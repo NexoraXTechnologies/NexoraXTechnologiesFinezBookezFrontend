@@ -127,7 +127,7 @@ const ProfessionalDashboard = () => {
   if (error) return <p className="text-red-500 text-center mt-10">{error}</p>;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="p-6 bg-gray-50 min-h-screen relative">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="p-6 bg-gray-50 min-h-screen relative h-[100vh] overflow-auto">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
