@@ -5,7 +5,7 @@ const Pagination = (({ localLimit, selectCb, preDisabled, nextDisabled, setLocal
     return (
         <div
             id="account-pagination"
-            className="flex justify-between items-center mt-4 text-sm text-gray-700 flex-wrap gap-2">
+            className="flex justify-between flex-0 items-center mt-4 text-sm text-gray-700 flex-wrap gap-2">
             <div className="flex items-center gap-3">
                 <label className="text-sm font-medium text-gray-600">
                     Rows per page
@@ -22,7 +22,6 @@ const Pagination = (({ localLimit, selectCb, preDisabled, nextDisabled, setLocal
                     ))}
                 </select>
             </div>
-
             <div className="flex items-center gap-2">
                 <PaginationButton {...{ disabled: preDisabled, icon: <ChevronFirst size={18} />, onClick: () => setLocalOffset(0) }} />
                 <PaginationButton {...{ disabled: preDisabled, icon: <ChevronLeft size={18} />, onClick: () => setLocalOffset((prev) => Math.max(0, prev - localLimit)) }} />

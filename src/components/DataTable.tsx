@@ -1,3 +1,5 @@
+import ReadMoreText from "./common/ReadMoreText";
+
 type Column<T> = {
     key: keyof T | string;
     title: string;
@@ -59,7 +61,7 @@ export default function DataTable<T>({
                                 className="hover:bg-indigo-50/40 transition-all duration-200">
                                 {columns.map((col) => (
                                     <td key={String(col.key)} className="px-4 py-3 border-b border-gray-200 font-medium text-gray-800">
-                                        {col.render ? col.render(row) : row[col.key as keyof T]}
+                                        {(col?.type == "date") ? new Date(row[col.key as keyof T]).toLocaleString() : ((col?.type == "readMoreText") ? <ReadMoreText text={row[col.key as keyof T] || '—'} charLimit={20} /> : col.render ? col.render(row) : row[col.key as keyof T])}
                                     </td>
                                 ))}
 

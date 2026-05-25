@@ -247,8 +247,8 @@ const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
           onClick={handleClick}
           style={{ paddingLeft: `${20 + level * 14}px` }}
           className={` flex items-center cursor-pointer py-3 px-2 mx-2 mb-1 rounded transition-all duration-200 select-none group ${isActive || isParentActive
-            ? 'bg-indigo-100 text-indigo-700 font-semibold'
-            : 'text-gray-700 hover:bg-gray-100'
+            ? 'bg-indigo-100 text-indigo-700'
+            : 'text-[#F5F5F5] hover:bg-indigo-100 hover:text-indigo-700'
             }
         `}
         >
@@ -299,7 +299,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
 
   return (
     <div
-      id="professional-sidebar" className={`h-screen bg-red border-r border-slate-200 shadow-lg border-r border-gray-200 transition-all duration-300 flex flex-col ${isExpanded ? 'w-64' : 'w-20'}`}
+      id="professional-sidebar" className={`h-screen border-r bg-[#2D1B69] border-slate-200 shadow-lg border-r border-gray-200 transition-all duration-300 flex flex-col ${isExpanded ? 'w-64' : 'w-20'}`}
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}>
       {/* Logo */}
@@ -320,7 +320,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
         ))}
       </div>
 
-      <div className="border-t border-gray-500 py-4 px-4">
+      <div className="border-t border-gray-800 py-4 px-4">
         <div onClick={openConfirm} className="flex items-center gap-3 text-gray-700 cursor-pointer hover:bg-red-50 px-2 py-2 rounded-lg transition-all">
           <LogOut size={20} className="text-red-500" />
           {isExpanded && <span className="text-sm font-medium text-red-500">Logout</span>}

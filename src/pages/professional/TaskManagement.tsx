@@ -16,6 +16,9 @@ import {
   uploadDocument,
   downloadDocument,
 } from "../../redux/slices/professionalSlice/professionalDocumentMgtSlice";
+import DataTable from "../../components/DataTable";
+import SearchInput from "../../components/searchInput";
+import { DataCreateButton, DataREfreshButton } from "../../components/buttons";
 
 const TaskManagement = () => {
   const dispatch = useDispatch();
@@ -134,13 +137,13 @@ const TaskManagement = () => {
 
     const assignedName = assignedUser
       ? [
-          assignedUser.userFirstName,
-          assignedUser.userMiddleName,
-          assignedUser.userLastName,
-        ]
-          .map((part) => (part || "").trim())
-          .filter(Boolean)
-          .join(" ")
+        assignedUser.userFirstName,
+        assignedUser.userMiddleName,
+        assignedUser.userLastName,
+      ]
+        .map((part) => (part || "").trim())
+        .filter(Boolean)
+        .join(" ")
       : task.taskAssignedTo || "";
 
     setEditingTask(task);
@@ -324,8 +327,47 @@ const TaskManagement = () => {
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   };
 
+  const columns = [
+    {
+      key: 'taskId',
+      title: 'Task ID',
+    },
+    {
+      key: 'taskName',
+      title: 'Task Name',
+      type:'readMoreText'
+    },
+    {
+      key: 'projectName',
+      title: 'Project',
+      type: 'readMoreText'
+    },
+    {
+      key: 'taskAssignedTo',
+      title: 'Assigned To',
+    },
+    {
+      key: 'taskPriority',
+      title: 'Priority'
+    },
+    {
+      key: 'createdOn',
+      title: 'Assign Date',
+      type: "date"
+    },
+    {
+      key: 'taskCompletionDate',
+      title: 'Due Date',
+      type: "date"
+    },
+    {
+      key: 'taskStatus',
+      title: 'Status',
+    }
+  ];
+
   return (
-    <div id="task-header" className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[85vh]">
+    <div id="task-header" className="w-full bg-white border border-gray-200 shadow-sm p-4 flex flex-col h-[85vh]">
       {/* Header */}
       <div className="flex items-center mb-3">
         <div className="flex items-start gap-3">
@@ -336,7 +378,7 @@ const TaskManagement = () => {
         </div>
 
         {/* Right controls */}
-        <div className="ml-auto flex items-center gap-2">
+        {/* <div className="ml-auto flex items-center gap-2">
           <input type="text" id="task-search-input" placeholder="Search (name or mobile)…" className="border px-3 py-2 h-9 rounded-md w-64 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
           <button id="task-refresh-button" onClick={handleRefresh} className="border px-3 h-9 rounded-md flex items-center justify-center hover:bg-gray-100">
             <RefreshCcw size={16} className={refreshing ? 'animate-spin text-blue-600' : ''} />
@@ -346,11 +388,17 @@ const TaskManagement = () => {
               <Plus size={16} className="mr-1" /> Add Task
             </button>
           )}
-        </div>
-      </div>
+        </div> */}
 
+        <div className="ml-auto flex items-center gap-2">
+          <SearchInput {...{ search, setSearch }} />
+          <DataREfreshButton {...{ callBackFn: handleRefresh }} />
+          <DataCreateButton {...{ callBackFn: openAddModal, text:"Add Task" }} />
+        </div>
+
+      </div>
       {/* Table */}
-      <div className="flex-1 overflow-x-auto w-full">
+      {/* <div className="flex-1 overflow-x-auto w-full">
         <div className="max-h-[78vh] overflow-y-auto border rounded-md">
           <table className="min-w-full table-fixed text-sm text-gray-700 border-collapse">
             <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
@@ -433,7 +481,47 @@ const TaskManagement = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </div> */}
+
+
+      <DataTable
+        columns={columns}
+        data={tasks}
+        loading={loading}
+        emptyMessage="No products found"
+        actions={(e) => (
+          <div className="flex items-center gap-2">
+            {/* EDIT */}
+            <button id="task-edit-button" onClick={() => openEditModal(t)} className="text-blue-600 hover:text-blue-800" title="Edit">
+              <Edit size={16} />
+            </button>
+
+            {canCreate && (
+              <button
+                id="task-delete-button"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const tooltipWidth = 150;
+                  let x = rect.left - tooltipWidth;
+                  if (x < 10) x = 10;
+                  const y = rect.top + window.scrollY - 5;
+
+                  setConfirmTooltip({
+                    show: true,
+                    x,
+                    y,
+                    taskId: t.taskId,
+                  });
+                }}
+                className="text-red-600 hover:text-red-800"
+                title="Delete">
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        )}
+      />
+      
 
       {/* Pagination */}
       {totalCount > 0 && (

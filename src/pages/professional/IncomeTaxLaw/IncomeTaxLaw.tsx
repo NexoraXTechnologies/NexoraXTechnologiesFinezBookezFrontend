@@ -6,6 +6,11 @@ import { toast } from 'react-toastify';
 // ✅ You should create/import these from your slice
 import { getAllProfessionalIncomeTaxLaw, getProfessionalIncomeTaxLawById, clearSelectedProfessionalIncomeTaxLaw } from '../../../redux/slices/professionalSlice/professionIntxLaw/professionalIncomeTaxLawSlice';
 import ReadMoreText from '../../../components/common/ReadMoreText';
+import SearchInput from '../../../components/searchInput';
+import { DataCreateButton, DataREfreshButton } from '../../../components/buttons';
+import DataTable from '../../../components/DataTable';
+import Pagination from '../../../components/pagination';
+import Badge from '../../../components/badge';
 
 /**
  * Dynamic renderer for arrays like:
@@ -85,6 +90,13 @@ const ArrayField = ({ label, value }) => {
     </div>
   );
 };
+
+const columns = [
+  { key: 'lawId', title: 'Law ID', },
+  { key: 'section', title: 'Section' },
+  { key: 'title', title: 'Title', type: "readMoreText" },
+  { key: 'status', title: 'Status' }
+];
 
 const ViewLawModal = ({ open, onClose, law, loading }) => {
   if (!open) return null;
@@ -261,144 +273,53 @@ const IncomeTaxLaw = () => {
   }, [error]);
 
   return (
-    <div id="income-tax-law-page-container" className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[85vh]">
+    <div id="income-tax-law-page-container" className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[100%]">
       {/* ================= Header ================= */}
       <div className="flex items-center mb-3 gap-2 flex-wrap shrink-0">
         {/* Left: basic info */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 h-8">
-            <span className="text-xs text-gray-600">Total:</span>
-            <span className="text-sm font-semibold text-blue-700">{pagination?.totalDocs ?? 0}</span>
-          </div>
-        </div>
-
+        <Badge {...{ count: pagination?.totalDocs ?? 0, text: "Total:", varient: "primary" }} />
         {/* Right: controls */}
         <div className="ml-auto flex items-center gap-2">
-          <input id="income-tax-law-search-input" type="text" placeholder="Search (lawId / section / title)..." className="border px-3 py-2 h-9 rounded-md w-64 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
-
+          <SearchInput {...{ search, setSearch }} />
           <select
             value={status}
             onChange={(e) => {
               setStatus(e.target.value);
               setPage(1);
             }}
-            className="border px-2 h-9 rounded-md text-sm">
+            className="h-11 rounded-md border border-gray-300 bg-white px-5 text-sm text-gray-800 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 cursor-pointer">
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
             <option value="">All</option>
           </select>
-
-          <button id="income-tax-law-refresh-button" onClick={handleRefresh} className="border px-3 h-9 rounded-md flex items-center justify-center hover:bg-gray-100" title="Refresh">
-            <RefreshCcw size={16} className={refreshing ? 'animate-spin text-blue-600' : ''} />
-          </button>
+          <DataREfreshButton {...{ callBackFn: handleRefresh }} />
         </div>
       </div>
 
-      {/* ================= Table ================= */}
-      <div className="flex-1 min-h-0 overflow-x-auto w-full">
-        <div className="h-full overflow-y-auto border rounded-md">
-          <table className="min-w-full table-fixed text-sm text-gray-700 border-collapse">
-            <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
-              <tr>
-                <th className="px-3 py-2 text-left w-[140px]">Law ID</th>
-                <th className="px-3 py-2 text-left w-[143px]">Section</th>
-                <th className="px-3 py-2 text-left">Title</th>
-                <th className="px-3 py-2 text-left w-[110px]">Status</th>
-                <th className="px-3 py-2 text-center w-[90px]">Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-6 text-gray-500 italic">
-                    Loading...
-                  </td>
-                </tr>
-              ) : rows?.length ? (
-                rows.map((row) => (
-                  <tr key={row.lawId || row.id} className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-2">{row.lawId ?? '-'}</td>
-                    <td className="px-3 py-2">{row.section ?? '-'}</td>
-                    <td className="px-3 py-2 truncate" title={row.title}>
-                      <ReadMoreText text={row.title || 'NA'} charLimit={50} />
-                    </td>
-                    <td className="px-3 py-2">{row.status ?? '-'}</td>
-
-                    <td className="px-3 py-4 flex items-center gap-3 justify-center">
-                      <button id="income-tax-law-view-button" onClick={() => handleView(row.lawId)} className="text-blue-600 hover:text-blue-800" title="View">
-                        <Eye size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="text-center py-6 text-gray-500 italic">
-                    No law sections found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ================= Pagination ================= */}
-      {(pagination?.totalDocs ?? 0) > 0 && rows?.length > 0 && (
-        <div id="income-tax-law-pagination" className="flex justify-between items-center mt-4 text-sm text-gray-700 flex-wrap gap-2 shrink-0">
-          {/* Rows per page */}
+      <DataTable
+        columns={columns}
+        data={rows}
+        loading={loading}
+        emptyMessage="No products found"
+        actions={(e) => (
           <div className="flex items-center gap-2">
-            <label className="text-gray-600">Rows per page:</label>
-
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1);
-              }}
-              className="border border-gray-300 rounded-md px-2 py-1 text-sm">
-              {[10, 20, 50, 100].map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Showing info */}
-          <div>
-            Showing{' '}
-            <strong>
-              {(pagination?.offset ?? 0) + 1}–{Math.min((pagination?.offset ?? 0) + (pagination?.limit ?? limit), pagination?.totalDocs ?? 0)}
-            </strong>{' '}
-            of <strong>{pagination?.totalDocs ?? 0}</strong> | Page <strong>{pagination?.currentPage ?? page}</strong> of <strong>{pagination?.totalPages ?? 1}</strong>
-          </div>
-
-          {/* Pagination Controls */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => setPage(1)} disabled={(pagination?.currentPage ?? 1) === 1} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              First
-            </button>
-
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(pagination?.currentPage ?? 1) === 1} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              Prev
-            </button>
-
-            <button
-              onClick={() => setPage((p) => Math.min(p + 1, pagination?.totalPages ?? 1))}
-              disabled={(pagination?.currentPage ?? 1) === (pagination?.totalPages ?? 1)}
-              className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              Next
-            </button>
-
-            <button onClick={() => setPage(pagination?.totalPages ?? 1)} disabled={(pagination?.currentPage ?? 1) === (pagination?.totalPages ?? 1)} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              Last
+            {/* EDIT */}
+            <button id="income-tax-law-view-button" onClick={() => handleView(row.lawId)} className="text-blue-600 hover:text-blue-800" title="View">
+              <Eye size={16} />
             </button>
           </div>
-        </div>
-      )}
+        )}
+      />
 
+      {(pagination?.totalDocs ?? 0) > 0 && rows?.length > 0 && <Pagination  {...{
+        localLimit: limit, selectCb: (e) => {
+          setLimit(Number(e.target.value));
+          setPage(1);
+        },
+        preDisabled: (pagination?.currentPage ?? 1) === 1,
+        nextDisabled: (pagination?.currentPage ?? 1) === (pagination?.totalPages ?? 1),
+        setLocalOffset: setPage, pagination
+      }} />}
       {/* ================= View Modal ================= */}
       <ViewLawModal open={viewOpen} onClose={closeView} law={selectedRecord} loading={viewLoading} />
     </div>
