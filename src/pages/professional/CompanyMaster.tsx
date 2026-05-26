@@ -150,7 +150,7 @@ const CompanyMaster = () => {
   };
 
   return (
-    <div className="w-full bg-white border border-gray-200 p-6 rounded-lg shadow-sm h-[85vh] flex flex-col">
+    <div className="w-full bg-white border border-gray-200 p-4 sm:p-6 rounded-lg shadow-sm h-full min-h-0 flex flex-col">
       {/* Header */}
       <div id="company-header" className="flex items-center mb-4">
         {/* <h1 className="text-xl font-semibold">Company Master</h1> */}
@@ -180,7 +180,7 @@ const CompanyMaster = () => {
         <div id="company-details-box" className="border rounded-lg p-4 bg-gray-50">
           <h2 className="text-lg font-semibold text-blue-700 mb-2">{company.companyName}</h2>
 
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <p>
               <strong>Email:</strong> {company.companyEmail}
             </p>
@@ -211,7 +211,7 @@ const CompanyMaster = () => {
       {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white w-[700px] p-6 rounded-lg shadow-lg max-h-[90vh] overflow-scroll relative">
+          <div className="bg-white w-full max-w-[700px] p-6 rounded-lg shadow-lg max-h-[90vh] overflow-scroll relative">
             <button className="absolute top-3 right-3 text-gray-600 text-xl" onClick={() => setShowModal(false)}>
               ×
             </button>
@@ -219,7 +219,7 @@ const CompanyMaster = () => {
             <h2 className="text-lg font-semibold mb-4">{editing ? 'Update Company' : 'Create Company'}</h2>
 
             {/* FORM */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               {/* Company Name */}
               <div className="flex flex-col">
                 <label className="mb-1 font-medium">Company Name *</label>

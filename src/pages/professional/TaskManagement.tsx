@@ -367,9 +367,9 @@ const TaskManagement = () => {
   ];
 
   return (
-    <div id="task-header" className="w-full bg-white border border-gray-200 shadow-sm p-4 flex flex-col h-[85vh]">
+    <div id="task-header" className="w-full bg-white border border-gray-200 shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex items-center mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <div className="flex items-start gap-3">
           <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 h-8">
             <span className="text-xs text-gray-600">Total Tasks:</span>
@@ -377,20 +377,7 @@ const TaskManagement = () => {
           </div>
         </div>
 
-        {/* Right controls */}
-        {/* <div className="ml-auto flex items-center gap-2">
-          <input type="text" id="task-search-input" placeholder="Search (name or mobile)…" className="border px-3 py-2 h-9 rounded-md w-64 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <button id="task-refresh-button" onClick={handleRefresh} className="border px-3 h-9 rounded-md flex items-center justify-center hover:bg-gray-100">
-            <RefreshCcw size={16} className={refreshing ? 'animate-spin text-blue-600' : ''} />
-          </button>
-          {canCreate && (
-            <button id="task-add-button" onClick={openAddModal} className="border bg-blue-600 text-white px-3 h-9 rounded-md flex items-center justify-center hover:bg-blue-700">
-              <Plus size={16} className="mr-1" /> Add Task
-            </button>
-          )}
-        </div> */}
-
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <SearchInput {...{ search, setSearch }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
           <DataCreateButton {...{ callBackFn: openAddModal, text:"Add Task" }} />
@@ -632,7 +619,7 @@ const TaskManagement = () => {
                   handleSubmit();
                 }
               }}
-              className="grid grid-cols-2 gap-4 text-sm">
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               {/* Task Name */}
               <div className="flex flex-col">
                 <label className="font-medium text-gray-700 mb-1">

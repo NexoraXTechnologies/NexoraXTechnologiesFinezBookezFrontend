@@ -189,9 +189,9 @@ const handleDownload = async (row) => {
   };
 
   return (
-    <div id="itr-page-container" className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[85vh]">
+    <div id="itr-page-container" className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* ================= Header ================= */}
-      <div className="flex items-center mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         {/* Left: summary cards (kept same style as DocumentMangement) */}
         <div id="itr-summary-section" className="flex items-start gap-3">
           <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 h-8">
@@ -211,10 +211,10 @@ const handleDownload = async (row) => {
         </div>
 
         {/* Right: controls */}
-        <div className="ml-auto flex items-center gap-2">
-          <input id="itr-pan-input" type="text" placeholder="Filter by PAN..." className="border px-3 py-2 h-9 rounded-md w-56 text-sm" value={pan} onChange={(e) => setPan(e.target.value)} />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <input id="itr-pan-input" type="text" placeholder="Filter by PAN..." className="border px-3 py-2 h-9 rounded-md w-40 sm:w-56 text-sm" value={pan} onChange={(e) => setPan(e.target.value)} />
 
-          <input id="itr-objectKey-input" type="text" placeholder="Filter by Object Key..." className="border px-3 py-2 h-9 rounded-md w-64 text-sm" value={objectKey} onChange={(e) => setObjectKey(e.target.value)} />
+          <input id="itr-objectKey-input" type="text" placeholder="Filter by Object Key..." className="border px-3 py-2 h-9 rounded-md w-44 sm:w-64 text-sm" value={objectKey} onChange={(e) => setObjectKey(e.target.value)} />
 
           {/* ✅ FILE ITR BUTTON (LEFT of Refresh) */}
           <button id="itr-file-button" onClick={() => navigate('/professional/incometax/fileitr')} className="flex items-center gap-1 bg-blue-600 text-white px-3 h-9 rounded-md hover:bg-blue-700">

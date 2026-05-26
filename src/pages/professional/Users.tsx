@@ -297,9 +297,9 @@ resetUserForm();
     }
   };
   return (
-    <div className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[85vh]">
+    <div className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex justify-end items-center mb-4">
+      <div className="flex flex-wrap justify-end items-center gap-2 mb-4">
         <div className="flex gap-2 items-center">
           <input type="text" placeholder="Search user..." className="border rounded-md pl-2 pr-3 py-1 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
 
@@ -309,7 +309,7 @@ resetUserForm();
         </div>
 
         <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-3 py-1 rounded-md flex items-center gap-1">
-          <Plus size={16} /> Add Employee/Team
+          <Plus size={16} /> <span className="hidden sm:inline">Add Employee/Team</span><span className="sm:hidden">Add</span>
         </button>
       </div>
 
@@ -385,7 +385,7 @@ resetUserForm();
 
             <h3 className="text-xl font-semibold mb-4">Add Team/Employee</h3>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* FIRST NAME */}
               <div>
                 <label className="block text-sm font-medium">First Name</label>

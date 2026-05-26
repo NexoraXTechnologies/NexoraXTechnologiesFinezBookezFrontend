@@ -127,11 +127,11 @@ const ProfessionalDashboard = () => {
   if (error) return <p className="text-red-500 text-center mt-10">{error}</p>;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="p-6 bg-gray-50 min-h-screen relative h-[100vh] overflow-auto">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="p-4 sm:p-6 bg-gray-50 min-h-screen relative overflow-auto">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Professional Dashboard</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Professional Dashboard</h2>
           <p className="text-sm text-gray-500">Filing overview, compliance status, and workload summary.</p>
         </div>
 
@@ -145,12 +145,12 @@ const ProfessionalDashboard = () => {
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-8">
         {cards.map((c) => <ProDashboardCart key={c.title} {...c} />)}
       </div>
 
       {/* Charts + Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
         <ProStatDonutChart title="Tasks Status" items={taskDonut} />
         <ProStatDonutChart title="ITR Status" items={itrDonut} />
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
@@ -163,7 +163,7 @@ const ProfessionalDashboard = () => {
       </div>
 
       {/* Trend + Taxpayer Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-20">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-20">
         <div className="lg:col-span-2">
           <ProTrendLineChart
             title="Weekly ITR Activity"

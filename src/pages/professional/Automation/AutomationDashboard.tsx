@@ -270,7 +270,7 @@ export default function AutomationDashboard() {
   const endIndex = totalCount === 0 ? 0 : Math.min(page * limit, totalCount);
 
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[85vh]">
+    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* ================= HEADER ================= */}
       <div className="flex items-center gap-3 mb-3 flex-wrap shrink-0">
         <div className="flex items-center gap-2">

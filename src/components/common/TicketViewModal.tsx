@@ -14,7 +14,7 @@ const TicketViewModal = ({ open, onClose, ticket, extraTop, extraBottom }) => {
     <>
       {/* ------------ MAIN TICKET MODAL ------------ */}
       <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[9999]">
-        <div className="bg-white w-[600px] rounded-lg shadow-xl border p-6 relative animate-fadeIn">
+        <div className="bg-white w-[600px] rounded-lg shadow-xl border p-6 relative animate-fadeIn max-w-[95vw]">
           {/* Close Icon */}
           <button
             onClick={onClose}

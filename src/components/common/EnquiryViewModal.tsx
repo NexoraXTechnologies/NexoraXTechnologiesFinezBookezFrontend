@@ -9,7 +9,7 @@ const EnquiryViewModal = ({ open, onClose, enquiry, extraTop, extraBottom }) => 
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[9999]">
-      <div className="bg-white w-[600px] rounded-lg shadow-lg border p-5 relative">
+      <div className="bg-white w-[600px] rounded-lg shadow-lg border p-5 relative max-w-[95vw]">
         {/* Close Icon */}
         <button
           onClick={onClose}

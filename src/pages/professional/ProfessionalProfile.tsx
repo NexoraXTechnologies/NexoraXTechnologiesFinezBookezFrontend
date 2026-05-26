@@ -126,8 +126,8 @@ const fileToBase64 = (file) => {
 
 
   return (
-    <div className="flex py-4 mx-auto">
-      <div className="bg-white shadow-lg rounded-2xl w-full max-w-6xl p-8 border border-gray-200">
+    <div className="flex py-4 px-4 sm:px-6 mx-auto w-full">
+      <div className="bg-white shadow-lg rounded-2xl w-full max-w-6xl p-4 sm:p-8 border border-gray-200">
         <div className="flex flex-col md:flex-row gap-10">
           {/* LEFT SECTION — FORM */}
           <div id="profile-section" className="flex-1">

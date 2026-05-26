@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard } from 'lucide-react';
+import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
 import FinEzLogo from '../assets/FinEZ.png';
 
-const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [openMenus, setOpenMenus] = useState({});
   const navigate = useNavigate();
   // const dispatchP = useDispatch();
@@ -237,6 +237,8 @@ const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
         }));
       } else if (item.path) {
         navigate(item.path);
+        // Close mobile sidebar on navigation
+        if (onMobileClose) onMobileClose();
       }
     };
 
@@ -254,28 +256,34 @@ const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
         >
           {/* ICON */}
           <div className="flex items-center justify-center w-5 h-5 shrink-0">{item.icon}</div>
-          {/* LABEL */}
-          {isExpanded && (
-            <span className="ml-3 text-sm truncate">
-              {item.label || item.name}
-            </span>
-          )}
+          {/* LABEL — always visible on mobile, hidden on desktop when collapsed */}
+          <span className={
+            "ml-3 text-sm truncate " +
+            (isExpanded ? "lg:block" : "lg:hidden") +
+            " block"
+          }>
+            {item.label || item.name}
+          </span>
 
-          {/* CHEVRON */}
-          {hasChildren && isExpanded && (
-            <div className="ml-auto">
-              {isOpen ? (
-                <ChevronDown size={16} />
-              ) : (
-                <ChevronRight size={16} />
-              )}
+          {/* CHEVRON — only when label is visible */}
+          {hasChildren && (
+            <div className={
+              "ml-auto " +
+              (isExpanded ? "lg:block" : "lg:hidden") +
+              " block"
+            }>
+              {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </div>
           )}
         </div>
 
-        {/* CHILDREN */}
-        {hasChildren && isOpen && isExpanded && (
-          <div className="space-y-1">
+        {/* CHILDREN — only when open AND label is visible */}
+        {hasChildren && isOpen && (
+          <div className={
+            "space-y-1 " +
+            (isExpanded ? "lg:block" : "lg:hidden") +
+            " block"
+          }>
             {item.children.map((child) => (
               <SidebarItem
                 key={child.name}
@@ -299,16 +307,43 @@ const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
 
   return (
     <div
-      id="professional-sidebar" className={`h-screen border-r bg-[#2D1B69] border-slate-200 shadow-lg border-r border-gray-200 transition-all duration-300 flex flex-col ${isExpanded ? 'w-64' : 'w-20'}`}
+      id="professional-sidebar"
+      className={
+        "h-screen border-r bg-[#2D1B69] border-slate-200 shadow-lg " +
+        "transition-all duration-300 flex flex-col " +
+        // mobile: always full-width drawer
+        "w-64 " +
+        // desktop: collapsed by default, expands on hover
+        (isExpanded ? "lg:w-64" : "lg:w-20")
+      }
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}>
       {/* Logo */}
-      <div className="flex items-center justify-center h-16">
-        <h1 className="font-bold text-xl bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{isExpanded ? <img src={FinEzLogo} alt="FinEZ Logo" className="w-30 h-10" /> : <img src={EZLogo} alt="EZ Logo" className="w-8 h-8" />}</h1>
+      <div className="flex items-center justify-between h-16 px-3">
+        <h1 className="font-bold text-xl bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+          {/* Mobile: always show full logo (drawer is w-64).
+              Desktop: show full when expanded, icon when collapsed */}
+          <span className="lg:hidden">
+            <img src={FinEzLogo} alt="FinEZ Logo" className="w-30 h-10" />
+          </span>
+          <span className="hidden lg:block">
+            {isExpanded
+              ? <img src={FinEzLogo} alt="FinEZ Logo" className="w-30 h-10" />
+              : <img src={EZLogo} alt="EZ Logo" className="w-8 h-8" />}
+          </span>
+        </h1>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onMobileClose}
+          className="lg:hidden text-gray-300 hover:text-white p-1 rounded"
+          aria-label="Close sidebar"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       {/* Menu */}
-      <div className="flex-1 mt-4 overflow-y-auto">
+      <div className="flex-1 mt-4 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => (
           <SidebarItem
             key={item.name}
@@ -323,7 +358,13 @@ const ProfessionalSidebar = ({ onMenuItemsChange }: any) => {
       <div className="border-t border-gray-800 py-4 px-4">
         <div onClick={openConfirm} className="flex items-center gap-3 text-gray-700 cursor-pointer hover:bg-red-50 px-2 py-2 rounded-lg transition-all">
           <LogOut size={20} className="text-red-500" />
-          {isExpanded && <span className="text-sm font-medium text-red-500">Logout</span>}
+          <span className={
+            "text-sm font-medium text-red-500 " +
+            (isExpanded ? "lg:block" : "lg:hidden") +
+            " block"
+          }>
+            Logout
+          </span>
         </div>
       </div>
 

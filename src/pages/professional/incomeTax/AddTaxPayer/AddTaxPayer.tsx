@@ -175,15 +175,15 @@ const AddTaxPayer = () => {
       : 0;
 
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[85vh]">
+    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* ================= HEADER ================= */}
-      <div className="flex items-center mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <div id="taxpayer-total-box" className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1 rounded-md">
           <span className="text-xs text-gray-600">Total Taxpayers:</span>
           <span className="text-sm font-semibold text-blue-700">{pagination?.totalDocs ?? 0}</span>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           {/* Mobile search */}
           <button
             id="taxpayer-toggle-inactive"

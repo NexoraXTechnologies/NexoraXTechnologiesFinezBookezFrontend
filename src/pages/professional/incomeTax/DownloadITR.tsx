@@ -397,10 +397,10 @@ const DownloadITRsWeb = () => {
   };
 
   return (
-    <div id="download-itr-page-container" className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[85vh]">
+    <div id="download-itr-page-container" className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* ================= Top Bar ================= */}
       <div className="mb-3 overflow-x-auto">
-        <div className="flex items-center gap-3 flex-nowrap min-w-max overflow-visible relative">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 h-9 whitespace-nowrap">
             <span className="text-xs text-gray-600">Total Records:</span>
             <span className="text-sm font-semibold text-blue-700">{filteredAttachments?.length ?? extractedData?.total ?? 0}</span>

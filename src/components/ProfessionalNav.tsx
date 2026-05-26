@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronDown, LogOut, Bell, X, Trash2 } from "lucide-react";
+import { ChevronDown, LogOut, Bell, X, Trash2, Menu } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import * as OneSignal from "react-onesignal";
 import { useDispatch, useSelector } from 'react-redux';
 
 
-const ProfessionalNav = ({ menuItems = [] }) => {
+const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatchP = useDispatch();
@@ -146,11 +146,21 @@ const ProfessionalNav = ({ menuItems = [] }) => {
   return (
     <nav
       id="professional-nav"
-      className="w-full h-16 bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-6 relative z-50"
+      className="w-full h-16 bg-white shadow-sm border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 relative z-50"
     >
-      <h2 className="text-lg font-semibold text-gray-800">{currentTitle}</h2>
+      <div className="flex items-center gap-3">
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={onMobileMenuToggle}
+          className="lg:hidden text-gray-600 hover:text-blue-600 p-1 rounded"
+          aria-label="Toggle sidebar"
+        >
+          <Menu size={22} />
+        </button>
+        <h2 className="text-base sm:text-lg font-semibold text-gray-800 truncate max-w-[160px] sm:max-w-xs md:max-w-sm">{currentTitle}</h2>
+      </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 sm:gap-6">
         {/* 🔔 Notification Bell */}
         <div className="relative" ref={notificationRef}>
           <button

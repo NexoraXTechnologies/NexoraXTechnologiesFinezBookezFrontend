@@ -90,17 +90,17 @@ const DocumentMangement = () => {
 	}, [search]);
 	
 	return (
-		<div id="document-page-container" className="bg-white border-gray-200 shadow-sm p-4 flex flex-col h-[100%]">
+		<div id="document-page-container" className="bg-white border-gray-200 shadow-sm p-4 flex flex-col h-full min-h-0">
 			{/* ================= Header ================= */}
-			<div className="flex items-center mb-3">
+			<div className="flex flex-wrap items-center gap-2 mb-3">
 				{/* Left: summary cards */}
-				<div id="document-summary-section" className="flex items-start gap-3">
+				<div id="document-summary-section" className="flex flex-wrap items-start gap-2">
 					<Badge {...{ count: summary?.totalDocuments ?? 0, text: "Total Documents:", varient: "primary" }} />
 					<Badge {...{ count: summary?.activeDocuments ?? 0, text: "Active Documents:" }} />
 					<Badge {...{ count: summary?.totalDeletedDocuments ?? 0, text: "Deleted Documents:", varient: "danger" }} />
 				</div>
 
-				<div className="ml-auto flex items-center gap-2">
+				<div className="ml-auto flex flex-wrap items-center gap-2">
 					<input
 						type="file"
 						ref={setFileInput}

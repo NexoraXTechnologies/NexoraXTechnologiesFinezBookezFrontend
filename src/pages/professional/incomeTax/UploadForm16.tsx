@@ -171,9 +171,9 @@ const UploadForm16 = () => {
   const currentPage = totalPages ? Math.floor((offset || 0) / (limit || 10)) + 1 : 1;
 
   return (
-    <div className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[85vh]">
+    <div className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* Header (like document mgmt) */}
-      <div className="flex items-center mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 h-8">
             <span className="text-xs text-gray-600">Total Form16:</span>
@@ -181,8 +181,8 @@ const UploadForm16 = () => {
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <input type="text" placeholder="Search filename..." className="border px-3 py-2 h-9 rounded-md w-64 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <input type="text" placeholder="Search filename..." className="border px-3 py-2 h-9 rounded-md w-48 sm:w-64 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
 
           <button onClick={() => setOpen(true)} className="flex items-center gap-1 bg-blue-600 text-white px-3 h-9 rounded-md hover:bg-blue-700">
             <UploadCloud size={16} /> Upload
