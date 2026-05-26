@@ -8,9 +8,7 @@ import TotalDeductions from './TotalDeductions';
 import ExemptedIncome from './ExemptedIncome';
 import TaxesPaid from './TaxesPaid';
 import Computations from './Computations';
-import TaxLiability from './TaxLiability';
 import UnderSec44 from './UnderSec44';
-
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -23,7 +21,7 @@ import { fetchAssessmentYearDropdown, fetchNatureOfEmploymentDropdown, fetchRegi
 import { getItrFilingWebById, saveItrFilingWeb, updateItrFilingWeb } from '../../../../redux/slices/professionalSlice/fileITRweb/itrFilingWebMgtSlice';
 import { formatIndianNumber } from '../../../../components/common/DateFormator';
 import { createOrderRazorPay, verifyRazorPayPayment } from '../../../../redux/slices/professionalSlice/payment/paymentSlice';
-import { buildITR1FromMyJson, buildITRJsonFromMyJson } from './IncomeTaxJsonBuilder/ITRJson';
+import { buildITRJsonFromMyJson } from './IncomeTaxJsonBuilder/ITRJson';
 
 import { getMonthValue } from './interestCalculations';
 const INITIAL_META = {
@@ -57,7 +55,6 @@ const FileITR = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const passedTaxpayer = location.state?.taxpayer || null;
-  const [isVerifiedAndPaid, setIsVerifiedAndPaid] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({
     regime: false,
     itrForm: false,
@@ -78,7 +75,6 @@ const FileITR = () => {
   const [step, setStep] = useState(1);
   const [selectedPan, setSelectedPan] = useState(null);
   const [selectedAY, setSelectedAY] = useState(null);
-
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupType, setPopupType] = useState(null);
   const [popupTitle, setPopupTitle] = useState('');
@@ -181,9 +177,7 @@ const FileITR = () => {
     const p = raw?.PersonalDetails || {};
     const addr = raw?.ContactAddressDetails || {};
     const bank = raw?.BankDetails?.array?.[0] || {};
-
     const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
-
     const fullAddress = [addr?.address1, addr?.address2, addr?.address3, addr?.address4, addr?.city?.name?.en || addr?.city, addr?.state?.name?.en || addr?.state, addr?.pin].filter(Boolean).join(', ');
 
     return {

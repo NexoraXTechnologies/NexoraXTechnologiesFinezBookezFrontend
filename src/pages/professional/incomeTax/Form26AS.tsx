@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-
+import { motion } from "framer-motion";
 import { getAllTaxPayers, getTaxPayerDetails, updateTaxpayer } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
 import {
   fetchForm26ASByDocId,
@@ -27,6 +27,8 @@ import { getJobQueueAutomationByCommonId, runAutomationAis } from '../../../redu
 import { buildJobQueuePayload, formatFYShort } from "./AISTISForm26PayloadBuilder";
 import { runnerService } from '../../../services/runnerService';
 import { ensureAppSettings, ensureRunnerRunning } from '../../../services/ensureRunnerRunning';
+import { SelectInput } from "../../../components/inputs";
+import { BlueButton, DataCreateButton, SecondaryButton, SuccessButton } from "../../../components/buttons";
 
 /* ---------------------------------------------------------
    CONSTANTS
@@ -826,141 +828,186 @@ const Form26AS = () => {
     }
   };
 
-  return (
-    <div className="p-1 bg-gray-50 w-full">
-      {/* FY SELECT */}
-      <div id="form26as-fy-buttons" className="flex gap-2 mb-4 flex-wrap">
-        {loading ? (
-          <span className="text-sm text-gray-500">Loading...</span>
-        ) : (
-          FY_LIST.map((y) => (
-            <button
-              key={y}
-              onClick={() => {
-                setFY(y);
-                if (selectedPAN) handleSelectPAN(selectedPAN);
-              }}
-              className={`px-2 py-1 rounded-full text-sm font-semibold ${fy === y ? 'bg-blue-600 text-white' : 'bg-white border'}`}>
-              {y}
-            </button>
-          ))
-        )}
-      </div>
+	const taxPayerv = taxpayers?.map((c) => {
+		const p = c?.payload?.PersonalDetails;
+		const name = [p?.firstName, p?.middleName, p?.lastName,].filter(Boolean).join(" ");
+		return { label: `${c?.pan}${name ? ` (${name})` : ""}`, value: c?.pan, };
+	}) || [];
 
-      {/* PAN + UPLOAD + DOWNLOAD + SYNC + SHARE */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <select id="form26as-pan-select" value={selectedPAN} onChange={(e) => handleSelectPAN(e.target.value)} className="border px-2 py-1 rounded-lg min-w-[260px]">
-          <option value="">Select PAN</option>
-          {taxpayers.map((t) => {
-            const p = t.payload?.PersonalDetails;
-            const name = [p?.firstName, p?.middleName, p?.lastName].filter(Boolean).join(' ');
+	const summaryCards = [
+		{
+			title: "TDS",
+			icon: ICONS.tds,
+			theme: {
+				card: "from-emerald-50 via-teal-50 to-white border-emerald-200",
+				iconBg: "bg-emerald-100 text-emerald-700",
+				badge: "bg-emerald-600",
+				glow: "bg-emerald-300",
+			},
+			rows: [
+				{ label: "Credited", value: summary.tdsCredited },
+				{ label: "Deposited", value: summary.tdsDeposited },
+				{ label: "Deducted", value: summary.tdsDeducted },
+			],
+		},
+		{
+			title: "TCS",
+			icon: ICONS.tcs,
+			theme: {
+				card: "from-blue-50 via-sky-50 to-white border-blue-200",
+				iconBg: "bg-blue-100 text-blue-700",
+				badge: "bg-blue-600",
+				glow: "bg-blue-300",
+			},
+			rows: [
+				{ label: "Credited", value: summary.tcsCredited },
+				{ label: "Deposited", value: summary.tcsDeposited },
+				{ label: "Collected", value: summary.tcsDeducted },
+			],
+		},
+	];
 
-            return (
-              <option key={t.pan} value={t.pan}>
-                {t.pan} {name ? `(${name})` : ''}
-              </option>
-            );
-          })}
-        </select>
+	return (
+		<div className="p-4 bg-gray-50 w-full ">
+			{/* FY SELECT */}
+			<div className="flex justify-between">
+				{/* PAN + UPLOAD + DOWNLOAD + SYNC + SHARE */}
+				<div className="flex items-center gap-3 mb-4 ">
+					<SelectInput {...{ value: selectedPAN, onChange: (e: any) => handleSelectPAN(e.target.value), options: [{ label: "select PAN", value: "" }, ...taxPayerv], }} />
+					{/* Upload */}
+					<BlueButton {...{
+						callBackFn: () => {
+							if (!selectedPAN) {
+								toast.error('Please select PAN first');
+								return;
+							}
+							fileRef.current.click();
+						},
+						text: "Upload",
+						icon: <Upload size={14} />
+					}} />
 
-        {/* Upload */}
-        <label
-          id="form26as-upload-btn"
-          onClick={() => {
-            if (!selectedPAN) {
-              toast.error('Please select PAN first');
-              return;
-            }
-            fileRef.current.click();
-          }}
-          className="bg-blue-600 text-white px-3 py-1.5 rounded-lg cursor-pointer text-sm flex items-center gap-2">
-          <Upload size={14} />
-          Upload
-        </label>
+					<input
+						ref={fileRef}
+						type="file"
+						className="hidden"
+						accept=".pdf,.zip"
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							if (!file) return;
+							handleFileUpload(file, file.name);
+						}}
+					/>
+					<DataCreateButton {...{ callBackFn: handleDownload, text: "Donwload", icon: <Download size={14} />, disabled: !selectedPAN }} />
+					<SuccessButton {...{ callBackFn: handleSyncClick, text: "Sync", icon: <FolderSync size={14} /> }} />
+					<SecondaryButton {...{ callBackFn: handleShare, text: "Share", icon: <Share2 size={14} /> }} />
+				</div>
+				<div id="form26as-fy-buttons" className="flex gap-3 mb-4 flex-wrap">
+					{loading ? (
+						<span className="text-sm text-gray-500">Loading...</span>
+					) : (
+						FY_LIST.map((y) => {
+							const isActive = fy === y;
 
-        <input
-          ref={fileRef}
-          type="file"
-          className="hidden"
-          accept=".pdf,.zip"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            handleFileUpload(file, file.name);
-          }}
-        />
-
-        {/* Download */}
-        <button onClick={handleDownload} disabled={!selectedPAN} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg cursor-pointer text-sm flex items-center gap-2">
-          <Download size={14} />
-          Download
-        </button>
-
-        {/* Sync */}
-        <button
-          type="button"
-          id="form26as-sync-btn"
-          onClick={handleSyncClick}
-          //  disabled={!selectedPAN}
-          className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60">
-          <FolderSync size={14} />
-          Sync
-        </button>
-
-        {/* Share */}
-        <button onClick={handleShare} disabled={!selectedPAN} className="bg-gray-700 text-white px-3 py-1.5 rounded-lg cursor-pointer text-sm flex items-center gap-2">
-          <Share2 size={14} />
-          Share
-        </button>
+							return (
+								<button key={y} type="button"
+									onClick={() => {
+										setFY(y);
+										if (selectedPAN) handleSelectPAN(selectedPAN);
+									}}
+									className={`flex items-center cursor-pointer h-10 gap-2 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-200 ${isActive ? "bg-blue-50 border-blue-600 text-blue-700 shadow-sm" : "bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50"}`}>
+									<span>{y}</span>
+								</button>
+							);
+						})
+					)}
+				</div>
       </div>
       {selectedName && <p className="text-sm text-blue-700 mb-4">Name: {selectedName}</p>}
       {/* SUMMARY BOXES (like RN) */}
-      <div
-        id="form26as-summary-cards"
-        className="grid gap-4 my-4
-             grid-cols-[repeat(auto-fit,minmax(260px,260px))]">
-        {/* TDS */}
-        <div className={`p-4 rounded-xl border shadow-sm ${COLORS.tds}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-white rounded-full">{ICONS.tds}</div>
-            <span className="font-semibold text-sm">TDS</span>
-          </div>
+			<div
+				id="form26as-summary-cards"
+				className="grid gap-5 my-5 grid-cols-[repeat(auto-fit,minmax(280px,1fr))]"
+			>
+				{summaryCards.map((card, index) => (
+					<motion.div
+						key={card.title}
+						initial={{ opacity: 0, y: 18, scale: 0.98 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						transition={{
+							duration: 0.35,
+							delay: index * 0.08,
+							ease: "easeOut",
+						}}
+						whileHover={{
+							y: -4,
+							scale: 1.01,
+						}}
+						className={`
+        relative overflow-hidden rounded-2xl border bg-gradient-to-br
+        ${card.theme.card}
+        p-5 shadow-sm transition-all duration-300
+        hover:shadow-xl
+      `}
+					>
+						{/* Soft glow */}
+						<div
+							className={`
+          absolute -right-10 -top-10 h-28 w-28 rounded-full
+          ${card.theme.glow} opacity-20 blur-2xl
+        `}
+						/>
 
-          <div className="text-sm flex justify-between">
-            <span>Credited</span>
-            <b>₹ {INR(summary.tdsCredited)}</b>
-          </div>
-          <div className="text-sm flex justify-between">
-            <span>Deposited</span>
-            <b>₹ {INR(summary.tdsDeposited)}</b>
-          </div>
-          <div className="text-sm flex justify-between">
-            <span>Deducted</span>
-            <b>₹ {INR(summary.tdsDeducted)}</b>
-          </div>
-        </div>
+						{/* Header */}
+						<div className="relative z-10 mb-5 flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div
+									className={`
+              flex h-12 w-12 items-center justify-center rounded-2xl
+              ${card.theme.iconBg}
+              shadow-sm ring-1 ring-white/70
+            `}
+								>
+									{card.icon}
+								</div>
 
-        {/* TCS */}
-        <div className={`p-4 rounded-xl border shadow-sm ${COLORS.tcs}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-white rounded-full">{ICONS.tcs}</div>
-            <span className="font-semibold text-sm">TCS</span>
-          </div>
+								<div>
+									<h3 className="text-lg font-bold text-gray-950">
+										{card.title}
+									</h3>
+									<p className="text-xs font-medium text-gray-500">
+										Form 26AS Summary
+									</p>
+								</div>
+							</div>
 
-          <div className="text-sm flex justify-between">
-            <span>Credited</span>
-            <b>₹ {INR(summary.tcsCredited)}</b>
-          </div>
-          <div className="text-sm flex justify-between">
-            <span>Deposited</span>
-            <b>₹ {INR(summary.tcsDeposited)}</b>
-          </div>
-          <div className="text-sm flex justify-between">
-            <span>Collected</span>
-            <b>₹ {INR(summary.tcsDeducted)}</b>
-          </div>
-        </div>
-      </div>
+							<span
+								className={`
+            h-2.5 w-2.5 rounded-full ${card.theme.badge}
+            shadow-[0_0_0_4px_rgba(255,255,255,0.8)]
+          `}
+							/>
+						</div>
+
+						{/* Rows */}
+						<div className="relative z-10 space-y-1">
+							{card.rows.map((row) => (
+								<div
+									key={row.label}
+									className="flex items-center justify-between px-3" >
+									<span className="text-sm font-medium text-gray-600">
+										{row.label}
+									</span>
+
+									<span className="text-base font-extrabold tracking-tight text-gray-950">
+										₹ {INR(row.value)}
+									</span>
+								</div>
+							))}
+						</div>
+					</motion.div>
+				))}
+			</div>
 
       {/* PART TABS (Part-I..X like you wanted) */}
       <div id="form26as-part-tabs" className="flex border-b mb-4 overflow-x-auto">

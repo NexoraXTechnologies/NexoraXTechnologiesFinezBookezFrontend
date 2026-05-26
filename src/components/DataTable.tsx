@@ -59,9 +59,9 @@ export default function DataTable<T>({
                             <tr
                                 key={index}
                                 className="hover:bg-indigo-50/40 transition-all duration-200">
-                                {columns.map((col) => (
+                                {columns.map((col,idx) => (
                                     <td key={String(col.key)} className="px-4 py-3 border-b border-gray-200 font-medium text-gray-800">
-                                        {(col?.type == "date") ? new Date(row[col.key as keyof T]).toLocaleString() : ((col?.type == "readMoreText") ? <ReadMoreText text={row[col.key as keyof T] || '—'} charLimit={20} /> : col.render ? col.render(row) : row[col.key as keyof T])}
+                                        {(col?.type == "date") ? new Date(row[col.key as keyof T]).toLocaleString() : ((col?.type == "readMoreText") ? <ReadMoreText text={row[col.key as keyof T] || '—'} charLimit={20} /> : col.render ? col.render(row,idx) : row[col.key as keyof T])}
                                     </td>
                                 ))}
 
