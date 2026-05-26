@@ -382,100 +382,12 @@ const TaskManagement = () => {
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
           <DataCreateButton {...{ callBackFn: openAddModal, text:"Add Task" }} />
         </div>
-
       </div>
-      {/* Table */}
-      {/* <div className="flex-1 overflow-x-auto w-full">
-        <div className="max-h-[78vh] overflow-y-auto border rounded-md">
-          <table className="min-w-full table-fixed text-sm text-gray-700 border-collapse">
-            <thead className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
-              <tr>
-                <th className="px-3 py-2 text-left w-[140px]">Task ID</th>
-                <th className="px-3 py-2 text-left">Task Name</th>
-                <th className="px-3 py-2 text-left">Project</th>
-                <th className="px-3 py-2 text-left">Assigned To</th>
-                <th className="px-3 py-2 text-left w-[100px]">Priority</th>
-                <th className="px-3 py-2 text-left w-[130px]">Assign Date</th>
-                <th className="px-3 py-2 text-left w-[130px]">Due Date</th>
-                <th className="px-3 py-2 text-left w-[120px]">Status</th>
-                <th className="px-3 py-2 text-center w-[100px]">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-6 text-gray-500">
-                    Loading…
-                  </td>
-                </tr>
-              ) : tasks?.length ? (
-                tasks.map((t) => (
-                  <tr key={t.taskId} className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-2 truncate">{t.taskId}</td>
-                    <td className="px-3 py-2">
-                      <ReadMoreText text={t.taskName || '—'} charLimit={20} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <ReadMoreText text={t.projectName || '—'} charLimit={20} />
-                    </td>
-                    <td className="px-3 py-2">{t.taskAssignedTo || '—'}</td>
-                    <td className="px-3 py-2">{t.taskPriority || '—'}</td>
-                    <td className="px-3 py-2">{formatDateTime(t.createdOn)}</td>
-
-                    <td className="px-3 py-2">{formatDateTime(t.taskCompletionDate)}</td>
-                    <td className="px-3 py-2">{t.taskStatus || '—'}</td>
-
-                    <td className="px-3 py-2 align-middle">
-                      <div className="flex items-center justify-center gap-3">
-                        <button id="task-edit-button" onClick={() => openEditModal(t)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                          <Edit size={16} />
-                        </button>
-
-                        {canCreate && (
-                          <button
-                            id="task-delete-button"
-                            onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const tooltipWidth = 150;
-                              let x = rect.left - tooltipWidth;
-                              if (x < 10) x = 10;
-                              const y = rect.top + window.scrollY - 5;
-
-                              setConfirmTooltip({
-                                show: true,
-                                x,
-                                y,
-                                taskId: t.taskId,
-                              });
-                            }}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={9} className="text-center py-6 text-gray-500 italic">
-                    {debouncedSearch ? `No tasks found for “${debouncedSearch}”.` : 'No tasks found'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div> */}
-
-
       <DataTable
         columns={columns}
         data={tasks}
         loading={loading}
-        emptyMessage="No products found"
+        emptyMessage="No Task Created"
         actions={(e) => (
           <div className="flex items-center gap-2">
             {/* EDIT */}

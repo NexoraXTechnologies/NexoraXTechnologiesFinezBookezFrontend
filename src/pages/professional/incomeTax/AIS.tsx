@@ -17,7 +17,7 @@ import {
   uploadForm26ASFile,
 } from "../../../redux/slices/professionalSlice/incomeTaxSlice/form26asSlice";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-
+import { motion } from "framer-motion";
 import {
   Receipt,
   FileSearch,
@@ -102,8 +102,6 @@ function groupAIS(details) {
     0
   );
 
-
-
   const tdsMergedItem = tdsSummary
     ? [
       {
@@ -147,8 +145,6 @@ function groupAIS(details) {
     (sum, item) => sum + (item.total || item.amount || 0),
     0
   );
-
-
 
   // --------- 4. DEMAND / REFUND ----------
 
@@ -867,26 +863,47 @@ const AIS = () => {
       {selectedName && <p className="text-sm text-blue-700 mb-4">Name: {selectedName}</p>}
 
       {/* SUMMARY CARDS */}
-      <div
-        id="ais-summary-cards"
-        className="grid gap-4 my-4
-             grid-cols-[repeat(auto-fit,minmax(260px,260px))]">
-        {Object.keys(summary).map((key) => (
-          <div key={key} className={`p-4 rounded-xl border shadow-sm ${COLORS[key]}`}>
-            {/* Top row: icon + title */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-full bg-white/60 flex items-center justify-center">{ICONS[key]}</div>
-              <span className="text-sm font-semibold text-slate-800">{TITLES[key] || key}</span>
-            </div>
+		  <div
+			  id="ais-summary-cards"
+			  className="flex flex-wrap gap-4 my-4"
+		  >
+			  {Object.keys(summary).map((key, index) => (
+				  <motion.div
+					  key={key}
+					  initial={{ opacity: 0, y: 10 }}
+					  animate={{ opacity: 1, y: 0 }}
+					  transition={{ duration: 0.25, delay: index * 0.05 }}
+					  whileHover={{ y: -2 }}
+					  className={` relative overflow-hidden w-[260px] rounded-md border p-3 shadow-sm transition-all duration-200 hover:shadow-md ${COLORS[key]}`}>
+					  {/* Soft shine */}
+					  <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-white/40 blur-2xl" />
 
-            {/* Second row: Amount label + value */}
-            <div className="flex items-center justify-between text-sm text-slate-700">
-              <span>Amount</span>
-              <span className="text-base font-bold">₹ {inr(summary[key]?.total)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+					  {/* Top row */}
+					  <div className="relative z-10 mb-3 flex items-center gap-2.5">
+						  <div
+							  className="flex h-9 w-9 items-center justify-center rounded-full  bg-white/80 shadow-sm ring-1 ring-black/5"
+						  >
+							  {ICONS[key]}
+						  </div>
+
+						  <span className="text-sm font-bold text-slate-900">
+							  {TITLES[key] || key}
+						  </span>
+					  </div>
+
+					  {/* Amount row */}
+					  <div className="relative z-10 flex items-center justify-between px-3 py-1 text-sm">
+						  <span className="font-medium text-slate-600">
+							  Amount
+						  </span>
+
+						  <span className="font-extrabold text-slate-950">
+							  ₹ {inr(summary[key]?.total)}
+						  </span>
+					  </div>
+				  </motion.div>
+			  ))}
+		  </div>
 
       {/* TABS (HORIZONTAL SCROLL) */}
       <div id="ais-tabs" className="flex border-b mb-4 overflow-auto">
@@ -926,8 +943,6 @@ const AIS = () => {
     </div>
   );
 }
-
-
 
 export const PasswordModal = ({ open, onClose, onSubmit, taxpayerName, loading }) => {
   const [pwd, setPwd] = useState("");
