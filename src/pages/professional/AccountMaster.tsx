@@ -130,7 +130,7 @@ const AccountMaster = () => {
 	/* ============================================ SAVE / UPDATE ============================================= */
 	const handleSubmit = async () => {
 		const e = {};
-console.log("here");
+		console.log("here");
 		// Account Name
 		if (!form.accountName.trim()) e.accountName = "Account name required";
 
@@ -297,10 +297,26 @@ console.log("here");
 						]
 					}} />
 
-					<TextInput {...{
+					{/* <TextInput {...{
 						label: "Mobile", mandatory: true, value: form.accountMobile,
 						onChange: (e) => setForm({ ...form, accountMobile: e.target.value }), placeholder: "Enter mobile number", error: errors.accountMobile
-					}} />
+					}} /> */}
+
+
+					<TextInput
+						label="Mobile"
+						mandatory={true}
+						value={form.accountMobile}
+						onChange={(e) =>
+							setForm({
+								...form,
+								accountMobile: e.target.value.replace(/\D/g, "").slice(0, 10),
+							})
+						}
+						placeholder="Enter mobile number"
+						error={errors.accountMobile}
+						type="tel"
+					/>
 
 					<TextInput {...{ label: "Email", mandatory: true, value: form.accountEmail, onChange: (e) => setForm({ ...form, accountEmail: e.target.value }), placeholder: "Enter email address", error: errors.accountEmail, type: "email" }} />
 

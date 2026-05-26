@@ -118,7 +118,7 @@ const DocumentMangement = () => {
 				columns={columns}
 				data={documents}
 				loading={loading}
-				emptyMessage="No products found"
+				emptyMessage="No documents found"
 				actions={(e) => (
 					<div className="flex items-center gap-2">
 						{/* EDIT */}
