@@ -7,7 +7,7 @@ import {
 } from "../../redux/slices/professionalSlice/professionalProfileSlice";
 import { FaUserCircle, FaUpload } from "react-icons/fa";
 import { toast } from "react-toastify";
-import {formatToDDMMYYYY,formatToInputDate} from '../../components/common/DateFormator'
+import { formatToDDMMYYYY, formatToInputDate } from '../../components/common/DateFormator'
 
 const ProfessionalProfile = () => {
   const dispatch = useDispatch();
@@ -33,34 +33,34 @@ const ProfessionalProfile = () => {
 
   // Reset form when profile is fetched
   useEffect(() => {
-  if (profile) {
+    if (profile) {
 
-    reset({
-      userFirstName: profile.userFirstName || "",
-      userMiddleName: profile.userMiddleName || "",
-      userLastName: profile.userLastName || "",
-      userDOB: formatToInputDate(profile.userDOB),
-      userEmail: profile.userEmail || "",
-      userAadhar: profile.userAadhar || "",
-      userPAN: profile.userPAN || "",
-      userMobileNumberHash: profile.userMobileNumberHash || "",
-      userType: profile.userType || "",
-      isUserActive: profile.isUserActive || "0",
-      parentUserMobileNumber: profile.parentUserMobileNumber || "",
+      reset({
+        userFirstName: profile.userFirstName || "",
+        userMiddleName: profile.userMiddleName || "",
+        userLastName: profile.userLastName || "",
+        userDOB: formatToInputDate(profile.userDOB),
+        userEmail: profile.userEmail || "",
+        userAadhar: profile.userAadhar || "",
+        userPAN: profile.userPAN || "",
+        userMobileNumberHash: profile.userMobileNumberHash || "",
+        userType: profile.userType || "",
+        isUserActive: profile.isUserActive || "0",
+        parentUserMobileNumber: profile.parentUserMobileNumber || "",
+      });
+
+      setPreview(profile.profilePic || null);
+    }
+  }, [profile, reset]);
+
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
     });
-
-    setPreview(profile.profilePic || null);
-  }
-}, [profile, reset]);
-
-const fileToBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-  });
-};
+  };
 
   // Image upload preview
   const handleImageChange = (e) => {
@@ -82,42 +82,42 @@ const fileToBase64 = (file) => {
 
   // Submit handler
   const onSubmit = async (data) => {
-  if (data.userDOB && !isAdult(data.userDOB)) {
-    toast.error("User must be at least 18 years old.");
-    return;
-  }
+    if (data.userDOB && !isAdult(data.userDOB)) {
+      toast.error("User must be at least 18 years old.");
+      return;
+    }
 
-  let base64Image = null;
-  if (profilePicFile) {
-    base64Image = await fileToBase64(profilePicFile);
-  }
+    let base64Image = null;
+    if (profilePicFile) {
+      base64Image = await fileToBase64(profilePicFile);
+    }
 
 
-  const payload = {
-    ChildUser: {
-      matchMobile: profile?.userMobileNumberHash,
-      userFirstName: data.userFirstName,
-      userMiddleName: data.userMiddleName,
-      userLastName: data.userLastName,
+    const payload = {
+      ChildUser: {
+        matchMobile: profile?.userMobileNumberHash,
+        userFirstName: data.userFirstName,
+        userMiddleName: data.userMiddleName,
+        userLastName: data.userLastName,
 
-      // ✅ send in dd-mm-yyyy
-      ...(data.userDOB && { userDOB: data.userDOB }),
+        // ✅ send in dd-mm-yyyy
+        ...(data.userDOB && { userDOB: data.userDOB }),
 
-      ...(data.userEmail && { userEmail: data.userEmail }),
-      ...(data.userPAN && { userPAN: data.userPAN }),
-      ...(data.userAadhar && { userAadhar: data.userAadhar }),
-      ...(base64Image && { profilePic: base64Image }),
-    },
+        ...(data.userEmail && { userEmail: data.userEmail }),
+        ...(data.userPAN && { userPAN: data.userPAN }),
+        ...(data.userAadhar && { userAadhar: data.userAadhar }),
+        ...(base64Image && { profilePic: base64Image }),
+      },
+    };
+
+    try {
+      const res = await dispatch(updateProfessionalProfile(payload)).unwrap();
+      toast.success("Profile updated successfully!");
+      dispatch(getProfessionalProfile())
+    } catch (err) {
+      toast.error(err?.message || "Failed to update profile");
+    }
   };
-
-  try {
-    const res = await dispatch(updateProfessionalProfile(payload)).unwrap();
-    toast.success("Profile updated successfully!");
-    dispatch(getProfessionalProfile())
-  } catch (err) {
-    toast.error(err?.message || "Failed to update profile");
-  }
-};
 
   // // Show toast after update
   // useEffect(() => {
@@ -130,7 +130,8 @@ const fileToBase64 = (file) => {
       <div className="bg-white shadow-lg rounded-2xl w-full max-w-6xl p-4 sm:p-8 border border-gray-200">
         <div className="flex flex-col md:flex-row gap-10">
           {/* LEFT SECTION — FORM */}
-          <div id="profile-section" className="flex-1">
+          {/* <div id="profile-section" className="flex-1"> */}
+          <div id="profile-section" className="flex-1 order-2 md:order-1">
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">
               My Profile
             </h2>
@@ -189,7 +190,7 @@ const fileToBase64 = (file) => {
                     <input
                       {...register("userDOB")}
                       type="date"
-                       readOnly
+                      readOnly
                       className="border p-2 rounded-md w-full bg-gray-100 text-gray-600"
                     />
                   </div>
@@ -202,7 +203,7 @@ const fileToBase64 = (file) => {
                       {...register("userEmail")}
                       type="email"
                       placeholder="Enter Email"
-                       readOnly
+                      readOnly
                       className="border p-2 rounded-md w-full bg-gray-100 text-gray-600"
                     />
                   </div>
@@ -228,7 +229,7 @@ const fileToBase64 = (file) => {
                     <input
                       {...register("userAadhar")}
                       placeholder="Enter Aadhar"
-                       readOnly
+                      readOnly
                       className="border p-2 rounded-md w-full bg-gray-100 text-gray-600"
                     />
                   </div>
@@ -258,18 +259,17 @@ const fileToBase64 = (file) => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600">
-                        Subscription Status
+                      Subscription Status
                     </label>
                     <input
                       value={
                         profile?.isUserActive === "1" ? "Active" : "Inactive"
                       }
                       readOnly
-                      className={`border p-2 rounded-md w-full bg-gray-100 ${
-                        profile?.isUserActive === "1"
-                          ? "text-green-600"
-                          : "text-red-500"
-                      }`}
+                      className={`border p-2 rounded-md w-full bg-gray-100 ${profile?.isUserActive === "1"
+                        ? "text-green-600"
+                        : "text-red-500"
+                        }`}
                     />
                   </div>
                   <div>
@@ -299,7 +299,8 @@ const fileToBase64 = (file) => {
           </div>
 
           {/* RIGHT SECTION — PHOTO */}
-          <div className="w-full md:w-1/3 flex flex-col items-center">
+          {/* <div className="w-full md:w-1/3 flex flex-col items-center"> */}
+          <div className="w-full md:w-1/3 flex flex-col items-center order-1 md:order-2">
             <div className="relative">
               {preview ? (
                 <img
