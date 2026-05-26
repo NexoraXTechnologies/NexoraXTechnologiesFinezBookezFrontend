@@ -130,7 +130,7 @@ const AccountMaster = () => {
 	/* ============================================ SAVE / UPDATE ============================================= */
 	const handleSubmit = async () => {
 		const e = {};
-
+console.log("here");
 		// Account Name
 		if (!form.accountName.trim()) e.accountName = "Account name required";
 
@@ -287,7 +287,8 @@ const AccountMaster = () => {
 					<TextInput {...{ label: "Account Name", mandatory: true, value: form.accountName, onChange: (e) => setForm({ ...form, accountName: e.target.value }), placeholder: "Enter account name", error: errors.accountName }} />
 					<SelectInput {...{
 						label: "Account Type", mandatory: true, value: form.accountType,
-						onChange: (value) => setForm({ ...form, accountType: value }), options: [
+						onChange: (e) => setForm({ ...form, accountType: e?.target?.value ?? value }), placeholder: "Select account type", error: errors.accountType,
+						options: [
 							{ value: "", label: "Select account type" },
 							{ value: "cash", label: "Cash" },
 							{ value: "bank", label: "Bank" },
