@@ -1,14 +1,14 @@
 import { motion } from 'framer-motion';
 import { Plus, RefreshCw } from 'lucide-react';
 
-const AuthButton = (({ clickCb, loader }: any) => {
+const AuthButton = (({ clickCb, loader,btnName }: any) => {
     return (
         <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.95 }}
             disabled={loader} onClick={clickCb}
             className={`w-full py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg shadow-indigo-500/20 transition-all duration-200 ${loader ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-            {loader ? 'Submitting...' : 'Send OTP'}
+            {loader ? 'Submitting...' : btnName || 'Send OTP'}
         </motion.button>
     )
 })

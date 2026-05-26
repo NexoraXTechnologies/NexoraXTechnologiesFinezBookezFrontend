@@ -421,7 +421,7 @@ const Login = () => {
                 </p>
 
                 {/* Next Button */}
-                <AuthButton {...{ loader: isVerifying, clickCb: handleVerifyOtp }} />
+                <AuthButton {...{ loader: isVerifying, clickCb: handleVerifyOtp, btnName:"Verify OTP" }} />
               </>
             ) : <>
               <div>
@@ -462,7 +462,8 @@ const Login = () => {
                       setShowOtpPopup(true);
                     })
                     .catch((err) => toast.error(err.message));
-                }
+                },
+               
               }} />
             </>}
             <p className="text-xs text-gray-600 mt-3">
