@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { getJobQueueAutomationByCommonId, runAutomationAis } from "../../../redux/slices/professionalSlice/automation/automatioinSlice";
 import { updateTaxpayer,getTaxPayerDetails } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
 import { buildJobQueuePayload } from './AISTISForm26PayloadBuilder';
-
 import { getAllTaxPayers } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
 import {
   fetchAISByDocId,
@@ -18,7 +17,7 @@ import {
   uploadForm26ASFile,
 } from "../../../redux/slices/professionalSlice/incomeTaxSlice/form26asSlice";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-
+import { motion } from "framer-motion";
 import {
   Receipt,
   FileSearch,
@@ -36,6 +35,8 @@ import {
 import { fetchAssessmentYearDropdown } from "../../../redux/slices/professionalSlice/allDropDowns/alldropdownSlice";
 import { ensureAppSettings, ensureRunnerRunning } from '../../../services/ensureRunnerRunning';
 import { runnerService } from "../../../services/runnerService";
+import { SelectInput } from "../../../components/inputs";
+import { BlueButton, DataCreateButton, SecondaryButton, SuccessButton } from "../../../components/buttons";
 
 const COLORS = {
   tdsTcs: "bg-[#ecf7f3] border-[#4c9d82]", // green soft
@@ -101,8 +102,6 @@ function groupAIS(details) {
     0
   );
 
-
-
   const tdsMergedItem = tdsSummary
     ? [
       {
@@ -147,8 +146,6 @@ function groupAIS(details) {
     0
   );
 
-
-
   // --------- 4. DEMAND / REFUND ----------
 
   const refundsRaw = details.partB4?.refunds || [];
@@ -177,14 +174,6 @@ function groupAIS(details) {
       items: refunds,
       total: refundTotal,
     },
-    // pendingProceeding: {
-    //   items: [],
-    //   total: 0,
-    // },
-    // completeProceeding: {
-    //   items: [],
-    //   total: 0,
-    // },
   };
 }
 
@@ -815,107 +804,106 @@ const AIS = () => {
       toast.error(err?.message || 'AIS share failed');
     }
   };
+
+  const taxPayerv = taxpayers?.map((c) => {
+    const p = c?.payload?.PersonalDetails;
+    const name = [p?.firstName, p?.middleName, p?.lastName,].filter(Boolean).join(" ");
+    return { label: `${c?.pan}${name ? ` (${name})` : ""}`, value: c?.pan, };
+  }) || [];
+
   return (
-    <div className="p-1 w-full bg-gray-50">
-      {/* FY SELECT */}
-      <div id="form26as-fy-buttons" className="flex gap-2 mb-4 flex-wrap">
-        {loadingAses ? (
-          <span className="text-sm text-gray-500">Loading...</span>
-        ) : (
-          FY_LIST.map((y) => (
-            <button
-              key={y}
-              onClick={() => {
-                setFY(y);
-                if (selectedPAN) handleSelectPAN(selectedPAN);
-              }}
-              className={`px-2 py-1 rounded-full text-sm font-semibold ${fy === y ? 'bg-blue-600 text-white' : 'bg-white border'}`}>
-              {y}
-            </button>
-          ))
-        )}
-      </div>
-
+    <div className="p-4 w-full bg-gray-50">
+      <div className="flex justify-between">
+    
       {/* PAN SELECT + UPLOAD + DOWNLOAD + SYNC + SHARE */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div className="flex items-center gap-3 mb-4">
         {/* PAN Select */}
-        <select id="ais-pan-select" value={selectedPAN} onChange={(e) => handleSelectPAN(e.target.value)} className="border px-2 py-1 rounded-lg min-w-[260px]">
-          <option value="">Select PAN</option>
-
-          {taxpayers.map((t) => {
-            const p = t.payload?.PersonalDetails;
-            const name = [p?.firstName, p?.middleName, p?.lastName].filter(Boolean).join(' ');
-
-            return (
-              <option key={t.pan} value={t.pan}>
-                {t.pan} {name ? `(${name})` : ''}
-              </option>
-            );
-          })}
-        </select>
+          <SelectInput {...{ value: selectedPAN, onChange: (e: any) => handleSelectPAN(e.target.value), options: [{ label: "Select PAN", value: "" }, ...taxPayerv], }} />
 
         {detailLoading && <p className="text-sm text-gray-500">Syncing AIS data…</p>}
-
-        {/* Upload */}
-        <button
-          type="button"
-          id="ais-upload-btn"
-          onClick={() => {
+          <BlueButton {...{
+            callBackFn: () => {
             if (!selectedPAN) {
               toast.error('Please select PAN first');
               return;
             }
             fileRef.current?.click();
-          }}
-          className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
-          <Upload size={14} />
-          Upload AIS
-        </button>
+            },
+            text: "Upload AIS",
+            icon: <Upload size={14} />
+          }} />
 
         <input ref={fileRef} type="file" accept="application/pdf" onChange={handleFileUpload} className="hidden" />
 
-        {/* Download */}
-        <button type="button" onClick={handleAISDownload} disabled={!selectedPAN} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
-          <Download size={14} />
-          Download
-        </button>
+          <DataCreateButton {...{ callBackFn: handleAISDownload, text: "Download", icon: <Download size={14} />, disabled: !selectedPAN }} />
+          <SuccessButton {...{ callBackFn: handleSyncClick, text: "Sync", icon: <FolderSync size={14} /> }} />
+          <SecondaryButton {...{ callBackFn: handleAISShare, text: "Share", icon: <Share2 size={14} /> }} />
+        </div>
+        <div id="form26as-fy-buttons" className="flex gap-3 mb-4">
+          {loading ? (
+            <span className="text-sm text-gray-500">Loading...</span>
+          ) : (
+            FY_LIST.map((y) => {
+              const isActive = fy === y;
 
-        {/* Sync */}
-        <button type="button" id="ais-sync-btn" onClick={handleSyncClick} disabled={!selectedPAN} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60">
-          <FolderSync size={14} />
-          Sync
-        </button>
-
-        {/* Share */}
-        <button type="button" onClick={handleAISShare} disabled={!false} className="bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
-          <Share2 size={14} />
-          Share
-        </button>
+              return (
+                <button key={y} type="button"
+                  onClick={() => {
+                    setFY(y);
+                    if (selectedPAN) handleSelectPAN(selectedPAN);
+                  }}
+                  className={`flex items-center cursor-pointer h-10 gap-2 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-200 ${isActive ? "bg-blue-50 border-blue-600 text-blue-700 shadow-sm" : "bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50"}`}>
+                  <span>{y}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
       </div>
-
       {selectedName && <p className="text-sm text-blue-700 mb-4">Name: {selectedName}</p>}
 
       {/* SUMMARY CARDS */}
-      <div
-        id="ais-summary-cards"
-        className="grid gap-4 my-4
-             grid-cols-[repeat(auto-fit,minmax(260px,260px))]">
-        {Object.keys(summary).map((key) => (
-          <div key={key} className={`p-4 rounded-xl border shadow-sm ${COLORS[key]}`}>
-            {/* Top row: icon + title */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-2 rounded-full bg-white/60 flex items-center justify-center">{ICONS[key]}</div>
-              <span className="text-sm font-semibold text-slate-800">{TITLES[key] || key}</span>
-            </div>
+		  <div
+			  id="ais-summary-cards"
+			  className="flex flex-wrap gap-4 my-4"
+		  >
+			  {Object.keys(summary).map((key, index) => (
+				  <motion.div
+					  key={key}
+					  initial={{ opacity: 0, y: 10 }}
+					  animate={{ opacity: 1, y: 0 }}
+					  transition={{ duration: 0.25, delay: index * 0.05 }}
+					  whileHover={{ y: -2 }}
+					  className={` relative overflow-hidden w-[260px] rounded-md border p-3 shadow-sm transition-all duration-200 hover:shadow-md ${COLORS[key]}`}>
+					  {/* Soft shine */}
+					  <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-white/40 blur-2xl" />
 
-            {/* Second row: Amount label + value */}
-            <div className="flex items-center justify-between text-sm text-slate-700">
-              <span>Amount</span>
-              <span className="text-base font-bold">₹ {inr(summary[key]?.total)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+					  {/* Top row */}
+					  <div className="relative z-10 mb-3 flex items-center gap-2.5">
+						  <div
+							  className="flex h-9 w-9 items-center justify-center rounded-full  bg-white/80 shadow-sm ring-1 ring-black/5"
+						  >
+							  {ICONS[key]}
+						  </div>
+
+						  <span className="text-sm font-bold text-slate-900">
+							  {TITLES[key] || key}
+						  </span>
+					  </div>
+
+					  {/* Amount row */}
+					  <div className="relative z-10 flex items-center justify-between px-3 py-1 text-sm">
+						  <span className="font-medium text-slate-600">
+							  Amount
+						  </span>
+
+						  <span className="font-extrabold text-slate-950">
+							  ₹ {inr(summary[key]?.total)}
+						  </span>
+					  </div>
+				  </motion.div>
+			  ))}
+		  </div>
 
       {/* TABS (HORIZONTAL SCROLL) */}
       <div id="ais-tabs" className="flex border-b mb-4 overflow-auto">
@@ -955,8 +943,6 @@ const AIS = () => {
     </div>
   );
 }
-
-
 
 export const PasswordModal = ({ open, onClose, onSubmit, taxpayerName, loading }) => {
   const [pwd, setPwd] = useState("");
