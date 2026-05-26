@@ -204,12 +204,12 @@ const AccountMaster = () => {
 	return (
 		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
 			{/* ================= HEADER ================= */}
-			<div id="account-header" className="flex items-center mb-3">
+			<div id="account-header" className="flex flex-wrap items-center gap-2 mb-3">
 				<div id="account-summary" className="flex items-start gap-3">
 					<Badge {...{ count: pagination.totalDocs ?? 0, text: "Total Accounts:" }} />
 				</div>
 
-				<div className="ml-auto flex items-center gap-2">
+				<div className="ml-auto flex flex-wrap items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
 					<DataCreateButton {...{ callBackFn: openAddModal }} />
