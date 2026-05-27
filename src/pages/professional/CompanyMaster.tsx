@@ -28,6 +28,14 @@ const CompanyMaster = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [verifiedIfscCode, setVerifiedIfscCode] = useState("");
 
+
+  console.log("company", company)
+
+  const hasCompany =
+    company &&
+    !Array.isArray(company) &&
+    Object.keys(company).length > 0;
+
   const [form, setForm] = useState({
     companyName: "",
     companyEmail: "",
@@ -239,26 +247,44 @@ const CompanyMaster = () => {
     }
   };
 
-
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
     try {
-      if (editing) {
+      if (hasCompany) {
         await dispatch(replaceCompany(form)).unwrap();
-        toast.success('Company updated');
+        toast.success("Company updated");
       } else {
         await dispatch(createCompany(form)).unwrap();
-        toast.success('Company created');
+        toast.success("Company created");
       }
 
       setShowModal(false);
+      setEditing(false);
       dispatch(getCompany());
-    } catch (err) {
-      toast.error(err.message);
+    } catch (err: any) {
+      toast.error(err?.message || "Something went wrong");
     }
   };
+
+  // const handleSubmit = async () => {
+  //   if (!validateForm()) return;
+
+  //   try {
+  //     if (editing) {
+  //       await dispatch(replaceCompany(form)).unwrap();
+  //       toast.success('Company updated');
+  //     } else {
+  //       await dispatch(createCompany(form)).unwrap();
+  //       toast.success('Company created');
+  //     }
+
+  //     setShowModal(false);
+  //     dispatch(getCompany());
+  //   } catch (err) {
+  //     toast.error(err.message);
+  //   }
+  // };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -297,50 +323,56 @@ const CompanyMaster = () => {
           <button
             id="company-edit-button"
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
+            // onClick={() => {
+            //   setEditing(!!company);
+            //   setShowModal(true);
+            // }}>
             onClick={() => {
-              setEditing(!!company);
+              setEditing(Boolean(hasCompany));
               setShowModal(true);
             }}>
             <Edit size={16} className="mr-1" />
-            {company ? 'Edit Company' : 'Create Company'}
+            {hasCompany ? 'Edit Company' : 'Create Company'}
           </button>
         </div>
       </div>
 
       {/* Display Company */}
-      {!company ? (
-        <div className="text-center text-gray-500 mt-10 italic">No company data found.</div>
-      ) : (
-        <div id="company-details-box" className="border rounded-lg p-4 bg-gray-50">
-          <h2 className="text-lg font-semibold text-blue-700 mb-2">{company.companyName}</h2>
+      {
+        !hasCompany ? (
+          <div className="text-center text-gray-500 mt-10 italic">No company data found.</div>
+        ) : (
+          <div id="company-details-box" className="border rounded-lg p-4 bg-gray-50">
+            <h2 className="text-lg font-semibold text-blue-700 mb-2">{company.companyName}</h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <p>
-              <strong>Email:</strong> {company.companyEmail}
-            </p>
-            <p>
-              <strong>Mobile:</strong> {company.companyMobile}
-            </p>
-            <p>
-              <strong>Bank:</strong> {company.bankName}
-            </p>
-            <p>
-              <strong>Bank Account:</strong> {company.bankAccountNumber}
-            </p>
-            <p>
-              <strong>IFSC:</strong> {company.ifscCode}
-            </p>
-            <p>
-              <strong>Address:</strong> {company.companyAddress}
-            </p>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <p>
+                <strong>Email:</strong> {company.companyEmail}
+              </p>
+              <p>
+                <strong>Mobile:</strong> {company.companyMobile}
+              </p>
+              <p>
+                <strong>Bank:</strong> {company.bankName}
+              </p>
+              <p>
+                <strong>Bank Account:</strong> {company.bankAccountNumber}
+              </p>
+              <p>
+                <strong>IFSC:</strong> {company.ifscCode}
+              </p>
+              <p>
+                <strong>Address:</strong> {company.companyAddress}
+              </p>
+            </div>
 
-          <div className="flex gap-10 mt-4">
-            {company.logoUri && <img id="company-logo" src={company.logoUri} alt="Company Logo" className="w-28 h-28 object-contain border rounded-md" />}
-            {company.signatureUri && <img id="company-signature" src={company.signatureUri} alt="Signature" className="w-28 h-28 object-contain border rounded-md" />}
+            <div className="flex gap-10 mt-4">
+              {company.logoUri && <img id="company-logo" src={company.logoUri} alt="Company Logo" className="w-28 h-28 object-contain border rounded-md" />}
+              {company.signatureUri && <img id="company-signature" src={company.signatureUri} alt="Signature" className="w-28 h-28 object-contain border rounded-md" />}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
 
 
@@ -584,8 +616,8 @@ const CompanyMaster = () => {
         }}
       />
 
-   
-    </div>
+
+    </div >
   );
 };
 
