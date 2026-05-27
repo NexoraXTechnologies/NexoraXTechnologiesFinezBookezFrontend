@@ -10,6 +10,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatchP = useDispatch();
+  const [imageError, setImageError] = useState(false);
 
   const [confirm, setConfirm] = useState({ show: false, x: null, y: null });
   const { profile } = useSelector(
@@ -37,10 +38,23 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
     name: storedUser.name || "Professional User",
     type: storedUser.type || "Tax Expert",
     profilePic:
-      storedUser.profilePic ||
-      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+      storedUser.profilePic ||"",
   };
-  const pic = profile?.profilePic || user?.profilePic
+  // const pic = profile?.profilePic || user?.profilePic ||"";
+
+  const rawPic = profile?.profilePic || user?.profilePic || "";
+
+  const isDefaultProfilePic =
+    rawPic.includes("cdn-icons-png.flaticon.com") ||
+    rawPic.includes("149071.png");
+
+  const pic = rawPic && !isDefaultProfilePic ? rawPic : "";
+
+  useEffect(() => {
+    setImageError(false);
+  }, [pic]);
+
+
   const flattenMenu = (items) =>
     items.flatMap((item) => (item.children ? [item, ...item.children] : item));
 
@@ -230,12 +244,25 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
             onClick={() => setShowProfileMenu((p) => !p)}
             className="flex items-center gap-2 hover:bg-gray-50 px-3 py-2 rounded-lg"
           >
-            <img
+            {/* <img
               src={pic}
               alt="Profile"
               className="w-9 h-9 rounded-full border"
-            />
-            <div className="hidden sm:block text-left">
+            /> */}
+
+            {pic && !imageError ? (
+              <img
+                src={pic}
+                alt="Profile"
+                onError={() => setImageError(true)}
+                className="w-9 h-9 rounded-full border object-cover"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full border bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-semibold">
+                {user?.name?.charAt(0)?.toUpperCase() || "U"}
+              </div>
+            )}
+            <div className="hidden sm:block text-left cursor-pointer">
               <p className="text-sm font-medium text-gray-800">{user.name}</p>
               <p className="text-xs text-gray-500">{user.type}</p>
             </div>

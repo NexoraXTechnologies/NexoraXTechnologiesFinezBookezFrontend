@@ -3,7 +3,7 @@ import { TextInput } from "./inputs";
 import { PrimaryButton, SecondaryButton } from "./buttons";
 import { X } from "lucide-react";
 
-const Modal = ({ show, setShow, handleSubmit, state, body }: { show: Boolean, setShow: () => void, handleSubmit: () => void, state: string, body: any }) => {
+const Modal = ({ show, setShow, handleSubmit, state, body,title }: { show: Boolean, setShow: () => void, handleSubmit: () => void, state: string, body: any }) => {
 
     return (
         <>
@@ -20,8 +20,8 @@ const Modal = ({ show, setShow, handleSubmit, state, body }: { show: Boolean, se
                             {/* Header */}
                             <div className="flex items-center justify-between border-b border-gray-300 px-6 py-3 bg-gray-50">
                                 <div>
-                                    <h2 className="text-xl font-semibold text-gray-800 mb-0">{state ? "Edit Account" : "Add New Account"}</h2>
-                                    <p className="text-sm text-gray-500">Fill in the account details below</p>
+                                    <h2 className="text-xl font-semibold text-gray-800 mb-0">{state ? `Edit ${title}` : `Add New ${title}`}</h2>
+                                    <p className="text-sm text-gray-500">Fill in the {title.toLowerCase()} details below</p>
                                 </div>
 
                                 <button onClick={() => setShow(false)} className="p-2 rounded-full hover:bg-gray-200 transition cursor-pointer">
