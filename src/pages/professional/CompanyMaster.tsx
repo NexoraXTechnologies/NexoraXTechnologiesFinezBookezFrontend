@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { Edit, RefreshCcw, Save, CheckCircle2 } from "lucide-react";
 import { SelectInput, TextArea, TextInput } from "../../components/inputs";
 import Modal from "../../components/modal";
+import { getCitiesByState, getStates } from "../../redux/slices/professionalSlice/stateCitySlice";
 
 const CompanyMaster = () => {
   const dispatch = useDispatch();
@@ -23,6 +24,12 @@ const CompanyMaster = () => {
     verifyLoading,
     ifscDetails,
   } = useSelector((s) => s.professionalCompanyMaster);
+
+  const {
+    states,
+    cities,
+    loading: stateCityLoading,
+  } = useSelector((s: any) => s.stateCity);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,6 +37,9 @@ const CompanyMaster = () => {
 
 
   console.log("company", company)
+  useEffect(() => {
+    dispatch(getStates(""));
+  }, [dispatch]);
 
   const hasCompany =
     company &&
@@ -44,6 +54,10 @@ const CompanyMaster = () => {
     bankName: "",
     bankAccountNumber: "",
     ifscCode: "",
+    upiId: "",
+    state: "",
+    city: "",
+    gstNumber: "",
     bankAddress: "",
     logoUri: null,
     signatureUri: null,
@@ -58,12 +72,16 @@ const CompanyMaster = () => {
 
   // Fill form with company data when loaded
   useEffect(() => {
-    if (company) {
+    if (hasCompany) {
       setForm({
         companyName: company.companyName || "",
         companyEmail: company.companyEmail || "",
         companyMobile: company.companyMobile || "",
+        upiId: company.upiId || "",
+        gstNumber: company.gstNumber || "",
         companyAddress: company.companyAddress || "",
+        state: company.state || "",
+        city: company.city || "",
         bankName: company.bankName || "",
         bankAccountNumber: company.bankAccountNumber || "",
         ifscCode: company.ifscCode || "",
@@ -71,8 +89,17 @@ const CompanyMaster = () => {
         logoUri: company.logoUri || null,
         signatureUri: company.signatureUri || null,
       });
+
+      // if (company.state) {
+      //   dispatch(
+      //     getCitiesByState({
+      //       stateCode: company.state,
+      //       searchText: "",
+      //     })
+      //   );
+      // }
     }
-  }, [company]);
+  }, [company, hasCompany, dispatch]);
 
   // Handle file upload (convert to base64 automatically)
   const fileToBase64 = (file) =>
@@ -119,6 +146,22 @@ const CompanyMaster = () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+    const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+    const gstRegex =
+      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+    if (!form.upiId?.trim()) {
+      e.upiId = "UPI ID is required";
+    } else if (!upiRegex.test(form.upiId)) {
+      e.upiId = "Enter valid UPI ID";
+    }
+
+    if (!form.gstNumber?.trim()) {
+      e.gstNumber = "GST number is required";
+    } else if (!gstRegex.test(form.gstNumber)) {
+      e.gstNumber = "Enter valid GST number";
+    }
 
     if (!form.companyName?.trim()) {
       e.companyName = "Company name is required";
@@ -309,6 +352,29 @@ const CompanyMaster = () => {
   const isIfscVerified =
     verifiedIfscCode === form.ifscCode?.trim().toUpperCase() && !errors.ifscCode;
 
+
+  const getDisplayName = (name: any) => {
+    if (!name) return "";
+
+    if (typeof name === "string") return name;
+
+    if (typeof name === "object") {
+      return (
+        name.en ||
+        name.mr ||
+        name.hi ||
+        name.gu ||
+        name.ta ||
+        name.te ||
+        name.kn ||
+        name.ml ||
+        name.pa ||
+        ""
+      );
+    }
+
+    return String(name);
+  };
   return (
     <div className="w-full bg-white border border-gray-200 p-4 sm:p-6 rounded-lg shadow-sm h-full min-h-0 flex flex-col">
       {/* Header */}
@@ -383,6 +449,9 @@ const CompanyMaster = () => {
           handleSubmit,
           state: editing,
           title: "Company",
+          gridCols: 3,
+          maxWidth: "4xl",
+          bodyClassName: "p-5 gap-3",
           body: (
             <>
               <TextInput
@@ -418,38 +487,68 @@ const CompanyMaster = () => {
                 error={errors.companyMobile}
                 type="tel"
               />
+              <TextInput
+                label="UPI ID"
+                mandatory={true}
+                value={form.upiId}
+                onChange={(e) =>
+                  updateField(
+                    "upiId",
+                    e.target.value.toLowerCase().replace(/\s/g, "").slice(0, 50)
+                  )
+                }
+                placeholder="Enter UPI ID"
+                error={errors.upiId}
+                type="text"
+              />
 
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <TextInput
-                    label="IFSC Code"
-                    mandatory={true}
-                    value={form.ifscCode}
-                    onChange={(e) => {
-                      const value = e.target.value.toUpperCase().slice(0, 11);
-                      updateField("ifscCode", value);
-                      setVerifiedIfscCode("");
-                    }}
-                    placeholder="Enter IFSC code"
-                    error={errors.ifscCode}
-                    type="text"
-                  />
-                </div>
 
-                <div className="pt-[30px]">
+              <TextInput
+                label="GST Number"
+                mandatory={true}
+                value={form.gstNumber}
+                onChange={(e) =>
+                  updateField(
+                    "gstNumber",
+                    e.target.value.toUpperCase().replace(/\s/g, "").slice(0, 15)
+                  )
+                }
+                placeholder="Enter GST number"
+                error={errors.gstNumber}
+                type="text"
+              />
+
+
+
+              <div className="relative [&_input]:pr-24">
+                <TextInput
+                  label="IFSC Code"
+                  mandatory={true}
+                  value={form.ifscCode}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase().slice(0, 11);
+                    updateField("ifscCode", value);
+                    setVerifiedIfscCode("");
+                  }}
+                  placeholder="Enter IFSC code"
+                  error={errors.ifscCode}
+                  type="text"
+                />
+
+                <div className="absolute right-2 top-[31px]">
                   {isIfscVerified ? (
-                    <div className="h-[35px] w-[58px] border border-green-500 bg-green-50 text-green-600 rounded-md flex items-center justify-center">
-                      <CheckCircle2 size={22} />
+                    <div className="h-[20px] w-[34px] text-green-600 rounded-md flex items-center justify-center">
+                      <CheckCircle2 size={21} />
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={handleIFSCVerify}
                       disabled={verifyLoading}
-                      className="h-[32px] px-4 border rounded-md hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+                      className="h-[20px] px-3 text-xs border rounded-md bg-white hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                     >
                       {verifyLoading ? (
-                        <RefreshCcw size={16} className="animate-spin" />
+                        <RefreshCcw size={14} className="animate-spin" />
                       ) : (
                         "Verify"
                       )}
@@ -483,6 +582,64 @@ const CompanyMaster = () => {
                 type="text"
               />
 
+
+              <SelectInput
+                label="State"
+                mandatory={true}
+                value={form.state}
+                onChange={(e) => {
+                  const selectedStateCode = e?.target?.value || "";
+
+                  setForm((prev) => ({
+                    ...prev,
+                    state: selectedStateCode,
+                    city: "",
+                  }));
+
+                  setErrors((prev: any) => ({
+                    ...prev,
+                    state: "",
+                    city: "",
+                  }));
+
+                  if (selectedStateCode) {
+                    dispatch(
+                      getCitiesByState({
+                        stateCode: selectedStateCode,
+                        searchText: "",
+                      })
+                    );
+                  }
+                }}
+                placeholder="Select state"
+                error={errors.state}
+                options={[
+                  { value: "", label: "Select state" },
+                  ...(states?.map((item: any) => ({
+                    value: item.isoCode || item.stateCode || item.code || item._id,
+                    label: getDisplayName(item.name || item.stateName) || item.isoCode,
+                  })) || []),
+                ]}
+              />
+
+
+
+              <SelectInput
+                label="City"
+                mandatory={true}
+                value={form.city}
+                onChange={(e) => updateField("city", e?.target?.value || "")}
+                placeholder="Select city"
+                error={errors.city}
+                options={[
+                  { value: "", label: "Select city" },
+                  ...(cities?.map((item: any) => ({
+                    value: item.cityName || item.name || item._id,
+                    label: getDisplayName(item.cityName || item.name),
+                  })) || []),
+                ]}
+              />
+
               <TextArea
                 label="Address"
                 mandatory={true}
@@ -492,124 +649,126 @@ const CompanyMaster = () => {
                 error={errors.companyAddress}
               />
 
-              {/* Company Logo */}
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">
-                  Company Logo <span className="text-red-500">*</span>
-                </label>
+              <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Company Logo */}
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-sm font-medium">
+                    Company Logo <span className="text-red-500">*</span>
+                  </label>
 
-                <div
-                  className={`border-2 border-dashed rounded-md p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition relative min-h-[60px] ${errors.logoUri ? "border-red-500" : "border-gray-300"
-                    }`}
-                  onClick={() => document.getElementById("companyLogoInput")?.click()}
-                >
-                  {form.logoUri ? (
-                    <>
-                      <img
-                        src={form.logoUri}
-                        alt="Company Logo"
-                        className="w-24 h-24 object-contain rounded "
-                      />
+                  <div
+                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-blue-400 transition relative h-[110px] w-full ${errors.logoUri ? "border-red-500" : "border-gray-300"
+                      }`}
+                    onClick={() => document.getElementById("companyLogoInput")?.click()}
+                  >
+                    {form.logoUri ? (
+                      <>
+                        <img
+                          src={form.logoUri}
+                          alt="Company Logo"
+                          className="max-w-[180px] h-24 object-contain rounded"
+                        />
 
-                      <button
-                        type="button"
-                        className="absolute top-2 right-2 text-red-600 text-sm font-medium hover:underline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateField("logoUri", null);
-                        }}
-                      >
-                        × Remove
-                      </button>
-                    </>
-                  ) : (
-                    <p className="text-gray-500 text-sm">Click to upload company logo</p>
+                        <button
+                          type="button"
+                          className="absolute top-2 right-3 text-red-600 text-sm font-medium hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateField("logoUri", null);
+                          }}
+                        >
+                          × Remove
+                        </button>
+                      </>
+                    ) : (
+                      <p className="text-gray-500 text-sm">Click to upload company logo</p>
+                    )}
+                  </div>
+
+                  {errors.logoUri && (
+                    <p className="text-xs text-red-500">{errors.logoUri}</p>
                   )}
+
+                  <input
+                    id="companyLogoInput"
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      if (!validateImage(file)) {
+                        e.target.value = "";
+                        return;
+                      }
+
+                      const base64 = await fileToBase64(file);
+                      updateField("logoUri", base64);
+                      e.target.value = "";
+                    }}
+                  />
                 </div>
 
-                {errors.logoUri && (
-                  <p className="text-xs text-red-500">{errors.logoUri}</p>
-                )}
+                {/* Signature */}
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-sm font-medium">
+                    Signature <span className="text-red-500">*</span>
+                  </label>
 
-                <input
-                  id="companyLogoInput"
-                  type="file"
-                  accept="image/png, image/jpeg, image/jpg, image/webp"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
+                  <div
+                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-blue-400 transition relative h-[110px] w-full ${errors.signatureUri ? "border-red-500" : "border-gray-300"
+                      }`}
+                    onClick={() => document.getElementById("signatureInput")?.click()}
+                  >
+                    {form.signatureUri ? (
+                      <>
+                        <img
+                          src={form.signatureUri}
+                          alt="Signature"
+                          className="max-w-[180px] h-24 object-contain rounded"
+                        />
 
-                    if (!validateImage(file)) {
-                      e.target.value = "";
-                      return;
-                    }
+                        <button
+                          type="button"
+                          className="absolute top-2 right-3 text-red-600 text-sm font-medium hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateField("signatureUri", null);
+                          }}
+                        >
+                          × Remove
+                        </button>
+                      </>
+                    ) : (
+                      <p className="text-gray-500 text-sm">Click to upload signature</p>
+                    )}
+                  </div>
 
-                    const base64 = await fileToBase64(file);
-                    updateField("logoUri", base64);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
-
-              {/* Signature */}
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium">
-                  Signature <span className="text-red-500">*</span>
-                </label>
-
-                <div
-                  className={`border-2 border-dashed rounded-md p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition relative min-h-[60px] ${errors.signatureUri ? "border-red-500" : "border-gray-300"
-                    }`}
-                  onClick={() => document.getElementById("signatureInput")?.click()}
-                >
-                  {form.signatureUri ? (
-                    <>
-                      <img
-                        src={form.signatureUri}
-                        alt="Signature"
-                        className="w-24 h-24 object-contain rounded "
-                      />
-
-                      <button
-                        type="button"
-                        className="absolute top-2 right-2 text-red-600 text-sm font-medium hover:underline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateField("signatureUri", null);
-                        }}
-                      >
-                        × Remove
-                      </button>
-                    </>
-                  ) : (
-                    <p className="text-gray-500 text-sm">Click to upload signature</p>
+                  {errors.signatureUri && (
+                    <p className="text-xs text-red-500">{errors.signatureUri}</p>
                   )}
-                </div>
 
-                {errors.signatureUri && (
-                  <p className="text-xs text-red-500">{errors.signatureUri}</p>
-                )}
+                  <input
+                    id="signatureInput"
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
 
-                <input
-                  id="signatureInput"
-                  type="file"
-                  accept="image/png, image/jpeg, image/jpg, image/webp"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
+                      if (!validateImage(file)) {
+                        e.target.value = "";
+                        return;
+                      }
 
-                    if (!validateImage(file)) {
+                      const base64 = await fileToBase64(file);
+                      updateField("signatureUri", base64);
                       e.target.value = "";
-                      return;
-                    }
-
-                    const base64 = await fileToBase64(file);
-                    updateField("signatureUri", base64);
-                    e.target.value = "";
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
             </>
           ),

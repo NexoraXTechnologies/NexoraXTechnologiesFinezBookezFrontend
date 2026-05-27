@@ -10,7 +10,7 @@ const TextInput = (({ label, value, onChange, placeholder, mandatory = false, er
                 onChange={onChange}
                 type={type}
                 placeholder={placeholder}
-                className="w-full h-11 rounded-md border border-gray-300 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200" />
+                className="w-full h-8 rounded-sm border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200" />
             {!!error?.length && (
                 <p className="text-xs text-red-500">
                     {error}
@@ -44,7 +44,7 @@ const SelectInput = (({ label, value, onChange, options, mandatory = false, erro
         <select
             value={value}
             onChange={onChange}
-            className=" w-full h-11 rounded-md border border-gray-300 bg-white px-4 text-sm text-gray-800 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 cursor-pointer">
+            className=" w-full  h-8 rounded-md border border-gray-300 bg-white px-4 text-sm text-gray-800 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 cursor-pointer">
             {options?.map((option: any, idx: any) => (
                 <option key={idx} value={idx == 0 ? "" : option?.value}>
                     {option?.label}
