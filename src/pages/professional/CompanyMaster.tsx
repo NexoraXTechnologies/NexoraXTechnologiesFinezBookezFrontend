@@ -9,6 +9,8 @@ import {
 
 import { toast } from "react-toastify";
 import { Edit, RefreshCcw, Save, CheckCircle2 } from "lucide-react";
+import { SelectInput, TextArea, TextInput } from "../../components/inputs";
+import Modal from "../../components/modal";
 
 const CompanyMaster = () => {
   const dispatch = useDispatch();
@@ -24,6 +26,7 @@ const CompanyMaster = () => {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [verifiedIfscCode, setVerifiedIfscCode] = useState("");
 
   const [form, setForm] = useState({
     companyName: "",
@@ -93,35 +96,150 @@ const CompanyMaster = () => {
     return true;
   };
 
+  // const validateForm = () => {
+  //   const e = {};
+  //   if (!form.companyName.trim()) e.companyName = 'Company name required';
+  //   if (!form.companyEmail.trim()) e.companyEmail = 'Email required';
+  //   if (!form.companyMobile.trim()) e.companyMobile = 'Mobile required';
+  //   if (!form.ifscCode.trim()) e.ifscCode = 'IFSC required';
+  //   setErrors(e);
+  //   return Object.keys(e).length === 0;
+  // };
+
   const validateForm = () => {
-    const e = {};
-    if (!form.companyName.trim()) e.companyName = 'Company name required';
-    if (!form.companyEmail.trim()) e.companyEmail = 'Email required';
-    if (!form.companyMobile.trim()) e.companyMobile = 'Mobile required';
-    if (!form.ifscCode.trim()) e.ifscCode = 'IFSC required';
+    const e: any = {};
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+    if (!form.companyName?.trim()) {
+      e.companyName = "Company name is required";
+    }
+
+    if (!form.companyEmail?.trim()) {
+      e.companyEmail = "Email is required";
+    } else if (!emailRegex.test(form.companyEmail)) {
+      e.companyEmail = "Enter valid email address";
+    }
+
+    if (!form.companyMobile?.trim()) {
+      e.companyMobile = "Mobile number is required";
+    } else if (!/^[6-9]\d{9}$/.test(form.companyMobile)) {
+      e.companyMobile = "Enter valid 10 digit mobile number";
+    }
+
+    if (!form.ifscCode?.trim()) {
+      e.ifscCode = "IFSC code is required";
+    } else if (!ifscRegex.test(form.ifscCode)) {
+      e.ifscCode = "Enter valid IFSC code";
+    }
+
+    if (!form.bankName?.trim()) {
+      e.bankName = "Bank name is required";
+    }
+
+    if (!form.bankAccountNumber?.trim()) {
+      e.bankAccountNumber = "Bank account number is required";
+    } else if (!/^\d{9,18}$/.test(form.bankAccountNumber)) {
+      e.bankAccountNumber = "Account number must be 9 to 18 digits";
+    }
+
+    if (!form.companyAddress?.trim()) {
+      e.companyAddress = "Company address is required";
+    }
+
+    // if (!form.logoUri) {
+    //   e.logoUri = "Company logo is required";
+    // }
+
+    // if (!form.signatureUri) {
+    //   e.signatureUri = "Signature is required";
+    // }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
+  // const handleIFSCVerify = async () => {
+  //   if (!form.ifscCode.trim()) {
+  //     toast.error('Enter IFSC code first');
+  //     return;
+  //   }
+
+  //   try {
+  //     const res = await dispatch(verifyIFSC(form.ifscCode)).unwrap();
+  //     setForm((prev) => ({
+  //       ...prev,
+  //       bankName: res.details.BANK || prev.bankName,
+  //       bankAddress: res.details.ADDRESS || prev.bankAddress,
+  //     }));
+
+  //     toast.success('IFSC Verified');
+  //   } catch (err) {
+  //     toast.error(err.message);
+  //   }
+  // };
+
+
+
   const handleIFSCVerify = async () => {
-    if (!form.ifscCode.trim()) {
-      toast.error('Enter IFSC code first');
+    const ifsc = form.ifscCode.trim().toUpperCase();
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+    // reset verified status before checking
+    setVerifiedIfscCode("");
+
+    if (!ifsc) {
+      setErrors((prev: any) => ({
+        ...prev,
+        ifscCode: "IFSC code is required",
+      }));
+      toast.error("Enter IFSC code first");
+      return;
+    }
+
+    if (!ifscRegex.test(ifsc)) {
+      setErrors((prev: any) => ({
+        ...prev,
+        ifscCode: "Enter valid IFSC code",
+      }));
+      toast.error("Enter valid IFSC code");
       return;
     }
 
     try {
-      const res = await dispatch(verifyIFSC(form.ifscCode)).unwrap();
+      const res = await dispatch(verifyIFSC(ifsc)).unwrap();
+
       setForm((prev) => ({
         ...prev,
-        bankName: res.details.BANK || prev.bankName,
-        bankAddress: res.details.ADDRESS || prev.bankAddress,
+        ifscCode: ifsc,
+        bankName: res?.details?.BANK || prev.bankName,
+        bankAddress: res?.details?.ADDRESS || prev.bankAddress,
       }));
 
-      toast.success('IFSC Verified');
-    } catch (err) {
-      toast.error(err.message);
+      setErrors((prev: any) => ({
+        ...prev,
+        ifscCode: "",
+        bankName: "",
+      }));
+
+      // this makes check icon show in place of Verify button
+      setVerifiedIfscCode(ifsc);
+
+      toast.success("IFSC Verified");
+    } catch (err: any) {
+      setVerifiedIfscCode("");
+
+      setErrors((prev: any) => ({
+        ...prev,
+        ifscCode: err?.message || "Invalid IFSC code",
+      }));
+
+      toast.error(err?.message || "Invalid IFSC code");
     }
   };
+
+
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
@@ -148,6 +266,22 @@ const CompanyMaster = () => {
     setRefreshing(false);
     toast.success('Company Detail refreshed');
   };
+
+
+  const updateField = (key: string, value: any) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+
+    setErrors((prev: any) => ({
+      ...prev,
+      [key]: "",
+    }));
+  };
+
+  const isIfscVerified =
+    verifiedIfscCode === form.ifscCode?.trim().toUpperCase() && !errors.ifscCode;
 
   return (
     <div className="w-full bg-white border border-gray-200 p-4 sm:p-6 rounded-lg shadow-sm h-full min-h-0 flex flex-col">
@@ -208,188 +342,249 @@ const CompanyMaster = () => {
         </div>
       )}
 
-      {/* MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-[700px] p-6 rounded-lg shadow-lg max-h-[90vh] overflow-scroll relative">
-            <button className="absolute top-3 right-3 text-gray-600 text-xl" onClick={() => setShowModal(false)}>
-              ×
-            </button>
 
-            <h2 className="text-lg font-semibold mb-4">{editing ? 'Update Company' : 'Create Company'}</h2>
 
-            {/* FORM */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {/* Company Name */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium">Company Name *</label>
-                <input
-                  type="text"
-                  className={`border rounded px-3 py-2 ${errors.companyName ? 'border-red-500' : ''}`}
-                  value={form.companyName}
-                  onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-                  placeholder="Enter Company Name"
-                />
-                {errors.companyName && <p className="text-xs text-red-500 mt-1">{errors.companyName}</p>}
-              </div>
+      <Modal
+        {...{
+          show: showModal,
+          setShow: setShowModal,
+          handleSubmit,
+          state: editing,
+          title: "Company",
+          body: (
+            <>
+              <TextInput
+                label="Company Name"
+                mandatory={true}
+                value={form.companyName}
+                onChange={(e) => updateField("companyName", e.target.value)}
+                placeholder="Enter company name"
+                error={errors.companyName}
+              />
 
-              {/* Email */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium">Email *</label>
-                <input
-                  type="email"
-                  className={`border rounded px-3 py-2 ${errors.companyEmail ? 'border-red-500' : ''}`}
-                  value={form.companyEmail}
-                  onChange={(e) => setForm({ ...form, companyEmail: e.target.value })}
-                  placeholder="Enter Email"
-                />
-              </div>
+              <TextInput
+                label="Email"
+                mandatory={true}
+                value={form.companyEmail}
+                onChange={(e) => updateField("companyEmail", e.target.value)}
+                placeholder="Enter email address"
+                error={errors.companyEmail}
+                type="email"
+              />
 
-              {/* Mobile */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium">Mobile *</label>
-                <input
-                  type="text"
-                  className={`border rounded px-3 py-2 ${errors.companyMobile ? 'border-red-500' : ''}`}
-                  value={form.companyMobile}
-                  onChange={(e) => setForm({ ...form, companyMobile: e.target.value })}
-                  maxLength={10}
-                  placeholder="Enter Mobile No."
-                />
-              </div>
+              <TextInput
+                label="Mobile"
+                mandatory={true}
+                value={form.companyMobile}
+                onChange={(e) =>
+                  updateField(
+                    "companyMobile",
+                    e.target.value.replace(/\D/g, "").slice(0, 10)
+                  )
+                }
+                placeholder="Enter mobile number"
+                error={errors.companyMobile}
+                type="tel"
+              />
 
-              {/* IFSC + verify */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium flex items-center gap-2">IFSC Code *{ifscDetails && <CheckCircle2 size={18} className="text-green-600" />}</label>
-                <div className="flex gap-2">
-                  <input type="text" value={form.ifscCode} className="border rounded px-3 py-2 flex-1" onChange={(e) => setForm({ ...form, ifscCode: e.target.value })} placeholder="Enter IFSC Code" />
-                  <button onClick={handleIFSCVerify} className="border px-3 rounded-md hover:bg-gray-100">
-                    {verifyLoading ? <RefreshCcw size={16} className="animate-spin" /> : 'Verify'}
-                  </button>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <TextInput
+                    label="IFSC Code"
+                    mandatory={true}
+                    value={form.ifscCode}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase().slice(0, 11);
+                      updateField("ifscCode", value);
+                      setVerifiedIfscCode("");
+                    }}
+                    placeholder="Enter IFSC code"
+                    error={errors.ifscCode}
+                    type="text"
+                  />
+                </div>
+
+                <div className="pt-[30px]">
+                  {isIfscVerified ? (
+                    <div className="h-[35px] w-[58px] border border-green-500 bg-green-50 text-green-600 rounded-md flex items-center justify-center">
+                      <CheckCircle2 size={22} />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleIFSCVerify}
+                      disabled={verifyLoading}
+                      className="h-[32px] px-4 border rounded-md hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {verifyLoading ? (
+                        <RefreshCcw size={16} className="animate-spin" />
+                      ) : (
+                        "Verify"
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Bank Name */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium">Bank Name</label>
-                <input className="border rounded px-3 py-2" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} placeholder="Enter Bank Name" />
-              </div>
+              <TextInput
+                label="Bank Name"
+                mandatory={true}
+                value={form.bankName}
+                onChange={(e) => updateField("bankName", e.target.value)}
+                placeholder="Enter bank name"
+                error={errors.bankName}
+                type="text"
+              />
 
-              {/* Bank Account */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium">Bank Account Number</label>
-                <input className="border rounded px-3 py-2" value={form.bankAccountNumber} onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })} placeholder="Enter Bank Account Number" maxLength={12} />
-              </div>
+              <TextInput
+                label="Bank Account Number"
+                mandatory={true}
+                value={form.bankAccountNumber}
+                onChange={(e) =>
+                  updateField(
+                    "bankAccountNumber",
+                    e.target.value.replace(/\D/g, "").slice(0, 18)
+                  )
+                }
+                placeholder="Enter bank account number"
+                error={errors.bankAccountNumber}
+                type="text"
+              />
 
-              {/* Address */}
-              <div className="col-span-2 flex flex-col">
-                <label className="mb-1 font-medium">Address</label>
-                <textarea className="border rounded px-3 py-2" rows={3} value={form.companyAddress} onChange={(e) => setForm({ ...form, companyAddress: e.target.value })} placeholder="Enter Address" />
-              </div>
+              <TextArea
+                label="Address"
+                mandatory={true}
+                value={form.companyAddress}
+                onChange={(e) => updateField("companyAddress", e.target.value)}
+                placeholder="Enter company address"
+                error={errors.companyAddress}
+              />
 
               {/* Company Logo */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium">Company Logo</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">
+                  Company Logo <span className="text-red-500">*</span>
+                </label>
 
                 <div
-                  className="border-2 border-dashed border-gray-300 rounded-md p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition relative"
-                  onClick={() => document.getElementById('companyLogoInput').click()}>
+                  className={`border-2 border-dashed rounded-md p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition relative min-h-[60px] ${errors.logoUri ? "border-red-500" : "border-gray-300"
+                    }`}
+                  onClick={() => document.getElementById("companyLogoInput")?.click()}
+                >
                   {form.logoUri ? (
                     <>
-                      <img src={form.logoUri} alt="Logo" className="w-24 h-24 object-contain rounded mb-2" />
+                      <img
+                        src={form.logoUri}
+                        alt="Company Logo"
+                        className="w-24 h-24 object-contain rounded "
+                      />
 
                       <button
+                        type="button"
                         className="absolute top-2 right-2 text-red-600 text-sm font-medium hover:underline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setForm({ ...form, logoUri: null });
-                        }}>
+                          updateField("logoUri", null);
+                        }}
+                      >
                         × Remove
                       </button>
                     </>
                   ) : (
-                    <p className="text-gray-500 text-sm">Click to upload Logo</p>
+                    <p className="text-gray-500 text-sm">Click to upload company logo</p>
                   )}
                 </div>
+
+                {errors.logoUri && (
+                  <p className="text-xs text-red-500">{errors.logoUri}</p>
+                )}
 
                 <input
                   id="companyLogoInput"
                   type="file"
                   accept="image/png, image/jpeg, image/jpg, image/webp"
                   className="hidden"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
 
                     if (!validateImage(file)) {
-                      e.target.value = ''; // reset input
+                      e.target.value = "";
                       return;
                     }
 
-                    const reader = new FileReader();
-                    reader.onload = () => setForm((prev) => ({ ...prev, logoUri: reader.result }));
-                    reader.readAsDataURL(file);
+                    const base64 = await fileToBase64(file);
+                    updateField("logoUri", base64);
+                    e.target.value = "";
                   }}
                 />
               </div>
 
               {/* Signature */}
-              <div className="flex flex-col">
-                <label className="mb-1 font-medium">Signature</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">
+                  Signature <span className="text-red-500">*</span>
+                </label>
 
                 <div
-                  className="border-2 border-dashed border-gray-300 rounded-md p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition relative"
-                  onClick={() => document.getElementById('signatureInput').click()}>
+                  className={`border-2 border-dashed rounded-md p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition relative min-h-[60px] ${errors.signatureUri ? "border-red-500" : "border-gray-300"
+                    }`}
+                  onClick={() => document.getElementById("signatureInput")?.click()}
+                >
                   {form.signatureUri ? (
                     <>
-                      <img src={form.signatureUri} alt="Signature" className="w-24 h-24 object-contain rounded mb-2" />
+                      <img
+                        src={form.signatureUri}
+                        alt="Signature"
+                        className="w-24 h-24 object-contain rounded "
+                      />
 
                       <button
+                        type="button"
                         className="absolute top-2 right-2 text-red-600 text-sm font-medium hover:underline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setForm({ ...form, signatureUri: null });
-                        }}>
+                          updateField("signatureUri", null);
+                        }}
+                      >
                         × Remove
                       </button>
                     </>
                   ) : (
-                    <p className="text-gray-500 text-sm">Click to upload Signature</p>
+                    <p className="text-gray-500 text-sm">Click to upload signature</p>
                   )}
                 </div>
+
+                {errors.signatureUri && (
+                  <p className="text-xs text-red-500">{errors.signatureUri}</p>
+                )}
 
                 <input
                   id="signatureInput"
                   type="file"
                   accept="image/png, image/jpeg, image/jpg, image/webp"
                   className="hidden"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
 
                     if (!validateImage(file)) {
-                      e.target.value = '';
+                      e.target.value = "";
                       return;
                     }
 
-                    const reader = new FileReader();
-                    reader.onload = () => setForm((prev) => ({ ...prev, signatureUri: reader.result }));
-                    reader.readAsDataURL(file);
+                    const base64 = await fileToBase64(file);
+                    updateField("signatureUri", base64);
+                    e.target.value = "";
                   }}
                 />
               </div>
-            </div>
+            </>
+          ),
+        }}
+      />
 
-            {/* Save Button */}
-            <div className="mt-6 flex justify-end">
-              <button onClick={handleSubmit} disabled={createLoading || updateLoading} className="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 flex items-center">
-                <Save size={16} className="mr-2" />
-                {editing ? 'Update Company' : 'Create Company'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+   
     </div>
   );
 };
