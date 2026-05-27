@@ -33,6 +33,8 @@ import AiTaxCopilot from "./pages/professional/AiChat/AiTaxCopilot";
 import AutomationDashboard from './pages/professional/Automation/AutomationDashboard';
 
 import ProfessionalRegister from "./pages/ProfessionalRegister";
+import AddTeamEmployee from './pages/addTeamEmployee';
+import Subscription from './pages/subscription';
 
 function App() {
 
@@ -83,6 +85,10 @@ function App() {
         <Route path="incometax/downloaditr" element={<DownloadITR />} />
         <Route path="incometax/refund" element={<Refund />} />
         <Route path="incometax/resetitrpassword" element={<ResetitrPassword />} />
+
+        {/* Subscribe  */}
+        <Route path="add-employee" element={<AddTeamEmployee />} />
+        <Route path="subscription" element={<Subscription />} />
 
         {/* ai */}
         <Route path="ai-tax-copilot" element={<AiTaxCopilot />} />

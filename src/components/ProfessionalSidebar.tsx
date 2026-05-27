@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X } from 'lucide-react';
+import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
 import FinEzLogo from '../assets/FinEZ.png';
+import AddTeamEmployee from "../pages/addTeamEmployee";
+import Subscription from "../pages/subscription";
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -35,6 +37,8 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
   const menuItems = [
     { name: 'Dashboard', path: '/professional', icon: <LayoutDashboard size={20} /> },
+    { name: 'Add Team/Employee', path: '/professional/add-employee', icon: <Users size={20} /> },
+    { name: 'Subscription', path: '/professional/subscription', icon: <CreditCard size={20} /> },
     {
       name: 'Company Master',
       path: '/professional/master/company',
@@ -386,5 +390,3 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 };
 
 export default ProfessionalSidebar;
-
-
