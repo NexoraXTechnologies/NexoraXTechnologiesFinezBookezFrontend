@@ -281,7 +281,7 @@ const AccountMaster = () => {
 			)}
 
 			<Modal {...{
-				show: showModal, setShow: setShowModal, handleSubmit, state: editingAccount,
+				show: showModal, setShow: setShowModal, handleSubmit, state: editingAccount,title:"Account",
 				body: <>
 					{/* Account Name */}
 					<TextInput {...{ label: "Account Name", mandatory: true, value: form.accountName, onChange: (e) => setForm({ ...form, accountName: e.target.value }), placeholder: "Enter account name", error: errors.accountName }} />

@@ -17,6 +17,8 @@ import { DataCreateButton, DataREfreshButton } from "../../components/buttons";
 import DataTable from "../../components/DataTable";
 import Pagination from "../../components/pagination";
 import Badge from "../../components/badge";
+import { SelectInput, TextArea, TextInput } from "../../components/inputs";
+import Modal from "../../components/modal";
 
 const ProductMaster = () => {
 	const dispatch = useDispatch();
@@ -42,6 +44,7 @@ const ProductMaster = () => {
 	const [editingProduct, setEditingProduct] = useState(null);
 
 	const [errors, setErrors] = useState({});
+console.log("products:", products);
 
 	const [confirmTooltip, setConfirmTooltip] = useState({
 		show: false,
@@ -57,6 +60,19 @@ const ProductMaster = () => {
 		productType: "",
 	});
 
+
+
+	const columns = [
+		{ key: 'productCode', title: 'Product Code', },
+		{ key: 'productName', title: 'Name', },
+		{ key: 'productType', title: 'Type', },
+		{
+			key: 'productHSNCode', title: 'HSN Code',
+
+		},
+		{ key: 'productDescription', title: 'Description', },
+
+	];
 	/* ============================================
 		  FETCH PRODUCTS
 	============================================= */
@@ -131,12 +147,29 @@ const ProductMaster = () => {
 		  SAVE / UPDATE PRODUCT
 	============================================= */
 	const handleSubmit = async () => {
+
 		const e = {};
-		if (!form.productName.trim()) e.productName = "Product name required";
-		if (!form.productHSNCode.trim()) e.productHSNCode = "HSN Code required";
-		if (!form.productType.trim()) e.productType = "Product type required";
+
+		if (!form.productName.trim()) {
+			e.productName = "Product name required";
+		}
+
+		if (!form.productHSNCode.trim()) {
+			e.productHSNCode = "HSN/SAC code required";
+		} else if (!/^(\d{2}|\d{4}|\d{6}|\d{8})$/.test(form.productHSNCode)) {
+			e.productHSNCode =
+				"Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code (digits only).";
+		}
+
+		if (!form.productType.trim()) {
+			e.productType = "Product type required";
+		}
+
 		setErrors(e);
 		if (Object.keys(e).length > 0) return;
+
+		// your create/update API call below
+
 
 		try {
 			if (editingProduct) {
@@ -206,12 +239,45 @@ const ProductMaster = () => {
 				<div className="ml-auto flex items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
-					<DataCreateButton {...{ callBackFn: openAddModal }} />
+					<DataCreateButton {...{ callBackFn: openAddModal, text: "Add Product" }} />
 				</div>
 			</div>
 
+
+			<DataTable
+				columns={columns}
+				data={products}
+				loading={loading}
+				emptyMessage="No products found"
+				actions={(prod) => (
+					<div className="flex items-center gap-2">
+
+						<button
+							id="product-edit-button"
+							onClick={() => openEditModal(prod)}
+							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
+							<Edit size={16} />
+						</button>
+
+
+						<button
+							id="product-delete-button"
+							onClick={(e) => {
+								const rect = e.currentTarget.getBoundingClientRect();
+								let x = rect.left - 150;
+								if (x < 10) x = 10;
+								const y = rect.top + window.scrollY - 5;
+								setConfirmTooltip({ show: true, x, y, productCode: acc.accountCode, });
+							}}
+							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+						>
+							<Trash2 size={16} />
+						</button>
+					</div>
+				)}
+			/>
 			{/* ================= TABLE ================= */}
-			<div className="flex-1 overflow-x-auto w-full">
+			{/* <div className="flex-1 overflow-x-auto w-full">
 				<div id="account-table-container" className="max-h-[78vh] overflow-auto rounded-md border border-gray-200 bg-white shadow-sm">
 					<table className="min-w-full text-sm text-gray-700 border-separate border-spacing-0 pb-[2rem]">
 						<thead className="sticky top-0 z-10 bg-white">
@@ -296,7 +362,7 @@ const ProductMaster = () => {
 						</tbody>
 					</table>
 				</div>
-			</div>
+			</div> */}
 
 			{/* ================= PAGINATION ================= */}
 
@@ -333,121 +399,53 @@ const ProductMaster = () => {
 			}
 
 			{/* ================= MODAL ================= */}
-			{
-				showModal && (
-					<div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-						<div className="bg-white rounded-lg shadow-lg w-[600px] max-w-[95vw] p-6 relative">
-							<button
-								onClick={() => setShowModal(false)}
-								className="absolute top-3 right-3 text-gray-600 text-xl"
-							>
-								×
-							</button>
 
-							<h2 className="text-lg font-semibold mb-4">
-								{editingProduct ? "Edit Product" : "Add New Product"}
-							</h2>
+			<Modal {...{
+				show: showModal, setShow: setShowModal, handleSubmit, state: editingProduct, title: "Product",
+				body: <>
+					{/* Product Name */}
+					<TextInput {...{ label: "Product Name", mandatory: true, value: form.productName, onChange: (e) => setForm({ ...form, productName: e.target.value }), placeholder: "Enter product name", error: errors.productName }} />
+					<SelectInput {...{
+						label: "Product Type", mandatory: true, value: form.productType,
+						onChange: (e) => setForm({ ...form, productType: e?.target?.value ?? value }), placeholder: "Select product type", error: errors.productType,
+						options: [
+							{ value: "", label: "Select product type" },
+							{ value: "Raw Material", label: "Raw Material" },
+							{ value: "Finished Goods", label: "Finished Goods" },
+							{ value: "Service Product", label: "Service Product" },
+							{ value: "Non Stock Product", label: "Non Stock Product" },
+							{ value: "Intermediary Product", label: "Intermediary Product" },
+						]
+					}} />
 
-							<div className="grid grid-cols-1 gap-4 text-sm">
-								{/* Product Name */}
-								<div className="flex flex-col">
-									<label className="font-medium">Product Name *</label>
-									<input
-										type="text"
-										value={form.productName}
-										onChange={(e) =>
-											setForm({ ...form, productName: e.target.value })
-										}
-										placeholder="Enter product name"
-										required
-										className={`border px-3 py-2 rounded ${errors.productName ? "border-red-500" : ""
-											}`}
-									/>
-									{errors.productName && (
-										<p className="text-red-500 text-xs mt-1">
-											{errors.productName}
-										</p>
-									)}
-								</div>
-								<div className="flex flex-col">
-									<label className="font-medium">Product Type *</label>
-									<input
-										type="text"
-										value={form.productType}
-										onChange={(e) =>
-											setForm({ ...form, productType: e.target.value })
-										}
-										placeholder="Enter product type"
-										required
-										className={`border px-3 py-2 rounded ${errors.productType ? "border-red-500" : ""
-											}`}
-									/>
-									{errors.productType && (
-										<p className="text-red-500 text-xs mt-1">
-											{errors.productType}
-										</p>
-									)}
-								</div>
 
-								{/* HSN Code */}
-								<div className="flex flex-col">
-									<label className="font-medium">HSN Code *</label>
-									<input
-										type="text"
-										value={form.productHSNCode}
-										onChange={(e) => {
-											const val = e.target.value.replace(/[^0-9]/g, "");
-											setForm({ ...form, productHSNCode: val });
-										}}
-										placeholder="Enter HSN code"
-										required
-										maxLength={8}
-										className={`border px-3 py-2 rounded ${errors.productHSNCode ? "border-red-500" : ""
-											}`}
-									/>
 
-									{errors.productHSNCode && (
-										<p className="text-red-500 text-xs mt-1">
-											{errors.productHSNCode}
-										</p>
-									)}
-								</div>
+					{/* <TextInput {...{ label: "Product Type", mandatory: true, value: form.productType, onChange: (e) => setForm({ ...form, productType: e.target.value }), placeholder: "Enter product type", error: errors.productType }} /> */}
 
-								{/* Description */}
-								<div className="flex flex-col">
-									<label className="font-medium">Description</label>
-									<textarea
-										rows={3}
-										value={form.productDescription}
-										onChange={(e) =>
-											setForm({ ...form, productDescription: e.target.value })
-										}
-										placeholder="Enter product description"
-										className="border px-3 py-2 rounded resize-none"
-									></textarea>
-								</div>
+					{/* <TextInput {...{ label: "HSN Code", mandatory: true, value: form.productHSNCode, onChange: (e) => setForm({ ...form, productHSNCode: e.target.value }), placeholder: "Enter HSN code", error: errors.productHSNCode, type: "number" }} /> */}
+					<TextInput
+						label="HSN Code"
+						mandatory={true}
+						value={form.productHSNCode}
+						onChange={(e) =>
+							setForm({
+								...form,
+								productHSNCode: e.target.value.replace(/\D/g, "").slice(0, 8),
+							})
+						}
+						placeholder="Enter HSN code"
+						error={errors.productHSNCode}
+						type="text"
+					/>
+					<TextArea {...{ label: "Description", mandatory: true, value: form.productDescription, onChange: (e) => setForm({ ...form, productDescription: e.target.value }), placeholder: "Enter product description", error: errors.productDescription }} />
+				</>
+			}} />
 
-								{/* Buttons */}
-								<div className="flex justify-end gap-2 mt-2">
-									<button
-										onClick={() => setShowModal(false)}
-										className="border px-4 py-2 rounded text-gray-700"
-									>
-										Cancel
-									</button>
 
-									<button
-										onClick={handleSubmit}
-										className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-									>
-										{editingProduct ? "Update" : "Save"}
-									</button>
-								</div>
-							</div>
-						</div>
-					</div>
-				)
-			}
+
+
+
+
 		</div >
 	);
 };
