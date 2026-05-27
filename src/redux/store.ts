@@ -31,7 +31,6 @@ import form16Reducer from "./slices/professionalSlice/incomeTaxSlice/form16Slice
 import automationReducer from "./slices/professionalSlice/automation/automatioinSlice";
 import stateCityReducer from "./slices/professionalSlice/stateCitySlice"
 
-
 export const store = configureStore({
   reducer: {
     auth: authReducer,

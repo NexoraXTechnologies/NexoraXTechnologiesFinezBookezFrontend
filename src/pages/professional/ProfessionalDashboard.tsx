@@ -13,12 +13,7 @@ import ProDashboardCart from '../../components/professionalDashboard/ProDashboar
 const ProfessionalDashboard = () => {
   const dispatch = useDispatch();
   const [openChat, setOpenChat] = useState(false);
-
   const { analytics, loading, error } = useSelector((s) => s.professionalDashboard);
-
-  useEffect(() => {
-    dispatch(fetchProfessionalDashboardAnalytics());
-  }, [dispatch]);
 
   const cards = useMemo(() => {
     return [
@@ -123,6 +118,10 @@ const ProfessionalDashboard = () => {
     { type: 'info', title: 'Missing documents', description: 'Form 16 / 26AS upload missing for some clients.' },
   ], []);
 
+  useEffect(() => {
+    dispatch(fetchProfessionalDashboardAnalytics());
+  }, [dispatch]);
+
   if (loading) return <p className="text-center mt-10 text-lg animate-pulse">Loading dashboard...</p>;
   if (error) return <p className="text-red-500 text-center mt-10">{error}</p>;
 
@@ -139,7 +138,7 @@ const ProfessionalDashboard = () => {
           links={[
             { label: 'Add Taxpayer', to: '/professional/incometax/addtaxpayer' },
             { label: 'File ITR', to: '/professional/incometax/fileitrlist' },
-            { label: 'Add Team/Employee', to: '/professional/users' },
+            // { label: 'Add Team/Employee', to: '/professional/users' },
           ]}
         />
       </div>

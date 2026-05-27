@@ -5,7 +5,6 @@ import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
 import FinEzLogo from '../assets/FinEZ.png';
-import AddTeamEmployee from "../pages/addTeamEmployee";
 import Subscription from "../pages/subscription";
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
@@ -37,7 +36,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
   const menuItems = [
     { name: 'Dashboard', path: '/professional', icon: <LayoutDashboard size={20} /> },
-    { name: 'Add Team/Employee', path: '/professional/add-employee', icon: <Users size={20} /> },
+    { name: 'Add Team/Employee', path: '/professional/users', icon: <Users size={20} /> },
     { name: 'Subscription', path: '/professional/subscription', icon: <CreditCard size={20} /> },
     {
       name: 'Company Master',

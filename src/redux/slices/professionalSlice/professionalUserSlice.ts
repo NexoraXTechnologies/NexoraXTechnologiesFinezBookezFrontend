@@ -1,9 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 
-// =======================================================
 // GET PROFESSIONAL USERS
-// =======================================================
 export const getProfessionalUsers = createAsyncThunk('professionalUser/getProfessionalUsers', async ({ page = 1, limit = 20 } = {}, { rejectWithValue }) => {
   try {
     const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
@@ -42,9 +40,7 @@ export const getProfessionalUsers = createAsyncThunk('professionalUser/getProfes
   }
 });
 
-// =======================================================
 // ADD NEW PROFESSIONAL USER
-// =======================================================
 export const addProfessionalUser = createAsyncThunk(
   "professionalUser/addProfessionalUser",
   async (userData, { rejectWithValue }) => {
@@ -76,9 +72,7 @@ export const addProfessionalUser = createAsyncThunk(
   }
 );
 
-// =======================================================
 // DELETE PROFESSIONAL USER
-// =======================================================
 export const deleteProfessionalUser = createAsyncThunk(
   "professionalUser/deleteProfessionalUser",
   async (mobile, { rejectWithValue }) => {
@@ -117,9 +111,7 @@ export const deleteProfessionalUser = createAsyncThunk(
   }
 );
 
-// =======================================================
 // SLICE
-// =======================================================
 const professionalUserSlice = createSlice({
   name: 'professionalUser',
   initialState: {
