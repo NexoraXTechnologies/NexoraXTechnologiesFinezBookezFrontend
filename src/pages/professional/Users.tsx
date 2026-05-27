@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getProfessionalUsers,
@@ -10,7 +10,12 @@ import { verifyPanWithHeader, resetVerifyPan } from '../../redux/slices/professi
 import { toast } from "react-toastify";
 import { RefreshCcw, Trash2, Plus } from "lucide-react";
 import ConfirmTooltip from "../../components/common/ConfirmTooltip";
-import { formatToInputDate,formatToDDMMYYYY} from '../../components/common/DateFormator'
+import { formatToDDMMYYYY } from '../../components/common/DateFormator';
+import SearchInput from "../../components/searchInput";
+import { DataCreateButton, DataREfreshButton } from "../../components/buttons";
+import DataTable from "../../components/DataTable";
+import Pagination from "../../components/pagination";
+
 const Users = () => {
   const dispatch = useDispatch();
   const { users, loading, pagination } = useSelector((s) => s.professionalUser);
@@ -20,10 +25,8 @@ const Users = () => {
   const [showModal, setShowModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { loading: panLoading } = useSelector((s) => s.verifyPan);
-
   const [panVerified, setPanVerified] = useState(false);
   const [panVerifyFailed, setPanVerifyFailed] = useState(false);
-
   const [confirmTooltip, setConfirmTooltip] = useState({
     show: false,
     x: null,
@@ -236,7 +239,6 @@ resetUserForm();
   const startIndex = totalCount === 0 ? 0 : (page - 1) * limit + 1;
   const endIndex = Math.min(page * limit, totalCount);
 
-
   const resetUserForm = () => {
     setFormData({
       userFirstName: '',
@@ -296,79 +298,65 @@ resetUserForm();
       toast.error(err || 'PAN verification failed');
     }
   };
+
+  const columns = [
+    {
+      key: 'name', title: 'Name',
+      render: (row:any) => (
+        <>
+          {`${row.userFirstName} ${row.userMiddleName ?? ''} ${row.userLastName}`}
+        </>
+      ),
+    },
+    { key: 'userEmail', title: 'Email', },
+    { key: 'userMobileNumberHash', title: 'Mobile', },
+    { key: 'userAadhar', title: 'Aadhaar', },
+    {
+      key: 'accountEmail', title: 'DOB', 
+      render: (row: any) => (
+        <>
+          {formatToDDMMYYYY(row.userDOB)}
+        </>
+      ),
+    },
+    { key: 'userType', title: 'Type', },
+    { key: 'userGender', title: 'Gender', },
+  ];
+
   return (
     <div className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="flex flex-wrap justify-end items-center gap-2 mb-4">
-        <div className="flex gap-2 items-center">
-          <input type="text" placeholder="Search user..." className="border rounded-md pl-2 pr-3 py-1 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-
-          <button onClick={handleRefresh} className="border rounded-md px-2 py-1.5 mr-2">
-            <RefreshCcw size={16} className={refreshing ? 'animate-spin text-blue-600' : ''} />
-          </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <SearchInput {...{ search: searchTerm, setSearch: setSearchTerm }} />
+          <DataREfreshButton {...{ callBackFn: handleRefresh }} />
+          <DataCreateButton {...{ callBackFn: () => setShowModal(true) }} />
         </div>
-
-        <button onClick={() => setShowModal(true)} className="bg-blue-600 text-white px-3 py-1 rounded-md flex items-center gap-1">
-          <Plus size={16} /> <span className="hidden sm:inline">Add Employee/Team</span><span className="sm:hidden">Add</span>
-        </button>
       </div>
 
-      {/* TABLE */}
-      <div className="flex-1 overflow-x-auto border rounded-md">
-        <table className="min-w-full text-sm text-gray-700 border-collapse">
-          <thead className="bg-gray-100 border-b">
-            <tr>
-              <th className="px-3 py-2 text-left ">Name</th>
-              <th className="px-3 py-2 text-left">Email</th>
-              <th className="px-3 py-2 text-left">Mobile</th>
-              <th className="px-3 py-2 text-left">Aadhar</th>
-              <th className="px-3 py-2 text-left">DOB</th>
-              <th className="px-3 py-2 text-left">Type</th>
-              <th className="px-3 py-2 text-left">Gender</th>
-              <th className="px-3 py-2 text-center">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((u) => (
-                <tr key={u.userMobileNumberHash} className="border-b">
-                  <td className="px-3 py-2">{`${u.userFirstName} ${u.userMiddleName ?? ''} ${u.userLastName}`}</td>
-                  <td className="px-3 py-2">{u.userEmail}</td>
-                  <td className="px-3 py-2">{u.userMobileNumberHash}</td>
-                  <td className="px-3 py-2">{u.userAadhar}</td>
-                  <td className="px-3 py-2">{formatToDDMMYYYY(u.userDOB)}</td>
-                  <td className="px-3 py-2">{u.userType}</td>
-                  <td className="px-3 py-2">{u.userGender}</td>
-                  <td className="px-3 py-2 text-center">
-                    <button
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setConfirmTooltip({
-                          show: true,
-                          x: rect.left + window.scrollX - 160,
-                          y: rect.top + window.scrollY - 5,
-                          mobile: u.userMobileNumberHash,
-                        });
-                      }}
-                      className="text-red-600 hover:text-red-800">
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" className="text-center py-6 text-gray-500">
-                  No users found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        {loading && <div className="text-center py-3 text-gray-500">Loading...</div>}
-      </div>
+      <DataTable
+        columns={columns}
+        data={filteredUsers}
+        loading={loading}
+        emptyMessage="No accounts found"
+        actions={(each) => (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setConfirmTooltip({
+                  show: true,
+                  x: rect.left + window.scrollX - 160,
+                  y: rect.top + window.scrollY - 5,
+                  mobile: each.userMobileNumberHash,
+                });
+              }}
+              className="text-red-600 hover:text-red-800">
+              <Trash2 size={16} />
+            </button>
+          </div>
+        )}
+      />
 
       {/* ADD MODAL */}
       {showModal && (
@@ -502,53 +490,16 @@ resetUserForm();
           </div>
         </div>
       )}
-      {/* Pagination */}
-      {totalCount > 0 && (
-        <div id="users-pagination" className="flex justify-between items-center mt-4 text-sm text-gray-700 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <label htmlFor="limit" className="text-gray-600">
-              Rows per page:
-            </label>
-            <select
-              id="limit"
-              value={localLimit}
-              onChange={(e) => {
-                setLocalLimit(Number(e.target.value));
-                setLocalPage(1);
-              }}
-              className="border border-gray-300 rounded-md px-2 py-1 text-sm">
-              {[10, 20, 50, 100].map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </div>
 
-          <div>
-            Showing{' '}
-            <strong>
-              {startIndex}–{endIndex}
-            </strong>{' '}
-            of <strong>{totalCount}</strong> | Page <strong>{page}</strong> of <strong>{totalPages}</strong>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button onClick={() => setLocalPage(1)} disabled={page === 1} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              First
-            </button>
-            <button onClick={() => setLocalPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              Prev
-            </button>
-            <button onClick={() => setLocalPage((p) => Math.min(p + 1, totalPages))} disabled={page === totalPages} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              Next
-            </button>
-            <button onClick={() => setLocalPage(totalPages)} disabled={page === totalPages} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50">
-              Last
-            </button>
-          </div>
-        </div>
-      )}
+      {totalCount > 0 && <Pagination  {...{
+        localLimit, selectCb: (e) => {
+          setLocalLimit(Number(e.target.value));
+          setLocalPage(1);
+        },
+        preDisabled: page === 1,
+        nextDisabled: page === totalPages,
+        setLocalOffset: setLocalPage, pagination
+      }} />}
 
       {/* DELETE TOOLTIP */}
       {confirmTooltip.show && (

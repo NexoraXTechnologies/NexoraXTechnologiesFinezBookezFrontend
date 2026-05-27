@@ -33,7 +33,6 @@ import AiTaxCopilot from "./pages/professional/AiChat/AiTaxCopilot";
 import AutomationDashboard from './pages/professional/Automation/AutomationDashboard';
 
 import ProfessionalRegister from "./pages/ProfessionalRegister";
-import AddTeamEmployee from './pages/addTeamEmployee';
 import Subscription from './pages/subscription';
 
 function App() {
@@ -87,7 +86,6 @@ function App() {
         <Route path="incometax/resetitrpassword" element={<ResetitrPassword />} />
 
         {/* Subscribe  */}
-        <Route path="add-employee" element={<AddTeamEmployee />} />
         <Route path="subscription" element={<Subscription />} />
 
         {/* ai */}
