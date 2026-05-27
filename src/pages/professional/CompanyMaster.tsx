@@ -68,19 +68,37 @@ const CompanyMaster = () => {
   const [showModal, setShowModal] = useState(false);
 
   const [editingCompany, setEditingCompany] = useState<any>(null);
-  const [form, setForm] = useState<any>(initialForm);
   const [errors, setErrors] = useState<any>({});
 
   const [pendingCity, setPendingCity] = useState("");
   const [verifiedIfscCode, setVerifiedIfscCode] = useState("");
 
+
+  console.log("company", company)
+
+  const hasCompany =
+    company &&
+    !Array.isArray(company) &&
+    Object.keys(company).length > 0;
+
+  const [form, setForm] = useState({
+    companyName: "",
+    companyEmail: "",
+    companyMobile: "",
+    companyAddress: "",
+    bankName: "",
+    bankAccountNumber: "",
+    ifscCode: "",
+    bankAddress: "",
+    logoUri: null,
+    signatureUri: null,
+  });
   const [confirmTooltip, setConfirmTooltip] = useState<any>({
     show: false,
     x: null,
     y: null,
     companyCode: null,
   });
-
   const getDisplayName = (name: any) => {
     if (!name) return "";
 
@@ -439,8 +457,6 @@ const CompanyMaster = () => {
     }
   };
 
-
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -457,37 +473,40 @@ const CompanyMaster = () => {
     };
 
     try {
-      if (editingCompany) {
-        const companyCode =
-          editingCompany.companyCode ||
-          editingCompany.companyPublicId ||
-          editingCompany.code ||
-          editingCompany._id;
-
-        await dispatch(
-          replaceCompany({
-            companyCode,
-            data: payload,
-          }) as any
-        ).unwrap();
-
-        toast.success("Company updated successfully");
+      if (hasCompany) {
+        await dispatch(replaceCompany(form)).unwrap();
+        toast.success("Company updated");
       } else {
-        await dispatch(createCompany(payload) as any).unwrap();
+        await dispatch(createCompany(form)).unwrap();
         toast.success("Company created");
       }
 
       setShowModal(false);
-      setEditingCompany(null);
-      setForm(initialForm);
-      setErrors({});
-      setVerifiedIfscCode("");
-      setPendingCity("");
-      fetchCompanies();
+      setEditing(false);
+      dispatch(getCompany());
     } catch (err: any) {
-      toast.error(err?.message || "Operation failed");
+      toast.error(err?.message || "Something went wrong");
     }
   };
+
+  // const handleSubmit = async () => {
+  //   if (!validateForm()) return;
+
+  //   try {
+  //     if (editing) {
+  //       await dispatch(replaceCompany(form)).unwrap();
+  //       toast.success('Company updated');
+  //     } else {
+  //       await dispatch(createCompany(form)).unwrap();
+  //       toast.success('Company created');
+  //     }
+
+  //     setShowModal(false);
+  //     dispatch(getCompany());
+  //   } catch (err) {
+  //     toast.error(err.message);
+  //   }
+  // };
 
   const handleRefresh = async () => {
     try {
