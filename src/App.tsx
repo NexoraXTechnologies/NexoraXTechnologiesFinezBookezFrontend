@@ -12,8 +12,8 @@ import ProfessionlIncomeTaxLaw from './pages/professional/IncomeTaxLaw/IncomeTax
 import ProtectedUsersRoute from "./pages/professional/ProtectedUsersRoute";
 import Users from "./pages/professional/Users";
 import CompanyMaster from "./pages/professional/CompanyMaster";
-import AccountMaster from "./pages/professional/AccountMaster";
-import ProductMaster from "./pages/professional/ProductMaster";
+import AccountMaster from "./pages/bookez/master/AccountMaster";
+import ProductMaster from "./pages/bookez/master/ProductMaster";
 import Configuration from './pages/professional/Configuration/Configuration';
 
 //income tax
@@ -34,8 +34,14 @@ import AutomationDashboard from './pages/professional/Automation/AutomationDashb
 
 import ProfessionalRegister from "./pages/ProfessionalRegister";
 import Subscription from './pages/subscription';
-import UnitMaster from './pages/professional/UnitMaster';
-import ReportMapping from './pages/professional/ReportMapping';
+import UnitMaster from './pages/bookez/master/UnitMaster';
+import ReportMapping from './pages/bookez/master/ReportMapping';
+import BookEZDashboard from './pages/bookez/master/MasterDashboard';
+import MasterDashboard from './pages/bookez/master/MasterDashboard';
+import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks/OpeningBalancesDashboard';
+import ProductionDashboard from './pages/bookez/transactions/production/ProductionDashboard';
+import SaleWorkflowDashboard from './pages/bookez/transactions/saleWorkflow/SaleWorkflowDashboard';
+import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkflow/PurchaseWorkflowDashboard';
 
 function App() {
 
@@ -67,11 +73,34 @@ function App() {
             </ProtectedUsersRoute>
           }
         />
+
+        <Route path="/professional/master" element={<MasterDashboard />} />
         <Route path="master/company" element={<CompanyMaster />} />
         <Route path="master/account" element={<AccountMaster />} />
         <Route path="master/product" element={<ProductMaster />} />
         <Route path="master/unit" element={<UnitMaster />} />
         <Route path="master/reports-mapping" element={<ReportMapping />} />
+
+
+        <Route
+          path="/professional/transaction/opening-balances"
+          element={<OpeningBalancesDashboard />}
+        />
+
+        <Route
+          path="/professional/transaction/production"
+          element={<ProductionDashboard />}
+        />
+
+        <Route
+          path="/professional/transaction/sale-workflow"
+          element={<SaleWorkflowDashboard />}
+        />
+
+        <Route
+          path="/professional/transaction/purchase-workflow"
+          element={<PurchaseWorkflowDashboard />}
+        />
 
         {/* configuration */}
         <Route path="configuration" element={<Configuration />} />

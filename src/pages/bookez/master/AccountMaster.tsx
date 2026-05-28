@@ -2,21 +2,21 @@ import { useEffect, useState } from "react";
 import { Trash2, Edit, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import ConfirmTooltip from "../../components/common/ConfirmTooltip";
+import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 import {
 	getAllAccounts,
 	createAccount,
 	updateAccount,
 	deleteAccount,
-} from "../../redux/slices/professionalSlice/accountMasterSlice";
-import { DataCreateButton, DataREfreshButton, PrimaryButton, SecondaryButton } from "../../components/buttons";
-import DataTable from "../../components/DataTable";
-import Pagination from "../../components/pagination";
-import SearchInput from "../../components/searchInput";
+} from "../../../redux/slices/professionalSlice/accountMasterSlice";
+import { DataCreateButton, DataREfreshButton, PrimaryButton, SecondaryButton } from "../../../components/buttons";
+import DataTable from "../../../components/DataTable";
+import Pagination from "../../../components/pagination";
+import SearchInput from "../../../components/searchInput";
 import { AnimatePresence, motion } from "framer-motion";
-import { SelectInput, TextArea, TextInput } from "../../components/inputs";
-import Modal from "../../components/modal";
-import Badge from "../../components/badge";
+import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
+import Modal from "../../../components/modal";
+import Badge from "../../../components/badge";
 
 const columns = [
 	{ key: 'accountCode', title: 'Account Code', },

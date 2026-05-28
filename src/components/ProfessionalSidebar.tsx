@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, TriangleDashed } from 'lucide-react';
+import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, TriangleDashed, WalletCards, Factory, BadgeIndianRupee, ShoppingCart } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
@@ -46,38 +46,63 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
           name: 'Master',
           path: '/professional/master',
           icon: <BrickWallShield size={20} />,
+          // children: [
+
+          //   {
+          //     name: 'Account',
+          //     path: '/professional/master/account',
+          //     icon: <Wallet size={14} />,
+          //   },
+          //   {
+          //     name: 'Product',
+          //     path: '/professional/master/product',
+          //     icon: <PackageSearch size={14} />,
+          //   },
+          //   {
+          //     name: 'Unit',
+          //     path: '/professional/master/unit',
+          //     icon: <FaUnity size={14} />,
+          //   },
+          //   {
+          //     name: 'Reports Mapping',
+          //     path: '/professional/master/reports-mapping',
+          //     icon: <FaRegFilePowerpoint size={14} />,
+          //   },
+
+          // ]
+        },
+        {
+
+          name: 'Transaction',
+          // path: '/professional/transaction',
+          icon: <BrickWallShield size={20} />,
           children: [
-
             {
-              name: 'Account',
-              path: '/professional/master/account',
-              icon: <Wallet size={14} />,
+              name: "Opening Balances / Stocks",
+              path: "/professional/transaction/opening-balances",
+              icon: <WalletCards size={14} />,
             },
             {
-              name: 'Product',
-              path: '/professional/master/product',
-              icon: <PackageSearch size={14} />,
+              name: "Production",
+              path: "/professional/transaction/production",
+              icon: <Factory size={14} />,
             },
             {
-              name: 'Unit',
-              path: '/professional/master/unit',
-              icon: <FaUnity size={14} />,
+              name: "Sale Workflow",
+              path: "/professional/transaction/sale-workflow",
+              icon: <BadgeIndianRupee size={14} />,
             },
             {
-              name: 'Reports Mapping',
-              path: '/professional/master/reports-mapping',
-              icon: <FaRegFilePowerpoint size={14} />,
+              name: "Purchase Workflow",
+              path: "/professional/transaction/purchase-workflow",
+              icon: <ShoppingCart size={14} />,
             },
-
           ]
         },
 
-        {
-          name: 'Transaction',
-          path: '/professional/transaction',
-          icon: <TriangleDashed size={20} />,
 
-        }
+
+
         // {
         //   name: 'Company Master',
         //   path: '/professional/master/company',
@@ -114,7 +139,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
         },
         {
           name: 'Income Tax',
-          path: '/professional/incometax',
+          path: '/professional/incomFetax',
           icon: <ReceiptIndianRupee size={20} />,
           children: [
             {
