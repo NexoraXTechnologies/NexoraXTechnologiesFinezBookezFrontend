@@ -779,7 +779,7 @@ const CompanyMaster = () => {
                   type="text"
                 />
 
-                <div className="absolute right-2 top-[31px]">
+                <div className="absolute right-2 top-[28px]">
                   {isIfscVerified ? (
                     <div className="h-[24px] w-[38px] text-green-600 rounded-md flex items-center justify-center">
                       <CheckCircle2 size={21} />
