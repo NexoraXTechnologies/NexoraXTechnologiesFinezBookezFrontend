@@ -536,14 +536,14 @@ const CompanyMaster = () => {
       render: (row: any) => row.upiId || "-",
     },
     {
-      key: "bankName",
-      title: "Bank",
-      render: (row: any) => row.bankName || "-",
-    },
-    {
       key: "ifscCode",
       title: "IFSC",
       render: (row: any) => row.ifscCode || "-",
+    },
+    {
+      key: "bankName",
+      title: "Bank",
+      render: (row: any) => row.bankName || "-",
     },
     {
       key: "state",
