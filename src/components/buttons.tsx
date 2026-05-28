@@ -40,8 +40,8 @@ const DataCreateButton = (({ callBackFn, text = "Add Account", icon, disabled = 
     )
 });
  
-const PrimaryButton = (({ callBackFn, text, disabled = false }: any) => (
-    <button id="account-add-button" onClick={callBackFn} disabled={disabled} className="h-9 cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-violet-700 hover:shadow-indigo-500/30 focus:outline-none focus:ring-4 focus:ring-indigo-100 active:scale-95">
+const PrimaryButton = (({ callBackFn, text, disabled = false, className = "" }: any) => (
+    <button id="account-add-button" onClick={callBackFn} disabled={disabled} className={`h-9 cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all duration-200 hover:from-indigo-700 hover:to-violet-700 hover:shadow-indigo-500/30 focus:outline-none focus:ring-4 focus:ring-indigo-100 active:scale-95 ${className}`}>
             {text}
         </button>
     )

@@ -4,17 +4,20 @@ import {
   getProfessionalUsers,
   addProfessionalUser,
   deleteProfessionalUser,
+  updateProfessionalUser,
 } from "../../redux/slices/professionalSlice/professionalUserSlice";
 
 import { verifyPanWithHeader, resetVerifyPan } from '../../redux/slices/professionalSlice/panVerify/panVerify';
 import { toast } from "react-toastify";
-import { RefreshCcw, Trash2, Plus } from "lucide-react";
+import { RefreshCcw, Trash2, Plus, Edit } from "lucide-react";
 import ConfirmTooltip from "../../components/common/ConfirmTooltip";
 import { formatToDDMMYYYY } from '../../components/common/DateFormator';
 import SearchInput from "../../components/searchInput";
 import { DataCreateButton, DataREfreshButton } from "../../components/buttons";
 import DataTable from "../../components/DataTable";
 import Pagination from "../../components/pagination";
+import Modal from "../../components/modal";
+import { SelectInput, TextInput } from "../../components/inputs";
 
 const Users = () => {
   const dispatch = useDispatch();
@@ -27,12 +30,15 @@ const Users = () => {
   const { loading: panLoading } = useSelector((s) => s.verifyPan);
   const [panVerified, setPanVerified] = useState(false);
   const [panVerifyFailed, setPanVerifyFailed] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
   const [confirmTooltip, setConfirmTooltip] = useState({
     show: false,
     x: null,
     y: null,
     mobile: null,
   });
+  // console.log(updateProfessionalUser);
+  // console.log(updateProfessionalUser.typePrefix);
 
   const [formData, setFormData] = useState({
     userFirstName: "",
@@ -43,7 +49,7 @@ const Users = () => {
     userEmail: "",
     userMobileNumberHash: "",
     userPAN: "",
-    userAadhar: "",
+    // userAadhar: "",
     userType: "",
   });
 
@@ -115,9 +121,9 @@ const Users = () => {
   }
   break;
 
-      case "userAadhar":
-        if (!/^\d{12}$/.test(value)) error = "Aadhar must be 12 digits";
-        break;
+      //   case "userAadhar":
+      //     if (!/^\d{12}$/.test(value)) error = "Aadhar must be 12 digits";
+      //     break;
 
       case "userType":
         if (!value) error = "User type is required";
@@ -162,8 +168,8 @@ const Users = () => {
       newErrors.userPAN = 'Please verify PAN';
     }
 
-    if (!/^\d{12}$/.test(formData.userAadhar))
-      newErrors.userAadhar = "Aadhar must be 12 digits";
+    // if (!/^\d{12}$/.test(formData.userAadhar))
+    //   newErrors.userAadhar = "Aadhar must be 12 digits";
 
     if (!formData.userType) newErrors.userType = "User type is required";
 
@@ -178,7 +184,7 @@ const Users = () => {
 
     let newValue = value;
 
-    if (name === 'userMobileNumberHash' || name === 'userAadhar') newValue = value.replace(/\D/g, '');
+    // if (name === 'userMobileNumberHash' || name === 'userAadhar') newValue = value.replace(/\D/g, '');
 
     if (name === 'userPAN') {
       newValue = value
@@ -201,18 +207,32 @@ const Users = () => {
     if (!validate()) return;
 
     try {
-      await dispatch(
-        addProfessionalUser({
-          ...formData,
-          userPAN: formData.userPAN.toUpperCase(),
-        })
-      ).unwrap();
+      if (editingAccount) {
+        const updatePayload = {};
 
+        const fields: any = ["userFirstName", "userLastName", "userGender", "userDOB", "userEmail", "userMobileNumberHash", "userPAN", "userType"];
+        fields.forEach((field) => {
+          if (formData[field] !== editingAccount[field]) updatePayload[field] = formData[field];
+        });
+        console.log({ updatePayload, editingAccount })
+        try {
+          await dispatch(updateProfessionalUser({ parentMobile: editingAccount?.parentUserMobileNumber, data: { ChildUser: { matchMobile: editingAccount?.userMobileNumberHash, ...updatePayload } } }));
+        } catch (err) {
+          console.log("OUTER ERROR", err);
+        }
+
+        toast.success("Account updated successfully");
+      } else {
+        await dispatch(
+          addProfessionalUser({
+            ...formData,
+            userPAN: formData.userPAN.toUpperCase(),
+          })
+        ).unwrap();
+      }
       toast.success("Employee/Team added successfully");
-
       setShowModal(false);
-resetUserForm();
-
+      resetUserForm();
       setLocalPage(1);
       dispatch(getProfessionalUsers({ page: 1, limit: localLimit }));
     } catch (err) {
@@ -249,7 +269,7 @@ resetUserForm();
       userEmail: '',
       userMobileNumberHash: '',
       userPAN: '',
-      userAadhar: '',
+      //   userAadhar: '',
       userType: '',
     });
     setErrors({});
@@ -257,6 +277,7 @@ resetUserForm();
     setPanVerifyFailed(false);
     dispatch(resetVerifyPan());
   };
+
   const handleVerifyPan = async () => {
     const pan = (formData.userPAN || '').trim().toUpperCase();
 
@@ -299,6 +320,23 @@ resetUserForm();
     }
   };
 
+  const openEditModal = (acc: any) => {
+    console.log({ acc })
+    setEditingAccount(acc);
+    setFormData({
+      userFirstName: acc.userFirstName,
+      userMiddleName: acc.userMiddleName,
+      userLastName: acc.userLastName,
+      userGender: acc.userGender,
+      userDOB: acc.userDOB,
+      userEmail: acc.userEmail,
+      userMobileNumberHash: acc?.userMobileNumberHash,
+      userPAN: acc?.userPAN,
+      userType: acc?.userType
+    });
+    setShowModal(true);
+  };
+
   const columns = [
     {
       key: 'name', title: 'Name',
@@ -310,7 +348,7 @@ resetUserForm();
     },
     { key: 'userEmail', title: 'Email', },
     { key: 'userMobileNumberHash', title: 'Mobile', },
-    { key: 'userAadhar', title: 'Aadhaar', },
+    // { key: 'userAadhar', title: 'Aadhaar', },
     {
       key: 'accountEmail', title: 'DOB', 
       render: (row: any) => (
@@ -330,7 +368,7 @@ resetUserForm();
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SearchInput {...{ search: searchTerm, setSearch: setSearchTerm }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
-          <DataCreateButton {...{ callBackFn: () => setShowModal(true) }} />
+          <DataCreateButton {...{ callBackFn: () => setShowModal(true), text: "Add Team/Employee" }} />
         </div>
       </div>
 
@@ -341,6 +379,13 @@ resetUserForm();
         emptyMessage="No accounts found"
         actions={(each) => (
           <div className="flex items-center gap-2">
+            <button
+              id="account-edit-button"
+              onClick={() => openEditModal(each)}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              <Edit size={16} />
+            </button>
             <button
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -358,138 +403,65 @@ resetUserForm();
         )}
       />
 
-      {/* ADD MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-3">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg relative">
-            <button
-              onClick={() => {
-                setShowModal(false);
-                resetUserForm();
-              }}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-lg">
-              ✕
-            </button>
+      <Modal {...{
+        show: showModal, setShow: () => {
+          setShowModal(false);
+          resetUserForm();
+        }, handleSubmit, title: "Team/Employee", state: editingAccount,
+        body: <>
+          {/* FIRST NAME */}
+          <TextInput {...{ label: "First Name", name: "userFirstName", mandatory: true, value: formData.userFirstName, onChange: handleChange, placeholder: "Enter first name", error: errors.userFirstName }} />
+          <TextInput {...{ label: "Middle Name", name: "userMiddleName", mandatory: false, value: formData.userMiddleName, onChange: handleChange, placeholder: "Enter middle name (optional)" }} />
+          <TextInput {...{ label: "Last Name", mandatory: true, name: "userLastName", value: formData.userLastName, onChange: handleChange, placeholder: "Enter last name", error: errors.userLastName }} />
+          <SelectInput {...{
+            label: "Gender", mandatory: true, value: formData.userGender, name: "userGender",
+            onChange: handleChange, placeholder: "Select account type", error: errors.userGender,
+            options: [
+              { value: "", label: "Select gender" },
+              { value: "Male", label: "Male" },
+              { value: "Female", label: "Female" },
+              { value: "Other", label: "Other" }
+            ]
+          }} />
+          <TextInput {...{ label: "Date of Birth", name: "userDOB", mandatory: true, value: formData.userDOB, onChange: handleChange, placeholder: "Select DOB", type: "date", error: errors.userDOB }} />
+          <TextInput {...{ label: "Email", name: "userEmail", mandatory: true, value: formData.userEmail, onChange: handleChange, placeholder: "Enter email address", error: errors.userEmail }} />
+          <TextInput {...{ label: "Mobile Number", maxLength: 10, name: "userMobileNumberHash", mandatory: true, value: formData.userMobileNumberHash, onChange: handleChange, placeholder: "Enter 10-digit mobile number", error: errors.userMobileNumberHash }} />
 
-            <h3 className="text-xl font-semibold mb-4">Add Team/Employee</h3>
-
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* FIRST NAME */}
-              <div>
-                <label className="block text-sm font-medium">First Name</label>
-                <input name="userFirstName" value={formData.userFirstName} onChange={handleChange} placeholder="Enter first name" className="border p-2 rounded-md w-full" />
-                {errors.userFirstName && <p className="text-red-500 text-xs">{errors.userFirstName}</p>}
+          {/* PAN */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">PAN</label>
+            <div className="relative">
+              <input name="userPAN" maxLength={10} value={formData.userPAN} onChange={handleChange} placeholder="Enter PAN (ABCDE1234F)" className="w-full h-11 rounded-md border border-gray-300 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200" />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                {panVerified ? (
+                  <span className="text-green-600 text-lg font-bold">✔</span>
+                ) : panVerifyFailed ? (
+                  <button type="button" onClick={handleVerifyPan} className="text-red-500 text-lg font-bold px-1" title="PAN verification failed. Retry">
+                    ✖
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleVerifyPan} disabled={panLoading} className="bg-blue-600 text-white text-xs px-2 py-1 rounded-md disabled:opacity-60">
+                    {panLoading ? 'Verifying...' : 'Verify'}
+                  </button>
+                )}
               </div>
+            </div>
 
-              {/* MIDDLE NAME */}
-              <div>
-                <label className="block text-sm font-medium">Middle Name</label>
-                <input name="userMiddleName" value={formData.userMiddleName} onChange={handleChange} placeholder="Enter middle name (optional)" className="border p-2 rounded-md w-full" />
-              </div>
-
-              {/* LAST NAME */}
-              <div>
-                <label className="block text-sm font-medium">Last Name</label>
-                <input name="userLastName" value={formData.userLastName} onChange={handleChange} placeholder="Enter last name" className="border p-2 rounded-md w-full" />
-                {errors.userLastName && <p className="text-red-500 text-xs">{errors.userLastName}</p>}
-              </div>
-
-              {/* GENDER */}
-              <div>
-                <label className="block text-sm font-medium">Gender</label>
-                <select name="userGender" value={formData.userGender} onChange={handleChange} className="border p-2 rounded-md w-full">
-                  <option value="">Select gender</option>
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
-                </select>
-                {errors.userGender && <p className="text-red-500 text-xs">{errors.userGender}</p>}
-              </div>
-
-              {/* DOB */}
-              <div>
-                <label className="block text-sm font-medium">Date of Birth</label>
-                <input type="date" name="userDOB" value={formData.userDOB} onChange={handleChange} placeholder="Select DOB" className="border p-2 rounded-md w-full" />
-                {errors.userDOB && <p className="text-red-500 text-xs">{errors.userDOB}</p>}
-              </div>
-
-              {/* EMAIL */}
-              <div>
-                <label className="block text-sm font-medium">Email</label>
-                <input type="email" name="userEmail" value={formData.userEmail} onChange={handleChange} placeholder="Enter email address" className="border p-2 rounded-md w-full" />
-                {errors.userEmail && <p className="text-red-500 text-xs">{errors.userEmail}</p>}
-              </div>
-
-              {/* MOBILE */}
-              <div>
-                <label className="block text-sm font-medium">Mobile Number</label>
-                <input name="userMobileNumberHash" maxLength={10} value={formData.userMobileNumberHash} onChange={handleChange} placeholder="Enter 10-digit mobile number" className="border p-2 rounded-md w-full" />
-                {errors.userMobileNumberHash && <p className="text-red-500 text-xs">{errors.userMobileNumberHash}</p>}
-              </div>
-
-              {/* PAN */}
-              <div>
-                <label className="block text-sm font-medium">PAN</label>
-
-                <div className="relative">
-                  <input name="userPAN" maxLength={10} value={formData.userPAN} onChange={handleChange} placeholder="Enter PAN (ABCDE1234F)" className="border p-2 rounded-md uppercase w-full pr-24" />
-
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-                    {panVerified ? (
-                      <span className="text-green-600 text-lg font-bold">✔</span>
-                    ) : panVerifyFailed ? (
-                      <button type="button" onClick={handleVerifyPan} className="text-red-500 text-lg font-bold px-1" title="PAN verification failed. Retry">
-                        ✖
-                      </button>
-                    ) : (
-                      <button type="button" onClick={handleVerifyPan} disabled={panLoading} className="bg-blue-600 text-white text-xs px-2 py-1 rounded-md disabled:opacity-60">
-                        {panLoading ? 'Verifying...' : 'Verify'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {errors.userPAN && <p className="text-red-500 text-xs">{errors.userPAN}</p>}
-              </div>
-
-              {/* AADHAR */}
-              <div>
-                <label className="block text-sm font-medium">Aadhar</label>
-                <input name="userAadhar" maxLength={12} value={formData.userAadhar} onChange={handleChange} placeholder="Enter 12-digit Aadhar number" className="border p-2 rounded-md w-full" />
-                {errors.userAadhar && <p className="text-red-500 text-xs">{errors.userAadhar}</p>}
-              </div>
-
-              {/* USER TYPE */}
-              <div>
-                <label className="block text-sm font-medium">User Type</label>
-                <select name="userType" value={formData.userType} onChange={handleChange} className="border p-2 rounded-md w-full">
-                  <option value="">Select user type</option>
-                  <option>Tax Payer/Employee</option>
-                  <option>Company</option>
-                  <option>CA/CMA/Tax Consultant</option>
-                </select>
-                {errors.userType && <p className="text-red-500 text-xs">{errors.userType}</p>}
-              </div>
-
-              {/* BUTTONS */}
-              <div className="col-span-2 flex justify-end gap-2 mt-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    resetUserForm();
-                  }}
-                  className="px-3 py-1 border rounded-md">
-                  Cancel
-                </button>
-                <button type="submit" disabled={panLoading || !panVerified} className="px-3 py-1 bg-blue-600 text-white rounded-md disabled:opacity-60">
-                  Save
-                </button>
-              </div>
-            </form>
+            {errors.userPAN && <p className="text-red-500 text-xs">{errors.userPAN}</p>}
           </div>
-        </div>
-      )}
+          {/* USER TYPE */}
+          <SelectInput {...{
+            label: "User Type", mandatory: true, value: formData.userType, name: "userType",
+            onChange: handleChange, placeholder: "Select user type", error: errors.userType,
+            options: [
+              { value: "", label: "Select user type" },
+              { value: "Tax Payer/Employee", label: "Tax Payer/Employee" },
+              { value: "Company", label: "Company" },
+              { value: "CA/CMA/Tax Consultant", label: "CA/CMA/Tax Consultant" }
+            ]
+          }} />
+        </>
+      }} />
 
       {totalCount > 0 && <Pagination  {...{
         localLimit, selectCb: (e) => {
