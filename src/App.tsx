@@ -34,6 +34,8 @@ import AutomationDashboard from './pages/professional/Automation/AutomationDashb
 
 import ProfessionalRegister from "./pages/ProfessionalRegister";
 import Subscription from './pages/subscription';
+import UnitMaster from './pages/professional/UnitMaster';
+import ReportMapping from './pages/professional/ReportMapping';
 
 function App() {
 
@@ -68,6 +70,8 @@ function App() {
         <Route path="master/company" element={<CompanyMaster />} />
         <Route path="master/account" element={<AccountMaster />} />
         <Route path="master/product" element={<ProductMaster />} />
+        <Route path="master/unit" element={<UnitMaster />} />
+        <Route path="master/reports-mapping" element={<ReportMapping />} />
 
         {/* configuration */}
         <Route path="configuration" element={<Configuration />} />
