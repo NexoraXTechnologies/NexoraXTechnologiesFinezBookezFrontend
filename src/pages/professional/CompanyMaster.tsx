@@ -917,7 +917,8 @@ const CompanyMaster = () => {
                 {/* Company Logo */}
                 <div className="flex flex-col gap-1 w-full min-w-0">
                   <label className="text-sm font-medium">
-                    Company Logo <span className="text-red-500">*</span>
+                    Company Logo 
+                    {/* <span className="text-red-500">*</span> */}
                   </label>
 
                   <div
@@ -981,7 +982,8 @@ const CompanyMaster = () => {
                 {/* Signature */}
                 <div className="flex flex-col gap-1 w-full min-w-0">
                   <label className="text-sm font-medium">
-                    Signature <span className="text-red-500">*</span>
+                    Signature 
+                    {/* <span className="text-red-500">*</span> */}
                   </label>
 
                   <div
