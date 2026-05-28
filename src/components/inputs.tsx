@@ -1,4 +1,4 @@
-const TextInput = (({ label, value, onChange, placeholder, mandatory = false, error = "", type = "text" }: any) => {
+const TextInput = (({ label, value, onChange, placeholder, name = "", mandatory = false, error = "", type = "text", maxLength = null }: any) => {
     return (
         <div className="w-full flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
@@ -6,7 +6,9 @@ const TextInput = (({ label, value, onChange, placeholder, mandatory = false, er
             </label>
 
             <input
+                maxLength={maxLength}
                 value={value}
+                name={name || value}
                 onChange={onChange}
                 type={type}
                 placeholder={placeholder}
@@ -35,13 +37,14 @@ const TextArea = (({ label, value, onChange, placeholder, mandatory = false, err
     )
 })
 
-const SelectInput = (({ label, value, onChange, options, mandatory = false, error = "" }: any) => (
+const SelectInput = (({ label, value, onChange, options, mandatory = false, error = "", name = "" }: any) => (
     <div className="w-full flex flex-col gap-1">
         <label className="text-sm font-medium text-gray-700">
             {label}{mandatory && <span className="text-red-500">*</span>}
         </label>
 
         <select
+            name={name}
             value={value}
             onChange={onChange}
             className=" w-full  h-8 rounded-md border border-gray-300 bg-white px-4 text-sm text-gray-800 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 cursor-pointer">

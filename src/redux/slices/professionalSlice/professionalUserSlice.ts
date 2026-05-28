@@ -111,12 +111,40 @@ export const deleteProfessionalUser = createAsyncThunk(
   }
 );
 
+// update
+export const updateProfessionalUser = createAsyncThunk(
+  "professionalUser/updateUser",
+  async ({ parentMobile, data }, { rejectWithValue }) => {
+    alert("THUNK STARTED");
+    console.log("isdsdsdd")
+    try {
+      const res = await professionalAxios.put(
+        `/eTaxSolnMongoApiBackend/users/${parentMobile}`,
+        data
+      );
+
+      if (!res.data?.success)
+        return rejectWithValue({
+          message: res.data?.message || "Failed to update account",
+        });
+
+      return res.data?.data ?? null;
+    } catch (err) {
+      console.log(err)
+      return rejectWithValue({
+        message: err?.response?.data?.message || "Failed to update account",
+      });
+    }
+  }
+);
+
 // SLICE
 const professionalUserSlice = createSlice({
   name: 'professionalUser',
   initialState: {
     users: [],
     loading: false,
+    updating:false,
     error: null,
     deleteSuccess: false,
     addSuccess: false,
@@ -189,6 +217,27 @@ const professionalUserSlice = createSlice({
       .addCase(deleteProfessionalUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to delete user';
+      });
+
+    // update 
+    builder
+      .addCase(updateProfessionalUser.pending, (state) => {
+        state.updating = true;
+      })
+      .addCase(updateProfessionalUser.fulfilled, (state, action) => {
+        console.log("object")
+        state.updating = false;
+
+        const updated = action.payload;
+        if (!updated?.accountCode) return;
+
+        state.users = state.users.map((acc) =>
+          acc.accountCode === updated.accountCode ? updated : acc
+        );
+      })
+      .addCase(updateProfessionalUser.rejected, (state, action) => {
+        state.updating = false;
+        state.error = action.payload?.message;
       });
   },
 });

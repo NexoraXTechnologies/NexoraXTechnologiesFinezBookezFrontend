@@ -1,9 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import professionalAxios from '../../../../services/professionalAxios';
 
-// =======================================================
 // CREATE ORDER (RAZORPAY)
-// =======================================================
 export const createOrderRazorPay = createAsyncThunk('payment/createOrderRazorPay', async ({ planPublicId, pan, mobile, email, firstName, middleName, lastName }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.post(`/eTaxSolnMongoApiBackend/users/plansAndSubScriptions/razorpay/createOrderRazorPay`, {
@@ -31,9 +29,7 @@ export const createOrderRazorPay = createAsyncThunk('payment/createOrderRazorPay
   }
 });
 
-// =======================================================
 // VERIFY PAYMENT (RAZORPAY)
-// =======================================================
 export const verifyRazorPayPayment = createAsyncThunk('payment/verifyRazorPayPayment', async ({ orderId, paymentId, signature, planPublicId }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.post(`/eTaxSolnMongoApiBackend/users/plansAndSubScriptions/razorpay/verifyPayment`, {
@@ -57,9 +53,7 @@ export const verifyRazorPayPayment = createAsyncThunk('payment/verifyRazorPayPay
   }
 });
 
-// =======================================================
 // SLICE
-// =======================================================
 const paymentSlice = createSlice({
   name: 'payment',
   initialState: {

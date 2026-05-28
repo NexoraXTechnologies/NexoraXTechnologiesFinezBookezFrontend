@@ -30,6 +30,7 @@ import tisReducer from "./slices/professionalSlice/incomeTaxSlice/tisSlice";
 import form16Reducer from "./slices/professionalSlice/incomeTaxSlice/form16Slice";
 import automationReducer from "./slices/professionalSlice/automation/automatioinSlice";
 import stateCityReducer from "./slices/professionalSlice/stateCitySlice"
+import plansReduce from "./slices/professionalSlice/subscriptions";
 
 export const store = configureStore({
   reducer: {
@@ -60,6 +61,10 @@ export const store = configureStore({
     downloadItrWithEmailExtractor: downloadItrWithEmailExtractorReducer,
     automation: automationReducer,
     stateCity: stateCityReducer,
+
+    // Plans
+    plans: plansReduce
+
   },
 });
 
