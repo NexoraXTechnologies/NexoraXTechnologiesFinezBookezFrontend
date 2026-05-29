@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -19,6 +20,7 @@ import ProductMaster from "./ProductMaster";
 import UnitMaster from "./UnitMaster";
 import ReportMapping from "./ReportMapping";
 import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
+import CustomMasterComp from "./customMasterComp";
 
 
 const MasterDashboard = () => {
@@ -62,23 +64,18 @@ const MasterDashboard = () => {
 
     const apiCards: DashboardCard[] = customMasterModules.map((item: any) => {
       const moduleName = item?.moduleName || "Custom Master";
-      const moduleCode = item?.moduleCode || item?._id;
+      const moduleCode = item?.moduleCode || item?._id || "";
+
+      const CustomMasterScreen = () => (
+        <CustomMasterComp name={moduleName} moduleCode={moduleCode} />
+      );
 
       return {
         title: moduleName,
         description:
           item?.description || `Manage ${moduleName} custom master data.`,
         icon: <Boxes size={22} />,
-        component: () => (
-          <div className="p-4">
-            <h2 className="text-xl font-semibold capitalize">
-              {moduleName}
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Module Code: {moduleCode}
-            </p>
-          </div>
-        ),
+        component: CustomMasterScreen,
       };
     });
 
