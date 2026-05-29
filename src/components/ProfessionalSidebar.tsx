@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard } from 'lucide-react';
+import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, TriangleDashed, WalletCards, Factory, BadgeIndianRupee, ShoppingCart } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
 import FinEzLogo from '../assets/FinEZ.png';
 import Subscription from "../pages/subscription";
+import { FaRegFilePowerpoint, FaUnity } from "react-icons/fa";
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -34,36 +35,113 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
   const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
   const canShowUsers = professionalHeaders?.['x-db-name'] == professionalHeaders?.loginuser;
 
+
+
+
+  useEffect(() => {
+    const updateSidebarWidth = () => {
+      const isDesktop = window.innerWidth >= 1024;
+
+      if (!isDesktop) {
+        document.documentElement.style.setProperty(
+          "--professional-sidebar-width",
+          "0px"
+        );
+        return;
+      }
+
+      document.documentElement.style.setProperty(
+        "--professional-sidebar-width",
+        isExpanded ? "256px" : "80px"
+      );
+    };
+
+    updateSidebarWidth();
+
+    window.addEventListener("resize", updateSidebarWidth);
+
+    return () => {
+      window.removeEventListener("resize", updateSidebarWidth);
+    };
+  }, [isExpanded]);
+
   const menuItems = [
     { name: 'Dashboard', path: '/professional', icon: <LayoutDashboard size={20} /> },
-    { name: 'Add Team/Employee', path: '/professional/users', icon: <Users size={20} /> },
-    { name: 'Subscription', path: '/professional/subscription', icon: <CreditCard size={20} /> },
-    {
-      name: 'Company Master',
-      path: '/professional/master/company',
-      icon: <Building2 size={20} />,
-    },
     {
       name: 'BookEZ',
       icon: <BookText size={20} />,
       children: [
+        {
+
+          name: 'Master',
+          path: '/professional/master',
+          icon: <BrickWallShield size={20} />,
+          // children: [
+
+          //   {
+          //     name: 'Account',
+          //     path: '/professional/master/account',
+          //     icon: <Wallet size={14} />,
+          //   },
+          //   {
+          //     name: 'Product',
+          //     path: '/professional/master/product',
+          //     icon: <PackageSearch size={14} />,
+          //   },
+          //   {
+          //     name: 'Unit',
+          //     path: '/professional/master/unit',
+          //     icon: <FaUnity size={14} />,
+          //   },
+          //   {
+          //     name: 'Reports Mapping',
+          //     path: '/professional/master/reports-mapping',
+          //     icon: <FaRegFilePowerpoint size={14} />,
+          //   },
+
+          // ]
+        },
+        {
+
+          name: 'Transaction',
+          // path: '/professional/transaction',
+          icon: <BrickWallShield size={20} />,
+          children: [
+            {
+              name: "Opening Balances / Stocks",
+              path: "/professional/transaction/opening-balances",
+              icon: <WalletCards size={14} />,
+            },
+            {
+              name: "Production",
+              path: "/professional/transaction/production",
+              icon: <Factory size={14} />,
+            },
+            {
+              name: "Sale Workflow",
+              path: "/professional/transaction/sale-workflow",
+              icon: <BadgeIndianRupee size={14} />,
+            },
+            {
+              name: "Purchase Workflow",
+              path: "/professional/transaction/purchase-workflow",
+              icon: <ShoppingCart size={14} />,
+            },
+          ]
+        },
+
+
+
+
         // {
         //   name: 'Company Master',
         //   path: '/professional/master/company',
         //   icon: <Building2 size={14} />,
         // },
-        {
-          name: 'Account Master',
-          path: '/professional/master/account',
-          icon: <Wallet size={14} />,
-        },
-        {
-          name: 'Product Master',
-          path: '/professional/master/product',
-          icon: <PackageSearch size={14} />,
-        },
+
       ],
     },
+
     {
       name: 'TaxEZ',
 
@@ -91,7 +169,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
         },
         {
           name: 'Income Tax',
-          path: '/professional/incometax',
+          path: '/professional/incomFetax',
           icon: <ReceiptIndianRupee size={20} />,
           children: [
             {
@@ -151,6 +229,15 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
         },
       ],
     },
+    {
+      name: 'Company Master',
+      path: '/professional/master/company',
+      icon: <Building2 size={20} />,
+    },
+    { name: 'Add Team/Employee', path: '/professional/users', icon: <Users size={20} /> },
+    { name: 'Subscription', path: '/professional/subscription', icon: <CreditCard size={20} /> },
+
+
     {
       name: 'Settings',
       icon: <Settings size={20} />,

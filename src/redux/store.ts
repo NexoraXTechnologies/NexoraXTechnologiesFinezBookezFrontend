@@ -31,6 +31,7 @@ import form16Reducer from "./slices/professionalSlice/incomeTaxSlice/form16Slice
 import automationReducer from "./slices/professionalSlice/automation/automatioinSlice";
 import stateCityReducer from "./slices/professionalSlice/stateCitySlice"
 import plansReduce from "./slices/professionalSlice/subscriptions";
+import customMasterModuleReducer from "./slices/professionalSlice/customMasterModuleSlice";
 
 export const store = configureStore({
   reducer: {
@@ -43,6 +44,8 @@ export const store = configureStore({
     professionalTaskMgt: professionalTaskMgtReducer,
     professionalCompanyMaster: professionalCompanyMasterReducer,
     accountMaster: accountMasterReducer,
+    customMasterModule: customMasterModuleReducer,
+
     productMaster: productMasterReducer,
     alldropdown: alldropdownReducer,
     taxpayer: taxpayerReducer,
@@ -64,6 +67,7 @@ export const store = configureStore({
 
     // Plans
     plans: plansReduce
+
 
   },
 });
