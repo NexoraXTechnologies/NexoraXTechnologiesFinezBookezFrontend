@@ -37,9 +37,15 @@ import Subscription from './pages/subscription';
 import UnitMaster from './pages/professional/UnitMaster';
 import ReportMapping from './pages/professional/ReportMapping';
 
+
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 function App() {
 
   return (
+    <>
+      <ToastContainer />
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/professionalRegister" element={<ProfessionalRegister />} />
@@ -96,7 +102,8 @@ function App() {
         <Route path="ai-tax-copilot" element={<AiTaxCopilot />} />
         <Route path="automation" element={<AutomationDashboard />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }
 

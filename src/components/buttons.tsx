@@ -47,7 +47,7 @@ const PrimaryButton = (({ callBackFn, text, disabled = false, className = "" }: 
     )
 );
  
-const SecondaryButton = (({ callBackFn, text, icon, disabled = false }: any) => (
+const SecondaryButton = (({ callBackFn, text, icon=null, disabled = false }: any) => (
     <button id="account-add-button" onClick={callBackFn} disabled={disabled} className="h-9 cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md bg-gray-200 text-gray-700 text-sm font-medium shadow shadow-indigo-500/20 transition-all duration-200 hover:bg-gray-300 hover:text-gray-800 hover:shadow-indigo-500/30 focus:outline-none focus:ring-4 focus:ring-indigo-100 active:scale-95">
         {icon ? icon : ""} <span>{text}</span>
     </button>
