@@ -38,7 +38,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
     name: storedUser.name || "Professional User",
     type: storedUser.type || "Tax Expert",
     profilePic:
-      storedUser.profilePic ||"",
+      storedUser.profilePic || "",
   };
   // const pic = profile?.profilePic || user?.profilePic ||"";
 
@@ -54,23 +54,33 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
     setImageError(false);
   }, [pic]);
 
-
-  const flattenMenu = (items) =>
-    items.flatMap((item) => (item.children ? [item, ...item.children] : item));
+  const flattenMenu = (items = []) => {
+    return items.flatMap((item) => [
+      item,
+      ...(item.children ? flattenMenu(item.children) : []),
+    ]);
+  };
 
   const allMenuItems = flattenMenu(menuItems);
 
   const activeMenu =
     allMenuItems
       .filter((item) => {
-        if (item.matchPaths) {
+        if (!item.path && !item.matchPaths) return false;
+
+        if (item.matchPaths?.length) {
           return item.matchPaths.some((p) =>
             location.pathname.startsWith(p)
           );
         }
-        return location.pathname.startsWith(item.path);
+
+        return location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
       })
-      .sort((a, b) => (b.path || "").length - (a.path || "").length)[0];
+      .sort((a, b) => {
+        const aPath = a.matchPaths?.[0] || a.path || "";
+        const bPath = b.matchPaths?.[0] || b.path || "";
+        return bPath.length - aPath.length;
+      })[0];
 
   const currentTitle = activeMenu ? activeMenu.name : "Professional Dashboard";
 

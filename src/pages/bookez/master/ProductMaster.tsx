@@ -3,22 +3,22 @@ import { RefreshCcw, Trash2, Edit, Plus } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
-import ConfirmTooltip from "../../components/common/ConfirmTooltip";
+import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 
 import {
 	getAllProducts,
 	createProduct,
 	updateProduct,
 	deleteProduct,
-} from "../../redux/slices/professionalSlice/productMasterSlice";
-import ReadMoreText from "../../components/common/ReadMoreText";
-import SearchInput from "../../components/searchInput";
-import { DataCreateButton, DataREfreshButton } from "../../components/buttons";
-import DataTable from "../../components/DataTable";
-import Pagination from "../../components/pagination";
-import Badge from "../../components/badge";
-import { SelectInput, TextArea, TextInput } from "../../components/inputs";
-import Modal from "../../components/modal";
+} from "../../../redux/slices/professionalSlice/productMasterSlice";
+import ReadMoreText from "../../../components/common/ReadMoreText";
+import SearchInput from "../../../components/searchInput";
+import { DataCreateButton, DataREfreshButton } from "../../../components/buttons";
+import DataTable from "../../../components/DataTable";
+import Pagination from "../../../components/pagination";
+import Badge from "../../../components/badge";
+import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
+import Modal from "../../../components/modal";
 
 const ProductMaster = () => {
 	const dispatch = useDispatch();
