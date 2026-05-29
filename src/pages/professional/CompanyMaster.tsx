@@ -276,6 +276,16 @@ const CompanyMaster = () => {
     return true;
   };
 
+  // const validateForm = () => {
+  //   const e = {};
+  //   if (!form.companyName.trim()) e.companyName = 'Company name required';
+  //   if (!form.companyEmail.trim()) e.companyEmail = 'Email required';
+  //   if (!form.companyMobile.trim()) e.companyMobile = 'Mobile required';
+  //   if (!form.ifscCode.trim()) e.ifscCode = 'IFSC required';
+  //   setErrors(e);
+  //   return Object.keys(e).length === 0;
+  // };
+
   const validateForm = () => {
     const e: any = {};
 
@@ -353,6 +363,28 @@ const CompanyMaster = () => {
     return Object.keys(e).length === 0;
   };
 
+  // const handleIFSCVerify = async () => {
+  //   if (!form.ifscCode.trim()) {
+  //     toast.error('Enter IFSC code first');
+  //     return;
+  //   }
+
+  //   try {
+  //     const res = await dispatch(verifyIFSC(form.ifscCode)).unwrap();
+  //     setForm((prev) => ({
+  //       ...prev,
+  //       bankName: res.details.BANK || prev.bankName,
+  //       bankAddress: res.details.ADDRESS || prev.bankAddress,
+  //     }));
+
+  //     toast.success('IFSC Verified');
+  //   } catch (err) {
+  //     toast.error(err.message);
+  //   }
+  // };
+
+
+
   const handleIFSCVerify = async () => {
     const ifsc = form.ifscCode.trim().toUpperCase();
     const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
@@ -364,7 +396,6 @@ const CompanyMaster = () => {
         ...prev,
         ifscCode: "IFSC code is required",
       }));
-
       toast.error("Enter IFSC code first");
       return;
     }
@@ -374,7 +405,6 @@ const CompanyMaster = () => {
         ...prev,
         ifscCode: "Enter valid IFSC code",
       }));
-
       toast.error("Enter valid IFSC code");
       return;
     }
@@ -408,6 +438,8 @@ const CompanyMaster = () => {
       toast.error(err?.message || "Invalid IFSC code");
     }
   };
+
+
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
@@ -917,8 +949,7 @@ const CompanyMaster = () => {
                 {/* Company Logo */}
                 <div className="flex flex-col gap-1 w-full min-w-0">
                   <label className="text-sm font-medium">
-                    Company Logo 
-                    {/* <span className="text-red-500">*</span> */}
+                    Company Logo <span className="text-red-500">*</span>
                   </label>
 
                   <div
