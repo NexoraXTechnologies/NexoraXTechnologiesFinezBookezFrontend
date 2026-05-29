@@ -4,7 +4,7 @@ import professionalAxios from "../../../services/professionalAxios";
 // get 
 export const getAllPlans = createAsyncThunk(
     "plans/getAllPlans",
-    async ({ offset = 0, limit = 100, search = "", tagName=""} = {}, { rejectWithValue }) => {
+    async ({ offset = 0, limit = 100, search = "", tagName = "" } = {}, { rejectWithValue }) => {
         try {
             const params = { offset, limit };
             if (search.trim()) params.search = search.trim();

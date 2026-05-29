@@ -233,6 +233,7 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any
     const labelClass = getLabelClass(plan.name);
     const dispatch = useDispatch()
     const { couponData, couponLoading } = useSelector((e: any) => e.plans);
+    console.log({ couponData })
     const [autoPay, setAutoPay] = useState(false);
     const professionalUser = JSON.parse(localStorage.getItem("professionalUser"))
     const hasDiscount = Number(plan.discountPercentage) > 0 && Number(plan.finalPrice) < Number(plan.price);
@@ -240,9 +241,11 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any
 
     const applyCouponFun = async () => {
         if (!coupon?.length) return toast.warning("Enter Coupon Code");
-        await dispatch(applyCoupon({ planPublicId: plan?.planPublicId, couponCode: coupon }))
-        console.log(couponData, "coupon")
-        if (couponData?.isFree) {
+        if (activePlan) return toast.error("This plan is already active!")
+        if (currentPlan?.current?.price > plan?.price) return toast.error("You can not Downgrade plan!");  
+       const res = await dispatch(applyCoupon({ planPublicId: plan?.planPublicId, couponCode: coupon }))
+        console.log(couponData, res, "coupon")
+        if (couponData?.isFree || res?.payload?.isFree) {
             toast.success("Subscription activated successfully")
             onClose();
             return;
