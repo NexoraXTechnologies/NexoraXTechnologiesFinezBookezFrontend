@@ -10,6 +10,7 @@ import {
 	createProduct,
 	updateProduct,
 	deleteProduct,
+	getAllProductMasterSchema
 } from "../../../redux/slices/professionalSlice/productMasterSlice";
 import ReadMoreText from "../../../components/common/ReadMoreText";
 import SearchInput from "../../../components/searchInput";
@@ -30,6 +31,8 @@ const ProductMaster = () => {
 		createLoading,
 		updateLoading,
 		deleteLoading,
+		productMasterSchemaFields = [],
+		schemaLoading,
 	} = useSelector((s) => s.productMaster);
 
 	const [localOffset, setLocalOffset] = useState(0);
@@ -46,6 +49,27 @@ const ProductMaster = () => {
 	const [errors, setErrors] = useState({});
 	console.log("products:", products);
 
+	const { units = [] } = useSelector((s: any) => s.unitMeasurement || {});
+
+	useEffect(() => {
+		dispatch(
+			getAllProductMasterSchema({
+				offset: 0,
+				limit: 50,
+			}) as any
+		);
+	}, [dispatch]);
+
+	// useEffect(() => {
+	// 	dispatch(
+	// 		getAllUnitMeasurements({
+	// 			offset: 0,
+	// 			limit: 1000,
+	// 			search: "",
+	// 		}) as any
+	// 	);
+	// }, [dispatch]);
+
 	const [confirmTooltip, setConfirmTooltip] = useState({
 		show: false,
 		x: null,
@@ -53,32 +77,274 @@ const ProductMaster = () => {
 		productCode: null,
 	});
 
-	const [form, setForm] = useState({
-		productName: "",
-		productDescription: "",
-		productHSNCode: "",
-		productType: "",
-	});
+	const [form, setForm] = useState<any>({});
 
-	const PRODUCT_TYPE_OPTIONS = [
-		{ value: "", label: "Select product type" },
-		{ value: "Raw Material", label: "Raw Material" },
-		{ value: "Finished Goods", label: "Finished Goods" },
-		{ value: "Service Product", label: "Service Product" },
-		{ value: "Non Stock Product", label: "Non Stock Product" },
-		{ value: "Intermediary Product", label: "Intermediary Product" },
-	];
+	const buildEmptyForm = (fields: any[] = []) => {
+		return fields.reduce((acc: any, field: any) => {
+			acc[field.key] = "";
+			return acc;
+		}, {});
+	};
+
+	useEffect(() => {
+		if (productMasterSchemaFields.length > 0) {
+			setForm((prev: any) => ({
+				...buildEmptyForm(productMasterSchemaFields),
+				...prev,
+			}));
+		}
+	}, [productMasterSchemaFields]);
+
+	const validateForm = () => {
+		const e: any = {};
+
+		productMasterSchemaFields.forEach((field: any) => {
+			const value = form?.[field.key];
+
+			if (field.isRequired && String(value || "").trim() === "") {
+				e[field.key] = `${field.label} required`;
+			}
+
+			if (
+				field.key === "productHSNCode" &&
+				value &&
+				!/^\d{2}$|^\d{4}$|^\d{6}$|^\d{8}$/.test(String(value))
+			) {
+				e[field.key] =
+					"Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code.";
+			}
+
+			if (
+				field.type === "number" &&
+				value !== "" &&
+				value !== null &&
+				Number(value) < 0
+			) {
+				e[field.key] = `${field.label} cannot be negative`;
+			}
+		});
+
+		setErrors(e);
+		return Object.keys(e).length === 0;
+	};
+
+	const getTextValue = (value: any) => {
+		if (!value) return "";
+
+		if (typeof value === "string" || typeof value === "number") {
+			return String(value);
+		}
+
+		if (typeof value === "object") {
+			return (
+				value.en ||
+				value.name ||
+				value.label ||
+				value.unitName ||
+				value.code ||
+				Object.values(value).find((v) => typeof v === "string") ||
+				""
+			);
+		}
+
+		return "";
+	};
 
 	const normalizeProductType = (value = "") => {
-		const map = {
+		const map: any = {
 			rawmaterial: "Raw Material",
 			finishedgoods: "Finished Goods",
 			serviceproduct: "Service Product",
+			nonstockproduct: "Non Stock Product",
 			nonstocks: "Non Stock Product",
 			intermediaryproduct: "Intermediary Product",
 		};
 
-		return map[value] || value;
+		const normalizedKey = String(value).toLowerCase().replace(/\s/g, "");
+		return map[normalizedKey] || value;
+	};
+
+	const getFieldOptions = (field: any) => {
+		if (field.ref === "unitMeasurement") {
+			return (
+				units?.map((item: any) => {
+					const value = item?.[field.valueField] || item?.unitCode || item?.code || "";
+					const label = item?.[field.labelField] || item?.unitName || item?.name || value;
+
+					return {
+						value,
+						label: getTextValue(label),
+					};
+				}) || []
+			);
+		}
+
+		if (field.key === "productType") {
+			return (field.options || []).map((opt: any) => {
+				const label = typeof opt === "object" ? opt.label || opt.name || opt.value : opt;
+
+				return {
+					value: label,
+					label,
+				};
+			});
+		}
+
+		return (field.options || []).map((opt: any) => {
+			if (typeof opt === "object") {
+				return {
+					value: opt.value || opt.code || opt.name || "",
+					label: opt.label || opt.name || opt.value || "",
+				};
+			}
+
+			return {
+				value: opt,
+				label: opt,
+			};
+		});
+	};
+
+	const renderSchemaField = (field: any) => {
+		const value = form?.[field.key] ?? "";
+
+		const commonProps = {
+			label: field.label,
+			mandatory: field.isRequired,
+			value,
+			placeholder: `Enter ${field.label}`,
+			error: errors?.[field.key],
+		};
+
+		if (field.type === "select") {
+			const options = getFieldOptions(field);
+
+			return (
+				<SelectInput
+					key={field.key}
+					label={field.label}
+					mandatory={field.isRequired}
+					value={value}
+					placeholder={`Select ${field.label}`}
+					error={errors?.[field.key]}
+					onChange={(e: any) => {
+						const selectedValue = e?.target?.value ?? "";
+
+						setForm((prev: any) => ({
+							...prev,
+							[field.key]: selectedValue,
+						}));
+
+						setErrors((prev: any) => ({
+							...prev,
+							[field.key]: "",
+						}));
+					}}
+					options={[
+						{ value: "", label: `Select ${field.label}` },
+						...options,
+					]}
+				/>
+			);
+		}
+
+		if (field.type === "number") {
+			return (
+				<TextInput
+					key={field.key}
+					{...commonProps}
+					type="number"
+					onChange={(e: any) => {
+						setForm((prev: any) => ({
+							...prev,
+							[field.key]: e.target.value,
+						}));
+
+						setErrors((prev: any) => ({
+							...prev,
+							[field.key]: "",
+						}));
+					}}
+				/>
+			);
+		}
+
+		if (field.type === "textarea") {
+			return (
+				<TextArea
+					key={field.key}
+					{...commonProps}
+					onChange={(e: any) => {
+						setForm((prev: any) => ({
+							...prev,
+							[field.key]: e.target.value,
+						}));
+
+						setErrors((prev: any) => ({
+							...prev,
+							[field.key]: "",
+						}));
+					}}
+				/>
+			);
+		}
+
+		if (field.key === "productHSNCode") {
+			return (
+				<TextInput
+					key={field.key}
+					{...commonProps}
+					type="text"
+					onChange={(e: any) => {
+						setForm((prev: any) => ({
+							...prev,
+							[field.key]: e.target.value.replace(/\D/g, "").slice(0, 8),
+						}));
+
+						setErrors((prev: any) => ({
+							...prev,
+							[field.key]: "",
+						}));
+					}}
+				/>
+			);
+		}
+
+		if (field.key === "imageUrl") {
+			return (
+				<TextInput
+					key={field.key}
+					{...commonProps}
+					type="text"
+					placeholder="Enter image URL"
+					onChange={(e: any) => {
+						setForm((prev: any) => ({
+							...prev,
+							[field.key]: e.target.value,
+						}));
+					}}
+				/>
+			);
+		}
+
+		return (
+			<TextInput
+				key={field.key}
+				{...commonProps}
+				type="text"
+				onChange={(e: any) => {
+					setForm((prev: any) => ({
+						...prev,
+						[field.key]: e.target.value,
+					}));
+
+					setErrors((prev: any) => ({
+						...prev,
+						[field.key]: "",
+					}));
+				}}
+			/>
+		);
 	};
 
 	const getProductTypeLabel = (value) => {
@@ -148,71 +414,134 @@ const ProductMaster = () => {
 	============================================= */
 	const openAddModal = () => {
 		setEditingProduct(null);
-
-		setForm({
-			productName: "",
-			productDescription: "",
-			productHSNCode: "",
-			productType: "",
-		});
-
+		setErrors({});
+		setForm(buildEmptyForm(productMasterSchemaFields));
 		setShowModal(true);
 	};
-
 	/* ============================================
 		  OPEN EDIT MODAL
 	============================================= */
-	const openEditModal = (p) => {
+	const openEditModal = (p: any) => {
 		setEditingProduct(p);
+		setErrors({});
 
-		setForm({
-			productName: p.productName,
-			productDescription: p.productDescription,
-			productHSNCode: p.productHSNCode,
-			// productType: p.productType,
-			productType: normalizeProductType(p.productType),
+		const nextForm = buildEmptyForm(productMasterSchemaFields);
+
+		productMasterSchemaFields.forEach((field: any) => {
+			const key = field.key;
+
+			if (key === "productType") {
+				nextForm[key] = normalizeProductType(p?.[key] || "");
+				return;
+			}
+
+			if (key === "unit") {
+				if (typeof p?.unit === "object") {
+					nextForm.unit =
+						p.unit?.unitCode ||
+						p.unit?.code ||
+						p.unit?.value ||
+						"";
+				} else {
+					nextForm.unit = p?.unit || "";
+				}
+
+				return;
+			}
+
+			nextForm[key] = p?.[key] ?? "";
 		});
 
+		setForm(nextForm);
 		setShowModal(true);
 	};
-
 	/* ============================================
 		  SAVE / UPDATE PRODUCT
 	============================================= */
+	// const handleSubmit = async () => {
+
+	// 	const e = {};
+
+	// 	if (!form.productName.trim()) {
+	// 		e.productName = "Product name required";
+	// 	}
+
+	// 	if (!form.productHSNCode.trim()) {
+	// 		e.productHSNCode = "HSN/SAC code required";
+	// 	} else if (!/^(\d{2}|\d{4}|\d{6}|\d{8})$/.test(form.productHSNCode)) {
+	// 		e.productHSNCode =
+	// 			"Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code (digits only).";
+	// 	}
+
+	// 	if (!form.productType.trim()) {
+	// 		e.productType = "Product type required";
+	// 	}
+
+	// 	setErrors(e);
+	// 	if (Object.keys(e).length > 0) return;
+
+	// 	// your create/update API call below
+
+
+	// 	try {
+	// 		if (editingProduct) {
+	// 			// Only send changed fields
+	// 			const updatePayload = {};
+
+	// 			const fields = ["productName", "productDescription", "productHSNCode", "productType"];
+	// 			fields.forEach((field) => {
+	// 				if (form[field] !== editingProduct[field]) {
+	// 					updatePayload[field] = form[field];
+	// 				}
+	// 			});
+
+	// 			await dispatch(
+	// 				updateProduct({
+	// 					productCode: editingProduct.productCode,
+	// 					data: updatePayload,
+	// 				})
+	// 			).unwrap();
+
+	// 			toast.success("Product updated successfully");
+	// 		} else {
+	// 			await dispatch(createProduct(form)).unwrap();
+	// 			toast.success("Product created");
+	// 		}
+
+	// 		setShowModal(false);
+	// 		fetchProducts();
+	// 	} catch (err) {
+	// 		toast.error(err.message || "Operation failed");
+	// 	}
+	// };
+
+
+
 	const handleSubmit = async () => {
+		if (!validateForm()) return;
 
-		const e = {};
+		const payload: any = { ...form };
 
-		if (!form.productName.trim()) {
-			e.productName = "Product name required";
-		}
-
-		if (!form.productHSNCode.trim()) {
-			e.productHSNCode = "HSN/SAC code required";
-		} else if (!/^(\d{2}|\d{4}|\d{6}|\d{8})$/.test(form.productHSNCode)) {
-			e.productHSNCode =
-				"Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code (digits only).";
-		}
-
-		if (!form.productType.trim()) {
-			e.productType = "Product type required";
-		}
-
-		setErrors(e);
-		if (Object.keys(e).length > 0) return;
-
-		// your create/update API call below
-
+		productMasterSchemaFields.forEach((field: any) => {
+			if (field.type === "number" && payload[field.key] !== "") {
+				payload[field.key] = Number(payload[field.key]);
+			}
+		});
 
 		try {
 			if (editingProduct) {
-				// Only send changed fields
-				const updatePayload = {};
+				const updatePayload: any = {};
 
-				const fields = ["productName", "productDescription", "productHSNCode", "productType"];
-				fields.forEach((field) => {
-					if (form[field] !== editingProduct[field]) {
-						updatePayload[field] = form[field];
+				productMasterSchemaFields.forEach((field: any) => {
+					const key = field.key;
+
+					const oldValue =
+						key === "productType"
+							? normalizeProductType(editingProduct?.[key] || "")
+							: editingProduct?.[key];
+
+					if (form[key] !== oldValue) {
+						updatePayload[key] = payload[key];
 					}
 				});
 
@@ -220,22 +549,21 @@ const ProductMaster = () => {
 					updateProduct({
 						productCode: editingProduct.productCode,
 						data: updatePayload,
-					})
+					}) as any
 				).unwrap();
 
 				toast.success("Product updated successfully");
 			} else {
-				await dispatch(createProduct(form)).unwrap();
+				await dispatch(createProduct(payload) as any).unwrap();
 				toast.success("Product created");
 			}
 
 			setShowModal(false);
 			fetchProducts();
-		} catch (err) {
+		} catch (err: any) {
 			toast.error(err.message || "Operation failed");
 		}
 	};
-
 	/* ============================================
 		  DELETE PRODUCT
 	============================================= */
@@ -348,57 +676,28 @@ const ProductMaster = () => {
 
 			{/* ================= MODAL ================= */}
 
-			<Modal {...{
-				show: showModal, setShow: setShowModal, handleSubmit, state: editingProduct, title: "Product",
-				body: <>
-					{/* Product Name */}
-					<TextInput {...{ label: "Product Name", mandatory: true, value: form.productName, onChange: (e) => setForm({ ...form, productName: e.target.value }), placeholder: "Enter product name", error: errors.productName }} />
-					{/* <SelectInput {...{
-						label: "Product Type", mandatory: true, value: form.productType,
-						onChange: (e) => setForm({ ...form, productType: e?.target?.value ?? value }), placeholder: "Select product type", error: errors.productType,
-						options: [
-							{ value: "", label: "Select product type" },
-							{ value: "Raw Material", label: "Raw Material" },
-							{ value: "Finished Goods", label: "Finished Goods" },
-							{ value: "Service Product", label: "Service Product" },
-							{ value: "Non Stock Product", label: "Non Stock Product" },
-							{ value: "Intermediary Product", label: "Intermediary Product" },
-						]
-					}} /> */}
-
-					<SelectInput
-						label="Product Type"
-						mandatory={true}
-						value={form.productType}
-						onChange={(e) =>
-							setForm({
-								...form,
-								productType: e?.target?.value || "",
-							})
-						}
-						placeholder="Select product type"
-						error={errors.productType}
-						options={PRODUCT_TYPE_OPTIONS}
-					/>
-
-					<TextInput
-						label="HSN Code"
-						mandatory={true}
-						value={form.productHSNCode}
-						onChange={(e) =>
-							setForm({
-								...form,
-								productHSNCode: e.target.value.replace(/\D/g, "").slice(0, 8),
-							})
-						}
-						placeholder="Enter HSN code"
-						error={errors.productHSNCode}
-						type="text"
-					/>
-					<TextArea {...{ label: "Description", mandatory: true, value: form.productDescription, onChange: (e) => setForm({ ...form, productDescription: e.target.value }), placeholder: "Enter product description", error: errors.productDescription }} />
-				</>
-			}} />
-
+			<Modal
+				{...{
+					show: showModal,
+					setShow: setShowModal,
+					handleSubmit,
+					state: editingProduct,
+					title: "Product",
+					body: (
+						<>
+							{schemaLoading ? (
+								<div className="py-6 text-sm text-gray-500">
+									Loading product fields...
+								</div>
+							) : (
+								productMasterSchemaFields.map((field: any) =>
+									renderSchemaField(field)
+								)
+							)}
+						</>
+					),
+				}}
+			/>
 
 
 
