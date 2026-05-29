@@ -87,7 +87,6 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);
 
-
   const handleLogout = async () => {
     try {
       // 1) read headers (who is logged in)

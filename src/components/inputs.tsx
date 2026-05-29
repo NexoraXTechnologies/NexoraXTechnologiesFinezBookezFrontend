@@ -1,9 +1,9 @@
-const TextInput = (({ label, value, onChange, placeholder, name = "", mandatory = false, error = "", type = "text", maxLength = null }: any) => {
+const TextInput = (({ label = "", value, onChange, placeholder, name = "", mandatory = false, error = "", type = "text", maxLength = null,className="" }: any) => {
     return (
         <div className="w-full flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
+            {!!label?.length && <label className="text-sm font-medium text-gray-700">
                 {label}{mandatory && <span className="text-red-500">*</span>}
-            </label>
+            </label>}
 
             <input
                 maxLength={maxLength}
@@ -12,7 +12,7 @@ const TextInput = (({ label, value, onChange, placeholder, name = "", mandatory 
                 onChange={onChange}
                 type={type}
                 placeholder={placeholder}
-                className="w-full h-8 rounded-sm border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200" />
+                className={`w-full h-8 rounded-sm border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 ${className}`} />
             {!!error?.length && (
                 <p className="text-xs text-red-500">
                     {error}
