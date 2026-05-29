@@ -8,6 +8,7 @@ import {
 	createAccount,
 	updateAccount,
 	deleteAccount,
+	getAllAccountMasterSchema,
 } from "../../../redux/slices/professionalSlice/accountMasterSlice";
 import { DataCreateButton, DataREfreshButton, PrimaryButton, SecondaryButton } from "../../../components/buttons";
 import DataTable from "../../../components/DataTable";
@@ -17,6 +18,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import Badge from "../../../components/badge";
+import { getCitiesByState, getStates } from "../../../redux/slices/professionalSlice/stateCitySlice";
 
 const columns = [
 	{ key: 'accountCode', title: 'Account Code', },
@@ -35,7 +37,13 @@ const columns = [
 
 const AccountMaster = () => {
 	const dispatch = useDispatch();
-	const { accounts, pagination, loading } = useSelector((s) => s.accountMaster);
+	const {
+		accounts,
+		pagination,
+		loading,
+		accountMasterSchemaFields = [],
+		schemaLoading,
+	} = useSelector((s: any) => s.accountMaster);
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
 	const [search, setSearch] = useState("");
@@ -44,6 +52,8 @@ const AccountMaster = () => {
 	const [showModal, setShowModal] = useState(false);
 	const [editingAccount, setEditingAccount] = useState(null);
 	const [errors, setErrors] = useState({});
+
+	const [pendingCity, setPendingCity] = useState("");
 	const [confirmTooltip, setConfirmTooltip] = useState({
 		show: false,
 		x: null,
@@ -51,14 +61,366 @@ const AccountMaster = () => {
 		accountCode: null,
 	});
 
-	const [form, setForm] = useState({
-		accountName: "",
-		accountType: "",
-		accountMobile: "",
-		accountEmail: "",
-		accountCreditLimit: "",
-		accountAddress: "",
-	});
+
+
+
+	const [form, setForm] = useState<any>({});
+	useEffect(() => {
+		if (accountMasterSchemaFields.length > 0) {
+			setForm((prev: any) => ({
+				...buildEmptyForm(accountMasterSchemaFields),
+				...prev,
+			}));
+		}
+	}, [accountMasterSchemaFields]);
+
+
+	const buildEmptyForm = (fields: any[] = []) => {
+		return fields.reduce((acc: any, field: any) => {
+			acc[field.key] = "";
+			return acc;
+		}, {});
+	};
+
+	const getDisplayName = (name: any) => {
+		if (!name) return "";
+
+		if (typeof name === "string") return name;
+
+		if (typeof name === "object") {
+			return (
+				name.en ||
+				name.mr ||
+				name.hi ||
+				name.gu ||
+				name.ta ||
+				name.te ||
+				name.kn ||
+				name.ml ||
+				name.pa ||
+				""
+			);
+		}
+
+		return String(name);
+	};
+
+	const {
+		states = [],
+		cities = [],
+	} = useSelector((s: any) => s.stateCity || {});
+
+	useEffect(() => {
+		dispatch(getStates() as any);
+	}, [dispatch]);
+
+	useEffect(() => {
+		if (form.state) {
+			dispatch(
+				getCitiesByState({
+					stateCode: form.state,
+					searchText: "",
+				}) as any
+			);
+		}
+	}, [dispatch, form.state]);
+
+
+
+	// const getFieldOptions = (field: any) => {
+	// 	if (field.key === "state") {
+	// 		return (
+	// 			states?.map((item: any) => {
+	// 				const stateCode =
+	// 					item.isoCode || item.stateCode || item.code || "";
+
+	// 				const stateName = getDisplayName(item.name || item.stateName);
+
+	// 				return {
+	// 					value: stateCode,
+	// 					label: stateName || stateCode,
+	// 				};
+	// 			}) || []
+	// 		);
+	// 	}
+
+	// 	if (field.key === "city") {
+	// 		return (
+	// 			cities?.map((item: any) => {
+	// 				const cityName = getDisplayName(item.name || item.cityName);
+
+	// 				return {
+	// 					value: cityName,
+	// 					label: cityName,
+	// 				};
+	// 			}) || []
+	// 		);
+	// 	}
+
+	// 	return (field.options || []).map((opt: string) => ({
+	// 		value: opt,
+	// 		label: opt,
+	// 	}));
+	// };
+
+
+	const getFieldOptions = (field: any) => {
+		if (field.key === "state") {
+			return (
+				states?.map((item: any) => {
+					const stateCode =
+						item.isoCode || item.stateCode || item.code || "";
+
+					const stateName = getDisplayName(item.name || item.stateName);
+
+					return {
+						value: stateCode,
+						label: stateName || stateCode,
+					};
+				}) || []
+			);
+		}
+
+		if (field.key === "city") {
+			return (
+				cities?.map((item: any) => {
+					const cityName = getDisplayName(item.name || item.cityName);
+
+					return {
+						value: cityName,
+						label: cityName,
+					};
+				}) || []
+			);
+		}
+
+		if (field.key === "accountType") {
+			return (field.options || []).map((opt: any) => {
+				const label =
+					typeof opt === "object"
+						? opt.label || opt.name || opt.value || ""
+						: opt;
+
+				const value =
+					typeof opt === "object"
+						? opt.value || opt.code || opt.name || label
+						: opt;
+
+				return {
+					label,
+					value: String(value).toLowerCase(),
+				};
+			});
+		}
+
+		return (field.options || []).map((opt: any) => {
+			if (typeof opt === "object") {
+				return {
+					value: opt.value || opt.code || opt.name || "",
+					label: opt.label || opt.name || opt.value || "",
+				};
+			}
+
+			return {
+				value: opt,
+				label: opt,
+			};
+		});
+	};
+
+	const findSelectedState = () => {
+		return states?.find((item: any) => {
+			const stateCode =
+				item.isoCode || item.stateCode || item.code || "";
+
+			return stateCode === form.state;
+		});
+	};
+
+	const findSelectedCity = () => {
+		return cities?.find((item: any) => {
+			const cityName = getDisplayName(item.name || item.cityName);
+			return cityName === form.city;
+		});
+	};
+
+
+	useEffect(() => {
+		if (!pendingCity || !cities?.length) return;
+
+		const matchedCity = cities.find((item: any) => {
+			const cityName = getDisplayName(item.name || item.cityName);
+			return cityName === pendingCity;
+		});
+
+		if (matchedCity) {
+			setForm((prev: any) => ({
+				...prev,
+				city: pendingCity,
+			}));
+
+			setPendingCity("");
+		}
+	}, [cities, pendingCity]);
+
+
+
+	/* ============================================
+		  FETCH Form Fields
+	============================================= */
+
+
+	const renderSchemaField = (field: any) => {
+		const value = form?.[field.key] ?? "";
+
+		const commonProps = {
+			label: field.label,
+			mandatory: field.isRequired,
+			value,
+			placeholder: `Enter ${field.label}`,
+			error: errors?.[field.key],
+		};
+
+		if (field.type === "select") {
+			const options = getFieldOptions(field);
+
+			return (
+				<SelectInput
+					key={field.key}
+					label={field.label}
+					mandatory={field.isRequired}
+					value={form?.[field.key] ?? ""}
+					placeholder={`Select ${field.label}`}
+					error={errors?.[field.key]}
+					onChange={(e: any) => {
+						const selectedValue = e?.target?.value ?? "";
+
+						setForm((prev: any) => ({
+							...prev,
+							[field.key]: selectedValue,
+							...(field.key === "state" ? { city: "" } : {}),
+						}));
+
+						setErrors((prev: any) => ({
+							...prev,
+							[field.key]: "",
+							...(field.key === "state" ? { city: "" } : {}),
+						}));
+
+						if (field.key === "state") {
+							setPendingCity("");
+
+							if (selectedValue) {
+								dispatch(
+									getCitiesByState({
+										stateCode: selectedValue,
+										searchText: "",
+									}) as any
+								);
+							}
+						}
+					}}
+					disabled={field.key === "city" && !form.state}
+					options={[
+						{
+							value: "",
+							label:
+								field.key === "city" && !form.state
+									? "Select state first"
+									: `Select ${field.label}`,
+						},
+						...options,
+					]}
+				/>
+			);
+		}
+
+		if (field.type === "number") {
+			return (
+				<TextInput
+					key={field.key}
+					{...commonProps}
+					type="number"
+					onChange={(e: any) =>
+						setForm({
+							...form,
+							[field.key]: e.target.value,
+						})
+					}
+				/>
+			);
+		}
+
+		if (field.type === "textarea") {
+			return (
+				<TextArea
+					key={field.key}
+					{...commonProps}
+					onChange={(e: any) =>
+						setForm({
+							...form,
+							[field.key]: e.target.value,
+						})
+					}
+				/>
+			);
+		}
+
+		if (field.key === "accountMobile") {
+			return (
+				<TextInput
+					key={field.key}
+					{...commonProps}
+					type="tel"
+					onChange={(e: any) =>
+						setForm({
+							...form,
+							[field.key]: e.target.value.replace(/\D/g, "").slice(0, 10),
+						})
+					}
+				/>
+			);
+		}
+
+		if (field.key === "accountEmail") {
+			return (
+				<TextInput
+					key={field.key}
+					{...commonProps}
+					type="email"
+					onChange={(e: any) =>
+						setForm({
+							...form,
+							[field.key]: e.target.value,
+						})
+					}
+				/>
+			);
+		}
+
+		return (
+			<TextInput
+				key={field.key}
+				{...commonProps}
+				type="text"
+				onChange={(e: any) =>
+					setForm({
+						...form,
+						[field.key]: e.target.value,
+					})
+				}
+			/>
+		);
+	};
+
+	useEffect(() => {
+		dispatch(
+			getAllAccountMasterSchema({
+				offset: 0,
+				limit: 50,
+			}) as any
+		);
+	}, [dispatch]);
 	/* ============================================
 		  FETCH ACCOUNTS
 	============================================= */
@@ -95,98 +457,234 @@ const AccountMaster = () => {
 	/* ============================================
 		  OPEN ADD
 	============================================= */
+
 	const openAddModal = () => {
 		setEditingAccount(null);
-
-		setForm({
-			accountName: "",
-			accountType: "",
-			accountMobile: "",
-			accountEmail: "",
-			accountCreditLimit: "",
-			accountAddress: "",
-		});
+		setErrors({});
+		setForm(buildEmptyForm(accountMasterSchemaFields));
 		setShowModal(true);
 	};
 
 	/* ============================================
 		  OPEN EDIT
 	============================================= */
-	const openEditModal = (acc) => {
-		setEditingAccount(acc);
+	// const openEditModal = (acc: any) => {
+	// 	setEditingAccount(acc);
+	// 	setErrors({});
 
-		setForm({
-			accountName: acc.accountName,
-			accountType: acc.accountType,
-			accountMobile: acc.accountMobile,
-			accountEmail: acc.accountEmail,
-			accountCreditLimit: acc.accountCreditLimit,
-			accountAddress: acc.accountAddress,
+	// 	const nextForm = buildEmptyForm(accountMasterSchemaFields);
+
+	// 	accountMasterSchemaFields.forEach((field: any) => {
+	// 		if (field.key === "state") {
+	// 			nextForm.state =
+	// 				typeof acc.state === "object"
+	// 					? acc.state?.isoCode || acc.state?.stateCode || acc.state?.code || ""
+	// 					: acc.state || "";
+	// 		} else if (field.key === "city") {
+	// 			const cityName =
+	// 				typeof acc.city === "object"
+	// 					? getDisplayName(acc.city?.name || acc.city?.cityName)
+	// 					: acc.city || "";
+
+	// 			nextForm.city = "";
+	// 			setPendingCity(cityName);
+	// 		} else {
+	// 			nextForm[field.key] = acc?.[field.key] ?? "";
+	// 		}
+	// 	});
+
+	// 	setForm(nextForm);
+
+	// 	if (nextForm.state) {
+	// 		dispatch(
+	// 			getCitiesByState({
+	// 				stateCode: nextForm.state,
+	// 				searchText: "",
+	// 			}) as any
+	// 		);
+	// 	}
+
+	// 	setShowModal(true);
+	// };
+
+
+
+	const openEditModal = (acc: any) => {
+		setEditingAccount(acc);
+		setErrors({});
+
+		const nextForm = buildEmptyForm(accountMasterSchemaFields);
+
+		accountMasterSchemaFields.forEach((field: any) => {
+			const key = field.key;
+
+			if (key === "state") {
+				nextForm.state =
+					typeof acc.state === "object"
+						? acc.state?.isoCode || acc.state?.stateCode || acc.state?.code || ""
+						: acc.state || "";
+
+				return;
+			}
+
+			if (key === "city") {
+				const cityName =
+					typeof acc.city === "object"
+						? getDisplayName(acc.city?.name || acc.city?.cityName)
+						: acc.city || "";
+
+				nextForm.city = "";
+				setPendingCity(cityName);
+
+				return;
+			}
+
+			if (key === "accountType") {
+				nextForm.accountType = acc?.accountType
+					? String(acc.accountType).toLowerCase()
+					: "";
+
+				return;
+			}
+
+			nextForm[key] = acc?.[key] ?? "";
 		});
+
+		setForm(nextForm);
+
+		if (nextForm.state) {
+			dispatch(
+				getCitiesByState({
+					stateCode: nextForm.state,
+					searchText: "",
+				}) as any
+			);
+		}
 
 		setShowModal(true);
 	};
+	/* ============================================
+		  Validate form fields
+	============================================= */
 
-	/* ============================================ SAVE / UPDATE ============================================= */
-	const handleSubmit = async () => {
-		const e = {};
-		console.log("here");
-		// Account Name
-		if (!form.accountName.trim()) e.accountName = "Account name required";
+	const validateForm = () => {
+		const e: any = {};
 
-		// Account Type
-		if (!form.accountType.trim()) e.accountType = "Account type required";
+		accountMasterSchemaFields.forEach((field: any) => {
+			const value = form?.[field.key];
 
-		// Mobile
-		if (!form.accountMobile.trim()) {
-			e.accountMobile = "Mobile required";
-		} else if (!/^\d{10}$/.test(form.accountMobile)) {
-			e.accountMobile = "Mobile must be 10 digits";
-		}
+			if (field.isRequired && String(value || "").trim() === "") {
+				e[field.key] = `${field.label} required`;
+			}
 
-		// Email
-		if (!form.accountEmail.trim()) {
-			e.accountEmail = "Email required";
-		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.accountEmail)) {
-			e.accountEmail = "Invalid email address";
-		}
+			if (
+				field.key === "accountMobile" &&
+				value &&
+				!/^\d{10}$/.test(String(value))
+			) {
+				e[field.key] = "Mobile must be 10 digits";
+			}
 
-		// Credit Limit
-		if (form.accountCreditLimit !== "" && Number(form.accountCreditLimit) < 0) e.accountCreditLimit = "Credit limit cannot be negative";
+			if (
+				field.key === "accountEmail" &&
+				value &&
+				!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))
+			) {
+				e[field.key] = "Invalid email address";
+			}
 
-		// Address
-		if (!form.accountAddress.trim()) e.accountAddress = "Address required";
+			if (
+				field.key === "accountCreditLimit" &&
+				value !== "" &&
+				Number(value) < 0
+			) {
+				e[field.key] = "Credit limit cannot be negative";
+			}
+		});
 
 		setErrors(e);
-		if (Object.keys(e).length > 0) return;
+		return Object.keys(e).length === 0;
+	};
+
+	/* ============================================ SAVE / UPDATE ============================================= */
+
+
+	const handleSubmit = async () => {
+		if (!validateForm()) return;
+
+		const selectedState = findSelectedState();
+		const selectedCity = findSelectedCity();
+
+		const payload: any = {
+			...form,
+			state: selectedState || form.state,
+			city: selectedCity || form.city,
+		};
 
 		try {
 			if (editingAccount) {
-				const updatePayload = {};
-				const fields = ["accountName", "accountType", "accountMobile", "accountEmail", "accountCreditLimit", "accountAddress"];
-				fields.forEach((field) => {
-					if (form[field] !== editingAccount[field]) updatePayload[field] = form[field];
+				const updatePayload: any = {};
+
+				accountMasterSchemaFields.forEach((field: any) => {
+					const key = field.key;
+
+					if (key === "state") {
+						const oldStateCode =
+							typeof editingAccount.state === "object"
+								? editingAccount.state?.isoCode ||
+								editingAccount.state?.stateCode ||
+								editingAccount.state?.code ||
+								""
+								: editingAccount.state || "";
+
+						if (form.state !== oldStateCode) {
+							updatePayload.state = selectedState || form.state;
+						}
+
+						return;
+					}
+
+					if (key === "city") {
+						const oldCityName =
+							typeof editingAccount.city === "object"
+								? getDisplayName(
+									editingAccount.city?.name ||
+									editingAccount.city?.cityName
+								)
+								: editingAccount.city || "";
+
+						if (form.city !== oldCityName) {
+							updatePayload.city = selectedCity || form.city;
+						}
+
+						return;
+					}
+
+					if (form[key] !== editingAccount[key]) {
+						updatePayload[key] = form[key];
+					}
 				});
 
-				if (form.accountEmail === editingAccount.accountEmail) delete updatePayload.accountEmail;
-				if (form.accountMobile === editingAccount.accountMobile) delete updatePayload.accountMobile;
-
 				await dispatch(
-					updateAccount({ accountCode: editingAccount.accountCode, data: updatePayload, })
+					updateAccount({
+						accountCode: editingAccount.accountCode,
+						data: updatePayload,
+					}) as any
 				).unwrap();
 
 				toast.success("Account updated successfully");
 			} else {
-				await dispatch(createAccount(form)).unwrap();
+				await dispatch(createAccount(payload) as any).unwrap();
 				toast.success("Account created");
 			}
 
 			setShowModal(false);
 			fetchAccounts();
-		} catch (err) {
+		} catch (err: any) {
 			toast.error(err.message || "Operation failed");
 		}
 	};
+
 
 	/* ============================================
 		  DELETE CONFIRM
@@ -280,51 +778,30 @@ const AccountMaster = () => {
 				/>
 			)}
 
-			<Modal {...{
-				show: showModal, setShow: setShowModal, handleSubmit, state: editingAccount,title:"Account",
-				body: <>
-					{/* Account Name */}
-					<TextInput {...{ label: "Account Name", mandatory: true, value: form.accountName, onChange: (e) => setForm({ ...form, accountName: e.target.value }), placeholder: "Enter account name", error: errors.accountName }} />
-					<SelectInput {...{
-						label: "Account Type", mandatory: true, value: form.accountType,
-						onChange: (e) => setForm({ ...form, accountType: e?.target?.value ?? value }), placeholder: "Select account type", error: errors.accountType,
-						options: [
-							{ value: "", label: "Select account type" },
-							{ value: "cash", label: "Cash" },
-							{ value: "bank", label: "Bank" },
-							{ value: "customer", label: "Customer" },
-							{ value: "vendor", label: "Vendor" }
-						]
-					}} />
-
-					{/* <TextInput {...{
-						label: "Mobile", mandatory: true, value: form.accountMobile,
-						onChange: (e) => setForm({ ...form, accountMobile: e.target.value }), placeholder: "Enter mobile number", error: errors.accountMobile
-					}} /> */}
 
 
-					<TextInput
-						label="Mobile"
-						mandatory={true}
-						value={form.accountMobile}
-						onChange={(e) =>
-							setForm({
-								...form,
-								accountMobile: e.target.value.replace(/\D/g, "").slice(0, 10),
-							})
-						}
-						placeholder="Enter mobile number"
-						error={errors.accountMobile}
-						type="tel"
-					/>
-
-					<TextInput {...{ label: "Email", mandatory: true, value: form.accountEmail, onChange: (e) => setForm({ ...form, accountEmail: e.target.value }), placeholder: "Enter email address", error: errors.accountEmail, type: "email" }} />
-
-					<TextInput {...{ label: "Credit Limit", mandatory: true, value: form.accountCreditLimit, onChange: (e) => setForm({ ...form, accountCreditLimit: e.target.value }), placeholder: "Enter credit limit", error: errors.accountCreditLimit, type: "number" }} />
-
-					<TextArea {...{ label: "Address", mandatory: true, value: form.accountAddress, onChange: (e) => setForm({ ...form, accountAddress: e.target.value }), placeholder: "Enter address", error: errors.accountAddress }} />
-				</>
-			}} />
+			<Modal
+				{...{
+					show: showModal,
+					setShow: setShowModal,
+					handleSubmit,
+					state: editingAccount,
+					title: "Account",
+					body: (
+						<>
+							{schemaLoading ? (
+								<div className="py-6 text-sm text-gray-500">
+									Loading account fields...
+								</div>
+							) : (
+								accountMasterSchemaFields.map((field: any) =>
+									renderSchemaField(field)
+								)
+							)}
+						</>
+					),
+				}}
+			/>
 		</div>
 	);
 };

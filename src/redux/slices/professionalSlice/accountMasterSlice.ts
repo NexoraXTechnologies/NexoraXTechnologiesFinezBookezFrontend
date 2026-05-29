@@ -2,6 +2,58 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 
 /* ===================================================
+    Form ACCOUNT Master
+=================================================== */
+
+export const getAllAccountMasterSchema = createAsyncThunk(
+  "accountMaster/getAllAccountMasterSchema",
+  async (
+    {
+      offset = 0,
+      limit = 20,
+      isSearchable = "",
+      isRequired = "",
+      isFilterable = "",
+    } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+      const params = {
+        offset,
+        limit,
+        isSearchable,
+        isRequired,
+        isFilterable,
+      };
+
+      const res = await professionalAxios.get(
+        "/eTaxSolnMongoApiBackend/users/masters/accountMaster/schema/getAll",
+        { params }
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch account schema",
+        });
+      }
+
+      return res.data?.data;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message || "Failed to fetch account schema",
+      });
+    }
+  }
+);
+
+
+
+
+
+
+
+/* ===================================================
     CREATE ACCOUNT
 =================================================== */
 export const createAccount = createAsyncThunk(
@@ -132,6 +184,9 @@ export const deleteAccount = createAsyncThunk(
   }
 );
 
+
+
+
 /* ===================================================
     SLICE
 =================================================== */
@@ -147,7 +202,11 @@ const accountMasterSlice = createSlice({
       currentPage: 1,
       hasNextPage: false,
       hasPrevPage: false,
+
     },
+
+    accountMasterSchemaFields: [],
+    schemaLoading: false,
 
     selectedAccount: null,
 
@@ -185,7 +244,7 @@ const accountMasterSlice = createSlice({
       .addCase(getAllAccounts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message;
-        state.accounts=[];
+        state.accounts = [];
       });
 
     /* ---------- GET BY ACCOUNT CODE ---------- */
@@ -201,6 +260,25 @@ const accountMasterSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.message;
       });
+
+
+    /* ----------  Form ACCOUNT Master ---------- */
+    builder
+      .addCase(getAllAccountMasterSchema.pending, (state) => {
+        state.schemaLoading = true;
+        state.error = null;
+      })
+
+      .addCase(getAllAccountMasterSchema.fulfilled, (state, action) => {
+        state.schemaLoading = false;
+        state.accountMasterSchemaFields = action.payload?.fields || [];
+      })
+
+      .addCase(getAllAccountMasterSchema.rejected, (state, action: any) => {
+        state.schemaLoading = false;
+        state.error =
+          action.payload?.message || "Failed to fetch account schema";
+      })
 
     /* ---------- CREATE ACCOUNT ---------- */
     builder
