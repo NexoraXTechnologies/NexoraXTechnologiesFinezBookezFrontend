@@ -1,5 +1,3 @@
-// src/pages/bookez/master/MasterDashboard.tsx
-
 import {
   BrickWallShield,
   Wallet,
@@ -7,34 +5,40 @@ import {
   Ruler,
 } from "lucide-react";
 import { FaRegFilePowerpoint } from "react-icons/fa";
-import TransactionDashboard, { type DashboardCard } from "../transactions/components/TransactionDashboard";
 
+import TransactionDashboard, {
+  type DashboardCard,
+} from "../transactions/components/TransactionDashboard";
+import AccountMaster from "./AccountMaster";
+import ProductMaster from "./ProductMaster";
+import UnitMaster from "./UnitMaster";
+import ReportMapping from "./ReportMapping";
 
 
 const masterCards: DashboardCard[] = [
   {
     title: "Account",
     description: "Manage customers, vendors, cash, bank and ledgers.",
-    path: "/professional/master/account",
     icon: <Wallet size={22} />,
+    component: AccountMaster,
   },
   {
     title: "Product",
     description: "Manage products, services, pricing and inventory details.",
-    path: "/professional/master/product",
     icon: <PackageSearch size={22} />,
+    component: ProductMaster,
   },
   {
     title: "Unit",
     description: "Manage unit measurements for products and transactions.",
-    path: "/professional/master/unit",
     icon: <Ruler size={22} />,
+    component: UnitMaster,
   },
   {
     title: "Reports Mapping",
     description: "Configure templates and mapped report formats.",
-    path: "/professional/master/reports-mapping",
     icon: <FaRegFilePowerpoint size={22} />,
+    component: ReportMapping,
   },
 ];
 

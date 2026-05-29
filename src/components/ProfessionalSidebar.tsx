@@ -35,6 +35,36 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
   const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
   const canShowUsers = professionalHeaders?.['x-db-name'] == professionalHeaders?.loginuser;
 
+
+
+
+  useEffect(() => {
+    const updateSidebarWidth = () => {
+      const isDesktop = window.innerWidth >= 1024;
+
+      if (!isDesktop) {
+        document.documentElement.style.setProperty(
+          "--professional-sidebar-width",
+          "0px"
+        );
+        return;
+      }
+
+      document.documentElement.style.setProperty(
+        "--professional-sidebar-width",
+        isExpanded ? "256px" : "80px"
+      );
+    };
+
+    updateSidebarWidth();
+
+    window.addEventListener("resize", updateSidebarWidth);
+
+    return () => {
+      window.removeEventListener("resize", updateSidebarWidth);
+    };
+  }, [isExpanded]);
+
   const menuItems = [
     { name: 'Dashboard', path: '/professional', icon: <LayoutDashboard size={20} /> },
     {
