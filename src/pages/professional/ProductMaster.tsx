@@ -89,7 +89,6 @@ const ProductMaster = () => {
 		);
 	};
 
-
 	const columns = [
 		{ key: 'productCode', title: 'Product Code', },
 		{ key: 'productName', title: 'Name', },
@@ -99,7 +98,6 @@ const ProductMaster = () => {
 			title: "Type",
 			render: (row) => normalizeProductType(row.productType),
 		},
-		{ key: 'productType', title: 'Type', },
 		{
 			key: 'productHSNCode', title: 'HSN Code',
 
@@ -278,52 +276,7 @@ const ProductMaster = () => {
 				</div>
 			</div>
 
-
-			<DataTable
-				columns={columns}
-				data={products}
-				loading={loading}
-				emptyMessage="No products found"
-				actions={(prod) => (
-					<div className="flex items-center gap-2">
-
-						<button
-							id="product-edit-button"
-							onClick={() => openEditModal(prod)}
-							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
-							<Edit size={16} />
-						</button>
-
-
-						<button
-							id="product-delete-button"
-							onClick={(e) => {
-								const rect = e.currentTarget.getBoundingClientRect();
-								let x = rect.left - 150;
-								if (x < 10) x = 10;
-								const y = rect.top + window.scrollY - 5;
-								setConfirmTooltip({ show: true, x, y, productCode: acc.accountCode, });
-							}}
-							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
-						>
-							<Trash2 size={16} />
-						</button>
-					</div>
-				)}
-			/>
 			{/* ================= TABLE ================= */}
-			{/* <div className="flex-1 overflow-x-auto w-full">
-				<div id="account-table-container" className="max-h-[78vh] overflow-auto rounded-md border border-gray-200 bg-white shadow-sm">
-					<table className="min-w-full text-sm text-gray-700 border-separate border-spacing-0 pb-[2rem]">
-						<thead className="sticky top-0 z-10 bg-white">
-							<tr className="border-b border-gray-200">
-								<th className="px-4 py-4 text-left font-semibold text-gray-600 w-[150px] bg-gray-50 border-b border-gray-200">Product Code</th>
-								<th className="px-4 py-4 text-left font-semibold text-gray-600 bg-gray-50 border-b border-gray-200">Name</th>
-								<th className="px-4 py-4 text-left font-semibold text-gray-600 bg-gray-50 border-b border-gray-200">HSN Code</th>
-								<th className="px-4 py-4 text-left font-semibold text-gray-600 bg-gray-50 border-b border-gray-200">Description</th>
-								<th className="px-4 py-4 text-left font-semibold text-gray-600 w-[120px] bg-gray-50 border-b border-gray-200">Actions</th>
-							</tr>
-						</thead>
 
 
 			<DataTable
@@ -358,38 +311,6 @@ const ProductMaster = () => {
 					</div>
 				)}
 			/>
-													setConfirmTooltip({
-														show: true,
-														x,
-														y,
-														productCode: p.productCode,
-													});
-												}}
-												className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200"
-											>
-												<Trash2 size={16} />
-											</button>
-										</td>
-									</tr>
-								))
-							) : (
-								<tr>
-									<td
-										colSpan={5}
-										className="text-center py-6 text-gray-500 italic"
-									>
-										<div className="flex flex-col items-center gap-2 text-sm text-gray-500">
-											{debouncedSearch
-												? `No products found for “${debouncedSearch}”.`
-												: "No products found"}
-										</div>
-									</td>
-								</tr>
-							)}
-						</tbody>
-					</table>
-				</div>
-			</div> */}
 
 			{/* ================= PAGINATION ================= */}
 
@@ -433,7 +354,6 @@ const ProductMaster = () => {
 					{/* Product Name */}
 					<TextInput {...{ label: "Product Name", mandatory: true, value: form.productName, onChange: (e) => setForm({ ...form, productName: e.target.value }), placeholder: "Enter product name", error: errors.productName }} />
 					{/* <SelectInput {...{
-					<SelectInput {...{
 						label: "Product Type", mandatory: true, value: form.productType,
 						onChange: (e) => setForm({ ...form, productType: e?.target?.value ?? value }), placeholder: "Select product type", error: errors.productType,
 						options: [
@@ -461,13 +381,6 @@ const ProductMaster = () => {
 						options={PRODUCT_TYPE_OPTIONS}
 					/>
 
-					}} />
-
-
-
-					{/* <TextInput {...{ label: "Product Type", mandatory: true, value: form.productType, onChange: (e) => setForm({ ...form, productType: e.target.value }), placeholder: "Enter product type", error: errors.productType }} /> */}
-
-					{/* <TextInput {...{ label: "HSN Code", mandatory: true, value: form.productHSNCode, onChange: (e) => setForm({ ...form, productHSNCode: e.target.value }), placeholder: "Enter HSN code", error: errors.productHSNCode, type: "number" }} /> */}
 					<TextInput
 						label="HSN Code"
 						mandatory={true}
