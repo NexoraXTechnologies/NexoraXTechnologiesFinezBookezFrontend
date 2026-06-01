@@ -59,7 +59,7 @@ const TransactionDashboard = ({
               <button
                 type="button"
                 onClick={() => setActiveCard(card)}
-                className="group flex w-full items-center gap-4 rounded-md border border-slate-200 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md"
+                className="group flex w-full items-center gap-4 rounded-md border border-slate-200 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md cursor-pointer"
               >
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600">
                   {card.icon}
