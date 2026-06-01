@@ -422,7 +422,7 @@ const Login = () => {
                 </p>
 
                 {/* Next Button */}
-                <AuthButton {...{ loader: isVerifying, clickCb: handleVerifyOtp, btnName:"Verify OTP" }} />
+                <AuthButton {...{ loader: isVerifying, clickCb: handleVerifyOtp, btnName: "Verify OTP" }} />
               </>
             ) : <>
               <div>
@@ -464,7 +464,7 @@ const Login = () => {
                     })
                     .catch((err) => toast.error(err.message));
                 },
-               
+                btnName: "Send OTP"
               }} />
             </>}
             <p className="text-xs text-gray-600 mt-3">
