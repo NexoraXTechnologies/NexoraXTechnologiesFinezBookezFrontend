@@ -10,15 +10,10 @@ export const getCustomMasterModules = createAsyncThunk(
     try {
       const params = { offset, limit, search };
 
-      console.log("params",params)
-
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/users/customMaster/module/getAll",
         { params }
       );
-
-
-      console.log("custom master modules",res)
 
       if (!res.data?.success) {
         return rejectWithValue({

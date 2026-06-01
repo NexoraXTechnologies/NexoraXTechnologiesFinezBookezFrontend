@@ -9,6 +9,7 @@ import professionalTaskMgtReducer from "./slices/professionalSlice/professionalT
 import professionalCompanyMasterReducer from "./slices/professionalSlice/professionalCompanyMaster.slice";
 import accountMasterReducer from "./slices/professionalSlice/accountMasterSlice";
 import productMasterReducer from "./slices/professionalSlice/productMasterSlice";
+import UnitMasterReducer from "./slices/professionalSlice/unitMasterSlice";
 import aiTaxCopilotReducer from "./slices/professionalSlice/ai/aiTaxCopilotSlice";
 import alldropdownReducer from "./slices/professionalSlice/allDropDowns/alldropdownSlice";
 
@@ -47,6 +48,7 @@ export const store = configureStore({
     customMasterModule: customMasterModuleReducer,
 
     productMaster: productMasterReducer,
+    unitMaster: UnitMasterReducer,
     alldropdown: alldropdownReducer,
     taxpayer: taxpayerReducer,
     ais: aisReducer,
