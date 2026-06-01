@@ -63,7 +63,7 @@ type ModalProps = {
     state: boolean;
     body: React.ReactNode;
     title: string;
-
+    loader: boolean;
     // Optional dynamic props
     gridCols?: 1 | 2 | 3 | 4;
     maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
@@ -97,7 +97,7 @@ const Modal = ({
     state,
     body,
     title,
-
+    loader = false,
     // Default old values, so other components stay same
     gridCols = 2,
     maxWidth = "3xl",
@@ -166,8 +166,9 @@ const Modal = ({
                             />
 
                             <PrimaryButton
+                                disabled={loader}
                                 callBackFn={handleSubmit}
-                                text={state ? "Update" : "Save"}
+                                text={loader ? "Loading.." : (state ? "Update" : "Save")}
                             />
                         </div>
                     </motion.div>

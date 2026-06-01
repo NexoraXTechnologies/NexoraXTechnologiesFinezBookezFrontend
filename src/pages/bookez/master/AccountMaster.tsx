@@ -34,6 +34,12 @@ const columns = [
 	{ key: 'accountMobile', title: 'Mobile', },
 	{ key: 'accountEmail', title: 'Email', },
 ];
+export const buildEmptyForm = (fields: any[] = []) => {
+		return fields.reduce((acc: any, field: any) => {
+			acc[field.key] = "";
+			return acc;
+		}, {});
+	};
 
 const AccountMaster = () => {
 	const dispatch = useDispatch();
@@ -61,9 +67,6 @@ const AccountMaster = () => {
 		accountCode: null,
 	});
 
-
-
-
 	const [form, setForm] = useState<any>({});
 	useEffect(() => {
 		if (accountMasterSchemaFields.length > 0) {
@@ -73,14 +76,6 @@ const AccountMaster = () => {
 			}));
 		}
 	}, [accountMasterSchemaFields]);
-
-
-	const buildEmptyForm = (fields: any[] = []) => {
-		return fields.reduce((acc: any, field: any) => {
-			acc[field.key] = "";
-			return acc;
-		}, {});
-	};
 
 	const getDisplayName = (name: any) => {
 		if (!name) return "";
@@ -244,7 +239,6 @@ const AccountMaster = () => {
 		});
 	};
 
-
 	useEffect(() => {
 		if (!pendingCity || !cities?.length) return;
 
@@ -269,6 +263,11 @@ const AccountMaster = () => {
 		  FETCH Form Fields
 	============================================= */
 
+	const regex = {
+		accountMobile: { regex: "",type:"tel" },
+		accountMobile: { regex: "", },
+		accountMobile: { regex: "", },
+	}
 
 	const renderSchemaField = (field: any) => {
 		const value = form?.[field.key] ?? "";
@@ -371,7 +370,7 @@ const AccountMaster = () => {
 				<TextInput
 					key={field.key}
 					{...commonProps}
-					type="tel"
+					type={regex?.[field.key]?.type}
 					onChange={(e: any) =>
 						setForm({
 							...form,

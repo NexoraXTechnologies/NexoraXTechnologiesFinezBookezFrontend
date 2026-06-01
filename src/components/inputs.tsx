@@ -1,4 +1,4 @@
-const TextInput = (({ label = "", value, onChange, placeholder, name = "", mandatory = false, error = "", type = "text", maxLength = null,className="" }: any) => {
+const TextInput = (({ label = "", value, onChange, placeholder, name = "", mandatory = false, error = "", type = "text", maxLength = null, className = "", disabled = false }: any) => {
     return (
         <div className="w-full flex flex-col gap-1">
             {!!label?.length && <label className="text-sm font-medium text-gray-700">
@@ -7,6 +7,7 @@ const TextInput = (({ label = "", value, onChange, placeholder, name = "", manda
 
             <input
                 maxLength={maxLength}
+                disabled={disabled}
                 value={value}
                 name={name || value}
                 onChange={onChange}
