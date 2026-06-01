@@ -460,7 +460,7 @@ const UnitMaster = () => {
 								let x = rect.left - 150;
 								if (x < 10) x = 10;
 								const y = rect.top + window.scrollY - 5;
-								setConfirmTooltip({ show: true, x, y, unitId: acc.accountCode, });
+								setConfirmTooltip({ show: true, x, y, unitId: unit.unitId, });
 							}}
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
@@ -488,7 +488,7 @@ const UnitMaster = () => {
 					<ConfirmTooltip
 						x={confirmTooltip.x}
 						y={confirmTooltip.y}
-						message="Are you sure you want to delete this product?"
+						message="Are you sure you want to delete this unit?"
 						confirmText="Delete"
 						cancelText="Cancel"
 						onConfirm={handleDeleteConfirm}
@@ -517,7 +517,7 @@ const UnitMaster = () => {
 						<>
 							{schemaLoading ? (
 								<div className="py-6 text-sm text-gray-500">
-									Loading product fields...
+									Loading unit fields...
 								</div>
 							) : (
 								unitMasterSchemaFields.map((field: any) =>

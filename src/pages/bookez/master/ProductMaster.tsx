@@ -524,6 +524,7 @@ const ProductMaster = () => {
 		}
 	};
 
+
 	/* ============================================
 		  PAGINATION
 	============================================= */
@@ -572,7 +573,7 @@ const ProductMaster = () => {
 								let x = rect.left - 150;
 								if (x < 10) x = 10;
 								const y = rect.top + window.scrollY - 5;
-								setConfirmTooltip({ show: true, x, y, productCode: acc.accountCode, });
+								setConfirmTooltip({ show: true, x, y, productCode: prod.productCode, });
 							}}
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
