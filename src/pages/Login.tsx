@@ -220,6 +220,7 @@ const Login = () => {
               profilePic: user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
               userMobileNumberHash: user?.userMobileNumberHash,
               userEmail: user.userEmail,
+              ...user
             }),
           );
           try {
@@ -421,7 +422,7 @@ const Login = () => {
                 </p>
 
                 {/* Next Button */}
-                <AuthButton {...{ loader: isVerifying, clickCb: handleVerifyOtp, btnName:"Verify OTP" }} />
+                <AuthButton {...{ loader: isVerifying, clickCb: handleVerifyOtp, btnName: "Verify OTP" }} />
               </>
             ) : <>
               <div>
@@ -463,7 +464,7 @@ const Login = () => {
                     })
                     .catch((err) => toast.error(err.message));
                 },
-               
+                btnName: "Send OTP"
               }} />
             </>}
             <p className="text-xs text-gray-600 mt-3">

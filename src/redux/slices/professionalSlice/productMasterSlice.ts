@@ -2,6 +2,54 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 
 /* ===================================================
+    Form PRODUCT Master
+=================================================== */
+
+export const getAllProductMasterSchema = createAsyncThunk(
+  "productMaster/getAllProductMasterSchema",
+  async (
+    {
+      offset = 0,
+      limit = 20,
+      isSearchable = "",
+      isRequired = "",
+      isFilterable = "",
+    } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+      const params = {
+        offset,
+        limit,
+        isSearchable,
+        isRequired,
+        isFilterable,
+      };
+
+      const res = await professionalAxios.get(
+        "/eTaxSolnMongoApiBackend/users/masters/productMaster/schema/getAll",
+        { params }
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch account schema",
+        });
+      }
+
+      return res.data?.data;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message || "Failed to fetch account schema",
+      });
+    }
+  }
+);
+
+
+
+/* ===================================================
     CREATE PRODUCT
 =================================================== */
 export const createProduct = createAsyncThunk(
@@ -149,6 +197,9 @@ const productMasterSlice = createSlice({
       hasPrevPage: false,
     },
 
+    productMasterSchemaFields: [],
+    schemaLoading: false,
+
     selectedProduct: null,
 
     loading: false,
@@ -202,6 +253,25 @@ const productMasterSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.message;
       });
+
+
+    /* ----------  Form PRODUCT Master ---------- */
+    builder
+      .addCase(getAllProductMasterSchema.pending, (state) => {
+        state.schemaLoading = true;
+        state.error = null;
+      })
+
+      .addCase(getAllProductMasterSchema.fulfilled, (state, action) => {
+        state.schemaLoading = false;
+        state.productMasterSchemaFields = action.payload?.fields || [];
+      })
+
+      .addCase(getAllProductMasterSchema.rejected, (state, action: any) => {
+        state.schemaLoading = false;
+        state.error =
+          action.payload?.message || "Failed to fetch product schema";
+      })
 
     /* ---------- CREATE PRODUCT ---------- */
     builder

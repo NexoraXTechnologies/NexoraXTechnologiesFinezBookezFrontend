@@ -71,7 +71,7 @@ const PageComponentModal = ({
                             </button>
                         </header>
 
-                        <main className="flex-1 overflow-auto p-4 sm:p-6">
+                        <main className="flex-1 overflow-auto">
                             {children}
                         </main>
                     </motion.div>
