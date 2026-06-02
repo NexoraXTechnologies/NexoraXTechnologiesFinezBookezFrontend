@@ -238,30 +238,6 @@ const ReportMapping = () => {
 		Converts templateMappings object to mappingFields array
 		so that user can edit/delete fields in UI.
 	===================================================== */
-	// const openEditModal = (p: any) => {
-	// 	setEditingReport(p);
-	// 	setErrors({});
-	// 	setIsEditingFields(false);
-
-	// 	const mappingFields = Object.entries(p?.templateMappings || {}).map(
-	// 		([key, value]: any) => ({
-	// 			key,
-	// 			type: "dropdown",
-	// 			value,
-	// 			customValue: "",
-	// 		})
-	// 	);
-
-	// 	setReportForm({
-	// 		templateName: p?.templateName || "",
-	// 		moduleType: p?.moduleType || "",
-	// 		file: null,
-	// 		templateMappings: p?.templateMappings || {},
-	// 		mappingFields,
-	// 	});
-
-	// 	setShowModal(true);
-	// };
 
 	const openEditModal = (p: any) => {
 		setEditingReport(p);
@@ -922,26 +898,6 @@ const ReportMapping = () => {
 														{/* Value Edit */}
 														<div className="md:col-span-2">
 															{item.type === "dropdown" ? (
-																// <SelectInput
-																// 	label="Value"
-																// 	value={item.value}
-																// 	onChange={(e: any) =>
-																// 		updateMappingField(
-																// 			index,
-																// 			"value",
-																// 			e.target.value
-																// 		)
-																// 	}
-
-																// 	options={[
-																// 		{
-																// 			label: moduleWiseKeysLoading ? "Loading Keys..." : "Select Dropdown",
-																// 			value: "",
-																// 		},
-																// 		...selectedTabOptions,
-																// 	]}
-																// />
-
 
 																<SelectInput
 																	label="Value"
