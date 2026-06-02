@@ -238,10 +238,47 @@ const ReportMapping = () => {
 		Converts templateMappings object to mappingFields array
 		so that user can edit/delete fields in UI.
 	===================================================== */
+	// const openEditModal = (p: any) => {
+	// 	setEditingReport(p);
+	// 	setErrors({});
+	// 	setIsEditingFields(false);
+
+	// 	const mappingFields = Object.entries(p?.templateMappings || {}).map(
+	// 		([key, value]: any) => ({
+	// 			key,
+	// 			type: "dropdown",
+	// 			value,
+	// 			customValue: "",
+	// 		})
+	// 	);
+
+	// 	setReportForm({
+	// 		templateName: p?.templateName || "",
+	// 		moduleType: p?.moduleType || "",
+	// 		file: null,
+	// 		templateMappings: p?.templateMappings || {},
+	// 		mappingFields,
+	// 	});
+
+	// 	setShowModal(true);
+	// };
+
 	const openEditModal = (p: any) => {
 		setEditingReport(p);
 		setErrors({});
 		setIsEditingFields(false);
+
+		const selectedModuleType = p?.moduleType || "";
+
+		if (selectedModuleType) {
+			dispatch(
+				getAllModulesWiseKey({
+					moduleType: selectedModuleType,
+					offset: 0,
+					limit: 100,
+				}) as any
+			);
+		}
 
 		const mappingFields = Object.entries(p?.templateMappings || {}).map(
 			([key, value]: any) => ({
@@ -254,13 +291,32 @@ const ReportMapping = () => {
 
 		setReportForm({
 			templateName: p?.templateName || "",
-			moduleType: p?.moduleType || "",
+			moduleType: selectedModuleType,
 			file: null,
 			templateMappings: p?.templateMappings || {},
 			mappingFields,
 		});
 
 		setShowModal(true);
+	};
+
+
+	const getOptionsByValue = (value: string) => {
+		if (!value) return selectedTabOptions;
+
+		if (value.startsWith("companyMaster.")) {
+			return companyKeyOptions;
+		}
+
+		if (value.startsWith("accountMaster.")) {
+			return accountKeyOptions;
+		}
+
+		if (value.startsWith("module.")) {
+			return moduleKeyOptions;
+		}
+
+		return selectedTabOptions;
 	};
 
 	/* =====================================================
@@ -866,34 +922,39 @@ const ReportMapping = () => {
 														{/* Value Edit */}
 														<div className="md:col-span-2">
 															{item.type === "dropdown" ? (
+																// <SelectInput
+																// 	label="Value"
+																// 	value={item.value}
+																// 	onChange={(e: any) =>
+																// 		updateMappingField(
+																// 			index,
+																// 			"value",
+																// 			e.target.value
+																// 		)
+																// 	}
+
+																// 	options={[
+																// 		{
+																// 			label: moduleWiseKeysLoading ? "Loading Keys..." : "Select Dropdown",
+																// 			value: "",
+																// 		},
+																// 		...selectedTabOptions,
+																// 	]}
+																// />
+
+
 																<SelectInput
 																	label="Value"
 																	value={item.value}
 																	onChange={(e: any) =>
-																		updateMappingField(
-																			index,
-																			"value",
-																			e.target.value
-																		)
+																		updateMappingField(index, "value", e.target.value)
 																	}
-																	// options={[
-																	// 	{
-																	// 		label:
-																	// 			"Select Dropdown",
-																	// 		value: "",
-																	// 	},
-																	// 	...mappingValueOptions[
-																	// 	fieldForm.tab
-																	// 	],
-																	// ]}
-
-
 																	options={[
 																		{
 																			label: moduleWiseKeysLoading ? "Loading Keys..." : "Select Dropdown",
 																			value: "",
 																		},
-																		...selectedTabOptions,
+																		...getOptionsByValue(item.value),
 																	]}
 																/>
 															) : (
@@ -969,8 +1030,12 @@ const ReportMapping = () => {
 															<span className="font-semibold text-gray-500">
 																Value
 															</span>
-															<span className="truncate font-semibold text-gray-900">
+															{/* <span className="truncate font-semibold text-gray-900">
 																{finalValue}
+															</span> */}
+
+															<span className="truncate font-semibold text-gray-900">
+																{item.type === "custom" ? finalValue : getTemplateKeyLabel(finalValue)}
 															</span>
 														</div>
 													</div>
