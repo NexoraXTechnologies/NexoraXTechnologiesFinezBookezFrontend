@@ -20,6 +20,7 @@ import Pagination from "../../../components/pagination";
 import Badge from "../../../components/badge";
 import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
+import { getAllUnits } from "../../../redux/slices/professionalSlice/unitMasterSlice";
 
 const ProductMaster = () => {
 	const dispatch = useDispatch();
@@ -47,9 +48,9 @@ const ProductMaster = () => {
 	const [editingProduct, setEditingProduct] = useState(null);
 
 	const [errors, setErrors] = useState({});
-	console.log("products:", products);
+	// console.log("products:", products);
 
-	const { units = [] } = useSelector((s: any) => s.unitMeasurement || {});
+	const { units = [] } = useSelector((s: any) => s.unitMaster || {});
 
 	useEffect(() => {
 		dispatch(
@@ -60,15 +61,15 @@ const ProductMaster = () => {
 		);
 	}, [dispatch]);
 
-	// useEffect(() => {
-	// 	dispatch(
-	// 		getAllUnitMeasurements({
-	// 			offset: 0,
-	// 			limit: 1000,
-	// 			search: "",
-	// 		}) as any
-	// 	);
-	// }, [dispatch]);
+	useEffect(() => {
+		dispatch(
+			getAllUnits({
+				offset: 0,
+				limit: 1000,
+				search: "",
+			}) as any
+		);
+	}, [dispatch]);
 
 	const [confirmTooltip, setConfirmTooltip] = useState({
 		show: false,
@@ -421,6 +422,75 @@ const ProductMaster = () => {
 	/* ============================================
 		  OPEN EDIT MODAL
 	============================================= */
+
+	const getComparableValue = (field: any, product: any) => {
+		const key = field.key;
+		const value = product?.[key];
+
+		if (key === "productType") {
+			return normalizeProductType(value || "");
+		}
+
+		if (key === "unit") {
+			if (typeof value === "object") {
+				return (
+					value?.unitCode ||
+					value?.code ||
+					value?.value ||
+					value?._id ||
+					""
+				);
+			}
+
+			return value || "";
+		}
+
+		if (field.type === "number") {
+			return value === undefined || value === null || value === ""
+				? ""
+				: Number(value);
+		}
+
+		return value ?? "";
+	};
+
+
+	// const openEditModal = (p: any) => {
+	// 	setEditingProduct(p);
+	// 	setErrors({});
+
+	// 	const nextForm = buildEmptyForm(productMasterSchemaFields);
+
+	// 	productMasterSchemaFields.forEach((field: any) => {
+	// 		const key = field.key;
+
+	// 		if (key === "productType") {
+	// 			nextForm[key] = normalizeProductType(p?.[key] || "");
+	// 			return;
+	// 		}
+
+	// 		if (key === "unit") {
+	// 			if (typeof p?.unit === "object") {
+	// 				nextForm.unit =
+	// 					p.unit?.unitCode ||
+	// 					p.unit?.code ||
+	// 					p.unit?.value ||
+	// 					"";
+	// 			} else {
+	// 				nextForm.unit = p?.unit || "";
+	// 			}
+
+	// 			return;
+	// 		}
+
+	// 		nextForm[key] = p?.[key] ?? "";
+	// 	});
+
+	// 	setForm(nextForm);
+	// 	setShowModal(true);
+	// };
+
+
 	const openEditModal = (p: any) => {
 		setEditingProduct(p);
 		setErrors({});
@@ -428,28 +498,7 @@ const ProductMaster = () => {
 		const nextForm = buildEmptyForm(productMasterSchemaFields);
 
 		productMasterSchemaFields.forEach((field: any) => {
-			const key = field.key;
-
-			if (key === "productType") {
-				nextForm[key] = normalizeProductType(p?.[key] || "");
-				return;
-			}
-
-			if (key === "unit") {
-				if (typeof p?.unit === "object") {
-					nextForm.unit =
-						p.unit?.unitCode ||
-						p.unit?.code ||
-						p.unit?.value ||
-						"";
-				} else {
-					nextForm.unit = p?.unit || "";
-				}
-
-				return;
-			}
-
-			nextForm[key] = p?.[key] ?? "";
+			nextForm[field.key] = getComparableValue(field, p);
 		});
 
 		setForm(nextForm);
@@ -471,31 +520,44 @@ const ProductMaster = () => {
 		});
 
 		try {
+			// if (editingProduct) {
+			// 	const updatePayload: any = {};
+
+			// 	productMasterSchemaFields.forEach((field: any) => {
+			// 		const key = field.key;
+
+			// 		const oldValue =
+			// 			key === "productType"
+			// 				? normalizeProductType(editingProduct?.[key] || "")
+			// 				: editingProduct?.[key];
+
+			// 		if (form[key] !== oldValue) {
+			// 			updatePayload[key] = payload[key];
+			// 		}
+			// 	});
+
+			// 	await dispatch(
+			// 		updateProduct({
+			// 			productCode: editingProduct.productCode,
+			// 			data: updatePayload,
+			// 		}) as any
+			// 	).unwrap();
+
+			// 	toast.success("Product updated successfully");
+			// } 
+
+
 			if (editingProduct) {
-				const updatePayload: any = {};
-
-				productMasterSchemaFields.forEach((field: any) => {
-					const key = field.key;
-
-					const oldValue =
-						key === "productType"
-							? normalizeProductType(editingProduct?.[key] || "")
-							: editingProduct?.[key];
-
-					if (form[key] !== oldValue) {
-						updatePayload[key] = payload[key];
-					}
-				});
-
 				await dispatch(
 					updateProduct({
 						productCode: editingProduct.productCode,
-						data: updatePayload,
+						data: payload,
 					}) as any
 				).unwrap();
 
 				toast.success("Product updated successfully");
-			} else {
+			}
+			else {
 				await dispatch(createProduct(payload) as any).unwrap();
 				toast.success("Product created");
 			}
@@ -503,7 +565,22 @@ const ProductMaster = () => {
 			setShowModal(false);
 			fetchProducts();
 		} catch (err: any) {
-			toast.error(err.message || "Operation failed");
+			const apiErrors =
+				err?.error ||
+				err?.errors ||
+				err?.response?.data?.error ||
+				err?.response?.data?.errors ||
+				{};
+
+			if (apiErrors && typeof apiErrors === "object") {
+				setErrors(apiErrors);
+			}
+
+			toast.error(
+				err?.message ||
+				err?.response?.data?.message ||
+				"Validation failed"
+			);
 		}
 	};
 	/* ============================================
