@@ -3,19 +3,58 @@ import professionalAxios from "../../../services/professionalAxios";
 
 
 /* ===================================================
+    GET Modules wise Key LIST
+=================================================== */
+export const getAllModulesWiseKey = createAsyncThunk(
+    "reportMapping/getAllModulesWiseKey",
+    async (
+        { moduleType, offset = 0, limit = 10 }: any = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const params = { offset, limit };
+
+            if (!moduleType) {
+                return rejectWithValue({
+                    message: "Module type is required",
+                });
+            }
+
+            const res = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/templateKeys/${moduleType}`,
+                { params }
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message: res.data?.message || "Failed to fetch module wise keys",
+                });
+            }
+
+            return res.data?.data;
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message || "Failed to fetch module wise keys",
+            });
+        }
+    }
+);
+
+
+
+
+
+
+
+/* ===================================================
     GET Modules LIST
 =================================================== */
 export const getAllModules = createAsyncThunk(
     "reportMapping/getAllModules",
-    async ({ offset = 0, limit = 10, search = "", moduleType = "" } = {}, { rejectWithValue }) => {
+    async ({ offset = 0, limit = 10 } = {}, { rejectWithValue }) => {
         try {
             const params = { offset, limit };
-            if (search.trim()) params.search = search.trim();
-
-            if (moduleType) {
-                params.moduleType = moduleType;
-            }
-
 
             const res = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/modules/getAll",
@@ -215,6 +254,11 @@ const reportMappingSlice = createSlice({
             moduleType: ""
         },
 
+        modules: [],
+        modulesLoading: false,
+
+        moduleWiseKeys: null,
+        moduleWiseKeysLoading: false,
 
         selectedReport: null,
 
@@ -236,24 +280,42 @@ const reportMappingSlice = createSlice({
     },
 
     extraReducers: (builder) => {
-        /* ---------- GET MODULES ---------- */
+
+
+        /* ---------- GET MODULE WISE KEYS ---------- */
+        builder
+            .addCase(getAllModulesWiseKey.pending, (state) => {
+                state.moduleWiseKeysLoading = true;
+                state.error = null;
+            })
+            .addCase(getAllModulesWiseKey.fulfilled, (state, action) => {
+                state.moduleWiseKeysLoading = false;
+
+                state.moduleWiseKeys = action.payload ?? null;
+            })
+            .addCase(getAllModulesWiseKey.rejected, (state, action) => {
+                state.moduleWiseKeysLoading = false;
+                state.error = action.payload?.message;
+                state.moduleWiseKeys = null;
+            });
+
+        /* ---------- GET ALL MODULES ---------- */
         builder
             .addCase(getAllModules.pending, (state) => {
-                state.loading = true;
+                state.modulesLoading = true;
                 state.error = null;
             })
             .addCase(getAllModules.fulfilled, (state, action) => {
-                state.loading = false;
+                state.modulesLoading = false;
 
-                const data = action.payload; // <-- { pagination, items }
+                const data = action.payload;
 
-                state.report = data?.modules ?? [];
-                state.pagination = data?.pagination ?? state.pagination;
+                state.modules = data?.modules ?? [];
             })
             .addCase(getAllModules.rejected, (state, action) => {
-                state.loading = false;
+                state.modulesLoading = false;
                 state.error = action.payload?.message;
-                state.report = [];
+                state.modules = [];
             });
         /* ---------- GET ALL ---------- */
         builder
