@@ -5,14 +5,6 @@ import { toast } from "react-toastify";
 
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 
-import {
-	getAllProducts,
-	createProduct,
-	updateProduct,
-	deleteProduct,
-	getAllProductMasterSchema
-} from "../../../redux/slices/professionalSlice/productMasterSlice";
-import ReadMoreText from "../../../components/common/ReadMoreText";
 import SearchInput from "../../../components/searchInput";
 import { DataCreateButton, DataREfreshButton } from "../../../components/buttons";
 import DataTable from "../../../components/DataTable";
@@ -20,20 +12,21 @@ import Pagination from "../../../components/pagination";
 import Badge from "../../../components/badge";
 import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
+import { createUnit, deleteUnit, getAllUnitMasterSchema, getAllUnits, updateUnit } from "../../../redux/slices/professionalSlice/unitMasterSlice";
 
 const UnitMaster = () => {
 	const dispatch = useDispatch();
 
 	const {
-		products,
+		units,
 		pagination,
 		loading,
 		createLoading,
 		updateLoading,
 		deleteLoading,
-		productMasterSchemaFields = [],
+		unitMasterSchemaFields = [],
 		schemaLoading,
-	} = useSelector((s) => s.productMaster);
+	} = useSelector((s) => s.unitMaster);
 
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
@@ -44,37 +37,27 @@ const UnitMaster = () => {
 	const [refreshing, setRefreshing] = useState(false);
 	const [showModal, setShowModal] = useState(false);
 
-	const [editingProduct, setEditingProduct] = useState(null);
+	const [editingUnit, setEditingUnit] = useState(null);
 
 	const [errors, setErrors] = useState({});
-	console.log("products:", products);
+	console.log("units:", unitMasterSchemaFields);
 
-	const { units = [] } = useSelector((s: any) => s.unitMeasurement || {});
+
 
 	useEffect(() => {
 		dispatch(
-			getAllProductMasterSchema({
+			getAllUnitMasterSchema({
 				offset: 0,
 				limit: 50,
 			}) as any
 		);
 	}, [dispatch]);
 
-	// useEffect(() => {
-	// 	dispatch(
-	// 		getAllUnitMeasurements({
-	// 			offset: 0,
-	// 			limit: 1000,
-	// 			search: "",
-	// 		}) as any
-	// 	);
-	// }, [dispatch]);
-
 	const [confirmTooltip, setConfirmTooltip] = useState({
 		show: false,
 		x: null,
 		y: null,
-		productCode: null,
+		unitId: null,
 	});
 
 	const [form, setForm] = useState<any>({});
@@ -87,32 +70,24 @@ const UnitMaster = () => {
 	};
 
 	useEffect(() => {
-		if (productMasterSchemaFields.length > 0) {
+		if (unitMasterSchemaFields.length > 0) {
 			setForm((prev: any) => ({
-				...buildEmptyForm(productMasterSchemaFields),
+				...buildEmptyForm(unitMasterSchemaFields),
 				...prev,
 			}));
 		}
-	}, [productMasterSchemaFields]);
+	}, [unitMasterSchemaFields]);
 
 	const validateForm = () => {
 		const e: any = {};
 
-		productMasterSchemaFields.forEach((field: any) => {
+		unitMasterSchemaFields.forEach((field: any) => {
 			const value = form?.[field.key];
 
 			if (field.isRequired && String(value || "").trim() === "") {
 				e[field.key] = `${field.label} required`;
 			}
 
-			if (
-				field.key === "productHSNCode" &&
-				value &&
-				!/^\d{2}$|^\d{4}$|^\d{6}$|^\d{8}$/.test(String(value))
-			) {
-				e[field.key] =
-					"Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code.";
-			}
 
 			if (
 				field.type === "number" &&
@@ -150,19 +125,6 @@ const UnitMaster = () => {
 		return "";
 	};
 
-	const normalizeProductType = (value = "") => {
-		const map: any = {
-			rawmaterial: "Raw Material",
-			finishedgoods: "Finished Goods",
-			serviceproduct: "Service Product",
-			nonstockproduct: "Non Stock Product",
-			nonstocks: "Non Stock Product",
-			intermediaryproduct: "Intermediary Product",
-		};
-
-		const normalizedKey = String(value).toLowerCase().replace(/\s/g, "");
-		return map[normalizedKey] || value;
-	};
 
 	const getFieldOptions = (field: any) => {
 		if (field.ref === "unitMeasurement") {
@@ -269,63 +231,7 @@ const UnitMaster = () => {
 			);
 		}
 
-		if (field.type === "textarea") {
-			return (
-				<TextArea
-					key={field.key}
-					{...commonProps}
-					onChange={(e: any) => {
-						setForm((prev: any) => ({
-							...prev,
-							[field.key]: e.target.value,
-						}));
 
-						setErrors((prev: any) => ({
-							...prev,
-							[field.key]: "",
-						}));
-					}}
-				/>
-			);
-		}
-
-		if (field.key === "productHSNCode") {
-			return (
-				<TextInput
-					key={field.key}
-					{...commonProps}
-					type="text"
-					onChange={(e: any) => {
-						setForm((prev: any) => ({
-							...prev,
-							[field.key]: e.target.value.replace(/\D/g, "").slice(0, 8),
-						}));
-
-						setErrors((prev: any) => ({
-							...prev,
-							[field.key]: "",
-						}));
-					}}
-				/>
-			);
-		}
-
-		if (field.key === "imageUrl") {
-			return (
-				<TextInput
-					key={field.key}
-					{...commonProps}
-					type="text"
-					placeholder="Enter image URL"
-					onChange={(e: any) => {
-						setForm((prev: any) => ({
-							...prev,
-							[field.key]: e.target.value,
-						}));
-					}}
-				/>
-			);
-		}
 
 		return (
 			<TextInput
@@ -347,36 +253,21 @@ const UnitMaster = () => {
 		);
 	};
 
-	const getProductTypeLabel = (value) => {
-		return (
-			PRODUCT_TYPE_OPTIONS.find((item) => item.value === value)?.label ||
-			value ||
-			"-"
-		);
-	};
+
 
 	const columns = [
-		{ key: 'productCode', title: 'Product Code', },
-		{ key: 'productName', title: 'Name', },
-		// { key: 'productType', title: 'Type', },
-		{
-			key: "productType",
-			title: "Type",
-			render: (row) => normalizeProductType(row.productType),
-		},
-		{
-			key: 'productHSNCode', title: 'HSN Code',
-
-		},
-		{ key: 'productDescription', title: 'Description', },
+		{ key: 'unitId', title: 'Unit ID', },
+		{ key: 'unitCode', title: 'Unit Code', },
+		{ key: 'unitName', title: 'Name', },
+		{ key: 'unitStatus', title: 'Status', },
 
 	];
 	/* ============================================
-		  FETCH PRODUCTS
+		  FETCH UNITS
 	============================================= */
-	const fetchProducts = () => {
+	const fetchUnits = () => {
 		dispatch(
-			getAllProducts({
+			getAllUnits({
 				offset: localOffset,
 				limit: localLimit,
 				search: debouncedSearch,
@@ -385,7 +276,7 @@ const UnitMaster = () => {
 	};
 
 	useEffect(() => {
-		fetchProducts();
+		fetchUnits();
 	}, [localOffset, localLimit, debouncedSearch]);
 
 	/* ============================================
@@ -404,8 +295,8 @@ const UnitMaster = () => {
 	============================================= */
 	const handleRefresh = async () => {
 		setRefreshing(true);
-		await fetchProducts();
-		toast.success("Product list refreshed");
+		await fetchUnits();
+		toast.success("Unit list refreshed");
 		setRefreshing(false);
 	};
 
@@ -413,27 +304,24 @@ const UnitMaster = () => {
 		  OPEN ADD MODAL
 	============================================= */
 	const openAddModal = () => {
-		setEditingProduct(null);
+		setEditingUnit(null);
 		setErrors({});
-		setForm(buildEmptyForm(productMasterSchemaFields));
+		setForm(buildEmptyForm(unitMasterSchemaFields));
 		setShowModal(true);
 	};
 	/* ============================================
 		  OPEN EDIT MODAL
 	============================================= */
 	const openEditModal = (p: any) => {
-		setEditingProduct(p);
+		setEditingUnit(p);
 		setErrors({});
 
-		const nextForm = buildEmptyForm(productMasterSchemaFields);
+		const nextForm = buildEmptyForm(unitMasterSchemaFields);
 
-		productMasterSchemaFields.forEach((field: any) => {
+		unitMasterSchemaFields.forEach((field: any) => {
 			const key = field.key;
 
-			if (key === "productType") {
-				nextForm[key] = normalizeProductType(p?.[key] || "");
-				return;
-			}
+
 
 			if (key === "unit") {
 				if (typeof p?.unit === "object") {
@@ -458,87 +346,28 @@ const UnitMaster = () => {
 	/* ============================================
 		  SAVE / UPDATE PRODUCT
 	============================================= */
-	// const handleSubmit = async () => {
-
-	// 	const e = {};
-
-	// 	if (!form.productName.trim()) {
-	// 		e.productName = "Product name required";
-	// 	}
-
-	// 	if (!form.productHSNCode.trim()) {
-	// 		e.productHSNCode = "HSN/SAC code required";
-	// 	} else if (!/^(\d{2}|\d{4}|\d{6}|\d{8})$/.test(form.productHSNCode)) {
-	// 		e.productHSNCode =
-	// 			"Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code (digits only).";
-	// 	}
-
-	// 	if (!form.productType.trim()) {
-	// 		e.productType = "Product type required";
-	// 	}
-
-	// 	setErrors(e);
-	// 	if (Object.keys(e).length > 0) return;
-
-	// 	// your create/update API call below
-
-
-	// 	try {
-	// 		if (editingProduct) {
-	// 			// Only send changed fields
-	// 			const updatePayload = {};
-
-	// 			const fields = ["productName", "productDescription", "productHSNCode", "productType"];
-	// 			fields.forEach((field) => {
-	// 				if (form[field] !== editingProduct[field]) {
-	// 					updatePayload[field] = form[field];
-	// 				}
-	// 			});
-
-	// 			await dispatch(
-	// 				updateProduct({
-	// 					productCode: editingProduct.productCode,
-	// 					data: updatePayload,
-	// 				})
-	// 			).unwrap();
-
-	// 			toast.success("Product updated successfully");
-	// 		} else {
-	// 			await dispatch(createProduct(form)).unwrap();
-	// 			toast.success("Product created");
-	// 		}
-
-	// 		setShowModal(false);
-	// 		fetchProducts();
-	// 	} catch (err) {
-	// 		toast.error(err.message || "Operation failed");
-	// 	}
-	// };
-
-
-
 	const handleSubmit = async () => {
 		if (!validateForm()) return;
 
 		const payload: any = { ...form };
 
-		productMasterSchemaFields.forEach((field: any) => {
+		unitMasterSchemaFields.forEach((field: any) => {
 			if (field.type === "number" && payload[field.key] !== "") {
 				payload[field.key] = Number(payload[field.key]);
 			}
 		});
 
 		try {
-			if (editingProduct) {
+			if (editingUnit) {
 				const updatePayload: any = {};
 
-				productMasterSchemaFields.forEach((field: any) => {
+				unitMasterSchemaFields.forEach((field: any) => {
 					const key = field.key;
 
 					const oldValue =
-						key === "productType"
-							? normalizeProductType(editingProduct?.[key] || "")
-							: editingProduct?.[key];
+						key === "unit"
+							? normalizeUnit(editingUnit?.[key] || "")
+							: editingUnit?.[key];
 
 					if (form[key] !== oldValue) {
 						updatePayload[key] = payload[key];
@@ -546,38 +375,39 @@ const UnitMaster = () => {
 				});
 
 				await dispatch(
-					updateProduct({
-						productCode: editingProduct.productCode,
+					updateUnit({
+						unitId: editingUnit.unitId,
 						data: updatePayload,
 					}) as any
 				).unwrap();
 
-				toast.success("Product updated successfully");
+				toast.success("Unit updated successfully");
 			} else {
-				await dispatch(createProduct(payload) as any).unwrap();
-				toast.success("Product created");
+				await dispatch(createUnit(payload) as any).unwrap();
+				toast.success("Unit created");
 			}
 
 			setShowModal(false);
-			fetchProducts();
+			fetchUnits();
 		} catch (err: any) {
 			toast.error(err.message || "Operation failed");
 		}
 	};
+
 	/* ============================================
-		  DELETE PRODUCT
+		  DELETE UNIT
 	============================================= */
 	const handleDeleteConfirm = async () => {
 		try {
-			await dispatch(deleteProduct(confirmTooltip.productCode)).unwrap();
-			toast.success("Product deleted");
-			fetchProducts();
+			await dispatch(deleteUnit(confirmTooltip.unitId)).unwrap();
+			toast.success("Unit deleted");
+			fetchUnits();
 		} finally {
 			setConfirmTooltip({
 				show: false,
 				x: null,
 				y: null,
-				productCode: null,
+				unitId: null,
 			});
 		}
 	};
@@ -586,21 +416,21 @@ const UnitMaster = () => {
 		  PAGINATION
 	============================================= */
 	const startIndex = pagination.totalDocs > 0 ? pagination.offset + 1 : 0;
-	const endIndex = pagination.totalDocs > 0 ? pagination.offset + products.length : 0;
+	const endIndex = pagination.totalDocs > 0 ? pagination.offset + units.length : 0;
 
 	return (
 		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
 			{/* ================= HEADER ================= */}
-			<div id="product-header" className="flex items-center mb-3">
+			<div id="unit-header" className="flex items-center mb-3">
 
-				<div id="product-summary" className="flex items-start gap-3">
-					<Badge {...{ count: pagination.totalDocs ?? 0, text: "Total Products:", varient: "primary" }} />
+				<div id="unit-summary" className="flex items-start gap-3">
+					<Badge {...{ count: pagination.totalDocs ?? 0, text: "Total Units:", varient: "primary" }} />
 				</div>
 
 				<div className="ml-auto flex items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
-					<DataCreateButton {...{ callBackFn: openAddModal, text: "Add Product" }} />
+					<DataCreateButton {...{ callBackFn: openAddModal, text: "Add Unit" }} />
 				</div>
 			</div>
 
@@ -609,28 +439,28 @@ const UnitMaster = () => {
 
 			<DataTable
 				columns={columns}
-				data={products}
+				data={units}
 				loading={loading}
-				emptyMessage="No products found"
-				actions={(prod) => (
+				emptyMessage="No units found"
+				actions={(unit) => (
 					<div className="flex items-center gap-2">
 
 						<button
-							id="product-edit-button"
-							onClick={() => openEditModal(prod)}
+							id="unit-edit-button"
+							onClick={() => openEditModal(unit)}
 							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
 							<Edit size={16} />
 						</button>
 
 
 						<button
-							id="product-delete-button"
+							id="unit-delete-button"
 							onClick={(e) => {
 								const rect = e.currentTarget.getBoundingClientRect();
 								let x = rect.left - 150;
 								if (x < 10) x = 10;
 								const y = rect.top + window.scrollY - 5;
-								setConfirmTooltip({ show: true, x, y, productCode: acc.accountCode, });
+								setConfirmTooltip({ show: true, x, y, unitId: unit.unitId, });
 							}}
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
@@ -658,7 +488,7 @@ const UnitMaster = () => {
 					<ConfirmTooltip
 						x={confirmTooltip.x}
 						y={confirmTooltip.y}
-						message="Are you sure you want to delete this product?"
+						message="Are you sure you want to delete this unit?"
 						confirmText="Delete"
 						cancelText="Cancel"
 						onConfirm={handleDeleteConfirm}
@@ -667,7 +497,7 @@ const UnitMaster = () => {
 								show: false,
 								x: null,
 								y: null,
-								productCode: null,
+								unitId: null,
 							})
 						}
 					/>
@@ -681,16 +511,16 @@ const UnitMaster = () => {
 					show: showModal,
 					setShow: setShowModal,
 					handleSubmit,
-					state: editingProduct,
-					title: "Product",
+					state: editingUnit,
+					title: "Unit",
 					body: (
 						<>
 							{schemaLoading ? (
 								<div className="py-6 text-sm text-gray-500">
-									Loading product fields...
+									Loading unit fields...
 								</div>
 							) : (
-								productMasterSchemaFields.map((field: any) =>
+								unitMasterSchemaFields.map((field: any) =>
 									renderSchemaField(field)
 								)
 							)}

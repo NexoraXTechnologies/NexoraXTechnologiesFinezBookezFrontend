@@ -458,64 +458,6 @@ const ProductMaster = () => {
 	/* ============================================
 		  SAVE / UPDATE PRODUCT
 	============================================= */
-	// const handleSubmit = async () => {
-
-	// 	const e = {};
-
-	// 	if (!form.productName.trim()) {
-	// 		e.productName = "Product name required";
-	// 	}
-
-	// 	if (!form.productHSNCode.trim()) {
-	// 		e.productHSNCode = "HSN/SAC code required";
-	// 	} else if (!/^(\d{2}|\d{4}|\d{6}|\d{8})$/.test(form.productHSNCode)) {
-	// 		e.productHSNCode =
-	// 			"Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code (digits only).";
-	// 	}
-
-	// 	if (!form.productType.trim()) {
-	// 		e.productType = "Product type required";
-	// 	}
-
-	// 	setErrors(e);
-	// 	if (Object.keys(e).length > 0) return;
-
-	// 	// your create/update API call below
-
-
-	// 	try {
-	// 		if (editingProduct) {
-	// 			// Only send changed fields
-	// 			const updatePayload = {};
-
-	// 			const fields = ["productName", "productDescription", "productHSNCode", "productType"];
-	// 			fields.forEach((field) => {
-	// 				if (form[field] !== editingProduct[field]) {
-	// 					updatePayload[field] = form[field];
-	// 				}
-	// 			});
-
-	// 			await dispatch(
-	// 				updateProduct({
-	// 					productCode: editingProduct.productCode,
-	// 					data: updatePayload,
-	// 				})
-	// 			).unwrap();
-
-	// 			toast.success("Product updated successfully");
-	// 		} else {
-	// 			await dispatch(createProduct(form)).unwrap();
-	// 			toast.success("Product created");
-	// 		}
-
-	// 		setShowModal(false);
-	// 		fetchProducts();
-	// 	} catch (err) {
-	// 		toast.error(err.message || "Operation failed");
-	// 	}
-	// };
-
-
 
 	const handleSubmit = async () => {
 		if (!validateForm()) return;
@@ -582,6 +524,7 @@ const ProductMaster = () => {
 		}
 	};
 
+
 	/* ============================================
 		  PAGINATION
 	============================================= */
@@ -630,7 +573,7 @@ const ProductMaster = () => {
 								let x = rect.left - 150;
 								if (x < 10) x = 10;
 								const y = rect.top + window.scrollY - 5;
-								setConfirmTooltip({ show: true, x, y, productCode: acc.accountCode, });
+								setConfirmTooltip({ show: true, x, y, productCode: prod.productCode, });
 							}}
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
