@@ -39,7 +39,7 @@ import ReportMapping from './pages/bookez/master/ReportMapping';
 import BookEZDashboard from './pages/bookez/master';
 import MasterDashboard from './pages/bookez/master';
 import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks/indec';
-import ProductionDashboard from './pages/bookez/transactions/production/ProductionDashboard';
+import ProductionDashboard from './pages/bookez/transactions/production';
 import SaleWorkflowDashboard from './pages/bookez/transactions/saleWorkflow/SaleWorkflowDashboard';
 import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkflow/PurchaseWorkflowDashboard';
 

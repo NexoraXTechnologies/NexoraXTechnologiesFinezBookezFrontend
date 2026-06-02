@@ -105,32 +105,76 @@ export const createProduct = createAsyncThunk(
 /* ===================================================
     GET ALL PRODUCTS
 =================================================== */
+// export const getAllProducts = createAsyncThunk(
+//   "productMaster/getAllProducts",
+//   async ({ offset = 0, limit = 10, search = "",productType:"" } = {}, { rejectWithValue }) => {
+//     try {
+//       const params = { offset, limit };
+//       if (search.trim()) params.search = search.trim();
+
+//       const res = await professionalAxios.get(
+//         "/eTaxSolnMongoApiBackend/productMaster/getAllProduct",
+//         { params }
+//       );
+
+//       if (!res.data?.success)
+//         return rejectWithValue({
+//           message: res.data?.message || "Failed to fetch products",
+//         });
+
+//       return res.data?.data;
+//     } catch (err) {
+//       return rejectWithValue({
+//         message: err?.response?.data?.message || "Failed to fetch products",
+//       });
+//     }
+//   }
+// );
+
+
+
 export const getAllProducts = createAsyncThunk(
   "productMaster/getAllProducts",
-  async ({ offset = 0, limit = 10, search = "" } = {}, { rejectWithValue }) => {
+  async (
+    {
+      offset = 0,
+      limit = 10,
+      search = "",
+      productType = "",
+    }: any = {},
+    { rejectWithValue }
+  ) => {
     try {
-      const params = { offset, limit };
-      if (search.trim()) params.search = search.trim();
+      const params: any = { offset, limit };
+
+      if (search?.trim()) {
+        params.search = search.trim();
+      }
+
+      if (productType) {
+        params.productType = productType;
+      }
 
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/productMaster/getAllProduct",
         { params }
       );
 
-      if (!res.data?.success)
+      if (!res.data?.success) {
         return rejectWithValue({
           message: res.data?.message || "Failed to fetch products",
         });
+      }
 
       return res.data?.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
-        message: err?.response?.data?.message || "Failed to fetch products",
+        message:
+          err?.response?.data?.message || "Failed to fetch products",
       });
     }
   }
 );
-
 /* ===================================================
     GET PRODUCT BY CODE
 =================================================== */

@@ -20,7 +20,7 @@ import ProductMaster from "./ProductMaster";
 import UnitMaster from "./UnitMaster";
 import ReportMapping from "./ReportMapping";
 import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
-import CustomMasterComp from "./customMasterComp";
+import CustomMasterComp from "./CustomMasterComp";
 
 
 const MasterDashboard = () => {

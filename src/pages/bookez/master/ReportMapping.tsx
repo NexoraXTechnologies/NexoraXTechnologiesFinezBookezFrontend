@@ -533,7 +533,7 @@ const ReportMapping = () => {
 		}
 	}, [showFieldModal]);
 	return (
-		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
+		<div className="w-full bg-white border border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[100%]">
 			{/* ================= HEADER ================= */}
 			<div id="unit-header" className="flex items-center mb-3">
 				<div id="unit-summary" className="flex items-start gap-3">
@@ -598,7 +598,7 @@ const ReportMapping = () => {
 						<button
 							id="unit-edit-button"
 							onClick={() => openEditModal(report)}
-							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
+							className="p-2 rounded-md text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
 						>
 							<Edit size={16} />
 						</button>
@@ -621,7 +621,7 @@ const ReportMapping = () => {
 									templateFileId: report.templateFileId,
 								});
 							}}
-							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+							className="p-2 rounded-md text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
 							<Trash2 size={16} />
 						</button>
