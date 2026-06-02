@@ -54,14 +54,7 @@ export default function DataTable<T>({
               ))}
 
               {actions && (
-                <th
-                  className="
-                    px-4 py-4
-                    border-b border-gray-200
-                    text-left font-semibold text-gray-600
-                    bg-gray-50 whitespace-nowrap
-                    w-[120px]
-                  "
+                <th className=" px-4 py-4 border-b border-gray-200 text-left font-semibold text-gray-600 bg-gray-50 whitespace-nowrap w-[120px]"
                 >
                   Actions
                 </th>
@@ -75,8 +68,7 @@ export default function DataTable<T>({
               <tr>
                 <td
                   colSpan={columns?.length + (actions ? 1 : 0)}
-                  className="text-center py-10 text-gray-500"
-                >
+                  className="text-center py-10 text-gray-500">
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
                     <span>Loading...</span>
@@ -87,21 +79,13 @@ export default function DataTable<T>({
               data?.map((row, index) => (
                 <tr
                   key={index}
-                  className="hover:bg-indigo-50/40 transition-all duration-200"
-                >
+                  className="hover:bg-indigo-50/40 transition-all duration-200">
                   {columns?.map((col) => {
                     const value = row[col.key as keyof T];
-
                     return (
                       <td
                         key={String(col.key)}
-                        className="
-                          px-4 py-3
-                          border-b border-gray-200
-                          font-medium text-gray-800
-                          whitespace-nowrap
-                        "
-                      >
+                        className="px-4 py-3 border-b border-gray-200 font-medium text-gray-800 whitespace-nowrap">
                         {col.type === "date" ? (
                           value ? (
                             new Date(value as any).toLocaleString()

@@ -506,8 +506,6 @@ const AccountMaster = () => {
 	// 	setShowModal(true);
 	// };
 
-
-
 	const openEditModal = (acc: any) => {
 		setEditingAccount(acc);
 		setErrors({});
