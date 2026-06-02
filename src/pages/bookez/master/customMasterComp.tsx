@@ -178,31 +178,28 @@ const CustomMasterComp = ({
 	};
 
 	const handleSubmit = async () => {
-		let err = {};
-		inputSchema?.forEach((field) => {
-			const value = form[field.key];
-			if (
-				field.isRequired &&
-				(value === undefined ||
-					value === null ||
-					value === "")
-			) {
-				err[field?.key] = `${field?.label} is required`;
+		let err: any = {};
+
+		addInput?.forEach((field: any) => {
+			const value = form?.[field.key];
+
+			if (field.isRequired && (value === undefined || value === null || String(value).trim() === "")) {
+				err[field.key] = `${field.label} is required`;
 			}
 		});
-		console.log({ form })
-		if (!!Object.keys(err)?.length) return;
-		setErrors(err)
+
+		setErrors(err);
+		if (Object.keys(err).length > 0) return;
 		if (edit) {
-			await dispatch(updateCustomData({ data: { ...form }, voucherNumber: form?.voucherNumber }));
+			await dispatch(updateCustomData({ data: { ...form }, voucherNumber: form?.voucherNumber, }));
 		} else {
-			await dispatch(saveCustomData({ data: { ...form }, moduleCode}));
+			await dispatch(saveCustomData({ data: { ...form }, moduleCode, }));
 		}
-		// ts-ignore
-		await dispatch(getCustomMasterListing({ moduleCode, offset: 0, limit: 10 }));
+		await dispatch(getCustomMasterListing({ moduleCode, offset: 0, limit: 10, }));
 		setShowModal(false);
 		setForm({});
-	}
+		setErrors({});
+	};
 
 	const handleDeleteConfirm = async () => {
 		try {
@@ -235,7 +232,7 @@ const CustomMasterComp = ({
 	}, [localOffset, localLimit, debouncedSearch]);
 
 	return (
-		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
+		<div className="w-full bg-white border border-gray-200 shadow-sm p-4 flex flex-col h-[100%]">
 			<div className="flex justify-end items-center mb-3">
 				<div className="me-2">
 					<SearchInput {...{ search, setSearch }} />
@@ -251,7 +248,7 @@ const CustomMasterComp = ({
 				columns={columns}
 				data={listing}
 				loading={loading}
-				emptyMessage="No accounts found"
+				emptyMessage="No data found"
 				actions={(acc) => (
 					<div className="flex items-center gap-2">
 						{/* EDIT */}
