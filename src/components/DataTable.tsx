@@ -38,7 +38,7 @@ export default function DataTable<T>({
           {/* HEADER */}
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
-              {columns.map((col) => (
+              {columns?.map((col) => (
                 <th
                   key={String(col.key)}
                   className={`
@@ -74,7 +74,7 @@ export default function DataTable<T>({
             {loading ? (
               <tr>
                 <td
-                  colSpan={columns.length + (actions ? 1 : 0)}
+                  colSpan={columns?.length + (actions ? 1 : 0)}
                   className="text-center py-10 text-gray-500"
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -84,12 +84,12 @@ export default function DataTable<T>({
                 </td>
               </tr>
             ) : data?.length ? (
-              data.map((row, index) => (
+              data?.map((row, index) => (
                 <tr
                   key={index}
                   className="hover:bg-indigo-50/40 transition-all duration-200"
                 >
-                  {columns.map((col) => {
+                  {columns?.map((col) => {
                     const value = row[col.key as keyof T];
 
                     return (
