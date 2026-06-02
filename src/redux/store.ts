@@ -34,6 +34,7 @@ import automationReducer from "./slices/professionalSlice/automation/automatioin
 import stateCityReducer from "./slices/professionalSlice/stateCitySlice"
 import plansReduce from "./slices/professionalSlice/subscriptions";
 import customMasterModuleReducer from "./slices/professionalSlice/customMasterModuleSlice";
+import openingBalanceSlice from "./slices/professionalSlice/openingBalance";
 
 export const store = configureStore({
   reducer: {
@@ -70,9 +71,8 @@ export const store = configureStore({
     stateCity: stateCityReducer,
 
     // Plans
-    plans: plansReduce
-
-
+    plans: plansReduce,
+    openingBalance: openingBalanceSlice
   },
 });
 

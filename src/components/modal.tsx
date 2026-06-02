@@ -127,8 +127,7 @@ const Modal = ({
                         className={`relative w-full ${maxWidthClass[maxWidth]} max-h-[90vh] rounded-md bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col`}
                     >
                         {/* Header */}
-                        <div
-                            className={`flex items-center justify-between border-b border-gray-300 px-6 py-3 bg-gray-50 shrink-0 ${headerClassName}`}
+                        <div className={`flex items-center justify-between border-b border-gray-300 px-6 py-3 bg-gray-50 shrink-0 ${headerClassName}`}
                         >
                             <div>
                                 <h2 className="text-xl font-semibold text-gray-800 mb-0">

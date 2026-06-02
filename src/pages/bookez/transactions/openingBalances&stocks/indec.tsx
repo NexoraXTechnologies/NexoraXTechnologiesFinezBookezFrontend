@@ -9,13 +9,13 @@ import {
 } from "lucide-react";
 import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
-
+import OpeningBalance from "./openingBalance";
 
 const cards: DashboardCard[] = [
   {
     title: "Opening Balances",
     description: "Manage account-wise opening balances.",
-    path: "/professional/transaction/opening-balances/account",
+    component: OpeningBalance,
     icon: <Landmark size={22} />,
   },
   {
