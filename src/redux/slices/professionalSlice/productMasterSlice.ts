@@ -52,6 +52,31 @@ export const getAllProductMasterSchema = createAsyncThunk(
 /* ===================================================
     CREATE PRODUCT
 =================================================== */
+// export const createProduct = createAsyncThunk(
+//   "productMaster/createProduct",
+//   async (payload, { rejectWithValue }) => {
+//     try {
+//       const res = await professionalAxios.post(
+//         "/eTaxSolnMongoApiBackend/productMaster/createProduct",
+//         payload
+//       );
+
+//       if (!res.data?.success)
+//         return rejectWithValue({
+//           message: res.data?.message || "Failed to create product",
+//         });
+
+//       return res.data?.data ?? null;
+//     } catch (err) {
+//       return rejectWithValue({
+//         message: err?.response?.data?.error || "Failed to create product",
+//       });
+//     }
+//   }
+// );
+
+
+
 export const createProduct = createAsyncThunk(
   "productMaster/createProduct",
   async (payload, { rejectWithValue }) => {
@@ -61,20 +86,22 @@ export const createProduct = createAsyncThunk(
         payload
       );
 
-      if (!res.data?.success)
-        return rejectWithValue({
-          message: res.data?.message || "Failed to create product",
-        });
+      if (!res.data?.success) {
+        return rejectWithValue(res.data);
+      }
 
       return res.data?.data ?? null;
-    } catch (err) {
-      return rejectWithValue({
-        message: err?.response?.data?.error || "Failed to create product",
-      });
+    } catch (err: any) {
+      return rejectWithValue(
+        err?.response?.data || {
+          success: false,
+          message: "Failed to create product",
+          error: {},
+        }
+      );
     }
   }
 );
-
 /* ===================================================
     GET ALL PRODUCTS
 =================================================== */
