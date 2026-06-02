@@ -12,10 +12,11 @@ import Badge from "../../../components/badge";
 import { SelectInput, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import { createReportMapping, deleteReportMapping, getAllReportMapping, updateReportMapping, getAllModules, getAllModulesWiseKey } from "../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getTemplateKeyLabel } from "../../../utils/templateKeyLabel";
 
 const ReportMapping = () => {
 	const dispatch = useDispatch();
-	const { report, pagination, loading, modules = [],modulesLoading, moduleWiseKeys,moduleWiseKeysLoading, } = useSelector((s: any) => s.reportMapping );
+	const { report, pagination, loading, modules = [], modulesLoading, moduleWiseKeys, moduleWiseKeysLoading, } = useSelector((s: any) => s.reportMapping);
 
 	/* =====================================================
 		LIST FILTER / PAGINATION STATES
@@ -72,7 +73,7 @@ const ReportMapping = () => {
 	const columns = [
 		{ key: "templateName", title: "Template Name" },
 		{ key: "moduleType", title: "Module Type" },
-		{ key: "createdOn", title: "Created On" },
+		{ key: "createdOn", title: "Created On", type: "date" },
 	];
 
 	/* =====================================================
@@ -98,23 +99,25 @@ const ReportMapping = () => {
 
 		You can replace these dummy fields with API data later.
 	===================================================== */
-
 	const makeOptionsFromKeys = (keys: any[] = []) => {
+		if (!Array.isArray(keys)) return [];
+
 		return keys.map((item: any) => {
 			if (typeof item === "string") {
 				return {
-					label: item,
+					label: getTemplateKeyLabel(item),
 					value: item,
 				};
 			}
 
+			const value = item?.value || item?.key || item?.name || item?.label || "";
+
 			return {
-				label: item?.label || item?.key || item?.name || item?.value || "",
-				value: item?.value || item?.key || item?.name || item?.label || "",
+				label: item?.label || getTemplateKeyLabel(value),
+				value,
 			};
 		});
 	};
-
 
 	const moduleKeyOptions = makeOptionsFromKeys(
 		moduleWiseKeys?.namespacedModuleKeys || []
@@ -127,7 +130,6 @@ const ReportMapping = () => {
 	const accountKeyOptions = makeOptionsFromKeys(
 		moduleWiseKeys?.namespacedAccountMaster || []
 	);
-
 
 	const selectedTabOptions =
 		fieldForm.tab === "Module"
@@ -656,9 +658,6 @@ const ReportMapping = () => {
 								placeholder="Enter report title"
 								error={errors.templateName}
 							/>
-
-
-
 							{/* Module Type */}
 							<SelectInput
 								label="Select Dropdown"
@@ -731,7 +730,6 @@ const ReportMapping = () => {
 											"Select Word File (.doc, .docx)"}
 									</span>
 								</label>
-
 								{errors.file && (
 									<p className="mt-1 text-xs text-red-500">
 										{errors.file}
@@ -795,7 +793,6 @@ const ReportMapping = () => {
 										- edit key
 										- change type dropdown/custom
 										- edit value
-										- delete field
 									===================================================== */
 									<div className="space-y-4">
 										{reportForm.mappingFields.map(
@@ -999,9 +996,6 @@ const ReportMapping = () => {
 					body: (
 						<>
 							{/* Tabs */}
-
-
-
 							<div className="col-span-2 grid grid-cols-3 rounded-md bg-gray-100 p-1">
 								{fieldTabs.map((tab) => {
 									const isSelected = activeFieldTab === tab.value;
@@ -1092,7 +1086,6 @@ const ReportMapping = () => {
 												value: e.target.value,
 											})
 										}
-
 										options={[
 											{
 												label: moduleWiseKeysLoading ? "Loading Keys..." : "Select Dropdown",
