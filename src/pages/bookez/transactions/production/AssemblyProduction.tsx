@@ -2,18 +2,29 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { createAssemblyProduction, deleteAssemblyProduction, getAllAssemblyProductions, updateAssemblyProduction } from "../../../../redux/slices/professionalSlice/assemblyProductionSlice";
+
+import {
+    createAssemblyProduction,
+    deleteAssemblyProduction,
+    getAllAssemblyProductions,
+    updateAssemblyProduction,
+} from "../../../../redux/slices/professionalSlice/assemblyProductionSlice";
+
 import Badge from "../../../../components/badge";
 import SearchInput from "../../../../components/searchInput";
-import { DataCreateButton, DataREfreshButton } from "../../../../components/buttons";
+import {
+    DataCreateButton,
+    DataREfreshButton,
+} from "../../../../components/buttons";
 import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import Modal from "../../../../components/modal";
 import { SelectInput, TextInput } from "../../../../components/inputs";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
-
-
+import { useNavigate } from "react-router-dom";
+import NoDataConfirmAlert from "./NoDataConfirmAlert";
+import ColumnWiseTable from "./ColumnWiseTable";
 
 /* ===================================================
     EMPTY PRODUCT STRUCTURE
@@ -25,7 +36,6 @@ const emptyProduct = {
     rate: "",
     amount: "",
 };
-
 
 /* ===================================================
     DEFAULT FORM STRUCTURE
@@ -48,9 +58,9 @@ const getDefaultForm = () => ({
     locationCode: "",
 });
 
-
 const AssemblyProduction = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     /* ===================================================
         REDUX STATE
@@ -64,13 +74,11 @@ const AssemblyProduction = () => {
         deleteLoading,
     } = useSelector((s: any) => s.assemblyProduction);
 
-
     /* ===================================================
         PAGINATION STATE
     =================================================== */
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
 
     /* ===================================================
         SEARCH STATE
@@ -78,27 +86,43 @@ const AssemblyProduction = () => {
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
-
     /* ===================================================
         MODAL STATE
     =================================================== */
     const [showModal, setShowModal] = useState(false);
     const [showRawMaterialModal, setShowRawMaterialModal] = useState(false);
-
+    const [showNoRawMaterialAlert, setShowNoRawMaterialAlert] = useState(false);
 
     /* ===================================================
         EDIT / FORM STATE
     =================================================== */
     const [editingRecord, setEditingRecord] = useState<any>(null);
     const [form, setForm] = useState<any>(getDefaultForm());
-    const [rawMaterialForm, setRawMaterialForm] = useState<any>({ ...emptyProduct });
+    const [editingRawMaterialIndex, setEditingRawMaterialIndex] =
+        useState<number | null>(null);
+    /*
+      Finished Good is first stored here.
+      It will be copied into form.finishedGood only after Apply click.
+    */
+    const [finishedGoodForm, setFinishedGoodForm] = useState<any>({
+        ...emptyProduct,
+    });
 
+    const [isFinishedGoodApplied, setIsFinishedGoodApplied] = useState(false);
+
+    const [rawMaterialForm, setRawMaterialForm] = useState<any>({
+        ...emptyProduct,
+    });
 
     /* ===================================================
         ERROR STATE
     =================================================== */
     const [errors, setErrors] = useState<any>({});
     const [rawErrors, setRawErrors] = useState<any>({});
+
+    /* ===================================================
+        DROPDOWN OPTIONS
+    =================================================== */
     const [finishedGoodOptions, setFinishedGoodOptions] = useState<any[]>([]);
     const [rawMaterialOptions, setRawMaterialOptions] = useState<any[]>([]);
 
@@ -107,6 +131,61 @@ const AssemblyProduction = () => {
     =================================================== */
     const [refreshing, setRefreshing] = useState(false);
 
+    /* ===================================================
+        DELETE CONFIRM TOOLTIP STATE
+    =================================================== */
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({
+        show: false,
+        x: null,
+        y: null,
+        voucherNumber: null,
+    });
+
+    /* ===================================================
+        HELPERS
+    =================================================== */
+    const getProductRate = (product: any, fallback = "") => {
+        return String(
+            product?.sellingPrice ||
+            product?.purchasePrice ||
+            product?.productSellingPrice ||
+            product?.productPurchasePrice ||
+            product?.rate ||
+            fallback ||
+            ""
+        );
+    };
+
+    const makeProductOptions = (res: any) => {
+        const records = Array.isArray(res?.items)
+            ? res.items
+            : Array.isArray(res?.records)
+                ? res.records
+                : Array.isArray(res?.data?.items)
+                    ? res.data.items
+                    : Array.isArray(res?.data?.records)
+                        ? res.data.records
+                        : Array.isArray(res)
+                            ? res
+                            : [];
+
+        return records.map((item: any) => ({
+            label: item.productName || item.name || "-",
+            value: item.productCode || item.code || item._id,
+            raw: item,
+        }));
+    };
+
+    const calculateAmount = (quantity: any, rate: any) => {
+        const qty = Number(quantity || 0);
+        const price = Number(rate || 0);
+
+        return qty && price ? String(qty * price) : "0";
+    };
+
+    /* ===================================================
+        FETCH PRODUCT DROPDOWNS
+    =================================================== */
     useEffect(() => {
         const fetchProductDropdowns = async () => {
             try {
@@ -139,27 +218,6 @@ const AssemblyProduction = () => {
 
         fetchProductDropdowns();
     }, [dispatch]);
-    /* ===================================================
-        DELETE CONFIRM TOOLTIP STATE
-    =================================================== */
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({
-        show: false,
-        x: null,
-        y: null,
-        voucherNumber: null,
-    });
-
-
-    /* ===================================================
-        COMMON AMOUNT CALCULATION
-    =================================================== */
-    const calculateAmount = (quantity: any, rate: any) => {
-        const qty = Number(quantity || 0);
-        const price = Number(rate || 0);
-
-        return qty && price ? String(qty * price) : "0";
-    };
-
 
     /* ===================================================
         TOTAL RAW MATERIAL COST
@@ -170,15 +228,12 @@ const AssemblyProduction = () => {
         }, 0);
     }, [form.rawMaterials]);
 
-
     /* ===================================================
         TOTAL FINISHED COST
-        Formula: Raw Material Cost + Production Cost
     =================================================== */
     const totalFinishedCost = useMemo(() => {
         return totalRawMaterialCost + Number(form.productionCost || 0);
     }, [totalRawMaterialCost, form.productionCost]);
-
 
     /* ===================================================
         MAIN LIST TABLE COLUMNS
@@ -255,7 +310,6 @@ const AssemblyProduction = () => {
         },
     ];
 
-
     /* ===================================================
         FETCH ASSEMBLY PRODUCTION LIST
     =================================================== */
@@ -269,14 +323,9 @@ const AssemblyProduction = () => {
         );
     };
 
-
-    /* ===================================================
-        FETCH LIST WHEN PAGINATION OR SEARCH CHANGES
-    =================================================== */
     useEffect(() => {
         fetchAssemblyProductions();
     }, [localOffset, localLimit, debouncedSearch]);
-
 
     /* ===================================================
         SEARCH DEBOUNCE
@@ -290,7 +339,6 @@ const AssemblyProduction = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
-
     /* ===================================================
         REFRESH LIST
     =================================================== */
@@ -301,7 +349,6 @@ const AssemblyProduction = () => {
         setRefreshing(false);
     };
 
-
     /* ===================================================
         OPEN ADD MODAL
     =================================================== */
@@ -310,10 +357,11 @@ const AssemblyProduction = () => {
         setErrors({});
         setRawErrors({});
         setForm(getDefaultForm());
+        setFinishedGoodForm({ ...emptyProduct });
+        setIsFinishedGoodApplied(false);
         setRawMaterialForm({ ...emptyProduct });
         setShowModal(true);
     };
-
 
     /* ===================================================
         OPEN EDIT MODAL
@@ -323,33 +371,42 @@ const AssemblyProduction = () => {
         setErrors({});
         setRawErrors({});
 
+        const appliedFinishedGood = {
+            productCode: record?.finishedGood?.productCode || "",
+            productName: record?.finishedGood?.productName || "",
+            quantity: record?.finishedGood?.quantity || "",
+            rate: record?.finishedGood?.rate || "",
+            amount: record?.finishedGood?.amount || "",
+        };
+
         setForm({
             voucherNumber: record?.voucherNumber || "ASP",
-            voucherDate: record?.voucherDate || new Date().toISOString().split("T")[0],
+            voucherDate:
+                record?.voucherDate || new Date().toISOString().split("T")[0],
             status: record?.status || "open",
             remarks: record?.remarks || "",
 
-            finishedGood: {
-                productCode: record?.finishedGood?.productCode || "",
-                productName: record?.finishedGood?.productName || "",
-                quantity: record?.finishedGood?.quantity || "",
-                rate: record?.finishedGood?.rate || "",
-                amount: record?.finishedGood?.amount || "",
-            },
+            finishedGood: appliedFinishedGood,
 
             rawMaterials: record?.rawMaterials || [],
 
             totalRawMaterialCost: record?.totalRawMaterialCost || "0",
-            productionCost: record?.productionCost || "0",
+            // productionCost: record?.productionCost || "0",
+            productionCost:
+                record?.productionCost ||
+                record?.finishedGood?.rate ||
+                "0",
             totalFinishedCost: record?.totalFinishedCost || "0",
 
             warehouseCode: record?.warehouseCode || "",
             locationCode: record?.locationCode || "",
         });
 
+        setFinishedGoodForm(appliedFinishedGood);
+        setIsFinishedGoodApplied(Boolean(appliedFinishedGood.productCode));
+
         setShowModal(true);
     };
-
 
     /* ===================================================
         MAIN FORM CHANGE HANDLER
@@ -366,90 +423,229 @@ const AssemblyProduction = () => {
         }));
     };
 
-
     /* ===================================================
-        FINISHED GOOD CHANGE HANDLER
+        FINISHED GOOD TEMP CHANGE HANDLER
     =================================================== */
     const handleFinishedGoodChange = (key: string, value: any) => {
-        setForm((prev: any) => {
-            const finishedGood = {
-                ...prev.finishedGood,
+        setFinishedGoodForm((prev: any) => {
+            const updated = {
+                ...prev,
                 [key]: value,
             };
 
-            finishedGood.amount = calculateAmount(
-                finishedGood.quantity,
-                finishedGood.rate
-            );
+            updated.amount = calculateAmount(updated.quantity, updated.rate);
 
-            return {
-                ...prev,
-                finishedGood,
-            };
+            return updated;
         });
+
+        /*
+          If user changes anything after Apply,
+          then they must click Apply again.
+        */
+        setIsFinishedGoodApplied(false);
 
         setErrors((prev: any) => ({
             ...prev,
             [`finishedGood.${key}`]: "",
+            finishedGoodApply: "",
         }));
     };
 
-
     /* ===================================================
         FINISHED GOOD PRODUCT CHANGE
-        Replace this with SelectInput when product dropdown is ready
     =================================================== */
     const handleFinishedGoodProductChange = (productCode: string) => {
         const selectedProduct = finishedGoodOptions.find(
             (item: any) => item.value === productCode
         );
 
-        setForm((prev: any) => ({
-            ...prev,
-            finishedGood: {
-                ...prev.finishedGood,
+        setFinishedGoodForm((prev: any) => {
+            const rate = productCode ? getProductRate(selectedProduct?.raw, "") : "";
+
+            const updated = {
+                ...prev,
                 productCode,
                 productName: selectedProduct?.label || "",
-                rate:
-                    selectedProduct?.raw?.sellingPrice ||
-                    selectedProduct?.raw?.productSellingPrice ||
-                    selectedProduct?.raw?.rate ||
-                    prev.finishedGood.rate,
-            },
+                rate,
+            };
+
+            updated.amount = calculateAmount(updated.quantity, updated.rate);
+
+            return updated;
+        });
+
+        setIsFinishedGoodApplied(false);
+
+        setErrors((prev: any) => ({
+            ...prev,
+            "finishedGood.productCode": "",
+            "finishedGood.rate": "",
+            finishedGoodApply: "",
+        }));
+    };
+
+    /* ===================================================
+        VALIDATE FINISHED GOOD BEFORE APPLY
+    =================================================== */
+    const validateFinishedGood = () => {
+        const err: any = {};
+
+        if (!finishedGoodForm.productCode) {
+            err["finishedGood.productCode"] = "Finished good is required";
+        }
+
+        if (!finishedGoodForm.quantity) {
+            err["finishedGood.quantity"] = "Quantity is required";
+        }
+
+        if (!finishedGoodForm.rate) {
+            err["finishedGood.rate"] = "Rate is required";
+        }
+
+        setErrors((prev: any) => ({
+            ...prev,
+            ...err,
+        }));
+
+        return Object.keys(err).length === 0;
+    };
+
+    /* ===================================================
+        APPLY FINISHED GOOD INTO MAIN PAYLOAD FORM
+    =================================================== */
+    // const handleApplyFinishedGood = () => {
+    //     if (!validateFinishedGood()) return;
+
+    //     const appliedFinishedGood = {
+    //         ...finishedGoodForm,
+    //         amount: calculateAmount(
+    //             finishedGoodForm.quantity,
+    //             finishedGoodForm.rate
+    //         ),
+    //     };
+
+    //     setForm((prev: any) => ({
+    //         ...prev,
+    //         finishedGood: appliedFinishedGood,
+    //     }));
+
+    //     setIsFinishedGoodApplied(true);
+
+    //     setErrors((prev: any) => ({
+    //         ...prev,
+    //         "finishedGood.productCode": "",
+    //         "finishedGood.quantity": "",
+    //         "finishedGood.rate": "",
+    //         finishedGoodApply: "",
+    //     }));
+
+    //     toast.success("Finished good applied");
+    // };
+
+    /* ===================================================
+        APPLY FINISHED GOOD INTO MAIN PAYLOAD FORM
+    =================================================== */
+    const handleApplyFinishedGood = () => {
+        if (!validateFinishedGood()) return;
+
+        const appliedFinishedGood = {
+            ...finishedGoodForm,
+            amount: calculateAmount(
+                finishedGoodForm.quantity,
+                finishedGoodForm.rate
+            ),
+        };
+
+        const autoProductionCost = String(Number(finishedGoodForm.rate || 0));
+
+        setForm((prev: any) => ({
+            ...prev,
+            finishedGood: appliedFinishedGood,
+
+            // production cost autofetch from finished good rate
+            productionCost: autoProductionCost,
+        }));
+
+        setIsFinishedGoodApplied(true);
+
+        setErrors((prev: any) => ({
+            ...prev,
+            "finishedGood.productCode": "",
+            "finishedGood.quantity": "",
+            "finishedGood.rate": "",
+            productionCost: "",
+            finishedGoodApply: "",
+        }));
+
+        toast.success("Finished good applied");
+    };
+
+    /* ===================================================
+        CLEAR FINISHED GOOD FORM
+    =================================================== */
+    const handleClearFinishedGood = () => {
+        setFinishedGoodForm({ ...emptyProduct });
+        setIsFinishedGoodApplied(false);
+
+        setForm((prev: any) => ({
+            ...prev,
+            finishedGood: { ...emptyProduct },
         }));
 
         setErrors((prev: any) => ({
             ...prev,
             "finishedGood.productCode": "",
+            "finishedGood.quantity": "",
+            "finishedGood.rate": "",
+            finishedGoodApply: "",
         }));
     };
 
-
-   
-
     /* ===================================================
         RAW MATERIAL PRODUCT CHANGE
-        Replace this with SelectInput when product dropdown is ready
     =================================================== */
     const handleRawMaterialProductChange = (productCode: string) => {
-        const selectedProduct = productOptions.find(
+        const selectedProduct = rawMaterialOptions.find(
             (item: any) => item.value === productCode
         );
 
-        setRawMaterialForm((prev: any) => ({
-            ...prev,
-            productCode,
-            productName: selectedProduct?.label || "",
-            rate:
-                selectedProduct?.raw?.sellingPrice ||
-                selectedProduct?.raw?.purchasePrice ||
-                selectedProduct?.raw?.rate ||
-                prev.rate,
-        }));
+        setRawMaterialForm((prev: any) => {
+            const updated = {
+                ...prev,
+                productCode,
+                productName: selectedProduct?.label || "",
+                rate: productCode
+                    ? getProductRate(selectedProduct?.raw, prev.rate)
+                    : "",
+            };
+
+            updated.amount = calculateAmount(updated.quantity, updated.rate);
+
+            return updated;
+        });
 
         setRawErrors((prev: any) => ({
             ...prev,
             productCode: "",
+            rate: "",
+        }));
+    };
+
+    const handleRawMaterialChange = (key: string, value: any) => {
+        setRawMaterialForm((prev: any) => {
+            const updated = {
+                ...prev,
+                [key]: value,
+            };
+
+            updated.amount = calculateAmount(updated.quantity, updated.rate);
+
+            return updated;
+        });
+
+        setRawErrors((prev: any) => ({
+            ...prev,
+            [key]: "",
         }));
     };
 
@@ -475,22 +671,56 @@ const AssemblyProduction = () => {
         return Object.keys(err).length === 0;
     };
 
+    /* ===================================================
+        Edit RAW MATERIAL TO MAIN FORM
+    =================================================== */
+    /* ===================================================
+        EDIT RAW MATERIAL
+    =================================================== */
+    const handleEditRawMaterial = (item: any, index: number) => {
+        setEditingRawMaterialIndex(index);
+
+        setRawMaterialForm({
+            productCode: item?.productCode || "",
+            productName: item?.productName || "",
+            quantity: item?.quantity || "",
+            rate: item?.rate || "",
+            amount: item?.amount || "",
+        });
+
+        setRawErrors({});
+        setShowRawMaterialModal(true);
+    };
+
 
     /* ===================================================
         ADD RAW MATERIAL TO MAIN FORM
     =================================================== */
+    /* ===================================================
+     ADD / UPDATE RAW MATERIAL TO MAIN FORM
+ =================================================== */
     const handleAddRawMaterial = () => {
         if (!validateRawMaterial()) return;
 
-        const newRawMaterial = {
+        const finalRawMaterial = {
             ...rawMaterialForm,
             amount: calculateAmount(rawMaterialForm.quantity, rawMaterialForm.rate),
         };
 
-        setForm((prev: any) => ({
-            ...prev,
-            rawMaterials: [...prev.rawMaterials, newRawMaterial],
-        }));
+        setForm((prev: any) => {
+            let updatedRawMaterials = [...prev.rawMaterials];
+
+            if (editingRawMaterialIndex !== null) {
+                updatedRawMaterials[editingRawMaterialIndex] = finalRawMaterial;
+            } else {
+                updatedRawMaterials.push(finalRawMaterial);
+            }
+
+            return {
+                ...prev,
+                rawMaterials: updatedRawMaterials,
+            };
+        });
 
         setErrors((prev: any) => ({
             ...prev,
@@ -499,9 +729,9 @@ const AssemblyProduction = () => {
 
         setRawMaterialForm({ ...emptyProduct });
         setRawErrors({});
+        setEditingRawMaterialIndex(null);
         setShowRawMaterialModal(false);
     };
-
 
     /* ===================================================
         DELETE RAW MATERIAL FROM MAIN FORM
@@ -509,21 +739,11 @@ const AssemblyProduction = () => {
     const handleDeleteRawMaterial = (index: number) => {
         setForm((prev: any) => ({
             ...prev,
-            rawMaterials: prev.rawMaterials.filter((_: any, i: number) => i !== index),
+            rawMaterials: prev.rawMaterials.filter(
+                (_: any, i: number) => i !== index
+            ),
         }));
     };
-
-
-    /* ===================================================
-        CLEAR FINISHED GOOD FORM
-    =================================================== */
-    const handleClearFinishedGood = () => {
-        setForm((prev: any) => ({
-            ...prev,
-            finishedGood: { ...emptyProduct },
-        }));
-    };
-
 
     /* ===================================================
         VALIDATE MAIN FORM
@@ -537,6 +757,10 @@ const AssemblyProduction = () => {
 
         if (!form.status) {
             err.status = "Status is required";
+        }
+
+        if (!isFinishedGoodApplied || !form.finishedGood.productCode) {
+            err.finishedGoodApply = "Please apply finished good before saving";
         }
 
         if (!form.finishedGood.productCode) {
@@ -556,8 +780,65 @@ const AssemblyProduction = () => {
         }
 
         setErrors(err);
+
+        if (err.finishedGoodApply) {
+            toast.error(err.finishedGoodApply);
+        }
+
         return Object.keys(err).length === 0;
     };
+
+    /* ===================================================
+        SAVE / UPDATE ASSEMBLY PRODUCTION
+    =================================================== */
+    //   const handleSubmit = async () => {
+    //     if (!validateForm()) return;
+
+    //     const payload = {
+    //       ...form,
+
+    //       finishedGood: {
+    //         ...form.finishedGood,
+    //         amount: calculateAmount(
+    //           form.finishedGood.quantity,
+    //           form.finishedGood.rate
+    //         ),
+    //       },
+
+    //       rawMaterials: form.rawMaterials,
+
+    //       totalRawMaterialCost: String(totalRawMaterialCost),
+    //       productionCost: String(Number(form.productionCost || 0)),
+    //       totalFinishedCost: String(totalFinishedCost),
+    //     };
+
+    //     try {
+    //       if (editingRecord) {
+    //         await dispatch(
+    //           updateAssemblyProduction({
+    //             voucherNumber: editingRecord.voucherNumber,
+    //             data: payload,
+    //           }) as any
+    //         ).unwrap();
+
+    //         toast.success("Assembly production updated successfully");
+    //       } else {
+    //         await dispatch(createAssemblyProduction(payload) as any).unwrap();
+
+    //         toast.success("Assembly production created successfully");
+    //       }
+
+    //       setShowModal(false);
+    //       setEditingRecord(null);
+    //       setForm(getDefaultForm());
+    //       setFinishedGoodForm({ ...emptyProduct });
+    //       setIsFinishedGoodApplied(false);
+    //       setRawMaterialForm({ ...emptyProduct });
+    //       fetchAssemblyProductions();
+    //     } catch (err: any) {
+    //       toast.error(err?.message || "Operation failed");
+    //     }
+    //   };
 
 
     /* ===================================================
@@ -566,8 +847,15 @@ const AssemblyProduction = () => {
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
+        /*
+          voucherNumber is only for UI display.
+          Do not send it in create/update payload.
+          Backend will auto-generate it.
+        */
+        const { voucherNumber, ...formWithoutVoucherNumber } = form;
+
         const payload = {
-            ...form,
+            ...formWithoutVoucherNumber,
 
             finishedGood: {
                 ...form.finishedGood,
@@ -603,14 +891,14 @@ const AssemblyProduction = () => {
             setShowModal(false);
             setEditingRecord(null);
             setForm(getDefaultForm());
+            setFinishedGoodForm({ ...emptyProduct });
+            setIsFinishedGoodApplied(false);
             setRawMaterialForm({ ...emptyProduct });
             fetchAssemblyProductions();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }
     };
-
-
     /* ===================================================
         DELETE ASSEMBLY PRODUCTION
     =================================================== */
@@ -637,9 +925,34 @@ const AssemblyProduction = () => {
     };
 
 
+
+
+    const rawMaterialTableFields = [
+        {
+            label: "Name",
+            key: "productName",
+            // render: (item: any) => item?.productName || "-",
+        },
+        {
+            label: "Quantity",
+            key: "quantity",
+            // render: (item: any) => item?.quantity || "0",
+        },
+        {
+            label: "Rate",
+            key: "rate",
+            render: (item: any) => `₹${item?.rate || "0"}`,
+        },
+        {
+            label: "Amount",
+            key: "amount",
+            render: (item: any) => `₹${Number(item?.amount || 0).toFixed(2)}`,
+        },
+    ];
+
+
     return (
         <div className="w-full bg-white border border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[100%]">
-
             {/* ================= HEADER ================= */}
             <div id="assembly-production-header" className="flex items-center mb-3">
                 <div id="assembly-production-summary" className="flex items-start gap-3">
@@ -671,7 +984,6 @@ const AssemblyProduction = () => {
                 </div>
             </div>
 
-
             {/* ================= LIST TABLE ================= */}
             <DataTable
                 columns={columns}
@@ -680,8 +992,6 @@ const AssemblyProduction = () => {
                 emptyMessage="No assembly production found"
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-
-                        {/* Edit */}
                         <button
                             id="assembly-production-edit-button"
                             onClick={() => openEditModal(record)}
@@ -690,7 +1000,6 @@ const AssemblyProduction = () => {
                             <Edit size={16} />
                         </button>
 
-                        {/* Delete */}
                         <button
                             id="assembly-production-delete-button"
                             disabled={deleteLoading}
@@ -717,7 +1026,6 @@ const AssemblyProduction = () => {
                 )}
             />
 
-
             {/* ================= PAGINATION ================= */}
             {pagination?.totalDocs > 0 && (
                 <Pagination
@@ -734,7 +1042,6 @@ const AssemblyProduction = () => {
                     }}
                 />
             )}
-
 
             {/* ================= DELETE CONFIRM TOOLTIP ================= */}
             {confirmTooltip.show && (
@@ -756,7 +1063,6 @@ const AssemblyProduction = () => {
                 />
             )}
 
-
             {/* ================= ADD / UPDATE MODAL ================= */}
             <Modal
                 {...{
@@ -771,11 +1077,10 @@ const AssemblyProduction = () => {
 
                     body: (
                         <div className="col-span-2 w-full space-y-5">
-
                             {/* ================= BASIC DETAILS CARD ================= */}
                             <div className="w-full rounded-md border border-slate-200 bg-white p-5 shadow-sm">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <TextInput
+                                    {/* <TextInput
                                         label="Voucher no."
                                         value={form.voucherNumber}
                                         placeholder="Voucher no."
@@ -784,6 +1089,13 @@ const AssemblyProduction = () => {
                                         onChange={(e: any) =>
                                             handleMainChange("voucherNumber", e.target.value)
                                         }
+                                    /> */}
+                                    <TextInput
+                                        label="Voucher no."
+                                        value={form.voucherNumber}
+                                        placeholder="Voucher no."
+                                        disabled
+                                        error={errors.voucherNumber}
                                     />
 
                                     <TextInput
@@ -798,7 +1110,7 @@ const AssemblyProduction = () => {
                                         }
                                     />
 
-                                    <TextInput
+                                    <SelectInput
                                         label="Status"
                                         value={form.status}
                                         placeholder="Status"
@@ -807,6 +1119,10 @@ const AssemblyProduction = () => {
                                         onChange={(e: any) =>
                                             handleMainChange("status", e.target.value)
                                         }
+                                        options={[
+                                            { label: "Open", value: "open" },
+                                            { label: "Closed", value: "closed" },
+                                        ]}
                                     />
 
                                     <div className="md:col-span-3">
@@ -825,9 +1141,23 @@ const AssemblyProduction = () => {
 
                             {/* ================= FINISHED GOOD CARD ================= */}
                             <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                                <h3 className="mb-4 text-lg font-bold text-slate-900">
-                                    Finished good
-                                </h3>
+                                <div className="mb-4 flex items-center justify-between gap-3">
+                                    <h3 className="text-lg font-bold text-slate-900">
+                                        Finished good
+                                    </h3>
+
+                                    {isFinishedGoodApplied && (
+                                        <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                                            Applied
+                                        </span>
+                                    )}
+                                </div>
+
+                                {errors.finishedGoodApply && (
+                                    <p className="mb-2 text-sm font-medium text-red-500">
+                                        {errors.finishedGoodApply}
+                                    </p>
+                                )}
 
                                 <div className="rounded-md border border-slate-200 p-4">
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -835,16 +1165,20 @@ const AssemblyProduction = () => {
                                             <SelectInput
                                                 label="Select Product"
                                                 mandatory
-                                                value={form.finishedGood.productCode}
+                                                value={finishedGoodForm.productCode}
                                                 placeholder="Select Product"
                                                 error={errors["finishedGood.productCode"]}
                                                 onChange={(e: any) =>
                                                     handleFinishedGoodProductChange(e.target.value)
                                                 }
-                                                options={[
-                                                    { label: "Select Product", value: "" },
-                                                    ...finishedGoodOptions,
-                                                ]}
+                                                options={
+                                                    finishedGoodOptions?.length > 0
+                                                        ? [
+                                                            { label: "Select Product", value: "" },
+                                                            ...finishedGoodOptions,
+                                                        ]
+                                                        : [{ label: "No Product", value: "" }]
+                                                }
                                             />
                                         </div>
 
@@ -852,7 +1186,7 @@ const AssemblyProduction = () => {
                                             label="Quantity"
                                             mandatory
                                             type="number"
-                                            value={form.finishedGood.quantity}
+                                            value={finishedGoodForm.quantity}
                                             placeholder="Quantity"
                                             error={errors["finishedGood.quantity"]}
                                             onChange={(e: any) =>
@@ -864,7 +1198,7 @@ const AssemblyProduction = () => {
                                             label="Rate"
                                             mandatory
                                             type="number"
-                                            value={form.finishedGood.rate}
+                                            value={finishedGoodForm.rate}
                                             placeholder="Rate"
                                             error={errors["finishedGood.rate"]}
                                             onChange={(e: any) =>
@@ -876,7 +1210,7 @@ const AssemblyProduction = () => {
                                             <TextInput
                                                 label="Amount"
                                                 type="number"
-                                                value={form.finishedGood.amount}
+                                                value={finishedGoodForm.amount}
                                                 placeholder="Amount"
                                                 disabled
                                                 onChange={(e: any) =>
@@ -887,7 +1221,7 @@ const AssemblyProduction = () => {
                                     </div>
 
                                     <div className="mt-4 text-sm font-bold text-slate-600">
-                                        Gross: ₹{Number(form.finishedGood.amount || 0).toFixed(2)}
+                                        Gross: ₹{Number(finishedGoodForm.amount || 0).toFixed(2)}
                                     </div>
 
                                     <div className="mt-3 flex gap-3">
@@ -901,7 +1235,7 @@ const AssemblyProduction = () => {
 
                                         <button
                                             type="button"
-                                            onClick={() => toast.success("Finished good applied")}
+                                            onClick={handleApplyFinishedGood}
                                             className="rounded-md bg-blue-600 px-6 py-2 font-semibold text-white hover:bg-blue-700"
                                         >
                                             Apply
@@ -920,6 +1254,12 @@ const AssemblyProduction = () => {
                                     <button
                                         type="button"
                                         onClick={() => {
+                                            if (rawMaterialOptions.length === 0) {
+                                                setShowNoRawMaterialAlert(true);
+                                                return;
+                                            }
+
+                                            setEditingRawMaterialIndex(null);
                                             setRawMaterialForm({ ...emptyProduct });
                                             setRawErrors({});
                                             setShowRawMaterialModal(true);
@@ -937,45 +1277,14 @@ const AssemblyProduction = () => {
                                     </p>
                                 )}
 
-                                {form.rawMaterials.length === 0 ? (
-                                    <div className="rounded-md border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
-                                        No data
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {form.rawMaterials.map((item: any, index: number) => (
-                                            <div
-                                                key={index}
-                                                className="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-slate-50 p-4"
-                                            >
-                                                <div>
-                                                    <div className="font-semibold text-slate-800">
-                                                        {item.productName}
-                                                    </div>
-
-                                                    <div className="text-sm text-slate-500">
-                                                        Code: {item.productCode} | Qty: {item.quantity} | Rate: ₹{item.rate}
-                                                    </div>
-
-                                                    <div className="text-sm font-semibold text-slate-700">
-                                                        Amount: ₹{Number(item.amount || 0).toFixed(2)}
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteRawMaterial(index)}
-                                                    className="rounded-md p-2 text-red-600 hover:bg-red-100"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                <ColumnWiseTable
+                                    data={form.rawMaterials}
+                                    fields={rawMaterialTableFields}
+                                    emptyMessage="No data"
+                                    onEdit={(item, index) => handleEditRawMaterial(item, index)}
+                                    onDelete={(_, index) => handleDeleteRawMaterial(index)}
+                                />
                             </div>
-
-
                             {/* ================= COST CARD ================= */}
                             <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -994,10 +1303,8 @@ const AssemblyProduction = () => {
                                         type="number"
                                         value={form.productionCost}
                                         placeholder="0"
+                                        disabled
                                         error={errors.productionCost}
-                                        onChange={(e: any) =>
-                                            handleMainChange("productionCost", e.target.value)
-                                        }
                                     />
 
                                     <TextInput
@@ -1009,15 +1316,12 @@ const AssemblyProduction = () => {
                                             handleMainChange("totalFinishedCost", e.target.value)
                                         }
                                     />
-
-
                                 </div>
                             </div>
                         </div>
                     ),
                 }}
             />
-
 
             {/* ================= ADD RAW MATERIAL MODAL ================= */}
             <Modal
@@ -1026,10 +1330,9 @@ const AssemblyProduction = () => {
                     setShow: setShowRawMaterialModal,
                     handleSubmit: handleAddRawMaterial,
                     loader: false,
-                    title: "Add raw material",
-                    // maxWidth: "lg",
+                    title: editingRawMaterialIndex !== null ? "Update raw material" : "Add raw material",
                     body: (
-                        <div className=" col-span-2  rounded-md border border-slate-200 bg-white p-4">
+                        <div className="col-span-2 rounded-md border border-slate-200 bg-white p-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="md:col-span-2">
                                     <SelectInput
@@ -1090,6 +1393,19 @@ const AssemblyProduction = () => {
                             </div>
                         </div>
                     ),
+                }}
+            />
+
+            <NoDataConfirmAlert
+                show={showNoRawMaterialAlert}
+                title="No Product Found"
+                message="Please create at least one raw material product to proceed with assembly production."
+                cancelText="Cancel"
+                confirmText="Yes"
+                onCancel={() => setShowNoRawMaterialAlert(false)}
+                onConfirm={() => {
+                    setShowNoRawMaterialAlert(false);
+                    navigate("/professional/master/product");
                 }}
             />
         </div>
