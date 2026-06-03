@@ -81,7 +81,7 @@ export default function DataTable<T>({
                   key={index}
                   className="hover:bg-indigo-50/40 transition-all duration-200">
                   {columns?.map((col) => {
-                    const value = row[col.key as keyof T];
+                    const value = row?.[col?.key as keyof T];
                     return (
                       <td
                         key={String(col.key)}
@@ -129,7 +129,7 @@ export default function DataTable<T>({
 
 
 export type ColumnWiseField<T = any> = {
-    label: string;
+    title: string;
     key: keyof T | string;
     render?: (item: T, index: number) => React.ReactNode;
 };
@@ -195,7 +195,7 @@ const ColumnWiseTable = <T extends Record<string, any>>({
                     {fields.map((field) => (
                         <tr key={String(field.key)}>
                             <td className={leftBodyClass}>
-                                {field.label}
+                          {field.title}
                             </td>
 
                             {data.map((item: T, index: number) => (

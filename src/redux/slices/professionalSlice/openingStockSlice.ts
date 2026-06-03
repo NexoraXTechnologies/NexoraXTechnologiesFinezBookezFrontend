@@ -2,13 +2,13 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 
 // get 
-export const addBalance = createAsyncThunk(
-    "openingBalance/addBalance",
+export const addOpeningStock = createAsyncThunk(
+    "openingStock/addOpeningStock",
     async ({ payload }: any, { rejectWithValue }) => {
         try {
 
             const res = await professionalAxios.post(
-                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingBalance/save`,
+                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingStock/save`,
                 { ...payload }
             );
 
@@ -26,13 +26,13 @@ export const addBalance = createAsyncThunk(
     }
 );
 
-export const updateBalance = createAsyncThunk(
-    "openingBalance/updateBalance",
-    async ({ payload, openingBalVoucherNumber }: any, { rejectWithValue }) => {
+export const updateOpeningStock = createAsyncThunk(
+    "openingStock/updateOpeningStock",
+    async ({ payload, openingStockVoucherNumber }: any, { rejectWithValue }) => {
         try {
 
             const res = await professionalAxios.put(
-                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingBalance/update/${openingBalVoucherNumber}`,
+                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingStock/update/${openingStockVoucherNumber}`,
                 { ...payload }
             );
 
@@ -50,13 +50,13 @@ export const updateBalance = createAsyncThunk(
     }
 );
 
-export const deleteBalance = createAsyncThunk(
-    "openingBalance/deleteBalance",
-    async ({ openingBalVoucherNumber }: any, { rejectWithValue }) => {
+export const deleteOpeningStock = createAsyncThunk(
+    "openingStock/deleteOpeningStock",
+    async ({ openingStockVoucherNumber }: any, { rejectWithValue }) => {
         try {
 
             const res = await professionalAxios.delete(
-                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingBalance/delete/${openingBalVoucherNumber}`
+                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingStock/delete/${openingStockVoucherNumber}`
             );
 
             if (!res.data?.success)
@@ -73,13 +73,13 @@ export const deleteBalance = createAsyncThunk(
     }
 );
 
-export const getOpeningBalList = createAsyncThunk(
-    "openingBalance/getOpeningBalList",
-    async ({ offset = 0, limit, status = "", search="" }: any, { rejectWithValue }) => {
+export const getOpeningStockList = createAsyncThunk(
+    "openingStock/getOpeningStockList",
+    async ({ offset = 0, limit, status = "", search = "" }: any, { rejectWithValue }) => {
         try {
             const params = { offset, limit, status, search }
             const res = await professionalAxios.get(
-                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingBalance/getAll`,
+                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingStock/getAll`,
                 { params }
             );
 
@@ -98,13 +98,13 @@ export const getOpeningBalList = createAsyncThunk(
 );
 
 // slice 
-const openingBalanceSlice = createSlice({
-    name: "opening Balance",
+const openingStockSlice = createSlice({
+    name: "opening Stock",
     initialState: {
         addLoader: false,
         listingLoader: false,
         deleteLoader: false,
-        openingBal: [],
+        openingStock: [],
         error: null,
         pagination: {
             offset: 0,
@@ -124,59 +124,59 @@ const openingBalanceSlice = createSlice({
     extraReducers: (builder) => {
         /* ---------- GET ALL ---------- */
         builder
-            .addCase(addBalance.pending, (state) => {
+            .addCase(addOpeningStock.pending, (state) => {
                 state.addLoader = true;
                 state.error = null;
             })
-            .addCase(addBalance.fulfilled, (state, action) => {
+            .addCase(addOpeningStock.fulfilled, (state, action) => {
                 state.addLoader = false;
-              
+
             })
-            .addCase(addBalance.rejected, (state, action) => {
+            .addCase(addOpeningStock.rejected, (state, action) => {
                 state.addLoader = false;
             })
 
-            // Open Balance listing
-            .addCase(getOpeningBalList.pending, (state) => {
+            // Open Stock listing
+            .addCase(getOpeningStockList.pending, (state) => {
                 state.listingLoader = true;
                 state.error = null;
             })
-            .addCase(getOpeningBalList.fulfilled, (state, action) => {
+            .addCase(getOpeningStockList.fulfilled, (state, action) => {
                 state.listingLoader = false;
                 state.pagination = action.payload.pagination ?? state.pagination;
-                state.openingBal = action.payload?.records
+                state.openingStock = action.payload?.records
             })
-            .addCase(getOpeningBalList.rejected, (state, action) => {
+            .addCase(getOpeningStockList.rejected, (state, action) => {
                 state.listingLoader = false;
             })
 
-            // update bal
-            .addCase(updateBalance.pending, (state) => {
+            // update stock
+            .addCase(updateOpeningStock.pending, (state) => {
                 state.addLoader = true;
                 state.error = null;
             })
-            .addCase(updateBalance.fulfilled, (state, action) => {
+            .addCase(updateOpeningStock.fulfilled, (state, action) => {
                 state.addLoader = false;
-                state.openingBal = action.payload?.records
+                state.openingStock = action.payload?.records
             })
-            .addCase(updateBalance.rejected, (state, action) => {
+            .addCase(updateOpeningStock.rejected, (state, action) => {
                 state.addLoader = false;
             })
 
             // delete bal
-            .addCase(deleteBalance.pending, (state) => {
+            .addCase(deleteOpeningStock.pending, (state) => {
                 state.deleteLoader = true;
                 state.error = null;
             })
-            .addCase(deleteBalance.fulfilled, (state, action) => {
+            .addCase(deleteOpeningStock.fulfilled, (state, action) => {
                 state.deleteLoader = false;
-                state.openingBal = action.payload?.records
+                state.openingStock = action.payload?.records
             })
-            .addCase(deleteBalance.rejected, (state, action) => {
+            .addCase(deleteOpeningStock.rejected, (state, action) => {
                 state.deleteLoader = false;
             })
     },
 });
 
-export const { } = openingBalanceSlice.actions;
-export default openingBalanceSlice.reducer;
+export const { } = openingStockSlice.actions;
+export default openingStockSlice.reducer;

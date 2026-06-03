@@ -26,7 +26,7 @@ export const resetItrPassword = createAsyncThunk('resetItrPassword/resetPassword
 /* ===================================================
    VERIFY RESET PASSWORD OTP
 =================================================== */
-export const verifyResetItrPasswordOtp = createAsyncThunk('resetItrPassword/verifyOtp', async (payload, { rejectWithValue }) => {
+export const verifyResetItrPasswordOtp = createAsyncThunk('resetItrPassword/verifyOtp', async (payload:any, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.post('/eTaxSolnMongoApiBackend/create/resetPwdOtp', payload);
 

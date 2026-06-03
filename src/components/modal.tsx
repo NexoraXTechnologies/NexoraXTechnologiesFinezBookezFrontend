@@ -60,6 +60,7 @@ type ModalProps = {
     show: boolean;
     setShow: (value: boolean) => void;
     handleSubmit: () => void;
+    handleClose: () => void;
     state: boolean;
     body: React.ReactNode;
     title: string;
@@ -96,6 +97,7 @@ const Modal = ({
     handleSubmit,
     state,
     body,
+    handleClose = () => null,
     title,
     loader = false,
     // Default old values, so other components stay same
@@ -141,7 +143,10 @@ const Modal = ({
 
                             <button
                                 type="button"
-                                onClick={() => setShow(false)}
+                                onClick={() => {
+                                    handleClose();
+                                    setShow(false)
+                                }}
                                 className="p-2 rounded-full hover:bg-gray-200 transition cursor-pointer"
                             >
                                 <X size={18} className="text-gray-600" />
@@ -160,7 +165,10 @@ const Modal = ({
                             className={`flex justify-end gap-3 border-t border-gray-300 bg-gray-50 px-6 py-4 shrink-0 ${footerClassName}`}
                         >
                             <SecondaryButton
-                                callBackFn={() => setShow(false)}
+                                callBackFn={() => {
+                                    handleClose()
+                                    setShow(false)
+                                }}
                                 text="Cancel"
                             />
 

@@ -25,7 +25,7 @@ const wordMap: Record<string, string> = {
   iso: "ISO",
 };
 
-const splitCamelCase = (value: string) => {
+export const splitCamelCase = (value: string) => {
   return value
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
@@ -117,3 +117,7 @@ export const makeTemplateKeyLabelMap = (keys: unknown) => {
       return acc;
     }, {});
 };
+
+export function capitalizeFirstLttr(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
