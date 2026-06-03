@@ -129,7 +129,7 @@ export default function DataTable<T>({
 
 
 export type ColumnWiseField<T = any> = {
-    label: string;
+    title: string;
     key: keyof T | string;
     render?: (item: T, index: number) => React.ReactNode;
 };
@@ -195,7 +195,7 @@ const ColumnWiseTable = <T extends Record<string, any>>({
                     {fields.map((field) => (
                         <tr key={String(field.key)}>
                             <td className={leftBodyClass}>
-                                {field.label}
+                          {field.title}
                             </td>
 
                             {data.map((item: T, index: number) => (

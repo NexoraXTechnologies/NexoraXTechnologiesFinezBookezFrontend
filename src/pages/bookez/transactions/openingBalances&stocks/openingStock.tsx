@@ -2,16 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
-
 import { PrimaryButton, SecondaryButton } from "../../../../components/buttons";
 import SearchInput from "../../../../components/searchInput";
 import Modal from "../../../../components/modal";
 import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
-import DataTable from "../../../../components/DataTable";
+import DataTable, { ColumnWiseTable } from "../../../../components/DataTable";
 import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import {
     addOpeningStock,
@@ -19,13 +17,6 @@ import {
     getOpeningStockList,
     updateOpeningStock,
 } from "../../../../redux/slices/professionalSlice/openingStockSlice";
-import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
-
-// import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMeasurementSlice";
-
-/* =====================================================
-   HELPERS
-===================================================== */
 
 const todayYMD = () => new Date().toISOString().split("T")[0];
 
@@ -43,10 +34,6 @@ const safePercent = (value: any) => {
     return n;
 };
 
-/* =====================================================
-   LIST TABLE COLUMNS
-===================================================== */
-
 const mainColumns = [
     {
         key: "openingStockVoucherNumber",
@@ -55,6 +42,7 @@ const mainColumns = [
     {
         key: "openingStockDate",
         title: "Date",
+        type: "date"
     },
     {
         key: "totalQuantity",
@@ -85,10 +73,6 @@ const mainColumns = [
         ),
     },
 ];
-
-/* =====================================================
-   PRODUCT TABLE COLUMNS
-===================================================== */
 
 const productColumns = [
     {
@@ -124,10 +108,6 @@ const productColumns = [
     },
 ];
 
-/* =====================================================
-   MAIN FORM FIELDS
-===================================================== */
-
 const mainInputData = [
     {
         grid: 2,
@@ -155,10 +135,6 @@ const mainInputData = [
         isRequired: false,
     },
 ];
-
-/* =====================================================
-   COMPONENT
-===================================================== */
 
 const OpeningStock = () => {
     const dispatch = useDispatch();
@@ -468,7 +444,7 @@ const OpeningStock = () => {
         const commonProps = {
             label: field.label,
             mandatory: field.isRequired,
-            value,
+            value: field.type === "date" ? value.split("T")[0] : value,
             placeholder: `Enter ${field.label}`,
             error: errors?.[field.key],
             disabled: field.disabled,
@@ -555,14 +531,7 @@ const OpeningStock = () => {
     };
 
     useEffect(() => {
-        dispatch(
-            getOpeningStockList({
-                limit: localLimit,
-                offset: localOffset,
-                status,
-                search: debouncedSearch,
-            }) as any
-        );
+        dispatch(getOpeningStockList({ limit: localLimit, offset: localOffset, status, search: debouncedSearch, }) as any);
     }, [dispatch, localLimit, localOffset, status, debouncedSearch]);
 
     useEffect(() => {
@@ -715,12 +684,9 @@ const OpeningStock = () => {
                                 disabled={deleteLoader}
                                 onClick={(e) => {
                                     const rect = e.currentTarget.getBoundingClientRect();
-
                                     let x = rect.left - 150;
                                     if (x < 10) x = 10;
-
                                     const y = rect.top + window.scrollY - 5;
-
                                     setConfirmTooltip({
                                         show: true,
                                         x,
@@ -831,31 +797,16 @@ const OpeningStock = () => {
                                             No products added
                                         </div>
                                     ) : (
-                                        <div className="w-full overflow-auto">
-                                            <DataTable
-                                                columns={productColumns}
-                                                data={form.openingStockBody}
-                                                emptyMessage="No products found"
-                                                actions={(row: any) => (
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleEditProduct(row)}
-                                                            className="rounded-lg p-2 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
-                                                        >
-                                                            <Edit size={16} />
-                                                        </button>
+                                            <div className="w-full overflow-auto">
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteProduct(row.id)}
-                                                            className="text-red-500 hover:text-red-700"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            />
+                                                <ColumnWiseTable
+                                                    data={form.openingStockBody}
+                                                    fields={productColumns}
+                                                    showRecordNumber={true}
+                                                    emptyMessage="No data"
+                                                    onEdit={(row: any, idx: number) => handleEditProduct(row?.id)}
+                                                    onDelete={(row: any, idx: number) => handleDeleteProduct(row?.id)}
+                                                />
                                         </div>
                                     )}
                                 </div>
