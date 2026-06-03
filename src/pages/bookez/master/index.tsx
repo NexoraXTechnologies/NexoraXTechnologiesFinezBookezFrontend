@@ -16,7 +16,7 @@ import TransactionDashboard, {
 } from "../transactions/components/TransactionDashboard";
 
 import AccountMaster from "./AccountMaster";
-import ProductMaster from "./ProductMaster";
+import ProductMaster from "./productMaster/ProductMaster";
 import UnitMaster from "./UnitMaster";
 import ReportMapping from "./ReportMapping";
 import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
