@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
-import AssemblyProduction from "./AssemblyProduction";
+import AssemblyProduction from "./assemblyProduction/AssemblyProduction";
 
 
 const cards: DashboardCard[] = [

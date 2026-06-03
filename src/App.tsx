@@ -13,7 +13,7 @@ import ProtectedUsersRoute from "./pages/professional/ProtectedUsersRoute";
 import Users from "./pages/professional/Users";
 import CompanyMaster from "./pages/professional/CompanyMaster";
 import AccountMaster from "./pages/bookez/master/AccountMaster";
-import ProductMaster from "./pages/bookez/master/ProductMaster";
+import ProductMaster from "./pages/bookez/master/productMaster/ProductMaster";
 import Configuration from './pages/professional/Configuration/Configuration';
 
 //income tax
