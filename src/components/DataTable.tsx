@@ -81,7 +81,7 @@ export default function DataTable<T>({
                   key={index}
                   className="hover:bg-indigo-50/40 transition-all duration-200">
                   {columns?.map((col) => {
-                    const value = row[col.key as keyof T];
+                    const value = row?.[col?.key as keyof T];
                     return (
                       <td
                         key={String(col.key)}

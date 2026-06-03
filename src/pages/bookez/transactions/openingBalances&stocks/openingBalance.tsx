@@ -6,8 +6,12 @@ import Modal from "../../../../components/modal";
 import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
 import DataTable from "../../../../components/DataTable";
 import { useDispatch, useSelector } from "react-redux";
-import { addBalance, getOpeningBalList } from "../../../../redux/slices/professionalSlice/openingBalance";
+import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../../../../redux/slices/professionalSlice/openingBalance";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
+import Toggle from "../../../../components/toggle";
+import Pagination from "../../../../components/pagination";
+import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
+import { toast } from "react-toastify";
 
 const columns = [
     { key: 'account', title: 'Account', },
@@ -32,7 +36,7 @@ const columns = [
 
 const mainColumns = [
     { key: 'openingBalVoucherNumber', title: 'Voucher', },
-    { key: 'createdOn', title: 'Voucher', },
+    { key: 'createdOn', title: 'Date', },
     {
         key: 'totalCredit', title: 'Total Credit',
         render: (row: any) => (
@@ -85,11 +89,22 @@ const mainInputData = [
 
 const OpeningBalance = () => {
     const [search, setSearch] = useState("");
+    const [localOffset, setLocalOffset] = useState(0);
+    const [localLimit, setLocalLimit] = useState(10);
     const [showModal, setShowModal] = useState(false);
     const [showEntryModal, setShowEntryModal] = useState(false);
     const dispatch = useDispatch();
     const { accounts } = useSelector((s: any) => s.accountMaster);
-    const { openingBal } = useSelector((s: any) => s.openingBalance);
+    const { openingBal, listingLoader, deleteLoader, pagination, addLoader } = useSelector((s: any) => s.openingBalance);
+    const [edit, setEdit] = useState(false);
+    const [status, setStatus] = useState("open");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [confirmTooltip, setConfirmTooltip] = useState({
+        show: false,
+        x: null,
+        y: null,
+        openingBalVoucherNumber: null,
+    });
 
     const accOptions = accounts?.reduce((a, c) => {
         a.push({ label: c?.accountName, value: c?.accountCode })
@@ -162,10 +177,8 @@ const OpeningBalance = () => {
 
     const validateMainForm = () => {
         const err: any = {};
-
         mainInputData.forEach((field: any) => {
             const value = form?.[field.key];
-
             if (field.isRequired && (value === undefined || value === null || String(value).trim() === "")) {
                 err[field.key] = `${field.label} is required`;
             }
@@ -245,7 +258,16 @@ const OpeningBalance = () => {
         }));
     };
 
-    const handleDeleteEntry = (id: number) => {
+    const handleDeleteEntry = async (e: any) => {
+        await dispatch(deleteBalance({ openingBalVoucherNumber: e }))
+        await dispatch(getOpeningBalList({ status }))
+        toast.success("Opening balance deleted successfully");
+        setConfirmTooltip({
+            show: false,
+            x: null,
+            y: null,
+            openingBalVoucherNumber: null,
+        })
         setForm((prev: any) => ({
             ...prev,
             openingBalBody: prev.openingBalBody.filter((item: any) => item.id !== id),
@@ -262,9 +284,13 @@ const OpeningBalance = () => {
                 totalCredit,
             }
         };
-        await dispatch(addBalance({ payload }))
-        // API call here
-        // return
+        if (edit) {
+            await dispatch(updateBalance({ payload, openingBalVoucherNumber: form?.openingBalVoucherNumber }))
+        } else {
+            await dispatch(addBalance({ payload }))
+        }
+        await dispatch(getOpeningBalList({ status }))
+        toast.success(`Opening balance ${edit ? "updated" : "added"} successfully`);
         setShowModal(false);
         setForm({
             voucherno: "OPBAL",
@@ -272,6 +298,7 @@ const OpeningBalance = () => {
             remark: "",
             openingBalBody: [],
         });
+        setEdit(false)
         setErrors({});
     };
 
@@ -379,9 +406,10 @@ const OpeningBalance = () => {
     };
 
     useEffect(() => {
-        dispatch(getOpeningBalList({}))
-        dispatch(getAllAccounts({ offset: 0, limit: 100 }));
-    }, []);
+        dispatch(getOpeningBalList({ limit: localLimit, offset: localOffset, status, search: debouncedSearch, }))
+        console.log({ localLimit })
+        dispatch(getAllAccounts({ limit: localLimit, offset: localOffset, status, search: debouncedSearch }));
+    }, [localOffset, localLimit, status, debouncedSearch]);
 
     const entryInputData = [
         {
@@ -417,11 +445,25 @@ const OpeningBalance = () => {
         }
     ];
 
-    console.log({ openingBal })
+    // useEffect(() => {
+    //     dispatch(getOpeningBalList({ limit: localLimit, offset: localOffset, status, search: debouncedSearch, }));
+    // }, [debouncedSearch]);
+
+    useEffect(() => {
+        const t = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
+        return () => clearTimeout(t);
+    }, [search]);
+
+    console.log({ openingBal, localOffset })
     return (
         <>
             <div className="w-full bg-white border border-gray-200 shadow-sm p-4 flex flex-col h-[100%]">
                 <div className="flex justify-end items-center mb-3">
+                    <Toggle  {...{ arr: ["open", "close"], state: status, setState: setStatus }} />
+
                     <div className="me-2">
                         <SearchInput {...{ search, setSearch }} />
                     </div>
@@ -436,24 +478,31 @@ const OpeningBalance = () => {
                 <DataTable
                     columns={mainColumns}
                     data={openingBal}
-                    // loading={loading}
-                    emptyMessage="No accounts found"
+                    loading={listingLoader}
+                    emptyMessage="No data found"
                     actions={(acc) => (
                         <div className="flex items-center gap-2">
                             <button
                                 id="account-edit-button"
                                 onClick={() => {
                                     setForm(acc)
-                                    console.log({ acc })
+                                    setEdit(true)
                                     setShowModal(true)
                                 }}
                                 className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
                                 <Edit size={16} />
                             </button>
-                            {/* EDIT */}
+                            {/* delete */}
                             <button
                                 type="button"
-                                onClick={() => handleDeleteEntry(acc.id)}
+                                // onClick={() => handleDeleteEntry(acc?.openingBalVoucherNumber)}
+                                onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    let x = rect.left - 150;
+                                    if (x < 10) x = 10;
+                                    const y = rect.top + window.scrollY - 5;
+                                    setConfirmTooltip({ show: true, x, y, openingBalVoucherNumber: acc.openingBalVoucherNumber, });
+                                }}
                                 className="text-red-500 hover:text-red-700"
                             >
                                 <Trash2 size={16} />
@@ -461,16 +510,58 @@ const OpeningBalance = () => {
                         </div>
                     )}
                 />
+                {pagination.totalDocs > 0 && <Pagination  {...{
+                    localLimit, selectCb: (e) => {
+                        setLocalLimit(Number(e.target.value));
+                        setLocalOffset(0);
+                    },
+                    preDisabled: !pagination.hasPrevPage,
+                    nextDisabled: !pagination.hasNextPage,
+                    setLocalOffset, pagination
+                }} />}
             </div>
+
+            {confirmTooltip.show && (
+                <ConfirmTooltip
+                    x={confirmTooltip.x}
+                    y={confirmTooltip.y}
+                    message="Are you sure you want to delete this account?"
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    onConfirm={() => {
+                        handleDeleteEntry(confirmTooltip?.openingBalVoucherNumber)
+                        
+                    }}
+                    onCancel={() =>
+                        setConfirmTooltip({
+                            show: false,
+                            x: null,
+                            y: null,
+                            openingBalVoucherNumber: null,
+                        })
+                    }
+                />
+            )}
+
 
             {/* Main Opening Balance Modal */}
             <Modal
                 {...{
                     show: showModal,
                     setShow: setShowModal,
+                    handleClose: () => {
+                        setErrors(null)
+                        setForm({
+                            voucherno: "OPBAL",
+                            openingBalDate: new Date().toISOString().split("T")[0],
+                            remark: "",
+                            openingBalBody: [],
+                        });
+                        setEdit(false)
+                    },
                     handleSubmit,
-                    loader: false,
-                    state: false,
+                    loader: addLoader,
+                    state: edit,
                     gridCols: 12,
                     title: "Opening Balance",
                     body: (

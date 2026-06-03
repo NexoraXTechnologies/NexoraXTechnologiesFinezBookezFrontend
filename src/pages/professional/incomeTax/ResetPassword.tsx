@@ -705,7 +705,7 @@ const ResetItrPasswordWeb = () => {
       }
 
       await pollAutomationUntilOtpOrEnd(runId, autoRes?.check_status);
-    } catch (e) {
+    } catch (e:any) {
       toast.error(e?.message || 'Failed to send OTP');
     } finally {
       setBusyAutomation(false);
