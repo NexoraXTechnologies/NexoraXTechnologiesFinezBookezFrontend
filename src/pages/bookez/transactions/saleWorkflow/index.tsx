@@ -7,12 +7,13 @@ import {
 } from "lucide-react";
 import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
+import SalesQuotations from "./salesQuations/SalesQuations";
 
 const cards: DashboardCard[] = [
   {
     title: "Sales Quotations",
     description: "Create and manage sales quotations.",
-    path: "/professional/transaction/sale-workflow/sales-quotations",
+    component: SalesQuotations,
     icon: <FileText size={22} />,
   },
   {
