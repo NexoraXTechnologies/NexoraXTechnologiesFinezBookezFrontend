@@ -16,15 +16,14 @@ import {
     DataCreateButton,
     DataREfreshButton,
 } from "../../../../components/buttons";
-import DataTable from "../../../../components/DataTable";
+import DataTable, { ColumnWiseTable } from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import Modal from "../../../../components/modal";
+import Modal, { WarningModel } from "../../../../components/modal";
 import { SelectInput, TextInput } from "../../../../components/inputs";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { useNavigate } from "react-router-dom";
-import NoDataConfirmAlert from "./NoDataConfirmAlert";
-import ColumnWiseTable from "./ColumnWiseTable";
+
 
 /* ===================================================
     EMPTY PRODUCT STRUCTURE
@@ -1396,7 +1395,7 @@ const AssemblyProduction = () => {
                 }}
             />
 
-            <NoDataConfirmAlert
+            <WarningModel
                 show={showNoRawMaterialAlert}
                 title="No Product Found"
                 message="Please create at least one raw material product to proceed with assembly production."
