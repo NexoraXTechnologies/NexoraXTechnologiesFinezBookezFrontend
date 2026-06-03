@@ -10,6 +10,7 @@ import {
 import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
 import OpeningBalance from "./openingBalance";
+import OpeningStock from "./openingStock";
 
 const cards: DashboardCard[] = [
   {
@@ -21,7 +22,7 @@ const cards: DashboardCard[] = [
   {
     title: "Opening Stocks",
     description: "Manage product-wise opening stock entries.",
-    path: "/professional/transaction/opening-balances/stock",
+    component: OpeningStock,
     icon: <Boxes size={22} />,
   },
   {

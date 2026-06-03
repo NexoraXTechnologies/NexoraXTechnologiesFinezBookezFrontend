@@ -36,6 +36,7 @@ import stateCityReducer from "./slices/professionalSlice/stateCitySlice"
 import plansReduce from "./slices/professionalSlice/subscriptions";
 import customMasterModuleReducer from "./slices/professionalSlice/customMasterModuleSlice";
 import openingBalanceSlice from "./slices/professionalSlice/openingBalance";
+import openingStockSlice from "./slices/professionalSlice/openingStockSlice";
 
 export const store = configureStore({
   reducer: {
@@ -51,7 +52,7 @@ export const store = configureStore({
     customMasterModule: customMasterModuleReducer,
 
     productMaster: productMasterReducer,
-    unitMaster: UnitMasterReducer,
+    units: UnitMasterReducer,
     assemblyProduction: assemblyProductionReducer,
     reportMapping:reportMappingReducer,
     alldropdown: alldropdownReducer,
@@ -74,7 +75,8 @@ export const store = configureStore({
 
     // Plans
     plans: plansReduce,
-    openingBalance: openingBalanceSlice
+    openingBalance: openingBalanceSlice,
+    openingStock: openingStockSlice,
   },
 });
 
