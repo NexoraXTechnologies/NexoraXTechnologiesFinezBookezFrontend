@@ -6,13 +6,14 @@ import {
 } from "lucide-react";
 import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
+import AssemblyProduction from "./AssemblyProduction";
 
 
 const cards: DashboardCard[] = [
   {
     title: "Assembly Production",
     description: "Manage assembly and finished goods production.",
-    path: "/professional/transaction/production/assembly-production",
+    component:AssemblyProduction,
     icon: <Factory size={22} />,
   },
   {
