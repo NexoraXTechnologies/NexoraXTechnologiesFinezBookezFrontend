@@ -17,22 +17,9 @@ import {
     getOpeningStockList,
     updateOpeningStock,
 } from "../../../../redux/slices/professionalSlice/openingStockSlice";
+import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
 
-const todayYMD = () => new Date().toISOString().split("T")[0];
 
-const num = (value: any) => {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
-};
-
-const money = (value: any) => `₹${num(value).toFixed(2)}`;
-
-const safePercent = (value: any) => {
-    const n = num(value);
-    if (n < 0) return 0;
-    if (n > 100) return 100;
-    return n;
-};
 
 const mainColumns = [
     {

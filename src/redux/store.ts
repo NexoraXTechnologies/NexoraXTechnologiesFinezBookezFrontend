@@ -10,8 +10,10 @@ import professionalCompanyMasterReducer from "./slices/professionalSlice/profess
 import accountMasterReducer from "./slices/professionalSlice/accountMasterSlice";
 import productMasterReducer from "./slices/professionalSlice/productMasterSlice";
 import UnitMasterReducer from "./slices/professionalSlice/unitMasterSlice";
-import reportMappingReducer from "./slices/professionalSlice/reportMappingSlice"
-import assemblyProductionReducer from "./slices/professionalSlice/assemblyProductionSlice"
+import reportMappingReducer from "./slices/professionalSlice/reportMappingSlice";
+import assemblyProductionReducer from "./slices/professionalSlice/assemblyProductionSlice";
+import salesQuationsReducer from "./slices/professionalSlice/salesQuationsSlice";
+import salesOrderReducer from "./slices/professionalSlice/salesOrderSlice";
 import aiTaxCopilotReducer from "./slices/professionalSlice/ai/aiTaxCopilotSlice";
 import alldropdownReducer from "./slices/professionalSlice/allDropDowns/alldropdownSlice";
 
@@ -54,6 +56,8 @@ export const store = configureStore({
     productMaster: productMasterReducer,
     units: UnitMasterReducer,
     assemblyProduction: assemblyProductionReducer,
+    salesQuotation:salesQuationsReducer,
+    salesOrder: salesOrderReducer,
     reportMapping:reportMappingReducer,
     alldropdown: alldropdownReducer,
     taxpayer: taxpayerReducer,

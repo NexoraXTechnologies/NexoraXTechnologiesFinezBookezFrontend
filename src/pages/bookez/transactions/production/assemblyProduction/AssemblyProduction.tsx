@@ -2455,22 +2455,22 @@ const AssemblyProduction = () => {
     =================================================== */
     const rawMaterialTableFields = [
         {
-            label: "Name",
+            title: "Name",
             key: "productName",
             // render: (item: any) => item?.productName || "-",
         },
         {
-            label: "Quantity",
+            title: "Quantity",
             key: "quantity",
             // render: (item: any) => item?.quantity || "0",
         },
         {
-            label: "Rate",
+            title: "Rate",
             key: "rate",
             render: (item: any) => `₹${item?.rate || "0"}`,
         },
         {
-            label: "Amount",
+            title: "Amount",
             key: "amount",
             render: (item: any) => `₹${Number(item?.amount || 0).toFixed(2)}`,
         },

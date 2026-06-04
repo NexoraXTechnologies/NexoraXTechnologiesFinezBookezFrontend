@@ -6,18 +6,20 @@ import {
   RotateCcw,
 } from "lucide-react";
 import TransactionDashboard from "../components/TransactionDashboard";
+import SalesQuotations from "./salesQuations/SalesQuations";
+import SalesOrder from "./salesOrder/SalesOrder";
 
 const cards: any = [
   {
     title: "Sales Quotations",
     description: "Create and manage sales quotations.",
-    path: "/professional/transaction/sale-workflow/sales-quotations",
+    component: SalesQuotations,
     icon: <FileText size={22} />,
   },
   {
     title: "Sales Orders",
     description: "Create and manage sales orders.",
-    path: "/professional/transaction/sale-workflow/sales-orders",
+    component: SalesOrder,
     icon: <ClipboardList size={22} />,
   },
   {
