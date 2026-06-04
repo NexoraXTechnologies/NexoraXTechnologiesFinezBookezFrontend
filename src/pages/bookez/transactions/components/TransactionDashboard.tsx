@@ -3,19 +3,13 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import PageComponentModal from "../../../../components/PageComponentModal";
 
-type TransactionDashboardProps = {
-  title: string;
-  description: string;
-  icon: any;
-  cards: any;
-};
 
 const TransactionDashboard = ({
   title,
   description,
   icon,
   cards,
-}: TransactionDashboardProps) => {
+}: any) => {
   const [activeCard, setActiveCard]: any = useState(null);
 
   const ActiveComponent = activeCard?.component;

@@ -36,7 +36,6 @@ import ProfessionalRegister from "./pages/ProfessionalRegister";
 import Subscription from './pages/subscription';
 import UnitMaster from './pages/bookez/master/UnitMaster';
 import ReportMapping from './pages/bookez/master/ReportMapping';
-import BookEZDashboard from './pages/bookez/master';
 import MasterDashboard from './pages/bookez/master';
 import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks/indec';
 import ProductionDashboard from './pages/bookez/transactions/production';

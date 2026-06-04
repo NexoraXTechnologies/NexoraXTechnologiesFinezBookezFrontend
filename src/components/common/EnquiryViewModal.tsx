@@ -1,8 +1,7 @@
 // src/components/common/EnquiryViewModal.jsx
-import React from "react";
 import { X } from "lucide-react";
 
-const EnquiryViewModal = ({ open, onClose, enquiry, extraTop, extraBottom }) => {
+const EnquiryViewModal = ({ open, onClose, enquiry, extraTop, extraBottom }: any) => {
   if (!open) return null;
 
   const loading = !enquiry;

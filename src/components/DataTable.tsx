@@ -31,7 +31,7 @@ export default function DataTable<T>({
           {/* HEADER */}
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
-              {columns?.map((col) => (
+              {columns?.map((col: any) => (
                 <th
                   key={String(col.key)}
                   className={`
@@ -73,7 +73,7 @@ export default function DataTable<T>({
                 <tr
                   key={index}
                   className="hover:bg-indigo-50/40 transition-all duration-200">
-                  {columns?.map((col) => {
+                  {columns?.map((col: any) => {
                     const value = row?.[col?.key as keyof T];
                     return (
                       <td

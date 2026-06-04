@@ -1,23 +1,22 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown, LogOut, Bell, X, Trash2, Menu } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import * as OneSignal from "react-onesignal";
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 
-const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
+const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatchP = useDispatch();
   const [imageError, setImageError] = useState(false);
 
-  const [confirm, setConfirm] = useState({ show: false, x: null, y: null });
+  const [confirm, setConfirm]: any = useState({ show: false, x: null, y: null });
   const { profile } = useSelector(
-    (state) => state.professionalProfile
+    (state: any) => state.professionalProfile
   );
 
-  const openConfirm = (e) => {
+  const openConfirm = (e: any) => {
     const btn = e.currentTarget.getBoundingClientRect();
     const gap = 4;
     const tipW = 176;
@@ -32,7 +31,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
 
     setConfirm({ show: true, x: left, y: top });
   };
-
+  // @ts-ignore
   const storedUser = JSON.parse(localStorage.getItem("professionalUser")) || {};
   const user = {
     name: storedUser.name || "Professional User",
@@ -54,8 +53,8 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
     setImageError(false);
   }, [pic]);
 
-  const flattenMenu = (items = []) => {
-    return items.flatMap((item) => [
+  const flattenMenu = (items: any = []) => {
+    return items.flatMap((item: any) => [
       item,
       ...(item.children ? flattenMenu(item.children) : []),
     ]);
@@ -65,18 +64,18 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
 
   const activeMenu =
     allMenuItems
-      .filter((item) => {
+      .filter((item: any) => {
         if (!item.path && !item.matchPaths) return false;
 
         if (item.matchPaths?.length) {
-          return item.matchPaths.some((p) =>
+          return item.matchPaths.some((p: any) =>
             location.pathname.startsWith(p)
           );
         }
 
         return location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
       })
-      .sort((a, b) => {
+      .sort((a: any, b: any) => {
         const aPath = a.matchPaths?.[0] || a.path || "";
         const bPath = b.matchPaths?.[0] || b.path || "";
         return bPath.length - aPath.length;
@@ -90,17 +89,17 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
   const handleLogout = async () => {
     try {
       // 1) read headers (who is logged in)
-      const headers = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
+      // const headers = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
 
-      const loginuser = headers?.loginuser; // userMobileNumberHash
-      const dbName = headers?.['x-db-name'];
-      const payload = {
-        loginuser: String(loginuser),
-        'x-db-name': String(dbName),
-        isLogin: false,
-      };
+      // const loginuser = headers?.loginuser; // userMobileNumberHash
+      // const dbName = headers?.['x-db-name'];
+      // const payload = {
+      //   loginuser: String(loginuser),
+      //   'x-db-name': String(dbName),
+      //   isLogin: false,
+      // };
       // parentUserMobileNumber
-    } catch (err) {
+    } catch (err: any) {
       // Don't block logout if API fails
       console.warn("Logout sync failed:", err?.message || err);
     } finally {
@@ -116,26 +115,26 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
   /* ------------------------- 🔔 NOTIFICATIONS -------------------------- */
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const notificationRef = useRef(null);
+  const notificationRef: any = useRef(null);
 
   // 🔥 Receive notifications from global OneSignal handler
   useEffect(() => {
-    const handler = (e) => {
-      const notification = e.detail;
-      setNotifications((prev) => [
-        {
-          id: Date.now(),
-          title: notification.title,
-          text: notification.body,
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          read: false,
-        },
-        ...prev,
-      ]);
-    };
+    // const handler = (e) => {
+    //   const notification = e.detail;
+    //   setNotifications((prev) => [
+    //     {
+    //       id: Date.now(),
+    //       title: notification.title,
+    //       text: notification.body,
+    //       time: new Date().toLocaleTimeString([], {
+    //         hour: "2-digit",
+    //         minute: "2-digit",
+    //       }),
+    //       read: false,
+    //     },
+    //     ...prev,
+    //   ]);
+    // };
 
     // window.addEventListener("onesignal-notification", handler);
     // return () => window.removeEventListener("onesignal-notification", handler);
@@ -143,7 +142,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
 
   // Close popup when clicking outside
   useEffect(() => {
-    const handler = (e) => {
+    const handler = (e: any) => {
       if (
         notificationRef.current &&
         !notificationRef.current.contains(e.target)
@@ -158,11 +157,11 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
   // Mark all as read when opened
   useEffect(() => {
     if (showNotifications) {
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setNotifications((prev: any) => prev.map((n: any) => ({ ...n, read: true })));
     }
   }, [showNotifications]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n: any) => !n.read).length;
 
   /* ------------------------------------------------------------------ */
 
@@ -225,7 +224,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }) => {
 
               <div className="max-h-72 overflow-y-auto">
                 {notifications.length > 0 ? (
-                  notifications.map((n) => (
+                  notifications.map((n: any) => (
                     <div
                       key={n.id}
                       className="px-4 py-3 border-b hover:bg-gray-50"

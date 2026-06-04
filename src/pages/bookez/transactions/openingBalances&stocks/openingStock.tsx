@@ -741,6 +741,7 @@ const OpeningStock = () => {
             )}
 
             {/* MAIN OPENING STOCK MODAL */}
+            {/* @ts-ignore */}
             <Modal
                 {...{
                     show: showModal,

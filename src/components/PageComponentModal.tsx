@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import { X, ArrowLeft } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -6,7 +5,7 @@ type PageComponentModalProps = {
     show: boolean;
     title: string;
     description?: string;
-    children: ReactNode;
+    children: any;
     onClose: () => void;
 };
 

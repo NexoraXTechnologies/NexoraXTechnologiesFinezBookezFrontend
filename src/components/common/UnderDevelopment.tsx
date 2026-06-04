@@ -1,4 +1,3 @@
-import React from "react";
 
 const UnderDevelopment = ({ size = 180 }) => {
   return (

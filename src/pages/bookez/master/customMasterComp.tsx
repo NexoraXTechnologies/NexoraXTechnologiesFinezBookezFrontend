@@ -38,7 +38,7 @@ const CustomMasterComp = ({
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
 
-	const [confirmTooltip, setConfirmTooltip] = useState({
+	const [confirmTooltip, setConfirmTooltip]:any = useState({
 		show: false,
 		x: null,
 		y: null,

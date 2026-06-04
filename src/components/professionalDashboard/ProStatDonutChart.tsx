@@ -1,4 +1,3 @@
-import React from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
 
@@ -32,6 +31,7 @@ const ProStatDonutChart = ({ title, items = [] }: { title: string; items: { name
       </div>
 
       <div className="h-60">
+        {/* @ts-ignore */}
         <Doughnut data={chartData} options={options} />
       </div>
     </div>

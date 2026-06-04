@@ -310,13 +310,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
     const isActive = location.pathname === item.path || item.matchPaths?.includes(location.pathname);
 
     // PARENT ACTIVE CHECK
-    const isParentActive = item.children?.some((child) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
+    const isParentActive = item.children?.some((child: any) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
+    console.log({ isParentActive, isActive })
     const isOpen = openMenus[item.name] || false;
 
     // TOGGLE MENU
     const handleClick = () => {
       if (hasChildren) {
-        setOpenMenus((prev) => ({
+        setOpenMenus((prev: any) => ({
           ...prev,
           [item.name]: !prev[item.name],
         }));
@@ -369,7 +370,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
             (isExpanded ? "lg:block" : "lg:hidden") +
             " block"
           }>
-            {item.children.map((child) => (
+            {item.children.map((child: any) => (
               <SidebarItem
                 key={child.name}
                 item={child}
