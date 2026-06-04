@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Home, MapPin, Hash, Building2, Landmark, IndianRupee, Calendar, Banknote } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
 import ConfirmTooltip from '../../../../components/common/ConfirmTooltip';
 import { formatIndianNumber, indianInputToRaw } from '../../../../components/common/DateFormator';
 
@@ -8,14 +7,15 @@ import { formatIndianNumber, indianInputToRaw } from '../../../../components/com
 
 const inputClass = 'border rounded-md pl-9 pr-3 py-2 w-full text-right appearance-none';
 
-const TextInput = ({ icon: Icon, value, onChange, placeholder }) => (
+const TextInput = ({ icon: Icon, value, onChange, placeholder }: { icon: React.ComponentType; value?: string; onChange?: (value: string) => void; placeholder?: string }) => (
   <div className="relative">
+    {/* @ts-ignore */}
     <Icon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-    <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="border rounded-md pl-9 pr-3 py-2 w-full" />
+    <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange?.(e.target.value)} className="border rounded-md pl-9 pr-3 py-2 w-full" />
   </div>
 );
 
-const RupeeInput = ({ value, onChange, disabled = false, bold = false }) => {
+const RupeeInput = ({ value, onChange, disabled = false, bold = false }: { value?: string; onChange?: (value: string) => void; disabled?: boolean; bold?: boolean }) => {
   const displayValue = formatIndianNumber(value);
 
   return (
@@ -36,11 +36,11 @@ const RupeeInput = ({ value, onChange, disabled = false, bold = false }) => {
 
 /* ------------------ MAIN COMPONENT ------------------ */
 
-const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onSave }) => {
+const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onSave }: { value?: any; taxpayerAddress?: any; taxRegime?: string; onClose: () => void; onSave: (data: any) => void }) => {
   const [propertyType, setPropertyType] = useState(value?.propertyType ?? '');
   const [copyAddress, setCopyAddress] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingPropertyType, setPendingPropertyType] = useState(null);
+  const [pendingPropertyType, setPendingPropertyType] = useState("");
   const getCenterPosition = () => ({
     x: window.innerWidth / 2 - 88, // half of tooltip width (≈176px)
     y: window.innerHeight / 2 - 60,
@@ -50,7 +50,7 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
     // clear rental + loan fields (RN behavior)
     setRent({ received: '', municipalTax: '' });
 
-    setLoan((prev) => ({
+    setLoan((prev: any) => ({
       ...prev,
       totalLoan: '',
       outstanding: '',
@@ -59,13 +59,13 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
     }));
 
     setPropertyType(pendingPropertyType); // apply 'S'
-    setPendingPropertyType(null);
+    setPendingPropertyType("");
     setConfirmOpen(false);
   };
 
   // ❌ User cancels
   const handleCancelPropertyType = () => {
-    setPendingPropertyType(null);
+    setPendingPropertyType("");
     setConfirmOpen(false);
   };
 
@@ -112,7 +112,7 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
     // Address → address3 + address4
     const addressText = [taxpayerAddress?.address3, taxpayerAddress?.address4].filter(Boolean).join(', ');
 
-    setAddress((prev) => ({
+    setAddress((prev: any) => ({
       ...prev,
       houseName: houseNameText || prev.houseName,
       address: addressText || prev.address,
@@ -124,7 +124,7 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
 
   /* ------------------ CALCULATIONS ------------------ */
 
-  const toNumber = (v) => Number(String(v ?? '').replace(/,/g, '')) || 0;
+  const toNumber = (v: any) => Number(String(v ?? '').replace(/,/g, '')) || 0;
 
   const annualValue = toNumber(rent.received) - toNumber(rent.municipalTax); // ✅ diff
   const thirtyPercentAnnualValue = annualValue * 0.3; // ✅ 30%
@@ -201,7 +201,7 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
 
                 // ✅ RN behavior: confirm before switching to Self Occupied
                 if (v === 'S' && propertyType !== 'S') {
-                  setPendingPropertyType(v); // store intended value
+                  setPendingPropertyType(v as string); // store intended value
                   setConfirmOpen(true); // open confirmation tooltip
                   return;
                 }
@@ -233,27 +233,27 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
             <label className="text-xs mb-1 block">House / Flat Name</label>
-            <TextInput icon={Building2} placeholder="Name of House / Flat" value={address.houseName} onChange={(v) => setAddress({ ...address, houseName: v })} />
+            <TextInput icon={Building2} placeholder="Name of House / Flat" value={address.houseName} onChange={(v: any) => setAddress({ ...address, houseName: v })} />
           </div>
 
           <div>
             <label className="text-xs mb-1 block">Address</label>
-            <TextInput icon={MapPin} placeholder="Address" value={address.address} onChange={(v) => setAddress({ ...address, address: v })} />
+            <TextInput icon={MapPin} placeholder="Address" value={address.address} onChange={(v: any) => setAddress({ ...address, address: v })} />
           </div>
 
           <div>
             <label className="text-xs mb-1 block">Pincode</label>
-            <TextInput icon={Hash} placeholder="Pincode" value={address.pincode} onChange={(v) => setAddress({ ...address, pincode: v })} />
+            <TextInput icon={Hash} placeholder="Pincode" value={address.pincode} onChange={(v: any) => setAddress({ ...address, pincode: v })} />
           </div>
 
           <div>
             <label className="text-xs mb-1 block">State</label>
-            <TextInput icon={Landmark} placeholder="State" value={address.state} onChange={(v) => setAddress({ ...address, state: v })} />
+            <TextInput icon={Landmark} placeholder="State" value={address.state} onChange={(v: any) => setAddress({ ...address, state: v })} />
           </div>
 
           <div>
             <label className="text-xs mb-1 block">City</label>
-            <TextInput icon={Landmark} placeholder="City" value={address.city} onChange={(v) => setAddress({ ...address, city: v })} />
+            <TextInput icon={Landmark} placeholder="City" value={address.city} onChange={(v: any) => setAddress({ ...address, city: v })} />
           </div>
 
           <div>
@@ -270,12 +270,12 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <label className="text-xs mb-1 block">Total Rental Received</label>
-                <RupeeInput value={rent.received} onChange={(v) => setRent({ ...rent, received: v })} />
+                <RupeeInput value={rent.received} onChange={(v: any) => setRent({ ...rent, received: v })} />
               </div>
 
               <div>
                 <label className="text-xs mb-1 block">Municipal Tax Paid</label>
-                <RupeeInput value={rent.municipalTax} onChange={(v) => setRent({ ...rent, municipalTax: v })} />
+                <RupeeInput value={rent.municipalTax} onChange={(v: any) => setRent({ ...rent, municipalTax: v })} />
               </div>
 
               <div>
@@ -301,7 +301,7 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
                 <label className="text-xs mb-1 block">Loan taken from</label>
                 <div className="relative">
                   <Banknote size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <select value={loan.loanFrom || ''} onChange={(e) => setLoan({ ...loan, loanFrom: e.target.value })} className="border rounded-md pl-9 pr-3 py-2 w-full">
+                  <select value={loan.loanFrom || ''} onChange={(e: any) => setLoan({ ...loan, loanFrom: e.target.value })} className="border rounded-md pl-9 pr-3 py-2 w-full">
                     <option value="">Select</option>
                     <option value="bank">Bank</option>
                     <option value="institution">Institution</option>
@@ -310,43 +310,44 @@ const HouseProperty = ({ value, taxpayerAddress, taxRegime = 'NEW', onClose, onS
               </div>
               <div>
                 <label className="text-xs mb-1 block">Name of Bank / Institution</label>
-                <TextInput icon={Building2} placeholder="Enter name" value={loan.bank} onChange={(v) => setLoan({ ...loan, bank: v })} />
+                <TextInput icon={Building2} placeholder="Enter name" value={loan.bank} onChange={(v: any) => setLoan({ ...loan, bank: v })} />
               </div>
               <div>
                 <label className="text-xs mb-1 block">Loan Account Number</label>
-                <TextInput icon={Hash} placeholder="Loan Account Number" value={loan.accountNo} onChange={(v) => setLoan({ ...loan, accountNo: v })} />
+                <TextInput icon={Hash} placeholder="Loan Account Number" value={loan.accountNo} onChange={(v: any) => setLoan({ ...loan, accountNo: v })} />
               </div>
 
               <div>
                 <label className="text-xs mb-1 block">Date of Sanction</label>
                 <div className="relative">
                   <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="date" className="border rounded-md pl-9 pr-3 py-2 w-full" value={loan.sanctionDate} onChange={(e) => setLoan({ ...loan, sanctionDate: e.target.value })} />
+                  <input type="date" className="border rounded-md pl-9 pr-3 py-2 w-full" value={loan.sanctionDate} onChange={(e: any) => setLoan({ ...loan, sanctionDate: e.target.value })} />
                 </div>
               </div>
 
               <div>
                 <label className="text-xs mb-1 block">Total Loan Amount</label>
-                <RupeeInput value={loan.totalLoan} onChange={(v) => setLoan({ ...loan, totalLoan: v })} />
+                <RupeeInput value={loan.totalLoan} onChange={(v: any) => setLoan({ ...loan, totalLoan: v })} />
               </div>
 
               <div>
                 <label className="text-xs mb-1 block">Loan Outstanding</label>
-                <RupeeInput value={loan.outstanding} onChange={(v) => setLoan({ ...loan, outstanding: v })} />
+                <RupeeInput value={loan.outstanding} onChange={(v: any) => setLoan({ ...loan, outstanding: v })} />
               </div>
 
               <div>
                 <label className="text-xs mb-1 block">Interest Amount</label>
-                <RupeeInput value={loan.interest} onChange={(v) => setLoan({ ...loan, interest: v })} />
+                <RupeeInput value={loan.interest} onChange={(v: any) => setLoan({ ...loan, interest: v })} />
               </div>
 
               <div>
                 <label className="text-xs mb-1 block">Arrears Received (30% deduction)</label>
-                <RupeeInput value={loan.arrears} onChange={(v) => setLoan({ ...loan, arrears: v })} />
+                <RupeeInput value={loan.arrears} onChange={(v: any) => setLoan({ ...loan, arrears: v })} />
               </div>
 
               <div>
                 <label className="text-xs mb-1 block">Total Income from House Property</label>
+                {/* @ts-ignore */}
                 <RupeeInput value={String(totalIncomeFromHouseProperty)} disabled bold />
               </div>
             </div>

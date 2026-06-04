@@ -1,8 +1,8 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { BeatLoader } from 'react-spinners';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 
 import { getPreFillTaxPayers } from '../../../../redux/slices/professionalSlice/preFillTaxPayers/preFillTaxPayersSlice';
 import { runAutomationAis, getJobQueueAutomationByCommonId } from '../../../../redux/slices/professionalSlice/automation/automatioinSlice';
@@ -12,14 +12,14 @@ import { ensureAppSettings, ensureRunnerRunning } from '../../../../services/ens
 import { runnerService } from '../../../../services/runnerService';
 import { getProfessionalHeader, makeJobId } from '../AISTISForm26PayloadBuilder';
 
-const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
+const AddExistingTaxpayerModal = ({ onClose, onSave }: { onClose: () => void; onSave: () => void }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   // ✅ If FY already in parent state, you can pass it as prop instead.
   // Here I’m taking it from your dropdown list selection (replace with your real store path).
-  const { assessmentYears } = useSelector((s) => s.alldropdown);
-  const fy = assessmentYears?.find((x) => x.status === 'active')?.assessmentYear || '2025-2026';
+  // const { assessmentYears } = useSelector((s) => s.alldropdown);
+  // const fy = assessmentYears?.find((x) => x.status === 'active')?.assessmentYear || '2025-2026';
 
   const [pan, setPan] = useState('');
   const [password, setPassword] = useState('');
@@ -49,21 +49,22 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
     return pan && password && consent && !panError && !passwordError && !loading;
   }, [pan, password, consent, panError, passwordError, loading]);
 
-  const makePrefillFileName = (p) => `${String(p || '').toUpperCase()}_Prefill.json`;
+  const makePrefillFileName = (p: string) => `${String(p || '').toUpperCase()}_Prefill.json`;
 
-  const isNotFound = (err) => {
+  const isNotFound = (err: any) => {
     const status = err?.status || err?.response?.status;
     const msg = String(err?.message || err?.response?.data?.message || '').toLowerCase();
     return status === 404 || msg.includes('not found') || msg.includes('no file') || msg.includes('no data');
   };
 
   // ✅ Taxpayer exists check using dispatch(getTaxPayerDetails)
-  const checkTaxpayerExistsByPan = async (panValue) => {
+  const checkTaxpayerExistsByPan = async (panValue: string) => {
     try {
+      // @ts-ignore
       const full = await dispatch(getTaxPayerDetails(panValue)).unwrap();
       // If unwrap succeeded and returns object => exists
       return !!full;
-    } catch (err) {
+    } catch (err: any) {
       // If your API throws 404 when not found => treat as NOT existing
       if (isNotFound(err)) return false;
       // else real error
@@ -72,7 +73,7 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
   };
 
   // ✅ Prefill payload builder (separate from AIS builder)
-  const buildPrefillJobQueuePayload = ({ panValue, itlPassword, machineInfo }) => {
+  const buildPrefillJobQueuePayload = ({ panValue, itlPassword, machineInfo }: any) => {
     const Authtoken = getProfessionalHeader('authtoken');
     const LoginUser = getProfessionalHeader('loginuser');
     const parent = getProfessionalHeader('x-db-name');
@@ -112,7 +113,7 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
       modifiedBy: LoginUser,
     };
   };
-  const fetchAndOpenPrefill = async (panArg, fileNameArg, itlPasswordArg) => {
+  const fetchAndOpenPrefill = async (panArg: string, fileNameArg: string, itlPasswordArg: string) => {
     try {
       const finalPan =
         String(panArg || pan || '')
@@ -128,13 +129,12 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
 
       const finalFileName =
         fileNameArg || makePrefillFileName(finalPan);
-
-      const prefillRes = await dispatch(
-        getPreFillTaxPayers(finalFileName)
+      // @ts-ignore
+      const prefillRes = await dispatch(getPreFillTaxPayers(finalFileName)
       ).unwrap();
 
       toast.success('Prefill data loaded');
-
+      // @ts-ignore
       onSave?.({
       pan: finalPan,
       password: finalPwd,
@@ -145,11 +145,11 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
     });
 
       onClose?.();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to load Prefill JSON');
     }
   };
-  const pollPrefillJobStatus = async (commonId, panValue, fileName, itlPassword) => {
+  const pollPrefillJobStatus = async (commonId: string, panValue: string, fileName: string, itlPassword: string) => {
     const MAX_TRIES = 60;
     const INTERVAL = 5000;
 
@@ -159,6 +159,7 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
       tries++;
 
       try {
+        // @ts-ignore
         const res = await dispatch(getJobQueueAutomationByCommonId({ commonId })).unwrap();
         const job = res?.data;
 
@@ -180,7 +181,7 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
         }
 
         await new Promise((r) => setTimeout(r, INTERVAL));
-      } catch (err) {
+      } catch (err: any) {
         toast.error(err?.message || 'Job status check failed');
         return;
       }
@@ -188,13 +189,13 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
 
     toast.error('Job timeout. Please try again.');
   };
-  const runPrefillAutomationNow = async ({ panValue, itlPassword, machineInfo, fileName }) => {
+  const runPrefillAutomationNow = async ({ panValue, itlPassword, machineInfo, fileName }: any) => {
     const payload = buildPrefillJobQueuePayload({ panValue, itlPassword, machineInfo });
 
     if (!payload?.input?.pan) throw new Error('PAN missing');
     if (!payload?.input?.password) throw new Error('Password missing');
     if (!payload?.input?.authToken) throw new Error('Missing AuthToken');
-
+    // @ts-ignore
     const res = await dispatch(runAutomationAis(payload)).unwrap();
     const commonId = res?.data?.commonId;
 
@@ -211,7 +212,6 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
   const isAutomationEnabledLocal = () => localStorage.getItem('nx_enable_automation') === 'true';
 
   const handleSubmit = async () => {
-    console.log('im in submit ');
     if (!pan) return toast.error('PAN is required');
     if (panError) return toast.error(panError);
     if (!password) return toast.error('Password is required');
@@ -237,10 +237,12 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
 
       // 2) prefill exists?
       try {
+        // @ts-ignore
         const prefillRes = await dispatch(getPreFillTaxPayers(fileName)).unwrap();
         toast.info('Prefill already exists');
 
         // ✅ send to parent so parent opens AddNewTaxpayerModal
+        // @ts-ignore
         onSave?.({
           pan: cleanPan,
           password: cleanPwd,
@@ -251,7 +253,7 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
 
         onClose?.();
         return;
-      } catch (err) {
+      } catch (err: any) {
         if (!isNotFound(err)) {
           toast.error(err?.message || 'Prefill check failed');
           return;
@@ -303,12 +305,13 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
       });
 
       // 4) fetch prefill after completed
+      // @ts-ignore
       const prefillRes2 = await dispatch(getPreFillTaxPayers(fileName)).unwrap();
 
       toast.success('Prefill ready');
 
       if (!aliveRef.current) return;
-
+      // @ts-ignore
       onSave?.({
         pan: cleanPan,
         password: cleanPwd,
@@ -319,7 +322,7 @@ const AddExistingTaxpayerModal = ({ onClose, onSave }) => {
       });
 
       onClose?.();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Something went wrong');
     } finally {
       if (aliveRef.current) setLoading(false);

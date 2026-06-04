@@ -11,16 +11,14 @@ import {
 } from "lucide-react";
 import { FaRegFilePowerpoint } from "react-icons/fa";
 
-import TransactionDashboard, {
-  type DashboardCard,
-} from "../transactions/components/TransactionDashboard";
+import TransactionDashboard from "../transactions/components/TransactionDashboard";
 
 import AccountMaster from "./AccountMaster";
 import ProductMaster from "./productMaster/ProductMaster";
 import UnitMaster from "./UnitMaster";
 import ReportMapping from "./ReportMapping";
 import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
-import CustomMasterComp from "./CustomMasterComp";
+import CustomMasterComp from "./customMasterComp";
 
 
 const MasterDashboard = () => {
@@ -40,8 +38,8 @@ const MasterDashboard = () => {
     );
   }, [dispatch]);
 
-  const masterCards: DashboardCard[] = useMemo(() => {
-    const defaultCards: DashboardCard[] = [
+  const masterCards: any[] = useMemo(() => {
+    const defaultCards: any[] = [
       {
         title: "Account",
         description: "Manage customers, vendors, cash, bank and ledgers.",
@@ -62,7 +60,7 @@ const MasterDashboard = () => {
       },
     ];
 
-    const apiCards: DashboardCard[] = customMasterModules.map((item: any) => {
+    const apiCards: any[] = customMasterModules.map((item: any) => {
       const moduleName = item?.moduleName || "Custom Master";
       const moduleCode = item?.moduleCode || item?._id || "";
 
@@ -79,7 +77,7 @@ const MasterDashboard = () => {
       };
     });
 
-    const reportCard: DashboardCard[] = [
+    const reportCard: any = [
       {
         title: "Reports Mapping",
         description: "Configure templates and mapped report formats.",

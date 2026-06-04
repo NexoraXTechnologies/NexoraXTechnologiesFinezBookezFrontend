@@ -14,7 +14,7 @@ export const getAllProductMasterSchema = createAsyncThunk(
       isSearchable = "",
       isRequired = "",
       isFilterable = "",
-    } = {},
+    }: { offset?: number; limit?: number; isSearchable?: string; isRequired?: string; isFilterable?: string },
     { rejectWithValue }
   ) => {
     try {
@@ -180,7 +180,7 @@ export const getAllProducts = createAsyncThunk(
 =================================================== */
 export const getProductByCode = createAsyncThunk(
   "productMaster/getProductByCode",
-  async (productCode, { rejectWithValue }) => {
+  async (productCode: string, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/productMaster/getProduct/${productCode}`
@@ -192,7 +192,7 @@ export const getProductByCode = createAsyncThunk(
         });
 
       return res.data?.data?.product ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to fetch product",
       });
@@ -205,7 +205,7 @@ export const getProductByCode = createAsyncThunk(
 =================================================== */
 export const updateProduct = createAsyncThunk(
   "productMaster/updateProduct",
-  async ({ productCode, data }, { rejectWithValue }) => {
+  async ({ productCode, data }: { productCode: string; data: any }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/productMaster/updateProduct/${productCode}`,
@@ -218,7 +218,7 @@ export const updateProduct = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to update product",
       });
@@ -243,7 +243,7 @@ export const deleteProduct = createAsyncThunk(
         });
 
       return productCode;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to delete product",
       });
@@ -305,7 +305,7 @@ const productMasterSlice = createSlice({
         state.products = data?.items ?? [];
         state.pagination = data?.pagination ?? state.pagination;
       })
-      .addCase(getAllProducts.rejected, (state, action) => {
+      .addCase(getAllProducts.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.products = [];
@@ -320,7 +320,7 @@ const productMasterSlice = createSlice({
         state.loading = false;
         state.selectedProduct = action.payload ?? null;
       })
-      .addCase(getProductByCode.rejected, (state, action) => {
+      .addCase(getProductByCode.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -349,15 +349,16 @@ const productMasterSlice = createSlice({
       .addCase(createProduct.pending, (state) => {
         state.createLoading = true;
       })
-      .addCase(createProduct.fulfilled, (state, action) => {
+      .addCase(createProduct.fulfilled, (state, action: any) => {
         state.createLoading = false;
 
         if (action.payload) {
+          // @ts-ignore
           state.products.unshift(action.payload);
           state.pagination.totalDocs += 1;
         }
       })
-      .addCase(createProduct.rejected, (state, action) => {
+      .addCase(createProduct.rejected, (state, action: any) => {
         state.createLoading = false;
         state.error = action.payload?.message;
       });
@@ -367,17 +368,17 @@ const productMasterSlice = createSlice({
       .addCase(updateProduct.pending, (state) => {
         state.updateLoading = true;
       })
-      .addCase(updateProduct.fulfilled, (state, action) => {
+      .addCase(updateProduct.fulfilled, (state: any, action) => {
         state.updateLoading = false;
 
         const updated = action.payload;
         if (!updated?.productCode) return;
 
-        state.products = state.products.map((prod) =>
+        state.products = state.products.map((prod: any) =>
           prod.productCode === updated.productCode ? updated : prod
         );
       })
-      .addCase(updateProduct.rejected, (state, action) => {
+      .addCase(updateProduct.rejected, (state, action: any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });
@@ -392,12 +393,12 @@ const productMasterSlice = createSlice({
 
         const removedCode = action.payload;
         state.products = state.products.filter(
-          (prod) => prod.productCode !== removedCode
+          (prod: any) => prod.productCode !== removedCode
         );
 
         state.pagination.totalDocs = Math.max(0, state.pagination.totalDocs - 1);
       })
-      .addCase(deleteProduct.rejected, (state, action) => {
+      .addCase(deleteProduct.rejected, (state, action:any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message;
       });

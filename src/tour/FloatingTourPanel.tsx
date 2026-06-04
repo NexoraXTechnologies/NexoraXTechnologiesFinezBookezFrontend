@@ -1,7 +1,5 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { useTour } from "./TourContext";
-import { Compass } from "lucide-react";
-
 const FloatingTourPanel = () => {
   const { steps, startTour } = useTour();
   const [open, setOpen] = useState(false);

@@ -4,9 +4,9 @@ import professionalAxios from "../../../services/professionalAxios";
 /* ---------------------------------------------------
     GET ALL TASKS
 --------------------------------------------------- */
-export const getAllTasks = createAsyncThunk('professionalTaskMgt/getAllTasks', async ({ page = 1, limit = 10, search = '', taskAssignedToMobile } = {}, { rejectWithValue }) => {
+export const getAllTasks = createAsyncThunk('professionalTaskMgt/getAllTasks', async ({ page = 1, limit = 10, search = '', taskAssignedToMobile } : { page?: number; limit?: number; search?: string; taskAssignedToMobile?: string }, { rejectWithValue }) => {
   try {
-    const params = { page, limit };
+    const params: any = { page, limit };
 
     if (taskAssignedToMobile) params.taskAssignedToMobile = taskAssignedToMobile;
 
@@ -35,7 +35,7 @@ export const getAllTasks = createAsyncThunk('professionalTaskMgt/getAllTasks', a
       filters: apiData.filters ?? {},
       message: res.data?.message,
     };
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to fetch tasks',
     });
@@ -58,7 +58,7 @@ export const createTask = createAsyncThunk(
 
       // backend returns created task ONLY inside data
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to create task",
       });
@@ -71,7 +71,7 @@ export const createTask = createAsyncThunk(
 --------------------------------------------------- */
 export const updateTask = createAsyncThunk(
   "professionalTaskMgt/updateTask",
-  async ({ taskId, data }, { rejectWithValue }) => {
+  async ({ taskId, data }: { taskId: string; data: any }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/taskAssign/${taskId}`,
@@ -82,7 +82,7 @@ export const updateTask = createAsyncThunk(
         return rejectWithValue({ message: res.data?.message || "Failed to update task" });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to update task",
       });
@@ -105,7 +105,7 @@ export const softDeleteTask = createAsyncThunk(
         return rejectWithValue({ message: res.data?.message || "Failed to delete task" });
 
       return taskId;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to delete task",
       });
@@ -162,7 +162,7 @@ const professionalTaskManagementSlice = createSlice({
         state.totalPages = totalPages ?? 1;
         state.filteredBy = filteredBy ?? "All";
       })
-      .addCase(getAllTasks.rejected, (state, action) => {
+      .addCase(getAllTasks.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.tasks=[];
@@ -173,16 +173,17 @@ const professionalTaskManagementSlice = createSlice({
       .addCase(createTask.pending, (state) => {
         state.createLoading = true;
       })
-      .addCase(createTask.fulfilled, (state, action) => {
+      .addCase(createTask.fulfilled, (state, action: { payload: any }) => {
         state.createLoading = false;
 
         // ❗ Only add if valid task returned
         if (action.payload && action.payload.taskId) {
+          // @ts-ignore
           state.tasks.unshift(action.payload);
           state.totalCount += 1;
         }
       })
-      .addCase(createTask.rejected, (state, action) => {
+      .addCase(createTask.rejected, (state, action: any) => {
         state.createLoading = false;
         state.error = action.payload?.message;
       });
@@ -192,17 +193,17 @@ const professionalTaskManagementSlice = createSlice({
       .addCase(updateTask.pending, (state) => {
         state.updateLoading = true;
       })
-      .addCase(updateTask.fulfilled, (state, action) => {
+      .addCase(updateTask.fulfilled, (state: any, action: any) => {
         state.updateLoading = false;
 
         const updated = action.payload;
         if (!updated?.taskId) return;
 
-        state.tasks = state.tasks.map((t) =>
+        state.tasks = state.tasks.map((t: any) =>
           t.taskId === updated.taskId ? { ...t, ...updated } : t
         );
       })
-      .addCase(updateTask.rejected, (state, action) => {
+      .addCase(updateTask.rejected, (state, action: any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });
@@ -212,14 +213,14 @@ const professionalTaskManagementSlice = createSlice({
       .addCase(softDeleteTask.pending, (state) => {
         state.deleteLoading = true;
       })
-      .addCase(softDeleteTask.fulfilled, (state, action) => {
+      .addCase(softDeleteTask.fulfilled, (state, action: any) => {
         state.deleteLoading = false;
 
         const removedId = action.payload;
-        state.tasks = state.tasks.filter((t) => t.taskId !== removedId);
+        state.tasks = state.tasks.filter((t: any) => t.taskId !== removedId);
         state.totalCount = Math.max(0, state.totalCount - 1);
       })
-      .addCase(softDeleteTask.rejected, (state, action) => {
+      .addCase(softDeleteTask.rejected, (state, action: any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message;
       });

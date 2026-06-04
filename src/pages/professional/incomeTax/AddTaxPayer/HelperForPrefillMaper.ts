@@ -1,4 +1,4 @@
-export const mapPrefillToTaxpayerForm = (prefillRes, itlPassword = '') => {
+export const mapPrefillToTaxpayerForm = (prefillRes: any, itlPassword: string = '') => {
   console.log('prefillRes', JSON.stringify(prefillRes, null, 2));
 
   // ✅ in your case prefillRes itself is the "data"
@@ -8,7 +8,7 @@ export const mapPrefillToTaxpayerForm = (prefillRes, itlPassword = '') => {
   const addr = p?.address || {};
   const banks = d?.bankAccountDtls?.[0]?.addtnlBankDetails || [];
 
-  const decodeMaybeBase64 = (v) => {
+  const decodeMaybeBase64 = (v: any) => {
     try {
       if (!v) return '';
       const s = String(v);
@@ -25,7 +25,7 @@ export const mapPrefillToTaxpayerForm = (prefillRes, itlPassword = '') => {
 
   /* ===================== TAXPAYER TYPE ===================== */
   // personalInfo.status examples: I / F / C / H / A / T / L etc (depends on source)
-  const mapTaxpayerType = (status) => {
+  const mapTaxpayerType = (status: string) => {
     const s = String(status || '')
       .trim()
       .toUpperCase();
@@ -44,7 +44,7 @@ export const mapPrefillToTaxpayerForm = (prefillRes, itlPassword = '') => {
 
   /* ===================== RESIDENTIAL STATUS ===================== */
   // filingStatus.ResidentialStatus examples: RES / NOR / RNOR / NR / NRES etc.
-  const mapResidentialStatus = (code) => {
+  const mapResidentialStatus = (code: string) => {
     const r = String(code || '')
       .trim()
       .toUpperCase();
@@ -98,7 +98,7 @@ export const mapPrefillToTaxpayerForm = (prefillRes, itlPassword = '') => {
     BankDetails: {
       array:
         banks?.length > 0
-          ? banks.map((b, idx) => ({
+          ? banks.map((b: any, idx: number) => ({
               accountNumber: String(b?.bankAccountNo || ''),
               cnfaccountNumber: String(b?.bankAccountNo || ''),
               bankName: b?.bankName || '',

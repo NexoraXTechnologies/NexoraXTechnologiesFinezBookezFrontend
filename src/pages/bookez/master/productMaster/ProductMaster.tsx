@@ -733,8 +733,8 @@
 
 
 
-import React, { useEffect, useState } from "react";
-import { RefreshCcw, Trash2, Edit, Plus } from "lucide-react";
+import  { useEffect, useState } from "react";
+import { Trash2, Edit } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -748,7 +748,6 @@ import {
   getAllProductMasterSchema,
 } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 
-import ReadMoreText from "../../../../components/common/ReadMoreText";
 import SearchInput from "../../../../components/searchInput";
 import { DataCreateButton, DataREfreshButton } from "../../../../components/buttons";
 import DataTable from "../../../../components/DataTable";
@@ -784,9 +783,6 @@ const ProductMaster = () => {
     products,
     pagination,
     loading,
-    createLoading,
-    updateLoading,
-    deleteLoading,
     productMasterSchemaFields = [],
     schemaLoading,
   } = useSelector((s: any) => s.productMaster);
@@ -800,7 +796,7 @@ const ProductMaster = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [refreshing, setRefreshing] = useState(false);
+  // const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -919,10 +915,10 @@ const ProductMaster = () => {
      REFRESH PRODUCT LIST
   ===================================================== */
   const handleRefresh = async () => {
-    setRefreshing(true);
+    // setRefreshing(true);
     await fetchProducts();
     toast.success("Product list refreshed");
-    setRefreshing(false);
+    // setRefreshing(false);
   };
 
   /* =====================================================
@@ -1001,16 +997,6 @@ const ProductMaster = () => {
     }
   };
 
-  /* =====================================================
-     PAGINATION COUNT
-
-     Kept from original code.
-     You can use this later if needed for display.
-  ===================================================== */
-  const startIndex = pagination.totalDocs > 0 ? pagination.offset + 1 : 0;
-  const endIndex =
-    pagination.totalDocs > 0 ? pagination.offset + products.length : 0;
-
   return (
     <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
       {/* ================= HEADER ================= */}
@@ -1028,6 +1014,7 @@ const ProductMaster = () => {
         <div className="ml-auto flex items-center gap-2">
           <SearchInput {...{ search, setSearch }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
+          {/* @ts-ignore */}
           <DataCreateButton
             {...{ callBackFn: openAddModal, text: "Add Product" }}
           />

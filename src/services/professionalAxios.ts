@@ -17,6 +17,7 @@ const professionalAxios = axios.create({
 professionalAxios.interceptors.request.use(
   (config) => {
     try {
+      // @ts-ignore
       const storedHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
       if (storedHeaders && typeof storedHeaders === "object") {
         config.headers = { ...config.headers, ...storedHeaders };
@@ -34,7 +35,7 @@ professionalAxios.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
-    const errorCode = error.response?.data?.errorCode || error.response?.data?.code;
+    // const errorCode = error.response?.data?.errorCode || error.response?.data?.code;
     const requestUrl = error.config?.url || '';
 
     const isGmailApi = requestUrl.includes('/gmailExtract/');

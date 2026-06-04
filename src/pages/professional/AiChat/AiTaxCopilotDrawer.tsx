@@ -1,7 +1,6 @@
-import React from "react";
 import AiTaxCopilot from "./AiTaxCopilot";
 
-const AiTaxCopilotDrawer = ({ open, onClose }) => {
+const AiTaxCopilotDrawer = ({ open, onClose }:any) => {
   if (!open) return null;
 
   return (

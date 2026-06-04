@@ -7,7 +7,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 =================================================== */
 export const fetchAssessmentYearDropdown = createAsyncThunk(
   "alldropdown/fetchAssessmentYearDropdown",
-  async ({ search = "", offset = 0, limit = 50 } = {}, { rejectWithValue }) => {
+  async ({ search = "", offset = 0, limit = 50 } :{search?: string; offset?: number; limit?: number}, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         "eTaxSolnMongoApiBackend/users/dropdown/fileITR1/assessmentYear/list",
@@ -21,7 +21,7 @@ export const fetchAssessmentYearDropdown = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -37,7 +37,7 @@ export const fetchAssessmentYearDropdown = createAsyncThunk(
 =================================================== */
 export const fetchRegimeDropdown = createAsyncThunk(
   "alldropdown/fetchRegimeDropdown",
-  async ({ offset = 0, limit = 100 } = {}, { rejectWithValue }) => {
+  async ({ offset = 0, limit = 100 }: { offset?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         "eTaxSolnMongoApiBackend/users/dropdown/fileITR1/regime/list",
@@ -51,7 +51,7 @@ export const fetchRegimeDropdown = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to fetch regime dropdown",
@@ -66,7 +66,7 @@ export const fetchRegimeDropdown = createAsyncThunk(
 =================================================== */
 export const fetchNatureOfEmploymentDropdown = createAsyncThunk(
   "alldropdown/fetchNatureOfEmploymentDropdown",
-  async ({ offset = 0, limit = 100 } = {}, { rejectWithValue }) => {
+  async ({ offset = 0, limit = 100 }: { offset?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         "eTaxSolnMongoApiBackend/users/dropdown/fileITR1/natureOfEmployment/list",
@@ -80,7 +80,7 @@ export const fetchNatureOfEmploymentDropdown = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -97,7 +97,7 @@ export const fetchNatureOfEmploymentDropdown = createAsyncThunk(
 export const fetchExemptAllowanceDropdown = createAsyncThunk(
   "alldropdown/fetchExemptAllowanceDropdown",
   async (
-    { search = "", offset = 0, limit = 100 } = {},
+    { search = "", offset = 0, limit = 100 }: { search?: string; offset?: number; limit?: number },
     { rejectWithValue }
   ) => {
     try {
@@ -113,7 +113,7 @@ export const fetchExemptAllowanceDropdown = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -130,7 +130,7 @@ export const fetchExemptAllowanceDropdown = createAsyncThunk(
 =================================================== */
 export const fetchHousePropertyDropdown = createAsyncThunk(
   "alldropdown/fetchHousePropertyDropdown",
-  async ({ search = "", offset = 0, limit = 100 } = {}, { rejectWithValue }) => {
+  async ({ search = "", offset = 0, limit = 100 }: { search?: string; offset?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         "eTaxSolnMongoApiBackend/users/dropdown/fileITR1/houseProperty/getAll",
@@ -144,7 +144,7 @@ export const fetchHousePropertyDropdown = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -160,7 +160,7 @@ export const fetchHousePropertyDropdown = createAsyncThunk(
 =================================================== */
 export const fetchReportingPurposeDropdown = createAsyncThunk(
   "alldropdown/fetchReportingPurposeDropdown",
-  async ({ search = "", offset = 0, limit = 100 } = {}, { rejectWithValue }) => {
+  async ({ search = "", offset = 0, limit = 100 }: { search?: string; offset?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         "eTaxSolnMongoApiBackend/users/dropdown/fileITR1/reportingPurpose/getAll",
@@ -175,7 +175,7 @@ export const fetchReportingPurposeDropdown = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -191,7 +191,7 @@ export const fetchReportingPurposeDropdown = createAsyncThunk(
 =================================================== */
 export const fetchTaxSlabsByAssessmentYear = createAsyncThunk(
   "alldropdown/fetchTaxSlabsByAssessmentYear",
-  async ({ assessmentYear }, { rejectWithValue }) => {
+  async ({ assessmentYear }: { assessmentYear: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `eTaxSolnMongoApiBackend/users/fileITR_1/tax/slabs/byAssessmentYear/${assessmentYear}`
@@ -204,7 +204,7 @@ export const fetchTaxSlabsByAssessmentYear = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -382,7 +382,7 @@ const alldropdownSlice = createSlice({
           hasPrevPage: action.payload?.hasPrevPage ?? false,
         };
       })
-      .addCase(fetchAssessmentYearDropdown.rejected, (state, action) => {
+      .addCase(fetchAssessmentYearDropdown.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.assessmentYears = [];
@@ -405,17 +405,17 @@ const alldropdownSlice = createSlice({
           hasPrevPage: action.payload?.hasPrevPage ?? false,
         };
       })
-      .addCase(fetchRegimeDropdown.rejected, (state, action) => {
+      .addCase(fetchRegimeDropdown.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.regimes = [];
       })
       /* ---------- NATURE OF EMPLOYMENT ---------- */
-      .addCase(fetchNatureOfEmploymentDropdown.pending, (state) => {
+      .addCase(fetchNatureOfEmploymentDropdown.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchNatureOfEmploymentDropdown.fulfilled, (state, action) => {
+      .addCase(fetchNatureOfEmploymentDropdown.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.natureOfEmployment = action.payload?.data ?? [];
         state.natureOfEmploymentPagination = {
@@ -427,17 +427,17 @@ const alldropdownSlice = createSlice({
           hasPrevPage: action.payload?.hasPrevPage ?? false,
         };
       })
-      .addCase(fetchNatureOfEmploymentDropdown.rejected, (state, action) => {
+      .addCase(fetchNatureOfEmploymentDropdown.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.natureOfEmployment = [];
       })
       /* ---------- EXEMPT ALLOWANCE ---------- */
-      .addCase(fetchExemptAllowanceDropdown.pending, (state) => {
+      .addCase(fetchExemptAllowanceDropdown.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchExemptAllowanceDropdown.fulfilled, (state, action) => {
+      .addCase(fetchExemptAllowanceDropdown.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.exemptAllowances = action.payload?.data ?? [];
         state.exemptAllowancePagination = {
@@ -449,17 +449,17 @@ const alldropdownSlice = createSlice({
           hasPrevPage: action.payload?.hasPrevPage ?? false,
         };
       })
-      .addCase(fetchExemptAllowanceDropdown.rejected, (state, action) => {
+      .addCase(fetchExemptAllowanceDropdown.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.exemptAllowances = [];
       })
       /* ---------- HOUSE PROPERTY ---------- */
-      .addCase(fetchHousePropertyDropdown.pending, (state) => {
+      .addCase(fetchHousePropertyDropdown.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchHousePropertyDropdown.fulfilled, (state, action) => {
+      .addCase(fetchHousePropertyDropdown.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.houseProperties = action.payload?.data ?? [];
         state.housePropertyPagination = {
@@ -471,7 +471,7 @@ const alldropdownSlice = createSlice({
           hasPrevPage: action.payload?.hasPrevPage ?? false,
         };
       })
-      .addCase(fetchHousePropertyDropdown.rejected, (state, action) => {
+      .addCase(fetchHousePropertyDropdown.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.houseProperties = [];
@@ -481,7 +481,7 @@ const alldropdownSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchReportingPurposeDropdown.fulfilled, (state, action) => {
+      .addCase(fetchReportingPurposeDropdown.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.reportingPurposes = action.payload?.data ?? [];
         state.reportingPurposePagination = {
@@ -493,17 +493,17 @@ const alldropdownSlice = createSlice({
           hasPrevPage: action.payload?.hasPrevPage ?? false,
         };
       })
-      .addCase(fetchReportingPurposeDropdown.rejected, (state, action) => {
+      .addCase(fetchReportingPurposeDropdown.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.reportingPurposes = [];
       })
       /* ---------- TAX SLABS ---------- */
-      .addCase(fetchTaxSlabsByAssessmentYear.pending, (state) => {
+      .addCase(fetchTaxSlabsByAssessmentYear.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchTaxSlabsByAssessmentYear.fulfilled, (state, action) => {
+      .addCase(fetchTaxSlabsByAssessmentYear.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.taxSlabs = {
           assessmentYear: action.payload?.assessmentYear || '',
@@ -511,7 +511,7 @@ const alldropdownSlice = createSlice({
           oldSlabs: action.payload?.oldSlabs ?? [],
         };
       })
-      .addCase(fetchTaxSlabsByAssessmentYear.rejected, (state, action) => {
+      .addCase(fetchTaxSlabsByAssessmentYear.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.taxSlabs = {
@@ -522,7 +522,7 @@ const alldropdownSlice = createSlice({
       });
   },
 });
-export const { clearAssessmentYearDropdown, clearRegimeDropdown, clearNatureOfEmploymentDropdown, clearExemptAllowanceDropdown, clearHousePropertyDropdown, clearReportingPurposeDropdown, clearTaxSlabs } = alldropdownSlice.actions;
+export const { clearAssessmentYearDropdown, clearRegimeDropdown, clearExemptAllowanceDropdown, clearHousePropertyDropdown, clearReportingPurposeDropdown, clearTaxSlabs } = alldropdownSlice.actions;
 
 
 export default alldropdownSlice.reducer;

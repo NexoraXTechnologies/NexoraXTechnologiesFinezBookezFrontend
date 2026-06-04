@@ -5,7 +5,7 @@ import { formatIndianNumber, indianInputToRaw } from '../../../../components/com
 
 /* ================== RUPEE INPUT ================== */
 
-const RupeeInput = ({ label, value, onChange, disabled }) => {
+const RupeeInput = ({ label, value, onChange, disabled }: { label?: string; value: any; onChange?: (value: string) => void; disabled?: boolean }) => {
   const displayValue = formatIndianNumber(value);
 
   return (
@@ -29,7 +29,7 @@ const RupeeInput = ({ label, value, onChange, disabled }) => {
 
 /* ================== MAIN COMPONENT ================== */
 
-const TaxesPaid = ({ value, salary, onClose, onSave }) => {
+const TaxesPaid = ({ value, salary, onClose, onSave }: { value?: any; salary?: any; onClose: () => void; onSave: (data: any) => void }) => {
   const [taxesPaid, setTaxesPaid] = useState(
     value ?? {
       tdsData: [{ tan: '', companyName: '', totalSalary: '', amount: '' }],
@@ -44,7 +44,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
     row: { tan: '', bsr: '', depositDate: '', challan: '', taxPaid: '' },
   });
 
-  const [advanceModal, setAdvanceModal] = useState({
+  const [advanceModal, setAdvanceModal]: any = useState({
     open: false,
     editIndex: null,
     row: {
@@ -56,29 +56,29 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
     },
   });
 
-  const formatDateDDMMYYYY = (date) => {
+  const formatDateDDMMYYYY = (date: string | null) => {
     if (!date) return '';
     const [yyyy, mm, dd] = date.split('-');
     return `${dd}-${mm}-${yyyy}`;
   };
 
-  const toNum = (v) => Number(String(v ?? '').replace(/,/g, '')) || 0;
+  const toNum = (v: any) => Number(String(v ?? '').replace(/,/g, '')) || 0;
   const salary17 = toNum(salary?.salary?.totalSalary); // salary u/s 17(1)
 
-  const totalSalaryFromTds = (taxesPaid.tdsData || []).reduce((sum, r) => sum + toNum(r.totalSalary), 0);
+  const totalSalaryFromTds = (taxesPaid.tdsData || []).reduce((sum: any, r: any) => sum + toNum(r.totalSalary), 0);
   const toastSlow = { autoClose: 7000 }; // 7s
   // simple Indian format for toast (optional)
-  const formatINR = (n) => new Intl.NumberFormat('en-IN').format(n);
-  const totalTdsTaxPaid = taxesPaid.tdsSummary.reduce((sum, r) => sum + toNum(r.taxPaid), 0);
+  const formatINR = (n: any) => new Intl.NumberFormat('en-IN').format(n);
+  const totalTdsTaxPaid = taxesPaid.tdsSummary.reduce((sum: any, r: any) => sum + toNum(r.taxPaid), 0);
 
-  const totalAdvanceTaxPaid = taxesPaid.advanceTaxes.reduce((sum, r) => sum + toNum(r.taxPaid), 0);
+  const totalAdvanceTaxPaid = taxesPaid.advanceTaxes.reduce((sum: number, r: any) => sum + toNum(r.taxPaid), 0);
 
   const totalTaxesPaid = totalTdsTaxPaid + totalAdvanceTaxPaid;
-  const recalculateTdsAmounts = (tdsData, tdsSummary) => {
-    return (tdsData || []).map((row) => {
+  const recalculateTdsAmounts = (tdsData: any[], tdsSummary: any[]) => {
+    return (tdsData || []).map((row: any) => {
       if (!row.tan) return row;
 
-      const totalTaxPaid = (tdsSummary || []).filter((s) => String(s.tan).toUpperCase() === String(row.tan).toUpperCase()).reduce((sum, s) => sum + toNum(s.taxPaid), 0);
+      const totalTaxPaid = (tdsSummary || []).filter((s: any) => String(s.tan).toUpperCase() === String(row.tan).toUpperCase()).reduce((sum, s: any) => sum + toNum(s.taxPaid), 0);
 
       return {
         ...row,
@@ -96,18 +96,18 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
     const changed = JSON.stringify(recalculated) !== JSON.stringify(tdsData);
 
     if (changed) {
-      setTaxesPaid((prev) => ({ ...prev, tdsData: recalculated }));
+      setTaxesPaid((prev: any) => ({ ...prev, tdsData: recalculated }));
     }
   }, [taxesPaid.tdsSummary]); // ✅ runs when summary changes
   const payload = {
-    tdsData: (taxesPaid.tdsData ?? []).map((r) => ({
+    tdsData: (taxesPaid.tdsData ?? []).map((r: any) => ({
       tan: (r.tan || '').toUpperCase(),
       companyName: r.companyName || '',
       totalSalary: toNum(r.totalSalary),
       amount: toNum(r.amount), // if you later compute it
     })),
 
-    tdsSummary: (taxesPaid.tdsSummary ?? []).map((r) => ({
+    tdsSummary: (taxesPaid.tdsSummary ?? []).map((r: any) => ({
       tan: (r.tan || '').toUpperCase(),
       bsr: r.bsr || '',
       depositDate: r.depositDate || '', // keep yyyy-mm-dd (best)
@@ -115,7 +115,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
       taxPaid: toNum(r.taxPaid),
     })),
 
-    advanceTaxes: (taxesPaid.advanceTaxes ?? []).map((r) => ({
+    advanceTaxes: (taxesPaid.advanceTaxes ?? []).map((r: any) => ({
       bankName: r.bankName || '',
       bsr: r.bsr || '',
       depositDate: r.depositDate || '',
@@ -146,7 +146,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
         {/* ================= TDS TAXES ================= */}
         <h3 className="font-semibold mb-3">TDS Taxes</h3>
 
-        {(taxesPaid.tdsData || []).map((row, idx) => (
+        {(taxesPaid.tdsData || []).map((row: any, idx: number) => (
           <div key={idx} className="border rounded-lg p-4 mb-4">
             <div className="grid grid-cols-2 gap-4 mb-3">
               <div>
@@ -201,6 +201,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
               />
 
               {/* RN: amount is not editable; it is auto-filled based on TDS Summary */}
+              {/* @ts-ignore */}
               <RupeeInput label="Amount" value={row.amount || ''} disabled />
             </div>
 
@@ -209,7 +210,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
                 const selectedTan = String(taxesPaid.tdsData?.[idx]?.tan || '').toUpperCase();
 
                 // RN prevents delete if TAN used in summary rows
-                const tanUsed = (taxesPaid.tdsSummary || []).some((s) => String(s.tan || '').toUpperCase() === selectedTan);
+                const tanUsed = (taxesPaid.tdsSummary || []).some((s: any) => String(s.tan || '').toUpperCase() === selectedTan);
 
                 if (tanUsed) {
                   toast.error('This TAN is already used in Advance Tax challan.');
@@ -261,7 +262,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
           {(taxesPaid.tdsSummary || []).length === 0 ? (
             <div className="p-3 text-gray-500">No TDS entries added yet.</div>
           ) : (
-            (taxesPaid.tdsSummary || []).map((r, i) => (
+              (taxesPaid.tdsSummary || []).map((r: any, i: number) => (
               <div key={i} className="grid grid-cols-7 gap-2 p-2 border-b items-center">
                 <div>{i + 1}</div>
                 <div className="break-all">{r.tan}</div>
@@ -269,7 +270,8 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
                 <div>{formatDateDDMMYYYY(r.depositDate)}</div>
                 <div className="break-all">{r.challan}</div>
                 <div className="text-right">{formatINR(r.taxPaid)}</div>
-                <div className="flex gap-2 justify-center">
+                  <div className="flex gap-2 justify-center">
+                    {/* @ts-ignore */}
                   <Pencil size={14} className="cursor-pointer text-blue-600" onClick={() => setTdsModal({ open: true, editIndex: i, row: r })} />
                   <Trash2
                     size={14}
@@ -331,7 +333,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
           {(taxesPaid.advanceTaxes || []).length === 0 ? (
             <div className="p-3 text-gray-500">No Advance/Self-Assessment entries added yet.</div>
           ) : (
-            (taxesPaid.advanceTaxes || []).map((r, i) => (
+              (taxesPaid.advanceTaxes || []).map((r: any, i: number) => (
               <div key={i} className="grid grid-cols-7 gap-2 p-2 border-b items-center">
                 <div>{i + 1}</div>
                 <div className="break-all">{r.bankName}</div>
@@ -417,7 +419,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
                 })
               }>
               <option value="">Select TAN</option>
-              {(taxesPaid.tdsData || []).map((t, i) => (
+              {(taxesPaid.tdsData || []).map((t: any, i: number) => (
                 <option key={i} value={t.tan}>
                   {t.tan}
                 </option>
@@ -495,7 +497,7 @@ const TaxesPaid = ({ value, salary, onClose, onSave }) => {
 
 /* ================== GENERIC MODAL ================== */
 
-const Modal = ({ title, children, onClose, onSave }) => (
+const Modal = ({ title, children, onClose, onSave }: { title: string; children: React.ReactNode; onClose: () => void; onSave: () => void }) => (
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div className="bg-white w-[420px] rounded-lg p-4">
       <h3 className="font-semibold mb-3">{title}</h3>
@@ -512,8 +514,8 @@ const Modal = ({ title, children, onClose, onSave }) => (
 
 /* ================== MODAL INPUTS ================== */
 
-const ModalInputs = ({ modal, setModal }) => {
-  const labelMap = {
+const ModalInputs = ({ modal, setModal }: { modal: any; setModal: (modal: any) => void }) => {
+  const labelMap: { [key: string]: string } = {
     bankName: 'Bank Name',
     bsr: 'BSR Code',
     depositDate: 'Date of Deposit',
@@ -521,7 +523,7 @@ const ModalInputs = ({ modal, setModal }) => {
     taxPaid: 'Tax Paid',
   };
 
-  const placeholderMap = {
+  const placeholderMap: { [key: string]: string } = {
     bankName: 'Enter bank name',
     bsr: 'Enter 7 digit BSR',
     depositDate: '',

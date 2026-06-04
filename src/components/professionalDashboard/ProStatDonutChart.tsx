@@ -4,7 +4,7 @@ import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
 
 Chart.register(ArcElement, Tooltip, Legend);
 
-const ProStatDonutChart = ({ title, items = [] }) => {
+const ProStatDonutChart = ({ title, items = [] }: { title: string; items: { name: string; value: number }[] }) => {
   const chartData = {
     labels: items.map((i) => i.name),
     datasets: [

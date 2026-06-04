@@ -18,7 +18,7 @@ export const addOpeningStock = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -42,7 +42,7 @@ export const updateOpeningStock = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -52,7 +52,7 @@ export const updateOpeningStock = createAsyncThunk(
 
 export const deleteOpeningStock = createAsyncThunk(
     "openingStock/deleteOpeningStock",
-    async ({ openingStockVoucherNumber }: any, { rejectWithValue }) => {
+    async ({ openingStockVoucherNumber }: { openingStockVoucherNumber: string }, { rejectWithValue }) => {
         try {
 
             const res = await professionalAxios.delete(
@@ -65,7 +65,7 @@ export const deleteOpeningStock = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err:any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -89,7 +89,7 @@ export const getOpeningStockList = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -128,11 +128,11 @@ const openingStockSlice = createSlice({
                 state.addLoader = true;
                 state.error = null;
             })
-            .addCase(addOpeningStock.fulfilled, (state, action) => {
+            .addCase(addOpeningStock.fulfilled, (state) => {
                 state.addLoader = false;
 
             })
-            .addCase(addOpeningStock.rejected, (state, action) => {
+            .addCase(addOpeningStock.rejected, (state) => {
                 state.addLoader = false;
             })
 
@@ -146,7 +146,7 @@ const openingStockSlice = createSlice({
                 state.pagination = action.payload.pagination ?? state.pagination;
                 state.openingStock = action.payload?.records
             })
-            .addCase(getOpeningStockList.rejected, (state, action) => {
+            .addCase(getOpeningStockList.rejected, (state) => {
                 state.listingLoader = false;
             })
 
@@ -159,7 +159,7 @@ const openingStockSlice = createSlice({
                 state.addLoader = false;
                 state.openingStock = action.payload?.records
             })
-            .addCase(updateOpeningStock.rejected, (state, action) => {
+            .addCase(updateOpeningStock.rejected, (state) => {
                 state.addLoader = false;
             })
 
@@ -172,7 +172,7 @@ const openingStockSlice = createSlice({
                 state.deleteLoader = false;
                 state.openingStock = action.payload?.records
             })
-            .addCase(deleteOpeningStock.rejected, (state, action) => {
+            .addCase(deleteOpeningStock.rejected, (state) => {
                 state.deleteLoader = false;
             })
     },

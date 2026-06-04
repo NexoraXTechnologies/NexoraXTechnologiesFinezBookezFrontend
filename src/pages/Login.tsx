@@ -1,14 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
-import { Link, useNavigate } from "react-router-dom";
-import { loginUser, googleLoginUser } from "../redux/slices/authSlice";
-import { GoogleLogin } from "@react-oauth/google";
-import LoginBGImg from "../assets/images/LoginBGImg.jpg";
-import ProfessionalImg from "../assets/images/bgremoved.png";
+import { useNavigate } from "react-router-dom";
 import eTaxSoln from '../assets/FinEZ.png';
 import LoginImgae from "../assets/loginBackground.jpg";
 import { sendProfessionalOtp, verifyProfessionalOtp, } from "../redux/slices/professionalSlice/professionalAuthSlice";
@@ -16,14 +10,14 @@ import OneSignal from 'react-onesignal';
 import { motion } from "framer-motion";
 import { AuthButton } from "../components/buttons";
 
-const Section = ({ title, text }) => (
+const Section = ({ title, text }: any) => (
   <div className="space-y-1">
     <h3 className="text-md font-semibold text-blue-700">{title}</h3>
     <p className="text-sm text-gray-700">{text}</p>
   </div>
 );
-const FULL_TEXT = "Tax filing is simplified now...";
-const termsAndConditions = [
+// const FULL_TEXT = "Tax filing is simplified now...";
+const termsAndConditions: any = [
   { title: "Scope of Services", text: "The Application provided by the Company enables taxpayers to file their income tax returns electronically by submitting the required information and documents. The Company will process the information provided and generate the applicable tax return forms in accordance with the regulations of the Income Tax Department of India." },
   {
     title: "User Eligibility",
@@ -78,11 +72,11 @@ const Login = () => {
   const dispatch = useDispatch();
   const dispatchP = useDispatch();
   const navigate = useNavigate();
-  const [showPass, setShowPass] = useState(false);
-  const { loading: authLoading } = useSelector((state) => state.auth);
-  const { loading: professionalLoading } = useSelector((state) => state.professionalAuth);
-  const [loginType, setLoginType] = useState("Nexora");
-  const [typedText, setTypedText] = useState("");
+  // const [showPass, setShowPass] = useState(false);
+  // const { loading: authLoading } = useSelector((state) => state.auth);
+  const { loading: professionalLoading } = useSelector((state: any) => state.professionalAuth);
+  // const [loginType, setLoginType] = useState("Nexora");
+  // const [typedText, setTypedText] = useState("");
   const [showTerms, setShowTerms] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   // PROFESSIONAL LOGIN STATES
@@ -91,62 +85,62 @@ const Login = () => {
 
   // OTP digits
   const [otp, setOtp] = useState(["", "", "", ""]);
-  const otpRefs = useRef([]);
-  const { professionalRequestID } = useSelector((state) => state.professionalAuth);
+  const otpRefs: any = useRef([]);
+  const { professionalRequestID } = useSelector((state: any) => state.professionalAuth);
 
-  useEffect(() => {
-    let index = 0;
-    let timeout;
-    const typeText = () => {
-      setTypedText(FULL_TEXT.substring(0, index));
-      if (index <= FULL_TEXT.length) {
-        index++;
-        timeout = setTimeout(typeText, 100);
-      } else {
-        setTimeout(() => {
-          index = 0;
-          typeText();
-        }, 1500);
-      }
-    };
-    typeText();
-    return () => clearTimeout(timeout);
-  }, []);
+  // useEffect(() => {
+  //   let index = 0;
+  //   let timeout: any;
+  //   const typeText = () => {
+  //     setTypedText(FULL_TEXT.substring(0, index));
+  //     if (index <= FULL_TEXT.length) {
+  //       index++;
+  //       timeout = setTimeout(typeText, 100);
+  //     } else {
+  //       setTimeout(() => {
+  //         index = 0;
+  //         typeText();
+  //       }, 1500);
+  //     }
+  //   };
+  //   typeText();
+  //   return () => clearTimeout(timeout);
+  // }, []);
 
 
   // Form
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
+  // const {  formState: { errors, isSubmitting } } = useForm();
 
   // Role Navigation
-  const navigateByRole = (userType) => {
-    if (userType === "Admin") navigate("/admin");
-    else if (userType === "Employee") navigate("/employee");
-    else if (userType === "Professional") navigate("/professional");
-    else navigate("");
-  };
+  // const navigateByRole = (userType: any) => {
+  //   if (userType === "Admin") navigate("/admin");
+  //   else if (userType === "Employee") navigate("/employee");
+  //   else if (userType === "Professional") navigate("/professional");
+  //   else navigate("");
+  // };
 
   // Nexora Login Submit
-  const onSubmit = async (data) => {
-    try {
-      const result = await dispatch(loginUser(data)).unwrap();
-      const userType = result?.userProfile?.type;
-      toast.success(`Welcome back ${result.userProfile?.name || "User"}!`);
-      navigateByRole(userType);
-    } catch (err) {
-      toast.error(err?.message || "Login failed. Please try again.");
-    }
-  };
+  // const onSubmit = async (data) => {
+  //   try {
+  //     const result = await dispatch(loginUser(data)).unwrap();
+  //     const userType = result?.userProfile?.type;
+  //     toast.success(`Welcome back ${result.userProfile?.name || "User"}!`);
+  //     navigateByRole(userType);
+  //   } catch (err) {
+  //     toast.error(err?.message || "Login failed. Please try again.");
+  //   }
+  // };
 
   // Google Login
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      const idToken = credentialResponse.credential;
-      const result = await dispatch(googleLoginUser(idToken)).unwrap();
-      navigateByRole(result?.userProfile?.type);
-    } catch (err) {
-      toast.error("Google Sign-In failed.");
-    }
-  };
+  // const handleGoogleSuccess = async (credentialResponse) => {
+  //   try {
+  //     const idToken = credentialResponse.credential;
+  //     const result = await dispatch(googleLoginUser(idToken)).unwrap();
+  //     navigateByRole(result?.userProfile?.type);
+  //   } catch (err) {
+  //     toast.error("Google Sign-In failed.");
+  //   }
+  // };
 
   useEffect(() => {
     const finalOtp = otp.join("");
@@ -155,7 +149,7 @@ const Login = () => {
     }
   }, [otp]);
 
-  const handleOtpInput = (e, index) => {
+  const handleOtpInput = (e: any, index: any) => {
     let value = e.target.value.replace(/\D/g, "");
     const newOtp = [...otp];
 
@@ -180,16 +174,15 @@ const Login = () => {
     const finalOtp = otp.join("");
     if (finalOtp.length !== 4) return toast.error("Enter all 4 digits");
     setIsVerifying(true); // Start verifying mode
-
-    dispatchP(
-      verifyProfessionalOtp({
+    // @ts-ignore
+    dispatchP(verifyProfessionalOtp({
         mobile,
         requestID: professionalRequestID,
         otp: finalOtp,
       })
     )
       .unwrap()
-      .then(async (res) => {
+      .then(async (res: any) => {
         toast.success("OTP Verified!");
 
         // ✅ If user already exists
@@ -242,17 +235,18 @@ const Login = () => {
           navigate("/professionalRegister");
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         toast.error(err.message);
         setIsVerifying(false);
       });
   };
 
   const handleResendOtp = () => {
+    // @ts-ignore
     dispatchP(sendProfessionalOtp(mobile))
       .unwrap()
       .then(() => toast.success("OTP Re-sent!"))
-      .catch((err) => {
+      .catch((err: any) => {
         toast.error(err.message);
         setOtp(["", "", "", ""]);
         otpRefs.current[0]?.focus();
@@ -407,7 +401,7 @@ const Login = () => {
                   {otp.map((digit, index) => (
                     <input
                       key={index}
-                      ref={(el) => (otpRefs.current[index] = el)}
+                      ref={(el: any) => (otpRefs.current[index] = el)}
                       type="text"
                       maxLength={1}
                       value={digit}
@@ -440,14 +434,14 @@ const Login = () => {
                         if (mobile.length !== 10) {
                           return toast.error("Enter valid mobile");
                         }
-
+                        // @ts-ignore
                         dispatch(sendProfessionalOtp(mobile))
                           .unwrap()
                           .then(() => {
                             toast.success("OTP Sent!");
                             setShowOtpPopup(true);
                           })
-                          .catch((err) => toast.error(err.message));
+                          .catch((err: any) => toast.error(err.message));
                       }
                     }}
                     className="w-full px-4 py-3 bg-transparent focus:outline-none text-gray-800 placeholder:text-gray-400" placeholder="Enter mobile number" />
@@ -456,13 +450,14 @@ const Login = () => {
               <AuthButton {...{
                 loader: professionalLoading, clickCb: () => {
                   if (mobile.length !== 10) return toast.error('Enter valid mobile');
+                  // @ts-ignore
                   dispatch(sendProfessionalOtp(mobile))
                     .unwrap()
                     .then(() => {
                       toast.success('OTP Sent!');
                       setShowOtpPopup(true);
                     })
-                    .catch((err) => toast.error(err.message));
+                    .catch((err: any) => toast.error(err.message));
                 },
                 btnName: "Send OTP"
               }} />
@@ -519,7 +514,7 @@ const Login = () => {
 
             {/* Scrollable Content */}
             <div className="px-5 py-4 overflow-y-auto max-h-[70vh] text-gray-700 space-y-4 scroll-smooth">
-              {termsAndConditions.map(({ title, text }, index) => <Section key={index} title={title} text={text} />)}
+              {termsAndConditions.map(({ title, text }: any, index: any) => <Section key={index} title={title} text={text} />)}
               <p className="text-sm mt-4">By using the Application, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.</p>
             </div>
           </div>

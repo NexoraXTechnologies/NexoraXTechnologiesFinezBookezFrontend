@@ -15,7 +15,7 @@ export const fetchProfessionalDashboardAnalytics = createAsyncThunk('professiona
     }
 
     return res.data?.data ?? null;
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to fetch dashboard analytics',
     });
@@ -65,7 +65,7 @@ const initialState = {
 /* ===================================================
    MAP NEW API RESPONSE TO OLD UI SHAPE
 =================================================== */
-const mapApiToDashboardShape = (api) => {
+const mapApiToDashboardShape = (api:any) => {
   return {
     accountMaster: {
       total: api?.masters?.accounts ?? 0,
@@ -89,7 +89,7 @@ const mapApiToDashboardShape = (api) => {
 /* ===================================================
    HELPER MERGE
 =================================================== */
-const mergeAnalytics = (defaults, apiMapped) => {
+const mergeAnalytics = (defaults: any, apiMapped:any) => {
   return {
     accountMaster: {
       ...defaults.accountMaster,
@@ -152,7 +152,7 @@ const professionalDashboardSlice = createSlice({
 
         state.analytics = mergeAnalytics(initialState.analytics, mappedAnalytics);
       })
-      .addCase(fetchProfessionalDashboardAnalytics.rejected, (state, action) => {
+      .addCase(fetchProfessionalDashboardAnalytics.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Something went wrong';
       });

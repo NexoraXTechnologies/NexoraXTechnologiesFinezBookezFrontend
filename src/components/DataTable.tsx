@@ -1,16 +1,9 @@
 import React from "react";
 import ReadMoreText from "./common/ReadMoreText";
 
-type Column<T> = {
-  key: keyof T | string;
-  title: string;
-  type?: "date" | "readMoreText";
-  render?: (row: T) => React.ReactNode;
-  className?: string;
-};
 
 type DataTableProps<T> = {
-  columns: Column<T>[];
+  columns: any;
   data: T[];
   loading?: boolean;
   emptyMessage?: string;

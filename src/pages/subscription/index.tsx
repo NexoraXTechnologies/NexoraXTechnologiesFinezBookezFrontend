@@ -48,13 +48,15 @@ const formatDuration = (months: any) => {
 const Subscription = () => {
     const dispatch = useDispatch();
     const { plans, currentPlan } = useSelector((e: any) => e.plans);
-    const [selectedCategory, setSelectedCategory] = useState("All Plans");
+    const [selectedCategory] = useState("All Plans");
     const [search, setSearch] = useState("");
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [coupon, setCoupon] = useState("");
 
     const fetchAccounts = () => {
+        // @ts-ignore
         dispatch(myPlan());
+        // @ts-ignore
         dispatch(getAllPlans({ offset: 0, limit: 100, search: "", }))
     };
 
@@ -113,7 +115,7 @@ const Subscription = () => {
 
                         {filteredPlans.length > 0 ? (
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                                {filteredPlans.map((plan, idx) => (
+                                {filteredPlans.map((plan: any, idx:any) => (
                                     <PlanCard
                                         key={idx}
                                         plan={plan}
@@ -150,7 +152,7 @@ const Subscription = () => {
     )
 }
 
-const PlanCard = ({ plan, onClick, currentPlan }) => {
+const PlanCard = ({ plan, onClick, currentPlan }: { plan: any; onClick: () => void; currentPlan: any }) => {
     const Icon = getPlanIcon(plan.name);
     const labelClass = getLabelClass(plan.name);
     const hasDiscount = Number(plan.discountPercentage) > 0 && Number(plan.finalPrice) < Number(plan.price);
@@ -228,13 +230,14 @@ const PlanCard = ({ plan, onClick, currentPlan }) => {
     );
 };
 
-const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any) => {
+const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { plan: any; onClose: () => void; coupon: string; setCoupon: (coupon: string) => void; currentPlan: any }) => {
     const Icon = getPlanIcon(plan.name);
     const labelClass = getLabelClass(plan.name);
     const dispatch = useDispatch()
     const { couponData, couponLoading } = useSelector((e: any) => e.plans);
     console.log({ couponData })
     const [autoPay, setAutoPay] = useState(false);
+    // @ts-ignore
     const professionalUser = JSON.parse(localStorage.getItem("professionalUser"))
     const hasDiscount = Number(plan.discountPercentage) > 0 && Number(plan.finalPrice) < Number(plan.price);
     const activePlan = currentPlan?.current?.planPublicId == plan?.planPublicId;
@@ -242,9 +245,10 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any
     const applyCouponFun = async () => {
         if (!coupon?.length) return toast.warning("Enter Coupon Code");
         if (activePlan) return toast.error("This plan is already active!")
-        if (currentPlan?.current?.price > plan?.price) return toast.error("You can not Downgrade plan!");  
+        if (currentPlan?.current?.price > plan?.price) return toast.error("You can not Downgrade plan!");
+        // @ts-ignore
        const res = await dispatch(applyCoupon({ planPublicId: plan?.planPublicId, couponCode: coupon }))
-        console.log(couponData, res, "coupon")
+        // @ts-ignore
         if (couponData?.isFree || res?.payload?.isFree) {
             toast.success("Subscription activated successfully")
             onClose();
@@ -290,15 +294,14 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any
             if (activePlan) return toast.error("This plan is already active!")
             if (currentPlan?.current?.price > plan?.price) return toast.error("You can not Downgrade plan!")
             const isLoaded = await loadRazorpayScript();
+            // @ts-ignore
             if (!isLoaded || !window.Razorpay) {
                 toast.error("Razorpay SDK failed to load")
                 return;
             }
-
-            const orderRes = await dispatch(
-                createOrder({
-                    planPublicId: couponData?.planPublicId || plan?.planPublicId,
-                    pan: professionalUser?.userPAN,
+            // @ts-ignore
+            const orderRes = await dispatch(createOrder({
+                planPublicId: couponData?.planPublicId || plan?.planPublicId, pan: professionalUser?.userPAN,
                     mobile: professionalUser?.userMobileNumberHash,
                     email: professionalUser?.userEmail,
                     firstName: professionalUser?.userFirstName,
@@ -347,21 +350,12 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any
 
                 handler: async function (response: any) {
                     try {
-                        await dispatch(
-                            verifyPayment({
-                                orderId: response.razorpay_order_id,
-                                paymentId: response.razorpay_payment_id,
-                                signature: response.razorpay_signature,
-                            })
-                        ).unwrap();
-
-                        await dispatch(
-                            subscribePlan({
-                                orderId: response.razorpay_order_id,
-                                paymentId: response.razorpay_payment_id
-                            })
-                        ).unwrap();
+                        // @ts-ignore
+                        await dispatch(verifyPayment({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature, })).unwrap();
+                        // @ts-ignore
+                        await dispatch(subscribePlan({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id })).unwrap();
                         handleModalClose();
+                        // @ts-ignore
                         dispatch(myPlan());
                         toast.success("Subscription activated")
                     } catch (error: any) {
@@ -373,7 +367,7 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any
                     ondismiss: function () { console.log("Payment popup closed"); },
                 },
             };
-
+            // @ts-ignore
             const razorpay = new window.Razorpay(options);
             razorpay.on("payment.failed", function (response: any) {
                 toast.error("Payment Failed", response.error);
@@ -477,7 +471,7 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: any
                             <h3 className="text-base font-bold text-gray-950">Plan Benefits</h3>
 
                             <div className="mt-2 space-y-3">
-                        {plan.benefits?.map((benefit, index) => (
+                                {plan.benefits?.map((benefit: any, index: any) => (
                             <div key={index} className="flex items-start gap-x-3 pb-0 mb-2">
                                 <CheckCircle2 className=" h-5 w-5 shrink-0 text-emerald-600" />
                                 <p className="text-sm font-semibold text-gray-700 mb-0">

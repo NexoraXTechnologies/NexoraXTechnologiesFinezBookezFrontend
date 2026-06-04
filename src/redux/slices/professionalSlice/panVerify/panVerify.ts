@@ -3,23 +3,23 @@ import axiosInstanceNoAuth from '../../../../services/axiosInstanceNoAuth';
 import professionalAxios from '../../../../services/professionalAxios'; // ✅ add this
 
 // ✅ WITHOUT HEADER (Registration time)
-export const verifyPan = createAsyncThunk('verifyPan/post', async ({ pan }, { rejectWithValue }) => {
+export const verifyPan = createAsyncThunk('verifyPan/post', async ({ pan }: { pan: string }, { rejectWithValue }) => {
   try {
     const res = await axiosInstanceNoAuth.post('/eTaxSolnMongoApiBackend/users/taxpayers/verifyPan', { pan });
 
     return res.data;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || 'Failed to verify PAN');
   }
 });
 
 // ✅ WITH HEADER (Logged-in / protected APIs)
-export const verifyPanWithHeader = createAsyncThunk('verifyPan/postWithHeader', async ({ pan }, { rejectWithValue }) => {
+export const verifyPanWithHeader = createAsyncThunk('verifyPan/postWithHeader', async ({ pan }: { pan: string }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.post('/eTaxSolnMongoApiBackend/users/taxpayers/verifyPan', { pan });
 
     return res.data;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || 'Failed to verify PAN');
   }
 });
@@ -54,7 +54,7 @@ const verifyPanSlice = createSlice({
         state.data = action.payload;
         state.success = true;
       })
-      .addCase(verifyPan.rejected, (state, action) => {
+      .addCase(verifyPan.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload;
         state.success = false;
@@ -71,7 +71,7 @@ const verifyPanSlice = createSlice({
         state.data = action.payload;
         state.success = true;
       })
-      .addCase(verifyPanWithHeader.rejected, (state, action) => {
+      .addCase(verifyPanWithHeader.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload;
         state.success = false;

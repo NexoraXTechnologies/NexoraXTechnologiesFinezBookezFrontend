@@ -4,12 +4,11 @@ import {
   PackageMinus,
   PackagePlus,
 } from "lucide-react";
-import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
 import AssemblyProduction from "./assemblyProduction/AssemblyProduction";
 
 
-const cards: DashboardCard[] = [
+const cards: any[] = [
   {
     title: "Assembly Production",
     description: "Manage assembly and finished goods production.",

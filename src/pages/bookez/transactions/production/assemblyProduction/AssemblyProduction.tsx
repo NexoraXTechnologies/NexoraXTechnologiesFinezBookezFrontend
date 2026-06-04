@@ -1422,7 +1422,7 @@
 
 
 
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -2499,7 +2499,7 @@ const AssemblyProduction = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
@@ -2623,6 +2623,7 @@ const AssemblyProduction = () => {
             />
 
             {/* ================= ADD / UPDATE RAW MATERIAL MODAL ================= */}
+            {/* @ts-ignore */}
             <Modal
                 {...{
                     show: showRawMaterialModal,

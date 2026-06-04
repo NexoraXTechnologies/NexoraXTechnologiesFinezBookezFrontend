@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import professionalAxios from '../../../../services/professionalAxios';
-import axios from 'axios';
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+// const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 /* ===================================================
     PREPARE AUTOMATION PACKAGE (WEB)
@@ -9,7 +9,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 =================================================== */
 export const prepareAutomation = createAsyncThunk(
   'automation/prepareAutomation',
-  async (payload = {}, { rejectWithValue }) => {
+  async (payload: any = {}, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         '/eTaxSolnMongoApiBackend/users/web/automation/prepare',
@@ -28,7 +28,7 @@ export const prepareAutomation = createAsyncThunk(
         message: res.data?.message || 'Automation package prepared.',
         data: res.data?.data || null,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'AUTOMATION_PREPARE_API_ERROR',
         message:
@@ -48,7 +48,7 @@ export const prepareAutomation = createAsyncThunk(
 =================================================== */
 export const downloadAutomation = createAsyncThunk(
   'automation/downloadAutomation',
-  async ({ fileName }, { rejectWithValue }) => {
+  async ({ fileName }: { fileName: string }, { rejectWithValue }) => {
     try {
       if (!fileName) {
         return rejectWithValue({
@@ -66,7 +66,7 @@ export const downloadAutomation = createAsyncThunk(
         }
       );
 
-      const contentType = res?.headers?.['content-type'] || '';
+      const contentType:any = res?.headers?.['content-type'] || '';
       if (contentType.includes('application/json')) {
         const text = await res.data.text?.();
         let json = null;
@@ -85,7 +85,7 @@ export const downloadAutomation = createAsyncThunk(
         message: 'Download ready',
         data: { fileName, blob: res.data },
       };
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'AUTOMATION_DOWNLOAD_API_ERROR',
         message:
@@ -105,7 +105,7 @@ export const downloadAutomation = createAsyncThunk(
 =================================================== */
 export const runAutomationAis = createAsyncThunk(
   'automation/runAutomationAis',
-  async (payload = {}, { rejectWithValue }) => {
+  async (payload:any = {}, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         '/eTaxSolnMongoApiBackend/users/jobQueueAutomation/save',
@@ -123,7 +123,7 @@ export const runAutomationAis = createAsyncThunk(
         message: res.data?.message || 'Automation run successful.',
         data: res.data?.data || null,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'AUTOMATION_RUN_API_ERROR',
         message:
@@ -152,7 +152,7 @@ export const getAllJobQueueAutomation = createAsyncThunk(
       createdBy = '',
       targetAgentId = '',
       status = '',
-    } = {},
+    }: { offset?: number; limit?: number; jobType?: string; jobId?: string; createdBy?: string; targetAgentId?: string; status?: string },
     { rejectWithValue }
   ) => {
     try {
@@ -183,7 +183,7 @@ export const getAllJobQueueAutomation = createAsyncThunk(
         message: res.data?.message || 'Job queue list fetched.',
         data: res.data?.data || null,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'JOBQUEUE_GETALL_API_ERROR',
         message:
@@ -203,7 +203,7 @@ export const getAllJobQueueAutomation = createAsyncThunk(
 =================================================== */
 export const getJobQueueAutomationByCommonId = createAsyncThunk(
   'automation/getJobQueueAutomationByCommonId',
-  async ({ commonId }, { rejectWithValue }) => {
+  async ({ commonId }: { commonId: string }, { rejectWithValue }) => {
     try {
       if (!commonId) {
         return rejectWithValue({
@@ -229,7 +229,7 @@ export const getJobQueueAutomationByCommonId = createAsyncThunk(
         message: res.data?.message || 'Job details fetched.',
         data: res.data?.data || null,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'JOBQUEUE_GETBYID_API_ERROR',
         message:
@@ -250,7 +250,7 @@ export const getJobQueueAutomationByCommonId = createAsyncThunk(
 =================================================== */
 export const pullJobQueueAutomation = createAsyncThunk(
   'automation/pullJobQueueAutomation',
-  async (payload = {}, { rejectWithValue }) => {
+  async (payload: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         '/eTaxSolnMongoApiBackend/users/jobQueueAutomation/pull',
@@ -269,7 +269,7 @@ export const pullJobQueueAutomation = createAsyncThunk(
         message: res.data?.message || 'Job pulled successfully.',
         data: res.data?.data || null,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'JOBQUEUE_PULL_API_ERROR',
         message:
@@ -289,7 +289,7 @@ export const pullJobQueueAutomation = createAsyncThunk(
 =================================================== */
 export const updateJobQueueAutomationByCommonId = createAsyncThunk(
   'automation/updateJobQueueAutomationByCommonId',
-  async ({ commonId, payload = {} }, { rejectWithValue }) => {
+  async ({ commonId, payload = {} }: { commonId: string; payload?: any }, { rejectWithValue }) => {
     try {
       if (!commonId) {
         return rejectWithValue({
@@ -316,7 +316,7 @@ export const updateJobQueueAutomationByCommonId = createAsyncThunk(
         message: res.data?.message || 'Job updated.',
         data: res.data?.data || null,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'JOBQUEUE_UPDATE_API_ERROR',
         message:
@@ -336,7 +336,7 @@ export const updateJobQueueAutomationByCommonId = createAsyncThunk(
 =================================================== */
 export const deleteJobQueueAutomationByCommonId = createAsyncThunk(
   'automation/deleteJobQueueAutomationByCommonId',
-  async ({ commonId }, { rejectWithValue }) => {
+  async ({ commonId }: { commonId: string }, { rejectWithValue }) => {
     try {
       if (!commonId) {
         return rejectWithValue({
@@ -362,7 +362,7 @@ export const deleteJobQueueAutomationByCommonId = createAsyncThunk(
         message: res.data?.message || 'Job deleted.',
         data: res.data?.data || null,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         code: err?.response?.data?.code || 'JOBQUEUE_DELETE_API_ERROR',
         message:
@@ -542,13 +542,13 @@ const automationSlice = createSlice({
         state.prepare.error = null;
         state.prepare.data = null;
       })
-      .addCase(prepareAutomation.fulfilled, (state, action) => {
+      .addCase(prepareAutomation.fulfilled, (state: any, action: any) => {
         state.prepare.status = 'success';
         state.prepare.loading = false;
         state.prepare.message = action.payload?.message;
         state.prepare.data = action.payload?.data;
       })
-      .addCase(prepareAutomation.rejected, (state, action) => {
+      .addCase(prepareAutomation.rejected, (state: any, action: any) => {
         state.prepare.status = 'error';
         state.prepare.loading = false;
         state.prepare.error = action.payload;
@@ -557,21 +557,21 @@ const automationSlice = createSlice({
       })
 
       /* ---------- DOWNLOAD ---------- */
-      .addCase(downloadAutomation.pending, (state) => {
+      .addCase(downloadAutomation.pending, (state: any) => {
         state.download.status = 'running';
         state.download.loading = true;
         state.download.message = 'Downloading automation package…';
         state.download.error = null;
         state.download.blob = null;
       })
-      .addCase(downloadAutomation.fulfilled, (state, action) => {
+      .addCase(downloadAutomation.fulfilled, (state: any, action: any) => {
         state.download.status = 'success';
         state.download.loading = false;
         state.download.message = action.payload?.message;
         state.download.fileName = action.payload?.data?.fileName;
         state.download.blob = action.payload?.data?.blob;
       })
-      .addCase(downloadAutomation.rejected, (state, action) => {
+      .addCase(downloadAutomation.rejected, (state, action: any) => {
         state.download.status = 'error';
         state.download.loading = false;
         state.download.error = action.payload;
@@ -593,7 +593,7 @@ const automationSlice = createSlice({
         state.run.message = action.payload?.message;
         state.run.data = action.payload?.data;
       })
-      .addCase(runAutomationAis.rejected, (state, action) => {
+      .addCase(runAutomationAis.rejected, (state, action: any) => {
         state.run.status = 'error';
         state.run.loading = false;
         state.run.error = action.payload;
@@ -615,7 +615,7 @@ const automationSlice = createSlice({
         state.jobQueue.list.message = action.payload?.message;
         state.jobQueue.list.data = action.payload?.data;
       })
-      .addCase(getAllJobQueueAutomation.rejected, (state, action) => {
+      .addCase(getAllJobQueueAutomation.rejected, (state, action: any) => {
         state.jobQueue.list.status = 'error';
         state.jobQueue.list.loading = false;
         state.jobQueue.list.error = action.payload;
@@ -637,7 +637,7 @@ const automationSlice = createSlice({
         state.jobQueue.detail.message = action.payload?.message;
         state.jobQueue.detail.data = action.payload?.data;
       })
-      .addCase(getJobQueueAutomationByCommonId.rejected, (state, action) => {
+      .addCase(getJobQueueAutomationByCommonId.rejected, (state, action: any) => {
         state.jobQueue.detail.status = 'error';
         state.jobQueue.detail.loading = false;
         state.jobQueue.detail.error = action.payload;
@@ -659,7 +659,7 @@ const automationSlice = createSlice({
         state.jobQueue.pull.message = action.payload?.message;
         state.jobQueue.pull.data = action.payload?.data;
       })
-      .addCase(pullJobQueueAutomation.rejected, (state, action) => {
+      .addCase(pullJobQueueAutomation.rejected, (state, action: any) => {
         state.jobQueue.pull.status = 'error';
         state.jobQueue.pull.loading = false;
         state.jobQueue.pull.error = action.payload;
@@ -681,7 +681,7 @@ const automationSlice = createSlice({
         state.jobQueue.update.message = action.payload?.message;
         state.jobQueue.update.data = action.payload?.data;
       })
-      .addCase(updateJobQueueAutomationByCommonId.rejected, (state, action) => {
+      .addCase(updateJobQueueAutomationByCommonId.rejected, (state: any, action: any) => {
         state.jobQueue.update.status = 'error';
         state.jobQueue.update.loading = false;
         state.jobQueue.update.error = action.payload;
@@ -703,7 +703,7 @@ const automationSlice = createSlice({
         state.jobQueue.delete.message = action.payload?.message;
         state.jobQueue.delete.data = action.payload?.data;
       })
-      .addCase(deleteJobQueueAutomationByCommonId.rejected, (state, action) => {
+      .addCase(deleteJobQueueAutomationByCommonId.rejected, (state: any, action: any) => {
         state.jobQueue.delete.status = 'error';
         state.jobQueue.delete.loading = false;
         state.jobQueue.delete.error = action.payload;

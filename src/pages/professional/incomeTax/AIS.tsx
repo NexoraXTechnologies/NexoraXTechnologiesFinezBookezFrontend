@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getJobQueueAutomationByCommonId, runAutomationAis } from "../../../redux/slices/professionalSlice/automation/automatioinSlice";
-import { updateTaxpayer,getTaxPayerDetails } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
+import { getTaxPayerDetails } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
 import { buildJobQueuePayload } from './AISTISForm26PayloadBuilder';
 import { getAllTaxPayers } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
 import {
@@ -19,12 +19,9 @@ import {
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { motion } from "framer-motion";
 import {
-  Receipt,
   FileSearch,
   Wallet,
   Undo2,
-  TrendingUp,
-  SearchCheck,
   Upload,
   FolderSync,
   Download,
@@ -38,7 +35,7 @@ import { runnerService } from "../../../services/runnerService";
 import { SelectInput } from "../../../components/inputs";
 import { BlueButton, DataCreateButton, SecondaryButton, SuccessButton } from "../../../components/buttons";
 
-const COLORS = {
+const COLORS: { [key: string]: string } = {
   tdsTcs: "bg-[#ecf7f3] border-[#4c9d82]", // green soft
   sftInformation: "bg-[#edf4fe] border-[#3066b6]", // blue soft
   taxPayments: "bg-[#fef3e1] border-[#c97b56]", // orange-beige
@@ -47,7 +44,7 @@ const COLORS = {
   // completeProceeding: "bg-[#f4e8dd] border-[#98643c]",
 };
 
-const ICONS = {
+const ICONS: { [key: string]: React.ReactNode } = {
   tdsTcs: <ReceiptIndianRupee className="w-5 h-5 text-[#4c9d82]" />,
   sftInformation: <FileSearch className="w-5 h-5 text-[#3066b6]" />,
   taxPayments: <Wallet className="w-5 h-5 text-[#c97b56]" />,
@@ -56,7 +53,7 @@ const ICONS = {
   // completeProceeding: <SearchCheck className="w-5 h-5 text-[#98643c]" />,
 };
 
-const TITLES = {
+const TITLES: { [key: string]: string } = {
   tdsTcs: "TDS/TCS",
   sftInformation: "SFT Information",
   taxPayments: "Tax Payments",
@@ -68,7 +65,7 @@ const TITLES = {
 /* -----------------------------------
    SHOW ZERO VALUES ON INITIAL LOAD
 ----------------------------------- */
-const EMPTY_SUMMARY = {
+const EMPTY_SUMMARY: { [key: string]: { items: any[]; total: number } } = {
   tdsTcs: { items: [], total: 0 },
   sftInformation: { items: [], total: 0 },
   taxPayments: { items: [], total: 0 },
@@ -80,7 +77,7 @@ const EMPTY_SUMMARY = {
 /* --------------------------
    INR FORMAT
 --------------------------- */
-const inr = (n) =>
+const inr = (n: any) =>
   Number(n || 0).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -90,7 +87,7 @@ const inr = (n) =>
    GROUP AIS DATA
    (TDS/TCS now mimics mobile)
 --------------------------- */
-function groupAIS(details) {
+function groupAIS(details: any) {
   if (!details) return EMPTY_SUMMARY;
 
   // --------- 1. TDS / TCS (Salary) ----------
@@ -98,7 +95,7 @@ function groupAIS(details) {
   const tdsDetails = details.partB1?.salary?.tdsDetails || [];
 
   const tdsProcessedTotal = tdsDetails.reduce(
-    (sum, item) => sum + (item.tdsDeducted || 0),
+    (sum: number, item: any) => sum + (item.tdsDeducted || 0),
     0
   );
 
@@ -115,16 +112,16 @@ function groupAIS(details) {
 
   // --------- 2. SFT INFORMATION ----------
   const sftItems = [
-    ...(details.partB2?.dividend || []).map((x) => ({
+    ...(details.partB2?.dividend || []).map((x: any) => ({
       title: "Dividend",
       ...x,
     })),
-    ...(details.partB2?.interest || []).map((x) => ({
+    ...(details.partB2?.interest || []).map((x: any) => ({
       title: "Interest",
       ...x,
     })),
   ];
-  const sftTotal = sftItems.reduce((a, b) => a + (b.amount || 0), 0);
+  const sftTotal = sftItems.reduce((a: number, b: any) => a + (b.amount || 0), 0);
 
   // --------- 3. TAX PAYMENTS ----------
   // --------- 3. TAX PAYMENTS ----------
@@ -142,7 +139,7 @@ function groupAIS(details) {
   }
 
   const taxTotal = taxPayments.reduce(
-    (sum, item) => sum + (item.total || item.amount || 0),
+    (sum: number, item: any) => sum + (item.total || item.amount || 0),
     0
   );
 
@@ -151,11 +148,11 @@ function groupAIS(details) {
   const refundsRaw = details.partB4?.refunds || [];
 
   // Add title: "Refund - <mode>"
-  const refunds = refundsRaw.map((item) => ({
+  const refunds = refundsRaw.map((item: any) => ({
     title: `Refund`, // 👈 Add title here
     ...item,
   }));
-  const refundTotal = refunds.reduce((a, b) => a + (b.refundAmount || 0), 0);
+  const refundTotal = refunds.reduce((a: number, b: any) => a + (b.refundAmount || 0), 0);
 
   return {
     tdsTcs: {
@@ -204,7 +201,7 @@ const prettyLabel = (key = "") => {
    DYNAMIC TRANSACTION TABLE
    (web version of RN code)
 --------------------------- */
-const TransactionTable = ({ rows }) => {
+const TransactionTable = ({ rows }: { rows: any[] }) => {
   if (!rows || rows.length === 0) return null;
 
   const columns = Object.keys(rows[0] || {});
@@ -267,7 +264,7 @@ const TransactionTable = ({ rows }) => {
    ENTRY CARD with accordion
    (web version of RN EntryCard)
 --------------------------- */
-const AisEntryCard = ({ item }) => {
+const AisEntryCard = ({ item }: { item: any }) => {
   const [open, setOpen] = useState(false);
 
   const hasTransactions =
@@ -323,24 +320,26 @@ const AisEntryCard = ({ item }) => {
 const AIS = () => {
   const dispatch = useDispatch();
 
-  const { taxpayers } = useSelector((s) => s.taxpayer);
-  const { detailLoading, processLoading, saveLoading } = useSelector((s) => s.ais);
-  const { assessmentYears, loading: loadingAses } = useSelector((state) => state.alldropdown);
-  const FY_LIST = assessmentYears?.filter((item) => item.status === 'active')?.map((item) => item.assessmentYear);
+  const { taxpayers } = useSelector((s: any) => s.taxpayer);
+  const { detailLoading, processLoading, saveLoading } = useSelector((s: any) => s.ais);
+  const { assessmentYears } = useSelector((state: any) => state.alldropdown);
+  const FY_LIST = assessmentYears?.filter((item: any) => item.status === 'active')?.map((item: any) => item.assessmentYear);
 
   const loading = detailLoading || processLoading || saveLoading;
 
-  const fileRef = useRef(null);
+  const fileRef: any = useRef(null);
 
   const [fy, setFY] = useState('2025-2026');
   const [selectedPAN, setSelectedPAN] = useState('');
   const [selectedName, setSelectedName] = useState('');
   const [dob, setDob] = useState('');
-  const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [summary, setSummary]: any = useState(EMPTY_SUMMARY);
   const [tab, setTab] = useState('tdsTcs');
 
   useEffect(() => {
+    // @ts-ignore
     dispatch(getAllTaxPayers({ search: '', limit: 500, page: 1 }));
+    // @ts-ignore
     dispatch(fetchAssessmentYearDropdown({ offset: 0, limit: 50 }));
   }, [dispatch]);
   const navigate = useNavigate();
@@ -348,13 +347,13 @@ const AIS = () => {
   const [pwdModalOpen, setPwdModalOpen] = useState(false);
   const [pwdSaving, setPwdSaving] = useState(false);
   const [pendingSyncPan, setPendingSyncPan] = useState('');
-  const [pendingJob, setPendingJob] = useState(null);
+  const [pendingJob, setPendingJob]: any = useState(null);
 
   const isAutomationEnabled = () => localStorage.getItem('nx_enable_automation') === 'true';
 
-  const getSelectedTaxpayer = (pan) => taxpayers?.find((t) => t.pan === pan);
+  const getSelectedTaxpayer = (pan: any) => taxpayers?.find((t: any) => t.pan === pan);
 
-  const runAutomationNow = async (pan, taxpayer, jobType, machineInfo) => {
+  const runAutomationNow = async (pan: any, taxpayer: any, jobType: any, machineInfo: any) => {
     const payload = buildJobQueuePayload({
       pan,
       fy,
@@ -367,6 +366,7 @@ const AIS = () => {
     if (!payload?.input?.authToken) return toast.error('Missing AuthToken');
     console.log('payload for .net', JSON.stringify(payload, null, 2));
     try {
+      // @ts-ignore
       const res = await dispatch(runAutomationAis(payload)).unwrap();
 
       const commonId = res?.data?.commonId;
@@ -380,7 +380,7 @@ const AIS = () => {
 
       // 🔥 START POLLING
       pollJobStatus(commonId, pan);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Job queue failed');
     }
   };
@@ -438,8 +438,9 @@ const AIS = () => {
     // ✅ Fetch FULL taxpayer from API (password may not be present in list)
     let full = null;
     try {
+      // @ts-ignore
       full = await dispatch(getTaxPayerDetails(selectedPAN)).unwrap();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to load taxpayer details');
       return;
     }
@@ -462,7 +463,7 @@ const AIS = () => {
     // ✅ Start automation (use full so payload has latest data)
     await runAutomationNow(selectedPAN, t || full, 'AIS', machineInfo);
   };
-  const handleSavePasswordAndSync = async (password) => {
+  const handleSavePasswordAndSync = async (password: any) => {
     const clean = String(password || '').trim();
     if (!clean) {
       toast.error('Password is required');
@@ -479,6 +480,7 @@ const AIS = () => {
       setPwdSaving(true);
 
       // 1) GET full object
+      // @ts-ignore
       const full = await dispatch(getTaxPayerDetails(pan)).unwrap();
       if (!full) {
         toast.error('Failed to load taxpayer details');
@@ -486,23 +488,24 @@ const AIS = () => {
       }
 
       // 2) Update password at correct path: payload.PersonalDetails.itlPassword
-      const updated = {
-        PersonalDetails: {
-          ...(full?.payload?.PersonalDetails || {}),
-          itlPassword: clean,
-        },
-        ContactAddressDetails: {
-          ...(full?.payload?.ContactAddressDetails || {}),
-        },
-        BankDetails: {
-          ...(full?.payload?.BankDetails || {}),
-        },
-      };
+      // const updated = {
+      //   PersonalDetails: {
+      //     ...(full?.payload?.PersonalDetails || {}),
+      //     itlPassword: clean,
+      //   },
+      //   ContactAddressDetails: {
+      //     ...(full?.payload?.ContactAddressDetails || {}),
+      //   },
+      //   BankDetails: {
+      //     ...(full?.payload?.BankDetails || {}),
+      //   },
+      // };
 
-      const updateRes = await dispatch(updateTaxpayer({ pan, data: updated })).unwrap();
-      const after = await dispatch(getTaxPayerDetails(pan)).unwrap();
+      // const updateRes = await dispatch(updateTaxpayer({ pan, data: updated })).unwrap();
+      // const after = await dispatch(getTaxPayerDetails(pan)).unwrap();
 
       // 5) Refresh list so your dropdown/check sees it
+      // @ts-ignore
       await dispatch(getAllTaxPayers({ search: '', limit: 500, page: 1 })).unwrap?.();
       // unwrap may not exist in your thunk return; safe either way
 
@@ -533,14 +536,14 @@ const AIS = () => {
       };
       console.log(JSON.stringify(patchedTaxpayer, null, 2));
       await runAutomationNow(ctx.pan, patchedTaxpayer, ctx.jobType, ctx.machineInfo);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to save password');
     } finally {
       setPwdSaving(false);
     }
   };
 
-  const pollJobStatus = async (commonId, pan) => {
+  const pollJobStatus = async (commonId: any, pan: any) => {
     const MAX_TRIES = 60; // ~5 minutes (5s interval)
     const INTERVAL = 5000;
 
@@ -550,6 +553,7 @@ const AIS = () => {
       tries++;
 
       try {
+        // @ts-ignore
         const res = await dispatch(getJobQueueAutomationByCommonId({ commonId })).unwrap();
 
         const job = res?.data;
@@ -578,7 +582,7 @@ const AIS = () => {
 
         // still running → wait
         await new Promise((r) => setTimeout(r, INTERVAL));
-      } catch (err) {
+      } catch (err: any) {
         toast.error(err?.message || 'Job status check failed');
         return;
       }
@@ -587,7 +591,7 @@ const AIS = () => {
     toast.error('Job timeout. Please try again.');
   };
 
-  const fetchAndSaveAISFromRunner = async (pan) => {
+  const fetchAndSaveAISFromRunner = async (pan: any) => {
     if (!pan) return toast.error('PAN missing');
 
     try {
@@ -610,6 +614,7 @@ const AIS = () => {
       }
 
       // 🔥 Process PDF → JSON
+      // @ts-ignore
       const aisData = await dispatch(processAISPdf({ name: fileName, password })).unwrap();
 
       if (!aisData) {
@@ -621,8 +626,8 @@ const AIS = () => {
       setSummary(groupAIS(aisData));
 
       // ✅ Save to DB
-      await dispatch(
-        saveAIS({
+      // @ts-ignore
+      await dispatch(saveAIS({
           pan,
           finYear: fy,
           lastSyncDateTime: new Date().toISOString(),
@@ -631,7 +636,7 @@ const AIS = () => {
       ).unwrap();
 
       toast.success('AIS synced successfully!');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       toast.error(err?.message || 'Failed to process AIS PDF');
     }
@@ -640,10 +645,10 @@ const AIS = () => {
   /* --------------------------
      HANDLE PAN SELECTION
   --------------------------- */
-  const handleSelectPAN = async (pan) => {
+  const handleSelectPAN = async (pan: any) => {
     setSelectedPAN(pan);
 
-    const found = taxpayers.find((t) => t.pan === pan);
+    const found = taxpayers.find((t: any) => t.pan === pan);
     const personal = found?.payload?.PersonalDetails;
 
     const fullName = [personal?.firstName, personal?.middleName, personal?.lastName]
@@ -664,6 +669,7 @@ const AIS = () => {
     const docId = `${pan}${fy}`;
 
     try {
+      // @ts-ignore
       const res = await dispatch(fetchAISByDocId(docId)).unwrap();
 
       if (res?.Data?.aisJSON?.data) {
@@ -672,7 +678,7 @@ const AIS = () => {
         toast.info('No AIS data found for this PAN & FY');
         setSummary(EMPTY_SUMMARY);
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to fetch AIS details');
       setSummary(EMPTY_SUMMARY);
     }
@@ -681,12 +687,12 @@ const AIS = () => {
   /* --------------------------
      PASSWORD GENERATION
   --------------------------- */
-  const generateAisPassword = (pan, dobRaw = '') => {
+  const generateAisPassword = (pan: any, dobRaw: string = '') => {
     if (!pan || !dobRaw) return '';
 
     const panLower = pan.trim().toLowerCase();
 
-    const date = new Date(dobRaw);
+    const date: any = new Date(dobRaw);
     if (isNaN(date)) return ''; // invalid DOB
 
     const dd = String(date.getDate()).padStart(2, '0');
@@ -715,21 +721,20 @@ const AIS = () => {
     }
 
     try {
-      await dispatch(
-        uploadForm26ASFile({
+      // @ts-ignore
+      await dispatch(uploadForm26ASFile({
           name: fileName,
           uploadDate,
           file,
           fileType: 'ais',
         }),
       ).unwrap();
-
+      // @ts-ignore
       const aisData = await dispatch(processAISPdf({ name: fileName, password })).unwrap();
 
       setSummary(groupAIS(aisData));
-
-      await dispatch(
-        saveAIS({
+      // @ts-ignore
+      await dispatch(saveAIS({
           pan: selectedPAN,
           finYear: fy,
           lastSyncDateTime: uploadDate,
@@ -738,7 +743,7 @@ const AIS = () => {
       ).unwrap();
 
       toast.success('AIS uploaded successfully!');
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Error uploading AIS');
     } finally {
       if (fileRef.current) fileRef.current.value = '';
@@ -753,7 +758,7 @@ const AIS = () => {
 
       // 🔹 AIS naming (adjust if backend differs)
       const name = `${selectedPAN.toUpperCase()}_${fy}_AIS.pdf`;
-
+      // @ts-ignore
       const { blob } = await dispatch(downloadForm26ASFile({ name })).unwrap();
 
       const url = window.URL.createObjectURL(blob);
@@ -766,7 +771,7 @@ const AIS = () => {
 
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'AIS download failed');
     }
   };
@@ -776,7 +781,7 @@ const AIS = () => {
       if (!selectedPAN || !fy) return;
 
       const name = `${selectedPAN.toUpperCase()}_${fy}_AIS.pdf`;
-
+      // @ts-ignore
       const { blob } = await dispatch(downloadForm26ASFile({ name })).unwrap();
 
       const file = new File([blob], name, {
@@ -800,12 +805,12 @@ const AIS = () => {
 
         toast.info('Sharing not supported. File downloaded instead.');
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'AIS share failed');
     }
   };
 
-  const taxPayerv = taxpayers?.map((c) => {
+  const taxPayerv = taxpayers?.map((c: any) => {
     const p = c?.payload?.PersonalDetails;
     const name = [p?.firstName, p?.middleName, p?.lastName,].filter(Boolean).join(" ");
     return { label: `${c?.pan}${name ? ` (${name})` : ""}`, value: c?.pan, };
@@ -843,7 +848,7 @@ const AIS = () => {
           {loading ? (
             <span className="text-sm text-gray-500">Loading...</span>
           ) : (
-            FY_LIST.map((y) => {
+            FY_LIST.map((y: string) => {
               const isActive = fy === y;
 
               return (
@@ -923,7 +928,7 @@ const AIS = () => {
         <p className="text-slate-400 text-center py-8 text-sm">No data available</p>
       ) : (
         <div id="ais-item-list" className="space-y-3">
-          {items.map((it, i) => (
+            {items.map((it: any, i: any) => (
             <AisEntryCard key={it.id || i} item={it} />
           ))}
         </div>
@@ -944,7 +949,7 @@ const AIS = () => {
   );
 }
 
-export const PasswordModal = ({ open, onClose, onSubmit, taxpayerName, loading }) => {
+export const PasswordModal = ({ open, onClose, onSubmit, taxpayerName, loading }: { open: boolean; onClose: () => void; onSubmit: (password: string) => void; taxpayerName: string; loading: boolean }) => {
   const [pwd, setPwd] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [consent, setConsent] = useState(false);

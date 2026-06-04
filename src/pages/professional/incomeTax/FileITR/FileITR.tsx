@@ -8,7 +8,6 @@ import TotalDeductions from './TotalDeductions';
 import ExemptedIncome from './ExemptedIncome';
 import TaxesPaid from './TaxesPaid';
 import Computations from './Computations';
-import TaxLiability from './TaxLiability';
 import UnderSec44 from './UnderSec44';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -23,7 +22,7 @@ import { fetchAssessmentYearDropdown, fetchNatureOfEmploymentDropdown, fetchRegi
 import { getItrFilingWebById, saveItrFilingWeb, updateItrFilingWeb } from '../../../../redux/slices/professionalSlice/fileITRweb/itrFilingWebMgtSlice';
 import { formatIndianNumber } from '../../../../components/common/DateFormator';
 import { createOrderRazorPay, verifyRazorPayPayment } from '../../../../redux/slices/professionalSlice/payment/paymentSlice';
-import { buildITR1FromMyJson, buildITRJsonFromMyJson } from './IncomeTaxJsonBuilder/ITRJson';
+import { buildITRJsonFromMyJson } from './IncomeTaxJsonBuilder/ITRJson';
 
 import { getMonthValue } from './interestCalculations';
 const INITIAL_META = {
@@ -57,7 +56,7 @@ const FileITR = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const passedTaxpayer = location.state?.taxpayer || null;
-  const [isVerifiedAndPaid, setIsVerifiedAndPaid] = useState(false);
+  // const [isVerifiedAndPaid, setIsVerifiedAndPaid] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({
     regime: false,
     itrForm: false,
@@ -69,31 +68,35 @@ const FileITR = () => {
   // Local Draft State
   // ---------------------------
   const [draftId, setDraftId] = useState(null);
-  const [meta, setMeta] = useState(INITIAL_META);
-  const [sections, setSections] = useState(INITIAL_SECTIONS);
+  const [meta, setMeta]: any = useState(INITIAL_META);
+  const [sections, setSections]: [any, React.Dispatch<React.SetStateAction<any>>] = useState(INITIAL_SECTIONS);
   const { pan: editPan, ay: editAy } = useParams();
   const isEditMode = Boolean(editPan && editAy);
 
   // UI state
   const [step, setStep] = useState(1);
-  const [selectedPan, setSelectedPan] = useState(null);
-  const [selectedAY, setSelectedAY] = useState(null);
+  const [selectedPan, setSelectedPan]: [any, React.Dispatch<React.SetStateAction<any>>] = useState(null);
+  const [selectedAY, setSelectedAY]: [any, React.Dispatch<React.SetStateAction<any>>] = useState(null);
 
   const [popupOpen, setPopupOpen] = useState(false);
-  const [popupType, setPopupType] = useState(null);
+  const [popupType, setPopupType] = useState("");
   const [popupTitle, setPopupTitle] = useState('');
 
-  const { taxpayers = [], loading } = useSelector((s) => s.taxpayer);
-  const { regimes, natureOfEmployment, assessmentYears } = useSelector((s) => s.alldropdown);
+  const { taxpayers = [], loading } = useSelector((s: any) => s.taxpayer);
+  const { regimes, natureOfEmployment, assessmentYears } = useSelector((s: any) => s.alldropdown);
 
   // ---------------------------
   // Load dropdowns + taxpayers
   // ---------------------------
 
   useEffect(() => {
+    {/* @ts-ignore */ }
     dispatch(getAllTaxPayers({ search: '', page: 1, limit: 500 }));
+    {/* @ts-ignore */ }
     dispatch(fetchRegimeDropdown({ offset: 0, limit: 100 }));
+    {/* @ts-ignore */ }
     dispatch(fetchNatureOfEmploymentDropdown({ offset: 0, limit: 100 }));
+    {/* @ts-ignore */ }
     dispatch(fetchAssessmentYearDropdown({ offset: 0, limit: 50 }));
   }, [dispatch]);
 
@@ -106,7 +109,7 @@ const FileITR = () => {
     const p = passedTaxpayer.payload?.PersonalDetails || {};
     const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
 
-    const sp = { pan: passedTaxpayer.pan, name, raw: passedTaxpayer };
+    const sp: any = { pan: passedTaxpayer.pan, name, raw: passedTaxpayer };
     setSelectedPan(sp);
 
     // NOTE: AY not passed in your state — user will pick AY then Continue
@@ -117,7 +120,7 @@ const FileITR = () => {
   // PAN options for dropdown
   // ---------------------------
   const panOptions = useMemo(() => {
-    return taxpayers.map((t) => {
+    return taxpayers.map((t: any) => {
       const p = t.payload?.PersonalDetails || {};
       const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
       return { pan: t.pan, name: name || '—', raw: t };
@@ -132,6 +135,7 @@ const FileITR = () => {
         isHydratingRef.current = true;
 
         // 1) fetch draft by PAN + AY
+        {/* @ts-ignore */ }
         const draft = await dispatch(getItrFilingWebById({ pan: editPan, assessmentYear: editAy })).unwrap();
 
         // 2) apply to local state (prefill)
@@ -139,11 +143,11 @@ const FileITR = () => {
 
         // 3) set dropdown UI selections (optional but nice)
         // selectedAY
-        const ayObj = assessmentYears?.find((x) => x.assessmentYear === editAy);
+        const ayObj = assessmentYears?.find((x: any) => x.assessmentYear === editAy);
         if (ayObj) setSelectedAY(ayObj);
 
         // selectedPan (from taxpayer list)
-        const t = taxpayers?.find((x) => x.pan === editPan);
+        const t = taxpayers?.find((x: any) => x.pan === editPan);
         if (t) {
           const p = t.payload?.PersonalDetails || {};
           const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
@@ -159,7 +163,7 @@ const FileITR = () => {
 
         // 4) move to step 2 directly
         setStep(2);
-      } catch (err) {
+      } catch (err: any) {
         toast.error(err?.message || 'Failed to load draft for edit');
       } finally {
         // allow autosave again
@@ -176,7 +180,7 @@ const FileITR = () => {
   // =========================================================
   // Build meta snapshot (your function) ✅
   // =========================================================
-  const buildMetaSnapshotFromTaxpayer = (selectedPan, selectedAY) => {
+  const buildMetaSnapshotFromTaxpayer = (selectedPan: any, selectedAY: any) => {
     const raw = selectedPan?.raw?.payload || {};
     const p = raw?.PersonalDetails || {};
     const addr = raw?.ContactAddressDetails || {};
@@ -229,7 +233,7 @@ const FileITR = () => {
   // =========================================================
   // Helpers: apply API draft -> local state
   // =========================================================
-  const applyDraftFromApi = (draft) => {
+  const applyDraftFromApi = (draft: any) => {
     // your API returns: data: { id, panCard, assessmentYear, payload: {...} }
     const root = draft?.payload ? draft.payload : draft; // normalize
 
@@ -237,13 +241,13 @@ const FileITR = () => {
     setDraftId(id);
 
     // ✅ set meta from correct place
-    if (root?.meta) setMeta((prev) => ({ ...prev, ...root.meta }));
+    if (root?.meta) setMeta((prev: any) => ({ ...prev, ...root.meta }));
 
     // ✅ set sections from correct place
-    if (root?.sections) setSections((prev) => ({ ...prev, ...root.sections }));
+    if (root?.sections) setSections((prev: any) => ({ ...prev, ...root.sections }));
 
     // ✅ set pan/ay if needed (top-level fields)
-    setMeta((prev) => ({
+    setMeta((prev: any) => ({
       ...prev,
       pan: root?.panCard || root?.meta?.pan || prev.pan,
       assessmentYear: root?.assessmentYear || root?.meta?.assessmentYear || prev.assessmentYear,
@@ -258,12 +262,12 @@ const FileITR = () => {
 
     // 1) build meta snapshot from taxpayer + ay
     const metaSnap = buildMetaSnapshotFromTaxpayer(selectedPan, selectedAY);
-    setMeta((prev) => ({ ...prev, ...metaSnap }));
+    setMeta((prev: any) => ({ ...prev, ...metaSnap }));
 
     // 2) Try load existing draft by PAN+AY
     try {
-      const existing = await dispatch(
-        getItrFilingWebById({
+      {/* @ts-ignore */ }
+      const existing = await dispatch(getItrFilingWebById({
           pan: selectedPan.pan,
           assessmentYear: selectedAY.assessmentYear,
         }),
@@ -290,7 +294,7 @@ const FileITR = () => {
         sections,
         status: 'DRAFT',
       };
-
+      // @ts-ignore
       const saved = await dispatch(saveItrFilingWeb(payloadToSave)).unwrap();
 
       const id = saved?.insertedId || saved?._id || saved?.id || saved?.draftId;
@@ -298,7 +302,7 @@ const FileITR = () => {
       setDraftId(id || null);
       toast.success('Draft created');
       setStep(2);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to create draft');
     }
   };
@@ -313,8 +317,8 @@ const FileITR = () => {
     if (!draftId) return; // we can only PUT after POST creates id
 
     try {
-      await dispatch(
-        updateItrFilingWeb({
+      {/* @ts-ignore */ }
+      await dispatch(updateItrFilingWeb({
           id: draftId,
           payload: {
             meta,
@@ -326,7 +330,7 @@ const FileITR = () => {
 
       // optional: toast on manual save only (not each autosave)
       // toast.success("Draft saved");
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Auto-save failed');
     }
   };
@@ -337,6 +341,7 @@ const FileITR = () => {
 
     // debounce
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    {/* @ts-ignore */ }
     saveTimerRef.current = setTimeout(() => {
       persistDraft();
     }, 700);
@@ -363,14 +368,14 @@ const FileITR = () => {
   // =========================================================
   // Popups: Save section -> local state
   // =========================================================
-  const openPopup = (type, title) => {
+  const openPopup = (type: any, title: any) => {
     if (!validateTopFields()) return;
     setPopupType(type);
     setPopupTitle(title);
     setPopupOpen(true);
   };
-  const saveSection = async (key, value, options = {}) => {
-    const { successMsg = 'Data saved', errorMsg = 'Failed to save data', showToast = true } = options;
+  const saveSection = async (key: any, value: any, options = {}) => {
+    const { successMsg = 'Data saved', errorMsg = 'Failed to save data', showToast = true }: { successMsg?: string; errorMsg?: string; showToast?: boolean } = options;
 
     if (!draftId) {
       toast.error('Draft ID not found. Please create draft first.');
@@ -381,8 +386,8 @@ const FileITR = () => {
     setSections(nextSections);
 
     try {
-      await dispatch(
-        updateItrFilingWeb({
+      {/* @ts-ignore */ }
+      await dispatch(updateItrFilingWeb({
           id: draftId,
           payload: {
             panCard: meta?.pan,
@@ -395,12 +400,12 @@ const FileITR = () => {
       ).unwrap();
 
       if (showToast) toast.success(successMsg);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || errorMsg);
     }
   };
   // ✅ Helper: convert regime dropdown code/value into "OLD" or "NEW"
-  const getTaxRegime = (regimeValue) => {
+  const getTaxRegime = (regimeValue: any) => {
     const v = String(regimeValue || '').toUpperCase();
 
     // adjust these if your dropdown codes differ
@@ -412,7 +417,7 @@ const FileITR = () => {
   };
   const taxRegime = getTaxRegime(meta?.regime);
   const validateTopFields = () => {
-    const nextErrors = {
+    const nextErrors: any = {
       regime: !meta?.regime,
       itrForm: !meta?.itrForm,
       natureOfEmployment: !meta?.natureOfEmployment,
@@ -451,7 +456,7 @@ const FileITR = () => {
             taxpayerAddress={meta?.address}
             taxRegime={taxRegime}
             onClose={() => setPopupOpen(false)}
-            onSave={async (payload) => {
+            onSave={async (payload: any) => {
               await saveSection('houseProperty', payload, { successMsg: 'Income From House Property Saved' });
               setPopupOpen(false);
             }}
@@ -463,7 +468,7 @@ const FileITR = () => {
           <UnderSec44
             value={sections?.underSec44}
             onClose={() => setPopupOpen(false)}
-            onSave={async (payload) => {
+            onSave={async (payload: any) => {
               await saveSection('underSec44', payload, { successMsg: 'Under Section 44AD/AE/ADA Saved' });
               setPopupOpen(false);
             }}
@@ -476,7 +481,7 @@ const FileITR = () => {
             value={sections?.incomeOtherSources}
             assessmentYear={meta?.assessmentYear || selectedAY?.assessmentYear}
             onClose={() => setPopupOpen(false)}
-            onSave={async (payload) => {
+            onSave={async (payload: any) => {
               await saveSection('incomeOtherSources', payload, { successMsg: 'Income From Other Sources Saved' });
               setPopupOpen(false);
             }}
@@ -500,7 +505,7 @@ const FileITR = () => {
           <ExemptedIncome
             value={sections?.exemptedIncome}
             onClose={() => setPopupOpen(false)}
-            onSave={async (payload) => {
+            onSave={async (payload: any) => {
               await saveSection('exemptedIncome', payload, { successMsg: 'Exempted Income Saved' });
               setPopupOpen(false);
             }}
@@ -528,7 +533,8 @@ const FileITR = () => {
             assessmentYear={meta?.assessmentYear}
             meta={meta}
             onClose={() => setPopupOpen(false)}
-            onSave={async (payload) => {
+            // @ts-ignore
+            onSave={async (payload: any) => {
               // ✅ DERIVE taxLiability automatically
               const derivedTaxLiability = {
                 totalTaxLiability: payload?.totalTaxLiability ?? payload?.roundOffTotalTaxFeeInterest ?? '0',
@@ -555,8 +561,8 @@ const FileITR = () => {
 
               // 2️⃣ Single PUT → single toast
               try {
-                await dispatch(
-                  updateItrFilingWeb({
+                {/* @ts-ignore */ }
+                await dispatch(updateItrFilingWeb({
                     id: draftId,
                     payload: {
                       panCard: meta?.pan,
@@ -569,7 +575,7 @@ const FileITR = () => {
                 ).unwrap();
 
                 toast.success('Computation saved');
-              } catch (err) {
+              } catch (err: any) {
                 toast.error(err?.message || 'Failed to save computation');
               }
 
@@ -620,11 +626,11 @@ const FileITR = () => {
                            focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={selectedAY?.assYid || ''}
                 onChange={(e) => {
-                  const ay = assessmentYears.find((item) => item.assYid === e.target.value);
+                  const ay = assessmentYears.find((item: any) => item.assYid === e.target.value);
                   setSelectedAY(ay);
                 }}>
                 <option value="">Select Assessment Year</option>
-                {assessmentYears.map((item) => (
+                  {assessmentYears.map((item: any) => (
                   <option key={item.id} value={item.assYid}>
                     {item.assessmentYear}
                   </option>
@@ -647,7 +653,7 @@ const FileITR = () => {
   // =========================================================
   // STEP 2 UI
   // =========================================================
-  const TableRow = ({ sr, desc, onClick, amount = 0 }) => (
+  const TableRow = ({ sr, desc, onClick, amount = 0 }: { sr: any; desc: any; onClick: () => void; amount?: any }) => (
     <tr onClick={onClick} className="cursor-pointer transition hover:bg-blue-50">
       <td className="px-3 py-2 text-center text-gray-600 border-r border-gray-200">{sr}</td>
       <td className="px-2.5 py-1.5 border-r border-gray-200 text-gray-700">{desc}</td>
@@ -657,7 +663,7 @@ const FileITR = () => {
     </tr>
   );
 
-  const ActionBtn = ({ label, icon: Icon }) => (
+  const ActionBtn = ({ label, icon: Icon }: { label: string; icon: any }) => (
     <button className="w-full flex items-center gap-2 text-left text-xs sm:text-sm px-3 py-2 rounded-lg bg-blue-50 border border-blue-100 text-gray-700 hover:bg-blue-100 hover:border-blue-200 transition">
       {Icon && <Icon size={16} className="text-blue-600 shrink-0" />}
       <span>{label}</span>
@@ -672,6 +678,7 @@ const FileITR = () => {
 
   const loadRazorpay = () =>
     new Promise((resolve) => {
+      {/* @ts-ignore */ }
       if (window.Razorpay) return resolve(true);
 
       const script = document.createElement('script');
@@ -700,7 +707,7 @@ const FileITR = () => {
         toast.error('Please select Assessment Year');
         return;
       }
-
+      // @ts-ignore
       const draft = await dispatch(getItrFilingWebById({ pan: meta?.pan, assessmentYear: meta?.assessmentYear || meta?.assessmentYearId })).unwrap();
 
       const root = draft?.payload || {};
@@ -708,10 +715,10 @@ const FileITR = () => {
       const draftSections = root?.sections || sections || {};
 
       // AY row for due date etc
-      const ayRow = assessmentYears?.find((x) => x.assessmentYear === draftMeta?.assessmentYear || draftMeta?.assessmentYearId);
+      const ayRow = assessmentYears?.find((x: any) => x.assessmentYear === draftMeta?.assessmentYear || draftMeta?.assessmentYearId);
       const returnFileSec = getMonthValue(ayRow?.dueDate || ayRow?.lastFilingItrDate);
       // ✅ required field validation before verify
-      const missing = {
+      const missing: any = {
         itrForm: !draftMeta?.itrForm,
         regime: !draftMeta?.regime,
         natureOfEmployment: !draftMeta?.natureOfEmployment,
@@ -747,6 +754,7 @@ const FileITR = () => {
       });
 
       const prevVerifyPay = draftSections?.verifyPay || sections?.verifyPay || {};
+      {/* @ts-ignore */ }
       // console.log('IncomeTaxJson', JSON.stringify(itrJson, null, 2));
       await saveSection(
         'verifyPay',
@@ -757,7 +765,7 @@ const FileITR = () => {
         },
         { successMsg: 'Verified successfully', errorMsg: 'Verify failed' },
       );
-    } catch (e) {
+    } catch (e: any) {
       toast.error(e?.message || 'Verify failed');
     }
   };
@@ -779,8 +787,8 @@ const FileITR = () => {
 
     try {
       // 1) Create order from redux thunk
-      const order = await dispatch(
-        createOrderRazorPay({
+      // @ts-ignore
+      const order = await dispatch(createOrderRazorPay({
           planPublicId: 'VARHZGX',
           pan: meta?.pan,
           mobile: meta?.taxpayer?.mobileNumber,
@@ -806,11 +814,11 @@ const FileITR = () => {
         },
         theme: { color: '#2563EB' },
 
-        handler: async (payment) => {
+        handler: async (payment: any) => {
           try {
             // 2) Verify payment
-            const verifyRes = await dispatch(
-              verifyRazorPayPayment({
+            // @ts-ignore
+            const verifyRes = await dispatch(verifyRazorPayPayment({
                 orderId: payment?.razorpay_order_id,
                 paymentId: payment?.razorpay_payment_id,
                 signature: payment?.razorpay_signature,
@@ -820,7 +828,7 @@ const FileITR = () => {
 
             // 3) Mark platform fee paid in draft (single source of truth)
             await saveSection('verifyPay', { ...verifyPay, isVerify: true, isPlatformFee: true, lastPayment: verifyRes || payment }, { successMsg: 'Platform fee paid', errorMsg: 'Failed to save payment status' });
-          } catch (e) {
+          } catch (e: any) {
             toast.error(e?.message || 'Payment verification failed');
           }
         },
@@ -829,10 +837,10 @@ const FileITR = () => {
           ondismiss: () => toast.info('Payment cancelled'),
         },
       };
-
+      // @ts-ignore
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Unable to create payment order');
     }
   };
@@ -910,11 +918,11 @@ const FileITR = () => {
                     ${fieldErrors.regime ? 'border-red-500 ring-1 ring-red-400 animate-pulse' : 'border-gray-300'} `}
                     value={meta?.regime ?? ''}
                     onChange={(e) => {
-                      setMeta((prev) => ({ ...prev, regime: e.target.value }));
-                      setFieldErrors((p) => ({ ...p, regime: false }));
+                      setMeta((prev: any) => ({ ...prev, regime: e.target.value }));
+                      setFieldErrors((p: any) => ({ ...p, regime: false }));
                     }}>
                     <option value="">Select</option>
-                    {regimes.map((item) => (
+                    {regimes.map((item: any) => (
                       <option key={item.id} value={item.code}>
                         {item.value}
                       </option>
@@ -930,8 +938,8 @@ const FileITR = () => {
                      ${fieldErrors.itrForm ? 'border-red-500 ring-1 ring-red-400 animate-pulse' : 'border-gray-300'}`}
                     value={meta?.itrForm ?? ''}
                     onChange={(e) => {
-                      setMeta((prev) => ({ ...prev, itrForm: e.target.value }));
-                      setFieldErrors((p) => ({ ...p, itrForm: false }));
+                      setMeta((prev: any) => ({ ...prev, itrForm: e.target.value }));
+                      setFieldErrors((p: any) => ({ ...p, itrForm: false }));
                     }}>
                     <option value="">Select</option>
                     <option value="ITR-1">ITR-1 (SAHAJ)</option>
@@ -952,11 +960,11 @@ const FileITR = () => {
                    ${fieldErrors.natureOfEmployment ? 'border-red-500 ring-1 ring-red-400 animate-pulse' : 'border-gray-300'} `}
                     value={meta?.natureOfEmployment ?? ''}
                     onChange={(e) => {
-                      setMeta((prev) => ({ ...prev, natureOfEmployment: e.target.value }));
-                      setFieldErrors((p) => ({ ...p, natureOfEmployment: false }));
+                      setMeta((prev: any) => ({ ...prev, natureOfEmployment: e.target.value }));
+                      setFieldErrors((p: any) => ({ ...p, natureOfEmployment: false }));
                     }}>
                     <option value="">Select</option>
-                    {natureOfEmployment.map((item) => (
+                    {natureOfEmployment.map((item: any) => (
                       <option key={item.id} value={item.code}>
                         {item.name}
                       </option>
@@ -973,16 +981,16 @@ const FileITR = () => {
     `}
                     value={meta?.assessmentYearId ?? ''}
                     onChange={(e) => {
-                      const ay = assessmentYears.find((item) => item.assYid === e.target.value);
+                      const ay = assessmentYears.find((item: any) => item.assYid === e.target.value);
                       setSelectedAY(ay);
 
                       // update meta snapshot again (keeps address/bank, updates AY)
                       const snap = buildMetaSnapshotFromTaxpayer(selectedPan, ay);
-                      setMeta((prev) => ({ ...prev, ...snap }));
-                      setFieldErrors((p) => ({ ...p, assessmentYear: false }));
+                      setMeta((prev: any) => ({ ...prev, ...snap }));
+                      setFieldErrors((p: any) => ({ ...p, assessmentYear: false }));
                     }}>
                     <option value="">Select</option>
-                    {assessmentYears.map((item) => (
+                    {assessmentYears.map((item: any) => (
                       <option key={item.id} value={item.assYid}>
                         {item.assessmentYear}
                       </option>
@@ -1031,6 +1039,7 @@ const FileITR = () => {
                       amount={formatIndianNumber(Number(sections?.exemptedIncome?.totalExemptIncome || 0) + Number(sections?.exemptedIncome?.ltcg112a?.ltcg || 0)) ?? 0}
                       onClick={() => openPopup('exemptedincome', 'Exempted Income')}
                     />
+                    {/* @ts-ignore */}
                     <TableRow sr="7" desc="Taxes Paid" amount={formatIndianNumber(sections?.taxesPaid?.totalTaxesPaid) ?? 0} onClick={() => openPopup('taxespaid', 'Taxes Paid')} />
                     <TableRow
                       sr="8"
@@ -1101,7 +1110,7 @@ const FileITR = () => {
 }
 
 /* ================= Searchable PAN Dropdown ================= */
-const SearchablePanDropdown = ({ options, value, onChange }) => {
+const SearchablePanDropdown = ({ options, value, onChange }: { options: any[]; value: any; onChange: (value: any) => void }) => {
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
 

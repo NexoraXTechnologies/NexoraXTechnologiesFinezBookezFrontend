@@ -3,23 +3,23 @@
 // ✅ No tax calculations here. Only mapping + defaults (null -> 0, "" -> "", etc.)
 
 /* ===================== HELPERS ===================== */
-const toStr = (v, d = '') => (v === null || v === undefined ? d : String(v));
-const toUpper = (v) => toStr(v, '').trim().toUpperCase();
-const toNum = (v, d = 0) => {
+const toStr = (v: any, d = '') => (v === null || v === undefined ? d : String(v));
+const toUpper = (v: any) => toStr(v, '').trim().toUpperCase();
+const toNum = (v: any, d = 0) => {
   if (v === null || v === undefined || v === '') return d;
   const n = Number(String(v).replace(/,/g, ''));
   return Number.isFinite(n) ? n : d;
 };
-const toBoolYN = (v, defaultYN = 'N') => {
-  const s = toStr(v, '').toLowerCase();
-  if (s === 'true' || s === '1' || s === 'y' || s === 'yes') return 'Y';
-  if (s === 'false' || s === '0' || s === 'n' || s === 'no') return 'N';
-  return defaultYN;
-};
-const safeArr = (v) => (Array.isArray(v) ? v : []);
-const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+// const toBoolYN = (v, defaultYN = 'N') => {
+//   const s = toStr(v, '').toLowerCase();
+//   if (s === 'true' || s === '1' || s === 'y' || s === 'yes') return 'Y';
+//   if (s === 'false' || s === '0' || s === 'n' || s === 'no') return 'N';
+//   return defaultYN;
+// };
+const safeArr = (v: any) => (Array.isArray(v) ? v : []);
+// const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
-const formatToYMD = (d) => {
+const formatToYMD = (d: any) => {
   // accepts: Date | "YYYY-MM-DD" | ISO
   if (!d) return '';
   const dt = d instanceof Date ? d : new Date(d);
@@ -32,10 +32,10 @@ const formatToYMD = (d) => {
 
 // ReturnFileSec expects a number (in your sample it's 12).
 // If you already have returnFileSec computed, pass it directly.
-const defaultReturnFileSec = (v) => toNum(v, 11);
+const defaultReturnFileSec = (v: any) => toNum(v, 11);
 
 // AY in IncomeTax JSON example: "2025" (start year)
-const getAssessmentYearStart = (ayStr) => {
+const getAssessmentYearStart = (ayStr: string) => {
   // "2025-2026" => "2025"
   const s = toStr(ayStr, '');
   const y = s.split('-')[0];
@@ -51,7 +51,7 @@ export const buildITR1FromMyJson = ({
   intermediaryCity = 'NAGPUR',
   digest = '-',
   returnFileSec = 12,
-}) => {
+}: { meta?: any; sections?: any; ayRow?: any; SWNO?: string; intermediaryCity?: string; digest?: string; returnFileSec?: number }) => {
   console.log('irt 1 json prepare');
   // ---- meta pieces
   const pan = toUpper(meta?.pan);
@@ -536,7 +536,7 @@ export const buildITR1FromMyJson = ({
 
 
 
-export const buildITR4FromMyJson = ({ meta = {}, sections = {}, ayRow = null, SWNO = 'SW20011054', intermediaryCity = 'NAGPUR', digest = '-', returnFileSec = 11 }) => {
+export const buildITR4FromMyJson = ({ meta = {}, sections = {}, ayRow = null, SWNO = 'SW20011054', intermediaryCity = 'NAGPUR', digest = '-', returnFileSec = 11 }: { meta?: any; sections?: any; ayRow?: any; SWNO?: string; intermediaryCity?: string; digest?: string; returnFileSec?: number }) => {
   console.log('irt 4 json prepare');
   const pan = toUpper(meta?.pan);
   const pd = meta?.taxpayer?.personalDetails || {};
@@ -579,7 +579,7 @@ export const buildITR4FromMyJson = ({ meta = {}, sections = {}, ayRow = null, SW
   const deductionUs16 = stdDed + entertainment + professionalTax;
 
   const incomeFromSal = toNum(sal?.netSalary, 0);
-  const netSalary = toNum(sal?.netSalary, 0); // schema wants both NetSalary + IncomeFromSal
+  // const netSalary = toNum(sal?.netSalary, 0); // schema wants both NetSalary + IncomeFromSal
 
   // ---- house property ----
   const grossRentReceived = toNum(hp?.rent?.received, 0);
@@ -659,7 +659,7 @@ export const buildITR4FromMyJson = ({ meta = {}, sections = {}, ayRow = null, SW
   // Your computed values
   const incomeOnDigital6 = toNum(u44?.incomeOnDigital6, 0);
   const incomeOnCash8 = toNum(u44?.incomeOnCash8, 0);
-  const presumptiveIncome44ADA = toNum(u44?.presumptiveIncome44ADA, 0);
+  // const presumptiveIncome44ADA = toNum(u44?.presumptiveIncome44ADA, 0);
   const computedPresumptiveIncome44AE = toNum(u44?.computedPresumptiveIncome44AE, 0);
 
   const finalPresumptiveIncome = toNum(u44?.finalPresumptiveIncome, 0);
@@ -1027,7 +1027,7 @@ export const buildITR4FromMyJson = ({ meta = {}, sections = {}, ayRow = null, SW
 /* ===================== ROUTER: Decide ITR1 vs ITR4 ===================== */
 // You said: if Under Sec 44 has entry then use ITR4.
 // Keep this helper near your other builders.
-export const decideItrForm = ({ sections = {}, meta = {} }) => {
+export const decideItrForm = ({ sections = {}, meta = {} }: { sections?: any; meta?: any }) => {
   const u44 = sections?.underSec44 || {};
   console.log('sectionssections', JSON.stringify(sections, null, 2));
   console.log('u44', JSON.stringify(u44, null, 2));
@@ -1057,7 +1057,7 @@ export const decideItrForm = ({ sections = {}, meta = {} }) => {
   return 'ITR-1';
 };
 
-export const buildITRJsonFromMyJson = (args) => {
+export const buildITRJsonFromMyJson = (args: any) => {
   const { meta = {}, sections = {} } = args || {};
   const form = decideItrForm({ sections, meta });
 

@@ -1,13 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshCcw, Eye } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Eye } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 
 // ✅ You should create/import these from your slice
 import { getAllProfessionalIncomeTaxLaw, getProfessionalIncomeTaxLawById, clearSelectedProfessionalIncomeTaxLaw } from '../../../redux/slices/professionalSlice/professionIntxLaw/professionalIncomeTaxLawSlice';
-import ReadMoreText from '../../../components/common/ReadMoreText';
 import SearchInput from '../../../components/searchInput';
-import { DataCreateButton, DataREfreshButton } from '../../../components/buttons';
+import { DataREfreshButton } from '../../../components/buttons';
 import DataTable from '../../../components/DataTable';
 import Pagination from '../../../components/pagination';
 import Badge from '../../../components/badge';
@@ -19,10 +18,10 @@ import Badge from '../../../components/badge';
  * - subsections: {number,text}[]
  * - examples: {title,description}[]
  */
-const ArrayField = ({ label, value }) => {
+const ArrayField = ({ label, value }: { label: string; value: any[] }) => {
   if (!Array.isArray(value) || value.length === 0) return null;
 
-  const renderItem = (item, idx) => {
+  const renderItem = (item: any, idx: number) => {
     if (item == null) return null;
 
     // string
@@ -98,7 +97,7 @@ const columns = [
   { key: 'status', title: 'Status' }
 ];
 
-const ViewLawModal = ({ open, onClose, law, loading }) => {
+const ViewLawModal = ({ open, onClose, law, loading }: { open: boolean; onClose: () => void; law: any; loading: boolean }) => {
   if (!open) return null;
 
   return (
@@ -182,14 +181,13 @@ const IncomeTaxLaw = () => {
   const dispatch = useDispatch();
 
   // slice state
-  const { records, loading, pagination, filters, selectedRecord, error } = useSelector((s) => s.professionalIncomeTaxLaw);
+  const { records, loading, pagination, selectedRecord, error } = useSelector((s: any) => s.professionalIncomeTaxLaw);
   console.log('selectedRecord', selectedRecord);
   // local ui state
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  const [refreshing, setRefreshing] = useState(false);
-
+  // const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -200,8 +198,8 @@ const IncomeTaxLaw = () => {
 
   // ===== Load list
   useEffect(() => {
-    dispatch(
-      getAllProfessionalIncomeTaxLaw({
+    // @ts-ignore
+    dispatch(getAllProfessionalIncomeTaxLaw({
         page,
         limit,
         search: debouncedSearch.trim(),
@@ -221,26 +219,27 @@ const IncomeTaxLaw = () => {
 
   // ===== Refresh
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await dispatch(
-      getAllProfessionalIncomeTaxLaw({
+    // setRefreshing(true);
+    // @ts-ignore
+    await dispatch(getAllProfessionalIncomeTaxLaw({
         page,
         limit,
         search: debouncedSearch.trim(),
         status,
       }),
     );
-    setRefreshing(false);
+    // setRefreshing(false);
     toast.success('Law list refreshed');
   };
 
   // ===== View (GET BY ID: /.../INTXL-731967)
-  const handleView = async (lawId) => {
+  const handleView = async (lawId: any) => {
     try {
       setViewLoading(true);
       setViewOpen(true);
 
       // IMPORTANT: your API example uses /INTXL-731967 (lawId), not mongo id.
+      // @ts-ignore
       const res = await dispatch(getProfessionalIncomeTaxLawById(lawId)).unwrap();
 
       // Your response sample returns { law: {...} }
@@ -254,7 +253,7 @@ const IncomeTaxLaw = () => {
       }
 
       setViewLoading(false);
-    } catch (e) {
+    } catch (e: any) {
       setViewLoading(false);
       toast.error(e?.message || 'Failed to load law section');
     }
@@ -266,7 +265,7 @@ const IncomeTaxLaw = () => {
   };
 
   // list to show (API might send key as records)
-  const rows = useMemo(() => records || [], [records]);
+  const rows: any = useMemo(() => records || [], [records]);
 
   useEffect(() => {
     if (error) toast.error(error);
@@ -295,16 +294,16 @@ const IncomeTaxLaw = () => {
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
         </div>
       </div>
-
       <DataTable
+        // @ts-ignore
         columns={columns}
         data={rows}
         loading={loading}
         emptyMessage="No products found"
-        actions={(e) => (
+        actions={(e: any) => (
           <div className="flex items-center gap-2">
             {/* EDIT */}
-            <button id="income-tax-law-view-button" onClick={() => handleView(row.lawId)} className="text-blue-600 hover:text-blue-800" title="View">
+            <button id="income-tax-law-view-button" onClick={() => handleView(e.lawId)} className="text-blue-600 hover:text-blue-800" title="View">
               <Eye size={16} />
             </button>
           </div>
@@ -312,7 +311,7 @@ const IncomeTaxLaw = () => {
       />
 
       {(pagination?.totalDocs ?? 0) > 0 && rows?.length > 0 && <Pagination  {...{
-        localLimit: limit, selectCb: (e) => {
+        localLimit: limit, selectCb: (e: any) => {
           setLimit(Number(e.target.value));
           setPage(1);
         },

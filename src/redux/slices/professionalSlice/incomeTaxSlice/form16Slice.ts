@@ -6,7 +6,7 @@ import professionalAxios from '../../../../services/professionalAxios';
  * Expecting your response:
  * { success, message, data: { offset, limit, totalDocs, totalPages, hasNextPage, hasPrevPage, data: [] } }
  */
-export const fetchForm16List = createAsyncThunk('form16/fetchForm16List', async ({ offset = 0, limit = 10, search = '' } = {}, { rejectWithValue }) => {
+export const fetchForm16List = createAsyncThunk('form16/fetchForm16List', async ({ offset = 0, limit = 10, search = '' } :{ offset?: number; limit?: number; search?: string }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/uploadfiles/list`, {
       params: {
@@ -17,14 +17,14 @@ export const fetchForm16List = createAsyncThunk('form16/fetchForm16List', async 
       },
     });
     return res.data;
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to fetch Form16 list',
     });
   }
 });
 
-export const uploadForm16File = createAsyncThunk('form16/uploadForm16File', async ({ name, uploadDate, file, fileType = 'form16', pan, assessmentYear }, { rejectWithValue }) => {
+export const uploadForm16File = createAsyncThunk('form16/uploadForm16File', async ({ name, uploadDate, file, fileType = 'form16', pan, assessmentYear }: { name: string; uploadDate: string; file: File; fileType?: string; pan?: string; assessmentYear?: string }, { rejectWithValue }) => {
   try {
     const formData = new FormData();
     formData.append('name', name);
@@ -39,7 +39,7 @@ export const uploadForm16File = createAsyncThunk('form16/uploadForm16File', asyn
     const res = await professionalAxios.post(`/eTaxSolnMongoApiBackend/users/uploadfiles/upload`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
     return res.data;
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || err?.response?.data?.error || 'Failed to upload Form16',
     });
@@ -49,11 +49,11 @@ export const uploadForm16File = createAsyncThunk('form16/uploadForm16File', asyn
 /**
  * DOWNLOAD by filename (same as your 26AS / document mgmt style)
  */
-export const downloadForm16File = createAsyncThunk('form16/downloadForm16File', async ({ filename }, { rejectWithValue }) => {
+export const downloadForm16File = createAsyncThunk('form16/downloadForm16File', async ({ filename }: { filename: string }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/uploadfiles/download/${filename}`, { responseType: 'blob' });
     return { blob: res.data, filename };
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to download Form16 file',
     });
@@ -64,14 +64,14 @@ export const downloadForm16File = createAsyncThunk('form16/downloadForm16File', 
  * DELETE by id (assuming you have something like /users/uploadfiles/:id)
  * If your delete route is different, change URL only.
  */
-export const deleteForm16File = createAsyncThunk('form16/deleteForm16File', async ({ id, fileType = 'form16' }, { rejectWithValue }) => {
+export const deleteForm16File = createAsyncThunk('form16/deleteForm16File', async ({ id, fileType = 'form16' }: { id: string; fileType?: string }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.delete(
       `/eTaxSolnMongoApiBackend/users/uploadfiles/delete/${id}`,
       { params: { fileType } }, // => ?fileType=form16
     );
     return res.data;
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to delete Form16 file',
     });
@@ -127,7 +127,7 @@ const form16Slice = createSlice({
           hasPrevPage: d?.hasPrevPage ?? false,
         };
       })
-      .addCase(fetchForm16List.rejected, (state, action) => {
+      .addCase(fetchForm16List.rejected, (state, action: any) => {
         state.listLoading = false;
         state.items = [];
         state.error = action.payload?.message;
@@ -141,7 +141,7 @@ const form16Slice = createSlice({
       .addCase(uploadForm16File.fulfilled, (state) => {
         state.uploadLoading = false;
       })
-      .addCase(uploadForm16File.rejected, (state, action) => {
+      .addCase(uploadForm16File.rejected, (state, action: any) => {
         state.uploadLoading = false;
         state.error = action.payload?.message;
       })
@@ -151,11 +151,11 @@ const form16Slice = createSlice({
         state.downloadLoading = true;
         state.error = null;
       })
-      .addCase(downloadForm16File.fulfilled, (state, action) => {
+      .addCase(downloadForm16File.fulfilled, (state, action: any) => {
         state.downloadLoading = false;
         state.downloadedFile = action.payload;
       })
-      .addCase(downloadForm16File.rejected, (state, action) => {
+      .addCase(downloadForm16File.rejected, (state, action: any) => {
         state.downloadLoading = false;
         state.error = action.payload?.message;
       })
@@ -168,7 +168,7 @@ const form16Slice = createSlice({
       .addCase(deleteForm16File.fulfilled, (state) => {
         state.deleteLoading = false;
       })
-      .addCase(deleteForm16File.rejected, (state, action) => {
+      .addCase(deleteForm16File.rejected, (state, action: any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message;
       });

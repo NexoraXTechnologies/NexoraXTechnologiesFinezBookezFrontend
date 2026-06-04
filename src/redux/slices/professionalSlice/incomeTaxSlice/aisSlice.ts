@@ -8,7 +8,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 =================================================== */
 export const fetchAISList = createAsyncThunk(
   "ais/fetchAISList",
-  async ({ offset = 0, limit = 10 } = {}, { rejectWithValue }) => {
+  async ({ offset = 0, limit = 10 }: { offset?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/ais`,
@@ -27,7 +27,7 @@ export const fetchAISList = createAsyncThunk(
       // }
 
       return res.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.error || "Failed to fetch AIS list",
@@ -51,7 +51,7 @@ export const fetchAISByDocId = createAsyncThunk(
       // Sample:
       // { "_id": "...", "Data": { pan, finYear, aisJSON, ... } }
       return res?.data;
-    } catch (err) {
+    } catch (err: any) {
      
       return rejectWithValue({
         message:
@@ -67,7 +67,7 @@ export const fetchAISByDocId = createAsyncThunk(
 =================================================== */
 export const processAISPdf = createAsyncThunk(
   "ais/processAISPdf",
-  async ({ name, password }, { rejectWithValue }) => {
+  async ({ name, password }: { name: string; password: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/ais/processPdf`,
@@ -91,7 +91,7 @@ export const processAISPdf = createAsyncThunk(
 
       // Return just the AIS data part (you can adjust to keep whole object if needed)
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.error || "Failed to process AIS PDF",
@@ -129,7 +129,7 @@ export const saveAIS = createAsyncThunk(
 
       // Return data; could be Data / data / full object depending on backend
       return res.data?.data ?? res.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.error || "Failed to save AIS",
       });
@@ -200,7 +200,7 @@ const aisSlice = createSlice({
           count: action.payload?.count ?? 0,
         };
       })
-      .addCase(fetchAISList.rejected, (state, action) => {
+      .addCase(fetchAISList.rejected, (state, action: any) => {
         state.listLoading = false;
         state.error = action.payload?.message;
         state.aisList = [];
@@ -217,7 +217,7 @@ const aisSlice = createSlice({
         // Whole object: { _id, Data: { ... } }
         state.selectedAIS = action.payload ?? null;
       })
-      .addCase(fetchAISByDocId.rejected, (state, action) => {
+      .addCase(fetchAISByDocId.rejected, (state, action: any) => {
         state.detailLoading = false;
         state.error = action.payload?.message;
       });
@@ -233,7 +233,7 @@ const aisSlice = createSlice({
         // This is res.data.data from /ais/processPdf
         state.processedAIS = action.payload ?? null;
       })
-      .addCase(processAISPdf.rejected, (state, action) => {
+      .addCase(processAISPdf.rejected, (state, action: any) => {
         state.processLoading = false;
         state.error = action.payload?.message;
       });
@@ -253,7 +253,7 @@ const aisSlice = createSlice({
         //   - or update aisList if docId matches
         state.selectedAIS = action.payload ?? state.selectedAIS;
       })
-      .addCase(saveAIS.rejected, (state, action) => {
+      .addCase(saveAIS.rejected, (state, action: any) => {
         state.saveLoading = false;
         state.error = action.payload?.message;
       });

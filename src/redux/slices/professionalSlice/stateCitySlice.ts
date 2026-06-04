@@ -6,7 +6,7 @@ import professionalAxios from "../../../services/professionalAxios";
 // =======================================================
 export const getLocationByPincode = createAsyncThunk(
   "stateCity/getLocationByPincode",
-  async (pincode, { rejectWithValue }) => {
+  async (pincode: string, { rejectWithValue }) => {
     try {
       if (!pincode) {
         return rejectWithValue({ message: "Pincode is required" });
@@ -23,7 +23,7 @@ export const getLocationByPincode = createAsyncThunk(
       }
 
       return res.data?.data?.data || null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err.response?.data?.message || "Failed to fetch location by pincode",
@@ -37,7 +37,7 @@ export const getLocationByPincode = createAsyncThunk(
 // =======================================================
 export const getStates = createAsyncThunk(
   "stateCity/getStates",
-  async (searchText = "", { rejectWithValue }) => {
+  async (searchText: string = "", { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/users/statesMaster?offset=0&limit=100&search=${searchText}`
@@ -50,7 +50,7 @@ export const getStates = createAsyncThunk(
       }
 
       return res?.data?.data?.records || [];
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to fetch states",
       });
@@ -63,7 +63,7 @@ export const getStates = createAsyncThunk(
 // =======================================================
 export const getCitiesByState = createAsyncThunk(
   "stateCity/getCitiesByState",
-  async ({ stateCode, searchText = "" }, { rejectWithValue }) => {
+  async ({ stateCode, searchText = "" }: { stateCode: string, searchText: string }, { rejectWithValue }) => {
     try {
       if (!stateCode) {
         return rejectWithValue({ message: "State code is required" });
@@ -80,7 +80,7 @@ export const getCitiesByState = createAsyncThunk(
       }
 
       return res.data.data?.records || [];
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to fetch cities",
       });
@@ -112,44 +112,44 @@ const stateCitySlice = createSlice({
   extraReducers: (builder) => {
     // GET STATES
     builder
-      .addCase(getStates.pending, (state) => {
+      .addCase(getStates.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(getStates.fulfilled, (state, action) => {
+      .addCase(getStates.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.states = action.payload;
       })
-      .addCase(getStates.rejected, (state, action) => {
+      .addCase(getStates.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message || "Something went wrong";
       });
 
     // GET CITIES
     builder
-      .addCase(getCitiesByState.pending, (state) => {
+      .addCase(getCitiesByState.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(getCitiesByState.fulfilled, (state, action) => {
+      .addCase(getCitiesByState.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.cities = action.payload;
       })
-      .addCase(getCitiesByState.rejected, (state, action) => {
+      .addCase(getCitiesByState.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message || "Something went wrong";
       });
     // GET LOCATION BY PINCODE
     builder
-      .addCase(getLocationByPincode.pending, (state) => {
+      .addCase(getLocationByPincode.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(getLocationByPincode.fulfilled, (state, action) => {
+      .addCase(getLocationByPincode.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.pincodeLocation = action.payload;
       })
-      .addCase(getLocationByPincode.rejected, (state, action) => {
+      .addCase(getLocationByPincode.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message || "Something went wrong";
       });

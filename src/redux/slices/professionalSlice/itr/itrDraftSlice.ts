@@ -26,10 +26,10 @@ const itrDraftSlice = createSlice({
   name: "itrDraft",
   initialState,
   reducers: {
-    setMeta(state, action) {
+    setMeta(state: any, action: any) {
       Object.assign(state.meta, action.payload);
     },
-    setSection(state, action) {
+    setSection(state: any, action: any) {
       const { key, data } = action.payload;
       state.sections[key] = data;
     },

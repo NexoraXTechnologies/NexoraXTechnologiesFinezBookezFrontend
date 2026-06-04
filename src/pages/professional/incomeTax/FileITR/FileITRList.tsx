@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshCcw, Trash2, Download, Edit, FileArchive } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -6,14 +6,14 @@ import ConfirmTooltip from '../../../../components/common/ConfirmTooltip';
 import { useNavigate } from 'react-router-dom';
 
 // ✅ update this import path to where you placed the slice
-import { getAllItrFilingWeb, getItrFilingWebById, deleteItrFilingWeb } from '../../../../redux/slices/professionalSlice/fileITRweb/itrFilingWebMgtSlice';
+import { getAllItrFilingWeb, deleteItrFilingWeb } from '../../../../redux/slices/professionalSlice/fileITRweb/itrFilingWebMgtSlice';
 
 const FileITRList = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   // ✅ update selector key as per your store
-  const { records, loading, pagination, summary } = useSelector((s) => s.itrFilingWebMgt);
+  const { records, loading, pagination } = useSelector((s: any) => s.itrFilingWebMgt);
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -26,7 +26,7 @@ const FileITRList = () => {
   const [objectKey, setObjectKey] = useState('');
   const [debouncedObjectKey, setDebouncedObjectKey] = useState('');
 
-  const [confirmTooltip, setConfirmTooltip] = useState({
+  const [confirmTooltip, setConfirmTooltip]: any = useState({
     show: false,
     x: null,
     y: null,
@@ -37,8 +37,8 @@ const FileITRList = () => {
   // Load list
   // ==================================================
   useEffect(() => {
-    dispatch(
-      getAllItrFilingWeb({
+    {/* @ts-ignore */ }
+    dispatch(getAllItrFilingWeb({
         page,
         limit,
         pan: debouncedPan.trim(),
@@ -72,8 +72,8 @@ const FileITRList = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await dispatch(
-        getAllItrFilingWeb({
+      {/* @ts-ignore */ }
+      await dispatch(getAllItrFilingWeb({
           page,
           limit,
           pan: debouncedPan.trim(),
@@ -81,7 +81,7 @@ const FileITRList = () => {
         })
       ).unwrap();
       toast.success('ITR list refreshed');
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to refresh');
     } finally {
       setRefreshing(false);
@@ -91,8 +91,8 @@ const FileITRList = () => {
   // ==================================================
   // Download (placeholder)
   // ==================================================
-  const isTrue = (v) => v === true || v === 'true' || v === 1 || v === '1';
-  const downloadJsonFile = (fileName, data) => {
+  const isTrue = (v: any) => v === true || v === 'true' || v === 1 || v === '1';
+  const downloadJsonFile = (fileName: string, data: any) => {
     const jsonText = JSON.stringify(data, null, 2); // pretty format
     const blob = new Blob([jsonText], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -106,7 +106,7 @@ const FileITRList = () => {
 
     URL.revokeObjectURL(url);
   };
-const handleDownload = async (row) => {
+  const handleDownload = async (row: any) => {
   const verifyPay = row?.payload?.sections?.verifyPay;
 
   const verified = isTrue(verifyPay?.isVerify);
@@ -134,7 +134,7 @@ const handleDownload = async (row) => {
   // Edit (fetch single record & navigate)
   // ==================================================
 
-  const handleEdit = (row) => {
+  const handleEdit = (row: any) => {
     const rowPan = row?.pan || row?.panCard;
     const rowAy = row?.assessmentYear;
 
@@ -170,18 +170,18 @@ const handleDownload = async (row) => {
   // ==================================================
   const handleDeleteConfirm = async () => {
     try {
+      {/* @ts-ignore */ }
       await dispatch(deleteItrFilingWeb(confirmTooltip.id)).unwrap();
       toast.success('Record deleted');
-
-      dispatch(
-        getAllItrFilingWeb({
+      {/* @ts-ignore */ }
+      dispatch(getAllItrFilingWeb({
           page,
           limit,
           pan: debouncedPan.trim(),
           objectKey: debouncedObjectKey.trim(),
         })
       );
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Delete failed');
     } finally {
       setConfirmTooltip({ show: false, x: null, y: null, id: null });
@@ -247,7 +247,7 @@ const handleDownload = async (row) => {
 
             <tbody>
               {records?.length ? (
-                records.map((row, idx) => {
+                records.map((row: any, idx: any) => {
                   const rowPan = row?.pan || row?.panCard || '-';
                   const rowAy = row?.assessmentYear || row?.AssessmentYear || row?.ay || '-';
                   const rowStatus = row?.status || row?.payload?.status || row?.Status || '—';

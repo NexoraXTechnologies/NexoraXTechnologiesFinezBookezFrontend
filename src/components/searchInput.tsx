@@ -1,6 +1,6 @@
 import { Search } from "lucide-react"
 
-const SearchInput = ({ search, setSearch }) => {
+const SearchInput = ({ search, setSearch }: any) => {
     return (
         <div className="relative w-full sm:w-72">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

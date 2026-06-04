@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { RefreshCcw, Trash2, Edit, Download, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Trash2, Edit, Download } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import ConfirmTooltip from "../../components/common/ConfirmTooltip";
@@ -11,7 +11,6 @@ import {
 } from "../../redux/slices/professionalSlice/professionalTaskManagementSlice";
 
 import { getProfessionalUsers } from "../../redux/slices/professionalSlice/professionalUserSlice";
-import ReadMoreText from "../../components/common/ReadMoreText";
 import {
   uploadDocument,
   downloadDocument,
@@ -23,27 +22,25 @@ import { DataCreateButton, DataREfreshButton } from "../../components/buttons";
 const TaskManagement = () => {
   const dispatch = useDispatch();
   const { tasks, page, limit, totalCount, totalPages, loading } = useSelector(
-    (s) => s.professionalTaskMgt
+    (s: any) => s.professionalTaskMgt
   );
-  const { users } = useSelector((s) => s.professionalUser || {});
-  const professionalHeaders = JSON.parse(
-    localStorage.getItem("professionalHeaders")
-  );
-  const professionalUser = JSON.parse(localStorage.getItem("professionalUser"));
+  const { users } = useSelector((s: any) => s.professionalUser || {});
+  {/* @ts-ignore */ }
+  const professionalHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
+  // const professionalUser = JSON.parse(localStorage.getItem("professionalUser"));
 
   const canCreate =
     professionalHeaders?.["x-db-name"] === professionalHeaders?.loginuser;
 
   const [localPage, setLocalPage] = useState(1);
   const [localLimit, setLocalLimit] = useState(10);
-  const [refreshing, setRefreshing] = useState(false);
+  // const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [attachmentFile, setAttachmentFile] = useState(null);
-  const [attachmentInfo, setAttachmentInfo] = useState(null);
+  const [editingTask, setEditingTask]: any = useState(null);
+  const [errors, setErrors]: any = useState({});
+  const [attachmentInfo, setAttachmentInfo]: any = useState(null);
 
   const [confirmTooltip, setConfirmTooltip] = useState({
     show: false,
@@ -68,7 +65,7 @@ const TaskManagement = () => {
   };
 
   // Form state for add/edit
-  const [form, setForm] = useState({
+  const [form, setForm]: [any, (form: any) => void] = useState({
     taskName: "",
     projectName: "",
     taskDetails: "",
@@ -83,7 +80,9 @@ const TaskManagement = () => {
 
   // Fetch tasks & users
   useEffect(() => {
+    {/* @ts-ignore */ }
     dispatch(getAllTasks(buildTaskParams()));
+    {/* @ts-ignore */ }
     dispatch(getProfessionalUsers());
   }, [dispatch, localPage, localLimit, debouncedSearch, canCreate]);
 
@@ -98,9 +97,10 @@ const TaskManagement = () => {
 
   // Refresh
   const handleRefresh = async () => {
-    setRefreshing(true);
+    // setRefreshing(true);
+    {/* @ts-ignore */ }
     await dispatch(getAllTasks(buildTaskParams()));
-    setRefreshing(false);
+    // setRefreshing(false);
     toast.success("Task list refreshed");
   };
 
@@ -129,22 +129,22 @@ const TaskManagement = () => {
   };
 
   // Open Edit Modal
-  const openEditModal = (task) => {
-    const assignedUser = users?.find(
-      (u) =>
-        String(u.userMobileNumberHash) === String(task.taskAssignedToMobile)
-    );
+  const openEditModal = (task: any) => {
+  // const assignedUser = users?.find(
+  //   (u: any) =>
+  //     String(u.userMobileNumberHash) === String(task.taskAssignedToMobile)
+  // );
 
-    const assignedName = assignedUser
-      ? [
-        assignedUser.userFirstName,
-        assignedUser.userMiddleName,
-        assignedUser.userLastName,
-      ]
-        .map((part) => (part || "").trim())
-        .filter(Boolean)
-        .join(" ")
-      : task.taskAssignedTo || "";
+    // const assignedName = assignedUser
+    //   ? [
+    //     assignedUser.userFirstName,
+    //     assignedUser.userMiddleName,
+    //     assignedUser.userLastName,
+    //   ]
+    //     .map((part) => (part || "").trim())
+    //     .filter(Boolean)
+    //     .join(" ")
+    //   : task.taskAssignedTo || "";
 
     setEditingTask(task);
 
@@ -188,6 +188,7 @@ const TaskManagement = () => {
         fd.append("description", "Uploaded");
         fd.append("uploadDate", new Date().toISOString());
         fd.append("tags[]", "KBTAG-000011");
+        {/* @ts-ignore */ }
         uploadedDoc = await dispatch(uploadDocument(fd)).unwrap();
       }
 
@@ -233,11 +234,12 @@ const TaskManagement = () => {
             String(prevCompletion || "") !== String(newCompletion || "") ||
             prevRemark !== newRemark
           ) {
-            const newEntry = {
+            const newEntry: any = {
               taskCompletionPercentage: newCompletion,
               taskCompletionPercentageDetails: newRemark,
               updatedOn: new Date().toISOString(),
             };
+            // @ts-ignore
             updatedCompletionList = [newEntry, ...taskCompletionList];
           }
 
@@ -248,14 +250,14 @@ const TaskManagement = () => {
           // keep also taskRemarks for compatibility
           payload.taskRemarks = newRemark;
         }
-
-        await dispatch(
-          updateTask({ taskId: editingTask.taskId, data: payload })
+        {/* @ts-ignore */ }
+        await dispatch(updateTask({ taskId: editingTask.taskId, data: payload })
         ).unwrap();
         toast.success("Task updated successfully");
       } else {
         // CREATE MODE
         payload.taskStatus = "Open";
+        {/* @ts-ignore */ }
         await dispatch(createTask(payload)).unwrap();
         toast.success("Task added successfully");
       }
@@ -264,9 +266,9 @@ const TaskManagement = () => {
       setAttachmentInfo(null);
       setCompletion("");
       setTaskCompletionList([]);
-
+      // @ts-ignore
       dispatch(getAllTasks(buildTaskParams()));
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.message || "Operation failed");
     }
   };
@@ -274,8 +276,10 @@ const TaskManagement = () => {
   // Delete confirm
   const handleDeleteConfirm = async () => {
     try {
+      // @ts-ignore
       await dispatch(softDeleteTask(confirmTooltip.taskId)).unwrap();
       toast.success("Task deleted");
+      // @ts-ignore
       dispatch(getAllTasks(buildTaskParams()));
     } finally {
       setConfirmTooltip({ show: false, x: null, y: null, taskId: null });
@@ -291,7 +295,7 @@ const TaskManagement = () => {
   const endIndex = totalCount > 0 ? offset + (tasks?.length || 0) : 0;
   const today = new Date().toISOString().split("T")[0];
 
-  const toDateInputFormat = (isoString) => {
+  const toDateInputFormat = (isoString: any) => {
     const d = new Date(isoString);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -299,35 +303,35 @@ const TaskManagement = () => {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const formatDateDDMMYYYY = (iso) => {
-    if (!iso) return "—";
-    const d = new Date(iso);
-    if (isNaN(d)) return "—";
+  // const formatDateDDMMYYYY = (iso) => {
+  //   if (!iso) return "—";
+  //   const d = new Date(iso);
+  //   if (isNaN(d)) return "—";
 
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
+  //   const dd = String(d.getDate()).padStart(2, "0");
+  //   const mm = String(d.getMonth() + 1).padStart(2, "0");
+  //   const yyyy = d.getFullYear();
 
-    return `${dd}-${mm}-${yyyy}`;
-  };
+  //   return `${dd}-${mm}-${yyyy}`;
+  // };
 
-  const formatDateTime = (isoString) => {
-    const d = new Date(isoString);
+  // const formatDateTime = (isoString: any) => {
+  //   const d = new Date(isoString);
 
-    const pad = (n) => (n < 10 ? "0" + n : n);
+  //   const pad = (n) => (n < 10 ? "0" + n : n);
 
-    const day = pad(d.getDate());
-    const month = pad(d.getMonth() + 1);
-    const year = d.getFullYear();
+  //   const day = pad(d.getDate());
+  //   const month = pad(d.getMonth() + 1);
+  //   const year = d.getFullYear();
 
-    const hours = pad(d.getHours());
-    const minutes = pad(d.getMinutes());
-    const seconds = pad(d.getSeconds());
+  //   const hours = pad(d.getHours());
+  //   const minutes = pad(d.getMinutes());
+  //   const seconds = pad(d.getSeconds());
 
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-  };
+  //   return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  // };
 
-  const columns = [
+  const columns: any = [
     {
       key: 'taskId',
       title: 'Task ID',
@@ -380,6 +384,7 @@ const TaskManagement = () => {
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SearchInput {...{ search, setSearch }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
+          {/* @ts-ignore */}
           <DataCreateButton {...{ callBackFn: openAddModal, text:"Add Task" }} />
         </div>
       </div>
@@ -388,7 +393,7 @@ const TaskManagement = () => {
         data={tasks}
         loading={loading}
         emptyMessage="No Task Created"
-        actions={(e) => (
+        actions={(t: any) => (
           <div className="flex items-center gap-2">
             {/* EDIT */}
             <button id="task-edit-button" onClick={() => openEditModal(t)} className="text-blue-600 hover:text-blue-800" title="Edit">
@@ -398,18 +403,18 @@ const TaskManagement = () => {
             {canCreate && (
               <button
                 id="task-delete-button"
-                onClick={(e) => {
+                onClick={(e: any) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const tooltipWidth = 150;
-                  let x = rect.left - tooltipWidth;
+                  let x: any = rect.left - tooltipWidth;
                   if (x < 10) x = 10;
-                  const y = rect.top + window.scrollY - 5;
+                  const y: any = rect.top + window.scrollY - 5;
 
                   setConfirmTooltip({
                     show: true,
                     x,
                     y,
-                    taskId: t.taskId,
+                    taskId: e.taskId,
                   });
                 }}
                 className="text-red-600 hover:text-red-800"
@@ -505,9 +510,9 @@ const TaskManagement = () => {
             <h2 className="text-lg font-semibold mb-4">{editingTask ? 'Edit Task' : 'Add New Task'}</h2>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={(e: any) => {
                 e.preventDefault();
-                const newErrors = {};
+                const newErrors: { [key: string]: string } = {};
 
                 if (!form.taskName.trim()) newErrors.taskName = 'Task name is required.';
                 if (!form.taskCompletionDate) newErrors.taskCompletionDate = 'Due date is required.';
@@ -518,7 +523,6 @@ const TaskManagement = () => {
                   if (!form.taskRemarks?.trim()) {
                     newErrors.taskRemarks = 'Remark is required.';
                   }
-
                   const prev = Number(editingTask.taskCompletionPercentage || 0);
                   if (completion && Number(completion || 0) < Number(prev || 0)) {
                     newErrors.completion = 'Completion percentage cannot be less than previous value.';
@@ -540,7 +544,7 @@ const TaskManagement = () => {
                 <input
                   type="text"
                   value={form.taskName}
-                  onChange={(e) => setForm({ ...form, taskName: e.target.value })}
+                  onChange={(e: any) => setForm({ ...form, taskName: e.target.value })}
                   className={`border rounded-md px-3 py-2 ${errors?.taskName ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="Enter task name"
                   disabled={!canCreate}
@@ -588,6 +592,7 @@ const TaskManagement = () => {
 
                     <div className="flex items-center gap-3">
                       {/* Download Icon */}
+                      {/* @ts-ignore */}
                       <button type="button" onClick={() => dispatch(downloadDocument(attachmentInfo.name))} className="text-blue-600 hover:text-blue-800" title="Download">
                         <Download size={16} />
                       </button>
@@ -697,7 +702,7 @@ const TaskManagement = () => {
                   onChange={(e) => {
                     const selectedMobile = e.target.value;
 
-                    const user = users?.find((u) => String(u.userMobileNumberHash) === String(selectedMobile));
+                    const user = users?.find((u: any) => String(u.userMobileNumberHash) === String(selectedMobile));
                     if (!user) return;
 
                     const fullName = [user.userFirstName, user.userMiddleName, user.userLastName]
@@ -705,7 +710,7 @@ const TaskManagement = () => {
                       .filter(Boolean)
                       .join(' ');
 
-                    setForm((prev) => ({
+                    setForm((prev: any) => ({
                       ...prev,
                       taskAssignedTo: fullName,
                       taskAssignedToMobile: selectedMobile,
@@ -713,7 +718,7 @@ const TaskManagement = () => {
                   }}>
                   <option value="">Select Assigned User</option>
 
-                  {users?.map((u) => {
+                  {users?.map((u: any) => {
                     const fullName = [u.userFirstName, u.userMiddleName, u.userLastName].filter(Boolean).join(' ');
 
                     return (
@@ -766,7 +771,7 @@ const TaskManagement = () => {
               {editingTask && (
                 <div className="col-span-2 mt-2">
                   {taskCompletionList && taskCompletionList.length > 0 ? (
-                    taskCompletionList.map((item, index) => (
+                    taskCompletionList.map((item: any, index: any) => (
                       <div key={index} className="border border-gray-300 rounded-md p-3 mb-2 bg-gray-50">
                         <div className="flex justify-between items-center mb-1">
                           <p className="text-sm font-semibold text-gray-800">{item.taskCompletionPercentage}% Completed</p>

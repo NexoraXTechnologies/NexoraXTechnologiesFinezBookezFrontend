@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const ProQuickLinks = ({ links = [] }) => {
+const ProQuickLinks = ({ links = [] }: { links: { label: string; to: string }[] }) => {
   if (!links.length) return null;
 
   return (

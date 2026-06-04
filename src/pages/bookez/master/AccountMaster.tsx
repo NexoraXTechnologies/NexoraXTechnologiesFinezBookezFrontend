@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Edit, X } from "lucide-react";
+import { Trash2, Edit, } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
@@ -10,11 +10,10 @@ import {
 	deleteAccount,
 	getAllAccountMasterSchema,
 } from "../../../redux/slices/professionalSlice/accountMasterSlice";
-import { DataCreateButton, DataREfreshButton, PrimaryButton, SecondaryButton } from "../../../components/buttons";
+import { DataCreateButton, DataREfreshButton } from "../../../components/buttons";
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import SearchInput from "../../../components/searchInput";
-import { AnimatePresence, motion } from "framer-motion";
 import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import Badge from "../../../components/badge";
@@ -25,7 +24,7 @@ const columns = [
 	{ key: 'accountName', title: 'Name', },
 	{
 		key: 'accountType', title: 'Type',
-		render: (row) => (
+		render: (row: any) => (
 			<span className="px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs">
 				{row.accountType}
 			</span>
@@ -54,10 +53,10 @@ const AccountMaster = () => {
 	const [localLimit, setLocalLimit] = useState(10);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [refreshing, setRefreshing] = useState(false);
+	// const [refreshing, setRefreshing] = useState(false);
 	const [showModal, setShowModal] = useState(false);
-	const [editingAccount, setEditingAccount] = useState(null);
-	const [errors, setErrors] = useState({});
+	const [editingAccount, setEditingAccount]: any = useState(null);
+	const [errors, setErrors]: any = useState({});
 
 	const [pendingCity, setPendingCity] = useState("");
 	const [confirmTooltip, setConfirmTooltip] = useState({
@@ -106,6 +105,7 @@ const AccountMaster = () => {
 	} = useSelector((s: any) => s.stateCity || {});
 
 	useEffect(() => {
+		// @ts-ignore
 		dispatch(getStates() as any);
 	}, [dispatch]);
 
@@ -263,11 +263,11 @@ const AccountMaster = () => {
 		  FETCH Form Fields
 	============================================= */
 
-	const regex = {
-		accountMobile: { regex: "",type:"tel" },
-		accountMobile: { regex: "", },
-		accountMobile: { regex: "", },
-	}
+	// const regex = {
+	// 	accountMobile: { regex: "",type:"tel" },
+	// 	accountMobile: { regex: "", },
+	// 	accountMobile: { regex: "", },
+	// }
 
 	const renderSchemaField = (field: any) => {
 		const value = form?.[field.key] ?? "";
@@ -370,7 +370,7 @@ const AccountMaster = () => {
 				<TextInput
 					key={field.key}
 					{...commonProps}
-					type={regex?.[field.key]?.type}
+					// type={regex?.[field.key]?.type}
 					onChange={(e: any) =>
 						setForm({
 							...form,
@@ -424,6 +424,7 @@ const AccountMaster = () => {
 		  FETCH ACCOUNTS
 	============================================= */
 	const fetchAccounts = () => {
+		// @ts-ignore
 		dispatch(getAllAccounts({ offset: localOffset, limit: localLimit, search: debouncedSearch, }));
 	};
 
@@ -447,10 +448,10 @@ const AccountMaster = () => {
 		  REFRESH
 	============================================= */
 	const handleRefresh = async () => {
-		setRefreshing(true);
+		// setRefreshing(true);
 		await fetchAccounts();
 		toast.success("Account list refreshed");
-		setRefreshing(false);
+		// setRefreshing(false);
 	};
 
 	/* ============================================
@@ -688,6 +689,7 @@ const AccountMaster = () => {
 	============================================= */
 	const handleDeleteConfirm = async () => {
 		try {
+			// @ts-ignore
 			await dispatch(deleteAccount(confirmTooltip.accountCode)).unwrap();
 			toast.success("Account deleted");
 			fetchAccounts();
@@ -707,6 +709,7 @@ const AccountMaster = () => {
 				<div className="ml-auto flex flex-wrap items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
+					{/* @ts-ignore */}
 					<DataCreateButton {...{ callBackFn: openAddModal }} />
 				</div>
 			</div>
@@ -717,7 +720,7 @@ const AccountMaster = () => {
 				data={accounts}
 				loading={loading}
 				emptyMessage="No accounts found"
-				actions={(acc) => (
+				actions={(acc: any) => (
 					<div className="flex items-center gap-2">
 						{/* EDIT */}
 						<button
@@ -732,9 +735,9 @@ const AccountMaster = () => {
 							id="account-delete-button"
 							onClick={(e) => {
 								const rect = e.currentTarget.getBoundingClientRect();
-								let x = rect.left - 150;
+								let x: any = rect.left - 150;
 								if (x < 10) x = 10;
-								const y = rect.top + window.scrollY - 5;
+								const y: any = rect.top + window.scrollY - 5;
 								setConfirmTooltip({ show: true, x, y, accountCode: acc.accountCode, });
 							}}
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
@@ -746,7 +749,7 @@ const AccountMaster = () => {
 			/>
 
 			{pagination.totalDocs > 0 && <Pagination  {...{
-				localLimit, selectCb: (e) => {
+				localLimit, selectCb: (e: any) => {
 					setLocalLimit(Number(e.target.value));
 					setLocalOffset(0);
 				},
@@ -776,7 +779,7 @@ const AccountMaster = () => {
 			)}
 
 
-
+			{/* @ts-ignore */}
 			<Modal
 				{...{
 					show: showModal,

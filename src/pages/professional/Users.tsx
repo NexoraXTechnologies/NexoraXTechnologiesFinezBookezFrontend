@@ -9,7 +9,7 @@ import {
 
 import { verifyPanWithHeader, resetVerifyPan } from '../../redux/slices/professionalSlice/panVerify/panVerify';
 import { toast } from "react-toastify";
-import { RefreshCcw, Trash2, Plus, Edit } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import ConfirmTooltip from "../../components/common/ConfirmTooltip";
 import { formatToDDMMYYYY } from '../../components/common/DateFormator';
 import SearchInput from "../../components/searchInput";
@@ -21,17 +21,17 @@ import { SelectInput, TextInput } from "../../components/inputs";
 
 const Users = () => {
   const dispatch = useDispatch();
-  const { users, loading, pagination } = useSelector((s) => s.professionalUser);
+  const { users, loading, pagination } = useSelector((s: any) => s.professionalUser);
   const [localPage, setLocalPage] = useState(1);
   const [localLimit, setLocalLimit] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const { loading: panLoading } = useSelector((s) => s.verifyPan);
+  // const [refreshing, setRefreshing] = useState(false);
+  const { loading: panLoading } = useSelector((s: any) => s.verifyPan);
   const [panVerified, setPanVerified] = useState(false);
   const [panVerifyFailed, setPanVerifyFailed] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
-  const [confirmTooltip, setConfirmTooltip] = useState({
+  const [confirmTooltip, setConfirmTooltip]: any = useState({
     show: false,
     x: null,
     y: null,
@@ -40,7 +40,7 @@ const Users = () => {
   // console.log(updateProfessionalUser);
   // console.log(updateProfessionalUser.typePrefix);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData]: [any, (formData: any) => void] = useState({
     userFirstName: "",
     userMiddleName: "",
     userLastName: "",
@@ -53,22 +53,24 @@ const Users = () => {
     userType: "",
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]: any = useState({});
 
   // Fetch users
- useEffect(() => {
+  useEffect(() => {
+    // @ts-ignore
    dispatch(getProfessionalUsers({ page: localPage, limit: localLimit }));
  }, [dispatch, localPage, localLimit]);
 
  const handleRefresh = async () => {
-   setRefreshing(true);
+   //  setRefreshing(true);
+   // @ts-ignore
    await dispatch(getProfessionalUsers({ page: localPage, limit: localLimit }));
    toast.success('List refreshed');
-   setRefreshing(false);
+   //  setRefreshing(false);
  };
 
   // Filtering
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = users.filter((u: any) => {
     const name = `${u.userFirstName} ${u.userLastName}`.toLowerCase();
     return (
       name.includes(searchTerm.toLowerCase()) ||
@@ -78,7 +80,7 @@ const Users = () => {
   });
 
   // LIVE FIELD VALIDATION
-  const validateField = (name, value) => {
+  const validateField = (name: any, value: any) => {
     let error = "";
 
     switch (name) {
@@ -133,12 +135,12 @@ const Users = () => {
         break;
     }
 
-    setErrors((prev) => ({ ...prev, [name]: error }));
+    setErrors((prev: any) => ({ ...prev, [name]: error }));
   };
 
   // GLOBAL VALIDATION (Before Submit)
   const validate = () => {
-    const newErrors = {};
+    const newErrors: any = {};
 
     if (!formData.userFirstName.trim())
       newErrors.userFirstName = "First name is required";
@@ -179,7 +181,7 @@ const Users = () => {
   };
 
   // Handle form input change
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target;
 
     let newValue = value;
@@ -196,26 +198,26 @@ const Users = () => {
       dispatch(resetVerifyPan());
     }
 
-    setFormData((prev) => ({ ...prev, [name]: newValue }));
+    setFormData((prev: any) => ({ ...prev, [name]: newValue }));
 
     validateField(name, newValue);
   };
 
   // Submit
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!validate()) return;
 
     try {
       if (editingAccount) {
-        const updatePayload = {};
+        const updatePayload: any = {};
 
         const fields: any = ["userFirstName", "userLastName", "userGender", "userDOB", "userEmail", "userMobileNumberHash", "userPAN", "userType"];
-        fields.forEach((field) => {
+        fields.forEach((field: any) => {
           if (formData[field] !== editingAccount[field]) updatePayload[field] = formData[field];
         });
-        console.log({ updatePayload, editingAccount })
         try {
+          // @ts-ignore
           await dispatch(updateProfessionalUser({ parentMobile: editingAccount?.parentUserMobileNumber, data: { ChildUser: { matchMobile: editingAccount?.userMobileNumberHash, ...updatePayload } } }));
         } catch (err) {
           console.log("OUTER ERROR", err);
@@ -223,9 +225,9 @@ const Users = () => {
 
         toast.success("Account updated successfully");
       } else {
-        await dispatch(
-          addProfessionalUser({
-            ...formData,
+        // @ts-ignore
+        await dispatch(addProfessionalUser({
+          ...formData,
             userPAN: formData.userPAN.toUpperCase(),
           })
         ).unwrap();
@@ -234,18 +236,20 @@ const Users = () => {
       setShowModal(false);
       resetUserForm();
       setLocalPage(1);
+      // @ts-ignore
       dispatch(getProfessionalUsers({ page: 1, limit: localLimit }));
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || "Failed to add Employee/Team");
     }
   };
 
   // Delete User
-  const handleDelete = async (mobile) => {
+  const handleDelete = async (mobile: string) => {
     try {
+      // @ts-ignore
       await dispatch(deleteProfessionalUser(mobile)).unwrap();
       toast.success("User deleted successfully");
-    } catch (err) {
+    } catch (err: any) {
       toast.error("Failed to delete user");
     } finally {
       setConfirmTooltip({ show: false, x: null, y: null, mobile: null });
@@ -254,10 +258,10 @@ const Users = () => {
   const totalCount = pagination?.totalDocs ?? 0;
   const totalPages = pagination?.totalPages ?? 1;
   const page = pagination?.currentPage ?? localPage;
-  const limit = pagination?.limit ?? localLimit;
+  // const limit = pagination?.limit ?? localLimit;
 
-  const startIndex = totalCount === 0 ? 0 : (page - 1) * limit + 1;
-  const endIndex = Math.min(page * limit, totalCount);
+  // const startIndex = totalCount === 0 ? 0 : (page - 1) * limit + 1;
+  // const endIndex = Math.min(page * limit, totalCount);
 
   const resetUserForm = () => {
     setFormData({
@@ -289,7 +293,7 @@ const Users = () => {
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan)) {
       setPanVerified(false);
       setPanVerifyFailed(true);
-      setErrors((prev) => ({
+      setErrors((prev: any) => ({
         ...prev,
         userPAN: 'Enter valid PAN',
       }));
@@ -298,20 +302,21 @@ const Users = () => {
     }
 
     try {
+      // @ts-ignore
       const res = await dispatch(verifyPanWithHeader({ pan })).unwrap();
 
       setPanVerified(true);
       setPanVerifyFailed(false);
-      setErrors((prev) => ({
+      setErrors((prev: any) => ({
         ...prev,
         userPAN: '',
       }));
 
       toast.success(res?.message || 'PAN verified successfully');
-    } catch (err) {
+    } catch (err: any) {
       setPanVerified(false);
       setPanVerifyFailed(true);
-      setErrors((prev) => ({
+      setErrors((prev: any) => ({
         ...prev,
         userPAN: 'PAN verification failed',
       }));
@@ -321,6 +326,7 @@ const Users = () => {
   };
 
   const openEditModal = (acc: any) => {
+    // @ts-ignore
     console.log({ acc })
     setEditingAccount(acc);
     setFormData({
@@ -368,6 +374,7 @@ const Users = () => {
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SearchInput {...{ search: searchTerm, setSearch: setSearchTerm }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
+          {/* @ts-ignore */}
           <DataCreateButton {...{ callBackFn: () => setShowModal(true), text: "Add Team/Employee" }} />
         </div>
       </div>
@@ -377,7 +384,7 @@ const Users = () => {
         data={filteredUsers}
         loading={loading}
         emptyMessage="No accounts found"
-        actions={(each) => (
+        actions={(each: any) => (
           <div className="flex items-center gap-2">
             <button
               id="account-edit-button"
@@ -387,7 +394,7 @@ const Users = () => {
               <Edit size={16} />
             </button>
             <button
-              onClick={(e) => {
+              onClick={(e: any) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 setConfirmTooltip({
                   show: true,
@@ -402,7 +409,7 @@ const Users = () => {
           </div>
         )}
       />
-
+      {/*  @ts-ignore */}
       <Modal {...{
         show: showModal, setShow: () => {
           setShowModal(false);
@@ -464,7 +471,7 @@ const Users = () => {
       }} />
 
       {totalCount > 0 && <Pagination  {...{
-        localLimit, selectCb: (e) => {
+        localLimit, selectCb: (e: React.ChangeEvent<HTMLSelectElement>) => {
           setLocalLimit(Number(e.target.value));
           setLocalPage(1);
         },

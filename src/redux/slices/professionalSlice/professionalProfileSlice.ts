@@ -9,6 +9,7 @@ export const getProfessionalProfile = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       // Get mobile number from localStorage
+      // @ts-ignore
       const professionalHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
       const mobile = professionalHeaders?.loginuser;
 
@@ -27,7 +28,7 @@ export const getProfessionalProfile = createAsyncThunk(
       }
 
       return res.data.data?.ChildUsers;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to fetch profile",
       });
@@ -42,6 +43,7 @@ export const updateProfessionalProfile = createAsyncThunk(
   "professionalProfile/updateProfessionalProfile",
   async (profileData, { rejectWithValue }) => {
     try {
+      // @ts-ignore
       const professionalHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
       const mobile = professionalHeaders?.["x-db-name"];
 
@@ -61,7 +63,7 @@ export const updateProfessionalProfile = createAsyncThunk(
       }
 
       return res.data.data?.ChildUsers || profileData;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to update profile",
       });
@@ -98,7 +100,7 @@ const professionalProfileSlice = createSlice({
         state.loading = false;
         state.profile = action.payload;
       })
-      .addCase(getProfessionalProfile.rejected, (state, action) => {
+      .addCase(getProfessionalProfile.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message || "Something went wrong";
       });
@@ -115,7 +117,7 @@ const professionalProfileSlice = createSlice({
         state.profile = action.payload;
         state.updateSuccess = true;
       })
-      .addCase(updateProfessionalProfile.rejected, (state, action) => {
+      .addCase(updateProfessionalProfile.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message || "Failed to update profile";
       });

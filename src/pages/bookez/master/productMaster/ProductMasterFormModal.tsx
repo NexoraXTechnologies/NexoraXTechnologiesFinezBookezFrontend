@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import Modal from "../../../../components/modal";
 import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
 
@@ -433,6 +433,7 @@ const ProductMasterFormModal = ({
   };
 
   return (
+    // @ts-ignore
     <Modal
       {...{
         show,

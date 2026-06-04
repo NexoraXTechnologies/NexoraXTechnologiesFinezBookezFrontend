@@ -1,4 +1,3 @@
-import React from 'react';
 
 const badge = {
   info: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -7,7 +6,7 @@ const badge = {
   success: 'bg-green-50 text-green-700 border-green-200',
 };
 
-const ProAlertsList = ({ items = [] }) => {
+const ProAlertsList = ({ items = [] }: { items: { type: string; title: string; description: string }[] }) => {
   if (!items.length) {
     return <p className="text-sm text-gray-500">No alerts 🎉</p>;
   }
