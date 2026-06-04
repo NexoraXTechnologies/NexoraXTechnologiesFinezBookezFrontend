@@ -119,45 +119,6 @@ export const createSalesQuotation = createAsyncThunk<
     GET ALL SALES QUOTATIONS
 =================================================== */
 
-// export const getAllSalesQuotations = createAsyncThunk<
-//   any,
-//   { offset?: number; limit?: number; search?: string } | undefined,
-//   { rejectValue: RejectValue }
-// >(
-//   "salesQuotation/getAllSalesQuotations",
-//   async ({ offset = 0, limit = 10, search = "" } = {}, { rejectWithValue }) => {
-//     try {
-//       const params: any = { offset, limit };
-
-//       if (search.trim()) {
-//         params.search = search.trim();
-//       }
-
-//       const res = await professionalAxios.get(
-//         "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/getAll",
-//         { params }
-//       );
-
-//       if (!res.data?.success) {
-//         return rejectWithValue({
-//           message: res.data?.message || "Failed to fetch sales quotations",
-//         });
-//       }
-
-//       return res.data?.data;
-//     } catch (err: any) {
-//       return rejectWithValue({
-//         message:
-//           err?.response?.data?.message ||
-//           err?.response?.data?.error ||
-//           "Failed to fetch sales quotations",
-//       });
-//     }
-//   }
-// );
-
-
-
 export const getAllSalesQuotations = createAsyncThunk<
     any,
     {

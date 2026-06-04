@@ -8,6 +8,7 @@ import {
 import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
 import SalesQuotations from "./salesQuations/SalesQuations";
+import SalesOrder from "./salesOrder/SalesOrder";
 
 const cards: DashboardCard[] = [
   {
@@ -19,7 +20,7 @@ const cards: DashboardCard[] = [
   {
     title: "Sales Orders",
     description: "Create and manage sales orders.",
-    path: "/professional/transaction/sale-workflow/sales-orders",
+    component: SalesOrder,
     icon: <ClipboardList size={22} />,
   },
   {
