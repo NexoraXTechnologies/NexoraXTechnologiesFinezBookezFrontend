@@ -16,7 +16,7 @@ export const resetItrPassword = createAsyncThunk('resetItrPassword/resetPassword
     }
 
     return res.data?.data ?? res.data;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to reset password',
     });
@@ -37,7 +37,7 @@ export const verifyResetItrPasswordOtp = createAsyncThunk('resetItrPassword/veri
     }
 
     return res.data?.data ?? res.data;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to verify OTP',
     });
@@ -52,7 +52,7 @@ export const startResetPasswordAutomation = createAsyncThunk('resetItrPassword/s
     const res = await axios.post('https://tvqv0u7ec8.execute-api.ap-south-1.amazonaws.com/api/automation/resetPassword/start', payload);
 
     return res.data?.data ?? res.data;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to start reset password automation',
     });
@@ -67,7 +67,7 @@ export const fetchResetPasswordStatusById = createAsyncThunk('resetItrPassword/f
     const res = await axios.get(`https://tvqv0u7ec8.execute-api.ap-south-1.amazonaws.com/api/automation/status/${jobId}`);
 
     return res.data?.data ?? res.data;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to fetch automation status',
     });
@@ -86,7 +86,7 @@ export const deleteResetPasswordJobById = createAsyncThunk('resetItrPassword/del
       jobId,
       message: res.data?.message || 'Job deleted successfully',
     };
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to delete automation job',
     });
@@ -142,71 +142,71 @@ const resetItrPasswordSlice = createSlice({
   extraReducers: (builder) => {
     builder
       /* ================= RESET PASSWORD ================= */
-      .addCase(resetItrPassword.pending, (state) => {
+      .addCase(resetItrPassword.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(resetItrPassword.fulfilled, (state, action) => {
+      .addCase(resetItrPassword.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.resetPasswordResponse = action.payload;
       })
-      .addCase(resetItrPassword.rejected, (state, action) => {
+      .addCase(resetItrPassword.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Something went wrong';
       })
 
       /* ================= VERIFY OTP ================= */
-      .addCase(verifyResetItrPasswordOtp.pending, (state) => {
+      .addCase(verifyResetItrPasswordOtp.pending, (state: any ) => {
         state.otpLoading = true;
         state.error = null;
       })
-      .addCase(verifyResetItrPasswordOtp.fulfilled, (state, action) => {
+      .addCase(verifyResetItrPasswordOtp.fulfilled, (state: any, action: any) => {
         state.otpLoading = false;
         state.otpVerificationResponse = action.payload;
       })
-      .addCase(verifyResetItrPasswordOtp.rejected, (state, action) => {
+      .addCase(verifyResetItrPasswordOtp.rejected, (state: any, action: any) => {
         state.otpLoading = false;
         state.error = action.payload?.message || 'Something went wrong';
       })
 
       /* ================= START AUTOMATION ================= */
-      .addCase(startResetPasswordAutomation.pending, (state) => {
+      .addCase(startResetPasswordAutomation.pending, (state: any) => {
         state.automationLoading = true;
         state.error = null;
       })
-      .addCase(startResetPasswordAutomation.fulfilled, (state, action) => {
+      .addCase(startResetPasswordAutomation.fulfilled, (state: any, action: any) => {
         state.automationLoading = false;
         state.automationStartResponse = action.payload;
       })
-      .addCase(startResetPasswordAutomation.rejected, (state, action) => {
+      .addCase(startResetPasswordAutomation.rejected, (state: any, action: any) => {
         state.automationLoading = false;
         state.error = action.payload?.message || 'Something went wrong';
       })
 
       /* ================= FETCH STATUS ================= */
-      .addCase(fetchResetPasswordStatusById.pending, (state) => {
+      .addCase(fetchResetPasswordStatusById.pending, (state: any) => {
         state.statusLoading = true;
         state.error = null;
       })
-      .addCase(fetchResetPasswordStatusById.fulfilled, (state, action) => {
+      .addCase(fetchResetPasswordStatusById.fulfilled, (state: any, action: any) => {
         state.statusLoading = false;
         state.automationStatusResponse = action.payload;
       })
-      .addCase(fetchResetPasswordStatusById.rejected, (state, action) => {
+      .addCase(fetchResetPasswordStatusById.rejected, (state: any, action: any) => {
         state.statusLoading = false;
         state.error = action.payload?.message || 'Something went wrong';
       })
 
       /* ================= DELETE JOB ================= */
-      .addCase(deleteResetPasswordJobById.pending, (state) => {
+      .addCase(deleteResetPasswordJobById.pending, (state: any) => {
         state.deleteLoading = true;
         state.error = null;
       })
-      .addCase(deleteResetPasswordJobById.fulfilled, (state, action) => {
+      .addCase(deleteResetPasswordJobById.fulfilled, (state: any, action: any) => {
         state.deleteLoading = false;
         state.deleteJobResponse = action.payload;
       })
-      .addCase(deleteResetPasswordJobById.rejected, (state, action) => {
+      .addCase(deleteResetPasswordJobById.rejected, (state: any, action: any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message || 'Something went wrong';
       });

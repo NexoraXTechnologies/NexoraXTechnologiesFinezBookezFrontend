@@ -8,7 +8,7 @@ import professionalAxios from "../../../services/professionalAxios";
 =================================================== */
 export const createAssemblyProduction = createAsyncThunk(
     "assemblyProduction/createAssemblyProduction",
-    async (payload, { rejectWithValue }) => {
+    async (payload: any, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.post(
                 "/eTaxSolnMongoApiBackend/users/bookez/otherApi/assemblyProduction/save",
@@ -21,7 +21,7 @@ export const createAssemblyProduction = createAsyncThunk(
                 });
 
             return res.data?.data ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.error || "Failed to create assembly production",
             });
@@ -35,13 +35,10 @@ export const createAssemblyProduction = createAsyncThunk(
 =================================================== */
 export const getAllAssemblyProductions = createAsyncThunk(
     "assemblyProduction/getAllAssemblyProductions",
-    async ({ offset = 0, limit = 10, search = "" } = {}, { rejectWithValue }) => {
+    async ({ offset = 0, limit = 10, search = "" }: { offset?: number; limit?: number; search?: string }, { rejectWithValue }) => {
         try {
-            const params = { offset, limit };
+            const params: { offset?: number; limit?: number; search?: string } = { offset, limit };
             if (search.trim()) params.search = search.trim();
-
-
-
             const res = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/bookez/otherApi/assemblyProduction/getAll",
                 { params }
@@ -55,7 +52,7 @@ export const getAllAssemblyProductions = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch assembly productions",
             });
@@ -83,7 +80,7 @@ export const getAssemblyProductionByVoucherNumber = createAsyncThunk(
                 });
 
             return res.data?.data?.assemblyProduction ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch assembly production",
             });
@@ -96,7 +93,7 @@ export const getAssemblyProductionByVoucherNumber = createAsyncThunk(
 =================================================== */
 export const updateAssemblyProduction = createAsyncThunk(
     "assemblyProduction/updateAssemblyProduction",
-    async ({ voucherNumber, data }, { rejectWithValue }) => {
+    async ({ voucherNumber, data }: { voucherNumber: string; data: any }, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.put(
                 `/eTaxSolnMongoApiBackend/users/bookez/otherApi/assemblyProduction/update/${voucherNumber}`,
@@ -109,7 +106,7 @@ export const updateAssemblyProduction = createAsyncThunk(
                 });
 
             return res.data?.data ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to update assembly production",
             });
@@ -134,7 +131,7 @@ export const deleteAssemblyProduction = createAsyncThunk(
                 });
 
             return voucherNumber;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to delete assembly production",
             });
@@ -175,7 +172,7 @@ const assemblyProductionSlice = createSlice({
     },
 
     reducers: {
-        clearAssemblyProductionState: (state) => {
+        clearAssemblyProductionState: (state: any) => {
             state.error = null;
             state.createLoading = false;
             state.updateLoading = false;
@@ -186,11 +183,11 @@ const assemblyProductionSlice = createSlice({
     extraReducers: (builder) => {
         /* ---------- GET ALL ---------- */
         builder
-            .addCase(getAllAssemblyProductions.pending, (state) => {
+            .addCase(getAllAssemblyProductions.pending, (state: any) => {
                 state.loading = true;
                 state.error = null;
             })
-            .addCase(getAllAssemblyProductions.fulfilled, (state, action) => {
+            .addCase(getAllAssemblyProductions.fulfilled, (state: any, action: any) => {
                 state.loading = false;
 
                 const data = action.payload; // <-- { pagination, items }
@@ -198,21 +195,21 @@ const assemblyProductionSlice = createSlice({
                 state.assemblyProductions = data?.records ?? [];
                 state.pagination = data?.pagination ?? state.pagination;
             })
-            .addCase(getAllAssemblyProductions.rejected, (state, action) => {
+            .addCase(getAllAssemblyProductions.rejected, (state: any, action: any) => {
                 state.loading = false;
                 state.error = action.payload?.message;
                 state.assemblyProductions = [];
             });
         /* ---------- GET BY ASSEMBLY PRODUCTION ID ---------- */
         builder
-            .addCase(getAssemblyProductionByVoucherNumber.pending, (state) => {
+            .addCase(getAssemblyProductionByVoucherNumber.pending, (state: any) => {
                 state.loading = true;
             })
-            .addCase(getAssemblyProductionByVoucherNumber.fulfilled, (state, action) => {
+            .addCase(getAssemblyProductionByVoucherNumber.fulfilled, (state: any, action: any) => {
                 state.loading = false;
                 state.selectedAssemblyProduction = action.payload ?? null;
             })
-            .addCase(getAssemblyProductionByVoucherNumber.rejected, (state, action) => {
+            .addCase(getAssemblyProductionByVoucherNumber.rejected, (state: any, action: any) => {
                 state.loading = false;
                 state.error = action.payload?.message;
             });
@@ -221,10 +218,10 @@ const assemblyProductionSlice = createSlice({
 
         /* ---------- CREATE ASSEMBLY PRODUCTION ---------- */
         builder
-            .addCase(createAssemblyProduction.pending, (state) => {
+            .addCase(createAssemblyProduction.pending, (state: any) => {
                 state.createLoading = true;
             })
-            .addCase(createAssemblyProduction.fulfilled, (state, action) => {
+            .addCase(createAssemblyProduction.fulfilled, (state: any, action: any) => {
                 state.createLoading = false;
 
                 if (action.payload) {
@@ -232,7 +229,7 @@ const assemblyProductionSlice = createSlice({
                     state.pagination.totalDocs += 1;
                 }
             })
-            .addCase(createAssemblyProduction.rejected, (state, action) => {
+            .addCase(createAssemblyProduction.rejected, (state: any, action: any) => {
                 state.createLoading = false;
                 state.error = action.payload?.message;
             });
@@ -243,17 +240,17 @@ const assemblyProductionSlice = createSlice({
             .addCase(updateAssemblyProduction.pending, (state) => {
                 state.updateLoading = true;
             })
-            .addCase(updateAssemblyProduction.fulfilled, (state, action) => {
+            .addCase(updateAssemblyProduction.fulfilled, (state: any, action: any) => {
                 state.updateLoading = false;
 
                 const updated = action.payload;
                 if (!updated?.voucherNumber) return;
 
-                state.assemblyProductions = state.assemblyProductions.map((assemblyProduction) =>
+                state.assemblyProductions = state.assemblyProductions.map((assemblyProduction: any) =>
                     assemblyProduction.voucherNumber === updated.voucherNumber ? updated : assemblyProduction
                 );
             })
-            .addCase(updateAssemblyProduction.rejected, (state, action) => {
+            .addCase(updateAssemblyProduction.rejected, (state: any, action: any) => {
                 state.updateLoading = false;
                 state.error = action.payload?.message;
             });
@@ -268,12 +265,12 @@ const assemblyProductionSlice = createSlice({
 
                 const removedId = action.payload;
                 state.assemblyProductions = state.assemblyProductions.filter(
-                    (assemblyProduction) => assemblyProduction.voucherNumber !== removedId
+                    (assemblyProduction: any) => assemblyProduction.voucherNumber !== removedId
                 );
 
                 state.pagination.totalDocs = Math.max(0, state.pagination.totalDocs - 1);
             })
-            .addCase(deleteAssemblyProduction.rejected, (state, action) => {
+            .addCase(deleteAssemblyProduction.rejected, (state:any, action:any) => {
                 state.deleteLoading = false;
                 state.error = action.payload?.message;
             });

@@ -1,9 +1,8 @@
 import { UAParser } from 'ua-parser-js';
-import { runnerService } from '../../../services/runnerService';
 
-const pad2 = (n) => String(n).padStart(2, '0');
+const pad2 = (n:any) => String(n).padStart(2, '0');
 
-const dobToDDMMYYYY = (dob) => {
+const dobToDDMMYYYY = (dob: any) => {
   // expects "yyyy-mm-dd"
   if (!dob || typeof dob !== 'string') return '';
   const [yyyy, mm, dd] = dob.split('-');
@@ -16,14 +15,14 @@ const nowCompact = (d = new Date()) => {
   return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
 };
 
-const makeJobId = (jobType) => {
+const makeJobId = (jobType:any) => {
   // ex: AIS-20260305134040-d444
   const ts = nowCompact(new Date());
   const rand = Math.random().toString(16).slice(2, 6); // 4 hex chars
   return `${jobType}-${ts}-${rand}`;
 };
 
-const getProfessionalHeader = (key) => {
+const getProfessionalHeader = (key: string) => {
   const data = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
   return data?.[key] ?? '';
 };
@@ -50,7 +49,7 @@ const getTargetAgentId = () => {
 };
 
 
-const buildJobQueuePayload = ({ pan, fy, taxpayer, jobType,machineInfo  }) => {
+const buildJobQueuePayload = ({ pan, fy, taxpayer, jobType, machineInfo }: { pan: string; fy: string; taxpayer: any; jobType: string; machineInfo: any }) => {
   const dob = taxpayer?.payload?.PersonalDetails?.dob || '';
   const ddmmyyyy = dobToDDMMYYYY(dob);
   const itlPassword = taxpayer?.payload?.PersonalDetails?.itlPassword || '';
@@ -108,7 +107,7 @@ const buildJobQueuePayload = ({ pan, fy, taxpayer, jobType,machineInfo  }) => {
   return payload;
 };
 
-const formatFYShort = (fy) => {
+const formatFYShort = (fy: string) => {
   if (!fy) return "";
   const [start, end] = fy.split("-");
   if (!start || !end) return fy;

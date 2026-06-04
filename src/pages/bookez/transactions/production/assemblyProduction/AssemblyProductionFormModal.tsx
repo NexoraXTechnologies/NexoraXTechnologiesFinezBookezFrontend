@@ -1,4 +1,3 @@
-import React from "react";
 import { Plus } from "lucide-react";
 
 import Modal from "../../../../../components/modal";
@@ -111,6 +110,7 @@ const AssemblyProductionFormModal = ({
     handleDeleteRawMaterial,
 }: AssemblyProductionFormModalProps) => {
     return (
+        // @ts-ignore
         <Modal
             {...{
                 show: showModal,

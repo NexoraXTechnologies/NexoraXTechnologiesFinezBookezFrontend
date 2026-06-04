@@ -8,7 +8,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 =================================================== */
 export const fetchForm26ASList = createAsyncThunk(
   "form26as/fetchForm26ASList",
-  async ({ offset = 0, limit = 10 } = {}, { rejectWithValue }) => {
+  async ({ offset = 0, limit = 10 }: { offset?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/form26as`,
@@ -16,7 +16,7 @@ export const fetchForm26ASList = createAsyncThunk(
       );
 
       return res.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to fetch Form 26AS list",
@@ -31,7 +31,7 @@ export const fetchForm26ASList = createAsyncThunk(
 =================================================== */
 export const fetchForm26ASByDocId = createAsyncThunk(
   "form26as/fetchForm26ASByDocId",
-  async (docId, { rejectWithValue }) => {
+  async (docId: string, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/form26as/${docId}`
@@ -42,7 +42,7 @@ export const fetchForm26ASByDocId = createAsyncThunk(
       
 
       return res?.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to fetch Form 26AS details",
@@ -57,7 +57,7 @@ export const fetchForm26ASByDocId = createAsyncThunk(
 =================================================== */
 export const processForm26ASZip = createAsyncThunk(
   "form26as/processForm26ASZip",
-  async ({ name, password }, { rejectWithValue }) => {
+  async ({ name, password }: { name: string; password: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/form26as/processZip`,
@@ -72,7 +72,7 @@ export const processForm26ASZip = createAsyncThunk(
 
       // Keep only the parsed data (statementTitle, assessee, parts, etc.)
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to process Form 26AS ZIP",
@@ -100,7 +100,7 @@ export const saveForm26AS = createAsyncThunk(
 
       // Could be { data: { ... } } or whole doc; support both
       return res.data?.data ?? res.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to save Form 26AS",
       });
@@ -114,7 +114,7 @@ export const saveForm26AS = createAsyncThunk(
 =================================================== */
 export const uploadForm26ASFile = createAsyncThunk(
   "form26as/uploadForm26ASFile",
-  async ({ name, uploadDate, file, fileType }, { rejectWithValue }) => {
+  async ({ name, uploadDate, file, fileType }: { name: string; uploadDate: string; file: File; fileType: string }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
       formData.append("name", name);
@@ -129,7 +129,7 @@ export const uploadForm26ASFile = createAsyncThunk(
       );
 
       return res.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -146,7 +146,7 @@ export const uploadForm26ASFile = createAsyncThunk(
 =================================================== */
 export const downloadForm26ASFile = createAsyncThunk(
   "form26as/downloadForm26ASFile",
-  async ({ name }, { rejectWithValue }) => {
+  async ({ name }: { name: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/users/uploadfiles/download/${name}`,
@@ -154,7 +154,7 @@ export const downloadForm26ASFile = createAsyncThunk(
       );
 
       return { blob: res.data, name };
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message ||
@@ -230,7 +230,7 @@ const form26asSlice = createSlice({
           count: action.payload?.count ?? 0,
         };
       })
-      .addCase(fetchForm26ASList.rejected, (state, action) => {
+      .addCase(fetchForm26ASList.rejected, (state:any, action:any) => {
         state.listLoading = false;
         state.error = action.payload?.message;
         state.form26asList = [];
@@ -246,7 +246,7 @@ const form26asSlice = createSlice({
         state.detailLoading = false;
         state.selectedForm26AS = action.payload ?? null;
       })
-      .addCase(fetchForm26ASByDocId.rejected, (state, action) => {
+      .addCase(fetchForm26ASByDocId.rejected, (state:any, action:any) => {
         state.detailLoading = false;
         state.error = action.payload?.message;
       });
@@ -262,7 +262,7 @@ const form26asSlice = createSlice({
         // Parsed object from /processZip
         state.processedForm26AS = action.payload ?? null;
       })
-      .addCase(processForm26ASZip.rejected, (state, action) => {
+      .addCase(processForm26ASZip.rejected, (state:any, action:any) => {
         state.processLoading = false;
         state.error = action.payload?.message;
       });
@@ -278,7 +278,7 @@ const form26asSlice = createSlice({
         // After saving, store whatever backend returns as current selected
         state.selectedForm26AS = action.payload ?? state.selectedForm26AS;
       })
-      .addCase(saveForm26AS.rejected, (state, action) => {
+      .addCase(saveForm26AS.rejected, (state, action:any) => {
         state.saveLoading = false;
         state.error = action.payload?.message;
       });
@@ -292,7 +292,7 @@ const form26asSlice = createSlice({
         state.uploadLoading = false;
         state.uploadResponse = action.payload ?? null;
       })
-      .addCase(uploadForm26ASFile.rejected, (state, action) => {
+      .addCase(uploadForm26ASFile.rejected, (state, action:any) => {
         state.uploadLoading = false;
         state.error = action.payload?.message;
       });
@@ -302,11 +302,11 @@ const form26asSlice = createSlice({
         state.downloadLoading = true;
         state.error = null;
       })
-      .addCase(downloadForm26ASFile.fulfilled, (state, action) => {
+      .addCase(downloadForm26ASFile.fulfilled, (state, action:any) => {
         state.downloadLoading = false;
         state.downloadedFile = action.payload;
       })
-      .addCase(downloadForm26ASFile.rejected, (state, action) => {
+      .addCase(downloadForm26ASFile.rejected, (state, action:any) => {
         state.downloadLoading = false;
         state.error = action.payload?.message;
       });

@@ -8,7 +8,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 =================================================== */
 export const fetchTISList = createAsyncThunk(
   "tis/fetchTISList",
-  async ({ offset = 0, limit = 10 } = {}, { rejectWithValue }) => {
+  async ({ offset = 0, limit = 10 }: { offset?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/tis`,
@@ -25,7 +25,7 @@ export const fetchTISList = createAsyncThunk(
       // }
 
       return res.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to fetch TIS list",
       });
@@ -39,7 +39,7 @@ export const fetchTISList = createAsyncThunk(
 =================================================== */
 export const fetchTISByDocId = createAsyncThunk(
   "tis/fetchTISByDocId",
-  async (docId, { rejectWithValue }) => {
+  async (docId: string, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/tis/${docId}`
@@ -48,7 +48,7 @@ export const fetchTISByDocId = createAsyncThunk(
       // Sample:
       // { "_id": "...", "Data": { pan, finYear, tisJSON, ... } }
       return res?.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to fetch TIS details",
@@ -63,7 +63,7 @@ export const fetchTISByDocId = createAsyncThunk(
 =================================================== */
 export const processTISPdf = createAsyncThunk(
   "tis/processTISPdf",
-  async ({ name, password }, { rejectWithValue }) => {
+  async ({ name, password }: { name: string; password: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/tis/processPdf`,
@@ -87,7 +87,7 @@ export const processTISPdf = createAsyncThunk(
 
       // Return just the TIS data part
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to process TIS PDF",
@@ -125,7 +125,7 @@ export const saveTIS = createAsyncThunk(
 
       // Could be { data: { ... } } or the full doc; support both
       return res.data?.data ?? res.data ?? null;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to save TIS",
       });
@@ -195,7 +195,7 @@ const tisSlice = createSlice({
           count: action.payload?.count ?? 0,
         };
       })
-      .addCase(fetchTISList.rejected, (state, action) => {
+      .addCase(fetchTISList.rejected, (state, action: any) => {
         state.listLoading = false;
         state.error = action.payload?.message;
         state.tisList = [];
@@ -211,7 +211,7 @@ const tisSlice = createSlice({
         state.detailLoading = false;
         state.selectedTIS = action.payload ?? null;
       })
-      .addCase(fetchTISByDocId.rejected, (state, action) => {
+      .addCase(fetchTISByDocId.rejected, (state, action: any) => {
         state.detailLoading = false;
         state.error = action.payload?.message;
       });
@@ -226,7 +226,7 @@ const tisSlice = createSlice({
         state.processLoading = false;
         state.processedTIS = action.payload ?? null;
       })
-      .addCase(processTISPdf.rejected, (state, action) => {
+      .addCase(processTISPdf.rejected, (state, action: any) => {
         state.processLoading = false;
         state.error = action.payload?.message;
       });
@@ -243,7 +243,7 @@ const tisSlice = createSlice({
         // After saving, set selectedTIS to returned doc (if backend sends it)
         state.selectedTIS = action.payload ?? state.selectedTIS;
       })
-      .addCase(saveTIS.rejected, (state, action) => {
+      .addCase(saveTIS.rejected, (state, action: any) => {
         state.saveLoading = false;
         state.error = action.payload?.message;
       });

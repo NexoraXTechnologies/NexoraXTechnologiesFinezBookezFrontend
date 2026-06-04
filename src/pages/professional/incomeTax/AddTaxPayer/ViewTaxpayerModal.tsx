@@ -1,11 +1,10 @@
-import React from "react";
 import { X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { formatToDDMMYYYY } from "../../../../components/common/DateFormator";
-const ViewTaxpayerModal = ({ onClose }) => {
-  const { selectedTaxpayer, loading } = useSelector((s) => s.taxpayer);
+const ViewTaxpayerModal = ({ onClose }: { onClose: () => void }) => {
+  const { selectedTaxpayer } = useSelector((s: any) => s.taxpayer);
 
-  const ACCOUNT_TYPE_MAP = {
+  const ACCOUNT_TYPE_MAP: { [key: string]: string } = {
     SB: "Saving Account",
     CA: "Current Account",
     CC: "Cash Credit Account",
@@ -20,7 +19,7 @@ const ViewTaxpayerModal = ({ onClose }) => {
   const c = selectedTaxpayer?.payload?.ContactAddressDetails || {};
   const b = selectedTaxpayer?.payload?.BankDetails?.array || [];
 
-  const safe = (v) => (v && v !== "" ? v : "–");
+  const safe = (v: any) => (v && v !== "" ? v : "–");
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 px-4">
@@ -102,7 +101,7 @@ const ViewTaxpayerModal = ({ onClose }) => {
             {b.length === 0 ? (
               <p className="text-gray-500 italic">No bank records available.</p>
             ) : (
-              b.map((bank, index) => (
+                b.map((bank: any, index: number) => (
                 <div
                   key={index}
                   className="border rounded-md p-4 mb-4 bg-purple-50"
@@ -152,7 +151,7 @@ const ViewTaxpayerModal = ({ onClose }) => {
 };
 
 // Simple reusable row
-const Detail = ({ label, value, full }) => (
+const Detail = ({ label, value, full }: { label: string; value: string; full?: any }) => (
   <div className={full ? "col-span-2" : ""}>
     <p className="text-gray-600 text-xs">{label}</p>
     <p className="font-medium text-gray-900">{value}</p>

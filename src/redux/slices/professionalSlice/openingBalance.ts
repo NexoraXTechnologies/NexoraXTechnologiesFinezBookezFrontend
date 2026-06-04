@@ -18,7 +18,7 @@ export const addBalance = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -42,7 +42,7 @@ export const updateBalance = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err:any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -65,7 +65,7 @@ export const deleteBalance = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -89,7 +89,7 @@ export const getOpeningBalList = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err:any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch accounts",
             });
@@ -128,11 +128,11 @@ const openingBalanceSlice = createSlice({
                 state.addLoader = true;
                 state.error = null;
             })
-            .addCase(addBalance.fulfilled, (state, action) => {
+            .addCase(addBalance.fulfilled, (state) => {
                 state.addLoader = false;
               
             })
-            .addCase(addBalance.rejected, (state, action) => {
+            .addCase(addBalance.rejected, (state) => {
                 state.addLoader = false;
             })
 
@@ -146,7 +146,7 @@ const openingBalanceSlice = createSlice({
                 state.pagination = action.payload.pagination ?? state.pagination;
                 state.openingBal = action.payload?.records
             })
-            .addCase(getOpeningBalList.rejected, (state, action) => {
+            .addCase(getOpeningBalList.rejected, (state: any) => {
                 state.listingLoader = false;
             })
 
@@ -159,7 +159,7 @@ const openingBalanceSlice = createSlice({
                 state.addLoader = false;
                 state.openingBal = action.payload?.records
             })
-            .addCase(updateBalance.rejected, (state, action) => {
+            .addCase(updateBalance.rejected, (state) => {
                 state.addLoader = false;
             })
 
@@ -172,7 +172,7 @@ const openingBalanceSlice = createSlice({
                 state.deleteLoader = false;
                 state.openingBal = action.payload?.records
             })
-            .addCase(deleteBalance.rejected, (state, action) => {
+            .addCase(deleteBalance.rejected, (state) => {
                 state.deleteLoader = false;
             })
     },

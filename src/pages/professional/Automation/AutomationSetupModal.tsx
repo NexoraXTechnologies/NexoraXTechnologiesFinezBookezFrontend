@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { X, Folder, FileText, CheckCircle2, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -8,14 +8,15 @@ import {
   clearDownloadState,
 } from '../../../redux/slices/professionalSlice/automation/automatioinSlice';
 import { UAParser } from 'ua-parser-js';
-import JSZip from 'jszip';
 import { toast } from 'react-toastify';
 
 
 
 const getOsInfo = () => {
   // Modern browsers (Chrome 89+)
+  // @ts-ignore
   if (navigator.userAgentData?.platform) {
+    // @ts-ignore
     const platform = navigator.userAgentData.platform.toLowerCase();
 
     if (platform.includes('win')) return { os: 'windows', name: 'Windows' };
@@ -44,7 +45,7 @@ const getOsInfo = () => {
   };
 };
 
-export default function AutomationSetupModal({ open, onClose, onSuccess }) {
+export default function AutomationSetupModal({ open, onClose, onSuccess }: any) {
   const dispatch = useDispatch();
 
   const osInfo = useMemo(() => getOsInfo(), []);
@@ -53,11 +54,11 @@ export default function AutomationSetupModal({ open, onClose, onSuccess }) {
   const payload = useMemo(() => ({ os }), [os]);
 
   const [downloading, setDownloading] = useState(false);
-  const [progress, setProgress] = useState(null); // 0-100 or null
-  const [dlError, setDlError] = useState(null);
-  const [dlSuccess, setDlSuccess] = useState(false);
+  const [progress] = useState(null); // 0-100 or null
+  // const [dlError, setDlError] = useState(null);
+  // const [dlSuccess, setDlSuccess] = useState(false);
 
-  const abortRef = useRef(null);
+  const abortRef: any = useRef(null);
   const downloadExeDirect = () => {
     setDownloading(true);
 
@@ -71,7 +72,7 @@ export default function AutomationSetupModal({ open, onClose, onSuccess }) {
     // Let animation run for 2 seconds for UX
     setTimeout(() => {
       setDownloading(false);
-      setDlSuccess(true);
+      // setDlSuccess(true);
 
       toast.success('Installer download started. Run the setup after download completes.', {
         autoClose: 9000,
@@ -82,16 +83,16 @@ export default function AutomationSetupModal({ open, onClose, onSuccess }) {
     }, 2000);
   };
 
-  const { prepare, download } = useSelector((s) => s.automation);
-  const { status, message, error } = prepare;
+  const { prepare, download } = useSelector((s: any) => s.automation);
+  const { status, error } = prepare;
   const downloadLoading = download?.loading;
 
   const running = downloading;
 
   // ✅ Refs for perfect alignment
-  const animBoxRef = useRef(null);
-  const sourceRef = useRef(null);
-  const targetRef = useRef(null);
+  const animBoxRef: any = useRef(null);
+  const sourceRef: any = useRef(null);
+  const targetRef: any = useRef(null);
 
   const [pathD, setPathD] = useState('M 58 98 C 150 8, 270 8, 362 98'); // fallback
   const [viewBox, setViewBox] = useState('0 0 420 160');
@@ -108,6 +109,7 @@ export default function AutomationSetupModal({ open, onClose, onSuccess }) {
     if (!fileName) return;
 
     try {
+      // @ts-ignore 
       const result = await dispatch(downloadAutomation({ fileName })).unwrap();
       const blob = result.data.blob; // original ZIP blob from API
 
@@ -128,7 +130,7 @@ export default function AutomationSetupModal({ open, onClose, onSuccess }) {
       onSuccess?.();
       dispatch(clearAutomationState());
       onClose?.('success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Download failed:', err);
       toast.error(err?.message || 'Download failed. Please try again.', {
         autoClose: 6000,
@@ -143,6 +145,7 @@ export default function AutomationSetupModal({ open, onClose, onSuccess }) {
 
   const handleRetry = () => {
     dispatch(clearAutomationState());
+    // @ts-ignore
     dispatch(prepareAutomation(payload));
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Trash2, Plus, X, IndianRupee } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchReportingPurposeDropdown } from "../../../../redux/slices/professionalSlice/allDropDowns/alldropdownSlice";
@@ -11,7 +11,7 @@ const inputClass = 'border rounded-md pl-7 pr-3 py-2 w-full text-right appearanc
 
 /* ================== RUPEE INPUT ================== */
 
-const RupeeInput = ({ value, onChange, disabled = false }) => {
+const RupeeInput = ({ value, onChange, disabled = false }: any) => {
   const displayValue = formatIndianNumber(value);
 
   return (
@@ -24,27 +24,28 @@ const RupeeInput = ({ value, onChange, disabled = false }) => {
 
 /* ================== MAIN COMPONENT ================== */
 
-const ExemptedIncome = ({ value, onClose, onSave }) => {
+const ExemptedIncome = ({ value, onClose, onSave }: any) => {
   const dispatch = useDispatch();
-  const { reportingPurposes } = useSelector((state) => state.alldropdown);
+  const { reportingPurposes } = useSelector((state: any) => state.alldropdown);
 
   useEffect(() => {
+    {/* @ts-ignore */ }
     dispatch(fetchReportingPurposeDropdown({ offset: 0, limit: 100 }));
   }, [dispatch]);
   /* -------- Exempted Income Rows -------- */
   const [rows, setRows] = useState(value?.rows ?? [{ type: '', amount: '' }]);
 
   const [ltcg112a, setLtcg112a] = useState(value?.ltcg112a ?? { sale: '', cost: '' });
-  const toNum = (v) => Number(String(v ?? '').replace(/,/g, '')) || 0;
+  const toNum = (v: string) => Number(String(v ?? '').replace(/,/g, '')) || 0;
 
   const sale = toNum(ltcg112a.sale);
   const cost = toNum(ltcg112a.cost);
   const ltcg = sale - cost; // ✅ RN logic
 
-  const totalExemptIncome = rows.reduce((sum, r) => sum + toNum(r.amount), 0);
+  const totalExemptIncome = rows.reduce((sum: number, r: { amount: string }) => sum + toNum(r.amount), 0);
 
   const payload = {
-    rows: rows.filter((r) => r.type || r.amount).map((r) => ({ type: r.type, amount: toNum(r.amount) })),
+    rows: rows.filter((r: { type: string; amount: string }) => r.type || r.amount).map((r: { type: string; amount: string }) => ({ type: r.type, amount: toNum(r.amount) })),
 
     totalExemptIncome,
 
@@ -70,7 +71,7 @@ const ExemptedIncome = ({ value, onClose, onSave }) => {
           <label className="text-xs text-gray-600 text-right">Total Exempt Income</label>
           <span />
         </div>
-        {rows.map((row, i) => (
+        {rows.map((row: { type: string; amount: string }, i: number) => (
           <div key={i} className="grid grid-cols-[3fr_2fr_40px] gap-4 mb-3">
             <select
               className="border rounded-md px-3 py-2  w-full max-w-full"
@@ -82,7 +83,7 @@ const ExemptedIncome = ({ value, onClose, onSave }) => {
               }}>
               <option value="">Reporting Purpose</option>
 
-              {reportingPurposes.map((item) => (
+              {reportingPurposes.map((item: { reportingPurposeId: string; code: string; name: string }) => (
                 <option key={item.reportingPurposeId} value={item.code}>
                   {item.name}
                 </option>
@@ -91,7 +92,7 @@ const ExemptedIncome = ({ value, onClose, onSave }) => {
 
             <RupeeInput
               value={row.amount}
-              onChange={(v) => {
+              onChange={(v: any) => {
                 const r = [...rows];
                 const next = toNum(v);
 
@@ -111,7 +112,7 @@ const ExemptedIncome = ({ value, onClose, onSave }) => {
                 if (rows.length === 1) {
                   setRows([{ type: '', amount: '' }]);
                 } else {
-                  setRows(rows.filter((_, idx) => idx !== i));
+                  setRows(rows.filter((_: { type: string; amount: string }, idx: number) => idx !== i));
                 }
               }}
               className="text-red-600">
@@ -131,12 +132,12 @@ const ExemptedIncome = ({ value, onClose, onSave }) => {
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div>
             <label className="text-xs">Total Sale Consideration</label>
-            <RupeeInput value={ltcg112a.sale} onChange={(v) => setLtcg112a((p) => ({ ...p, sale: v }))} />
+            <RupeeInput value={ltcg112a.sale} onChange={(v: string) => setLtcg112a((p: any) => ({ ...p, sale: v }))} />
           </div>
 
           <div>
             <label className="text-xs">Total Cost of Acquisition</label>
-            <RupeeInput value={ltcg112a.cost} onChange={(v) => setLtcg112a((p) => ({ ...p, cost: v }))} />
+            <RupeeInput value={ltcg112a.cost} onChange={(v: string) => setLtcg112a((p: any) => ({ ...p, cost: v }))} />
           </div>
 
           <div>

@@ -1,6 +1,5 @@
-import React from "react";
 
-const AiChatBox = ({ onClick }) => {
+const AiChatBox = ({ onClick }: any) => {
   return (
     <>
       <div

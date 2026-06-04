@@ -1,9 +1,10 @@
 // src/components/common/TicketViewModal.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { X, Image as ImageIcon } from "lucide-react";
+// @ts-ignore
 import Zoom from "react-medium-image-zoom";
 import "react-medium-image-zoom/dist/styles.css";
-const TicketViewModal = ({ open, onClose, ticket, extraTop, extraBottom }) => {
+const TicketViewModal = ({ open, onClose, ticket, extraTop, extraBottom }: any) => {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   if (!open) return null;

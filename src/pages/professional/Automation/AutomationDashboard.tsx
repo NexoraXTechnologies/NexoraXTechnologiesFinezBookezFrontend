@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import professionalAxios from '../../../services/professionalAxios';
 import { runnerService } from '../../../services/runnerService';
 import { Play, Square, RefreshCcw, Laptop, Download, Trash2 } from 'lucide-react';
@@ -22,8 +22,8 @@ export default function AutomationDashboard() {
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null);
-  const openDetails = (job) => {
+  const [selectedJob, setSelectedJob]: any = useState(null);
+  const openDetails = (job: any) => {
     setSelectedJob(job);
     setDetailsOpen(true);
   };
@@ -33,27 +33,27 @@ export default function AutomationDashboard() {
     setSelectedJob(null);
   };
   const dispatch = useDispatch();
-  const [confirmTooltip, setConfirmTooltip] = useState({
+  const [confirmTooltip, setConfirmTooltip]: any = useState({
     show: false,
     x: null,
     y: null,
     commonId: null,
   });
 
-  const fmt = (v) => (v === null || v === undefined || v === '' ? '—' : String(v));
+  const fmt = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v));
 
-  const fmtDateTime = (v) => {
+  const fmtDateTime = (v: any) => {
     if (!v) return '—';
     const d = new Date(v);
     return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
   };
 
-  const mask = (val, showStart = 3, showEnd = 2) => {
-    const s = String(val ?? '');
-    if (!s) return '—';
-    if (s.length <= showStart + showEnd) return '•'.repeat(s.length);
-    return `${s.slice(0, showStart)}${'•'.repeat(Math.max(4, s.length - (showStart + showEnd)))}${s.slice(-showEnd)}`;
-  };
+  // const mask = (val, showStart = 3, showEnd = 2) => {
+  //   const s = String(val ?? '');
+  //   if (!s) return '—';
+  //   if (s.length <= showStart + showEnd) return '•'.repeat(s.length);
+  //   return `${s.slice(0, showStart)}${'•'.repeat(Math.max(4, s.length - (showStart + showEnd)))}${s.slice(-showEnd)}`;
+  // };
 
   // ✅ pagination states (same concept as Users)
   const [page, setPage] = useState(1);
@@ -69,14 +69,14 @@ export default function AutomationDashboard() {
     hasPrevPage: false,
   });
 
-  const getProfessionalHeader = (key) => {
-    const data = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
-    return data?.[key] ?? '';
-  };
+  // const getProfessionalHeader = (key:any) => {
+  //   const data = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
+  //   return data?.[key] ?? '';
+  // };
 
-  const Authtoken = getProfessionalHeader('authtoken');
-  const LoginUser = getProfessionalHeader('loginuser');
-  const parent = getProfessionalHeader('x-db-name');
+  // const Authtoken = getProfessionalHeader('authtoken');
+  // const LoginUser = getProfessionalHeader('loginuser');
+  // const parent = getProfessionalHeader('x-db-name');
 
   const baseQueryParams = useMemo(
     () => ({
@@ -155,7 +155,7 @@ export default function AutomationDashboard() {
     toast.success('Refreshed');
     setRefreshing(false);
   };
-  const openDeleteConfirm = (e, job) => {
+  const openDeleteConfirm = (e: any, job: any) => {
     e.stopPropagation();
 
     const commonId = job?.commonId || job?.jobCommonId || job?.jobId;
@@ -188,12 +188,13 @@ export default function AutomationDashboard() {
     if (!confirmTooltip.commonId) return;
 
     try {
+      // @ts-ignore
       await dispatch(deleteJobQueueAutomationByCommonId({ commonId: confirmTooltip.commonId })).unwrap();
       toast.success('Job deleted successfully');
 
       // ✅ refresh list (recommended so pagination counts stay correct)
       await loadJobs();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || err || 'Failed to delete job');
     } finally {
       setConfirmTooltip({ show: false, x: null, y: null, commonId: null });
@@ -253,7 +254,7 @@ export default function AutomationDashboard() {
     return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">{runner}</span>;
   };
 
-  const statusBadge = (status) => {
+  const statusBadge = (status: any) => {
     const s = String(status || '').toUpperCase();
     if (s === 'COMPLETED') return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">COMPLETED</span>;
     if (s === 'IN_PROGRESS') return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">IN PROGRESS</span>;
@@ -354,7 +355,7 @@ export default function AutomationDashboard() {
                   </td>
                 </tr>
               ) : jobs?.length ? (
-                jobs.map((j, idx) => {
+                  jobs.map((j: any, idx: any) => {
                   const commonId = j.commonId || j.jobCommonId || j.jobId; // commonId fallback
                   return (
                     <tr key={j._id || commonId || idx} className="border-b hover:bg-gray-50">

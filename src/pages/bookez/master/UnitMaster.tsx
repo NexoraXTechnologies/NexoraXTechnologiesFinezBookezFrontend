@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { RefreshCcw, Trash2, Edit, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Trash2, Edit } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -10,7 +10,7 @@ import { DataCreateButton, DataREfreshButton } from "../../../components/buttons
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import Badge from "../../../components/badge";
-import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
+import { SelectInput, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import { createUnit, deleteUnit, getAllUnitMasterSchema, getAllUnits, updateUnit } from "../../../redux/slices/professionalSlice/unitMasterSlice";
 
@@ -21,12 +21,9 @@ const UnitMaster = () => {
 		units,
 		pagination,
 		loading,
-		createLoading,
-		updateLoading,
-		deleteLoading,
 		unitMasterSchemaFields = [],
 		schemaLoading,
-	} = useSelector((s) => s.unitMaster);
+	} = useSelector((s: any) => s.unitMaster);
 
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
@@ -34,12 +31,12 @@ const UnitMaster = () => {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 
-	const [refreshing, setRefreshing] = useState(false);
+	// const [refreshing, setRefreshing] = useState(false);
 	const [showModal, setShowModal] = useState(false);
 
-	const [editingUnit, setEditingUnit] = useState(null);
+	const [editingUnit, setEditingUnit]: any = useState(null);
 
-	const [errors, setErrors] = useState({});
+	const [errors, setErrors]: any = useState({});
 	console.log("units:", unitMasterSchemaFields);
 
 
@@ -266,8 +263,8 @@ const UnitMaster = () => {
 		  FETCH UNITS
 	============================================= */
 	const fetchUnits = () => {
-		dispatch(
-			getAllUnits({
+		// @ts-ignore
+		dispatch(getAllUnits({
 				offset: localOffset,
 				limit: localLimit,
 				search: debouncedSearch,
@@ -294,10 +291,10 @@ const UnitMaster = () => {
 		  REFRESH
 	============================================= */
 	const handleRefresh = async () => {
-		setRefreshing(true);
+		// setRefreshing(true);
 		await fetchUnits();
 		toast.success("Unit list refreshed");
-		setRefreshing(false);
+		// setRefreshing(false);
 	};
 
 	/* ============================================
@@ -363,11 +360,8 @@ const UnitMaster = () => {
 
 				unitMasterSchemaFields.forEach((field: any) => {
 					const key = field.key;
-
-					const oldValue =
-						key === "unit"
-							? normalizeUnit(editingUnit?.[key] || "")
-							: editingUnit?.[key];
+					{/* @ts-ignore */ }
+					const oldValue = key === "unit" ? normalizeUnit(editingUnit?.[key] || "") : editingUnit?.[key];
 
 					if (form[key] !== oldValue) {
 						updatePayload[key] = payload[key];
@@ -399,6 +393,7 @@ const UnitMaster = () => {
 	============================================= */
 	const handleDeleteConfirm = async () => {
 		try {
+			{/* @ts-ignore */ }
 			await dispatch(deleteUnit(confirmTooltip.unitId)).unwrap();
 			toast.success("Unit deleted");
 			fetchUnits();
@@ -415,8 +410,8 @@ const UnitMaster = () => {
 	/* ============================================
 		  PAGINATION
 	============================================= */
-	const startIndex = pagination.totalDocs > 0 ? pagination.offset + 1 : 0;
-	const endIndex = pagination.totalDocs > 0 ? pagination.offset + units.length : 0;
+	// const startIndex = pagination.totalDocs > 0 ? pagination.offset + 1 : 0;
+	// const endIndex = pagination.totalDocs > 0 ? pagination.offset + units.length : 0;
 
 	return (
 		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
@@ -430,6 +425,7 @@ const UnitMaster = () => {
 				<div className="ml-auto flex items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
+					{/* @ts-ignore */}
 					<DataCreateButton {...{ callBackFn: openAddModal, text: "Add Unit" }} />
 				</div>
 			</div>
@@ -442,7 +438,7 @@ const UnitMaster = () => {
 				data={units}
 				loading={loading}
 				emptyMessage="No units found"
-				actions={(unit) => (
+				actions={(unit: any) => (
 					<div className="flex items-center gap-2">
 
 						<button
@@ -457,9 +453,9 @@ const UnitMaster = () => {
 							id="unit-delete-button"
 							onClick={(e) => {
 								const rect = e.currentTarget.getBoundingClientRect();
-								let x = rect.left - 150;
+								let x: any = rect.left - 150;
 								if (x < 10) x = 10;
-								const y = rect.top + window.scrollY - 5;
+								const y: any = rect.top + window.scrollY - 5;
 								setConfirmTooltip({ show: true, x, y, unitId: unit.unitId, });
 							}}
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
@@ -473,7 +469,7 @@ const UnitMaster = () => {
 			{/* ================= PAGINATION ================= */}
 
 			{pagination.totalDocs > 0 && <Pagination  {...{
-				localLimit, selectCb: (e) => {
+				localLimit, selectCb: (e: any) => {
 					setLocalLimit(Number(e.target.value));
 					setLocalOffset(0);
 				},
@@ -505,7 +501,7 @@ const UnitMaster = () => {
 			}
 
 			{/* ================= MODAL ================= */}
-
+			{/* @ts-ignore */}
 			<Modal
 				{...{
 					show: showModal,

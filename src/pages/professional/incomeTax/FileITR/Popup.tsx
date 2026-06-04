@@ -1,7 +1,7 @@
 // Popup.jsx
 import React from "react";
 
-const Popup = ({ open, onClose, title, children }) => {
+const Popup = ({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) => {
   if (!open) return null;
 
   return (

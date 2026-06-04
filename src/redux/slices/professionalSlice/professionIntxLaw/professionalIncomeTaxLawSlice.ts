@@ -4,14 +4,14 @@ import professionalAxios from '../../../../services/professionalAxios';
 // =======================================================
 // GET ALL LAW SECTIONS (PAGINATION + FILTER)
 // =======================================================
-export const getAllProfessionalIncomeTaxLaw = createAsyncThunk('professionalIncomeTaxLaw/getAllProfessionalIncomeTaxLaw', async ({ page = 1, limit = 10, search = '', status = 'Active' }, { rejectWithValue }) => {
+export const getAllProfessionalIncomeTaxLaw = createAsyncThunk('professionalIncomeTaxLaw/getAllProfessionalIncomeTaxLaw', async ({ page = 1, limit = 10, search = '', status = 'Active' }: { page?: number; limit?: number; search?: string; status?: string }, { rejectWithValue }) => {
   try {
     const query = new URLSearchParams();
 
-    const offset = (page - 1) * limit;
+    const offset: number = (page - 1) * limit;
 
-    query.append('offset', offset);
-    query.append('limit', limit);
+    query.append('offset', offset.toString());
+    query.append('limit', limit.toString());
 
     // API supports: search=<text>
     if (search) query.append('search', search);
@@ -41,7 +41,7 @@ export const getAllProfessionalIncomeTaxLaw = createAsyncThunk('professionalInco
       },
       filters: payload.filters || { status, search: search || null },
     };
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err.response?.data?.message || 'Failed to fetch law sections',
     });
@@ -66,7 +66,7 @@ export const getProfessionalIncomeTaxLawById = createAsyncThunk('professionalInc
     // ✅ IMPORTANT: return something
     return res.data?.law; // best: modal expects a law object
     // OR return res.data if you want the whole payload
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err.response?.data?.message || 'Failed to fetch law section',
     });
@@ -119,7 +119,7 @@ const professionalIncomeTaxLawSlice = createSlice({
         state.pagination = action.payload.pagination;
         state.filters = action.payload.filters;
       })
-      .addCase(getAllProfessionalIncomeTaxLaw.rejected, (state, action) => {
+      .addCase(getAllProfessionalIncomeTaxLaw.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -134,7 +134,7 @@ const professionalIncomeTaxLawSlice = createSlice({
         state.loading = false;
         state.selectedRecord = action.payload; // payload is now the law object
       })
-      .addCase(getProfessionalIncomeTaxLawById.rejected, (state, action) => {
+      .addCase(getProfessionalIncomeTaxLawById.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });

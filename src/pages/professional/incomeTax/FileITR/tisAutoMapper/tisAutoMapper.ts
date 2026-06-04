@@ -1,23 +1,23 @@
 const STANDARD_DEDUCTION = 75000;
 
-const toNum = (v) => {
+const toNum = (v: any) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
 
-const pickAmount = (obj) => {
+const pickAmount = (obj: any) => {
   if (!obj || typeof obj !== 'object') return 0;
 
   return toNum(obj.acceptedByTaxpayer ?? obj.processedBySystem ?? obj.reportedBySource ?? 0);
 };
 
 const sumDetailRows = (rows = []) => {
-  return rows.reduce((sum, row) => sum + pickAmount(row), 0);
+  return rows.reduce((sum: number, row: any) => sum + pickAmount(row), 0);
 };
 
-const getSummaryAmount = (summary = [], category) => {
+const getSummaryAmount = (summary = [], category: string) => {
   const found = summary.find(
-    (x) =>
+    (x: any) =>
       String(x?.category || '')
         .trim()
         .toLowerCase() ===
@@ -29,7 +29,7 @@ const getSummaryAmount = (summary = [], category) => {
   return found ? pickAmount(found) : 0;
 };
 
-const getCategoryAmount = (tisData, category) => {
+const getCategoryAmount = (tisData: any, category: string) => {
   const summary = tisData?.summary || [];
   const details = tisData?.details || {};
 
@@ -44,7 +44,7 @@ const getCategoryAmount = (tisData, category) => {
    INCOME FROM SALARY FROM TIS
    exact same shape as popup onSave(payload)
 ========================================================= */
-export const buildIncomeFromSalaryFromTIS = ({ tisData, existingValue = {}, taxRegime = 'NEW' }) => {
+export const buildIncomeFromSalaryFromTIS = ({ tisData, existingValue = {}, taxRegime = 'NEW' }: { tisData: any; existingValue?: any; taxRegime?: string }) => {
   if (!tisData) return existingValue || {};
 
   const salaryAmount = getCategoryAmount(tisData, 'Salary');
@@ -72,7 +72,7 @@ export const buildIncomeFromSalaryFromTIS = ({ tisData, existingValue = {}, taxR
 
   const total89A = otherSalary ? toNum(salary89A.usa) + toNum(salary89A.uk) + toNum(salary89A.canada) + toNum(salary89A.other) : 0;
 
-  const totalExempt = existingExemptRows.reduce((sum, row) => sum + toNum(row?.amount), 0);
+  const totalExempt = existingExemptRows.reduce((sum: number, row: any) => sum + toNum(row?.amount), 0);
 
   const entertainmentDeduction = taxRegime === 'OLD' ? toNum(existingDeductions.entertainment) : 0;
 
@@ -106,8 +106,8 @@ export const buildIncomeFromSalaryFromTIS = ({ tisData, existingValue = {}, taxR
 
     exemptAllowances: {
       rows: existingExemptRows
-        .filter((r) => r?.allowance || r?.amount)
-        .map((r) => ({
+        .filter((r: any) => r?.allowance || r?.amount)
+        .map((r: any) => ({
           allowance: r.allowance,
           amount: toNum(r.amount),
         })),
@@ -131,7 +131,7 @@ export const buildIncomeFromSalaryFromTIS = ({ tisData, existingValue = {}, taxR
    INCOME FROM OTHER SOURCES FROM TIS
    exact same shape as popup onSave(payload)
 ========================================================= */
-export const buildIncomeOtherSourcesFromTIS = ({ tisData, assessmentYear, existingValue = {} }) => {
+export const buildIncomeOtherSourcesFromTIS = ({ tisData, assessmentYear, existingValue = {} }: { tisData: any; assessmentYear: any; existingValue?: any }) => {
   if (!tisData) return existingValue || {};
 
   const savingInterest = getCategoryAmount(tisData, 'Interest from savings bank');
@@ -152,7 +152,7 @@ export const buildIncomeOtherSourcesFromTIS = ({ tisData, assessmentYear, existi
 
   const totalDividend = q1 + q2 + q3 + q4 + q5;
 
-  const totalOtherIncome = existingOtherRows.reduce((sum, r) => sum + toNum(r?.amount), 0);
+  const totalOtherIncome = existingOtherRows.reduce((sum: number, r: any) => sum + toNum(r?.amount), 0);
 
   const totalNotified = toNum(existingNotified.usa) + toNum(existingNotified.uk) + toNum(existingNotified.canada);
 
@@ -192,8 +192,8 @@ export const buildIncomeOtherSourcesFromTIS = ({ tisData, assessmentYear, existi
     },
 
     otherRows: existingOtherRows
-      .filter((r) => r?.type || r?.amount)
-      .map((r) => ({
+      .filter((r: any) => r?.type || r?.amount)
+      .map((r: any) => ({
         type: r.type,
         amount: toNum(r.amount),
       })),
@@ -245,7 +245,7 @@ export const buildIncomeOtherSourcesFromTIS = ({ tisData, assessmentYear, existi
    EXEMPTED INCOME FROM TIS
    exact same shape as popup onSave(payload)
 ========================================================= */
-export const buildExemptedIncomeFromTIS = ({ tisData, existingValue = {} }) => {
+export const buildExemptedIncomeFromTIS = ({ tisData, existingValue = {} }: { tisData: any; existingValue?: any }) => {
   if (!tisData) return existingValue || {};
 
   const sale = getCategoryAmount(tisData, 'Sale of securities and units of mutual fund');
@@ -254,7 +254,7 @@ export const buildExemptedIncomeFromTIS = ({ tisData, existingValue = {} }) => {
 
   const existingRows = Array.isArray(existingValue?.rows) ? existingValue.rows : [];
 
-  const totalExemptIncome = existingRows.reduce((sum, row) => sum + toNum(row?.amount), 0);
+  const totalExemptIncome = existingRows.reduce((sum: number, row: any) => sum + toNum(row?.amount), 0);
 
   const finalSale = sale > 0 ? toNum(sale) : toNum(existingValue?.ltcg112a?.sale);
 
@@ -264,8 +264,8 @@ export const buildExemptedIncomeFromTIS = ({ tisData, existingValue = {} }) => {
 
   return {
     rows: existingRows
-      .filter((r) => r?.type || r?.amount)
-      .map((r) => ({
+      .filter((r: any) => r?.type || r?.amount)
+      .map((r: any) => ({
         type: r.type,
         amount: toNum(r.amount),
       })),
@@ -278,7 +278,7 @@ export const buildExemptedIncomeFromTIS = ({ tisData, existingValue = {} }) => {
   };
 };
 
-export const buildUnderSec44FromTIS = ({ tisData, existingValue = {} }) => {
+export const buildUnderSec44FromTIS = ({ tisData, existingValue = {} }: { tisData: any; existingValue?: any }) => {
   if (!tisData) return existingValue || {};
 
   const businessReceipts = getCategoryAmount(tisData, 'Business receipts');
@@ -363,7 +363,7 @@ export const buildUnderSec44FromTIS = ({ tisData, existingValue = {} }) => {
 /* =========================================================
    BUILD ALL SECTIONS FROM TIS
 ========================================================= */
-export const buildSectionsFromTIS = ({ tisData, assessmentYear, existingSections = {}, taxRegime = 'NEW' }) => {
+export const buildSectionsFromTIS = ({ tisData, assessmentYear, existingSections = {}, taxRegime = 'NEW' }: { tisData: any; assessmentYear: any; existingSections?: any; taxRegime?: string }) => {
   const incomeFromSalary = buildIncomeFromSalaryFromTIS({
     tisData,
     existingValue: existingSections?.incomeFromSalary,

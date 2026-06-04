@@ -1,9 +1,10 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 
-const ProtectedUsersRoute = ({ children }) => {
+const ProtectedUsersRoute = ({ children }: { children: React.ReactNode }) => {
+  {/* @ts-ignore */ }
   const professionalHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
-  const professionalUser = JSON.parse(localStorage.getItem("professionalUser"));
+  // const professionalUser = JSON.parse(localStorage.getItem("professionalUser"));
 
   const canAccess =
     professionalHeaders?.["x-db-name"] ===

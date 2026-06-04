@@ -13,7 +13,7 @@ import ProDashboardCart from '../../components/professionalDashboard/ProDashboar
 const ProfessionalDashboard = () => {
   const dispatch = useDispatch();
   const [openChat, setOpenChat] = useState(false);
-  const { analytics, loading, error } = useSelector((s) => s.professionalDashboard);
+  const { analytics, loading, error } = useSelector((s: any) => s.professionalDashboard);
 
   const cards = useMemo(() => {
     return [
@@ -119,6 +119,7 @@ const ProfessionalDashboard = () => {
   ], []);
 
   useEffect(() => {
+    // @ts-ignore
     dispatch(fetchProfessionalDashboardAnalytics());
   }, [dispatch]);
 

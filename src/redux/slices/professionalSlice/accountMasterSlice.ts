@@ -14,7 +14,13 @@ export const getAllAccountMasterSchema = createAsyncThunk(
       isSearchable = "",
       isRequired = "",
       isFilterable = "",
-    } = {},
+    } : {
+      offset?: number;
+      limit?: number;
+      isSearchable?: string;
+      isRequired?: string;
+      isFilterable?: string;
+     },
     { rejectWithValue }
   ) => {
     try {
@@ -58,7 +64,7 @@ export const getAllAccountMasterSchema = createAsyncThunk(
 =================================================== */
 export const createAccount = createAsyncThunk(
   "accountMaster/createAccount",
-  async (payload, { rejectWithValue }) => {
+  async (payload: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         "/eTaxSolnMongoApiBackend/accountMaster/createAccount",
@@ -71,7 +77,7 @@ export const createAccount = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to create account",
       });
@@ -84,9 +90,9 @@ export const createAccount = createAsyncThunk(
 =================================================== */
 export const getAllAccounts = createAsyncThunk(
   "accountMaster/getAllAccounts",
-  async ({ offset = 0, limit = 10, search = "" } = {}, { rejectWithValue }) => {
+  async ({ offset = 0, limit = 10, search = "" } : { offset?: number; limit?: number; search?: string }, { rejectWithValue }) => {
     try {
-      const params = { offset, limit };
+      const params: { offset?: number; limit?: number; search?: string } = { offset, limit };
       if (search.trim()) params.search = search.trim();
 
       const res = await professionalAxios.get(
@@ -100,7 +106,7 @@ export const getAllAccounts = createAsyncThunk(
         });
 
       return res.data?.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to fetch accounts",
       });
@@ -113,7 +119,7 @@ export const getAllAccounts = createAsyncThunk(
 =================================================== */
 export const getAccountByCode = createAsyncThunk(
   "accountMaster/getAccountByCode",
-  async (accountCode, { rejectWithValue }) => {
+  async (accountCode: string, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/accountMaster/getByAccCode/${accountCode}`
@@ -125,7 +131,7 @@ export const getAccountByCode = createAsyncThunk(
         });
 
       return res.data?.data?.account ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to fetch account",
       });
@@ -138,7 +144,7 @@ export const getAccountByCode = createAsyncThunk(
 =================================================== */
 export const updateAccount = createAsyncThunk(
   "accountMaster/updateAccount",
-  async ({ accountCode, data }, { rejectWithValue }) => {
+  async ({ accountCode, data }: { accountCode: string; data: any }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/accountMaster/updateAccount/${accountCode}`,
@@ -151,7 +157,7 @@ export const updateAccount = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to update account",
       });
@@ -164,7 +170,7 @@ export const updateAccount = createAsyncThunk(
 =================================================== */
 export const deleteAccount = createAsyncThunk(
   "accountMaster/deleteAccount",
-  async (accountCode, { rejectWithValue }) => {
+  async (accountCode: string, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.delete(
         `/eTaxSolnMongoApiBackend/accountMaster/deleteAccount/${accountCode}`
@@ -176,7 +182,7 @@ export const deleteAccount = createAsyncThunk(
         });
 
       return accountCode;
-    } catch (err) {
+    } catch (err: any ) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to delete account",
       });
@@ -230,18 +236,18 @@ const accountMasterSlice = createSlice({
   extraReducers: (builder) => {
     /* ---------- GET ALL ---------- */
     builder
-      .addCase(getAllAccounts.pending, (state) => {
+      .addCase(getAllAccounts.pending, (state:any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(getAllAccounts.fulfilled, (state, action) => {
+      .addCase(getAllAccounts.fulfilled, (state:any, action:any ) => {
         state.loading = false;
         const data = action.payload;
 
         state.accounts = data.items ?? [];
         state.pagination = data.pagination ?? state.pagination;
       })
-      .addCase(getAllAccounts.rejected, (state, action) => {
+      .addCase(getAllAccounts.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.accounts = [];
@@ -249,14 +255,14 @@ const accountMasterSlice = createSlice({
 
     /* ---------- GET BY ACCOUNT CODE ---------- */
     builder
-      .addCase(getAccountByCode.pending, (state) => {
+      .addCase(getAccountByCode.pending, (state:any) => {
         state.loading = true;
       })
-      .addCase(getAccountByCode.fulfilled, (state, action) => {
+      .addCase(getAccountByCode.fulfilled, (state:any, action:any) => {
         state.loading = false;
         state.selectedAccount = action.payload ?? null;
       })
-      .addCase(getAccountByCode.rejected, (state, action) => {
+      .addCase(getAccountByCode.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -264,17 +270,17 @@ const accountMasterSlice = createSlice({
 
     /* ----------  Form ACCOUNT Master ---------- */
     builder
-      .addCase(getAllAccountMasterSchema.pending, (state) => {
+      .addCase(getAllAccountMasterSchema.pending, (state:any) => {
         state.schemaLoading = true;
         state.error = null;
       })
 
-      .addCase(getAllAccountMasterSchema.fulfilled, (state, action) => {
+      .addCase(getAllAccountMasterSchema.fulfilled, (state:any, action:any) => {
         state.schemaLoading = false;
         state.accountMasterSchemaFields = action.payload?.fields || [];
       })
 
-      .addCase(getAllAccountMasterSchema.rejected, (state, action: any) => {
+      .addCase(getAllAccountMasterSchema.rejected, (state:any, action:any) => {
         state.schemaLoading = false;
         state.error =
           action.payload?.message || "Failed to fetch account schema";
@@ -282,10 +288,10 @@ const accountMasterSlice = createSlice({
 
     /* ---------- CREATE ACCOUNT ---------- */
     builder
-      .addCase(createAccount.pending, (state) => {
+      .addCase(createAccount.pending, (state:any) => {
         state.createLoading = true;
       })
-      .addCase(createAccount.fulfilled, (state, action) => {
+      .addCase(createAccount.fulfilled, (state:any, action:any) => {
         state.createLoading = false;
 
         if (action.payload) {
@@ -293,42 +299,42 @@ const accountMasterSlice = createSlice({
           state.pagination.totalDocs += 1;
         }
       })
-      .addCase(createAccount.rejected, (state, action) => {
+      .addCase(createAccount.rejected, (state:any, action:any) => {
         state.createLoading = false;
         state.error = action.payload?.message;
       });
 
     /* ---------- UPDATE ACCOUNT ---------- */
     builder
-      .addCase(updateAccount.pending, (state) => {
+      .addCase(updateAccount.pending, (state:any) => {
         state.updateLoading = true;
       })
-      .addCase(updateAccount.fulfilled, (state, action) => {
+      .addCase(updateAccount.fulfilled, (state:any, action:any) => {
         state.updateLoading = false;
 
         const updated = action.payload;
         if (!updated?.accountCode) return;
 
-        state.accounts = state.accounts.map((acc) =>
+        state.accounts = state.accounts.map((acc: any) =>
           acc.accountCode === updated.accountCode ? updated : acc
         );
       })
-      .addCase(updateAccount.rejected, (state, action) => {
+      .addCase(updateAccount.rejected, (state:any, action:any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });
 
     /* ---------- DELETE ACCOUNT ---------- */
     builder
-      .addCase(deleteAccount.pending, (state) => {
+      .addCase(deleteAccount.pending, (state:any) => {
         state.deleteLoading = true;
       })
-      .addCase(deleteAccount.fulfilled, (state, action) => {
+      .addCase(deleteAccount.fulfilled, (state:any, action:any) => {
         state.deleteLoading = false;
 
         const removedCode = action.payload;
         state.accounts = state.accounts.filter(
-          (acc) => acc.accountCode !== removedCode
+          (acc: any) => acc.accountCode !== removedCode
         );
 
         state.pagination.totalDocs = Math.max(
@@ -336,7 +342,7 @@ const accountMasterSlice = createSlice({
           state.pagination.totalDocs - 1
         );
       })
-      .addCase(deleteAccount.rejected, (state, action) => {
+      .addCase(deleteAccount.rejected, (state:any, action:any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message;
       });

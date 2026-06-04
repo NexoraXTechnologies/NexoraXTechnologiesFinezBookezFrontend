@@ -5,10 +5,9 @@ import {
   RotateCcw,
   ReceiptText,
 } from "lucide-react";
-import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
 
-const cards: DashboardCard[] = [
+const cards: any[] = [
   {
     title: "Purchase Order",
     description: "Create and manage purchase orders.",

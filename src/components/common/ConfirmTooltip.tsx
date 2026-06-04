@@ -1,4 +1,3 @@
-import React from "react";
 import { createPortal } from "react-dom";
 
 const ConfirmTooltip = ({
@@ -9,7 +8,7 @@ const ConfirmTooltip = ({
   cancelText = "Cancel",
   onConfirm,
   onCancel,
-}) => {
+}: any) => {
   if (x === null || y === null) return null;
 
   return createPortal(

@@ -18,7 +18,7 @@ export const getPreFillTaxPayers = createAsyncThunk('preFillTaxPayers/getPreFill
     }
 
     return res.data?.data ?? null;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to fetch prefill taxpayers data',
     });
@@ -47,7 +47,7 @@ export const getFiledReturnData = createAsyncThunk(
       }
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || 'Failed to fetch filed return data',
@@ -88,7 +88,7 @@ const preFillTaxPayersSlice = createSlice({
         state.loading = false;
         state.data = action.payload ?? null;
       })
-      .addCase(getPreFillTaxPayers.rejected, (state, action) => {
+      .addCase(getPreFillTaxPayers.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to fetch prefill taxpayers data';
         state.data = null;
@@ -105,7 +105,7 @@ const preFillTaxPayersSlice = createSlice({
         state.filedReturnData = action.payload ?? null;
       })
 
-      .addCase(getFiledReturnData.rejected, (state, action) => {
+      .addCase(getFiledReturnData.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to fetch filed return data';
         state.filedReturnData = null;

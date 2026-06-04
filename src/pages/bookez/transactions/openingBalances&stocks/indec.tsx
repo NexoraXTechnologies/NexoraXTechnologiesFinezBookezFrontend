@@ -7,12 +7,11 @@ import {
   FilePlus2,
   FileMinus2,
 } from "lucide-react";
-import type { DashboardCard } from "../components/TransactionDashboard";
 import TransactionDashboard from "../components/TransactionDashboard";
 import OpeningBalance from "./openingBalance";
 import OpeningStock from "./openingStock";
 
-const cards: DashboardCard[] = [
+const cards: any = [
   {
     title: "Opening Balances",
     description: "Manage account-wise opening balances.",

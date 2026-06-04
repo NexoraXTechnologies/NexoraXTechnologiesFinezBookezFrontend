@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { BeatLoader } from "react-spinners";
 import { useNavigate } from "react-router-dom";
@@ -14,13 +14,11 @@ import {
 import { getAllTaxPayers } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 import { fetchTISByDocId } from "../../../redux/slices/professionalSlice/incomeTaxSlice/tisSlice";
-import { fetchAISByDocId } from "../../../redux/slices/professionalSlice/incomeTaxSlice/aisSlice";
-import { fetchForm26ASByDocId } from "../../../redux/slices/professionalSlice/incomeTaxSlice/form26asSlice";
 import DOMPurify from "dompurify";
 // -------------------------------------
 // Helpers
 // -------------------------------------
-const QUICK_QUESTIONS = [
+const QUICK_QUESTIONS: any = [
   "What is Tax?",
   "What is Tax Computation?",
   "How to claim TDS refund?",
@@ -28,12 +26,12 @@ const QUICK_QUESTIONS = [
   "Difference between old and new tax regime?",
 ];
 
-const ASSESSMENT_YEARS = ["2024-2025", "2025-2026", "2026-2027"];
+const ASSESSMENT_YEARS: any = ["2024-2025", "2025-2026", "2026-2027"];
 
 // -------------------------------------
 // Component
 // -------------------------------------
-const AiTaxCopilot = ({ onClose }) => {
+const AiTaxCopilot = ({ onClose }: any) => {
   const dispatch = useDispatch();
   const chatEndRef = useRef(null);
   const navigate = useNavigate();
@@ -45,7 +43,7 @@ const AiTaxCopilot = ({ onClose }) => {
     message: "",
     onConfirm: null,
   });
-  const openConfirmTooltip = ({ x, y, message, onConfirm }) => {
+  const openConfirmTooltip = ({ x, y, message, onConfirm }: any) => {
     setConfirmTooltip({
       x,
       y,
@@ -55,19 +53,19 @@ const AiTaxCopilot = ({ onClose }) => {
   };
   const DEFAULT_FIRST_QUESTION =
     "Generate a detailed Old vs New tax computation with full breakup, interest, rebate, cess, regime recommendation, and export the result as a PDF.";
-  const { taxpayers } = useSelector((s) => s.taxpayer);
-  const { taxSummary } = useSelector((s) => s.aiTaxCopilot);
+  const { taxpayers } = useSelector((s: any) => s.taxpayer);
+  const { taxSummary } = useSelector((s: any) => s.aiTaxCopilot);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [selectedPAN, setSelectedPAN] = useState("");
   const [assessmentYear, setAssessmentYear] = useState("");
   const [isBotTyping, setIsBotTyping] = useState(false);
-  const [confirmNav, setConfirmNav] = useState({
-    open: false,
-    message: "",
-    path: "",
-  });
-  const [aisDataState, setAisDataState] = useState(null);
+  // const [confirmNav, setConfirmNav] = useState({
+  //   open: false,
+  //   message: "",
+  //   path: "",
+  // });
+  const [aisDataState]: any = useState(null);
 
   // -------------------------------------
   // User name (first name only)
@@ -81,6 +79,7 @@ const AiTaxCopilot = ({ onClose }) => {
   // Load PAN list
   // -------------------------------------
   useEffect(() => {
+    // @ts-ignore
     dispatch(getAllTaxPayers({ search: "", limit: 500, page: 1 }));
   }, [dispatch]);
 
@@ -95,6 +94,7 @@ const AiTaxCopilot = ({ onClose }) => {
   // Scroll to bottom
   // -------------------------------------
   useEffect(() => {
+    // @ts-ignore
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isBotTyping]);
 
@@ -116,10 +116,10 @@ const AiTaxCopilot = ({ onClose }) => {
   // -------------------------------------
   // Send message
   // -------------------------------------
-  const sendMessage = async (question) => {
+  const sendMessage = async (question: any) => {
     if (!question.trim()) return;
-
-    setMessages((prev) => [...prev, { sender: "user", text: question }]);
+    // @ts-ignore
+    setMessages((prev: any) => [...prev, { sender: "user", text: question }]);
     setInput("");
     setIsBotTyping(true);
 
@@ -127,9 +127,8 @@ const AiTaxCopilot = ({ onClose }) => {
       const taxData = taxSummary?.summary
         ? { summary: taxSummary.summary }
         : {};
-
-      const res = await dispatch(
-        aiTaxChat({
+      // @ts-ignore
+      const res = await dispatch(aiTaxChat({
           question,
           taxData,
         })
@@ -137,19 +136,16 @@ const AiTaxCopilot = ({ onClose }) => {
 
       setIsBotTyping(false);
 
-      const payload = res?.payload;
+      const payload: any = res?.payload;
       const botAnswer = payload?.answer;
       const botHtml = payload?.html; // ✅ GET HTML
       const pdfMeta = payload?.pdf;
 
       if (botAnswer || botHtml) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            sender: "bot",
-            text: botAnswer || "",
-            meta: {
-              html: botHtml || null, // ✅ STORE HTML
+        // @ts-ignore
+        setMessages((prev: any) => [...prev, {
+          sender: "bot", text: botAnswer || "", meta: {
+            html: botHtml || null, // ✅ STORE HTML
               pdf: pdfMeta || null,
             },
             timestamp: Date.now(),
@@ -161,12 +157,12 @@ const AiTaxCopilot = ({ onClose }) => {
       toast.error("AI response failed");
     }
   };
-  const isPdfExpired = (msg) =>
+  const isPdfExpired = (msg: any) =>
     Date.now() > msg.timestamp + msg.meta.pdf.expiresInMinutes * 60 * 1000;
   // -------------------------------------
   // UI
   // -------------------------------------
-  const handleNoTaxpayerClick = (e) => {
+  const handleNoTaxpayerClick = (e: any) => {
     const rect = e.currentTarget.getBoundingClientRect();
 
     openConfirmTooltip({
@@ -178,7 +174,7 @@ const AiTaxCopilot = ({ onClose }) => {
       },
     });
   };
-  const showDocMissingConfirm = (message, path) => {
+  const showDocMissingConfirm = (message: any, path: any) => {
     toast.error(message);
 
     setTimeout(() => {
@@ -197,7 +193,7 @@ const AiTaxCopilot = ({ onClose }) => {
 
     const docId = `${selectedPAN}${assessmentYear}`;
 
-    let aisData, tisData, form26asData;
+    let tisData;
 
     // try {
     //   aisData = await dispatch(fetchAISByDocId(docId)).unwrap();
@@ -208,6 +204,7 @@ const AiTaxCopilot = ({ onClose }) => {
     // }
 
     try {
+      // @ts-ignore
       tisData = await dispatch(fetchTISByDocId(docId)).unwrap();
     } catch {
       showDocMissingConfirm('TIS document not found.', '/professional/incometax/tis');
@@ -248,8 +245,8 @@ const AiTaxCopilot = ({ onClose }) => {
       // -----------------------------
       // 1️⃣ POST: Generate summary
       // -----------------------------
-      await dispatch(
-        generateTaxSummary({
+      // @ts-ignore
+      await dispatch(generateTaxSummary({
           payload,
           useLLM: true,
         }),
@@ -258,14 +255,15 @@ const AiTaxCopilot = ({ onClose }) => {
       // -----------------------------
       // 2️⃣ GET: Fetch generated summary
       // -----------------------------
+      // @ts-ignore
       await dispatch(getTaxSummary({ pan, ay })).unwrap();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to generate or fetch tax summary');
     }
   };;
   const getModalCenterPosition = () => {
     if (!modalRef.current) return { x: 0, y: 0 };
-
+    // @ts-ignore
     const rect = modalRef.current.getBoundingClientRect();
 
     return {
@@ -273,8 +271,9 @@ const AiTaxCopilot = ({ onClose }) => {
       y: rect.top + rect.height / 2 - 40,
     };
   };
-  const handleDownloadPdf = async (pdfKey) => {
+  const handleDownloadPdf = async (pdfKey: any) => {
     try {
+      // @ts-ignore
       const action = await dispatch(downloadTaxPdf(pdfKey));
 
       if (!downloadTaxPdf.fulfilled.match(action)) {
@@ -287,7 +286,7 @@ const AiTaxCopilot = ({ onClose }) => {
     }
   };
 
-  const normalizeHtmlForChat = (html) => {
+  const normalizeHtmlForChat = (html: any) => {
     if (!html) return html;
 
     const parser = new DOMParser();
@@ -326,7 +325,7 @@ const AiTaxCopilot = ({ onClose }) => {
 
     return doc.body.innerHTML;
   };
-  const renderBotHtml = (html) => {
+  const renderBotHtml = (html: any) => {
     return (
       <div
         className="mt-2 text-sm text-gray-900"
@@ -337,7 +336,7 @@ const AiTaxCopilot = ({ onClose }) => {
     );
   };
   const hasAskedDefaultQuestionRef = useRef(false);
-  const isTaxSummaryHtml = (html) => {
+  const isTaxSummaryHtml = (html: any) => {
     return typeof html === "string" && html.includes("Tax Computation");
   };
   const resetCopilotState = () => {
@@ -348,13 +347,13 @@ const AiTaxCopilot = ({ onClose }) => {
     setAssessmentYear("");
     setIsBotTyping(false);
   };
-  const extractCompactRowsFromTaxHtml = (html) => {
+  const extractCompactRowsFromTaxHtml = (html: any) => {
     if (!html) return [];
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    const rows = [];
+    const rows: any = [];
     let context = "";
 
     const SKIP_KEYWORDS = [
@@ -396,7 +395,7 @@ const AiTaxCopilot = ({ onClose }) => {
 
     return rows;
   };
-  const CompactTaxChatTable = ({ html }) => {
+  const CompactTaxChatTable = ({ html }: any) => {
     const rows = extractCompactRowsFromTaxHtml(html);
     if (!rows.length) return null;
 
@@ -404,7 +403,7 @@ const AiTaxCopilot = ({ onClose }) => {
       <div className="border rounded bg-white max-h-[220px] overflow-y-auto">
         <table className="w-full text-[10px] leading-tight border-collapse">
           <tbody>
-            {rows.map((r, i) => (
+            {rows.map((r: any, i: any) => (
               <tr key={i}>
                 {/* LABEL */}
                 <td className="border px-[4px] py-[2px] text-gray-600 whitespace-nowrap text-left">
@@ -470,9 +469,10 @@ const ay =
     // -----------------------------
     // Dispatch save API
     // -----------------------------
+    // @ts-ignore
     const res = await dispatch(saveITR1NewRegime(payload)).unwrap();
     toast.success(res.message); 
-  } catch (err) {
+  } catch (err: any) {
     toast.error(err?.message || "Failed to file ITR-1");
   }
 };
@@ -547,7 +547,7 @@ const ay =
           className="border rounded-lg px-3 py-2 text-sm"
         >
           <option value="">Assessment Year</option>
-          {ASSESSMENT_YEARS.map((ay) => (
+          {ASSESSMENT_YEARS.map((ay: any) => (
             <option key={ay} value={ay}>
               {ay}
             </option>
@@ -569,7 +569,7 @@ const ay =
 
         {/* Quick Questions */}
         <div className="flex flex-wrap gap-2 justify-center mt-4">
-          {QUICK_QUESTIONS.map((q) => (
+          {QUICK_QUESTIONS.map((q: any) => (
             <button
               key={q}
               onClick={() => sendMessage(q)}
@@ -581,7 +581,7 @@ const ay =
         </div>
 
         {/* Messages */}
-        {messages.map((m, i) => (
+        {messages.map((m: any, i: any) => (
           <div
             key={i}
             className={`max-w-[90%] px-4 py-2 rounded-xl text-sm ${
@@ -675,6 +675,7 @@ const ay =
           confirmText="Yes"
           cancelText="Cancel"
           onConfirm={() => {
+            // @ts-ignore
             confirmTooltip.onConfirm?.();
             setConfirmTooltip({
               x: null,

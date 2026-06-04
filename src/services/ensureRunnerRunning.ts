@@ -25,7 +25,7 @@ export const ensureRunnerRunning = async () => {
 };
 
 const buildAppSettingsJson = () => {
-  const getProfessionalHeader = (key) => {
+  const getProfessionalHeader = (key: any) => {
     const data = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
     return data?.[key] ?? '';
   };
@@ -57,7 +57,7 @@ export const ensureAppSettings = async () => {
     await runnerService.writeAppsettings(obj);
 
     return { ok: true };
-  } catch (e) {
+  } catch (e: any) {
     const data = e?.response?.data || null;
     const code = data?.code;
 

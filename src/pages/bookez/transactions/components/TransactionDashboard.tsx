@@ -1,39 +1,16 @@
 
-import { ComponentType, ReactNode, useState } from "react";
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import PageComponentModal from "../../../../components/PageComponentModal";
 
-export type DashboardCard = {
-  title: string;
-  description: string;
-  icon: ReactNode;
-
-  /**
-   * Give component directly here.
-   * Example: component: AccountMaster
-   */
-  component: ComponentType<any>;
-
-  /**
-   * Optional props for opened component.
-   */
-  componentProps?: Record<string, any>;
-};
-
-type TransactionDashboardProps = {
-  title: string;
-  description: string;
-  icon: ReactNode;
-  cards: DashboardCard[];
-};
 
 const TransactionDashboard = ({
   title,
   description,
   icon,
   cards,
-}: TransactionDashboardProps) => {
-  const [activeCard, setActiveCard] = useState<DashboardCard | null>(null);
+}: any) => {
+  const [activeCard, setActiveCard]: any = useState(null);
 
   const ActiveComponent = activeCard?.component;
 
@@ -54,7 +31,7 @@ const TransactionDashboard = ({
         </section>
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => (
+          {cards.map((card: any) => (
             <article key={card.title}>
               <button
                 type="button"

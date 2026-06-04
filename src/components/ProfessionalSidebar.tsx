@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Key, Building2, Wallet, PackageSearch, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, TriangleDashed, WalletCards, Factory, BadgeIndianRupee, ShoppingCart } from 'lucide-react';
+import { LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Building2, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, Factory, BadgeIndianRupee, ShoppingCart } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
 import FinEzLogo from '../assets/FinEZ.png';
-import Subscription from "../pages/subscription";
-import { FaRegFilePowerpoint, FaUnity } from "react-icons/fa";
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -31,12 +29,9 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
     setConfirm({ show: true, x: left, y: top });
   };
-
+  // @ts-ignore
   const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
   const canShowUsers = professionalHeaders?.['x-db-name'] == professionalHeaders?.loginuser;
-
-
-
 
   useEffect(() => {
     const updateSidebarWidth = () => {
@@ -282,18 +277,18 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
   const handleLogout = async () => {
     try {
       // 1) read headers (who is logged in)
-      const headers = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
+      // const headers = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
 
-      const loginuser = headers?.loginuser; // userMobileNumberHash
-      const dbName = headers?.['x-db-name'];
-      const payload = {
-        loginuser: String(loginuser),
-        'x-db-name': String(dbName),
-        isLogin: false,
-      };
+      // const loginuser = headers?.loginuser; // userMobileNumberHash
+      // const dbName = headers?.['x-db-name'];
+      // const payload = {
+      //   loginuser: String(loginuser),
+      //   'x-db-name': String(dbName),
+      //   isLogin: false,
+      // };
       // parentUserMobileNumber
 
-    } catch (err) {
+    } catch (err: any) {
       // Don't block logout if API fails
       console.warn("Logout sync failed:", err?.message || err);
     } finally {
@@ -306,7 +301,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
     }
   };
 
-  const SidebarItem = ({ item, level = 0, isExpanded, openMenus, setOpenMenus, }) => {
+  const SidebarItem = ({ item, level = 0, isExpanded, openMenus, setOpenMenus, }: any) => {
     const navigate = useNavigate();
     const location = useLocation();
     const hasChildren = item.children?.length > 0;
@@ -315,13 +310,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
     const isActive = location.pathname === item.path || item.matchPaths?.includes(location.pathname);
 
     // PARENT ACTIVE CHECK
-    const isParentActive = item.children?.some((child) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
+    const isParentActive = item.children?.some((child: any) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
+    console.log({ isParentActive, isActive })
     const isOpen = openMenus[item.name] || false;
 
     // TOGGLE MENU
     const handleClick = () => {
       if (hasChildren) {
-        setOpenMenus((prev) => ({
+        setOpenMenus((prev: any) => ({
           ...prev,
           [item.name]: !prev[item.name],
         }));
@@ -374,7 +370,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
             (isExpanded ? "lg:block" : "lg:hidden") +
             " block"
           }>
-            {item.children.map((child) => (
+            {item.children.map((child: any) => (
               <SidebarItem
                 key={child.name}
                 item={child}
@@ -446,6 +442,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
       </div>
 
       <div className="border-t border-gray-800 py-4 px-4">
+        {/* @ts-ignore */}
         <div onClick={openConfirm} className="flex items-center gap-3 text-gray-700 cursor-pointer hover:bg-red-50 px-2 py-2 rounded-lg transition-all">
           <LogOut size={20} className="text-red-500" />
           <span className={

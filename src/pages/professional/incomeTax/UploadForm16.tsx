@@ -12,18 +12,18 @@ import { uploadForm16File, fetchForm16List, downloadForm16File, deleteForm16File
 
 const UploadForm16 = () => {
   const dispatch = useDispatch();
-  const fileRef = useRef(null);
+  const fileRef: any = useRef(null);
 
-  const { uploadLoading, listLoading, downloadLoading, deleteLoading, items, pagination } = useSelector((s) => s.form16);
+  const { uploadLoading, listLoading, downloadLoading, deleteLoading, items, pagination } = useSelector((s: any) => s.form16);
 
-  const { taxpayers = [], loading: panLoading } = useSelector((s) => s.taxpayer);
-  const { regimes, natureOfEmployment, assessmentYears } = useSelector((s) => s.alldropdown);
+  const { taxpayers = [], loading: panLoading } = useSelector((s:any) => s.taxpayer);
+  const { assessmentYears } = useSelector((s: any) => s.alldropdown);
 
   // modal states
   const [open, setOpen] = useState(false);
-  const [selectedPan, setSelectedPan] = useState(null); // {pan,name}
-  const [selectedAY, setSelectedAY] = useState(null);
-  const [file, setFile] = useState(null);
+  const [selectedPan, setSelectedPan]: any = useState(null); // {pan,name}
+  const [selectedAY, setSelectedAY]: any = useState(null);
+  const [file, setFile]: any = useState(null);
 
   // list states (like document mgmt)
   const [limit, setLimit] = useState(10);
@@ -34,7 +34,7 @@ const UploadForm16 = () => {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const [confirmTooltip, setConfirmTooltip] = useState({
+  const [confirmTooltip, setConfirmTooltip]: any = useState({
     show: false,
     x: null,
     y: null,
@@ -43,7 +43,9 @@ const UploadForm16 = () => {
 
   // load dropdowns once
   useEffect(() => {
+    // @ts-ignore
     dispatch(getAllTaxPayers());
+    // @ts-ignore
     dispatch(fetchAssessmentYearDropdown());
   }, [dispatch]);
 
@@ -58,6 +60,7 @@ const UploadForm16 = () => {
 
   // load list
   useEffect(() => {
+    // @ts-ignore
     dispatch(fetchForm16List({ offset, limit, search: debouncedSearch }));
   }, [dispatch, offset, limit, debouncedSearch]);
 
@@ -65,11 +68,11 @@ const UploadForm16 = () => {
     const rows = taxpayers ?? [];
     // IMPORTANT: SearchablePanDropdown expects {pan, name}
     return rows
-      .map((t) => ({
+      .map((t: any) => ({
         pan: t?.pan,
         name: t?.name || t?.fullName || '',
       }))
-      .filter((x) => x.pan);
+      .filter((x: any) => x.pan);
   }, [taxpayers]);
 
   const resetModal = () => {
@@ -84,7 +87,7 @@ const UploadForm16 = () => {
     setOpen(false);
   };
 
-  const validatePdf = (f) => {
+  const validatePdf = (f: any) => {
     if (!f) return 'Please choose a PDF file.';
     const isPdfMime = f.type === 'application/pdf';
     const isPdfName = /\.pdf$/i.test(f.name);
@@ -94,6 +97,7 @@ const UploadForm16 = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    // @ts-ignore
     await dispatch(fetchForm16List({ offset, limit, search: debouncedSearch }));
     setRefreshing(false);
     toast.success('Form16 list refreshed');
@@ -116,8 +120,8 @@ const UploadForm16 = () => {
     }
 
     try {
-      await dispatch(
-        uploadForm16File({
+      // @ts-ignore
+      await dispatch(uploadForm16File({
           name: file.name,
           uploadDate: new Date().toISOString(),
           fileType: 'form16',
@@ -131,15 +135,17 @@ const UploadForm16 = () => {
 
       // refresh list
       setOffset(0);
+      // @ts-ignore
       dispatch(fetchForm16List({ offset: 0, limit, search: debouncedSearch }));
       onCancel();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Upload failed');
     }
   };
 
-  const handleDownload = async (filename) => {
+  const handleDownload = async (filename: any) => {
     try {
+      // @ts-ignore
       const { blob } = await dispatch(downloadForm16File({ filename })).unwrap();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -149,17 +155,19 @@ const UploadForm16 = () => {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Download failed');
     }
   };
 
   const handleDeleteConfirm = async () => {
     try {
+      // @ts-ignore
       await dispatch(deleteForm16File({ id: confirmTooltip.id, fileType: 'form16' })).unwrap();
       toast.success('Form16 deleted');
+      // @ts-ignore
       dispatch(fetchForm16List({ offset, limit, search: debouncedSearch }));
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Delete failed');
     } finally {
       setConfirmTooltip({ show: false, x: null, y: null, id: null });
@@ -216,7 +224,7 @@ const UploadForm16 = () => {
                   </td>
                 </tr>
               ) : items?.length ? (
-                items.map((row) => (
+                  items.map((row: any) => (
                   <tr key={row.id} className="border-b hover:bg-gray-50">
                     <td className="px-3 py-2">{row.filename}</td>
                     <td className="px-3 py-2">{row.fileType}</td>
@@ -361,11 +369,11 @@ const UploadForm16 = () => {
                                focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={selectedAY?.assYid || ''}
                     onChange={(e) => {
-                      const ay = (assessmentYears || []).find((item) => item.assYid === e.target.value);
+                      const ay = (assessmentYears || []).find((item: any) => item.assYid === e.target.value);
                       setSelectedAY(ay || null);
                     }}>
                     <option value="">Select Assessment Year</option>
-                    {(assessmentYears || []).map((item) => (
+                      {(assessmentYears || []).map((item: any) => (
                       <option key={item.id || item.assYid} value={item.assYid}>
                         {item.assessmentYear}
                       </option>
@@ -398,7 +406,7 @@ const UploadForm16 = () => {
                       accept="application/pdf,.pdf"
                       className="hidden"
                       onChange={(e) => {
-                        const f = e.target.files?.[0];
+                        const f: any = e.target.files?.[0];
                         if (!f) return;
 
                         const err = validatePdf(f);
@@ -434,12 +442,12 @@ const UploadForm16 = () => {
 /**
  * Uses shape: { pan, name }
  */
-const SearchablePanDropdown = ({ options, value, onChange }) => {
+const SearchablePanDropdown = ({ options, value, onChange }: { options: any[]; value: any; onChange: (value: any) => void }) => {
   const [query, setQuery] = React.useState('');
   const [open, setOpen] = React.useState(false);
 
   const q = query?.toLowerCase() || '';
-  const filtered = (options || []).filter((o) => (o?.pan?.toLowerCase() || '').includes(q) || (o?.name?.toLowerCase() || '').includes(q));
+  const filtered = (options || []).filter((o: any) => (o?.pan?.toLowerCase() || '').includes(q) || (o?.name?.toLowerCase() || '').includes(q));
 
   return (
     <div className="relative z-50">
@@ -460,7 +468,7 @@ const SearchablePanDropdown = ({ options, value, onChange }) => {
       {open && (
         <div className="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
           {filtered.length ? (
-            filtered.map((o) => (
+            filtered.map((o: any) => (
               <div
                 key={o.pan}
                 onMouseDown={() => {

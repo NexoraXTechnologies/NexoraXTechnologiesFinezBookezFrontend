@@ -17,7 +17,7 @@ export const getAllUnitMasterSchema = createAsyncThunk(
             isSearchable = "",
             isRequired = "",
             isFilterable = "",
-        } = {},
+        } : { offset: number, limit: number, isSearchable?: string, isRequired?: string, isFilterable?: string },
         { rejectWithValue }
     ) => {
         try {
@@ -58,7 +58,7 @@ export const getAllUnitMasterSchema = createAsyncThunk(
 =================================================== */
 export const createUnit = createAsyncThunk(
     "unitMaster/createUnit",
-    async (payload, { rejectWithValue }) => {
+    async (payload: any, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.post(
                 "/eTaxSolnMongoApiBackend/users/bookez/unitMeasurement/create",
@@ -71,7 +71,7 @@ export const createUnit = createAsyncThunk(
                 });
 
             return res.data?.data ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.error || "Failed to create unit",
             });
@@ -85,12 +85,10 @@ export const createUnit = createAsyncThunk(
 =================================================== */
 export const getAllUnits = createAsyncThunk(
     "unitMaster/getAllUnits",
-    async ({ offset = 0, limit = 10, search = "" } = {}, { rejectWithValue }) => {
+    async ({ offset = 0, limit = 10, search = "" }: { offset: number, limit: number, search?: string }, { rejectWithValue }) => {
         try {
-            const params = { offset, limit };
+            const params: { offset: number; limit: number; search?: string } = { offset, limit };
             if (search.trim()) params.search = search.trim();
-
-
 
             const res = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/bookez/unitMeasurement/getAll",
@@ -105,7 +103,7 @@ export const getAllUnits = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch units",
             });
@@ -121,7 +119,7 @@ export const getAllUnits = createAsyncThunk(
 =================================================== */
 export const getUnitById = createAsyncThunk(
     "unitMaster/getUnitById",
-    async (unitId, { rejectWithValue }) => {
+    async (unitId: string, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.get(
                 `/eTaxSolnMongoApiBackend/users/bookez/unitMeasurement/getByUnitId/${unitId}`
@@ -133,7 +131,7 @@ export const getUnitById = createAsyncThunk(
                 });
 
             return res.data?.data?.unit ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch unit",
             });
@@ -146,7 +144,7 @@ export const getUnitById = createAsyncThunk(
 =================================================== */
 export const updateUnit = createAsyncThunk(
     "unitMaster/updateUnit",
-    async ({ unitId, data }, { rejectWithValue }) => {
+    async ({ unitId, data }: { unitId: string; data: any }, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.put(
                 `/eTaxSolnMongoApiBackend/users/bookez/unitMeasurement/update/${unitId}`,
@@ -159,7 +157,7 @@ export const updateUnit = createAsyncThunk(
                 });
 
             return res.data?.data ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to update unit",
             });
@@ -172,7 +170,7 @@ export const updateUnit = createAsyncThunk(
 =================================================== */
 export const deleteUnit = createAsyncThunk(
     "unitMaster/deleteUnit",
-    async (unitId, { rejectWithValue }) => {
+    async (unitId: string, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.delete(
                 `/eTaxSolnMongoApiBackend/users/bookez/unitMeasurement/delete/${unitId}`
@@ -184,7 +182,7 @@ export const deleteUnit = createAsyncThunk(
                 });
 
             return unitId;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to delete unit",
             });
@@ -236,11 +234,11 @@ const unitMasterSlice = createSlice({
     extraReducers: (builder) => {
         /* ---------- GET ALL ---------- */
         builder
-            .addCase(getAllUnits.pending, (state) => {
+            .addCase(getAllUnits.pending, (state: any) => {
                 state.loading = true;
                 state.error = null;
             })
-            .addCase(getAllUnits.fulfilled, (state, action) => {
+            .addCase(getAllUnits.fulfilled, (state: any, action: any) => {
                 state.loading = false;
 
                 const data = action.payload; // <-- { pagination, items }
@@ -248,21 +246,21 @@ const unitMasterSlice = createSlice({
                 state.units = data?.items ?? [];
                 state.pagination = data?.pagination ?? state.pagination;
             })
-            .addCase(getAllUnits.rejected, (state, action) => {
+            .addCase(getAllUnits.rejected, (state: any, action: any) => {
                 state.loading = false;
                 state.error = action.payload?.message;
                 state.units = [];
             });
         /* ---------- GET BY UNIT ID ---------- */
         builder
-            .addCase(getUnitById.pending, (state) => {
+            .addCase(getUnitById.pending, (state: any) => {
                 state.loading = true;
             })
-            .addCase(getUnitById.fulfilled, (state, action) => {
+            .addCase(getUnitById.fulfilled, (state: any, action: any) => {
                 state.loading = false;
                 state.selectedUnit = action.payload ?? null;
             })
-            .addCase(getUnitById.rejected, (state, action) => {
+            .addCase(getUnitById.rejected, (state: any, action: any) => {
                 state.loading = false;
                 state.error = action.payload?.message;
             });
@@ -271,7 +269,7 @@ const unitMasterSlice = createSlice({
 
         /* ----------  Form UNIT Master ---------- */
         builder
-            .addCase(getAllUnitMasterSchema.pending, (state) => {
+            .addCase(getAllUnitMasterSchema.pending, (state: any) => {
                 state.schemaLoading = true;
                 state.error = null;
             })
@@ -281,7 +279,7 @@ const unitMasterSlice = createSlice({
                 state.unitMasterSchemaFields = action.payload?.fields || [];
             })
 
-            .addCase(getAllUnitMasterSchema.rejected, (state, action: any) => {
+            .addCase(getAllUnitMasterSchema.rejected, (state: any, action: any) => {
                 state.schemaLoading = false;
                 state.error =
                     action.payload?.message || "Failed to fetch unit schema";
@@ -290,10 +288,10 @@ const unitMasterSlice = createSlice({
 
         /* ---------- CREATE UNIT ---------- */
         builder
-            .addCase(createUnit.pending, (state) => {
+            .addCase(createUnit.pending, (state: any) => {
                 state.createLoading = true;
             })
-            .addCase(createUnit.fulfilled, (state, action) => {
+            .addCase(createUnit.fulfilled, (state: any, action: any) => {
                 state.createLoading = false;
 
                 if (action.payload) {
@@ -301,7 +299,7 @@ const unitMasterSlice = createSlice({
                     state.pagination.totalDocs += 1;
                 }
             })
-            .addCase(createUnit.rejected, (state, action) => {
+            .addCase(createUnit.rejected, (state: any, action: any) => {
                 state.createLoading = false;
                 state.error = action.payload?.message;
             });
@@ -312,17 +310,17 @@ const unitMasterSlice = createSlice({
             .addCase(updateUnit.pending, (state) => {
                 state.updateLoading = true;
             })
-            .addCase(updateUnit.fulfilled, (state, action) => {
+            .addCase(updateUnit.fulfilled, (state: any, action: any) => {
                 state.updateLoading = false;
 
                 const updated = action.payload;
                 if (!updated?.unitId) return;
 
-                state.units = state.units.map((unit) =>
+                state.units = state.units.map((unit: any) =>
                     unit.unitId === updated.unitId ? updated : unit
                 );
             })
-            .addCase(updateUnit.rejected, (state, action) => {
+            .addCase(updateUnit.rejected, (state: any, action: any) => {
                 state.updateLoading = false;
                 state.error = action.payload?.message;
             });
@@ -337,12 +335,12 @@ const unitMasterSlice = createSlice({
 
                 const removedId = action.payload;
                 state.units = state.units.filter(
-                    (unit) => unit.unitId !== removedId
+                    (unit: any) => unit.unitId !== removedId
                 );
 
                 state.pagination.totalDocs = Math.max(0, state.pagination.totalDocs - 1);
             })
-            .addCase(deleteUnit.rejected, (state, action) => {
+            .addCase(deleteUnit.rejected, (state: any, action: any) => {
                 state.deleteLoading = false;
                 state.error = action.payload?.message;
             });

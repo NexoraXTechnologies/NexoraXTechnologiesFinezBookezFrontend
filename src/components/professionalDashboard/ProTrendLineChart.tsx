@@ -1,10 +1,10 @@
-import React from 'react';
+
 import { Line } from 'react-chartjs-2';
 import { Chart, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from 'chart.js';
 
 Chart.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
-const ProTrendLineChart = ({ title = 'Filing Trend', data }) => {
+const ProTrendLineChart = ({ title = 'Filing Trend', data }: any) => {
   const labels = data?.labels?.length >= 2 ? data.labels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const filed = Array.isArray(data?.filed) && data.filed.length ? data.filed : [1, 2, 1, 3, 2, 4, 3];
@@ -45,6 +45,7 @@ const ProTrendLineChart = ({ title = 'Filing Trend', data }) => {
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
       <h3 className="font-semibold text-gray-900 mb-4">{title}</h3>
+      {/* @ts-ignore */}
       <Line data={chartData} options={options} />
     </div>
   );

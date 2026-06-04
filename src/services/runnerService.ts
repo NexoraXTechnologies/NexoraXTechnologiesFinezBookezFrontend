@@ -23,7 +23,7 @@ export const runnerService = {
     return res.data;
   },
 
-  async writeAppsettings(payload) {
+  async writeAppsettings(payload: any) {
     const res = await axios.post(`${RUNNER_BASE}/runner/appsettings/write`, payload, { timeout: 5000 });
     return res.data;
   },

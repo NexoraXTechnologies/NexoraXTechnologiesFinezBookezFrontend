@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Check } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -12,7 +12,7 @@ import { formatToInputDate } from '../../../../components/common/DateFormator';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { verifyPanWithHeader, resetVerifyPan } from '../../../../redux/slices/professionalSlice/panVerify/panVerify';
 
-const emptyForm = {
+const emptyForm: any = {
   PersonalDetails: {
     firstName: '',
     middleName: '',
@@ -61,22 +61,21 @@ const emptyForm = {
   },
 };
 
-const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
+const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }: { onClose: () => void; mode: string; initialForm: any }) => {
   console.log('initialForm', JSON.stringify(initialForm, null, 2));
 
   const dispatch = useDispatch();
-  const { selectedTaxpayer, verifyLoading, addLoading, updateLoading } = useSelector((s) => s.taxpayer);
-  const { parentUserExists, parentUserData, loading } = useSelector((state) => state.professionalAuth);
-  const { data: panData, loading: panLoading, error: panError, success: panSuccess } = useSelector((s) => s.verifyPan);
+  const { selectedTaxpayer, verifyLoading, addLoading, updateLoading } = useSelector((s: any) => s.taxpayer);
+  const { loading: panLoading } = useSelector((s: any) => s.verifyPan);
   const [panVerified, setPanVerified] = useState(false);
   const [panVerifyFailed, setPanVerifyFailed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const lastPinRef = useRef('');
-  const pinLookupAbortRef = useRef(false);
+  // const pinLookupAbortRef = useRef(false);
 
-  const { states, cities } = useSelector((s) => s.stateCity);
+  const { states, cities } = useSelector((s: any) => s.stateCity);
   const [form, setForm] = useState(emptyForm);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]: any = useState({});
   const [originalPan, setOriginalPan] = useState(null);
 
   /* ===================== DROPDOWN STATES ====================== */
@@ -88,8 +87,8 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
   const [pinStatus, setPinStatus] = useState('idle');
 
   /* ===================== HANDLERS ====================== */
-  const setField = (path, value) => {
-    setForm((prev) => {
+  const setField = (path: string, value: any) => {
+    setForm((prev: any) => {
       const keys = path.split('.');
       const updated = JSON.parse(JSON.stringify(prev));
       let obj = updated;
@@ -127,8 +126,8 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
       setPanVerifyFailed(false);
 
       if (c.state?.isoCode) {
-        dispatch(
-          getCitiesByState({
+        // @ts-ignore
+        dispatch(getCitiesByState({
             stateCode: c.state.isoCode,
             searchText: '',
           }),
@@ -144,12 +143,14 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
 
   /* ===================== FETCH STATES ====================== */
   useEffect(() => {
+    // @ts-ignore
     dispatch(getStates(''));
   }, []);
 
   /* SEARCH STATES */
   useEffect(() => {
     const delay = setTimeout(() => {
+      // @ts-ignore
       dispatch(getStates(stateSearch));
     }, 300);
     return () => clearTimeout(delay);
@@ -160,8 +161,8 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
     if (!form.ContactAddressDetails.state) return;
 
     const delay = setTimeout(() => {
-      dispatch(
-        getCitiesByState({
+      // @ts-ignore
+      dispatch(getCitiesByState({
           stateCode: form.ContactAddressDetails.state?.isoCode,
           searchText: citySearch,
         }),
@@ -174,8 +175,8 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
   /* WHEN STATE CHANGES → FETCH CITIES */
   useEffect(() => {
     if (form.ContactAddressDetails.state?.isoCode) {
-      dispatch(
-        getCitiesByState({
+      // @ts-ignore
+      dispatch(getCitiesByState({
           stateCode: form.ContactAddressDetails.state.isoCode, // ✅
           searchText: '',
         }),
@@ -193,7 +194,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
 
   prefillAppliedRef.current = true;
 
-  setForm((prev) => ({
+    setForm((prev: any) => ({
     ...prev,
     ...initialForm,
     PersonalDetails: {
@@ -225,7 +226,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
   useEffect(() => {
     if (mode !== 'add') return;
 
-    form.BankDetails.array.forEach((b, i) => {
+    form.BankDetails.array.forEach((b: any, i: number) => {
       if (b?.ifscCode?.length === 11 && !b._verified) {
         runIFSCVerify(i, b.ifscCode);
       }
@@ -234,7 +235,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
 
   /* ===================== BANK HANDLERS ====================== */
   const addBank = () => {
-    setForm((prev) => ({
+    setForm((prev: any) => ({
       ...prev,
       BankDetails: {
         array: [
@@ -253,19 +254,19 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
     }));
   };
 
-  const removeBank = (i) => {
-    setForm((prev) => {
-      const arr = prev.BankDetails.array.filter((_, idx) => idx !== i);
-      if (!arr.some((b) => b.isDefaultACC === 'true')) arr[0].isDefaultACC = 'true';
+  const removeBank = (i: number) => {
+    setForm((prev: any) => {
+      const arr = prev.BankDetails.array.filter((_: any, idx: number) => idx !== i);
+      if (!arr.some((b: any) => b.isDefaultACC === 'true')) arr[0].isDefaultACC = 'true';
       return { ...prev, BankDetails: { array: arr } };
     });
   };
 
-  const setDefaultBank = (i) => {
-    setForm((prev) => ({
+  const setDefaultBank = (i: number) => {
+    setForm((prev: any) => ({
       ...prev,
       BankDetails: {
-        array: prev.BankDetails.array.map((b, idx) => ({
+        array: prev.BankDetails.array.map((b: any, idx: number) => ({
           ...b,
           isDefaultACC: idx === i ? 'true' : 'false',
         })),
@@ -273,7 +274,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
     }));
   };
 
-  const runPinLookup = async (pin) => {
+  const runPinLookup = async (pin: any) => {
     const cleanPin = String(pin || '')
       .replace(/\D/g, '')
       .slice(0, 6);
@@ -292,7 +293,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
 
     try {
       setPinStatus('loading');
-
+      // @ts-ignore 
       const res = await dispatch(getLocationByPincode(cleanPin)).unwrap();
 
       const apiState = String(res?.state || '')
@@ -324,8 +325,8 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
       setField('ContactAddressDetails.city', {});
 
       // fetch cities for this state
-      const cityList = await dispatch(
-        getCitiesByState({
+      // @ts-ignore 
+      const cityList = await dispatch(getCitiesByState({
           stateCode: matchedState.isoCode,
           searchText: '',
         }),
@@ -337,7 +338,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
       }
 
       const matchedCity = (cityList || cities || []).find(
-        (c) =>
+        (c: any) =>
           String(c?.name?.en || '')
             .trim()
             .toLowerCase() === apiCity,
@@ -355,10 +356,11 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
       setPinStatus('invalid');
     }
   };
-  const runIFSCVerify = async (index, code) => {
+  const runIFSCVerify = async (index: number, code: string) => {
     if (!code || code.length !== 11) return;
 
     try {
+      // @ts-ignore 
       const result = await dispatch(verifyIFSC(code)).unwrap();
 
       if (!result || !result.details) return;
@@ -373,7 +375,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
     }
   };
   /* ===================== IFSC VERIFY ====================== */
-  const handleVerifyIFSC = async (i, code) => {
+  const handleVerifyIFSC = async (i: number, code: string) => {
     if (!code) return toast.error('Enter IFSC first');
     if (code.length !== 11) return toast.error('Invalid IFSC (11 chars)');
 
@@ -383,10 +385,10 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
 
   /* ===================== VALIDATION ====================== */
   const validate = () => {
-    const e = {};
-    const P = form.PersonalDetails;
-    const C = form.ContactAddressDetails;
-    const B = form.BankDetails.array;
+    const e: any = {};
+    const P: any = form.PersonalDetails;
+    const C: any = form.ContactAddressDetails;
+    const B: any = form.BankDetails.array;
 
     /* ===================== PERSONAL DETAILS ===================== */
 
@@ -434,7 +436,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
 
     /* ===================== BANK DETAILS ===================== */
 
-    B.forEach((b, i) => {
+    B.forEach((b: any, i: any) => {
       if (!b.accountNumber.trim()) e[`acc_${i}`] = 'Account number is required';
 
       if (!b.cnfaccountNumber.trim()) e[`cnf_${i}`] = 'Confirm account number is required';
@@ -468,22 +470,16 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
       toast.error('Fix validation errors');
       return;
     }
-    const action =
-      mode === 'add'
-        ? addTaxpayer(form)
-        : updateTaxpayer({
-            pan: originalPan, // ✅ FIXED
-            data: form,
-          });
-
+    const action = mode === 'add' ? addTaxpayer(form) : updateTaxpayer({ pan: originalPan, data: form, });
+    // @ts-ignore 
     dispatch(action)
       .unwrap()
       .then(() => {
         toast.success(mode === 'add' ? 'Added' : 'Updated');
 
         // 🔥 REFRESH LIST AFTER UPDATE
-        dispatch(
-          getAllTaxPayers({
+        // @ts-ignore 
+        dispatch(getAllTaxPayers({
             search: '',
             limit: 10,
             offset: 0,
@@ -492,7 +488,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
 
         onClose();
       })
-      .catch((err) => toast.error(err.message));
+      .catch((err: any) => toast.error(err.message));
   };
 
   // const handlePinChange = async (e) => {
@@ -567,18 +563,19 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
     }
 
     try {
+      // @ts-ignore 
       const res = await dispatch(verifyPanWithHeader({ pan })).unwrap();
 
       setPanVerified(true);
       setPanVerifyFailed(false);
       toast.success(res?.message || 'PAN verified successfully');
-    } catch (err) {
+    } catch (err: any) {
       setPanVerified(false);
       setPanVerifyFailed(true);
       toast.error(err || 'PAN verification failed');
     }
   };
-  const handlePanChange = (e) => {
+  const handlePanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
@@ -588,11 +585,12 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
     setPanVerifyFailed(false);
     dispatch(resetVerifyPan());
   };
-  const handlePinChange = async (e) => {
+  const handlePinChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     runPinLookup(e.target.value);
   };
   const handleFillFromLoggedInUser = async () => {
     try {
+      // @ts-ignore 
       const mobileData = JSON.parse(localStorage.getItem('professionalHeaders'));
       const mobile = mobileData?.loginuser;
       if (!mobile) {
@@ -601,6 +599,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
       }
 
       // 🔔 Call API: checkProfessionalParentUser(mobile)
+      // @ts-ignore 
       const res = await dispatch(checkProfessionalParentUser(mobile)).unwrap();
       const user = res?.user?.ChildUsers;
       if (!user) {
@@ -608,7 +607,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
         return;
       }
 
-      setForm((prev) => ({
+      setForm((prev: any) => ({
         ...prev,
         PersonalDetails: {
           ...prev.PersonalDetails,
@@ -639,7 +638,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
         dispatch(resetVerifyPan());
 
       toast.success('Login user details filled');
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to fetch login user details');
     }
   };
@@ -920,7 +919,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
             {showStateDropdown && (
               <div className="absolute z-50 bg-white border w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-auto">
                 <input placeholder="Search state…" className="px-3 py-2 border-b w-full outline-none text-sm" value={stateSearch} onChange={(e) => setStateSearch(e.target.value)} />
-                {states?.map((st) => (
+                {states?.map((st: any) => (
                   <div
                     key={st.isoCode}
                     onClick={() => {
@@ -928,9 +927,8 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
                       setField('ContactAddressDetails.city', {});
                       setShowStateDropdown(false);
                       setCitySearch('');
-
-                      dispatch(
-                        getCitiesByState({
+                      // @ts-ignore
+                      dispatch(getCitiesByState({
                           stateCode: st.isoCode, // ✅ string only for API
                           searchText: '',
                         }),
@@ -961,7 +959,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
               <div className="absolute z-50 bg-white border w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-auto">
                 <input placeholder="Search city…" value={citySearch} onChange={(e) => setCitySearch(e.target.value)} className="px-3 py-2 border-b w-full outline-none text-sm" />
 
-                {cities?.map((ct) => (
+                {cities?.map((ct: any) => (
                   <div
                     key={ct.name.en}
                     onClick={() => {
@@ -981,7 +979,7 @@ const AddNewTaxpayerModal = ({ onClose, mode = 'add', initialForm }) => {
         {/* BANK DETAILS */}
         <h3 className="text-lg font-semibold mb-3">Bank Details (Refund)</h3>
 
-        {form.BankDetails.array.map((b, i) => (
+        {form.BankDetails.array.map((b: any, i: number) => (
           <div key={i} className="border p-4 rounded-lg mb-5">
             <div className="flex justify-between mb-2">
               <h4 className="font-semibold">Bank #{i + 1}</h4>

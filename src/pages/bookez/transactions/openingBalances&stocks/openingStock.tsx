@@ -728,6 +728,7 @@ const OpeningStock = () => {
             )}
 
             {/* MAIN OPENING STOCK MODAL */}
+            {/* @ts-ignore */}
             <Modal
                 {...{
                     show: showModal,
@@ -791,8 +792,8 @@ const OpeningStock = () => {
                                                     fields={productColumns}
                                                     showRecordNumber={true}
                                                     emptyMessage="No data"
-                                                    onEdit={(row: any, idx: number) => handleEditProduct(row?.id)}
-                                                    onDelete={(row: any, idx: number) => handleDeleteProduct(row?.id)}
+                                                    onEdit={(row: any,) => handleEditProduct(row?.id)}
+                                                    onDelete={(row: any,) => handleDeleteProduct(row?.id)}
                                                 />
                                         </div>
                                     )}

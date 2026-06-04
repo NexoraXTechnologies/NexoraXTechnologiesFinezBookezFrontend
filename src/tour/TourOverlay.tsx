@@ -1,5 +1,5 @@
 // src/tour/TourOverlay.jsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTour } from "./TourContext";
 
 const INITIAL_STYLE = {
@@ -8,19 +8,18 @@ const INITIAL_STYLE = {
   width: 0,
   height: 0,
 };
-
 const TourOverlay = () => {
   const { steps, isActive, currentStep, nextStep, prevStep, endTour } = useTour();
 
   const [highlightStyle, setHighlightStyle] = useState(INITIAL_STYLE);
   const [tooltipStyle, setTooltipStyle] = useState({});
 
-  const step = steps[currentStep];
+  const step: any = steps[currentStep];
 
   // -------------------------
   // Clamp tooltip inside screen
   // -------------------------
-  const clampPosition = (top, left, width, height) => {
+  const clampPosition = (top: number, left: number, width: number, height: number) => {
     const padding = 16;
     const maxLeft = window.innerWidth - width - padding;
     const maxTop = window.innerHeight - height - padding;
