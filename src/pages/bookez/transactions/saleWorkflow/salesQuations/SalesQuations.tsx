@@ -28,8 +28,15 @@ import {
 
 import SalesQuotationsFormModal from "./SalesQuationsFormModel";
 import Toggle from "../../../../../components/toggle";
-import { fmtMoney, formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
-
+import {
+    fmtMoney,
+    formatDateForInput,
+    formatDateForList,
+    money,
+    num,
+    safePercent,
+    todayYMD,
+} from "../../../../../utils/helperFunctions";
 
 /* ===================================================
     TYPES
@@ -120,10 +127,10 @@ const getDefaultForm = () => ({
     customerCode: "",
     customerName: "",
 
-    // This is document status: open / close
+    // Document status: open / close
     status: "open",
 
-    // This is quotation workflow status: draft / sent / accepted etc.
+    // Quotation workflow status: draft / sent / accepted
     quoteStatus: "draft",
 
     remarks: "",
@@ -172,7 +179,7 @@ const SalesQuotations = () => {
 
     const [refreshing, setRefreshing] = useState(false);
 
-    // This toggle is for API docStatus=open / docStatus=close
+    // Toggle for API docStatus=open / docStatus=close
     const [status, setStatus] = useState("open");
 
     /* ===================================================
@@ -213,76 +220,33 @@ const SalesQuotations = () => {
     });
 
     /* ===================================================
-        GETTERS
+        PRODUCT HELPERS
     =================================================== */
-
-    const getVoucherNumber = (record: any) => {
-        return record?.sQuoteVoucherNumber || record?.voucherNumber || "";
-    };
-
-    const getVoucherDate = (record: any) => {
-        return record?.sQuoteVoucherDate || record?.voucherDate || "";
-    };
-
-    const getCustomerCode = (record: any) => {
-        return record?.sQuoteCustomerCode || record?.customerCode || "";
-    };
-
-    const getCustomerName = (record: any) => {
-        return record?.sQuoteCustomerName || record?.customerName || "";
-    };
-
-    // Quotation workflow status like draft
-    const getQuoteStatus = (record: any) => {
-        return record?.sQuoteStatus || record?.quoteStatus || "draft";
-    };
-
-    // Document status like open / close
-    const getDocStatus = (record: any) => {
-        return record?.sQuoteDocStatus || record?.docStatus || "open";
-    };
-
-    const getRemarks = (record: any) => {
-        return record?.sQuoteRemark || record?.remarks || "";
-    };
-
-    const getProducts = (record: any): ProductLine[] => {
-        return record?.sQuoteBody || record?.body || record?.products || [];
-    };
-
-    const getFooter = (record: any) => {
-        return record?.sQuoteFooter || record?.footer || {};
-    };
-
-    const getNetAmount = (record: any) => {
-        const footer = getFooter(record);
-        return footer?.netAmount || footer?.totalNetAmount || record?.netAmount || 0;
-    };
 
     const getProductRate = (product: any, fallback = "") => {
         return String(
             product?.sellingPrice ||
-            product?.productSellingPrice ||
-            product?.salesRate ||
-            product?.saleRate ||
-            product?.rate ||
-            product?.purchasePrice ||
-            product?.productPurchasePrice ||
-            fallback ||
-            ""
+                product?.productSellingPrice ||
+                product?.salesRate ||
+                product?.saleRate ||
+                product?.rate ||
+                product?.purchasePrice ||
+                product?.productPurchasePrice ||
+                fallback ||
+                ""
         );
     };
 
     const getProductUnit = (product: any) => {
         return String(
             product?.unit ||
-            product?.uom ||
-            product?.unitName ||
-            product?.unitCode ||
-            product?.productUnit ||
-            product?.unitMeasurement ||
-            product?.unitMeasurementCode ||
-            ""
+                product?.uom ||
+                product?.unitName ||
+                product?.unitCode ||
+                product?.productUnit ||
+                product?.unitMeasurement ||
+                product?.unitMeasurementCode ||
+                ""
         );
     };
 
@@ -620,78 +584,73 @@ const SalesQuotations = () => {
     };
 
     /* ===================================================
-        MAIN TABLE COLUMNS
+        MAIN TABLE COLUMNS - DIRECT API KEYS
     =================================================== */
 
     const columns = [
         {
-            key: "voucherNumber",
+            key: "sQuoteVoucherNumber",
             title: "Voucher No",
-            render: (row: any) => getVoucherNumber(row) || "-",
         },
         {
-            key: "voucherDate",
+            key: "sQuoteVoucherDate",
             title: "Date",
-            render: (row: any) => formatDateForList(getVoucherDate(row)),
+            render: (row: any) =>
+                row?.sQuoteVoucherDate
+                    ? formatDateForList(row.sQuoteVoucherDate)
+                    : "-",
         },
         {
-            key: "customer",
+            key: "sQuoteCustomerName",
             title: "Customer",
             render: (row: any) => (
                 <div>
                     <div className="font-medium text-slate-800">
-                        {getCustomerName(row) || "-"}
+                        {row?.sQuoteCustomerName || "-"}
                     </div>
                     <div className="text-xs text-slate-500">
-                        {getCustomerCode(row) || "-"}
+                        {row?.sQuoteCustomerCode || "-"}
                     </div>
                 </div>
             ),
         },
         {
-            key: "items",
+            key: "sQuoteBody",
             title: "Items",
-            render: (row: any) => getProducts(row)?.length || 0,
+            render: (row: any) => row?.sQuoteBody?.length || 0,
         },
         {
-            key: "netAmount",
+            key: "sQuoteFooter",
             title: "Net Amount",
             render: (row: any) => (
                 <span className="font-semibold text-indigo-700">
-                    {money(getNetAmount(row))}
+                    {money(row?.sQuoteFooter?.netAmount || 0)}
                 </span>
             ),
         },
         {
             key: "sQuoteDocStatus",
             title: "Doc Status",
-            render: (row: any) => {
-                const docStatus = getDocStatus(row);
-
-                return (
-                    <span
-                        className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${docStatus === "open"
+            render: (row: any) => (
+                <span
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
+                        row?.sQuoteDocStatus === "open"
                             ? "border-green-200 bg-green-50 text-green-700"
                             : "border-red-200 bg-red-50 text-red-700"
-                            }`}
-                    >
-                        {docStatus || "-"}
-                    </span>
-                );
-            },
+                    }`}
+                >
+                    {row?.sQuoteDocStatus || "-"}
+                </span>
+            ),
         },
         {
             key: "sQuoteStatus",
             title: "Quote Status",
-            render: (row: any) => {
-                const quoteStatus = getQuoteStatus(row);
-
-                return (
-                    <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-                        {quoteStatus || "-"}
-                    </span>
-                );
-            },
+            render: (row: any) => (
+                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                    {row?.sQuoteStatus || "-"}
+                </span>
+            ),
         },
     ];
 
@@ -758,10 +717,10 @@ const SalesQuotations = () => {
     };
 
     const openEditModal = (record: any) => {
-        const footer = getFooter(record);
+        const footer = record?.sQuoteFooter || {};
 
-        const products = getProducts(record).map((item: any) => {
-            const unitCode = item?.unit || item?.uom || "";
+        const products = (record?.sQuoteBody || []).map((item: any) => {
+            const unitCode = item?.unit || "";
 
             return {
                 id: item?.id || Date.now() + Math.random(),
@@ -770,9 +729,7 @@ const SalesQuotations = () => {
                 productName: item?.productName || "",
                 productId: item?.productId || "",
 
-                description:
-                    item?.description || item?.productDescription || "",
-
+                description: item?.description || item?.productDescription || "",
                 remarks: item?.remarks || "",
 
                 quantity: item?.quantity || "",
@@ -812,34 +769,40 @@ const SalesQuotations = () => {
         setProductErrors({});
 
         setForm({
-            voucherNumber: getVoucherNumber(record) || "SQ",
+            voucherNumber: record?.sQuoteVoucherNumber || "SQ",
+            voucherDate: formatDateForInput(record?.sQuoteVoucherDate),
 
-            voucherDate: formatDateForInput(getVoucherDate(record)),
-
-            customerCode: getCustomerCode(record),
-            customerName: getCustomerName(record),
+            customerCode: record?.sQuoteCustomerCode || "",
+            customerName: record?.sQuoteCustomerName || "",
 
             sQuoteSalesAccount: record?.sQuoteSalesAccount || "SA021",
 
             // form.status is document status
-            status: getDocStatus(record),
+            status: record?.sQuoteDocStatus || "open",
 
-            // form.quoteStatus is quotation status
-            quoteStatus: getQuoteStatus(record),
+            // form.quoteStatus is quotation workflow status
+            quoteStatus: record?.sQuoteStatus || "draft",
 
-            remarks: getRemarks(record),
+            remarks: record?.sQuoteRemark || "",
 
             products,
 
-            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            grossAmount:
+                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount:
                 footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-            otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
+            cgstAmount:
+                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount:
+                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount:
+                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            taxAmount:
+                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            otherAmount:
+                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            netAmount:
+                footer?.netAmount || footer?.totalNetAmount || "0.00",
         });
 
         resetProductForm();
@@ -893,7 +856,6 @@ const SalesQuotations = () => {
                     "";
 
                 updated.rate = getProductRate(selectedProduct, "");
-
                 updated.unit = getProductUnit(selectedProduct);
             }
 
@@ -1065,8 +1027,8 @@ const SalesQuotations = () => {
 
             const updatedProducts = editingProductId
                 ? prev.products.map((item: ProductLine) =>
-                    item.id === editingProductId ? newProduct : item
-                )
+                      item.id === editingProductId ? newProduct : item
+                  )
                 : [...prev.products, newProduct];
 
             return {
@@ -1145,9 +1107,7 @@ const SalesQuotations = () => {
 
                 quantity: String(item.quantity),
 
-                // uom: item.unit,
                 unit: item.unit,
-                // unitName: item.unitName,
 
                 rate: String(item.rate),
 
@@ -1207,11 +1167,9 @@ const SalesQuotations = () => {
 
         try {
             if (editingRecord) {
-                const voucherNumber = getVoucherNumber(editingRecord);
-
                 await dispatch(
                     updateSalesQuotation({
-                        voucherNumber,
+                        voucherNumber: editingRecord?.sQuoteVoucherNumber,
                         data: payload,
                     }) as any
                 ).unwrap();
@@ -1281,7 +1239,10 @@ const SalesQuotations = () => {
                         handleProductChange(field.key, e?.target?.value)
                     }
                     options={[
-                        { label: field.placeholder || `Select ${field.label}`, value: "" },
+                        {
+                            label: field.placeholder || `Select ${field.label}`,
+                            value: "",
+                        },
                         ...(field.options || []),
                     ]}
                 />
@@ -1373,7 +1334,8 @@ const SalesQuotations = () => {
                             id="sales-quotation-delete-button"
                             disabled={deleteLoading}
                             onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
+                                const rect =
+                                    e.currentTarget.getBoundingClientRect();
 
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
@@ -1384,7 +1346,7 @@ const SalesQuotations = () => {
                                     show: true,
                                     x,
                                     y,
-                                    voucherNumber: getVoucherNumber(record),
+                                    voucherNumber: record?.sQuoteVoucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
@@ -1454,7 +1416,9 @@ const SalesQuotations = () => {
                 handleCustomerChange={handleCustomerChange}
                 openAddProductModal={openAddProductModal}
                 handleEditProduct={(row: any) => handleEditProduct(row)}
-                handleDeleteProduct={(row: any) => handleDeleteProduct(row?.id || row)}
+                handleDeleteProduct={(row: any) =>
+                    handleDeleteProduct(row?.id || row)
+                }
             />
 
             {/* ================= ADD / EDIT PRODUCT MODAL ================= */}
@@ -1475,15 +1439,16 @@ const SalesQuotations = () => {
                                 {productInputData.map((field: any, index: number) => (
                                     <div
                                         key={field.key || index}
-                                        className={`mb-3 grid gap-3 ${field?.grid === 2
-                                            ? "grid-cols-2"
-                                            : "grid-cols-1"
-                                            }`}
+                                        className={`mb-3 grid gap-3 ${
+                                            field?.grid === 2
+                                                ? "grid-cols-2"
+                                                : "grid-cols-1"
+                                        }`}
                                     >
                                         {field?.child?.length
                                             ? field.child.map((child: any) =>
-                                                renderProductField(child)
-                                            )
+                                                  renderProductField(child)
+                                              )
                                             : renderProductField(field)}
                                     </div>
                                 ))}
@@ -1506,10 +1471,22 @@ const SalesQuotations = () => {
                                         >
                                             <TextInput
                                                 label={row.label}
-                                                value={productForm?.[row.percentKey] ?? ""}
-                                                placeholder={row.isAmountInput ? "Amount" : "0"}
+                                                value={
+                                                    productForm?.[
+                                                        row.percentKey
+                                                    ] ?? ""
+                                                }
+                                                placeholder={
+                                                    row.isAmountInput
+                                                        ? "Amount"
+                                                        : "0"
+                                                }
                                                 type="number"
-                                                error={productErrors?.[row.percentKey]}
+                                                error={
+                                                    productErrors?.[
+                                                        row.percentKey
+                                                    ]
+                                                }
                                                 onChange={(e: any) =>
                                                     handleProductChange(
                                                         row.percentKey,
@@ -1531,7 +1508,9 @@ const SalesQuotations = () => {
                                     )}
 
                                     <div className="mt-4 flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-base font-semibold">
-                                        <span className="text-secondary">Net Total</span>
+                                        <span className="text-secondary">
+                                            Net Total
+                                        </span>
                                         <span className="text-primary">
                                             {money(productCalc.netTotal)}
                                         </span>
