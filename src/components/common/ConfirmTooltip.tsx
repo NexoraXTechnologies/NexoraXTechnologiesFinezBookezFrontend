@@ -28,13 +28,13 @@ const ConfirmTooltip = ({
       <div className="flex justify-center gap-2">
         <button
           onClick={onConfirm}
-          className="px-2.5 py-0.5 rounded bg-red-500 text-white text-xs hover:bg-red-600 transition"
+          className="px-2.5 py-0.5 rounded bg-red-500 text-white text-xs hover:bg-red-600 transition cursor-pointer"
         >
           {confirmText}
         </button>
         <button
           onClick={onCancel}
-          className="px-2.5 py-0.5 rounded bg-gray-200 text-gray-700 text-xs hover:bg-gray-300 transition"
+          className="px-2.5 py-0.5 rounded bg-gray-200 text-gray-700 text-xs hover:bg-gray-300 transition cursor-pointer"
         >
           {cancelText}
         </button>
