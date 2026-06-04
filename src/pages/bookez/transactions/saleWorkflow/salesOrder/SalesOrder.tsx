@@ -52,8 +52,8 @@ const SalesOrder = () => {
     }
 
 
-    const openEditModal=(record=>{
-
+    const openEditModal = ((record: any) => {
+        console.log({ record })
     })
     return (
 
@@ -87,7 +87,7 @@ const SalesOrder = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
@@ -121,7 +121,7 @@ const SalesOrder = () => {
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
 
-                                const y = rect.top + window.scrollY - 5;
+                                // const y = rect.top + window.scrollY - 5;
 
                                 // setConfirmTooltip({
                                 //     show: true,

@@ -1,4 +1,3 @@
-import React from "react";
 import { Plus } from "lucide-react";
 
 import Modal from "../../../../../components/modal";
@@ -71,6 +70,7 @@ const SalesQuotationsFormModal = ({
   handleDeleteProduct,
 }: SalesQuotationsFormModalProps) => {
   return (
+    // @ts-ignore
     <Modal
       {...{
         show: showModal,

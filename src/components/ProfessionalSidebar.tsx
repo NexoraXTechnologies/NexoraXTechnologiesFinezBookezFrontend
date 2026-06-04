@@ -61,15 +61,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
   }, [isExpanded]);
 
   const menuItems = [
-    { name: 'Dashboard', path: '/professional', icon: <LayoutDashboard size={20} /> },
+    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
     {
       name: 'BookEZ',
       icon: <BookText size={20} />,
       children: [
         {
-
           name: 'Master',
-          path: '/professional/master',
+          path: '/bookEz/master',
           icon: <BrickWallShield size={20} />,
           // children: [
 
@@ -104,22 +103,22 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
           children: [
             {
               name: "Opening Balances / Stocks",
-              path: "/professional/transaction/opening-balances",
+              path: "/bookEz/transaction/opening-balances",
               icon: <WalletCards size={14} />,
             },
             {
               name: "Production",
-              path: "/professional/transaction/production",
+              path: "/bookEz/transaction/production",
               icon: <Factory size={14} />,
             },
             {
               name: "Sale Workflow",
-              path: "/professional/transaction/sale-workflow",
+              path: "/bookEz/transaction/sale-workflow",
               icon: <BadgeIndianRupee size={14} />,
             },
             {
               name: "Purchase Workflow",
-              path: "/professional/transaction/purchase-workflow",
+              path: "/bookEz/transaction/purchase-workflow",
               icon: <ShoppingCart size={14} />,
             },
           ]
@@ -149,75 +148,75 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
         // },
         {
           name: 'Document Management',
-          path: '/professional/documentmngt',
+          path: '/documentmngt',
           icon: <FileCheck size={20} />,
         },
         {
           name: 'Task Management',
-          path: '/professional/taskmngt',
+          path: '/taskmngt',
           icon: <ListTodo size={20} />,
         },
         {
           name: 'Income Tax Law',
-          path: '/professional/incometx',
+          path: '/incometx',
           icon: <Scale size={20} />,
         },
         {
           name: 'Income Tax',
-          path: '/professional/incomFetax',
+          path: '/incomFetax',
           icon: <ReceiptIndianRupee size={20} />,
           children: [
             {
               name: 'Add Tax Payer',
-              path: '/professional/incometax/addtaxpayer',
+              path: '/incometax/addtaxpayer',
               icon: <UserPlus size={14} />,
             },
             {
               name: 'File ITR',
-              path: '/professional/incometax/fileitrlist',
+              path: '/incometax/fileitrlist',
               // IMPORTANT
-              matchPaths: ['/professional/incometax/fileitr', '/professional/incometax/fileitrlist'],
+              matchPaths: ['/incometax/fileitr', '/incometax/fileitrlist'],
               icon: <FileArchive size={14} />,
             },
 
             {
               name: 'Form 26AS',
-              path: '/professional/incometax/form26as',
+              path: '/incometax/form26as',
               icon: <BookCheck size={14} />,
             },
             {
               name: 'Annual Information Statement', // FULL TITLE
               label: 'AIS', // SIDEBAR TEXT
-              path: '/professional/incometax/ais',
+              path: '/incometax/ais',
               icon: <Contact size={14} />,
             },
             {
               name: 'Taxpayer Information Summary',
               label: 'TIS',
-              path: '/professional/incometax/tis',
+              path: '/incometax/tis',
               icon: <BookUser size={14} />,
             },
 
             {
               name: 'Check Your Refund Status',
               label: 'Refund Status',
-              path: '/professional/incometax/refund',
+              path: '/incometax/refund',
               icon: <BanknoteArrowDown size={14} />,
             },
             {
               name: 'Reset Your IncomeTax Password',
               label: 'Reset Password',
-              path: '/professional/incometax/resetitrpassword',
+              path: '/incometax/resetitrpassword',
               icon: <ListRestart size={14} />,
             },
             {
               name: 'Upload Form 16',
-              path: '/professional/incometax/uploadform16',
+              path: '/incometax/uploadform16',
               icon: <CloudUpload size={14} />,
             },
             {
               name: 'Download ITRs',
-              path: '/professional/incometax/downloaditr',
+              path: '/incometax/downloaditr',
               icon: <Download size={14} />,
             },
           ],
@@ -226,11 +225,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
     },
     {
       name: 'Company Master',
-      path: '/professional/master/company',
+      path: '/master/company',
       icon: <Building2 size={20} />,
     },
-    { name: 'Add Team/Employee', path: '/professional/users', icon: <Users size={20} /> },
-    { name: 'Subscription', path: '/professional/subscription', icon: <CreditCard size={20} /> },
+    { name: 'Add Team/Employee', path: '/users', icon: <Users size={20} /> },
+    { name: 'Subscription', path: '/subscription', icon: <CreditCard size={20} /> },
 
 
     {
@@ -241,14 +240,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
           ? [
             {
               name: 'Add Team/Employee',
-              path: '/professional/users',
+              path: '/users',
               icon: <Users size={14} />,
             },
           ]
           : []),
         {
           name: 'Profile',
-          path: '/professional/profile',
+          path: '/profile',
           icon: <IdCard size={14} />,
         },
         ...(canShowUsers
@@ -256,7 +255,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
             {
               name: 'Configuration',
               icon: <Sliders size={14} />,
-              path: '/professional/configuration',
+              path: '/configuration',
             },
           ]
           : []),
@@ -265,7 +264,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
             {
               name: 'Automation',
               icon: <CloudCog size={14} />,
-              path: '/professional/automation',
+              path: '/automation',
             },
           ]
           : []),
@@ -308,9 +307,9 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
     // ACTIVE CHECK
     const isActive = location.pathname === item.path || item.matchPaths?.includes(location.pathname);
-
     // PARENT ACTIVE CHECK
     const isParentActive = item.children?.some((child: any) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
+    console.log({ location: location.pathname, item: item.path, name: item?.name, isActive, isParentActive })
     const isOpen = openMenus[item.name] || false;
 
     // TOGGLE MENU

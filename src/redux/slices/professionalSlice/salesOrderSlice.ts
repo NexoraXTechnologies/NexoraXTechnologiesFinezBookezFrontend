@@ -3,7 +3,7 @@ import professionalAxios from "../../../services/professionalAxios";
 
 export const getAllSalesOrder = createAsyncThunk(
     "salesOrder/getAllSalesOrder",
-    async ({ limit = 200, offset = 0, search = "" }, { rejectWithValue }) => {
+    async ({ limit = 200, offset = 0, search = "" }: any, { rejectWithValue }) => {
         try {
             const params = {
                 limit,
@@ -59,12 +59,12 @@ const salesOrderSlice=createSlice({
 
 
         builder
-        .addCase(getAllSalesOrder.pending,(state)=>{
+            .addCase(getAllSalesOrder.pending, (state: any) => {
             state.loading=true;
             state.error=null;
             
         })
-        .addCase(getAllSalesOrder.fulfilled,(state,action)=>{
+            .addCase(getAllSalesOrder.fulfilled, (state: any, action: any) => {
             state.loading=false;
             const data=action.payload;
             state.salesOrders=data.records??[];
@@ -72,7 +72,7 @@ const salesOrderSlice=createSlice({
 
 
         })
-        .addCase(getAllSalesOrder.rejected,(state,action)=>{
+            .addCase(getAllSalesOrder.rejected, (state: any, action: any) => {
             state.loading=false;
             state.error=action.payload.message || "failed to fetch sales orders";
             state.salesOrders=[];

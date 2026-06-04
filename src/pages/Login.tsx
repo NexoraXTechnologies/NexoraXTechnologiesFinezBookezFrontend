@@ -227,7 +227,7 @@ const Login = () => {
             console.error('❌ OneSignal PRO login error:', err);
           }
 
-          navigate('/professional');
+          navigate('/');
         }
 
         // 🚀 If user does not exist → go to registration
