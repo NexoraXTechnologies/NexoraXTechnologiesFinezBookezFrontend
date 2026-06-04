@@ -56,7 +56,7 @@ function App() {
       <Route path="/professionalRegister" element={<ProfessionalRegister />} />
       {/* professional route */}
       <Route
-        path="/professional"
+          path="/"
         element={
           <ProtectedRoute allowedRoles={['Professional']}>
             <TourProvider>
@@ -79,7 +79,7 @@ function App() {
           }
         />
 
-        <Route path="/professional/master" element={<MasterDashboard />} />
+          <Route path="/bookEz/master" element={<MasterDashboard />} />
         <Route path="master/company" element={<CompanyMaster />} />
         <Route path="master/account" element={<AccountMaster />} />
         <Route path="master/product" element={<ProductMaster />} />
@@ -88,22 +88,22 @@ function App() {
 
 
         <Route
-          path="/professional/transaction/opening-balances"
+            path="/bookEz/transaction/opening-balances"
           element={<OpeningBalancesDashboard />}
         />
 
         <Route
-          path="/professional/transaction/production"
+            path="/bookEz/transaction/production"
           element={<ProductionDashboard />}
         />
 
         <Route
-          path="/professional/transaction/sale-workflow"
+            path="/bookEz/transaction/sale-workflow"
           element={<SaleWorkflowDashboard />}
         />
 
         <Route
-          path="/professional/transaction/purchase-workflow"
+            path="/bookEz/transaction/purchase-workflow"
           element={<PurchaseWorkflowDashboard />}
         />
 

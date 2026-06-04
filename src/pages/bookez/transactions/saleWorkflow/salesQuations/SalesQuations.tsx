@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -517,13 +517,11 @@ const SalesQuotations = () => {
                             search: "",
                         }) as any
                     ).unwrap(),
-
-                    dispatch(
-                        getAllAccounts({
+                    // @ts-ignore
+                    dispatch(getAllAccounts({
                             offset: 0,
                             limit: 200,
-                            search: "",
-                            accountType: "customer",
+                        search: ""
                         }) as any
                     ).unwrap(),
 
@@ -1304,7 +1302,7 @@ const SalesQuotations = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    {/* @ts-ignore  */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,

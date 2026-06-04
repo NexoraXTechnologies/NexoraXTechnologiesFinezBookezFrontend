@@ -17,15 +17,7 @@ const initialState: any = {
 
 export const getAllSalesOrder = createAsyncThunk(
     "salesOrder/getAllSalesOrder",
-    async (
-        {
-            limit = 200,
-            offset = 0,
-            search = "",
-            status = "open",
-        }: GetAllSalesOrderParams = {},
-        { rejectWithValue }
-    ) => {
+    async ({ limit = 200, offset = 0, search = "" }, { rejectWithValue }) => {
         try {
             const params: any = {
                 limit,
@@ -78,29 +70,26 @@ const salesOrderSlice = createSlice({
 
     extraReducers: (builder) => {
         builder
-            .addCase(getAllSalesOrder.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
+        .addCase(getAllSalesOrder.pending,(state)=>{
+            state.loading=true;
+            state.error=null;
+            
+        })
+        .addCase(getAllSalesOrder.fulfilled,(state,action)=>{
+            state.loading=false;
+            const data=action.payload;
+            state.salesOrders=data.records??[];
+            state.pagination=data.pagination || state.pagination
 
-            .addCase(getAllSalesOrder.fulfilled, (state, action) => {
-                state.loading = false;
 
-                const data: any = action.payload;
-
-                state.salesOrders = data?.records ?? [];
-                state.pagination = data?.pagination ?? null;
-            })
-
-            .addCase(getAllSalesOrder.rejected, (state, action: any) => {
-                state.loading = false;
-                state.error =
-                    action.payload?.message || "Failed to fetch sales orders";
-                state.salesOrders = [];
-                state.pagination = null;
-            });
-    },
-});
+        })
+        .addCase(getAllSalesOrder.rejected,(state,action)=>{
+            state.loading=false;
+            state.error=action.payload.message || "failed to fetch sales orders";
+            state.salesOrders=[];
+        })
+    }
+})
 
 export const { clearSalesOrderState, clearSalesOrderError } =
     salesOrderSlice.actions;
