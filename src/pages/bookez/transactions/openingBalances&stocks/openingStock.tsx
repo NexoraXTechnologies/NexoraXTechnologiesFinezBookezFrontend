@@ -17,7 +17,7 @@ import {
     getOpeningStockList,
     updateOpeningStock,
 } from "../../../../redux/slices/professionalSlice/openingStockSlice";
-import { num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
+import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
 
 
 

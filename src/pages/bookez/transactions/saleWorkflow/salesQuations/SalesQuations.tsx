@@ -262,27 +262,27 @@ const SalesQuotations = () => {
     const getProductRate = (product: any, fallback = "") => {
         return String(
             product?.sellingPrice ||
-                product?.productSellingPrice ||
-                product?.salesRate ||
-                product?.saleRate ||
-                product?.rate ||
-                product?.purchasePrice ||
-                product?.productPurchasePrice ||
-                fallback ||
-                ""
+            product?.productSellingPrice ||
+            product?.salesRate ||
+            product?.saleRate ||
+            product?.rate ||
+            product?.purchasePrice ||
+            product?.productPurchasePrice ||
+            fallback ||
+            ""
         );
     };
 
     const getProductUnit = (product: any) => {
         return String(
             product?.unit ||
-                product?.uom ||
-                product?.unitName ||
-                product?.unitCode ||
-                product?.productUnit ||
-                product?.unitMeasurement ||
-                product?.unitMeasurementCode ||
-                ""
+            product?.uom ||
+            product?.unitName ||
+            product?.unitCode ||
+            product?.productUnit ||
+            product?.unitMeasurement ||
+            product?.unitMeasurementCode ||
+            ""
         );
     };
 
@@ -302,16 +302,16 @@ const SalesQuotations = () => {
         return Array.isArray(res?.items)
             ? res.items
             : Array.isArray(res?.records)
-              ? res.records
-              : Array.isArray(res?.data?.items)
-                ? res.data.items
-                : Array.isArray(res?.data?.records)
-                  ? res.data.records
-                  : Array.isArray(res?.data)
-                    ? res.data
-                    : Array.isArray(res)
-                      ? res
-                      : [];
+                ? res.records
+                : Array.isArray(res?.data?.items)
+                    ? res.data.items
+                    : Array.isArray(res?.data?.records)
+                        ? res.data.records
+                        : Array.isArray(res?.data)
+                            ? res.data
+                            : Array.isArray(res)
+                                ? res
+                                : [];
     };
 
     const makeProductOptions = (res: any): OptionType[] => {
@@ -596,16 +596,7 @@ const SalesQuotations = () => {
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
-
-                // IMPORTANT:
-                // API expects docStatus=open / docStatus=close
                 docStatus: status,
-
-                // Keeping status blank because API URL has status=
-                status: "",
-
-                // Keeping if slice supports this filter also
-                sQuoteDocStatus: status,
             }) as any
         );
     };
@@ -679,11 +670,10 @@ const SalesQuotations = () => {
 
                 return (
                     <span
-                        className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
-                            docStatus === "open"
-                                ? "border-green-200 bg-green-50 text-green-700"
-                                : "border-red-200 bg-red-50 text-red-700"
-                        }`}
+                        className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${docStatus === "open"
+                            ? "border-green-200 bg-green-50 text-green-700"
+                            : "border-red-200 bg-red-50 text-red-700"
+                            }`}
                     >
                         {docStatus || "-"}
                     </span>
@@ -1075,8 +1065,8 @@ const SalesQuotations = () => {
 
             const updatedProducts = editingProductId
                 ? prev.products.map((item: ProductLine) =>
-                      item.id === editingProductId ? newProduct : item
-                  )
+                    item.id === editingProductId ? newProduct : item
+                )
                 : [...prev.products, newProduct];
 
             return {
@@ -1155,9 +1145,9 @@ const SalesQuotations = () => {
 
                 quantity: String(item.quantity),
 
-                uom: item.unit,
+                // uom: item.unit,
                 unit: item.unit,
-                unitName: item.unitName,
+                // unitName: item.unitName,
 
                 rate: String(item.rate),
 
@@ -1485,16 +1475,15 @@ const SalesQuotations = () => {
                                 {productInputData.map((field: any, index: number) => (
                                     <div
                                         key={field.key || index}
-                                        className={`mb-3 grid gap-3 ${
-                                            field?.grid === 2
-                                                ? "grid-cols-2"
-                                                : "grid-cols-1"
-                                        }`}
+                                        className={`mb-3 grid gap-3 ${field?.grid === 2
+                                            ? "grid-cols-2"
+                                            : "grid-cols-1"
+                                            }`}
                                     >
                                         {field?.child?.length
                                             ? field.child.map((child: any) =>
-                                                  renderProductField(child)
-                                              )
+                                                renderProductField(child)
+                                            )
                                             : renderProductField(field)}
                                     </div>
                                 ))}
