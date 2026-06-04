@@ -50,9 +50,14 @@ export const getAllModulesWiseKey = createAsyncThunk(
 /* ===================================================
     GET Modules LIST
 =================================================== */
-export const getAllModules = createAsyncThunk(
+
+export const getAllModules = createAsyncThunk<
+    any[],
+    { offset?: number; limit?: number } | undefined,
+    { rejectValue: { message: string } }
+>(
     "reportMapping/getAllModules",
-    async ({ offset = 0, limit = 10 } :{ offset?: number; limit?: number }, { rejectWithValue }) => {
+    async ({ offset = 0, limit = 10 } = {}, { rejectWithValue }) => {
         try {
             const params = { offset, limit };
 
@@ -61,24 +66,33 @@ export const getAllModules = createAsyncThunk(
                 { params }
             );
 
-
-
-            if (!res.data?.success)
+            if (!res.data?.success) {
                 return rejectWithValue({
-                    message: res.data?.message || "Failed to fetch units",
+                    message: res.data?.message || "Failed to fetch modules",
                 });
+            }
 
-            return res.data?.data;
+            const data = res.data?.data;
+
+            // ✅ handle all possible API response structures
+            const modules =
+                data?.records ||
+                data?.modules ||
+                data?.moduleTypes ||
+                data ||
+                [];
+
+            return Array.isArray(modules) ? modules : [];
         } catch (err: any) {
             return rejectWithValue({
-                message: err?.response?.data?.message || "Failed to fetch units",
+                message:
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Failed to fetch modules",
             });
         }
     }
 );
-
-
-
 
 
 
@@ -303,20 +317,16 @@ const reportMappingSlice = createSlice({
         builder
             .addCase(getAllModules.pending, (state) => {
                 state.modulesLoading = true;
-                state.error = null;
             })
-            .addCase(getAllModules.fulfilled, (state, action) => {
+            .addCase(getAllModules.fulfilled, (state: any, action) => {
                 state.modulesLoading = false;
-
-                const data = action.payload;
-
-                state.modules = data?.modules ?? [];
+                state.modules = Array.isArray(action.payload) ? action.payload : [];
             })
             .addCase(getAllModules.rejected, (state, action: any) => {
                 state.modulesLoading = false;
-                state.error = action.payload?.message;
                 state.modules = [];
-            });
+                state.error = action.payload?.message || "Failed to fetch modules";
+            })
         /* ---------- GET ALL ---------- */
         builder
             .addCase(getAllReportMapping.pending, (state) => {

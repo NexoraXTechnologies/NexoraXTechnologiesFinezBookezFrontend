@@ -119,8 +119,8 @@ const AssemblyProductionFormModal = ({
                 loader: editingRecord ? updateLoading : createLoading,
                 state: editingRecord,
                 title: editingRecord
-                    ? "Update Assembly Production"
-                    : "Add New Assembly Production",
+                    ? "Assembly Production"
+                    : "Assembly Production",
 
                 body: (
                     <div className="col-span-2 w-full space-y-5">

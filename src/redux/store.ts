@@ -54,7 +54,7 @@ export const store = configureStore({
     customMasterModule: customMasterModuleReducer,
 
     productMaster: productMasterReducer,
-    units: UnitMasterReducer,
+    unitMaster: UnitMasterReducer,
     assemblyProduction: assemblyProductionReducer,
     salesQuotation:salesQuationsReducer,
     salesOrder: salesOrderReducer,

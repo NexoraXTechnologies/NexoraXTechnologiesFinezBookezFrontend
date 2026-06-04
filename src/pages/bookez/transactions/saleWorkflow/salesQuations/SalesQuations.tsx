@@ -15,7 +15,6 @@ import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import Modal from "../../../../../components/modal";
 import { SelectInput, TextArea, TextInput } from "../../../../../components/inputs";
 
-import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
@@ -37,63 +36,10 @@ import {
     safePercent,
     todayYMD,
 } from "../../../../../utils/helperFunctions";
+import type { ConfirmTooltipState, OptionType, ProductLine } from "../salesWorkflowTypes";
+import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
 
-/* ===================================================
-    TYPES
-=================================================== */
 
-type OptionType = {
-    label: string;
-    value: string;
-    raw?: any;
-};
-
-type ProductLine = {
-    id: any;
-
-    productCode: string;
-    productName: string;
-    productId: string;
-
-    description: string;
-    remarks: string;
-
-    quantity: number | string;
-
-    unit: string;
-    unitName: string;
-
-    rate: number | string;
-
-    grossAmount: number | string;
-
-    discountPercentage: number | string;
-    discountAmount: number | string;
-
-    taxableAmount: number | string;
-
-    cgstPercentage: number | string;
-    cgstAmount: number | string;
-
-    sgstPercentage: number | string;
-    sgstAmount: number | string;
-
-    igstPercentage: number | string;
-    igstAmount: number | string;
-
-    taxAmount: number | string;
-
-    otherAmount: number | string;
-
-    netTotal: number | string;
-};
-
-type ConfirmTooltipState = {
-    show: boolean;
-    x: number | null;
-    y: number | null;
-    voucherNumber: string | null;
-};
 
 const defaultPagination = {
     offset: 0,
@@ -506,47 +452,47 @@ const SalesQuotations = () => {
         FETCH DROPDOWNS
     =================================================== */
 
-    useEffect(() => {
-        const fetchDropdowns = async () => {
-            try {
-                const [productRes, accountRes, unitRes]: any = await Promise.all([
-                    dispatch(
-                        getAllProducts({
-                            offset: 0,
-                            limit: 200,
-                            search: "",
-                        }) as any
-                    ).unwrap(),
-                    // @ts-ignore
-                    dispatch(getAllAccounts({
-                            offset: 0,
-                            limit: 200,
-                        search: ""
-                        }) as any
-                    ).unwrap(),
-
-                    professionalAxios.get(
-                        "/eTaxSolnMongoApiBackend/users/bookez/unitMeasurement/getAll",
-                        {
-                            params: {
-                                offset: 0,
-                                limit: 200,
-                                search: "",
-                            },
-                        }
-                    ),
-                ]);
-
-                setProductOptions(makeProductOptions(productRes));
-                setCustomerOptions(makeCustomerOptions(accountRes));
-                setUnitOptions(makeUnitOptions(unitRes?.data?.data));
-            } catch (err: any) {
-                toast.error(err?.message || "Failed to load dropdown data");
-            }
-        };
-
-        fetchDropdowns();
-    }, [dispatch]);
+   
+       useEffect(() => {
+           const fetchDropdowns = async () => {
+               try {
+                   const [productRes, accountRes, unitRes]: any = await Promise.all([
+                       dispatch(
+                           getAllProducts({
+                               offset: 0,
+                               limit: 200,
+                               search: "",
+                           }) as any
+                       ).unwrap(),
+   
+                       dispatch(
+                           getAllAccounts({
+                               offset: 0,
+                               limit: 200,
+                               search: "",
+                           }) as any
+                       ).unwrap(),
+   
+                       dispatch(
+                           getAllUnits({
+                               offset: 0,
+                               limit: 200,
+                               search: "",
+                           }) as any
+                       ).unwrap(),
+                   ]);
+   
+                   setProductOptions(makeProductOptions(productRes));
+                   setCustomerOptions(makeCustomerOptions(accountRes));
+                   setUnitOptions(makeUnitOptions(unitRes));
+               } catch (err: any) {
+                   console.log("Failed to load dropdown data:", err);
+                   toast.error(err?.message || "Failed to load dropdown data");
+               }
+           };
+   
+           fetchDropdowns();
+       }, [dispatch]);
 
     /* ===================================================
         FETCH LIST BASIS ON DOCUMENT STATUS

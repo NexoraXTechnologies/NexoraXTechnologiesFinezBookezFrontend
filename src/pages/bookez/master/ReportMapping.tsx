@@ -16,8 +16,8 @@ import { getTemplateKeyLabel } from "../../../utils/templateKeyLabel";
 
 const ReportMapping = () => {
 	const dispatch = useDispatch();
-	const { report, pagination, loading, modules = [], modulesLoading, moduleWiseKeys, moduleWiseKeysLoading, } = useSelector((s: any) => s.reportMapping);
-
+	const { report, pagination, loading, modules, modulesLoading, moduleWiseKeys, moduleWiseKeysLoading, } = useSelector((s: any) => s.reportMapping);
+	console.log("report modules", modules)
 	/* =====================================================
 		LIST FILTER / PAGINATION STATES
 	===================================================== */
@@ -93,6 +93,8 @@ const ReportMapping = () => {
 			label: item,
 			value: item,
 		})) || [];
+
+
 
 
 	/* =====================================================
