@@ -1,4 +1,4 @@
-import { TextArea, TextInput } from "../inputs";
+import { SelectInput, TextArea, TextInput } from "../inputs";
 import EditableLineTable from "./EditableLineTable";
 import SummaryCards from "./SummaryCards";
 import VoucherFormModal from "./VoucherFormModal";
@@ -54,6 +54,16 @@ const DynamicAddForm = ({
                 />
             );
         }
+
+        if (e?.type == "select") return <SelectInput
+            label={e?.title}
+            value={form?.[e?.key] || ""}
+            placeholder={e?.placeholder}
+            disabled={e?.disabled}
+            error={errors?.[e?.key]}
+            onChange={(event: any) => handleChange(e?.key, event.target.value)}
+            options={e?.options}
+        />
 
         return (
             <TextInput

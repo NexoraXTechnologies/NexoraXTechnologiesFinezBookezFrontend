@@ -12,15 +12,19 @@ import {
 import DataTable from "../../../../../components/DataTable";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
-import Modal from "../../../../../components/modal";
-import { SelectInput, TextArea, TextInput } from "../../../../../components/inputs";
+import Toggle from "../../../../../components/toggle";
+import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 
 import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
 
-import SalesQuotationsFormModal from "./SalesQuationsFormModel";
-import Toggle from "../../../../../components/toggle";
+import {
+    addSalesQuotation,
+    deleteSalesQuotation,
+    getSalesQuotationList,
+    updateSalesQuotation,
+} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 
 import {
     fmtMoney,
@@ -38,13 +42,6 @@ import type {
     ProductLine,
 } from "../salesWorkflowTypes";
 
-import {
-    addSalesQuotation,
-    deleteSalesQuotation,
-    getSalesQuotationList,
-    updateSalesQuotation,
-} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
-
 const defaultPagination = {
     offset: 0,
     limit: 10,
@@ -55,38 +52,42 @@ const defaultPagination = {
     hasPrevPage: false,
 };
 
-const emptyProductForm = {
+const emptyProductRow = {
+    id: Date.now(),
     productCode: "",
+    productName: "",
+    productId: "",
     description: "",
     remarks: "",
     quantity: "",
     unit: "",
+    unitName: "",
     rate: "",
+    grossAmount: 0,
     discountPercentage: "",
+    discountAmount: 0,
+    taxableAmount: 0,
     cgstPercentage: "",
+    cgstAmount: 0,
     sgstPercentage: "",
+    sgstAmount: 0,
     igstPercentage: "",
+    igstAmount: 0,
+    taxAmount: 0,
     otherAmount: "",
+    netTotal: 0,
 };
 
 const getDefaultForm = () => ({
-    voucherNumber: "SQ",
+    voucherNumber: "SQUOTE",
     voucherDate: todayYMD(),
     sQuoteSalesAccount: "SA021",
-
     customerCode: "",
     customerName: "",
-
-    // Document status: open / close
     status: "open",
-
-    // Quotation workflow status: draft / sent / accepted
     quoteStatus: "draft",
-
     remarks: "",
-
-    products: [] as ProductLine[],
-
+    products: [{ ...emptyProductRow, id: Date.now() }],
     grossAmount: "0.00",
     discountAmount: "0.00",
     cgstAmount: "0.00",
@@ -107,25 +108,11 @@ const SalesQuotations = () => {
     const {
         salesQuotations = [],
         pagination = defaultPagination,
-
-        // JournalVoucher pattern loaders
-        listingLoader = false,
-        addLoader = false,
-        deleteLoader = false,
-
-        // fallback support if old slice still exists
-        loading: oldLoading = false,
-        createLoading: oldCreateLoading = false,
-        updateLoading: oldUpdateLoading = false,
+        loading = false,
+        createLoading = false,
+        updateLoading = false,
+        deleteLoading = false,
     } = salesQuotationState || {};
-
-    const loading = listingLoader || oldLoading;
-    const createLoading = addLoader || oldCreateLoading;
-    const updateLoading = addLoader || oldUpdateLoading;
-
-    /* ===================================================
-        LIST STATES
-    =================================================== */
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
@@ -134,40 +121,18 @@ const SalesQuotations = () => {
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
     const [refreshing, setRefreshing] = useState(false);
-
-    // Toggle for API docStatus=open / docStatus=close
     const [status, setStatus] = useState("open");
 
-    /* ===================================================
-        MODAL STATES
-    =================================================== */
-
     const [showModal, setShowModal] = useState(false);
-    const [showProductModal, setShowProductModal] = useState(false);
-
-    const [editingRecord, setEditingRecord] = useState<any>(null);
-    const [editingProductId, setEditingProductId] = useState<any>(null);
+    const [editingRecord, setEditingRecord] = useState<any>(false);
 
     const [form, setForm] = useState<any>(getDefaultForm());
-    const [productForm, setProductForm] = useState<any>({
-        ...emptyProductForm,
-    });
-
     const [errors, setErrors] = useState<any>({});
-    const [productErrors, setProductErrors] = useState<any>({});
-
-    /* ===================================================
-        DROPDOWNS
-    =================================================== */
 
     const [customerOptions, setCustomerOptions] = useState<OptionType[]>([]);
     const [productOptions, setProductOptions] = useState<OptionType[]>([]);
     const [unitOptions, setUnitOptions] = useState<OptionType[]>([]);
-
-    /* ===================================================
-        DELETE TOOLTIP
-    =================================================== */
-
+    console.log({ customerOptions })
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({
         show: false,
         x: null,
@@ -175,63 +140,20 @@ const SalesQuotations = () => {
         voucherNumber: null,
     });
 
-    /* ===================================================
-        PRODUCT HELPERS
-    =================================================== */
-
-    const getProductRate = (product: any, fallback = "") => {
-        return String(
-            product?.sellingPrice ||
-                product?.productSellingPrice ||
-                product?.salesRate ||
-                product?.saleRate ||
-                product?.rate ||
-                product?.purchasePrice ||
-                product?.productPurchasePrice ||
-                fallback ||
-                ""
-        );
-    };
-
-    const getProductUnit = (product: any) => {
-        return String(
-            product?.unit ||
-                product?.uom ||
-                product?.unitName ||
-                product?.unitCode ||
-                product?.productUnit ||
-                product?.unitMeasurement ||
-                product?.unitMeasurementCode ||
-                ""
-        );
-    };
-
-    const getUnitLabel = (unitCode: string) => {
-        return (
-            unitOptions.find((item) => item.value === unitCode)?.label ||
-            unitCode ||
-            ""
-        );
-    };
-
-    /* ===================================================
-        OPTION MAPPERS
-    =================================================== */
-
     const getRecords = (res: any) => {
         return Array.isArray(res?.items)
             ? res.items
             : Array.isArray(res?.records)
-              ? res.records
-              : Array.isArray(res?.data?.items)
-                ? res.data.items
-                : Array.isArray(res?.data?.records)
-                  ? res.data.records
-                  : Array.isArray(res?.data)
-                    ? res.data
-                    : Array.isArray(res)
-                      ? res
-                      : [];
+                ? res.records
+                : Array.isArray(res?.data?.items)
+                    ? res.data.items
+                    : Array.isArray(res?.data?.records)
+                        ? res.data.records
+                        : Array.isArray(res?.data)
+                            ? res.data
+                            : Array.isArray(res)
+                                ? res
+                                : [];
     };
 
     const makeProductOptions = (res: any): OptionType[] => {
@@ -278,34 +200,68 @@ const SalesQuotations = () => {
         }));
     };
 
-    /* ===================================================
-        PRODUCT CALCULATION
-    =================================================== */
+    const getProductRate = (product: any, fallback = "") => {
+        return String(
+            product?.sellingPrice ||
+            product?.productSellingPrice ||
+            product?.salesRate ||
+            product?.saleRate ||
+            product?.rate ||
+            product?.purchasePrice ||
+            product?.productPurchasePrice ||
+            fallback ||
+            ""
+        );
+    };
 
-    const productCalc = useMemo(() => {
-        const quantity = num(productForm.quantity);
-        const rate = num(productForm.rate);
+    const getProductUnit = (product: any) => {
+        return String(
+            product?.unit ||
+            product?.uom ||
+            product?.unitName ||
+            product?.unitCode ||
+            product?.productUnit ||
+            product?.unitMeasurement ||
+            product?.unitMeasurementCode ||
+            ""
+        );
+    };
+
+    const getUnitLabel = (unitCode: string) => {
+        return (
+            unitOptions.find((item) => item.value === unitCode)?.label ||
+            unitCode ||
+            ""
+        );
+    };
+
+    const calculateRow = (row: any) => {
+        const quantity = num(row.quantity);
+        const rate = num(row.rate);
 
         const grossAmount = quantity * rate;
 
-        const discountPercentage = safePercent(productForm.discountPercentage);
-        const cgstPercentage = safePercent(productForm.cgstPercentage);
-        const sgstPercentage = safePercent(productForm.sgstPercentage);
-        const igstPercentage = safePercent(productForm.igstPercentage);
-
+        const discountPercentage = safePercent(row.discountPercentage);
         const discountAmount = (grossAmount * discountPercentage) / 100;
+
         const taxableAmount = grossAmount - discountAmount;
+
+        const cgstPercentage = safePercent(row.cgstPercentage);
+        const sgstPercentage = safePercent(row.sgstPercentage);
+        const igstPercentage = safePercent(row.igstPercentage);
 
         const cgstAmount = (taxableAmount * cgstPercentage) / 100;
         const sgstAmount = (taxableAmount * sgstPercentage) / 100;
         const igstAmount = (taxableAmount * igstPercentage) / 100;
 
-        const otherAmount = num(productForm.otherAmount);
+        const otherAmount = num(row.otherAmount);
         const taxAmount = cgstAmount + sgstAmount + igstAmount;
 
         const netTotal = taxableAmount + taxAmount + otherAmount;
 
         return {
+            ...row,
+
             quantity,
             rate,
 
@@ -325,20 +281,15 @@ const SalesQuotations = () => {
             igstPercentage,
             igstAmount,
 
-            taxAmount,
-
             otherAmount,
 
+            taxAmount,
             netTotal,
         };
-    }, [productForm]);
+    };
 
-    /* ===================================================
-        FOOTER TOTALS
-    =================================================== */
-
-    const footerTotals = useMemo(() => {
-        return form.products.reduce(
+    const calculateFooter = (products: ProductLine[]) => {
+        return products.reduce(
             (acc: any, item: ProductLine) => {
                 acc.totalQuantity += num(item.quantity);
                 acc.totalGrossAmount += num(item.grossAmount);
@@ -364,6 +315,10 @@ const SalesQuotations = () => {
                 totalNetAmount: 0,
             }
         );
+    };
+
+    const footerTotals = useMemo(() => {
+        return calculateFooter(form.products || []);
     }, [form.products]);
 
     const grossAmount = footerTotals.totalGrossAmount;
@@ -373,94 +328,16 @@ const SalesQuotations = () => {
     const igstAmount = footerTotals.totalIgstAmount;
     const netAmount = footerTotals.totalNetAmount;
 
-    /* ===================================================
-        PRODUCT MODAL CONFIGS
-    =================================================== */
-
-    const productInputData = [
-        {
-            key: "productCode",
-            label: "Product",
-            type: "select",
-            isRequired: true,
-            placeholder: "Select Product",
-            options: productOptions,
-        },
-        {
-            key: "description",
-            label: "Description",
-            type: "text",
-            isRequired: false,
-            placeholder: "Description",
-        },
-        {
-            key: "remarks",
-            label: "Remarks",
-            type: "text",
-            isRequired: false,
-            placeholder: "Remarks",
-        },
-        {
-            grid: 2,
-            child: [
-                {
-                    key: "quantity",
-                    label: "Quantity",
-                    type: "number",
-                    isRequired: true,
-                    placeholder: "Quantity",
-                },
-                {
-                    key: "unit",
-                    label: "Unit",
-                    type: "select",
-                    isRequired: true,
-                    placeholder: "Unit",
-                    options: unitOptions,
-                },
-            ],
-        },
-        {
-            key: "rate",
-            label: "Rate",
-            type: "number",
-            isRequired: true,
-            placeholder: "Rate",
-        },
-    ];
-
-    const percentAmountRows = [
-        {
-            label: "Discount",
-            percentKey: "discountPercentage",
-            amount: productCalc.discountAmount,
-        },
-        {
-            label: "CGST",
-            percentKey: "cgstPercentage",
-            amount: productCalc.cgstAmount,
-        },
-        {
-            label: "SGST",
-            percentKey: "sgstPercentage",
-            amount: productCalc.sgstAmount,
-        },
-        {
-            label: "IGST",
-            percentKey: "igstPercentage",
-            amount: productCalc.igstAmount,
-        },
-        {
-            label: "Other Amount",
-            percentKey: "otherAmount",
-            amount: productCalc.otherAmount,
-            isAmountInput: true,
-        },
-    ];
-
-    /* ===================================================
-        FETCH DROPDOWNS
-    =================================================== */
+    const fetchSalesQuotations = async () => {
+        await dispatch(
+            getSalesQuotationList({
+                offset: localOffset,
+                limit: localLimit,
+                search: debouncedSearch,
+                docStatus: status,
+            }) as any
+        );
+    };
 
     useEffect(() => {
         const fetchDropdowns = async () => {
@@ -504,21 +381,6 @@ const SalesQuotations = () => {
         fetchDropdowns();
     }, [dispatch]);
 
-    /* ===================================================
-        FETCH LIST BASIS ON DOCUMENT STATUS
-    =================================================== */
-
-    const fetchSalesQuotations = async () => {
-        await dispatch(
-            getSalesQuotationList({
-                offset: localOffset,
-                limit: localLimit,
-                search: debouncedSearch,
-                docStatus: status,
-            }) as any
-        );
-    };
-
     useEffect(() => {
         fetchSalesQuotations();
     }, [localOffset, localLimit, debouncedSearch, status]);
@@ -536,10 +398,6 @@ const SalesQuotations = () => {
         setStatus(nextStatus);
         setLocalOffset(0);
     };
-
-    /* ===================================================
-        MAIN TABLE COLUMNS - DIRECT API KEYS
-    =================================================== */
 
     const columns = [
         {
@@ -587,11 +445,10 @@ const SalesQuotations = () => {
             title: "Doc Status",
             render: (row: any) => (
                 <span
-                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
-                        row?.sQuoteDocStatus === "open"
-                            ? "border-green-200 bg-green-50 text-green-700"
-                            : "border-red-200 bg-red-50 text-red-700"
-                    }`}
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.sQuoteDocStatus === "open"
+                        ? "border-green-200 bg-green-50 text-green-700"
+                        : "border-red-200 bg-red-50 text-red-700"
+                        }`}
                 >
                     {row?.sQuoteDocStatus || "-"}
                 </span>
@@ -608,39 +465,6 @@ const SalesQuotations = () => {
         },
     ];
 
-    const productTableFields = [
-        {
-            title: "Product",
-            key: "productName",
-        },
-        {
-            title: "Qty",
-            key: "quantity",
-        },
-        {
-            title: "Unit",
-            key: "unitName",
-        },
-        {
-            title: "Rate",
-            key: "rate",
-            render: (item: ProductLine) => money(item?.rate),
-        },
-        {
-            title: "Net Amount",
-            key: "netTotal",
-            render: (item: ProductLine) => (
-                <span className="rounded-md bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
-                    {money(item?.netTotal)}
-                </span>
-            ),
-        },
-    ];
-
-    /* ===================================================
-        FORM HANDLERS
-    =================================================== */
-
     const handleRefresh = async () => {
         setRefreshing(true);
 
@@ -652,16 +476,9 @@ const SalesQuotations = () => {
         }
     };
 
-    const resetProductForm = () => {
-        setProductForm({ ...emptyProductForm });
-        setEditingProductId(null);
-        setProductErrors({});
-    };
-
     const resetMainForm = () => {
         setEditingRecord(null);
         setErrors({});
-        resetProductForm();
         setForm(getDefaultForm());
     };
 
@@ -673,54 +490,62 @@ const SalesQuotations = () => {
     const openEditModal = (record: any) => {
         const footer = record?.sQuoteFooter || {};
 
-        const products = (record?.sQuoteBody || []).map((item: any) => {
-            const unitCode = item?.unit || "";
+        const products =
+            record?.sQuoteBody?.length > 0
+                ? record.sQuoteBody.map((item: any) => {
+                    const unitCode = item?.unit || "";
 
-            return {
-                id: item?.id || Date.now() + Math.random(),
+                    return calculateRow({
+                        id: item?.id || Date.now() + Math.random(),
 
-                productCode: item?.productCode || "",
-                productName: item?.productName || "",
-                productId: item?.productId || "",
+                        productCode: item?.productCode || "",
+                        productName: item?.productName || "",
+                        productId: item?.productId || "",
 
-                description: item?.description || item?.productDescription || "",
-                remarks: item?.remarks || "",
+                        description:
+                            item?.description ||
+                            item?.productDescription ||
+                            "",
+                        remarks: item?.remarks || "",
 
-                quantity: item?.quantity || "",
+                        quantity: item?.quantity || "",
 
-                unit: unitCode,
-                unitName: item?.unitName || getUnitLabel(unitCode),
+                        unit: unitCode,
+                        unitName: item?.unitName || getUnitLabel(unitCode),
 
-                rate: item?.rate || "",
+                        rate: item?.rate || "",
 
-                grossAmount: item?.grossAmount || item?.gross || 0,
+                        grossAmount: item?.grossAmount || item?.gross || 0,
 
-                discountPercentage:
-                    item?.discountPercentage || item?.discount || "",
-                discountAmount: item?.discountAmount || 0,
+                        discountPercentage:
+                            item?.discountPercentage || item?.discount || "",
+                        discountAmount: item?.discountAmount || 0,
 
-                taxableAmount: item?.taxableAmount || 0,
+                        taxableAmount: item?.taxableAmount || 0,
 
-                cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-                cgstAmount: item?.cgstAmount || 0,
+                        cgstPercentage:
+                            item?.cgstPercentage || item?.cgst || "",
+                        cgstAmount: item?.cgstAmount || 0,
 
-                sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-                sgstAmount: item?.sgstAmount || 0,
+                        sgstPercentage:
+                            item?.sgstPercentage || item?.sgst || "",
+                        sgstAmount: item?.sgstAmount || 0,
 
-                igstPercentage: item?.igstPercentage || item?.igst || "",
-                igstAmount: item?.igstAmount || 0,
+                        igstPercentage:
+                            item?.igstPercentage || item?.igst || "",
+                        igstAmount: item?.igstAmount || 0,
 
-                taxAmount: item?.taxAmount || 0,
+                        taxAmount: item?.taxAmount || 0,
 
-                otherAmount: item?.otherAmount || 0,
+                        otherAmount: item?.otherAmount || 0,
 
-                netTotal: item?.netTotal || item?.netAmount || 0,
-            };
-        });
+                        netTotal: item?.netTotal || item?.netAmount || 0,
+                    });
+                })
+                : [{ ...emptyProductRow, id: Date.now() }];
 
-        setEditingRecord(record);
+        setEditingRecord(true);
         setErrors({});
-        setProductErrors({});
 
         setForm({
             voucherNumber: record?.sQuoteVoucherNumber || "SQ",
@@ -731,10 +556,7 @@ const SalesQuotations = () => {
 
             sQuoteSalesAccount: record?.sQuoteSalesAccount || "SA021",
 
-            // form.status is document status
             status: record?.sQuoteDocStatus || "open",
-
-            // form.quoteStatus is quotation workflow status
             quoteStatus: record?.sQuoteStatus || "draft",
 
             remarks: record?.sQuoteRemark || "",
@@ -759,15 +581,26 @@ const SalesQuotations = () => {
                 footer?.netAmount || footer?.totalNetAmount || "0.00",
         });
 
-        resetProductForm();
         setShowModal(true);
     };
 
     const handleMainChange = (key: string, value: any) => {
-        setForm((prev: any) => ({
-            ...prev,
-            [key]: value,
-        }));
+        setForm((prev: any) => {
+            const updated = {
+                ...prev,
+                [key]: value,
+            };
+
+            if (key === "sQuoteCustomerName") {
+                const selectedCustomer = customerOptions.find(
+                    (item) => item.value === value
+                );
+                updated.sQuoteCustomerCode = value;
+                updated.customerName = selectedCustomer?.label || "";
+            }
+
+            return updated;
+        });
 
         setErrors((prev: any) => ({
             ...prev,
@@ -775,215 +608,93 @@ const SalesQuotations = () => {
         }));
     };
 
-    const handleCustomerChange = (customerCode: string) => {
-        const selectedCustomer = customerOptions.find(
-            (item) => item.value === customerCode
-        );
+    const handleAddRow = () => {
+        if (productOptions.length === 0) {
+            toast.error("Please create at least one product first");
+            return;
+        }
 
         setForm((prev: any) => ({
             ...prev,
-            customerCode,
-            customerName: selectedCustomer?.label || "",
-        }));
-
-        setErrors((prev: any) => ({
-            ...prev,
-            customerCode: "",
+            products: [
+                ...(prev.products || []),
+                {
+                    ...emptyProductRow,
+                    id: Date.now(),
+                },
+            ],
         }));
     };
 
-    const handleProductChange = (key: string, value: any) => {
-        setProductForm((prev: any) => {
-            const updated = {
+    const handleDeleteRow = (index: number) => {
+        setForm((prev: any) => {
+            const updatedProducts = prev.products.filter(
+                (_: any, i: number) => i !== index
+            );
+
+            return {
                 ...prev,
+                products:
+                    updatedProducts.length > 0
+                        ? updatedProducts
+                        : [{ ...emptyProductRow, id: Date.now() }],
+            };
+        });
+    };
+
+    const handleRowChange = (index: number, key: string, value: any) => {
+        setForm((prev: any) => {
+            const updatedProducts = [...(prev.products || [])];
+
+            let updatedRow = {
+                ...updatedProducts[index],
                 [key]: value,
             };
 
             if (key === "productCode") {
                 const selectedProduct = productOptions.find(
                     (item) => item.value === value
-                )?.raw;
+                );
 
-                updated.description =
-                    selectedProduct?.productDescription ||
-                    selectedProduct?.description ||
+                const product = selectedProduct?.raw;
+
+                updatedRow.productCode = value;
+                updatedRow.productName = selectedProduct?.label || "";
+                updatedRow.productId = product?._id || "";
+
+                updatedRow.description =
+                    product?.productDescription ||
+                    product?.description ||
                     "";
 
-                updated.rate = getProductRate(selectedProduct, "");
-                updated.unit = getProductUnit(selectedProduct);
+                updatedRow.rate = getProductRate(product, "");
+                updatedRow.unit = getProductUnit(product);
+                updatedRow.unitName = getUnitLabel(updatedRow.unit);
+            }
+
+            if (key === "unit") {
+                updatedRow.unit = value;
+                updatedRow.unitName = getUnitLabel(value);
             }
 
             if (key === "cgstPercentage" || key === "sgstPercentage") {
                 if (num(value) > 0) {
-                    updated.igstPercentage = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
                 }
             }
 
             if (key === "igstPercentage") {
                 if (num(value) > 0) {
-                    updated.cgstPercentage = "";
-                    updated.sgstPercentage = "";
+                    updatedRow.cgstPercentage = "";
+                    updatedRow.sgstPercentage = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
                 }
             }
 
-            return updated;
-        });
-
-        setProductErrors((prev: any) => ({
-            ...prev,
-            [key]: "",
-            tax: "",
-        }));
-    };
-
-    /* ===================================================
-        VALIDATIONS
-    =================================================== */
-
-    const validateProductForm = () => {
-        const err: any = {};
-
-        if (!productForm.productCode) {
-            err.productCode = "Product is required";
-        }
-
-        if (!productForm.quantity || num(productForm.quantity) <= 0) {
-            err.quantity = "Quantity is required";
-        }
-
-        if (!productForm.unit) {
-            err.unit = "Unit is required";
-        }
-
-        if (!productForm.rate || num(productForm.rate) <= 0) {
-            err.rate = "Rate is required";
-        }
-
-        const cgst = num(productForm.cgstPercentage);
-        const sgst = num(productForm.sgstPercentage);
-        const igst = num(productForm.igstPercentage);
-
-        if (igst > 0 && (cgst > 0 || sgst > 0)) {
-            err.tax = "You can enter either IGST or CGST/SGST";
-            err.igstPercentage = "Only one tax type allowed";
-            err.cgstPercentage = "Only one tax type allowed";
-            err.sgstPercentage = "Only one tax type allowed";
-        }
-
-        setProductErrors(err);
-        return Object.keys(err).length === 0;
-    };
-
-    const validateForm = () => {
-        const err: any = {};
-
-        if (!form.voucherDate) {
-            err.voucherDate = "Date is required";
-        }
-
-        if (!form.customerCode) {
-            err.customerCode = "Customer is required";
-        }
-
-        if (!form.status) {
-            err.status = "Document status is required";
-        }
-
-        if (!form.products || form.products.length === 0) {
-            err.products = "Please add at least one product";
-        }
-
-        setErrors(err);
-
-        if (err.products) {
-            toast.error(err.products);
-        }
-
-        return Object.keys(err).length === 0;
-    };
-
-    /* ===================================================
-        PRODUCT ADD / EDIT / DELETE
-    =================================================== */
-
-    const openAddProductModal = () => {
-        if (productOptions.length === 0) {
-            toast.error("Please create at least one product first");
-            return;
-        }
-
-        resetProductForm();
-        setShowProductModal(true);
-    };
-
-    const handleAddProduct = () => {
-        if (!validateProductForm()) return;
-
-        const selectedProduct = productOptions.find(
-            (item) => item.value === productForm.productCode
-        );
-
-        const selectedUnit = unitOptions.find(
-            (item) => item.value === productForm.unit
-        );
-
-        const newProduct: ProductLine = {
-            id: editingProductId || Date.now(),
-
-            productCode: productForm.productCode,
-            productName: selectedProduct?.label || "",
-            productId: selectedProduct?.raw?._id || "",
-
-            description: productForm.description || "",
-            remarks: productForm.remarks || "",
-
-            quantity: productCalc.quantity,
-
-            unit: productForm.unit,
-            unitName: selectedUnit?.label || productForm.unit,
-
-            rate: productCalc.rate,
-
-            grossAmount: productCalc.grossAmount,
-
-            discountPercentage: productCalc.discountPercentage,
-            discountAmount: productCalc.discountAmount,
-
-            taxableAmount: productCalc.taxableAmount,
-
-            cgstPercentage: productCalc.cgstPercentage,
-            cgstAmount: productCalc.cgstAmount,
-
-            sgstPercentage: productCalc.sgstPercentage,
-            sgstAmount: productCalc.sgstAmount,
-
-            igstPercentage: productCalc.igstPercentage,
-            igstAmount: productCalc.igstAmount,
-
-            taxAmount: productCalc.taxAmount,
-
-            otherAmount: productCalc.otherAmount,
-
-            netTotal: productCalc.netTotal,
-        };
-
-        setForm((prev: any) => {
-            const alreadyExists = prev.products.some(
-                (item: ProductLine) =>
-                    item.productCode === newProduct.productCode &&
-                    item.id !== editingProductId
-            );
-
-            if (alreadyExists) {
-                toast.error("This product is already added");
-                return prev;
-            }
-
-            const updatedProducts = editingProductId
-                ? prev.products.map((item: ProductLine) =>
-                      item.id === editingProductId ? newProduct : item
-                  )
-                : [...prev.products, newProduct];
+            updatedRow = calculateRow(updatedRow);
+            updatedProducts[index] = updatedRow;
 
             return {
                 ...prev,
@@ -994,63 +705,144 @@ const SalesQuotations = () => {
         setErrors((prev: any) => ({
             ...prev,
             products: "",
+            [`row_${index}_${key}`]: "",
+            [`row_${index}_tax`]: "",
         }));
-
-        resetProductForm();
-        setShowProductModal(false);
     };
 
-    const handleEditProduct = (row: any) => {
-        setEditingProductId(row.id);
-
-        setProductForm({
-            productCode: row.productCode || "",
-            description: row.description || "",
-            remarks: row.remarks || "",
-            quantity: row.quantity || "",
-            unit: row.unit || "",
-            rate: row.rate || "",
-            discountPercentage: row.discountPercentage || "",
-            cgstPercentage: row.cgstPercentage || "",
-            sgstPercentage: row.sgstPercentage || "",
-            igstPercentage: row.igstPercentage || "",
-            otherAmount: row.otherAmount || "",
+    const getFilledRows = () => {
+        return form.products.filter((row: any) => {
+            return (
+                row.productCode ||
+                row.description ||
+                row.remarks ||
+                row.quantity ||
+                row.unit ||
+                row.rate ||
+                row.discountPercentage ||
+                row.cgstPercentage ||
+                row.sgstPercentage ||
+                row.igstPercentage ||
+                row.otherAmount
+            );
         });
-
-        setProductErrors({});
-        setShowProductModal(true);
     };
 
-    const handleDeleteProduct = (id: any) => {
-        setForm((prev: any) => ({
-            ...prev,
-            products: prev.products.filter((item: ProductLine) => item.id !== id),
-        }));
+    const validateForm = () => {
+        const err: any = {};
+
+        if (!form.voucherDate) {
+            err.voucherDate = "Date is required";
+        }
+
+        // if (!form.customerCode) {
+        //     err.customerCode = "Customer is required";
+        // }
+
+        if (!form.status) {
+            err.status = "Document status is required";
+        }
+
+        const filledRows = getFilledRows();
+
+        if (filledRows.length === 0) {
+            err.products = "Please add at least one product";
+        }
+
+        form.products.forEach((row: any, index: number) => {
+            const hasAnyValue =
+                row.productCode ||
+                row.description ||
+                row.remarks ||
+                row.quantity ||
+                row.unit ||
+                row.rate ||
+                row.discountPercentage ||
+                row.cgstPercentage ||
+                row.sgstPercentage ||
+                row.igstPercentage ||
+                row.otherAmount;
+
+            if (!hasAnyValue) return;
+
+            if (!row.productCode) {
+                err[`row_${index}_productCode`] = "Product is required";
+            }
+
+            if (!row.quantity || num(row.quantity) <= 0) {
+                err[`row_${index}_quantity`] = "Quantity is required";
+            }
+
+            if (!row.unit) {
+                err[`row_${index}_unit`] = "Unit is required";
+            }
+
+            if (!row.rate || num(row.rate) <= 0) {
+                err[`row_${index}_rate`] = "Rate is required";
+            }
+
+            const cgst = num(row.cgstPercentage);
+            const sgst = num(row.sgstPercentage);
+            const igst = num(row.igstPercentage);
+
+            if (igst > 0 && (cgst > 0 || sgst > 0)) {
+                err[`row_${index}_tax`] =
+                    "You can enter either IGST or CGST/SGST";
+
+                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
+            }
+        });
+        console.log({ err })
+        setErrors(err);
+
+        if (err.products) {
+            toast.error(err.products);
+        }
+
+        return Object.keys(err).length === 0;
     };
 
-    /* ===================================================
-        SUBMIT / DELETE
-    =================================================== */
+    const cleanRows = () => {
+        return form.products
+            .filter((row: any) => {
+                return (
+                    row.productCode ||
+                    row.description ||
+                    row.remarks ||
+                    row.quantity ||
+                    row.unit ||
+                    row.rate ||
+                    row.discountPercentage ||
+                    row.cgstPercentage ||
+                    row.sgstPercentage ||
+                    row.igstPercentage ||
+                    row.otherAmount
+                );
+            })
+            .map((row: any) => calculateRow(row));
+    };
 
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
-        const payload = {
+        const products = cleanRows();
+        const footer = calculateFooter(products);
+
+        const payload:any = {
             sQuoteVoucherDate: form.voucherDate,
 
-            sQuoteCustomerCode: form.customerCode,
+            sQuoteCustomerCode: form.sQuoteCustomerCode,
             sQuoteCustomerName: form.customerName,
             sQuoteSalesAccount: form.sQuoteSalesAccount || "SA021",
 
-            // workflow status
             sQuoteStatus: form.quoteStatus || "draft",
-
-            // document status
             sQuoteDocStatus: form.status || "open",
 
             sQuoteRemark: form.remarks,
 
-            sQuoteBody: form.products.map((item: ProductLine) => ({
+            sQuoteBody: products.map((item: ProductLine) => ({
                 productCode: item.productCode,
                 productName: item.productName,
                 productId: item.productId,
@@ -1062,7 +854,6 @@ const SalesQuotations = () => {
                 quantity: String(item.quantity),
 
                 unit: item.unit,
-                unitName: item.unitName,
 
                 rate: String(item.rate),
 
@@ -1096,62 +887,49 @@ const SalesQuotations = () => {
             })),
 
             sQuoteFooter: {
-                grossAmount: fmtMoney(footerTotals.totalGrossAmount),
-                discountAmount: fmtMoney(footerTotals.totalDiscountAmount),
-                cgstAmount: fmtMoney(footerTotals.totalCgstAmount),
-                sgstAmount: fmtMoney(footerTotals.totalSgstAmount),
-                igstAmount: fmtMoney(footerTotals.totalIgstAmount),
-                taxAmount: fmtMoney(footerTotals.totalTaxAmount),
-                otherAmount: fmtMoney(footerTotals.totalOtherAmount),
-                netAmount: fmtMoney(footerTotals.totalNetAmount),
+                grossAmount: fmtMoney(footer.totalGrossAmount),
+                discountAmount: fmtMoney(footer.totalDiscountAmount),
+                cgstAmount: fmtMoney(footer.totalCgstAmount),
+                sgstAmount: fmtMoney(footer.totalSgstAmount),
+                igstAmount: fmtMoney(footer.totalIgstAmount),
+                taxAmount: fmtMoney(footer.totalTaxAmount),
+                otherAmount: fmtMoney(footer.totalOtherAmount),
+                netAmount: fmtMoney(footer.totalNetAmount),
 
                 adjustedAmount: "0",
-                balanceAmount: fmtMoney(footerTotals.totalNetAmount),
+                balanceAmount: fmtMoney(footer.totalNetAmount),
 
-                totalQuantity: footerTotals.totalQuantity,
-                totalGrossAmount: fmtMoney(footerTotals.totalGrossAmount),
-                totalDiscountAmount: fmtMoney(footerTotals.totalDiscountAmount),
-                totalCgstAmount: fmtMoney(footerTotals.totalCgstAmount),
-                totalSgstAmount: fmtMoney(footerTotals.totalSgstAmount),
-                totalIgstAmount: fmtMoney(footerTotals.totalIgstAmount),
-                totalTaxAmount: fmtMoney(footerTotals.totalTaxAmount),
-                totalOtherAmount: fmtMoney(footerTotals.totalOtherAmount),
-                totalNetAmount: fmtMoney(footerTotals.totalNetAmount),
+                totalQuantity: footer.totalQuantity,
+                totalGrossAmount: fmtMoney(footer.totalGrossAmount),
+                totalDiscountAmount: fmtMoney(footer.totalDiscountAmount),
+                totalCgstAmount: fmtMoney(footer.totalCgstAmount),
+                totalSgstAmount: fmtMoney(footer.totalSgstAmount),
+                totalIgstAmount: fmtMoney(footer.totalIgstAmount),
+                totalTaxAmount: fmtMoney(footer.totalTaxAmount),
+                totalOtherAmount: fmtMoney(footer.totalOtherAmount),
+                totalNetAmount: fmtMoney(footer.totalNetAmount),
             },
         };
-
         try {
+            console.log(form, "form?.sQuoteVoucherNumber", editingRecord)
             if (editingRecord) {
-                const sQuoteVoucherNumber =
-                    editingRecord?.sQuoteVoucherNumber ||
-                    editingRecord?.voucherNumber ||
-                    form?.voucherNumber;
-
-                if (!sQuoteVoucherNumber) {
-                    toast.error("Sales quotation voucher number not found");
-                    return;
-                }
-
                 await dispatch(
                     updateSalesQuotation({
-                        sQuoteVoucherNumber,
-                        payload,
+                        sQuoteVoucherNumber: form?.voucherNumber,
+                        payload: payload,
                     }) as any
                 ).unwrap();
 
                 toast.success("Sales quotation updated successfully");
             } else {
-                await dispatch(
-                    addSalesQuotation({
-                        payload,
-                    }) as any
-                ).unwrap();
+                await dispatch(addSalesQuotation({ payload }) as any).unwrap();
 
                 toast.success("Sales quotation created successfully");
             }
 
             setShowModal(false);
             resetMainForm();
+
             fetchSalesQuotations();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
@@ -1160,17 +938,10 @@ const SalesQuotations = () => {
 
     const handleDeleteConfirm = async () => {
         try {
-            const sQuoteVoucherNumber = confirmTooltip.voucherNumber;
-
-            if (!sQuoteVoucherNumber) {
-                toast.error("Sales quotation voucher number not found");
-                return;
-            }
+            if (!confirmTooltip.voucherNumber) return;
 
             await dispatch(
-                deleteSalesQuotation({
-                    sQuoteVoucherNumber,
-                }) as any
+                deleteSalesQuotation(confirmTooltip.voucherNumber) as any
             ).unwrap();
 
             toast.success("Sales quotation deleted");
@@ -1187,73 +958,242 @@ const SalesQuotations = () => {
         }
     };
 
-    /* ===================================================
-        RENDER PRODUCT FIELD
-    =================================================== */
+    const inputData = {
+        headerInput: [
+            {
+                key: "voucherNumber",
+                title: "Voucher No",
+                type: "text",
+                disabled: true,
+            },
+            {
+                key: "voucherDate",
+                title: "Date",
+                type: "date",
+                required: true,
+            },
+            {
+                key: "sQuoteCustomerName",
+                title: "Customer Account",
+                type: "select",
+                required: true,
+                placeholder: "Select Customer",
+                options: customerOptions,
+            },
+            {
+                key: "sQuoteCustomerCode",
+                title: "Customer Code",
+                type: "text",
+                required: false,
+                placeholder: "Sales Account",
+            },
+            // {
+            //     key: "status",
+            //     title: "Document Status",
+            //     type: "select",
+            //     required: true,
+            //     options: [
+            //         { label: "Open", value: "open" },
+            //         { label: "Close", value: "close" },
+            //     ],
+            // },
+            {
+                key: "quoteStatus",
+                title: "Status",
+                type: "select",
+                required: true,
+                options: [
+                    { label: "Draft", value: "draft" },
+                    { label: "Sent", value: "sent" },
+                    { label: "Pending Response", value: "pending_response" },
+                    { label: "Negotiation", value: "Negotiation" },
+                    { label: "Negotiation", value: "follow_up" },
+                    { label: "Won", value: "won" },
+                    { label: "Lost", value: "lost" },
+                ],
+            },
+            {
+                key: "remarks",
+                title: "Remark",
+                type: "textarea",
+                required: false,
+                placeholder: "Enter Remark",
+            },
+        ],
 
-    const renderProductField = (field: any) => {
-        const value = productForm?.[field.key] ?? "";
+        editTable: [
+            {
+                key: "productCode",
+                title: "Product",
+                type: "select",
+                width: "240px",
+                required: true,
+                options: productOptions,
+            },
+            {
+                key: "description",
+                title: "Description",
+                type: "text",
+                width: "220px",
+            },
+            {
+                key: "remarks",
+                title: "Remarks",
+                type: "text",
+                width: "180px",
+            },
+            {
+                key: "quantity",
+                title: "Qty",
+                type: "number",
+                width: "120px",
+                required: true,
+                align: "right",
+            },
+            {
+                key: "unit",
+                title: "Unit",
+                type: "select",
+                width: "150px",
+                required: true,
+                options: unitOptions,
+            },
+            {
+                key: "rate",
+                title: "Rate",
+                type: "number",
+                width: "130px",
+                required: true,
+                align: "right",
+            },
+            {
+                key: "grossAmount",
+                title: "Gross",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "discountPercentage",
+                title: "Disc %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "discountAmount",
+                title: "Disc Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "cgstPercentage",
+                title: "CGST %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "cgstAmount",
+                title: "CGST Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "sgstPercentage",
+                title: "SGST %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "sgstAmount",
+                title: "SGST Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "igstPercentage",
+                title: "IGST %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "igstAmount",
+                title: "IGST Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "otherAmount",
+                title: "Other",
+                type: "number",
+                width: "130px",
+                align: "right",
+            },
+            {
+                key: "taxAmount",
+                title: "Tax",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "netTotal",
+                title: "Net",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+        ],
 
-        const commonProps = {
-            label: field.label,
-            mandatory: field.isRequired,
-            value,
-            placeholder: field.placeholder || `Enter ${field.label}`,
-            error: productErrors?.[field.key],
-        };
-
-        if (field.type === "select") {
-            return (
-                <SelectInput
-                    key={field.key}
-                    label={field.label}
-                    mandatory={field.isRequired}
-                    value={value}
-                    placeholder={field.placeholder || `Select ${field.label}`}
-                    error={productErrors?.[field.key]}
-                    onChange={(e: any) =>
-                        handleProductChange(field.key, e?.target?.value)
-                    }
-                    options={[
-                        {
-                            label: field.placeholder || `Select ${field.label}`,
-                            value: "",
-                        },
-                        ...(field.options || []),
-                    ]}
-                />
-            );
-        }
-
-        if (field.type === "textarea") {
-            return (
-                <TextArea
-                    key={field.key}
-                    {...commonProps}
-                    onChange={(e: any) =>
-                        handleProductChange(field.key, e.target.value)
-                    }
-                />
-            );
-        }
-
-        return (
-            <TextInput
-                key={field.key}
-                {...commonProps}
-                type={field.type || "text"}
-                onChange={(e: any) =>
-                    handleProductChange(field.key, e.target.value)
-                }
-            />
-        );
+        footerCard: [
+            {
+                label: "Gross Amount",
+                value: money(grossAmount),
+            },
+            {
+                label: "Discount Amount",
+                value: money(discountAmount),
+            },
+            {
+                label: "CGST Amount",
+                value: money(cgstAmount),
+            },
+            {
+                label: "SGST Amount",
+                value: money(sgstAmount),
+            },
+            {
+                label: "IGST Amount",
+                value: money(igstAmount),
+            },
+            {
+                label: "Net Amount",
+                value: money(netAmount),
+            },
+        ],
     };
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-            {/* ================= HEADER ================= */}
             <div id="sales-quotation-header" className="mb-3 flex items-center">
-                <div id="sales-quotation-summary" className="flex items-start gap-3">
+                <div
+                    id="sales-quotation-summary"
+                    className="flex items-start gap-3"
+                >
                     <Badge
                         {...{
                             count: pagination?.totalDocs ?? 0,
@@ -1281,7 +1221,6 @@ const SalesQuotations = () => {
                         }}
                     />
 
-                    {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
@@ -1291,7 +1230,6 @@ const SalesQuotations = () => {
                 </div>
             </div>
 
-            {/* ================= LIST ================= */}
             <DataTable
                 columns={columns}
                 data={salesQuotations}
@@ -1309,7 +1247,7 @@ const SalesQuotations = () => {
 
                         <button
                             id="sales-quotation-delete-button"
-                            disabled={deleteLoader}
+                            disabled={deleteLoading}
                             onClick={(e) => {
                                 const rect =
                                     e.currentTarget.getBoundingClientRect();
@@ -1324,8 +1262,7 @@ const SalesQuotations = () => {
                                     x,
                                     y,
                                     voucherNumber:
-                                        record?.sQuoteVoucherNumber ||
-                                        record?.voucherNumber,
+                                        record?.sQuoteVoucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
@@ -1336,7 +1273,6 @@ const SalesQuotations = () => {
                 )}
             />
 
-            {/* ================= PAGINATION ================= */}
             {pagination?.totalDocs > 0 && (
                 <Pagination
                     {...{
@@ -1353,7 +1289,6 @@ const SalesQuotations = () => {
                 />
             )}
 
-            {/* ================= DELETE TOOLTIP ================= */}
             {confirmTooltip.show && (
                 <ConfirmTooltip
                     x={confirmTooltip.x}
@@ -1373,133 +1308,27 @@ const SalesQuotations = () => {
                 />
             )}
 
-            {/* ================= SALES QUOTATION MAIN MODAL ================= */}
-            <SalesQuotationsFormModal
-                showModal={showModal}
-                setShowModal={setShowModal}
-                editingRecord={editingRecord}
-                createLoading={createLoading}
-                updateLoading={updateLoading}
-                form={form}
-                errors={errors}
-                customerOptions={customerOptions}
-                productTableFields={productTableFields}
-                grossAmount={grossAmount}
-                discountAmount={discountAmount}
-                cgstAmount={cgstAmount}
-                sgstAmount={sgstAmount}
-                igstAmount={igstAmount}
-                netAmount={netAmount}
-                handleSubmit={handleSubmit}
-                handleMainChange={handleMainChange}
-                handleCustomerChange={handleCustomerChange}
-                openAddProductModal={openAddProductModal}
-                handleEditProduct={(row: any) => handleEditProduct(row)}
-                handleDeleteProduct={(row: any) =>
-                    handleDeleteProduct(row?.id || row)
-                }
-            />
-
-            {/* ================= ADD / EDIT PRODUCT MODAL ================= */}
-            <Modal
+            <DynamicAddForm
                 {...{
-                    show: showProductModal,
-                    setShow: setShowProductModal,
-                    handleClose: resetProductForm,
-                    handleSubmit: handleAddProduct,
-                    loader: false,
-                    maxWidth: "lg",
-                    state: Boolean(editingProductId),
-                    gridCols: 1,
-                    title: editingProductId ? "Edit Product" : "Add Product",
-                    body: (
-                        <>
-                            <div>
-                                {productInputData.map(
-                                    (field: any, index: number) => (
-                                        <div
-                                            key={field.key || index}
-                                            className={`mb-3 grid gap-3 ${
-                                                field?.grid === 2
-                                                    ? "grid-cols-2"
-                                                    : "grid-cols-1"
-                                            }`}
-                                        >
-                                            {field?.child?.length
-                                                ? field.child.map((child: any) =>
-                                                      renderProductField(child)
-                                                  )
-                                                : renderProductField(field)}
-                                        </div>
-                                    )
-                                )}
-
-                                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="mb-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-800">
-                                        <span>Gross Amount</span>
-                                        <span>{money(productCalc.grossAmount)}</span>
-                                    </div>
-
-                                    <div className="mb-2 grid grid-cols-2 gap-3 px-1 text-center text-sm font-semibold text-slate-800">
-                                        <span>Percentage / Amount</span>
-                                        <span>Amount</span>
-                                    </div>
-
-                                    {percentAmountRows.map((row: any) => (
-                                        <div
-                                            key={row.label}
-                                            className="mb-3 grid grid-cols-2 gap-3"
-                                        >
-                                            <TextInput
-                                                label={row.label}
-                                                value={
-                                                    productForm?.[
-                                                        row.percentKey
-                                                    ] ?? ""
-                                                }
-                                                placeholder={
-                                                    row.isAmountInput
-                                                        ? "Amount"
-                                                        : "0"
-                                                }
-                                                type="number"
-                                                error={
-                                                    productErrors?.[
-                                                        row.percentKey
-                                                    ]
-                                                }
-                                                onChange={(e: any) =>
-                                                    handleProductChange(
-                                                        row.percentKey,
-                                                        e.target.value
-                                                    )
-                                                }
-                                            />
-
-                                            <div className="flex min-h-[42px] items-center justify-end rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800">
-                                                {money(row.amount)}
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {productErrors?.tax && (
-                                        <p className="mb-3 text-sm text-red-500">
-                                            {productErrors.tax}
-                                        </p>
-                                    )}
-
-                                    <div className="mt-4 flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-base font-semibold">
-                                        <span className="text-secondary">
-                                            Net Total
-                                        </span>
-                                        <span className="text-primary">
-                                            {money(productCalc.netTotal)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ),
+                    show: showModal,
+                    setShow: setShowModal,
+                    edit: Boolean(editingRecord),
+                    title: "Sales Quotation",
+                    subtitle: "Fill in the sales quotation details below",
+                    loading: createLoading || updateLoading,
+                    onClose: () => {
+                        setShowModal(false);
+                        resetMainForm();
+                    },
+                    onSubmit: handleSubmit,
+                    form,
+                    errors,
+                    handleAddRow,
+                    handleDeleteRow,
+                    handleRowChange,
+                    inputData,
+                    bodyKey: "products",
+                    handleChange: handleMainChange,
                 }}
             />
         </div>
