@@ -79,8 +79,8 @@ const SalesQuotationsFormModal = ({
         loader: editingRecord ? updateLoading : createLoading,
         state: editingRecord,
         title: editingRecord
-          ? "Update Sales Quotation"
-          : "Add New Sales Quotation",
+          ? "Sales Quotation"
+          : "Sales Quotation",
 
         body: (
           <div className="col-span-2 w-full space-y-5">

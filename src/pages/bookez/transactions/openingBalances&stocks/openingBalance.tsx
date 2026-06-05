@@ -1,28 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { toast } from "react-toastify";
-
-import { PrimaryButton } from "../../../../components/buttons";
-import SearchInput from "../../../../components/searchInput";
-import DataTable from "../../../../components/DataTable";
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import { TextArea, TextInput } from "../../../../components/inputs";
+import { toast } from "react-toastify";
+import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingBalance";
 
-import VoucherFormModal from "../../../../components/voucher/VoucherFormModal";
-import EditableLineTable from "../../../../components/voucher/EditableLineTable";
-import SummaryCards from "../../../../components/voucher/SummaryCards";
-
-import {
-    addBalance,
-    deleteBalance,
-    getOpeningBalList,
-    updateBalance,
-} from "../../../../redux/slices/professionalSlice/openingBalance";
-
-import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 
 const emptyEntryRow = {

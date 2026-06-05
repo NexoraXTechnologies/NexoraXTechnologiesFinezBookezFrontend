@@ -8,6 +8,7 @@ import {
 import TransactionDashboard from "../components/TransactionDashboard";
 import SalesQuotations from "./salesQuations/SalesQuations";
 import SalesOrder from "./salesOrder/SalesOrder";
+import SalesInVoice from "./salesInvoice/SalesInvoice";
 
 const cards: any = [
   {
@@ -25,7 +26,7 @@ const cards: any = [
   {
     title: "Sales Invoices",
     description: "Create and manage sales invoices.",
-    path: "/professional/transaction/sale-workflow/sales-invoices",
+    component: SalesInVoice,
     icon: <ReceiptText size={22} />,
   },
   {

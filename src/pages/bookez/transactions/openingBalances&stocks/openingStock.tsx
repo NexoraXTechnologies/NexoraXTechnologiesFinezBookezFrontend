@@ -5,30 +5,15 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { PrimaryButton } from "../../../../components/buttons";
 import SearchInput from "../../../../components/searchInput";
-import { TextArea, TextInput } from "../../../../components/inputs";
 import DataTable from "../../../../components/DataTable";
 import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 
-import VoucherFormModal from "../../../../components/voucher/VoucherFormModal";
-import EditableLineTable from "../../../../components/voucher/EditableLineTable";
-import SummaryCards from "../../../../components/voucher/SummaryCards";
-
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
-import {
-    addOpeningStock,
-    deleteOpeningStock,
-    getOpeningStockList,
-    updateOpeningStock,
-} from "../../../../redux/slices/professionalSlice/openingStockSlice";
 
-import {
-    money,
-    num,
-    safePercent,
-    todayYMD,
-} from "../../../../utils/helperFunctions";
+import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
+import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 
 const emptyProductRow = {
