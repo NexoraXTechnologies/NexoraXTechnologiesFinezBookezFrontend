@@ -17,11 +17,11 @@ import { SelectInput, TextArea, TextInput } from "../../../../../components/inpu
 
 import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
-
-
+import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
 
 import SalesQuotationsFormModal from "./SalesQuationsFormModel";
 import Toggle from "../../../../../components/toggle";
+
 import {
     fmtMoney,
     formatDateForInput,
@@ -31,11 +31,19 @@ import {
     safePercent,
     todayYMD,
 } from "../../../../../utils/helperFunctions";
-import type { ConfirmTooltipState, OptionType, ProductLine } from "../salesWorkflowTypes";
-import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
-import { createSalesQuotation, deleteSalesQuotation, getAllSalesQuotations, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 
+import type {
+    ConfirmTooltipState,
+    OptionType,
+    ProductLine,
+} from "../salesWorkflowTypes";
 
+import {
+    addSalesQuotation,
+    deleteSalesQuotation,
+    getSalesQuotationList,
+    updateSalesQuotation,
+} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -89,10 +97,6 @@ const getDefaultForm = () => ({
     netAmount: "0.00",
 });
 
-/* ===================================================
-    COMPONENT
-=================================================== */
-
 const SalesQuotations = () => {
     const dispatch = useDispatch();
 
@@ -103,11 +107,21 @@ const SalesQuotations = () => {
     const {
         salesQuotations = [],
         pagination = defaultPagination,
-        loading = false,
-        createLoading = false,
-        updateLoading = false,
-        deleteLoading = false,
+
+        // JournalVoucher pattern loaders
+        listingLoader = false,
+        addLoader = false,
+        deleteLoader = false,
+
+        // fallback support if old slice still exists
+        loading: oldLoading = false,
+        createLoading: oldCreateLoading = false,
+        updateLoading: oldUpdateLoading = false,
     } = salesQuotationState || {};
+
+    const loading = listingLoader || oldLoading;
+    const createLoading = addLoader || oldCreateLoading;
+    const updateLoading = addLoader || oldUpdateLoading;
 
     /* ===================================================
         LIST STATES
@@ -208,16 +222,16 @@ const SalesQuotations = () => {
         return Array.isArray(res?.items)
             ? res.items
             : Array.isArray(res?.records)
-                ? res.records
-                : Array.isArray(res?.data?.items)
-                    ? res.data.items
-                    : Array.isArray(res?.data?.records)
-                        ? res.data.records
-                        : Array.isArray(res?.data)
-                            ? res.data
-                            : Array.isArray(res)
-                                ? res
-                                : [];
+              ? res.records
+              : Array.isArray(res?.data?.items)
+                ? res.data.items
+                : Array.isArray(res?.data?.records)
+                  ? res.data.records
+                  : Array.isArray(res?.data)
+                    ? res.data
+                    : Array.isArray(res)
+                      ? res
+                      : [];
     };
 
     const makeProductOptions = (res: any): OptionType[] => {
@@ -448,47 +462,47 @@ const SalesQuotations = () => {
         FETCH DROPDOWNS
     =================================================== */
 
-   
-       useEffect(() => {
-           const fetchDropdowns = async () => {
-               try {
-                   const [productRes, accountRes, unitRes]: any = await Promise.all([
-                       dispatch(
-                           getAllProducts({
-                               offset: 0,
-                               limit: 200,
-                               search: "",
-                           }) as any
-                       ).unwrap(),
-   
-                       dispatch(
-                           getAllAccounts({
-                               offset: 0,
-                               limit: 200,
-                               search: "",
-                           }) as any
-                       ).unwrap(),
-   
-                       dispatch(
-                           getAllUnits({
-                               offset: 0,
-                               limit: 200,
-                               search: "",
-                           }) as any
-                       ).unwrap(),
-                   ]);
-   
-                   setProductOptions(makeProductOptions(productRes));
-                   setCustomerOptions(makeCustomerOptions(accountRes));
-                   setUnitOptions(makeUnitOptions(unitRes));
-               } catch (err: any) {
-                   console.log("Failed to load dropdown data:", err);
-                   toast.error(err?.message || "Failed to load dropdown data");
-               }
-           };
-   
-           fetchDropdowns();
-       }, [dispatch]);
+    useEffect(() => {
+        const fetchDropdowns = async () => {
+            try {
+                const [productRes, accountRes, unitRes]: any =
+                    await Promise.all([
+                        dispatch(
+                            getAllProducts({
+                                offset: 0,
+                                limit: 200,
+                                search: "",
+                            }) as any
+                        ).unwrap(),
+
+                        dispatch(
+                            getAllAccounts({
+                                offset: 0,
+                                limit: 200,
+                                search: "",
+                            }) as any
+                        ).unwrap(),
+
+                        dispatch(
+                            getAllUnits({
+                                offset: 0,
+                                limit: 200,
+                                search: "",
+                            }) as any
+                        ).unwrap(),
+                    ]);
+
+                setProductOptions(makeProductOptions(productRes));
+                setCustomerOptions(makeCustomerOptions(accountRes));
+                setUnitOptions(makeUnitOptions(unitRes));
+            } catch (err: any) {
+                console.log("Failed to load dropdown data:", err);
+                toast.error(err?.message || "Failed to load dropdown data");
+            }
+        };
+
+        fetchDropdowns();
+    }, [dispatch]);
 
     /* ===================================================
         FETCH LIST BASIS ON DOCUMENT STATUS
@@ -496,7 +510,7 @@ const SalesQuotations = () => {
 
     const fetchSalesQuotations = async () => {
         await dispatch(
-            getAllSalesQuotations({
+            getSalesQuotationList({
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
@@ -1048,6 +1062,7 @@ const SalesQuotations = () => {
                 quantity: String(item.quantity),
 
                 unit: item.unit,
+                unitName: item.unitName,
 
                 rate: String(item.rate),
 
@@ -1107,23 +1122,36 @@ const SalesQuotations = () => {
 
         try {
             if (editingRecord) {
+                const sQuoteVoucherNumber =
+                    editingRecord?.sQuoteVoucherNumber ||
+                    editingRecord?.voucherNumber ||
+                    form?.voucherNumber;
+
+                if (!sQuoteVoucherNumber) {
+                    toast.error("Sales quotation voucher number not found");
+                    return;
+                }
+
                 await dispatch(
                     updateSalesQuotation({
-                        voucherNumber: editingRecord?.sQuoteVoucherNumber,
-                        data: payload,
+                        sQuoteVoucherNumber,
+                        payload,
                     }) as any
                 ).unwrap();
 
                 toast.success("Sales quotation updated successfully");
             } else {
-                await dispatch(createSalesQuotation(payload) as any).unwrap();
+                await dispatch(
+                    addSalesQuotation({
+                        payload,
+                    }) as any
+                ).unwrap();
 
                 toast.success("Sales quotation created successfully");
             }
 
             setShowModal(false);
             resetMainForm();
-
             fetchSalesQuotations();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
@@ -1132,10 +1160,18 @@ const SalesQuotations = () => {
 
     const handleDeleteConfirm = async () => {
         try {
-            if (!confirmTooltip.voucherNumber) return;
+            const sQuoteVoucherNumber = confirmTooltip.voucherNumber;
 
-            await dispatch(deleteSalesQuotation(confirmTooltip.voucherNumber) as any)
-                .unwrap();
+            if (!sQuoteVoucherNumber) {
+                toast.error("Sales quotation voucher number not found");
+                return;
+            }
+
+            await dispatch(
+                deleteSalesQuotation({
+                    sQuoteVoucherNumber,
+                }) as any
+            ).unwrap();
 
             toast.success("Sales quotation deleted");
             fetchSalesQuotations();
@@ -1244,7 +1280,8 @@ const SalesQuotations = () => {
                             loading: refreshing,
                         }}
                     />
-                    {/* @ts-ignore  */}
+
+                    {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
@@ -1272,7 +1309,7 @@ const SalesQuotations = () => {
 
                         <button
                             id="sales-quotation-delete-button"
-                            disabled={deleteLoading}
+                            disabled={deleteLoader}
                             onClick={(e) => {
                                 const rect =
                                     e.currentTarget.getBoundingClientRect();
@@ -1286,7 +1323,9 @@ const SalesQuotations = () => {
                                     show: true,
                                     x,
                                     y,
-                                    voucherNumber: record?.sQuoteVoucherNumber,
+                                    voucherNumber:
+                                        record?.sQuoteVoucherNumber ||
+                                        record?.voucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
@@ -1376,22 +1415,24 @@ const SalesQuotations = () => {
                     body: (
                         <>
                             <div>
-                                {productInputData.map((field: any, index: number) => (
-                                    <div
-                                        key={field.key || index}
-                                        className={`mb-3 grid gap-3 ${
-                                            field?.grid === 2
-                                                ? "grid-cols-2"
-                                                : "grid-cols-1"
-                                        }`}
-                                    >
-                                        {field?.child?.length
-                                            ? field.child.map((child: any) =>
-                                                  renderProductField(child)
-                                              )
-                                            : renderProductField(field)}
-                                    </div>
-                                ))}
+                                {productInputData.map(
+                                    (field: any, index: number) => (
+                                        <div
+                                            key={field.key || index}
+                                            className={`mb-3 grid gap-3 ${
+                                                field?.grid === 2
+                                                    ? "grid-cols-2"
+                                                    : "grid-cols-1"
+                                            }`}
+                                        >
+                                            {field?.child?.length
+                                                ? field.child.map((child: any) =>
+                                                      renderProductField(child)
+                                                  )
+                                                : renderProductField(field)}
+                                        </div>
+                                    )
+                                )}
 
                                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                                     <div className="mb-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-800">
