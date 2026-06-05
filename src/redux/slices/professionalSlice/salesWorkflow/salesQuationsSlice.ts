@@ -1,441 +1,343 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../../services/professionalAxios";
 
-
-/* ===================================================
-    TYPES
-=================================================== */
-
-export type SalesQuotationProduct = {
-    productCode: string;
-    productName: string;
-    quantity: string | number;
-    rate: string | number;
-    amount: string | number;
-};
-
-export type SalesQuotationFooter = {
-    grossAmount: string | number;
-    netAmount: string | number;
-};
-
-export type SalesQuotation = {
-    _id?: string;
-
-    voucherNumber?: string;
-    sQuoteVoucherNumber?: string;
-
-    voucherDate?: string;
-    sQuoteVoucherDate?: string;
-
-    customerCode?: string;
-    customerName?: string;
-    sQuoteCustomerCode?: string;
-    sQuoteCustomerName?: string;
-
-    status?: string;
-    sQuoteStatus?: string;
-
-    remarks?: string;
-    sQuoteRemark?: string;
-
-    body?: SalesQuotationProduct[];
-    sQuoteBody?: SalesQuotationProduct[];
-
-    footer?: SalesQuotationFooter;
-    sQuoteFooter?: SalesQuotationFooter;
-};
-
-type Pagination = {
-    offset: number;
-    limit: number;
-    totalDocs: number;
-    totalPages: number;
-    currentPage: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-};
-
-type SalesQuotationState = {
-    salesQuotations: SalesQuotation[];
-    pagination: Pagination;
-
-    selectedSalesQuotation: SalesQuotation | null;
-
-    loading: boolean;
-    error: string | null;
-
-    createLoading: boolean;
-    updateLoading: boolean;
-    deleteLoading: boolean;
-};
-
 type RejectValue = {
-    message: string;
+  message: string;
 };
 
-const initialPagination: Pagination = {
-    offset: 0,
-    limit: 10,
-    totalDocs: 0,
-    totalPages: 1,
-    currentPage: 1,
-    hasNextPage: false,
-    hasPrevPage: false,
+type SalesQuotationParams = {
+  offset?: number;
+  limit?: number;
+  status?: string;
+  docStatus?: string;
+  search?: string;
+  isAutoPost?: string | boolean;
+};
+
+type SalesQuotationPayload = {
+  payload: any;
+};
+
+type UpdateSalesQuotationPayload = {
+  payload: any;
+  sQuoteVoucherNumber: string;
+};
+
+type DeleteSalesQuotationPayload = {
+  sQuoteVoucherNumber: string;
 };
 
 /* ===================================================
-    CREATE SALES QUOTATION
+   ADD SALES QUOTATION
 =================================================== */
 
-export const createSalesQuotation = createAsyncThunk<
-    SalesQuotation | null,
-    any,
-    { rejectValue: RejectValue }
->("salesQuotation/createSalesQuotation", async (payload, { rejectWithValue }) => {
+export const addSalesQuotation = createAsyncThunk<
+  any,
+  SalesQuotationPayload,
+  { rejectValue: RejectValue }
+>(
+  "salesQuotation/addSalesQuotation",
+  async ({ payload }, { rejectWithValue }) => {
     try {
-        const res = await professionalAxios.post(
-            "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/save",
-            payload
-        );
+      const res = await professionalAxios.post(
+        "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/save",
+        { ...payload }
+      );
 
-        if (!res.data?.success) {
-            return rejectWithValue({
-                message: res.data?.message || "Failed to create sales quotation",
-            });
-        }
-
-        return res.data?.data ?? null;
-    } catch (err: any) {
+      if (!res.data?.success) {
         return rejectWithValue({
-            message:
-                err?.response?.data?.message ||
-                err?.response?.data?.error ||
-                "Failed to create sales quotation",
+          message: res.data?.message || "Failed to create sales quotation",
         });
+      }
+
+      return res.data?.data;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to create sales quotation",
+      });
     }
-});
-
-/* ===================================================
-    GET ALL SALES QUOTATIONS
-=================================================== */
-
-export const getAllSalesQuotations = createAsyncThunk<
-    any,
-    {
-        offset?: number;
-        limit?: number;
-        search?: string;
-        status?: string;
-        docStatus?: string;
-        isAutoPost?: string | boolean;
-    } | undefined,
-    { rejectValue: RejectValue }
->(
-    "salesQuotation/getAllSalesQuotations",
-    async (
-        {
-            offset = 0,
-            limit = 10,
-            search = "",
-            status = "",
-            docStatus = "open",
-            isAutoPost = "",
-        } = {},
-        { rejectWithValue }
-    ) => {
-        try {
-            const params: any = {
-                offset,
-                limit,
-                status,
-                docStatus,
-            };
-
-            if (search.trim()) {
-                params.search = search.trim();
-            }
-
-            if (isAutoPost !== "" && isAutoPost !== undefined && isAutoPost !== null) {
-                params.isAutoPost = isAutoPost;
-            }
-
-            const res = await professionalAxios.get(
-                "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/getAll",
-                { params }
-            );
-
-            if (!res.data?.success) {
-                return rejectWithValue({
-                    message: res.data?.message || "Failed to fetch sales quotations",
-                });
-            }
-
-            return res.data?.data;
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Failed to fetch sales quotations",
-            });
-        }
-    }
+  }
 );
 
 /* ===================================================
-    GET SALES QUOTATION BY VOUCHER NUMBER
-=================================================== */
-
-export const getSalesQuotationByVoucherNumber = createAsyncThunk<
-    SalesQuotation | null,
-    string,
-    { rejectValue: RejectValue }
->(
-    "salesQuotation/getSalesQuotationByVoucherNumber",
-    async (voucherNumber, { rejectWithValue }) => {
-        try {
-            const res = await professionalAxios.get(
-                `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/getByVoucherNumber/${voucherNumber}`
-            );
-
-            if (!res.data?.success) {
-                return rejectWithValue({
-                    message: res.data?.message || "Failed to fetch sales quotation",
-                });
-            }
-
-            return (
-                res.data?.data?.salesQuotation ||
-                res.data?.data?.salesQuation ||
-                res.data?.data ||
-                null
-            );
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Failed to fetch sales quotation",
-            });
-        }
-    }
-);
-
-/* ===================================================
-    UPDATE SALES QUOTATION
+   UPDATE SALES QUOTATION
 =================================================== */
 
 export const updateSalesQuotation = createAsyncThunk<
-    SalesQuotation | null,
-    { voucherNumber: string; data: any },
-    { rejectValue: RejectValue }
+  any,
+  UpdateSalesQuotationPayload,
+  { rejectValue: RejectValue }
 >(
-    "salesQuotation/updateSalesQuotation",
-    async ({ voucherNumber, data }, { rejectWithValue }) => {
-        try {
-            const res = await professionalAxios.put(
-                `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/update/${voucherNumber}`,
-                data
-            );
+  "salesQuotation/updateSalesQuotation",
+  async ({ payload, sQuoteVoucherNumber }, { rejectWithValue }) => {
+    try {
+      const res = await professionalAxios.put(
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/update/${sQuoteVoucherNumber}`,
+        { ...payload }
+      );
 
-            if (!res.data?.success) {
-                return rejectWithValue({
-                    message: res.data?.message || "Failed to update sales quotation",
-                });
-            }
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to update sales quotation",
+        });
+      }
 
-            return res.data?.data ?? null;
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Failed to update sales quotation",
-            });
-        }
+      return res.data?.data;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to update sales quotation",
+      });
     }
+  }
 );
 
 /* ===================================================
-    DELETE SALES QUOTATION
+   DELETE SALES QUOTATION
 =================================================== */
 
 export const deleteSalesQuotation = createAsyncThunk<
-    string,
-    string,
-    { rejectValue: RejectValue }
+  any,
+  DeleteSalesQuotationPayload,
+  { rejectValue: RejectValue }
 >(
-    "salesQuotation/deleteSalesQuotation",
-    async (voucherNumber, { rejectWithValue }) => {
-        try {
-            const res = await professionalAxios.delete(
-                `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/delete/${voucherNumber}`
-            );
+  "salesQuotation/deleteSalesQuotation",
+  async ({ sQuoteVoucherNumber }, { rejectWithValue }) => {
+    try {
+      const res = await professionalAxios.delete(
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/delete/${sQuoteVoucherNumber}`
+      );
 
-            if (!res.data?.success) {
-                return rejectWithValue({
-                    message: res.data?.message || "Failed to delete sales quotation",
-                });
-            }
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to delete sales quotation",
+        });
+      }
 
-            return voucherNumber;
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Failed to delete sales quotation",
-            });
-        }
+      return sQuoteVoucherNumber;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to delete sales quotation",
+      });
     }
+  }
 );
 
 /* ===================================================
-    SLICE
+   GET SALES QUOTATION LIST
+=================================================== */
+
+export const getSalesQuotationList = createAsyncThunk<
+  any,
+  SalesQuotationParams | undefined,
+  { rejectValue: RejectValue }
+>(
+  "salesQuotation/getSalesQuotationList",
+  async (
+    {
+      offset = 0,
+      limit = 10,
+      status = "",
+      docStatus = "",
+      search = "",
+      isAutoPost = "",
+    } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+      const params: any = {
+        offset,
+        limit,
+      };
+
+      if (status) {
+        params.status = status;
+      }
+
+      if (docStatus) {
+        params.docStatus = docStatus;
+      }
+
+      if (search.trim()) {
+        params.search = search.trim();
+      }
+
+      if (
+        isAutoPost !== "" &&
+        isAutoPost !== undefined &&
+        isAutoPost !== null
+      ) {
+        params.isAutoPost = isAutoPost;
+      }
+
+      const res = await professionalAxios.get(
+        "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/getAll",
+        { params }
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch sales quotations",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to fetch sales quotations",
+      });
+    }
+  }
+);
+
+/* ===================================================
+   SLICE
 =================================================== */
 
 const salesQuotationSlice = createSlice({
-    name: "salesQuotation",
+  name: "salesQuotation",
 
-    initialState: {
-        salesQuotations: [],
-        pagination: initialPagination,
+  initialState: {
+    addLoader: false,
+    listingLoader: false,
+    deleteLoader: false,
 
-        selectedSalesQuotation: null,
+    salesQuotations: [] as any[],
+    selectedSalesQuotation: null as any,
 
-        loading: false,
-        error: null,
+    error: null as string | null,
 
-        createLoading: false,
-        updateLoading: false,
-        deleteLoading: false,
-    } as SalesQuotationState,
+    pagination: {
+      offset: 0,
+      limit: 10,
+      totalDocs: 0,
+      totalPages: 1,
+      currentPage: 1,
+      hasNextPage: false,
+      hasPrevPage: false,
+    },
+  },
 
-    reducers: {
-        clearSalesQuotationState: (state) => {
-            state.error = null;
-            state.createLoading = false;
-            state.updateLoading = false;
-            state.deleteLoading = false;
-        },
-
-        clearSelectedSalesQuotation: (state) => {
-            state.selectedSalesQuotation = null;
-        },
+  reducers: {
+    clearSalesQuotationState: (state) => {
+      state.error = null;
+      state.addLoader = false;
+      state.deleteLoader = false;
+      state.listingLoader = false;
     },
 
-    extraReducers: (builder) => {
-        /* ---------- GET ALL ---------- */
-        builder
-            .addCase(getAllSalesQuotations.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(getAllSalesQuotations.fulfilled, (state, action) => {
-                state.loading = false;
-
-                const data = action.payload;
-
-                state.salesQuotations =
-                    data?.records || data?.items || data?.salesQuotations || [];
-
-                state.pagination = data?.pagination || state.pagination;
-            })
-            .addCase(getAllSalesQuotations.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload?.message || "Failed to fetch sales quotations";
-                state.salesQuotations = [];
-            });
-
-        /* ---------- GET BY VOUCHER NUMBER ---------- */
-        builder
-            .addCase(getSalesQuotationByVoucherNumber.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(getSalesQuotationByVoucherNumber.fulfilled, (state, action) => {
-                state.loading = false;
-                state.selectedSalesQuotation = action.payload || null;
-            })
-            .addCase(getSalesQuotationByVoucherNumber.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload?.message || "Failed to fetch sales quotation";
-            });
-
-        /* ---------- CREATE ---------- */
-        builder
-            .addCase(createSalesQuotation.pending, (state) => {
-                state.createLoading = true;
-                state.error = null;
-            })
-            .addCase(createSalesQuotation.fulfilled, (state, action) => {
-                state.createLoading = false;
-
-                if (action.payload) {
-                    state.salesQuotations.unshift(action.payload);
-                    state.pagination.totalDocs += 1;
-                }
-            })
-            .addCase(createSalesQuotation.rejected, (state, action) => {
-                state.createLoading = false;
-                state.error = action.payload?.message || "Failed to create sales quotation";
-            });
-
-        /* ---------- UPDATE ---------- */
-        builder
-            .addCase(updateSalesQuotation.pending, (state) => {
-                state.updateLoading = true;
-                state.error = null;
-            })
-            .addCase(updateSalesQuotation.fulfilled, (state, action) => {
-                state.updateLoading = false;
-
-                const updated = action.payload;
-                const updatedVoucher =
-                    updated?.sQuoteVoucherNumber || updated?.voucherNumber;
-
-                if (!updated || !updatedVoucher) return;
-
-                state.salesQuotations = state.salesQuotations.map((item) => {
-                    const itemVoucher = item.sQuoteVoucherNumber || item.voucherNumber;
-                    return itemVoucher === updatedVoucher ? updated : item;
-                });
-            })
-            .addCase(updateSalesQuotation.rejected, (state, action) => {
-                state.updateLoading = false;
-                state.error = action.payload?.message || "Failed to update sales quotation";
-            });
-
-        /* ---------- DELETE ---------- */
-        builder
-            .addCase(deleteSalesQuotation.pending, (state) => {
-                state.deleteLoading = true;
-                state.error = null;
-            })
-            .addCase(deleteSalesQuotation.fulfilled, (state, action) => {
-                state.deleteLoading = false;
-
-                const removedVoucher = action.payload;
-
-                state.salesQuotations = state.salesQuotations.filter((item) => {
-                    const itemVoucher = item.sQuoteVoucherNumber || item.voucherNumber;
-                    return itemVoucher !== removedVoucher;
-                });
-
-                state.pagination.totalDocs = Math.max(
-                    0,
-                    state.pagination.totalDocs - 1
-                );
-            })
-            .addCase(deleteSalesQuotation.rejected, (state, action) => {
-                state.deleteLoading = false;
-                state.error = action.payload?.message || "Failed to delete sales quotation";
-            });
+    clearSelectedSalesQuotation: (state) => {
+      state.selectedSalesQuotation = null;
     },
+
+    setSelectedSalesQuotation: (state, action) => {
+      state.selectedSalesQuotation = action.payload;
+    },
+  },
+
+  extraReducers: (builder) => {
+    builder
+
+      /* ---------- ADD SALES QUOTATION ---------- */
+      .addCase(addSalesQuotation.pending, (state) => {
+        state.addLoader = true;
+        state.error = null;
+      })
+      .addCase(addSalesQuotation.fulfilled, (state) => {
+        state.addLoader = false;
+      })
+      .addCase(addSalesQuotation.rejected, (state, action) => {
+        state.addLoader = false;
+        state.error =
+          action.payload?.message || "Failed to create sales quotation";
+      })
+
+      /* ---------- SALES QUOTATION LISTING ---------- */
+      .addCase(getSalesQuotationList.pending, (state) => {
+        state.listingLoader = true;
+        state.error = null;
+      })
+      .addCase(getSalesQuotationList.fulfilled, (state, action) => {
+        state.listingLoader = false;
+
+        state.pagination = action.payload?.pagination ?? state.pagination;
+        state.salesQuotations = action.payload?.records ?? [];
+      })
+      .addCase(getSalesQuotationList.rejected, (state, action) => {
+        state.listingLoader = false;
+        state.error =
+          action.payload?.message || "Failed to fetch sales quotations";
+        state.salesQuotations = [];
+      })
+
+      /* ---------- UPDATE SALES QUOTATION ---------- */
+      .addCase(updateSalesQuotation.pending, (state) => {
+        state.addLoader = true;
+        state.error = null;
+      })
+      .addCase(updateSalesQuotation.fulfilled, (state) => {
+        state.addLoader = false;
+      })
+      .addCase(updateSalesQuotation.rejected, (state, action) => {
+        state.addLoader = false;
+        state.error =
+          action.payload?.message || "Failed to update sales quotation";
+      })
+
+      /* ---------- DELETE SALES QUOTATION ---------- */
+      .addCase(deleteSalesQuotation.pending, (state) => {
+        state.deleteLoader = true;
+        state.error = null;
+      })
+      .addCase(deleteSalesQuotation.fulfilled, (state, action) => {
+        state.deleteLoader = false;
+
+        state.salesQuotations = state.salesQuotations.filter(
+          (item: any) =>
+            item?.sQuoteVoucherNumber !== action.payload &&
+            item?.voucherNumber !== action.payload
+        );
+
+        if (
+          state.selectedSalesQuotation?.sQuoteVoucherNumber === action.payload ||
+          state.selectedSalesQuotation?.voucherNumber === action.payload
+        ) {
+          state.selectedSalesQuotation = null;
+        }
+
+        state.pagination.totalDocs = Math.max(
+          0,
+          state.pagination.totalDocs - 1
+        );
+      })
+      .addCase(deleteSalesQuotation.rejected, (state, action) => {
+        state.deleteLoader = false;
+        state.error =
+          action.payload?.message || "Failed to delete sales quotation";
+      });
+  },
 });
 
-export const { clearSalesQuotationState, clearSelectedSalesQuotation } =
-    salesQuotationSlice.actions;
+export const {
+  clearSalesQuotationState,
+  clearSelectedSalesQuotation,
+  setSelectedSalesQuotation,
+} = salesQuotationSlice.actions;
 
 export default salesQuotationSlice.reducer;

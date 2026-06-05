@@ -20,9 +20,9 @@ import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/ac
 import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
 
 import {
-    createSalesQuotation,
+    addSalesQuotation,
     deleteSalesQuotation,
-    getAllSalesQuotations,
+    getSalesQuotationList,
     updateSalesQuotation,
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 
@@ -330,7 +330,7 @@ const SalesQuotations = () => {
 
     const fetchSalesQuotations = async () => {
         await dispatch(
-            getAllSalesQuotations({
+            getSalesQuotationList({
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
@@ -446,8 +446,8 @@ const SalesQuotations = () => {
             render: (row: any) => (
                 <span
                     className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.sQuoteDocStatus === "open"
-                            ? "border-green-200 bg-green-50 text-green-700"
-                            : "border-red-200 bg-red-50 text-red-700"
+                        ? "border-green-200 bg-green-50 text-green-700"
+                        : "border-red-200 bg-red-50 text-red-700"
                         }`}
                 >
                     {row?.sQuoteDocStatus || "-"}
@@ -830,7 +830,7 @@ const SalesQuotations = () => {
         const products = cleanRows();
         const footer = calculateFooter(products);
 
-        const payload = {
+        const payload:any = {
             sQuoteVoucherDate: form.voucherDate,
 
             sQuoteCustomerCode: form.customerCode,
@@ -922,7 +922,7 @@ const SalesQuotations = () => {
 
                 toast.success("Sales quotation updated successfully");
             } else {
-                await dispatch(createSalesQuotation(payload) as any).unwrap();
+                await dispatch(addSalesQuotation(payload) as any).unwrap();
 
                 toast.success("Sales quotation created successfully");
             }

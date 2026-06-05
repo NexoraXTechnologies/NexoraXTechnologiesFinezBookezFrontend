@@ -3,120 +3,136 @@ import EditableLineTable from "./EditableLineTable";
 import SummaryCards from "./SummaryCards";
 import VoucherFormModal from "./VoucherFormModal";
 
-const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange, inputData, bodyKey, handleChange }: any) => {
-
+const DynamicAddForm = ({
+    show,
+    setShow,
+    edit,
+    title,
+    subtitle,
+    loading,
+    onClose,
+    onSubmit,
+    form,
+    errors,
+    handleAddRow,
+    handleDeleteRow,
+    handleRowChange,
+    inputData,
+    bodyKey,
+    handleChange,
+}: any) => {
     const renderInput = (e: any) => {
+        if (e?.type === "date") {
+            return (
+                <TextInput
+                    label={e?.title}
+                    disabled={e?.disabled}
+                    type={e.type}
+                    value={
+                        form?.[e?.key]
+                            ? String(form?.[e?.key]).split("T")[0]
+                            : ""
+                    }
+                    error={errors?.[e?.key]}
+                    onChange={(event: any) =>
+                        handleChange(e?.key, event.target.value)
+                    }
+                />
+            );
+        }
+
+        if (e?.type === "textarea") {
+            return (
+                <TextArea
+                    label={e?.title}
+                    value={form?.[e?.key] || ""}
+                    placeholder={e?.placeholder}
+                    error={errors?.[e?.key]}
+                    onChange={(event: any) =>
+                        handleChange(e?.key, event.target.value)
+                    }
+                />
+            );
+        }
+
+        if (e?.type == "select") return <SelectInput
+            label={e?.title}
+            value={form?.[e?.key] || ""}
+            placeholder={e?.placeholder}
+            disabled={e?.disabled}
+            error={errors?.[e?.key]}
+            onChange={(event: any) => handleChange(e?.key, event.target.value)}
+            options={e?.options}
+        />
+
         return (
-            <>
-                {e?.type == "date" ?
-                    <TextInput
-                        label={e?.title}
-                        disabled={e?.disabled}
-                        type={e.type}
-                        value={form?.[e?.key] ? String(form?.[e?.key]).split("T")[0] : ""}
-                        error={errors?.openingStockDate}
-                        onChange={(event: any) => handleChange(e?.key, event.target.value)}
-                    />
-                    :
-                    (e?.type == "textarea" ?
-                        <TextArea
-                            label={e?.title}
-                            value={form?.[e?.key] || ""}
-                            placeholder={e?.placeholder}
-                            error={errors?.[e?.key]}
-                            onChange={(event: any) => handleChange(e?.key, event.target.value)}
-                        />
-                        : (e?.type == "select" ? <SelectInput
-                            label={e?.title}
-                            value={form?.[e?.key] || ""}
-                            placeholder={e?.placeholder}
-                            disabled={e?.disabled}
-                            error={errors?.[e?.key]}
-                            onChange={(event: any) => handleChange(e?.key, event.target.value)}
-                            options={e?.options}
-                        /> : <TextInput
-                            label={e?.title}
-                            value={form?.[e?.key] || ""}
-                            error={errors?.[e?.key]}
-                            disabled={e?.disabled}
-                            onChange={(event: any) => handleChange(e?.key, event.target.value)}
-                        />))
+            <TextInput
+                label={e?.title}
+                value={form?.[e?.key] || ""}
+                disabled={e?.disabled}
+                placeholder={e?.placeholder}
+                error={errors?.[e?.key]}
+                onChange={(event: any) =>
+                    handleChange(e?.key, event.target.value)
                 }
-            </>
-        )
-    }
+            />
+        );
+    };
 
     return (
         <VoucherFormModal
-            {...{ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange }}
+            show={show}
+            setShow={setShow}
+            edit={edit}
+            title={title}
+            subtitle={subtitle}
+            loading={loading}
+            onClose={onClose}
+            onSubmit={onSubmit}
         >
-            <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
+            <div className="w-full max-w-full">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
+                    {inputData?.headerInput?.map((e: any, index: number) => (
+                        <div key={e?.key || index}>
+                            {renderInput(e)}
+                        </div>
+                    ))}
+                </div>
 
-                {inputData?.headerInput?.map((e: any) => renderInput(e))}
+                {errors?.[bodyKey] && (
+                    <p className="mt-4 text-sm text-red-500">
+                        {errors?.[bodyKey]}
+                    </p>
+                )}
 
-                {/* <TextInput
-                    label="Voucher No"
-                    value={form.openingStockVoucherNumber || ""}
-                    disabled
-                    onChange={(e: any) =>
-                        handleChange(
-                            "openingStockVoucherNumber",
-                            e.target.value
-                        )
-                    }
-                />
+                {/* ✅ Only EditableLineTable has horizontal scroll inside itself */}
+                <div className="mt-6 w-full max-w-full">
+                    <EditableLineTable
+                        title="Products"
+                        addButtonText="Add Product"
+                        rows={form?.[bodyKey] || []}
+                        columns={inputData?.editTable || []}
+                        errors={errors}
+                        onAddRow={handleAddRow}
+                        onDeleteRow={handleDeleteRow}
+                        onChange={handleRowChange}
+                        emptyText="No products added"
+                    />
+                </div>
 
-                <TextInput
-                    label="Date"
-                    type="date"
-                    value={form.openingStockDate ? String(form.openingStockDate).split("T")[0] : ""}
-                    error={errors?.openingStockDate}
-                    onChange={(e: any) =>
-                        handleChange("openingStockDate", e.target.value)
-                    }
-                />
+                {Object.keys(errors || {})
+                    .filter((key) => key.includes("_tax"))
+                    .map((key) => (
+                        <p key={key} className="mt-2 text-sm text-red-500">
+                            {errors[key]}
+                        </p>
+                    ))}
 
-                <TextArea
-                    label="Remark"
-                    value={form.remark || ""}
-                    placeholder="Enter Remark"
-                    error={errors?.remark}
-                    onChange={(e: any) =>
-                        handleChange("remark", e.target.value)
-                    }
-                /> */}
+                {/* ✅ Summary stays outside table scroll */}
+                <SummaryCards items={inputData?.footerCard || []} />
             </div>
-
-            {errors?.[bodyKey] && (
-                <p className="mt-4 text-sm text-red-500">
-                    {errors?.[bodyKey]}
-                </p>
-            )}
-
-            <div className="col-span-2 space-y-5">
-                <EditableLineTable
-                    title="Products"
-                    addButtonText="Add Product"
-                    rows={form?.[bodyKey]}
-                    columns={inputData?.editTable}
-                    errors={errors}
-                    onAddRow={handleAddRow}
-                    onDeleteRow={handleDeleteRow}
-                    onChange={handleRowChange}
-                    emptyText="No products added"
-                />
-            </div>
-
-            {Object.keys(errors || {}).filter((key) => key.includes("_tax")).map((key) => (
-                <p key={key} className="mt-2 text-sm text-red-500">
-                    {errors[key]}
-                </p>
-            ))}
-
-            <SummaryCards
-                items={inputData?.footerCard}
-            />
         </VoucherFormModal>
-    )
-}
+    );
+};
+
 export default DynamicAddForm;
