@@ -43,7 +43,14 @@ import plansReduce from "./slices/professionalSlice/subscriptions";
 import customMasterModuleReducer from "./slices/professionalSlice/customMasterModuleSlice";
 import openingBalanceSlice from "./slices/professionalSlice/openingBalancesStocks/openingBalance";
 import openingStockSlice from "./slices/professionalSlice/openingBalancesStocks/openingStockSlice";
+import journalVoucherReducer from "./slices/professionalSlice/openingBalancesStocks/journalVoucherSlice";
+import contraVoucherReducer from "./slices/professionalSlice/openingBalancesStocks/contraVoucherSlice";
+import creditNoteReducer from "./slices/professionalSlice/openingBalancesStocks/creditNoteSlice";
+import debitNoteReducer from "./slices/professionalSlice/openingBalancesStocks/debitNoteSlice";
 import purchaseOrderSlice from "./slices/professionalSlice/purchaseWorkflow/purchaseOrder";
+import grnReducer from "./slices/professionalSlice//purchaseWorkflow/grnSlice";
+import purchaseReturnReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
+import purchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 
 export const store = configureStore({
   reducer: {
@@ -61,13 +68,13 @@ export const store = configureStore({
     productMaster: productMasterReducer,
     unitMaster: UnitMasterReducer,
     assemblyProduction: assemblyProductionReducer,
-    issuesToProduction:issuesToProductionReducer,
-    receiptFromProduction:receiptFromProductionReducer,
-    salesQuotation:salesQuationsReducer,
+    issuesToProduction: issuesToProductionReducer,
+    receiptFromProduction: receiptFromProductionReducer,
+    salesQuotation: salesQuationsReducer,
     salesOrder: salesOrderReducer,
-    salesInvoice:salesInvoiceReducer,
-    salesInvoiceReturn:salesInvoiceReturnReducer,
-    reportMapping:reportMappingReducer,
+    salesInvoice: salesInvoiceReducer,
+    salesInvoiceReturn: salesInvoiceReturnReducer,
+    reportMapping: reportMappingReducer,
     alldropdown: alldropdownReducer,
     taxpayer: taxpayerReducer,
     ais: aisReducer,
@@ -90,8 +97,17 @@ export const store = configureStore({
     plans: plansReduce,
     openingBalance: openingBalanceSlice,
     openingStock: openingStockSlice,
+    journalVoucher: journalVoucherReducer,
+    contraVoucher: contraVoucherReducer,
+    creditNote:creditNoteReducer,
+    debitNote:debitNoteReducer,
 
-    purchaseOrder: purchaseOrderSlice
+    purchaseOrder: purchaseOrderSlice,
+    grn:grnReducer,
+    purchaseReturn:purchaseReturnReducer,
+    purchaseInvoice:purchaseInvoiceReducer,
+
+
   },
 });
 
