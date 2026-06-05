@@ -6,12 +6,13 @@ import {
   ReceiptText,
 } from "lucide-react";
 import TransactionDashboard from "../components/TransactionDashboard";
+import PurchaseOrder from "./purchaseOrder";
 
 const cards: any[] = [
   {
     title: "Purchase Order",
     description: "Create and manage purchase orders.",
-    path: "/professional/transaction/purchase-workflow/purchase-order",
+    component: PurchaseOrder,
     icon: <ClipboardList size={22} />,
   },
   {

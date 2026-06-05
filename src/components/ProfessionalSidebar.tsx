@@ -309,7 +309,6 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
     const isActive = location.pathname === item.path || item.matchPaths?.includes(location.pathname);
     // PARENT ACTIVE CHECK
     const isParentActive = item.children?.some((child: any) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
-    console.log({ location: location.pathname, item: item.path, name: item?.name, isActive, isParentActive })
     const isOpen = openMenus[item.name] || false;
 
     // TOGGLE MENU

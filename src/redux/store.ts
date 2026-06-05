@@ -39,6 +39,7 @@ import plansReduce from "./slices/professionalSlice/subscriptions";
 import customMasterModuleReducer from "./slices/professionalSlice/customMasterModuleSlice";
 import openingBalanceSlice from "./slices/professionalSlice/openingBalance";
 import openingStockSlice from "./slices/professionalSlice/openingStockSlice";
+import purchaseOrderSlice from "./slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 
 export const store = configureStore({
   reducer: {
@@ -81,6 +82,8 @@ export const store = configureStore({
     plans: plansReduce,
     openingBalance: openingBalanceSlice,
     openingStock: openingStockSlice,
+
+    purchaseOrder: purchaseOrderSlice
   },
 });
 

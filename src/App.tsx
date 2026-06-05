@@ -40,7 +40,7 @@ import MasterDashboard from './pages/bookez/master';
 import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks/indec';
 import ProductionDashboard from './pages/bookez/transactions/production';
 import SaleWorkflowDashboard from './pages/bookez/transactions/saleWorkflow';
-import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkflow/PurchaseWorkflowDashboard';
+import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkflow';
 
 
 import { ToastContainer } from "react-toastify";

@@ -1,140 +1,134 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Plus, Trash2 } from "lucide-react";
-import { PrimaryButton, SecondaryButton } from "../../../../components/buttons";
-import SearchInput from "../../../../components/searchInput";
-import Modal from "../../../../components/modal";
-import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
-import DataTable from "../../../../components/DataTable";
+import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../../../../redux/slices/professionalSlice/openingBalance";
-import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
+import { toast } from "react-toastify";
+
+import { PrimaryButton } from "../../../../components/buttons";
+import SearchInput from "../../../../components/searchInput";
+import DataTable from "../../../../components/DataTable";
 import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import { toast } from "react-toastify";
+import { TextArea, TextInput } from "../../../../components/inputs";
 
-const columns = [
-    { key: 'account', title: 'Account', },
-    {
-        key: 'debit', title: 'Debit',
-        render: (row: any) => (
-            <span className="px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs">
-                ₹{row.debit?.toFixed ? row.debit.toFixed(2) : row.debit}
-            </span>
-        ),
-    },
-    {
-        key: 'credit', title: 'Credit',
-        render: (row: any) => (
-            <span className="px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs">
-                ₹{row.credit.toFixed ? row.credit.toFixed(2) : row.credit}
-            </span>
-        ),
-    },
-    { key: 'reference', title: 'Reference', },
-];
+import VoucherFormModal from "../../../../components/voucher/VoucherFormModal";
+import EditableLineTable from "../../../../components/voucher/EditableLineTable";
+import SummaryCards from "../../../../components/voucher/SummaryCards";
+
+import {
+    addBalance,
+    deleteBalance,
+    getOpeningBalList,
+    updateBalance,
+} from "../../../../redux/slices/professionalSlice/openingBalance";
+
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
+import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
+
+const emptyEntryRow = {
+    id: Date.now(),
+    accountCode: "",
+    account: "",
+    accountName: "",
+    debit: "",
+    credit: "",
+    reference: "",
+    remarks: "",
+};
+
+const emptyForm = {
+    voucherno: "OPBAL",
+    openingBalDate: new Date().toISOString().split("T")[0],
+    remark: "",
+    openingBalBody: [{ ...emptyEntryRow, id: Date.now() }],
+};
 
 const mainColumns = [
-    { key: 'openingBalVoucherNumber', title: 'Voucher', },
-    { key: 'createdOn', title: 'Date', },
     {
-        key: 'totalCredit', title: 'Total Credit',
+        key: "openingBalVoucherNumber",
+        title: "Voucher",
+    },
+    {
+        key: "openingBalDate",
+        title: "Date",
+        render: (row: any) => row?.openingBalDate || row?.createdOn || "-",
+    },
+    {
+        key: "totalDebit",
+        title: "Total Debit",
         render: (row: any) => (
-            <>
-                {row?.openingBalFooter?.totalCredit && `₹${row?.openingBalFooter?.totalCredit}`}
-            </>
+            <>₹{Number(row?.openingBalFooter?.totalDebit || 0).toFixed(2)}</>
         ),
     },
     {
-        key: 'credit', title: 'Total Debit',
+        key: "totalCredit",
+        title: "Total Credit",
         render: (row: any) => (
-            <>
-                {row?.openingBalFooter?.totalDebit && `₹${row?.openingBalFooter?.totalDebit}`}
-            </>
+            <>₹{Number(row?.openingBalFooter?.totalCredit || 0).toFixed(2)}</>
         ),
     },
-    { key: 'openingBalStatus', title: 'Status', },
-];
-
-const mainInputData = [
     {
-        grid: 2,
-        child: [
-            {
-                key: "voucherno",
-                label: "Voucher No",
-                type: "text",
-                grid: 2,
-                isRequired: true,
-                disabled: true,
-            },
-            {
-                key: "openingBalDate",
-                label: "Date",
-                grid: 2,
-                type: "date",
-                isRequired: true,
-                disabled: true,
-            },
-        ]
-    },
-    {
-        key: "remark",
-        label: "Remark",
-        grid: 1,
-        type: "textarea",
-        isRequired: false,
+        key: "openingBalStatus",
+        title: "Status",
     },
 ];
 
 const OpeningBalance = () => {
-    const [search, setSearch] = useState("");
-    const [localOffset, setLocalOffset] = useState(0);
-    const [localLimit, setLocalLimit] = useState(10);
-    const [showModal, setShowModal] = useState(false);
-    const [showEntryModal, setShowEntryModal] = useState(false);
     const dispatch = useDispatch();
     const { accounts } = useSelector((s: any) => s.accountMaster);
     const { openingBal, listingLoader, pagination, addLoader } = useSelector((s: any) => s.openingBalance);
+
+    const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [localOffset, setLocalOffset] = useState(0);
+    const [localLimit, setLocalLimit] = useState(10);
+
+    const [showModal, setShowModal] = useState(false);
     const [edit, setEdit] = useState(false);
     const [status, setStatus] = useState("open");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [confirmTooltip, setConfirmTooltip] = useState({
+
+    const [form, setForm] = useState<any>(emptyForm);
+    const [errors, setErrors] = useState<any>({});
+
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
         x: null,
         y: null,
         openingBalVoucherNumber: null,
     });
 
-    const accOptions = accounts?.reduce((a: any, c: any) => {
-        a.push({ label: c?.accountName, value: c?.accountCode })
-        return a;
-    }, []);
-
-    const [form, setForm] = useState<any>({
-        voucherno: "OPBAL",
-        openingBalDate: new Date().toISOString().split("T")[0],
-        remark: "",
-        openingBalBody: [],
-    });
-
-    const [entryForm, setEntryForm] = useState<any>({});
-    const [errors, setErrors] = useState<any>({});
-    const [entryErrors, setEntryErrors] = useState<any>({});
+    const accountOptions = useMemo(() => {
+        return (
+            accounts?.map((item: any) => ({
+                label: item?.accountName,
+                value: item?.accountCode,
+                raw: item,
+            })) || []
+        );
+    }, [accounts]);
 
     const totalDebit = useMemo(() => {
-        return form.openingBalBody.reduce(
+        return form.openingBalBody?.reduce(
             (sum: number, item: any) => sum + Number(item.debit || 0),
             0
         );
     }, [form.openingBalBody]);
 
     const totalCredit = useMemo(() => {
-        return form.openingBalBody.reduce(
+        return form.openingBalBody?.reduce(
             (sum: number, item: any) => sum + Number(item.credit || 0),
             0
         );
     }, [form.openingBalBody]);
+
+    const resetForm = () => {
+        setForm({
+            ...emptyForm,
+            openingBalBody: [{ ...emptyEntryRow, id: Date.now() }],
+        });
+        setErrors({});
+        setEdit(false);
+    };
 
     const handleChange = (key: string, value: any) => {
         setForm((prev: any) => ({
@@ -148,327 +142,276 @@ const OpeningBalance = () => {
         }));
     };
 
-    const handleEntryChange = (key: string, value: any) => {
-        setEntryForm((prev: any) => {
-            let updated = {
-                ...prev,
+    const handleRowChange = (index: number, key: string, value: any) => {
+        setForm((prev: any) => {
+            const updatedBody = [...(prev.openingBalBody || [])];
+
+            const updatedRow = {
+                ...updatedBody[index],
                 [key]: value,
             };
 
-            // Optional: if debit entered, clear credit
+            if (key === "accountCode") {
+                const selectedAccount = accountOptions.find(
+                    (item: any) => item.value === value
+                );
+
+                updatedRow.accountCode = value;
+                updatedRow.account = value;
+                updatedRow.accountName = selectedAccount?.label || "";
+            }
+
             if (key === "debit" && Number(value) > 0) {
-                updated.credit = "";
+                updatedRow.credit = "";
             }
 
-            // Optional: if credit entered, clear debit
             if (key === "credit" && Number(value) > 0) {
-                updated.debit = "";
+                updatedRow.debit = "";
             }
 
-            return updated;
+            updatedBody[index] = updatedRow;
+
+            return {
+                ...prev,
+                openingBalBody: updatedBody,
+            };
         });
 
-        setEntryErrors((prev: any) => ({
+        setErrors((prev: any) => ({
             ...prev,
-            [key]: "",
-            amount: "",
+            openingBalBody: "",
+            [`row_${index}_${key}`]: "",
+            [`row_${index}_amount`]: "",
         }));
     };
 
-    const validateMainForm = () => {
-        const err: any = {};
-        mainInputData.forEach((field: any) => {
-            const value = form?.[field.key];
-            if (field.isRequired && (value === undefined || value === null || String(value).trim() === "")) {
-                err[field.key] = `${field.label} is required`;
-            }
-        });
+    const handleAddRow = () => {
+        setForm((prev: any) => ({
+            ...prev,
+            openingBalBody: [
+                ...(prev.openingBalBody || []),
+                {
+                    ...emptyEntryRow,
+                    id: Date.now(),
+                },
+            ],
+        }));
+    };
 
-        if (!form.openingBalBody || form.openingBalBody.length === 0) {
+    const handleDeleteRow = (index: number) => {
+        setForm((prev: any) => {
+            const updatedBody = prev.openingBalBody.filter(
+                (_: any, i: number) => i !== index
+            );
+
+            return {
+                ...prev,
+                openingBalBody:
+                    updatedBody.length > 0
+                        ? updatedBody
+                        : [{ ...emptyEntryRow, id: Date.now() }],
+            };
+        });
+    };
+
+    const getFilledRows = () => {
+        return form.openingBalBody.filter((row: any) => {
+            return (
+                row.accountCode ||
+                row.account ||
+                row.debit ||
+                row.credit ||
+                row.reference ||
+                row.remarks
+            );
+        });
+    };
+
+    const validateForm = () => {
+        const err: any = {};
+
+        if (!form.voucherno || String(form.voucherno).trim() === "") {
+            err.voucherno = "Voucher No is required";
+        }
+
+        if (!form.openingBalDate || String(form.openingBalDate).trim() === "") {
+            err.openingBalDate = "Date is required";
+        }
+
+        const filledRows = getFilledRows();
+
+        if (filledRows.length === 0) {
             err.openingBalBody = "Please add at least one account";
         }
+
+        form.openingBalBody.forEach((row: any, index: number) => {
+            const hasAnyValue =
+                row.accountCode ||
+                row.account ||
+                row.debit ||
+                row.credit ||
+                row.reference ||
+                row.remarks;
+
+            if (!hasAnyValue) return;
+
+            const debit = Number(row.debit || 0);
+            const credit = Number(row.credit || 0);
+
+            if (!row.accountCode && !row.account) {
+                err[`row_${index}_accountCode`] = "Account is required";
+            }
+
+            if (debit <= 0 && credit <= 0) {
+                err[`row_${index}_amount`] = "Debit or Credit amount is required";
+                err[`row_${index}_debit`] = "Required";
+                err[`row_${index}_credit`] = "Required";
+            }
+
+            if (debit > 0 && credit > 0) {
+                err[`row_${index}_amount`] = "Only one amount allowed";
+                err[`row_${index}_debit`] = "Only one";
+                err[`row_${index}_credit`] = "Only one";
+            }
+        });
 
         setErrors(err);
         return Object.keys(err).length === 0;
     };
 
-    const validateEntryForm = () => {
-        const err: any = {};
-
-        entryInputData.forEach((field: any) => {
-            const value = entryForm?.[field.key];
-
-            if (
-                field.isRequired &&
-                (value === undefined || value === null || String(value).trim() === "")
-            ) {
-                err[field.key] = `${field.label} is required`;
-            }
-        });
-
-        const debit = Number(entryForm?.debit || 0);
-        const credit = Number(entryForm?.credit || 0);
-
-        if (debit <= 0 && credit <= 0) {
-            err.amount = "Debit or Credit amount is required";
-            err.debit = "Enter debit or credit";
-            err.credit = "Enter debit or credit";
-        }
-
-        if (debit > 0 && credit > 0) {
-            err.amount = "You can enter either debit or credit, not both";
-            err.debit = "Only one amount allowed";
-            err.credit = "Only one amount allowed";
-        }
-
-        setEntryErrors(err);
-
-        return Object.keys(err).length === 0;
+    const cleanRows = () => {
+        return form.openingBalBody
+            .filter((row: any) => {
+                return (
+                    row.accountCode ||
+                    row.account ||
+                    row.debit ||
+                    row.credit ||
+                    row.reference ||
+                    row.remarks
+                );
+            })
+            .map((row: any) => ({
+                id: row.id || Date.now(),
+                account: row.accountCode || row.account,
+                accountCode: row.accountCode || row.account,
+                accountName: row.accountName || "",
+                debit: Number(row.debit || 0),
+                credit: Number(row.credit || 0),
+                reference: row.reference || "",
+                remarks: row.remarks || "",
+            }));
     };
 
-    const handleAddEntry = () => {
-        if (!validateEntryForm()) return;
+    const refreshList = async () => {
+        // @ts-ignore
+        await dispatch(getOpeningBalList({
+            limit: localLimit,
+            offset: localOffset,
+            status,
+            search: debouncedSearch,
+        })
+        );
+    };
 
-        // const selectedAccount = entryInputData[0].options.find(
-        //     (item: any) => item.value === entryForm.accountCode
-        // );
+    const handleSubmit = async () => {
+        if (!validateForm()) return;
 
-        const newEntry = {
-            id: Date.now(),
-            account: entryForm.accountCode,
-            // accountName: selectedAccount?.label || "",
-            debit: Number(entryForm.debit || 0),
-            credit: Number(entryForm.credit || 0),
-            reference: entryForm.reference || "",
-            remarks: entryForm.remarks || "",
+        const openingBalBody = cleanRows();
+
+        const payload = {
+            ...form,
+            openingBalBody,
+            openingBalFooter: {
+                totalDebit,
+                totalCredit,
+            },
         };
 
-        setForm((prev: any) => ({
-            ...prev,
-            openingBalBody: [...prev.openingBalBody, newEntry],
-        }));
+        if (edit) {
+            // @ts-ignore
+            await dispatch(updateBalance({
+                payload,
+                openingBalVoucherNumber: form?.openingBalVoucherNumber,
+            })
+            );
+        } else {
+            // @ts-ignore
+            await dispatch(addBalance({ payload }));
+        }
 
-        setEntryForm({});
-        setEntryErrors({});
-        setShowEntryModal(false);
+        await refreshList();
 
-        setErrors((prev: any) => ({
-            ...prev,
-            openingBalBody: "",
-        }));
+        toast.success(`Opening balance ${edit ? "updated" : "added"} successfully`);
+
+        setShowModal(false);
+        resetForm();
     };
 
-    const handleDeleteEntry = async (e: any) => {
-        {/* @ts-ignore */ }
-        await dispatch(deleteBalance({ openingBalVoucherNumber: e }))
-        {/* @ts-ignore */ }
-        await dispatch(getOpeningBalList({ status }))
+    const handleDeleteVoucher = async (openingBalVoucherNumber: any) => {
+        // @ts-ignore
+        await dispatch(deleteBalance({ openingBalVoucherNumber }));
+        await refreshList();
         toast.success("Opening balance deleted successfully");
+
         setConfirmTooltip({
             show: false,
             x: null,
             y: null,
             openingBalVoucherNumber: null,
-        })
-        setForm((prev: any) => ({
-            ...prev,
-            openingBalBody: prev.openingBalBody.filter((item: any) => item.id !== e?.id),
-        }));
-    };
-
-    const handleSubmit = async () => {
-        if (!validateMainForm()) return;
-
-        const payload = {
-            ...form,
-            openingBalFooter: {
-                totalDebit,
-                totalCredit,
-            }
-        };
-        if (edit) {
-            {/* @ts-ignore */ }
-            await dispatch(updateBalance({ payload, openingBalVoucherNumber: form?.openingBalVoucherNumber }))
-        } else {
-            {/* @ts-ignore */ }
-            await dispatch(addBalance({ payload }))
-        } {/* @ts-ignore */ }
-        await dispatch(getOpeningBalList({ status }))
-        toast.success(`Opening balance ${edit ? "updated" : "added"} successfully`);
-        setShowModal(false);
-        setForm({
-            voucherno: "OPBAL",
-            openingBalDate: new Date().toISOString().split("T")[0],
-            remark: "",
-            openingBalBody: [],
         });
-        setEdit(false)
-        setErrors({});
-    };
-
-    const renderMainField = (field: any) => {
-        const value = form?.[field.key] ?? "";
-
-        const commonProps = {
-            label: field.label,
-            mandatory: field.isRequired,
-            value,
-            placeholder: `Enter ${field.label}`,
-            error: errors?.[field.key],
-            disabled: field.disabled,
-        };
-
-        if (field.type === "date") {
-            return (
-                <TextInput
-                    key={field.key}
-                    {...commonProps}
-                    type="date"
-                    onChange={(e: any) => handleChange(field.key, e.target.value)}
-                />
-            );
-        }
-
-        if (field.type === "textarea") {
-            return (
-                <TextArea
-                    key={field.key}
-                    {...commonProps}
-                    onChange={(e: any) => handleChange(field.key, e.target.value)}
-                />
-            );
-        }
-
-        return (
-            <TextInput
-                key={field.key}
-                {...commonProps}
-                type="text"
-                onChange={(e: any) => handleChange(field.key, e.target.value)}
-            />
-        );
-    };
-
-    const renderEntryField = (field: any) => {
-        const value = entryForm?.[field.key] ?? "";
-
-        const commonProps = {
-            label: field.label,
-            mandatory: field.isRequired,
-            value,
-            placeholder: `Enter ${field.label}`,
-            error: entryErrors?.[field.key],
-        };
-
-        if (field.type === "select") {
-            return (
-                <SelectInput
-                    key={field.key}
-                    label={field.label}
-                    mandatory={field.isRequired}
-                    value={value}
-                    placeholder={`Select ${field.label}`}
-                    error={entryErrors?.[field.key]}
-                    onChange={(e: any) => handleEntryChange(field.key, e?.target?.value)}
-                    options={[
-                        { label: `Select ${field.label}`, value: "" },
-                        ...field.options,
-                    ]}
-                />
-            );
-        }
-
-        if (field.type === "number") {
-            return (
-                <TextInput
-                    key={field.key}
-                    {...commonProps}
-                    type="number"
-                    onChange={(e: any) => handleEntryChange(field.key, e.target.value)}
-                />
-            );
-        }
-
-        if (field.type === "textarea") {
-            return (
-                <TextArea
-                    key={field.key}
-                    {...commonProps}
-                    onChange={(e: any) => handleEntryChange(field.key, e.target.value)}
-                />
-            );
-        }
-
-        return (
-            <TextInput
-                key={field.key}
-                {...commonProps}
-                type="text"
-                onChange={(e: any) => handleEntryChange(field.key, e.target.value)}
-            />
-        );
     };
 
     useEffect(() => {
+        refreshList();
+
         // @ts-ignore
-        dispatch(getOpeningBalList({ limit: localLimit, offset: localOffset, status, search: debouncedSearch, }))
-        console.log({ localLimit })
-        // @ts-ignore
-        dispatch(getAllAccounts({ limit: localLimit, offset: localOffset, status, search: debouncedSearch }));
+        dispatch(getAllAccounts({
+            limit: 200,
+            offset: 0,
+        })
+        );
     }, [localOffset, localLimit, status, debouncedSearch]);
 
-    const entryInputData = [
-        {
-            key: "accountCode",
-            label: "Account",
-            type: "select",
-            isRequired: true,
-            options: accOptions,
-        },
-        {
-            key: "debit",
-            label: "Debit",
-            type: "number",
-            isRequired: false,
-        },
-        {
-            key: "credit",
-            label: "Credit",
-            type: "number",
-            isRequired: false,
-        },
-        {
-            key: "reference",
-            label: "Reference",
-            type: "text",
-            isRequired: false,
-        },
-        {
-            key: "remarks",
-            label: "Remarks",
-            type: "textarea",
-            isRequired: false,
-        }
-    ];
-
-    // useEffect(() => {
-    //     dispatch(getOpeningBalList({ limit: localLimit, offset: localOffset, status, search: debouncedSearch, }));
-    // }, [debouncedSearch]);
-
     useEffect(() => {
-        const t = setTimeout(() => {
+        const timer = setTimeout(() => {
             setDebouncedSearch(search.trim());
             setLocalOffset(0);
         }, 400);
-        return () => clearTimeout(t);
+
+        return () => clearTimeout(timer);
     }, [search]);
 
-    console.log({ openingBal, localOffset })
+    const inputData = {
+        headerInput: [
+            { key: "voucherno", title: "Voucher No", type: "text", disabled: true },
+            { key: "openingBalDate", title: "Date", type: "date", disabled: true },
+            { key: "remark", title: "Remark", type: "textarea", required: false, placeholder: "Enter Remark" }
+        ],
+        editTable: [
+            { key: "accountCode", title: "Account", type: "select", width: "260px", required: true, options: accountOptions },
+            { key: "debit", title: "Debit", type: "number", width: "150px", align: "right" },
+            { key: "credit", title: "Credit", type: "number", width: "150px", align: "right" },
+            { key: "reference", title: "Reference", type: "text", width: "200px" },
+            { key: "remarks", title: "Remarks", type: "text", width: "250px" }
+        ],
+        footerCard: [
+            { label: "Total Debit", value: `₹${totalDebit.toFixed(2)}` },
+            { label: "Total Credit", value: `₹${totalCredit.toFixed(2)}` }
+        ]
+    }
+
     return (
         <>
-            <div className="w-full bg-white border border-gray-200 shadow-sm p-4 flex flex-col h-[100%]">
-                <div className="flex justify-end items-center mb-3">
-                    <Toggle  {...{ arr: ["open", "close"], state: status, setState: setStatus }} />
+            <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-end gap-3">
+                    <Toggle
+                        {...{
+                            arr: ["open", "close"],
+                            state: status,
+                            setState: setStatus,
+                        }}
+                    />
 
                     <div className="me-2">
                         <SearchInput {...{ search, setSearch }} />
@@ -477,67 +420,106 @@ const OpeningBalance = () => {
                     <PrimaryButton
                         {...{
                             text: "Add",
-                            callBackFn: () => setShowModal(true),
+                            callBackFn: () => {
+                                resetForm();
+                                setShowModal(true);
+                            },
                         }}
                     />
                 </div>
+
                 <DataTable
                     columns={mainColumns}
                     data={openingBal}
                     loading={listingLoader}
                     emptyMessage="No data found"
-                    actions={(acc: any) => (
+                    actions={(item: any) => (
                         <div className="flex items-center gap-2">
                             <button
-                                id="account-edit-button"
+                                id="opening-balance-edit-button"
                                 onClick={() => {
-                                    setForm(acc)
-                                    setEdit(true)
-                                    setShowModal(true)
+                                    const body =
+                                        item?.openingBalBody?.length > 0
+                                            ? item.openingBalBody.map((row: any) => ({
+                                                id: row.id || Date.now() + Math.random(),
+                                                accountCode: row.accountCode || row.account || "",
+                                                account: row.accountCode || row.account || "",
+                                                accountName: row.accountName || "",
+                                                debit: row.debit || "",
+                                                credit: row.credit || "",
+                                                reference: row.reference || "",
+                                                remarks: row.remarks || "",
+                                            }))
+                                            : [
+                                                {
+                                                    ...emptyEntryRow,
+                                                    id: Date.now(),
+                                                },
+                                            ];
+
+                                    setForm({
+                                        ...item,
+                                        voucherno: item?.voucherno || item?.openingBalVoucherNumber || "OPBAL",
+                                        openingBalDate: item?.openingBalDate || new Date().toISOString().split("T")[0],
+                                        remark: item?.remark || "",
+                                        openingBalBody: body,
+                                    });
+
+                                    setErrors({});
+                                    setEdit(true);
+                                    setShowModal(true);
                                 }}
-                                className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
+                                className="cursor-pointer rounded-lg p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                            >
                                 <Edit size={16} />
                             </button>
-                            {/* delete */}
+
                             <button
                                 type="button"
-                                // onClick={() => handleDeleteEntry(acc?.openingBalVoucherNumber)}
                                 onClick={(e: any) => {
                                     const rect = e.currentTarget.getBoundingClientRect();
                                     let x: any = rect.left - 150;
                                     if (x < 10) x = 10;
                                     const y: any = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({ show: true, x, y, openingBalVoucherNumber: acc.openingBalVoucherNumber, });
+                                    setConfirmTooltip({
+                                        show: true,
+                                        x,
+                                        y,
+                                        openingBalVoucherNumber: item.openingBalVoucherNumber,
+                                    });
                                 }}
-                                className="text-red-500 hover:text-red-700"
-                            >
+                                className="text-red-500 hover:text-red-700">
                                 <Trash2 size={16} />
                             </button>
                         </div>
                     )}
                 />
-                {pagination.totalDocs > 0 && <Pagination  {...{
-                    localLimit, selectCb: (e: any) => {
-                        setLocalLimit(Number(e.target.value));
-                        setLocalOffset(0);
-                    },
-                    preDisabled: !pagination.hasPrevPage,
-                    nextDisabled: !pagination.hasNextPage,
-                    setLocalOffset, pagination
-                }} />}
+
+                {pagination?.totalDocs > 0 && (
+                    <Pagination
+                        {...{
+                            localLimit,
+                            selectCb: (e: any) => {
+                                setLocalLimit(Number(e.target.value));
+                                setLocalOffset(0);
+                            },
+                            preDisabled: !pagination.hasPrevPage,
+                            nextDisabled: !pagination.hasNextPage,
+                            setLocalOffset,
+                            pagination,
+                        }}
+                    />
+                )}
             </div>
 
             {confirmTooltip.show && (
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message="Are you sure you want to delete this account?"
+                    message="Are you sure you want to delete this opening balance?"
                     confirmText="Delete"
                     cancelText="Cancel"
-                    onConfirm={() => {
-                        handleDeleteEntry(confirmTooltip?.openingBalVoucherNumber)
-                        
-                    }}
+                    onConfirm={() => handleDeleteVoucher(confirmTooltip?.openingBalVoucherNumber)}
                     onCancel={() =>
                         setConfirmTooltip({
                             show: false,
@@ -548,142 +530,126 @@ const OpeningBalance = () => {
                     }
                 />
             )}
+            <DynamicAddForm {...{
+                show: showModal, setShow: setShowModal, edit, title: "Opening Balance", subtitle: "Fill in the opening balance details below", loading: addLoader, onClose: () => {
+                    setShowModal(false);
+                    resetForm();
+                }, onSubmit: handleSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange, inputData, bodyKey: "openingBalBody", handleChange
+            }} />
 
-
-            {/* Main Opening Balance Modal */}
-            {/* @ts-ignore */}
-            <Modal
-                {...{
-                    show: showModal,
-                    setShow: setShowModal,
-                    handleClose: () => {
-                        setErrors(null)
-                        setForm({
-                            voucherno: "OPBAL",
-                            openingBalDate: new Date().toISOString().split("T")[0],
-                            remark: "",
-                            openingBalBody: [],
-                        });
-                        setEdit(false)
-                    },
-                    handleSubmit,
-                    loader: addLoader,
-                    state: edit,
-                    gridCols: 12,
-                    title: "Opening Balance",
-                    body: (
-                        <>
-                            <div>
-                                <div>
-                                    {mainInputData.map((field: any) => <><div className={`grid gap-2 mb-2 grid-cols-${field?.grid}`}> {field?.child?.length ? field?.child?.map((e: any) => renderMainField(e)) : renderMainField(field)}</div></>)}
-                                </div>
-
-                                <div className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <h3 className="text-base font-semibold text-slate-800">
-                                            Entries
-                                        </h3>
-                                        <SecondaryButton
-                                            {...{
-                                                text: "Add Account",
-                                                icon: <Plus size={16} />,
-                                                callBackFn: () => setShowEntryModal(true),
-                                            }}
-                                        />
-                                    </div>
-
-                                    {errors?.openingBalBody && (
-                                        <p className="mb-2 text-sm text-red-500">{errors.openingBalBody}</p>
-                                    )}
-
-                                    {form.openingBalBody.length === 0 ? (
-                                        <div className="rounded-lg border border-slate-200 p-5 text-center text-sm text-slate-500">
-                                            No data found
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="overflow-auto w-100">
-                                                <DataTable
-                                                    columns={columns}
-                                                    data={form.openingBalBody}
-                                                    // loading={loading}
-                                                    emptyMessage="No accounts found"
-                                                        actions={(acc: any) => (
-                                                        <div className="flex items-center gap-2">
-                                                            {/* EDIT */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDeleteEntry(acc.id)}
-                                                                className="text-red-500 hover:text-red-700"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-
-                                <div className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-                                    <div className="flex items-center justify-between text-base font-semibold text-slate-800">
-                                        <span>Total Debit:</span>
-                                        <span>₹{totalDebit.toFixed(2)}</span>
-                                    </div>
-
-                                    <div className="mt-2 flex items-center justify-between text-base font-semibold text-slate-800">
-                                        <span>Total Credit:</span>
-                                        <span>₹{totalCredit.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ),
+            {/* <VoucherFormModal
+                show={showModal}
+                setShow={setShowModal}
+                title="Opening Balance"
+                subtitle="Fill in the opening balance details below"
+                edit={edit}
+                loading={addLoader}
+                onClose={() => {
+                    setShowModal(false);
+                    resetForm();
                 }}
-            />
+                onSubmit={handleSubmit}
+            >
+                <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
+                    <TextInput
+                        label="Voucher No"
+                        value={form.voucherno || ""}
+                        disabled
+                        error={errors?.voucherno}
+                        onChange={(e: any) =>
+                            handleChange("voucherno", e.target.value)
+                        }
+                    />
 
-            {/* Add Account Modal */}
-            {/* @ts-ignore */}
-            <Modal
-                {...{
-                    show: showEntryModal,
-                    setShow: setShowEntryModal,
-                    handleSubmit: handleAddEntry,
-                    loader: false,
-                    maxWidth: "lg",
-                    state: false,
-                    gridCols: 1,
-                    title: "Add Opening Balance",
-                    body: (
-                        <>
-                            <div>
-                                <div>
-                                    {entryInputData.map((field: any) => <><div className="mb-2">{renderEntryField(field)}</div></>)}
-                                </div>
+                    <TextInput
+                        label="Date"
+                        type="date"
+                        value={form.openingBalDate || ""}
+                        error={errors?.openingBalDate}
+                        onChange={(e: any) =>
+                            handleChange("openingBalDate", e.target.value)
+                        }
+                    />
 
-                                {entryErrors?.amount && (
-                                    <p className="mt-2 text-sm text-red-500">
-                                        {entryErrors.amount}
-                                    </p>
-                                )}
+                    <div className="md:col-span-2">
+                        <TextArea
+                            label="Remark"
+                            value={form.remark || ""}
+                            placeholder="Enter Remark"
+                            error={errors?.remark}
+                            onChange={(e: any) =>
+                                handleChange("remark", e.target.value)
+                            }
+                        />
+                    </div>
+                </div>
 
-                                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
-                                        <span>Total Debit</span>
-                                        <span>₹{Number(entryForm?.debit || 0).toFixed(2)}</span>
-                                    </div>
+                {errors?.openingBalBody && (
+                    <p className="mt-4 text-sm text-red-500">
+                        {errors.openingBalBody}
+                    </p>
+                )}
 
-                                    <div className="mt-3 flex items-center justify-between text-sm font-semibold text-slate-800">
-                                        <span>Total Credit</span>
-                                        <span>₹{Number(entryForm?.credit || 0).toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ),
-                }}
-            />
+                <EditableLineTable
+                    title="Entries"
+                    addButtonText="Add Account"
+                    rows={form.openingBalBody}
+                    columns={[
+                        {
+                            key: "accountCode",
+                            title: "Account",
+                            type: "select",
+                            width: "260px",
+                            required: true,
+                            options: accountOptions,
+                        },
+                        {
+                            key: "debit",
+                            title: "Debit",
+                            type: "number",
+                            width: "150px",
+                            align: "right",
+                        },
+                        {
+                            key: "credit",
+                            title: "Credit",
+                            type: "number",
+                            width: "150px",
+                            align: "right",
+                        },
+                        {
+                            key: "reference",
+                            title: "Reference",
+                            type: "text",
+                            width: "200px",
+                        },
+                        {
+                            key: "remarks",
+                            title: "Remarks",
+                            type: "text",
+                            width: "250px",
+                        },
+                    ]}
+                    errors={errors}
+                    onAddRow={handleAddRow}
+                    onDeleteRow={handleDeleteRow}
+                    onChange={handleRowChange}
+                    emptyText="No accounts added"
+                />
+
+                <SummaryCards
+                    items={[
+                        {
+                            label: "Total Debit",
+                            value: `₹${totalDebit.toFixed(2)}`,
+                        },
+                        {
+                            label: "Total Credit",
+                            value: `₹${totalCredit.toFixed(2)}`,
+                        },
+                    ]}
+                />
+            </VoucherFormModal> */}
         </>
     );
 };

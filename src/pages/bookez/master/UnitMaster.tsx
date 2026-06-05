@@ -23,8 +23,8 @@ const UnitMaster = () => {
 		loading,
 		unitMasterSchemaFields = [],
 		schemaLoading,
-	} = useSelector((s: any) => s.unitMaster);
-
+	} = useSelector((s: any) => s.units);
+	console.log({ units })
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
 
