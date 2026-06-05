@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import professionalAxios from "../../../services/professionalAxios";
+import professionalAxios from "../../../../services/professionalAxios";
 
 type RejectValue = {
   message: string;

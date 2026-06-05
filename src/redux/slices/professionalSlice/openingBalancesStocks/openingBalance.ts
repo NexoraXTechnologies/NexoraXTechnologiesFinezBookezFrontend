@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import professionalAxios from "../../../services/professionalAxios";
+import professionalAxios from "../../../../services/professionalAxios";
 
 // get 
 export const addBalance = createAsyncThunk(

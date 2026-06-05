@@ -18,12 +18,7 @@ import { SelectInput, TextArea, TextInput } from "../../../../../components/inpu
 import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
-import {
-    createSalesQuotation,
-    deleteSalesQuotation,
-    getAllSalesQuotations,
-    updateSalesQuotation,
-} from "../../../../../redux/slices/professionalSlice/salesQuationsSlice";
+
 
 import SalesQuotationsFormModal from "./SalesQuationsFormModel";
 import Toggle from "../../../../../components/toggle";
@@ -38,6 +33,7 @@ import {
 } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState, OptionType, ProductLine } from "../salesWorkflowTypes";
 import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
+import { createSalesQuotation, deleteSalesQuotation, getAllSalesQuotations, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 
 
 

@@ -11,13 +11,9 @@ import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
-import {
-    addOpeningStock,
-    deleteOpeningStock,
-    getOpeningStockList,
-    updateOpeningStock,
-} from "../../../../redux/slices/professionalSlice/openingStockSlice";
+
 import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
+import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
 
 
 

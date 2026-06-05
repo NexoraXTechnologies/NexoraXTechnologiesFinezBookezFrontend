@@ -6,12 +6,12 @@ import Modal from "../../../../components/modal";
 import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
 import DataTable from "../../../../components/DataTable";
 import { useDispatch, useSelector } from "react-redux";
-import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../../../../redux/slices/professionalSlice/openingBalance";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import { toast } from "react-toastify";
+import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingBalance";
 
 const columns = [
     { key: 'account', title: 'Account', },

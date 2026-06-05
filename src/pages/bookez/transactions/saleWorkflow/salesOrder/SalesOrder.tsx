@@ -29,7 +29,8 @@ import type { OptionType, ProductLine } from "../salesWorkflowTypes";
 import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
-import { getAllSalesOrder } from "../../../../../redux/slices/professionalSlice/salesOrderSlice";
+import { getAllSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
+
 
 /* ===================================================
    DEFAULT STATES
