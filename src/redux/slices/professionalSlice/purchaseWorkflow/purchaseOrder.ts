@@ -50,13 +50,13 @@ export const updatePurchaseOrder = createAsyncThunk(
     }
 );
 
-export const deleteOpeningStock = createAsyncThunk(
-    "purchaseOrder/deleteOpeningStock",
+export const deletePurchaseOrder = createAsyncThunk(
+    "purchaseOrder/deletePurchaseOrder",
     async ({ openingStockVoucherNumber }: { openingStockVoucherNumber: string }, { rejectWithValue }) => {
         try {
 
             const res = await professionalAxios.delete(
-                `/eTaxSolnMongoApiBackend/users/bookez/otherApi/openingStock/delete/${openingStockVoucherNumber}`
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseOrder/delete/${openingStockVoucherNumber}`
             );
 
             if (!res.data?.success)
@@ -164,15 +164,15 @@ const purchaseOrder = createSlice({
             })
 
             // delete bal
-            .addCase(deleteOpeningStock.pending, (state) => {
+            .addCase(deletePurchaseOrder.pending, (state) => {
                 state.deleteLoader = true;
                 state.error = null;
             })
-            .addCase(deleteOpeningStock.fulfilled, (state, action) => {
+            .addCase(deletePurchaseOrder.fulfilled, (state, action) => {
                 state.deleteLoader = false;
                 state.purchaseOrderList = action.payload?.records
             })
-            .addCase(deleteOpeningStock.rejected, (state) => {
+            .addCase(deletePurchaseOrder.rejected, (state) => {
                 state.deleteLoader = false;
             })
     },

@@ -12,7 +12,7 @@ import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
-import { addOpeningStock, getOpeningStockList, updateOpeningStock } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
+import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
 
 
 

@@ -25,7 +25,6 @@ const SalesInVoice = () => {
     const {
         salesInvoices = [],
         loading = false,
-        pagination,
     } = useSelector((state: any) => state.salesInvoice);
 
     const fetchSalesInvoices = async () => {
@@ -111,7 +110,7 @@ const SalesInVoice = () => {
                     <SearchInput search={search} setSearch={setSearch} />
 
                     <DataREfreshButton callBackFn={handleRefresh} loading={refreshing} />
-
+                     {/* @ts-ignore */}
                     <DataCreateButton
                         callBackFn={openAddModal}
                         text="Add Sales Invoice"

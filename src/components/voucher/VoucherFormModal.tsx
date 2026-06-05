@@ -18,7 +18,6 @@ const VoucherFormModal = ({
     show,
     setShow,
     title,
-    subtitle,
     edit = false,
     loading = false,
     onClose,
