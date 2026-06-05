@@ -124,7 +124,7 @@ const SalesQuotations = () => {
     const [status, setStatus] = useState("open");
 
     const [showModal, setShowModal] = useState(false);
-    const [editingRecord, setEditingRecord] = useState<any>(null);
+    const [editingRecord, setEditingRecord] = useState<any>(false);
 
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
@@ -544,7 +544,7 @@ const SalesQuotations = () => {
                 })
                 : [{ ...emptyProductRow, id: Date.now() }];
 
-        setEditingRecord(record);
+        setEditingRecord(true);
         setErrors({});
 
         setForm({
@@ -735,9 +735,9 @@ const SalesQuotations = () => {
             err.voucherDate = "Date is required";
         }
 
-        if (!form.customerCode) {
-            err.customerCode = "Customer is required";
-        }
+        // if (!form.customerCode) {
+        //     err.customerCode = "Customer is required";
+        // }
 
         if (!form.status) {
             err.status = "Document status is required";
@@ -794,7 +794,7 @@ const SalesQuotations = () => {
                 err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
             }
         });
-
+        console.log({ err })
         setErrors(err);
 
         if (err.products) {
@@ -833,7 +833,7 @@ const SalesQuotations = () => {
         const payload:any = {
             sQuoteVoucherDate: form.voucherDate,
 
-            sQuoteCustomerCode: form.customerCode,
+            sQuoteCustomerCode: form.sQuoteCustomerCode,
             sQuoteCustomerName: form.customerName,
             sQuoteSalesAccount: form.sQuoteSalesAccount || "SA021",
 
@@ -910,19 +910,19 @@ const SalesQuotations = () => {
                 totalNetAmount: fmtMoney(footer.totalNetAmount),
             },
         };
-
         try {
+            console.log(form, "form?.sQuoteVoucherNumber", editingRecord)
             if (editingRecord) {
                 await dispatch(
                     updateSalesQuotation({
-                        voucherNumber: editingRecord?.sQuoteVoucherNumber,
-                        data: payload,
+                        sQuoteVoucherNumber: form?.voucherNumber,
+                        payload: payload,
                     }) as any
                 ).unwrap();
 
                 toast.success("Sales quotation updated successfully");
             } else {
-                await dispatch(addSalesQuotation(payload) as any).unwrap();
+                await dispatch(addSalesQuotation({ payload }) as any).unwrap();
 
                 toast.success("Sales quotation created successfully");
             }
