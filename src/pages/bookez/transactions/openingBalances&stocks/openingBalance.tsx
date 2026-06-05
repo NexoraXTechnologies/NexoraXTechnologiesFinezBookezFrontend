@@ -9,6 +9,9 @@ import { toast } from "react-toastify";
 import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingBalance";
 
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
+import SearchInput from "../../../../components/searchInput";
+import { PrimaryButton } from "../../../../components/buttons";
+import DataTable from "../../../../components/DataTable";
 
 const emptyEntryRow = {
     id: Date.now(),
