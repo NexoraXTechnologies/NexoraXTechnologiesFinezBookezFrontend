@@ -132,7 +132,7 @@ const SalesQuotations = () => {
     const [customerOptions, setCustomerOptions] = useState<OptionType[]>([]);
     const [productOptions, setProductOptions] = useState<OptionType[]>([]);
     const [unitOptions, setUnitOptions] = useState<OptionType[]>([]);
-    console.log({ customerOptions })
+    
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({
         show: false,
         x: null,
