@@ -123,10 +123,12 @@ export const getAssemblyProductionList = createAsyncThunk(
       offset = 0,
       limit = 10,
       search = "",
+      status = "",
     }: {
       offset?: number;
       limit?: number;
       search?: string;
+      status?: string;
     } = {},
     { rejectWithValue }
   ) => {
@@ -135,6 +137,10 @@ export const getAssemblyProductionList = createAsyncThunk(
         offset,
         limit,
       };
+
+      if (status) {
+        params.status = status;
+      }
 
       if (search.trim()) {
         params.search = search.trim();
