@@ -393,19 +393,14 @@ const SalesQuotations = () => {
 
         return {
             ...row,
-
             quantity,
             rate,
-
             gross: grossAmount,
             grossAmount,
-
             discount: discountPercentage,
             discountPercentage,
             discountAmount,
-
             taxableAmount,
-
             cgst: cgstPercentage,
             cgstPercentage,
             cgstAmount,
@@ -415,17 +410,12 @@ const SalesQuotations = () => {
             igst: igstPercentage,
             igstPercentage,
             igstAmount,
-
             otherAmount,
-
             taxAmount,
-
             netAmount,
             netTotal: netAmount,
-
             unit: row.unit || row.uom || "",
             uom: row.uom || row.unit || "",
-
             description: row.description || row.productDescription || "",
             productDescription:
                 row.productDescription || row.description || "",
