@@ -29,50 +29,6 @@ export const getAllTransactionSchema = createAsyncThunk(
     }
 );
 
-const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all(
-        fields.map(async (field) => {
-            if (!field?.api) return field;
-
-            try {
-                const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    {
-                        params: field.queryParams || {},
-                    }
-                );
-
-                const records =
-                    res.data?.data?.records ||
-                    res.data?.data?.docs ||
-                    res.data?.data ||
-                    [];
-
-                const options = Array.isArray(records)
-                    ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
-                        raw: item,
-                    }))
-                    : [];
-
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
-
-                return {
-                    ...field,
-                    options: [],
-                };
-            }
-        })
-    );
-
-    return updatedFields;
-};
 
 const transationsSchemaSlice = createSlice({
     name: "transactionSchema",
@@ -120,23 +76,7 @@ const transationsSchemaSlice = createSlice({
                 state.transactionsSchema = [];
             });
         
-        builder
-            .addCase(loadFieldOptions.pending, (state: any) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(loadFieldOptions.fulfilled, (state: any, action: any) => {
-                state.loading = false;
-                const data = action.payload;
-
-                state.transactionsSchema = data ?? [];
-                state.pagination = data.pagination ?? state.pagination;
-            })
-            .addCase(loadFieldOptions.rejected, (state: any, action: any) => {
-                state.loading = false;
-                state.error = action.payload?.message;
-                state.transactionsSchema = [];
-            });
+       
     },
 });
 
