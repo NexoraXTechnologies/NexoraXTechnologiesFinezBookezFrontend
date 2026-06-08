@@ -6,7 +6,7 @@ import {
   ReceiptText,
 } from "lucide-react";
 import TransactionDashboard from "../components/TransactionDashboard";
-import PurchaseOrder from "./purchaseOrder";
+import PurchaseOrder from "./PurchaseOrder";
 
 const cards: any[] = [
   {
