@@ -23,11 +23,9 @@ const UnitMaster = () => {
 		loading,
 		unitMasterSchemaFields = [],
 		schemaLoading,
-	} = useSelector((s: any) => s.units);
-	console.log({ units })
+	} = useSelector((s: any) => s.unitMaster);
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
-
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -37,7 +35,6 @@ const UnitMaster = () => {
 	const [editingUnit, setEditingUnit]: any = useState(null);
 
 	const [errors, setErrors]: any = useState({});
-	console.log("units:", unitMasterSchemaFields);
 
 
 
