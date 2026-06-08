@@ -120,12 +120,6 @@ const getRecords = (res: any) => {
                     ? res.data.items
                     : Array.isArray(res?.data?.records)
                         ? res.data.records
-                        : Array.isArray(res?.data?.docs)
-                            ? res.data.docs
-                            : Array.isArray(res?.data)
-                                ? res.data
-                                : Array.isArray(res)
-                                    ? res
                                     : [];
 };
 
@@ -367,72 +361,7 @@ const PurchaseOrder = () => {
        CALCULATIONS
     =================================================== */
 
-    // const calculateRow = (row: any) => {
-    //     const quantity = num(row.quantity);
-    //     const rate = num(row.rate);
-    //     const grossAmount = quantity * rate;
-
-    //     const discountPercentage = safePercent(
-    //         row.discountPercentage || row.discount
-    //     );
-
-    //     const discountAmount = (grossAmount * discountPercentage) / 100;
-    //     const taxableAmount = grossAmount - discountAmount;
-
-    //     const cgstPercentage = safePercent(row.cgstPercentage || row.cgst);
-    //     const sgstPercentage = safePercent(row.sgstPercentage || row.sgst);
-    //     const igstPercentage = safePercent(row.igstPercentage || row.igst);
-
-    //     const cgstAmount = (taxableAmount * cgstPercentage) / 100;
-    //     const sgstAmount = (taxableAmount * sgstPercentage) / 100;
-    //     const igstAmount = (taxableAmount * igstPercentage) / 100;
-
-    //     const otherAmount = num(row.otherAmount);
-
-    //     const taxAmount = cgstAmount + sgstAmount + igstAmount;
-    //     const netAmount = taxableAmount + taxAmount + otherAmount;
-
-    //     return {
-    //         ...row,
-    //         quantity,
-    //         rate,
-
-    //         gross: grossAmount,
-    //         grossAmount,
-
-    //         discount: discountPercentage,
-    //         discountPercentage,
-    //         discountAmount,
-
-    //         taxableAmount,
-
-    //         cgst: cgstPercentage,
-    //         cgstPercentage,
-    //         cgstAmount,
-
-    //         sgst: sgstPercentage,
-    //         sgstPercentage,
-    //         sgstAmount,
-
-    //         igst: igstPercentage,
-    //         igstPercentage,
-    //         igstAmount,
-
-    //         otherAmount,
-
-    //         taxAmount,
-    //         netAmount,
-    //         netTotal: netAmount,
-
-    //         unit: row.unit || row.uom || "",
-    //         uom: row.uom || row.unit || "",
-
-    //         description: row.description || row.productDescription || "",
-    //         productDescription:
-    //             row.productDescription || row.description || "",
-    //     };
-    // };
-
+   
     const calculateRow = (row: any) => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
@@ -521,34 +450,7 @@ const PurchaseOrder = () => {
     };
 
 
-    // const calculateFooter = (products: any[]) => {
-    //     return products.reduce(
-    //         (acc: any, item: any) => {
-    //             acc.totalQuantity += num(item.quantity);
-    //             acc.totalGrossAmount += num(item.grossAmount || item.gross);
-    //             acc.totalDiscountAmount += num(item.discountAmount);
-    //             acc.totalCgstAmount += num(item.cgstAmount);
-    //             acc.totalSgstAmount += num(item.sgstAmount);
-    //             acc.totalIgstAmount += num(item.igstAmount);
-    //             acc.totalTaxAmount += num(item.taxAmount);
-    //             acc.totalOtherAmount += num(item.otherAmount);
-    //             acc.totalNetAmount += num(item.netTotal || item.netAmount);
-
-    //             return acc;
-    //         },
-    //         {
-    //             totalQuantity: 0,
-    //             totalGrossAmount: 0,
-    //             totalDiscountAmount: 0,
-    //             totalCgstAmount: 0,
-    //             totalSgstAmount: 0,
-    //             totalIgstAmount: 0,
-    //             totalTaxAmount: 0,
-    //             totalOtherAmount: 0,
-    //             totalNetAmount: 0,
-    //         }
-    //     );
-    // };
+  
 
     const calculateFooter = (products: any[]) => {
         return (products || []).reduce(
@@ -703,21 +605,7 @@ const PurchaseOrder = () => {
                 </span>
             ),
         },
-        // {
-        //     key: "pOrdDocStatus",
-        //     title: "Doc Status",
-        //     render: (row: any) => (
-        //         <span
-        //             className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
-        //                 row?.pOrdDocStatus === "open"
-        //                     ? "border-green-200 bg-green-50 text-green-700"
-        //                     : "border-red-200 bg-red-50 text-red-700"
-        //             }`}
-        //         >
-        //             {row?.pOrdDocStatus || "-"}
-        //         </span>
-        //     ),
-        // },
+       
         {
             key: "pOrdStatus",
             title: "Order Status",
@@ -988,71 +876,6 @@ const PurchaseOrder = () => {
             };
         });
     };
-
-    // const handleRowChange = (index: number, key: string, value: any) => {
-    //     setForm((prev: any) => {
-    //         const updatedProducts = [...(prev.products || [])];
-
-    //         const currentRow = updatedProducts[index] || {};
-    //         const currentField = getBodyFieldByKey(key);
-
-    //         let updatedRow = {
-    //             ...currentRow,
-    //             [key]: value,
-    //         };
-
-    //         if (currentField?.mapFields) {
-    //             updatedRow = applyMappedFields(
-    //                 currentField,
-    //                 value,
-    //                 updatedRow
-    //             );
-    //         }
-
-    //         const selectedOption = getOptionByValue(currentField, value);
-
-    //         if (selectedOption?.raw?._id && !updatedRow.productId) {
-    //             updatedRow.productId = selectedOption.raw._id;
-    //         }
-
-    //         updatedRow = normalizeRowKeys(updatedRow);
-
-    //         const lowerKey = String(key).toLowerCase();
-    //         const isCgstOrSgst =
-    //             lowerKey.includes("cgst") || lowerKey.includes("sgst");
-    //         const isIgst = lowerKey.includes("igst");
-
-    //         if (isCgstOrSgst && num(value) > 0) {
-    //             updatedRow.igst = "";
-    //             updatedRow.igstPercentage = "";
-    //             updatedRow.igstAmount = 0;
-    //         }
-
-    //         if (isIgst && num(value) > 0) {
-    //             updatedRow.cgst = "";
-    //             updatedRow.sgst = "";
-    //             updatedRow.cgstPercentage = "";
-    //             updatedRow.sgstPercentage = "";
-    //             updatedRow.cgstAmount = 0;
-    //             updatedRow.sgstAmount = 0;
-    //         }
-
-    //         updatedRow = calculateRow(updatedRow);
-    //         updatedProducts[index] = updatedRow;
-
-    //         return {
-    //             ...prev,
-    //             products: updatedProducts,
-    //         };
-    //     });
-
-    //     setErrors((prev: any) => ({
-    //         ...prev,
-    //         products: "",
-    //         [`row_${index}_${key}`]: "",
-    //         [`row_${index}_tax`]: "",
-    //     }));
-    // };
 
 
     const handleRowChange = (index: number, key: string, value: any) => {
