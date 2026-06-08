@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import TransactionDashboard from "../components/TransactionDashboard";
 import PurchaseOrder from "./PurchaseOrder";
+import Grn from "./Grn";
 
 const cards: any[] = [
   {
@@ -18,7 +19,7 @@ const cards: any[] = [
   {
     title: "GRN",
     description: "Manage goods receipt notes.",
-    path: "/professional/transaction/purchase-workflow/grn",
+    component:Grn,
     icon: <Truck size={22} />,
   },
   {
