@@ -132,7 +132,7 @@ const SalesQuotations = () => {
     const [customerOptions, setCustomerOptions] = useState<OptionType[]>([]);
     const [productOptions, setProductOptions] = useState<OptionType[]>([]);
     const [unitOptions, setUnitOptions] = useState<OptionType[]>([]);
-    
+
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({
         show: false,
         x: null,
@@ -830,7 +830,7 @@ const SalesQuotations = () => {
         const products = cleanRows();
         const footer = calculateFooter(products);
 
-        const payload:any = {
+        const payload: any = {
             sQuoteVoucherDate: form.voucherDate,
 
             sQuoteCustomerCode: form.sQuoteCustomerCode,
@@ -1220,7 +1220,7 @@ const SalesQuotations = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,

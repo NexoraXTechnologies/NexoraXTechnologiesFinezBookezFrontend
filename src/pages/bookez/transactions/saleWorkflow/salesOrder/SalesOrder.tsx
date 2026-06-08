@@ -1221,7 +1221,7 @@ const SalesOrder = () => {
                         callBackFn={handleRefresh}
                         loading={refreshing}
                     />
-
+{/* @ts-ignore */}
                     <DataCreateButton
                         callBackFn={openAddModal}
                         text="Add Sales Order"
