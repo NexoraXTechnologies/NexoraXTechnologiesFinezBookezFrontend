@@ -24,12 +24,12 @@ const DynamicAddForm = ({
     headerChildTitle,
 }: any) => {
     const renderInput = (e: any) => {
-        console.log(e?.label)
         if (e?.type === "date") {
             return (
                 <TextInput
                     label={e?.label}
-                    disabled={e?.disabled}
+                    mandatory={e?.isRequired}
+                    disabled={e?.disabled || e?.isReadonly}
                     type={e.type}
                     value={
                         form?.[e?.key]
@@ -48,6 +48,7 @@ const DynamicAddForm = ({
             return (
                 <TextArea
                     label={e?.label}
+                    mandatory={e?.isRequired}
                     value={form?.[e?.key] || ""}
                     placeholder={e?.placeholder}
                     error={errors?.[e?.key]}
@@ -61,8 +62,9 @@ const DynamicAddForm = ({
         if (e?.type == "select") return <SelectInput
             label={e?.label}
             value={form?.[e?.key] || ""}
+            mandatory={e?.isRequired}
             placeholder={e?.placeholder}
-            disabled={e?.disabled}
+            disabled={e?.disabled || e?.isReadonly}
             error={errors?.[e?.key]}
             onChange={(event: any) => handleChange(e?.key, event.target.value)}
             options={[{label:`Select ${e?.label}`},...e?.options]}
@@ -71,8 +73,9 @@ const DynamicAddForm = ({
         return (
             <TextInput
                 label={e?.label}
+                mandatory={e?.isRequired}
                 value={form?.[e?.key] || ""}
-                disabled={e?.disabled}
+                disabled={e?.disabled || e?.isReadonly}
                 placeholder={e?.placeholder}
                 error={errors?.[e?.key]}
                 onChange={(event: any) =>
@@ -129,7 +132,7 @@ const DynamicAddForm = ({
                 )}
 
                 {/* ✅ Only EditableLineTable has horizontal scroll inside itself */}
-                <div className="mt-6 w-full max-w-full">
+                <div className="mt-3 w-full max-w-full">
                     <EditableLineTable
                         title="Products"
                         addButtonText="Add Product"

@@ -372,19 +372,20 @@ const SalesQuotations = () => {
     const calculateRow = (row: any) => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
-        const grossAmount = quantity * rate;
-        const discountPercentage = safePercent(
-            row.discountPercentage || row.discount
-        );
-        const discountAmount = (grossAmount * discountPercentage) / 100;
-        const taxableAmount = grossAmount - discountAmount;
-        const cgstPercentage = safePercent(row.cgstPercentage || row.cgst);
-        const sgstPercentage = safePercent(row.sgstPercentage || row.sgst);
-        const igstPercentage = safePercent(row.igstPercentage || row.igst);
 
-        const cgstAmount = (taxableAmount * cgstPercentage) / 100;
-        const sgstAmount = (taxableAmount * sgstPercentage) / 100;
-        const igstAmount = (taxableAmount * igstPercentage) / 100;
+        const gross = quantity * rate;
+
+        const discountPercent = safePercent(row.discount);
+        const cgstPercent = safePercent(row.cgst);
+        const sgstPercent = safePercent(row.sgst);
+        const igstPercent = safePercent(row.igst);
+
+        const discountAmount = (gross * discountPercent) / 100;
+        const taxableAmount = gross - discountAmount;
+
+        const cgstAmount = (taxableAmount * cgstPercent) / 100;
+        const sgstAmount = (taxableAmount * sgstPercent) / 100;
+        const igstAmount = (taxableAmount * igstPercent) / 100;
 
         const otherAmount = num(row.otherAmount);
 
@@ -393,47 +394,50 @@ const SalesQuotations = () => {
 
         return {
             ...row,
-            quantity,
-            rate,
-            gross: grossAmount,
-            grossAmount,
-            discount: discountPercentage,
-            discountPercentage,
+
+            // keep typing values as string
+            quantity: row.quantity,
+            rate: row.rate,
+            discount: row.discount,
+            cgst: row.cgst,
+            sgst: row.sgst,
+            igst: row.igst,
+            otherAmount: row.otherAmount,
+
+            // calculated values
+            gross,
+            grossAmount: gross,
+
             discountAmount,
             taxableAmount,
-            cgst: cgstPercentage,
-            cgstPercentage,
+
             cgstAmount,
-            sgst: sgstPercentage,
-            sgstPercentage,
             sgstAmount,
-            igst: igstPercentage,
-            igstPercentage,
             igstAmount,
-            otherAmount,
+
             taxAmount,
+
             netAmount,
             netTotal: netAmount,
-            unit: row.unit || row.uom || "",
-            uom: row.uom || row.unit || "",
-            description: row.description || row.productDescription || "",
-            productDescription:
-                row.productDescription || row.description || "",
         };
     };
 
-    const calculateFooter = (products: ProductLine[]) => {
-        return products.reduce(
+    const calculateFooter = (products: any[]) => {
+        return (products || []).reduce(
             (acc: any, item: any) => {
                 acc.totalQuantity += num(item.quantity);
-                acc.totalGrossAmount += num(item.grossAmount || item.gross);
+
+                acc.totalGrossAmount += num(item.gross);
                 acc.totalDiscountAmount += num(item.discountAmount);
+
                 acc.totalCgstAmount += num(item.cgstAmount);
                 acc.totalSgstAmount += num(item.sgstAmount);
                 acc.totalIgstAmount += num(item.igstAmount);
+
                 acc.totalTaxAmount += num(item.taxAmount);
                 acc.totalOtherAmount += num(item.otherAmount);
-                acc.totalNetAmount += num(item.netTotal || item.netAmount);
+
+                acc.totalNetAmount += num(item.netAmount);
 
                 return acc;
             },
@@ -454,7 +458,6 @@ const SalesQuotations = () => {
     const footerTotals = useMemo(() => {
         return calculateFooter(form.products || []);
     }, [form.products]);
-    console.log({ footerTotals })
     const grossAmount = footerTotals.totalGrossAmount;
     const discountAmount = footerTotals.totalDiscountAmount;
     const cgstAmount = footerTotals.totalCgstAmount;
@@ -629,12 +632,8 @@ const SalesQuotations = () => {
 
     const openEditModal = (record: any) => {
         const footer = record?.sQuoteFooter || {};
-
-        const products =
-            record?.sQuoteBody?.length > 0
-                ? record.sQuoteBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
-
+        const products = record?.sQuoteBody?.length > 0 ? record.sQuoteBody.map((item: any) => {
+            const unitCode = item?.unit || item?.uom || "";
                     return calculateRow(
                         normalizeRowKeys({
                             id: item?.id || Date.now() + Math.random(),
@@ -765,7 +764,6 @@ const SalesQuotations = () => {
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
-
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
             let updatedRow = {
@@ -781,22 +779,19 @@ const SalesQuotations = () => {
             }
 
             const selectedOption = getOptionByValue(currentField, value);
-            if (selectedOption?.raw?._id && !updatedRow.productId) updatedRow.productId = selectedOption.raw._id;
-            updatedRow = normalizeRowKeys(updatedRow);
-            const lowerKey = String(key).toLowerCase();
-            const isCgstOrSgst = lowerKey.includes("cgst") || lowerKey.includes("sgst");
-            const isIgst = lowerKey.includes("igst");
-            if (isCgstOrSgst && num(value) > 0) {
-                updatedRow.igst = "";
-                updatedRow.igstPercentage = "";
-                updatedRow.igstAmount = 0;
+
+            if (selectedOption?.raw?._id && !updatedRow.productId) {
+                updatedRow.productId = selectedOption.raw._id;
             }
 
-            if (isIgst && num(value) > 0) {
+            updatedRow = normalizeRowKeys(updatedRow);
+            if ((key === "cgst" || key === "sgst") && num(value) > 0) {
+                updatedRow.igst = "";
+                updatedRow.igstAmount = 0;
+            }
+            if (key === "igst" && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
-                updatedRow.cgstPercentage = "";
-                updatedRow.sgstPercentage = "";
                 updatedRow.cgstAmount = 0;
                 updatedRow.sgstAmount = 0;
             }
@@ -835,20 +830,15 @@ const SalesQuotations = () => {
 
     const validateForm = () => {
         const err: any = {};
-
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden) return;
             if (!field.isRequired) return;
-
             const value = form?.[field.key];
-
             if (value === undefined || value === null || value === "") {
                 err[field.key] = `${field.label || field.key} is required`;
             }
         });
-
         const filledRows = getFilledRows();
-
         if (filledRows.length === 0) {
             err.products = "Please add at least one product";
         }
@@ -857,29 +847,20 @@ const SalesQuotations = () => {
             const hasAnyValue = (templateFields?.body || []).some(
                 (field: any) => {
                     const value = row?.[field.key];
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
+                    return (value !== undefined && value !== null && value !== "");
                 }
             );
-
             if (!hasAnyValue) return;
-
             (templateFields?.body || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
-
                 const value = row?.[field.key];
-
                 if (
                     value === undefined ||
                     value === null ||
                     value === ""
                 ) {
-                    err[`row_${index}_${field.key}`] = `${field.label || field.key
-                        } is required`;
+                    err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
                 }
             });
 
@@ -888,16 +869,10 @@ const SalesQuotations = () => {
             const igst = num(row.igstPercentage || row.igst);
 
             if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] =
-                    "You can enter either IGST or CGST/SGST";
-
-                err[`row_${index}_igstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] =
-                    "Only one tax type allowed";
-
+                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
+                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
                 err[`row_${index}_igst`] = "Only one tax type allowed";
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
@@ -909,7 +884,6 @@ const SalesQuotations = () => {
         if (err.products) {
             toast.error(err.products);
         }
-
         return Object.keys(err).length === 0;
     };
 
@@ -917,9 +891,7 @@ const SalesQuotations = () => {
         const bodyKeys = (templateFields?.body || []).map(
             (field: any) => field.key
         );
-
-        return (form.products || [])
-            .filter((row: any) => {
+        return (form.products || []).filter((row: any) => {
                 return bodyKeys.some((key: string) => {
                     const value = row?.[key];
                     return (
@@ -928,20 +900,16 @@ const SalesQuotations = () => {
                         value !== ""
                     );
                 });
-            })
-            .map((row: any) => calculateRow(normalizeRowKeys(row)));
+        }).map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
     /* ===================================================
        SUBMIT
     =================================================== */
-    console.log({ form })
     const handleSubmit = async () => {
         if (!validateForm()) return;
-
         const products = cleanRows();
         const footer = calculateFooter(products);
-
         const payload: any = {
             sQuoteVoucherDate: form.sQuoteVoucherDate,
             sQuoteCustomerCode: form.sQuoteCustomerCode,
@@ -962,25 +930,25 @@ const SalesQuotations = () => {
                 unit: item.unit || item.uom,
                 uom: item.uom || item.unit,
                 rate: String(item.rate),
-                gross: fmtMoney(item.grossAmount),
-                grossAmount: fmtMoney(item.grossAmount),
-                discount: String(item.discountPercentage || item.discount || ""),
-                discountPercentage: String(item.discountPercentage || item.discount || ""),
+                gross: fmtMoney(item.gross),
+                grossAmount: fmtMoney(item.gross),
+                discount: String(item.discount || ""),
+                discountPercentage: String(item.discount || ""),
                 discountAmount: fmtMoney(item.discountAmount),
                 taxableAmount: fmtMoney(item.taxableAmount),
-                cgst: String(item.cgstPercentage || item.cgst || ""),
-                cgstPercentage: String(item.cgstPercentage || item.cgst || ""),
+                cgst: String(item.cgst || ""),
+                cgstPercentage: String(item.cgst || ""),
                 cgstAmount: fmtMoney(item.cgstAmount),
-                sgst: String(item.sgstPercentage || item.sgst || ""),
-                sgstPercentage: String(item.sgstPercentage || item.sgst || ""),
+                sgst: String(item.sgst || ""),
+                sgstPercentage: String(item.sgst || ""),
                 sgstAmount: fmtMoney(item.sgstAmount),
-                igst: String(item.igstPercentage || item.igst || ""),
-                igstPercentage: String(item.igstPercentage || item.igst || ""),
+                igst: String(item.igst || ""),
+                igstPercentage: String(item.igst || ""),
                 igstAmount: fmtMoney(item.igstAmount),
                 taxAmount: fmtMoney(item.taxAmount),
                 otherAmount: fmtMoney(item.otherAmount),
-                netAmount: fmtMoney(item.netAmount || item.netTotal),
-                netTotal: fmtMoney(item.netTotal || item.netAmount),
+                netAmount: fmtMoney(item.netAmount),
+                netTotal: fmtMoney(item.netAmount),
             })),
 
             sQuoteFooter: {
@@ -1022,13 +990,10 @@ const SalesQuotations = () => {
                 toast.success("Sales quotation updated successfully");
             } else {
                 await dispatch(addSalesQuotation({ payload }) as any).unwrap();
-
                 toast.success("Sales quotation created successfully");
             }
-
             setShowModal(false);
             resetMainForm();
-
             fetchSalesQuotations();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
@@ -1057,9 +1022,6 @@ const SalesQuotations = () => {
         }
     };
 
-
-
-
     const footerValues = useMemo(() => {
         return {
             grossAmount,
@@ -1071,29 +1033,17 @@ const SalesQuotations = () => {
             adjustedAmount: 0,
             balanceAmount: netAmount,
         };
-    }, [
-        grossAmount,
-        discountAmount,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-        netAmount,
-    ]);
+    }, [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount,]);
 
     const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
-
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
+        return (templateFields?.footer || []).filter((field: any) => !field.isHidden).map((field: any) => {
+            const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
+            return { ...field, value: money(rawValue), rawValue, };
             });
     }, [templateFields?.footer, footerValues]);
+
+    console.log({ templateFields })
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">
@@ -1168,8 +1118,7 @@ const SalesQuotations = () => {
                                     show: true,
                                     x,
                                     y,
-                                    voucherNumber:
-                                        record?.sQuoteVoucherNumber,
+                                    voucherNumber: record?.sQuoteVoucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"

@@ -41,7 +41,7 @@ const EditableLineTable = ({
 }: EditableLineTableProps) => {
 
     return (
-        <div className="mt-8 w-full max-w-full">
+        <div className="w-full max-w-full">
             <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3">
                 <h3 className="text-sm font-semibold text-slate-800">
                     {title}
@@ -73,19 +73,12 @@ const EditableLineTable = ({
                                 {columns.map((col: any) => (
                                     <th
                                         key={col.key}
-                                        className={`border border-slate-500 px-3 py-2 ${col.align === "right"
-                                                ? "text-right"
-                                                : col.align === "center"
-                                                    ? "text-center"
-                                                    : "text-left"
-                                            }`}
-                                        style={{
-                                            minWidth: col.width || "160px",
-                                        }}
+                                        className={`border border-slate-500 px-3 py-2 ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"}`}
+                                        style={{ minWidth: col.width || "160px", }}
                                     >
 
                                         {col?.label || capitalizeFirstLttr(col?.key)}
-                                        {col.required && (
+                                        {col.isRequired && (
                                             <span className="text-red-500">*</span>
                                         )}
                                     </th>
