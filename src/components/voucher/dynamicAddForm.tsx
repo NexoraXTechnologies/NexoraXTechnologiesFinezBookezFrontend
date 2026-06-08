@@ -25,7 +25,7 @@ const DynamicAddForm = ({
         if (e?.type === "date") {
             return (
                 <TextInput
-                    label={e?.title}
+                    label={e?.label}
                     disabled={e?.disabled}
                     type={e.type}
                     value={
@@ -44,7 +44,7 @@ const DynamicAddForm = ({
         if (e?.type === "textarea") {
             return (
                 <TextArea
-                    label={e?.title}
+                    label={e?.label}
                     value={form?.[e?.key] || ""}
                     placeholder={e?.placeholder}
                     error={errors?.[e?.key]}
@@ -56,7 +56,7 @@ const DynamicAddForm = ({
         }
 
         if (e?.type == "select") return <SelectInput
-            label={e?.title}
+            label={e?.label}
             value={form?.[e?.key] || ""}
             placeholder={e?.placeholder}
             disabled={e?.disabled}
@@ -67,7 +67,7 @@ const DynamicAddForm = ({
 
         return (
             <TextInput
-                label={e?.title}
+                label={e?.label}
                 value={form?.[e?.key] || ""}
                 disabled={e?.disabled}
                 placeholder={e?.placeholder}
@@ -92,7 +92,7 @@ const DynamicAddForm = ({
         >
             <div className="w-full max-w-full">
                 <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
-                    {inputData?.headerInput?.map((e: any, index: number) => (
+                    {inputData?.header?.map((e: any, index: number) => (
                         <div key={e?.key || index}>
                             {renderInput(e)}
                         </div>
@@ -111,7 +111,7 @@ const DynamicAddForm = ({
                         title="Products"
                         addButtonText="Add Product"
                         rows={form?.[bodyKey] || []}
-                        columns={inputData?.editTable || []}
+                        columns={inputData?.body || []}
                         errors={errors}
                         onAddRow={handleAddRow}
                         onDeleteRow={handleDeleteRow}
@@ -129,7 +129,7 @@ const DynamicAddForm = ({
                     ))}
 
                 {/* ✅ Summary stays outside table scroll */}
-                <SummaryCards items={inputData?.footerCard || []} />
+                <SummaryCards items={inputData?.footer || []} />
             </div>
         </VoucherFormModal>
     );
