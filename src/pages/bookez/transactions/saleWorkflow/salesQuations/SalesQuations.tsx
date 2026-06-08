@@ -1137,7 +1137,7 @@ const SalesQuotations = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
