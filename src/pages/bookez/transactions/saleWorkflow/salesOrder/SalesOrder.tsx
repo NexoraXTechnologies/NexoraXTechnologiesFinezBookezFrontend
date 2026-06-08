@@ -11,25 +11,50 @@ import {
 import SearchInput from "../../../../../components/searchInput";
 import Toggle from "../../../../../components/toggle";
 import DataTable from "../../../../../components/DataTable";
+import Pagination from "../../../../../components/pagination";
+import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 
 import {
+    fmtMoney,
+    formatDateForInput,
+    formatDateForList,
     money,
     num,
     safePercent,
     todayYMD,
 } from "../../../../../utils/helperFunctions";
 
-import type { OptionType, ProductLine } from "../salesWorkflowTypes";
+import type {
+    ConfirmTooltipState,
+    OptionType,
+    ProductLine,
+} from "../salesWorkflowTypes";
 
 import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
-import { getAllSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
+
+import {
+    createSalesOrder,
+    deleteSalesOrder,
+    getAllSalesOrder,
+    updateSalesOrder,
+} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 
 /* ===================================================
    DEFAULT STATES
 =================================================== */
+
+const defaultPagination = {
+    offset: 0,
+    limit: 10,
+    totalDocs: 0,
+    totalPages: 1,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+};
 
 const emptyProductRow = {
     id: Date.now(),
@@ -181,9 +206,16 @@ const makeUnitOptions = (res: any): OptionType[] => {
 const SalesOrder = () => {
     const dispatch = useDispatch<any>();
 
-    const { salesOrders, loading, pagination } = useSelector(
-        (state: any) => state.salesOrder
-    );
+    const salesOrderState = useSelector((state: any) => state.salesOrder);
+
+    const {
+        salesOrders = [],
+        pagination = defaultPagination,
+        loading = false,
+        createLoading = false,
+        updateLoading = false,
+        deleteLoading = false,
+    } = salesOrderState || {};
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -203,6 +235,13 @@ const SalesOrder = () => {
     const [productOptions, setProductOptions] = useState<OptionType[]>([]);
     const [unitOptions, setUnitOptions] = useState<OptionType[]>([]);
 
+    const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({
+        show: false,
+        x: null,
+        y: null,
+        voucherNumber: null,
+    });
+
     /* ===================================================
        PRODUCT HELPERS
     =================================================== */
@@ -210,27 +249,27 @@ const SalesOrder = () => {
     const getProductRate = (product: any, fallback = "") => {
         return String(
             product?.sellingPrice ||
-            product?.productSellingPrice ||
-            product?.salesRate ||
-            product?.saleRate ||
-            product?.rate ||
-            product?.purchasePrice ||
-            product?.productPurchasePrice ||
-            fallback ||
-            ""
+                product?.productSellingPrice ||
+                product?.salesRate ||
+                product?.saleRate ||
+                product?.rate ||
+                product?.purchasePrice ||
+                product?.productPurchasePrice ||
+                fallback ||
+                ""
         );
     };
 
     const getProductUnit = (product: any) => {
         return String(
             product?.unit ||
-            product?.uom ||
-            product?.unitName ||
-            product?.unitCode ||
-            product?.productUnit ||
-            product?.unitMeasurement ||
-            product?.unitMeasurementCode ||
-            ""
+                product?.uom ||
+                product?.unitName ||
+                product?.unitCode ||
+                product?.productUnit ||
+                product?.unitMeasurement ||
+                product?.unitMeasurementCode ||
+                ""
         );
     };
 
@@ -330,31 +369,32 @@ const SalesOrder = () => {
     useEffect(() => {
         const fetchDropdowns = async () => {
             try {
-                const [productRes, accountRes, unitRes]: any = await Promise.all([
-                    dispatch(
-                        getAllProducts({
-                            offset: 0,
-                            limit: 200,
-                            search: "",
-                        }) as any
-                    ).unwrap(),
+                const [productRes, accountRes, unitRes]: any =
+                    await Promise.all([
+                        dispatch(
+                            getAllProducts({
+                                offset: 0,
+                                limit: 200,
+                                search: "",
+                            }) as any
+                        ).unwrap(),
 
-                    dispatch(
-                        getAllAccounts({
-                            offset: 0,
-                            limit: 200,
-                            search: "",
-                        }) as any
-                    ).unwrap(),
+                        dispatch(
+                            getAllAccounts({
+                                offset: 0,
+                                limit: 200,
+                                search: "",
+                            }) as any
+                        ).unwrap(),
 
-                    dispatch(
-                        getAllUnits({
-                            offset: 0,
-                            limit: 200,
-                            search: "",
-                        }) as any
-                    ).unwrap(),
-                ]);
+                        dispatch(
+                            getAllUnits({
+                                offset: 0,
+                                limit: 200,
+                                search: "",
+                            }) as any
+                        ).unwrap(),
+                    ]);
 
                 setProductOptions(makeProductOptions(productRes));
                 setCustomerOptions(makeCustomerOptions(accountRes));
@@ -416,9 +456,7 @@ const SalesOrder = () => {
             render: (row: any) => (
                 <span>
                     {row?.sOrderVoucherDate
-                        ? new Date(row.sOrderVoucherDate).toLocaleDateString(
-                            "en-IN"
-                        )
+                        ? formatDateForList(row.sOrderVoucherDate)
                         : "-"}
                 </span>
             ),
@@ -438,11 +476,16 @@ const SalesOrder = () => {
             ),
         },
         {
-            key: "netAmount",
+            key: "sOrderBody",
+            title: "Items",
+            render: (row: any) => row?.sOrderBody?.length || 0,
+        },
+        {
+            key: "sOrderFooter",
             title: "Net Amount",
             render: (row: any) => (
-                <span className="font-semibold text-slate-900">
-                    ₹{Number(row?.sOrderFooter?.netAmount ?? 0).toFixed(2)}
+                <span className="font-semibold text-indigo-700">
+                    {money(row?.sOrderFooter?.netAmount || 0)}
                 </span>
             ),
         },
@@ -451,12 +494,13 @@ const SalesOrder = () => {
             title: "Status",
             render: (row: any) => (
                 <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${row?.sOrderStatus === "close"
+                    className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                        (row?.sOrderDocStatus || row?.sOrderStatus) === "close"
                             ? "bg-red-50 text-red-700"
                             : "bg-green-50 text-green-700"
-                        }`}
+                    }`}
                 >
-                    {row?.sOrderStatus || "-"}
+                    {row?.sOrderDocStatus || row?.sOrderStatus || "-"}
                 </span>
             ),
         },
@@ -481,55 +525,55 @@ const SalesOrder = () => {
         const products =
             record?.sOrderBody?.length > 0
                 ? record.sOrderBody.map((item: any) => {
-                    const unitCode = item?.unit || "";
+                      const unitCode = item?.unit || "";
 
-                    return calculateRow({
-                        id: item?.id || Date.now() + Math.random(),
+                      return calculateRow({
+                          id: item?.id || Date.now() + Math.random(),
 
-                        productCode: item?.productCode || "",
-                        productName: item?.productName || "",
-                        productId: item?.productId || "",
+                          productCode: item?.productCode || "",
+                          productName: item?.productName || "",
+                          productId: item?.productId || "",
 
-                        description:
-                            item?.description ||
-                            item?.productDescription ||
-                            "",
-                        remarks: item?.remarks || "",
+                          description:
+                              item?.description ||
+                              item?.productDescription ||
+                              "",
+                          remarks: item?.remarks || "",
 
-                        quantity: item?.quantity || "",
+                          quantity: item?.quantity || "",
 
-                        unit: unitCode,
-                        unitName: item?.unitName || getUnitLabel(unitCode),
+                          unit: unitCode,
+                          unitName: item?.unitName || getUnitLabel(unitCode),
 
-                        rate: item?.rate || "",
+                          rate: item?.rate || "",
 
-                        grossAmount: item?.grossAmount || item?.gross || 0,
+                          grossAmount: item?.grossAmount || item?.gross || 0,
 
-                        discountPercentage:
-                            item?.discountPercentage || item?.discount || "",
-                        discountAmount: item?.discountAmount || 0,
+                          discountPercentage:
+                              item?.discountPercentage || item?.discount || "",
+                          discountAmount: item?.discountAmount || 0,
 
-                        taxableAmount: item?.taxableAmount || 0,
+                          taxableAmount: item?.taxableAmount || 0,
 
-                        cgstPercentage:
-                            item?.cgstPercentage || item?.cgst || "",
-                        cgstAmount: item?.cgstAmount || 0,
+                          cgstPercentage:
+                              item?.cgstPercentage || item?.cgst || "",
+                          cgstAmount: item?.cgstAmount || 0,
 
-                        sgstPercentage:
-                            item?.sgstPercentage || item?.sgst || "",
-                        sgstAmount: item?.sgstAmount || 0,
+                          sgstPercentage:
+                              item?.sgstPercentage || item?.sgst || "",
+                          sgstAmount: item?.sgstAmount || 0,
 
-                        igstPercentage:
-                            item?.igstPercentage || item?.igst || "",
-                        igstAmount: item?.igstAmount || 0,
+                          igstPercentage:
+                              item?.igstPercentage || item?.igst || "",
+                          igstAmount: item?.igstAmount || 0,
 
-                        taxAmount: item?.taxAmount || 0,
+                          taxAmount: item?.taxAmount || 0,
 
-                        otherAmount: item?.otherAmount || 0,
+                          otherAmount: item?.otherAmount || 0,
 
-                        netTotal: item?.netTotal || item?.netAmount || 0,
-                    });
-                })
+                          netTotal: item?.netTotal || item?.netAmount || 0,
+                      });
+                  })
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setEditingRecord(record);
@@ -537,15 +581,14 @@ const SalesOrder = () => {
 
         setForm({
             voucherNumber: record?.sOrderVoucherNumber || "SO",
-            voucherDate: record?.sOrderVoucherDate
-                ? String(record.sOrderVoucherDate).split("T")[0]
-                : todayYMD(),
+            voucherDate:
+                formatDateForInput(record?.sOrderVoucherDate) || todayYMD(),
 
             customerCode: record?.sOrderCustomerCode || "",
             customerName: record?.sOrderCustomerName || "",
 
-            status: record?.sOrderStatus || "open",
-            remarks: record?.sOrderRemarks || "",
+            status: record?.sOrderDocStatus || record?.sOrderStatus || "open",
+            remarks: record?.sOrderRemarks || record?.sOrderRemark || "",
 
             products,
 
@@ -645,9 +688,7 @@ const SalesOrder = () => {
                 updatedRow.productId = product?._id || "";
 
                 updatedRow.description =
-                    product?.productDescription ||
-                    product?.description ||
-                    "";
+                    product?.productDescription || product?.description || "";
 
                 updatedRow.rate = getProductRate(product, "");
                 updatedRow.unit = getProductUnit(product);
@@ -816,52 +857,137 @@ const SalesOrder = () => {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!validateForm()) return;
 
         const products = cleanRows();
         const totals = calculateTotals(products);
 
-        const payload = {
+        const payload: any = {
             sOrderVoucherDate: form.voucherDate,
 
             sOrderCustomerCode: form.customerCode,
             sOrderCustomerName: form.customerName,
 
             sOrderStatus: form.status || "open",
+            sOrderDocStatus: form.status || "open",
             sOrderRemarks: form.remarks || "",
+            sOrderRemark: form.remarks || "",
 
-            sOrderBody: products,
+            sOrderBody: products.map((item: ProductLine) => ({
+                productCode: item.productCode,
+                productName: item.productName,
+                productId: item.productId,
+
+                productDescription: item.description,
+                description: item.description,
+                remarks: item.remarks,
+
+                quantity: String(item.quantity),
+
+                unit: item.unit,
+                unitName: item.unitName,
+
+                rate: String(item.rate),
+
+                gross: fmtMoney(item.grossAmount),
+                grossAmount: fmtMoney(item.grossAmount),
+
+                discount: String(item.discountPercentage),
+                discountPercentage: String(item.discountPercentage),
+                discountAmount: fmtMoney(item.discountAmount),
+
+                taxableAmount: fmtMoney(item.taxableAmount),
+
+                cgst: String(item.cgstPercentage),
+                cgstPercentage: String(item.cgstPercentage),
+                cgstAmount: fmtMoney(item.cgstAmount),
+
+                sgst: String(item.sgstPercentage),
+                sgstPercentage: String(item.sgstPercentage),
+                sgstAmount: fmtMoney(item.sgstAmount),
+
+                igst: String(item.igstPercentage),
+                igstPercentage: String(item.igstPercentage),
+                igstAmount: fmtMoney(item.igstAmount),
+
+                taxAmount: fmtMoney(item.taxAmount),
+
+                otherAmount: fmtMoney(item.otherAmount),
+
+                netAmount: fmtMoney(item.netTotal),
+                netTotal: fmtMoney(item.netTotal),
+            })),
 
             sOrderFooter: {
-                grossAmount: totals.grossAmount.toFixed(2),
-                discountAmount: totals.discountAmount.toFixed(2),
-                cgstAmount: totals.cgstAmount.toFixed(2),
-                sgstAmount: totals.sgstAmount.toFixed(2),
-                igstAmount: totals.igstAmount.toFixed(2),
-                taxAmount: totals.taxAmount.toFixed(2),
-                otherAmount: totals.otherAmount.toFixed(2),
-                netAmount: totals.netAmount.toFixed(2),
+                grossAmount: fmtMoney(totals.grossAmount),
+                discountAmount: fmtMoney(totals.discountAmount),
+                cgstAmount: fmtMoney(totals.cgstAmount),
+                sgstAmount: fmtMoney(totals.sgstAmount),
+                igstAmount: fmtMoney(totals.igstAmount),
+                taxAmount: fmtMoney(totals.taxAmount),
+                otherAmount: fmtMoney(totals.otherAmount),
+                netAmount: fmtMoney(totals.netAmount),
+
+                adjustedAmount: "0",
+                balanceAmount: fmtMoney(totals.netAmount),
 
                 totalQuantity: totals.totalQuantity,
-                totalGrossAmount: totals.grossAmount.toFixed(2),
-                totalDiscountAmount: totals.discountAmount.toFixed(2),
-                totalCgstAmount: totals.cgstAmount.toFixed(2),
-                totalSgstAmount: totals.sgstAmount.toFixed(2),
-                totalIgstAmount: totals.igstAmount.toFixed(2),
-                totalTaxAmount: totals.taxAmount.toFixed(2),
-                totalOtherAmount: totals.otherAmount.toFixed(2),
-                totalNetAmount: totals.netAmount.toFixed(2),
+                totalGrossAmount: fmtMoney(totals.grossAmount),
+                totalDiscountAmount: fmtMoney(totals.discountAmount),
+                totalCgstAmount: fmtMoney(totals.cgstAmount),
+                totalSgstAmount: fmtMoney(totals.sgstAmount),
+                totalIgstAmount: fmtMoney(totals.igstAmount),
+                totalTaxAmount: fmtMoney(totals.taxAmount),
+                totalOtherAmount: fmtMoney(totals.otherAmount),
+                totalNetAmount: fmtMoney(totals.netAmount),
             },
         };
 
-        console.log("Sales Order Payload:", payload);
+        try {
+            if (editingRecord) {
+                await dispatch(
+                    updateSalesOrder({
+                        voucherNumber: form?.voucherNumber,
+                        data: payload,
+                    }) as any
+                ).unwrap();
 
-        toast.success(
-            editingRecord
-                ? "Sales order update payload ready"
-                : "Sales order create payload ready"
-        );
+                toast.success("Sales order updated successfully");
+            } else {
+                await dispatch(createSalesOrder(payload) as any).unwrap();
+
+                toast.success("Sales order created successfully");
+            }
+
+            setShowModal(false);
+            resetMainForm();
+            fetchSalesOrders();
+        } catch (err: any) {
+            toast.error(err?.message || "Operation failed");
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        try {
+            if (!confirmTooltip.voucherNumber) return;
+
+            await dispatch(
+                deleteSalesOrder(confirmTooltip.voucherNumber) as any
+            ).unwrap();
+
+            toast.success("Sales order deleted successfully");
+            fetchSalesOrders();
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to delete sales order");
+        } finally {
+            setConfirmTooltip({
+                show: false,
+                x: null,
+                y: null,
+                voucherNumber: null,
+            });
+        }
     };
 
     const inputData = {
@@ -1111,6 +1237,7 @@ const SalesOrder = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <button
+                            id="sales-order-edit-button"
                             type="button"
                             onClick={() => openEditModal(record)}
                             className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
@@ -1119,10 +1246,25 @@ const SalesOrder = () => {
                         </button>
 
                         <button
+                            id="sales-order-delete-button"
                             type="button"
-                            onClick={() =>
-                                console.log("Delete Sales Order:", record)
-                            }
+                            disabled={deleteLoading}
+                            onClick={(e) => {
+                                const rect =
+                                    e.currentTarget.getBoundingClientRect();
+
+                                let x = rect.left - 150;
+                                if (x < 10) x = 10;
+
+                                const y = rect.top + window.scrollY - 5;
+
+                                setConfirmTooltip({
+                                    show: true,
+                                    x,
+                                    y,
+                                    voucherNumber: record?.sOrderVoucherNumber,
+                                });
+                            }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
@@ -1131,6 +1273,41 @@ const SalesOrder = () => {
                 )}
             />
 
+            {pagination?.totalDocs > 0 && (
+                <Pagination
+                    {...{
+                        localLimit,
+                        selectCb: (e: any) => {
+                            setLocalLimit(Number(e.target.value));
+                            setLocalOffset(0);
+                        },
+                        preDisabled: !pagination?.hasPrevPage,
+                        nextDisabled: !pagination?.hasNextPage,
+                        setLocalOffset,
+                        pagination,
+                    }}
+                />
+            )}
+
+            {confirmTooltip.show && (
+                <ConfirmTooltip
+                    x={confirmTooltip.x}
+                    y={confirmTooltip.y}
+                    message="Are you sure you want to delete this sales order?"
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() =>
+                        setConfirmTooltip({
+                            show: false,
+                            x: null,
+                            y: null,
+                            voucherNumber: null,
+                        })
+                    }
+                />
+            )}
+
             <DynamicAddForm
                 {...{
                     show: showModal,
@@ -1138,7 +1315,7 @@ const SalesOrder = () => {
                     edit: Boolean(editingRecord),
                     title: "Sales Order",
                     subtitle: "Fill in the sales order details below",
-                    loading: false,
+                    loading: createLoading || updateLoading,
                     onClose: () => {
                         setShowModal(false);
                         resetMainForm();
