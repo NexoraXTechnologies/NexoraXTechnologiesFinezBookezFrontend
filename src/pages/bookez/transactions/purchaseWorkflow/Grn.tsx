@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { fmtMoney, formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
+import {
+    fmtMoney,
+    formatDateForInput,
+    formatDateForList,
+    money,
+    num,
+    safePercent,
+    todayYMD,
+} from "../../../../utils/helperFunctions";
 import professionalAxios from "../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
 import Badge from "../../../../components/badge";
@@ -12,9 +20,16 @@ import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
-import { addGrn, deleteGrn, getGrnList, updateGrn } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
-import { DataCreateButton, DataREfreshButton } from "../../../../components/buttons";
-
+import {
+    addGrn,
+    deleteGrn,
+    getGrnList,
+    updateGrn,
+} from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
+import {
+    DataCreateButton,
+    DataREfreshButton,
+} from "../../../../components/buttons";
 
 const defaultPagination = {
     offset: 0,
@@ -77,20 +92,20 @@ const emptyProductRow = {
 };
 
 const getDefaultForm = () => ({
-    pOrdVoucherNumber: "AUTO",
-    pOrdVoucherDate: todayYMD(),
+    grnVoucherNumber: "AUTO",
+    grnVoucherDate: todayYMD(),
 
-    pOrdPurchaseAccount: "",
+    grnPurchaseAccount: "",
 
-    pOrdVendorCode: "",
-    pOrdVendorName: "",
+    grnVendorCode: "",
+    grnVendorName: "",
 
-    pOrdStatus: "draft",
-    pOrdDocStatus: "open",
+    grnStatus: "draft",
+    grnDocStatus: "open",
 
-    pOrdRemark: "",
-    pOrdStatusRemark: "",
-    pOrdStatusHistory: [],
+    grnRemark: "",
+    grnStatusRemark: "",
+    grnStatusHistory: [],
     isAutoPost: false,
 
     products: [{ ...emptyProductRow, id: Date.now() }],
@@ -194,44 +209,42 @@ const loadAllTemplateOptions = async (templateData: any) => {
 };
 
 /* ===================================================
-   PURCHASE ORDER
+   GRN
 =================================================== */
 
 const Grn = () => {
     const dispatch = useDispatch();
 
-    const purchaseOrderState = useSelector(
-        (state: any) => state.purchaseOrder
-    );
+    const grnState = useSelector((state: any) => state.grn);
 
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
     );
 
-    const purchaseOrders =
-        purchaseOrderState?.purchaseOrders ||
-        purchaseOrderState?.purchaseOrderList ||
+    const grns =
+        grnState?.grns ||
+        grnState?.grnList ||
+        grnState?.grnRecords ||
+        grnState?.grnData ||
         [];
 
-    const pagination =
-        purchaseOrderState?.pagination || defaultPagination;
+    const pagination = grnState?.pagination || defaultPagination;
 
     const loading =
-        purchaseOrderState?.loading ||
-        purchaseOrderState?.listingLoader ||
+        grnState?.loading ||
+        grnState?.listingLoader ||
         false;
 
     const createLoading =
-        purchaseOrderState?.createLoading ||
-        purchaseOrderState?.addLoader ||
+        grnState?.createLoading ||
+        grnState?.addLoader ||
         false;
 
-    const updateLoading =
-        purchaseOrderState?.updateLoading || false;
+    const updateLoading = grnState?.updateLoading || false;
 
     const deleteLoading =
-        purchaseOrderState?.deleteLoading ||
-        purchaseOrderState?.deleteLoader ||
+        grnState?.deleteLoading ||
+        grnState?.deleteLoader ||
         false;
 
     const [localOffset, setLocalOffset] = useState(0);
@@ -412,7 +425,6 @@ const Grn = () => {
         return {
             ...row,
 
-            // ✅ keep typed/input values as it is
             quantity: row.quantity,
             rate: row.rate,
 
@@ -430,7 +442,6 @@ const Grn = () => {
 
             otherAmount: row.otherAmount,
 
-            // ✅ calculated values
             gross,
             grossAmount: gross,
 
@@ -453,7 +464,6 @@ const Grn = () => {
             productDescription: row.productDescription || row.description || "",
         };
     };
-
 
     const calculateFooter = (products: any[]) => {
         return (products || []).reduce(
@@ -503,13 +513,13 @@ const Grn = () => {
        API CALLS
     =================================================== */
 
-    const fetchPurchaseOrders = async () => {
+    const fetchGrns = async () => {
         await dispatch(
             getGrnList({
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
-                // status: status,
+                // status,
             }) as any
         );
     };
@@ -519,7 +529,7 @@ const Grn = () => {
     }, [dispatch]);
 
     useEffect(() => {
-        fetchPurchaseOrders();
+        fetchGrns();
     }, [localOffset, localLimit, debouncedSearch, status]);
 
     useEffect(() => {
@@ -569,66 +579,51 @@ const Grn = () => {
 
     const columns = [
         {
-            key: "pOrdVoucherNumber",
+            key: "grnVoucherNumber",
             title: "Voucher No",
         },
         {
-            key: "pOrdVoucherDate",
+            key: "grnVoucherDate",
             title: "Date",
             render: (row: any) =>
-                row?.pOrdVoucherDate
-                    ? formatDateForList(row.pOrdVoucherDate)
+                row?.grnVoucherDate
+                    ? formatDateForList(row.grnVoucherDate)
                     : "-",
         },
         {
-            key: "pOrdVendorName",
+            key: "grnVendorName",
             title: "Vendor",
             render: (row: any) => (
                 <div>
                     <div className="font-medium text-slate-800">
-                        {row?.pOrdVendorName || "-"}
+                        {row?.grnVendorName || "-"}
                     </div>
                     <div className="text-xs text-slate-500">
-                        {row?.pOrdVendorCode || "-"}
+                        {row?.grnVendorCode || "-"}
                     </div>
                 </div>
             ),
         },
         {
-            key: "pOrdBody",
+            key: "grnBody",
             title: "Items",
-            render: (row: any) => row?.pOrdBody?.length || 0,
+            render: (row: any) => row?.grnBody?.length || 0,
         },
         {
-            key: "pOrdFooter",
+            key: "grnFooter",
             title: "Net Amount",
             render: (row: any) => (
                 <span className="font-semibold text-indigo-700">
-                    {money(row?.pOrdFooter?.netAmount || 0)}
+                    {money(row?.grnFooter?.netAmount || 0)}
                 </span>
             ),
         },
-        // {
-        //     key: "pOrdDocStatus",
-        //     title: "Doc Status",
-        //     render: (row: any) => (
-        //         <span
-        //             className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
-        //                 row?.pOrdDocStatus === "open"
-        //                     ? "border-green-200 bg-green-50 text-green-700"
-        //                     : "border-red-200 bg-red-50 text-red-700"
-        //             }`}
-        //         >
-        //             {row?.pOrdDocStatus || "-"}
-        //         </span>
-        //     ),
-        // },
         {
-            key: "pOrdStatus",
-            title: "Order Status",
+            key: "grnStatus",
+            title: "GRN Status",
             render: (row: any) => (
                 <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-                    {row?.pOrdStatus || "-"}
+                    {row?.grnStatus || "-"}
                 </span>
             ),
         },
@@ -647,8 +642,8 @@ const Grn = () => {
         setRefreshing(true);
 
         try {
-            await fetchPurchaseOrders();
-            toast.success("Purchase order list refreshed");
+            await fetchGrns();
+            toast.success("GRN list refreshed");
         } finally {
             setRefreshing(false);
         }
@@ -666,11 +661,11 @@ const Grn = () => {
     };
 
     const openEditModal = (record: any) => {
-        const footer = record?.pOrdFooter || {};
+        const footer = record?.grnFooter || {};
 
         const products =
-            record?.pOrdBody?.length > 0
-                ? record.pOrdBody.map((item: any) => {
+            record?.grnBody?.length > 0
+                ? record.grnBody.map((item: any) => {
                     const unitCode = item?.unit || item?.uom || "";
 
                     return calculateRow(
@@ -781,23 +776,21 @@ const Grn = () => {
         setErrors({});
 
         setForm({
-            pOrdVoucherNumber: record?.pOrdVoucherNumber || "AUTO",
+            grnVoucherNumber: record?.grnVoucherNumber || "AUTO",
 
-            pOrdVoucherDate: formatDateForInput(
-                record?.pOrdVoucherDate
-            ),
+            grnVoucherDate: formatDateForInput(record?.grnVoucherDate),
 
-            pOrdVendorCode: record?.pOrdVendorCode || "",
-            pOrdVendorName: record?.pOrdVendorName || "",
+            grnVendorCode: record?.grnVendorCode || "",
+            grnVendorName: record?.grnVendorName || "",
 
-            pOrdPurchaseAccount: record?.pOrdPurchaseAccount || "",
+            grnPurchaseAccount: record?.grnPurchaseAccount || "",
 
-            pOrdDocStatus: record?.pOrdDocStatus || "open",
-            pOrdStatus: record?.pOrdStatus || "draft",
+            grnDocStatus: record?.grnDocStatus || "open",
+            grnStatus: record?.grnStatus || "draft",
 
-            pOrdRemark: record?.pOrdRemark || "",
-            pOrdStatusRemark: record?.pOrdStatusRemark || "",
-            pOrdStatusHistory: record?.pOrdStatusHistory || [],
+            grnRemark: record?.grnRemark || "",
+            grnStatusRemark: record?.grnStatusRemark || "",
+            grnStatusHistory: record?.grnStatusHistory || [],
 
             isAutoPost: record?.isAutoPost || false,
 
@@ -894,9 +887,6 @@ const Grn = () => {
         });
     };
 
-   
-
-
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
@@ -931,14 +921,12 @@ const Grn = () => {
             const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
             const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
 
-            // ✅ CGST/SGST selected, so clear IGST
             if ((isCgst || isSgst) && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstPercentage = "";
                 updatedRow.igstAmount = 0;
             }
 
-            // ✅ IGST selected, so clear CGST/SGST
             if (isIgst && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
@@ -971,6 +959,7 @@ const Grn = () => {
             [`row_${index}_sgst`]: "",
         }));
     };
+
     /* ===================================================
        DYNAMIC VALIDATION
     =================================================== */
@@ -1093,7 +1082,6 @@ const Grn = () => {
        SUBMIT
     =================================================== */
 
-
     const getTaxValue = (primary: any, fallback: any) => {
         return primary !== undefined && primary !== null && primary !== ""
             ? primary
@@ -1101,6 +1089,7 @@ const Grn = () => {
                 ? fallback
                 : "";
     };
+
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
@@ -1108,19 +1097,19 @@ const Grn = () => {
         const footer = calculateFooter(products);
 
         const payload: any = {
-            pOrdVoucherDate: form.pOrdVoucherDate,
+            grnVoucherDate: form.grnVoucherDate,
 
-            pOrdVendorCode: form.pOrdVendorCode,
-            pOrdVendorName: form.pOrdVendorName,
+            grnVendorCode: form.grnVendorCode,
+            grnVendorName: form.grnVendorName,
 
-            pOrdPurchaseAccount: form.pOrdPurchaseAccount,
+            grnPurchaseAccount: form.grnPurchaseAccount,
 
-            pOrdStatus: form.pOrdStatus || "draft",
-            pOrdDocStatus: form.pOrdDocStatus || "open",
+            grnStatus: form.grnStatus || "draft",
+            grnDocStatus: form.grnDocStatus || "open",
 
-            pOrdRemark: form.pOrdRemark,
+            grnRemark: form.grnRemark,
 
-            pOrdBody: products.map((item: any) => ({
+            grnBody: products.map((item: any) => ({
                 productCode: item.productCode,
                 productName: item.productName,
                 productId: item.productId,
@@ -1146,11 +1135,10 @@ const Grn = () => {
                 grossAmount: fmtMoney(item.grossAmount),
 
                 discount: String(
-                    item.discountPercentage || item.discount || ""
+                    getTaxValue(item.discount, item.discountPercentage)
                 ),
-
                 discountPercentage: String(
-                    item.discountPercentage || item.discount || ""
+                    getTaxValue(item.discountPercentage, item.discount)
                 ),
 
                 discountAmount: fmtMoney(item.discountAmount),
@@ -1158,13 +1146,21 @@ const Grn = () => {
                 taxableAmount: fmtMoney(item.taxableAmount),
 
                 cgst: String(getTaxValue(item.cgst, item.cgstPercentage)),
-                cgstPercentage: String(getTaxValue(item.cgstPercentage, item.cgst)),
+                cgstPercentage: String(
+                    getTaxValue(item.cgstPercentage, item.cgst)
+                ),
+                cgstAmount: fmtMoney(item.cgstAmount),
 
                 sgst: String(getTaxValue(item.sgst, item.sgstPercentage)),
-                sgstPercentage: String(getTaxValue(item.sgstPercentage, item.sgst)),
+                sgstPercentage: String(
+                    getTaxValue(item.sgstPercentage, item.sgst)
+                ),
+                sgstAmount: fmtMoney(item.sgstAmount),
 
                 igst: String(getTaxValue(item.igst, item.igstPercentage)),
-                igstPercentage: String(getTaxValue(item.igstPercentage, item.igst)),
+                igstPercentage: String(
+                    getTaxValue(item.igstPercentage, item.igst)
+                ),
                 igstAmount: fmtMoney(item.igstAmount),
 
                 taxAmount: fmtMoney(item.taxAmount),
@@ -1175,7 +1171,7 @@ const Grn = () => {
                 netTotal: fmtMoney(item.netTotal || item.netAmount),
             })),
 
-            pOrdFooter: {
+            grnFooter: {
                 grossAmount: fmtMoney(footer.totalGrossAmount),
                 discountAmount: fmtMoney(footer.totalDiscountAmount),
                 cgstAmount: fmtMoney(footer.totalCgstAmount),
@@ -1190,9 +1186,7 @@ const Grn = () => {
 
                 totalQuantity: footer.totalQuantity,
                 totalGrossAmount: fmtMoney(footer.totalGrossAmount),
-                totalDiscountAmount: fmtMoney(
-                    footer.totalDiscountAmount
-                ),
+                totalDiscountAmount: fmtMoney(footer.totalDiscountAmount),
                 totalCgstAmount: fmtMoney(footer.totalCgstAmount),
                 totalSgstAmount: fmtMoney(footer.totalSgstAmount),
                 totalIgstAmount: fmtMoney(footer.totalIgstAmount),
@@ -1206,22 +1200,22 @@ const Grn = () => {
             if (editingRecord) {
                 await dispatch(
                     updateGrn({
-                        pOrdVoucherNumber: form?.pOrdVoucherNumber,
+                        grnVoucherNumber: form?.grnVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
 
-                toast.success("Purchase order updated successfully");
+                toast.success("GRN updated successfully");
             } else {
                 await dispatch(addGrn({ payload }) as any).unwrap();
 
-                toast.success("Purchase order created successfully");
+                toast.success("GRN created successfully");
             }
 
             setShowModal(false);
             resetMainForm();
 
-            fetchPurchaseOrders();
+            fetchGrns();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }
@@ -1232,24 +1226,24 @@ const Grn = () => {
             const voucherNumber = confirmTooltip?.voucherNumber;
 
             if (!voucherNumber) {
-                toast.error("Purchase order voucher number not found");
+                toast.error("GRN voucher number not found");
                 return;
             }
 
             await dispatch(
                 deleteGrn({
-                    pOrdVoucherNumber: voucherNumber,
+                    grnVoucherNumber: voucherNumber,
                 }) as any
             ).unwrap();
 
-            toast.success("Purchase order deleted successfully");
+            toast.success("GRN deleted successfully");
 
-            await fetchPurchaseOrders();
+            await fetchGrns();
         } catch (err: any) {
             toast.error(
                 err?.message ||
                 err?.payload?.message ||
-                "Failed to delete purchase order"
+                "Failed to delete GRN"
             );
         } finally {
             setConfirmTooltip({
@@ -1303,17 +1297,17 @@ const Grn = () => {
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div
-                id="purchase-order-header"
+                id="grn-header"
                 className="mb-3 flex items-center"
             >
                 <div
-                    id="purchase-order-summary"
+                    id="grn-summary"
                     className="flex items-start gap-3"
                 >
                     <Badge
                         {...{
                             count: pagination?.totalDocs ?? 0,
-                            text: "Total Purchase Orders:",
+                            text: "Total GRNs:",
                             varient: "primary",
                         }}
                     />
@@ -1349,13 +1343,13 @@ const Grn = () => {
 
             <DataTable
                 columns={columns}
-                data={purchaseOrders}
+                data={grns}
                 loading={loading}
-                emptyMessage={`No ${status} purchase order found`}
+                emptyMessage={`No ${status} GRN found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <button
-                            id="purchase-order-edit-button"
+                            id="grn-edit-button"
                             onClick={() => openEditModal(record)}
                             className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
                         >
@@ -1363,7 +1357,7 @@ const Grn = () => {
                         </button>
 
                         <button
-                            id="purchase-order-delete-button"
+                            id="grn-delete-button"
                             disabled={deleteLoading}
                             onClick={(e) => {
                                 const rect =
@@ -1378,7 +1372,7 @@ const Grn = () => {
                                     show: true,
                                     x,
                                     y,
-                                    voucherNumber: record?.pOrdVoucherNumber,
+                                    voucherNumber: record?.grnVoucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
@@ -1409,7 +1403,7 @@ const Grn = () => {
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message="Are you sure you want to delete this purchase order?"
+                    message="Are you sure you want to delete this GRN?"
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteConfirm}
@@ -1430,8 +1424,8 @@ const Grn = () => {
                         show: showModal,
                         setShow: setShowModal,
                         edit: Boolean(editingRecord),
-                        title: "Purchase Order",
-                        subtitle: "Fill in the purchase order details below",
+                        title: "GRN",
+                        subtitle: "Fill in the GRN details below",
                         loading: createLoading || updateLoading,
                         onClose: () => {
                             setShowModal(false);
@@ -1445,7 +1439,6 @@ const Grn = () => {
                         handleRowChange,
                         footerTotals,
 
-                        // dynamic schema with options
                         inputData: {
                             ...templateFields,
                             footer: dynamicFooterArray,
