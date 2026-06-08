@@ -51,6 +51,7 @@ import purchaseOrderSlice from "./slices/professionalSlice/purchaseWorkflow/purc
 import grnReducer from "./slices/professionalSlice//purchaseWorkflow/grnSlice";
 import purchaseReturnReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 import purchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+import getAllTransactionSchema from "./slices/professionalSlice/transactionSchema";
 
 export const store = configureStore({
   reducer: {
@@ -105,7 +106,8 @@ export const store = configureStore({
     purchaseOrder: purchaseOrderSlice,
     grn:grnReducer,
     purchaseReturn:purchaseReturnReducer,
-    purchaseInvoice:purchaseInvoiceReducer,
+    purchaseInvoice: purchaseInvoiceReducer,
+    getAllTransactionSchema
 
 
   },

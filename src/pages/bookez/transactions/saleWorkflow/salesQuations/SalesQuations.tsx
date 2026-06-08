@@ -41,6 +41,8 @@ import type {
     OptionType,
     ProductLine,
 } from "../salesWorkflowTypes";
+import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
+import professionalAxios from "../../../../../services/professionalAxios";
 
 const defaultPagination = {
     offset: 0,
@@ -98,13 +100,57 @@ const getDefaultForm = () => ({
     netAmount: "0.00",
 });
 
+export const loadFieldOptions = async (fields: any[]) => {
+    const updatedFields = await Promise.all(
+        fields.map(async (field) => {
+            if (!field?.api) return field;
+
+            try {
+                const res = await professionalAxios.get(
+                    `/eTaxSolnMongoApiBackend${field.api}`,
+                    {
+                        params: field.queryParams || {},
+                    }
+                );
+
+                const records =
+                    res.data?.data?.records ||
+                    res.data?.data?.docs ||
+                    res.data?.data ||
+                    [];
+
+                const options = Array.isArray(records)
+                    ? records.map((item: any) => ({
+                        label: item?.[field.labelField] || "",
+                        value: item?.[field.valueField] || "",
+                        raw: item,
+                    }))
+                    : [];
+
+                return {
+                    ...field,
+                    options,
+                };
+            } catch (error) {
+                console.log(`Failed to load options for ${field.key}`, error);
+
+                return {
+                    ...field,
+                    options: [],
+                };
+            }
+        })
+    );
+
+    return updatedFields;
+};
+
 const SalesQuotations = () => {
     const dispatch = useDispatch();
 
-    const salesQuotationState = useSelector(
-        (state: any) => state.salesQuotation
-    );
-
+    const salesQuotationState = useSelector((state: any) => state.salesQuotation);
+    const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
+    console.log({ transactionsSchema })
     const {
         salesQuotations = [],
         pagination = defaultPagination,
@@ -339,45 +385,46 @@ const SalesQuotations = () => {
         );
     };
 
+    const fetchDropdowns = async () => {
+        try {
+            const [productRes, accountRes, unitRes]: any =
+                await Promise.all([
+                    dispatch(
+                        getAllProducts({
+                            offset: 0,
+                            limit: 200,
+                            search: "",
+                        }) as any
+                    ).unwrap(),
+
+                    dispatch(
+                        getAllAccounts({
+                            offset: 0,
+                            limit: 200,
+                            search: "",
+                        }) as any
+                    ).unwrap(),
+
+                    dispatch(
+                        getAllUnits({
+                            offset: 0,
+                            limit: 200,
+                            search: "",
+                        }) as any
+                    ).unwrap(),
+                ]);
+
+            setProductOptions(makeProductOptions(productRes));
+            setCustomerOptions(makeCustomerOptions(accountRes));
+            setUnitOptions(makeUnitOptions(unitRes));
+        } catch (err: any) {
+            console.log("Failed to load dropdown data:", err);
+            toast.error(err?.message || "Failed to load dropdown data");
+        }
+    };
+
     useEffect(() => {
-        const fetchDropdowns = async () => {
-            try {
-                const [productRes, accountRes, unitRes]: any =
-                    await Promise.all([
-                        dispatch(
-                            getAllProducts({
-                                offset: 0,
-                                limit: 200,
-                                search: "",
-                            }) as any
-                        ).unwrap(),
-
-                        dispatch(
-                            getAllAccounts({
-                                offset: 0,
-                                limit: 200,
-                                search: "",
-                            }) as any
-                        ).unwrap(),
-
-                        dispatch(
-                            getAllUnits({
-                                offset: 0,
-                                limit: 200,
-                                search: "",
-                            }) as any
-                        ).unwrap(),
-                    ]);
-
-                setProductOptions(makeProductOptions(productRes));
-                setCustomerOptions(makeCustomerOptions(accountRes));
-                setUnitOptions(makeUnitOptions(unitRes));
-            } catch (err: any) {
-                console.log("Failed to load dropdown data:", err);
-                toast.error(err?.message || "Failed to load dropdown data");
-            }
-        };
-
+        dispatch(getAllTransactionSchema("salesQuotation"))
         fetchDropdowns();
     }, [dispatch]);
 
@@ -592,9 +639,7 @@ const SalesQuotations = () => {
             };
 
             if (key === "sQuoteCustomerName") {
-                const selectedCustomer = customerOptions.find(
-                    (item) => item.value === value
-                );
+                const selectedCustomer = customerOptions.find((item) => item.value === value);
                 updated.sQuoteCustomerCode = value;
                 updated.customerName = selectedCustomer?.label || "";
             }
@@ -1325,7 +1370,7 @@ const SalesQuotations = () => {
                     handleAddRow,
                     handleDeleteRow,
                     handleRowChange,
-                    inputData,
+                    inputData: transactionsSchema,
                     bodyKey: "products",
                     handleChange: handleMainChange,
                 }}

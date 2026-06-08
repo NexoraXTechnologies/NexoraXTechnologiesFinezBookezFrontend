@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { SelectInput, TextInput } from "../inputs";
+import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 
 type ColumnType = "select" | "text" | "number";
 
@@ -38,6 +39,7 @@ const EditableLineTable = ({
     onChange,
     emptyText = "No data found",
 }: EditableLineTableProps) => {
+
     return (
         <div className="mt-8 w-full max-w-full">
             <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3">
@@ -68,7 +70,7 @@ const EditableLineTable = ({
                                     #
                                 </th>
 
-                                {columns.map((col) => (
+                                {columns.map((col: any) => (
                                     <th
                                         key={col.key}
                                         className={`border border-slate-500 px-3 py-2 ${col.align === "right"
@@ -81,7 +83,8 @@ const EditableLineTable = ({
                                             minWidth: col.width || "160px",
                                         }}
                                     >
-                                        {col.title}
+
+                                        {col?.label || capitalizeFirstLttr(col?.key)}
                                         {col.required && (
                                             <span className="text-red-500">*</span>
                                         )}
@@ -207,5 +210,4 @@ const EditableLineTable = ({
             </div>
             );
 };
-
-            export default EditableLineTable;
+export default EditableLineTable;
