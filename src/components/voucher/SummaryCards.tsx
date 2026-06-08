@@ -7,9 +7,9 @@ type SummaryCardsProps = {
     items?: SummaryItem[];
 };
 
-const SummaryCards = ({ items = [] }: SummaryCardsProps) => {
+const SummaryCards = ({ items = [], footerTotals }: SummaryCardsProps) => {
     if (!items.length) return null;
-
+    console.log({ items, footerTotals })
     return (
         <div className="mt-6 w-full rounded-md border border-slate-200 bg-white p-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

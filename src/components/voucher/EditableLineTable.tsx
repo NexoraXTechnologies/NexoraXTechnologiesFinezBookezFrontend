@@ -117,7 +117,7 @@ const EditableLineTable = ({
                                             {rowIndex + 1}
                                         </td>
 
-                                        {columns.map((col) => (
+                                        {columns.map((col: any) => (
                                             <td
                                                 key={col.key}
                                                 className="border border-slate-200 px-2 py-1"
@@ -151,7 +151,7 @@ const EditableLineTable = ({
                                                             {
                                                                 label:
                                                                     col.placeholder ||
-                                                                    `Select ${col.title}`,
+                                                                    `Select ${col?.label}`,
                                                                 value: "",
                                                             },
                                                             ...(col.options || []),
