@@ -1261,8 +1261,7 @@ const SalesQuotations = () => {
                                     show: true,
                                     x,
                                     y,
-                                    voucherNumber:
-                                        record?.sQuoteVoucherNumber,
+                                    voucherNumber: record?.sQuoteVoucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"

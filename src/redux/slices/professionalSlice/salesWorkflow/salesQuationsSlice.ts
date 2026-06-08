@@ -107,7 +107,7 @@ export const deleteSalesQuotation = createAsyncThunk<
   { rejectValue: RejectValue }
 >(
   "salesQuotation/deleteSalesQuotation",
-  async ({ sQuoteVoucherNumber }, { rejectWithValue }) => {
+  async (sQuoteVoucherNumber , { rejectWithValue }) => {
     try {
       const res = await professionalAxios.delete(
         `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/delete/${sQuoteVoucherNumber}`
