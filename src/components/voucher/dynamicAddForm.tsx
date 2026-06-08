@@ -20,6 +20,7 @@ const DynamicAddForm = ({
     inputData,
     bodyKey,
     handleChange,
+    footerTotals
 }: any) => {
     const renderInput = (e: any) => {
         if (e?.type === "date") {
@@ -62,7 +63,7 @@ const DynamicAddForm = ({
             disabled={e?.disabled}
             error={errors?.[e?.key]}
             onChange={(event: any) => handleChange(e?.key, event.target.value)}
-            options={e?.options}
+            options={[{label:`Select ${e?.label}`},...e?.options]}
         />
 
         return (
@@ -92,11 +93,14 @@ const DynamicAddForm = ({
         >
             <div className="w-full max-w-full">
                 <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
-                    {inputData?.header?.map((e: any, index: number) => (
+                    {inputData?.header?.map((e: any, index: number) => {
+                        if (e?.isHidden) return
+                      return (
                         <div key={e?.key || index}>
                             {renderInput(e)}
                         </div>
-                    ))}
+                        )
+                    })}
                 </div>
 
                 {errors?.[bodyKey] && (
@@ -129,7 +133,7 @@ const DynamicAddForm = ({
                     ))}
 
                 {/* ✅ Summary stays outside table scroll */}
-                <SummaryCards items={inputData?.footer || []} />
+                <SummaryCards footerTotals={footerTotals} items={inputData?.footer || []} />
             </div>
         </VoucherFormModal>
     );
