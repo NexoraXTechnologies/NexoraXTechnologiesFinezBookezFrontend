@@ -28,11 +28,11 @@ export const addPurchaseOrder = createAsyncThunk(
 
 export const updatePurchaseOrder = createAsyncThunk(
     "purchaseOrder/updatePurchaseOrder",
-    async ({ payload, openingStockVoucherNumber }: any, { rejectWithValue }) => {
+    async ({ payload, pOrdVoucherNumber }: any, { rejectWithValue }) => {
         try {
 
             const res = await professionalAxios.put(
-                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseOrder/update/${openingStockVoucherNumber}`,
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseOrder/update/${pOrdVoucherNumber}`,
                 { ...payload }
             );
 
@@ -52,11 +52,11 @@ export const updatePurchaseOrder = createAsyncThunk(
 
 export const deletePurchaseOrder = createAsyncThunk(
     "purchaseOrder/deletePurchaseOrder",
-    async ({ openingStockVoucherNumber }: { openingStockVoucherNumber: string }, { rejectWithValue }) => {
+    async ({ pOrdVoucherNumber }: { pOrdVoucherNumber: string }, { rejectWithValue }) => {
         try {
 
             const res = await professionalAxios.delete(
-                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseOrder/delete/${openingStockVoucherNumber}`
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseOrder/delete/${pOrdVoucherNumber}`
             );
 
             if (!res.data?.success)

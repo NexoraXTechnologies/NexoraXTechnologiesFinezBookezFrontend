@@ -843,13 +843,13 @@ const AssemblyProduction = () => {
                 key: "voucherDate",
                 label: "Date",
                 type: "date",
-                required: true,
+                isRequired: true,
             },
             {
                 key: "status",
                 label: "Status",
                 type: "select",
-                required: true,
+                isRequired: true,
                 options: [
                     { label: "Open", value: "open" },
                     { label: "Close", value: "close" },
@@ -859,7 +859,7 @@ const AssemblyProduction = () => {
                 key: "remarks",
                 label: "Remark",
                 type: "textarea",
-                required: false,
+                isRequired: false,
                 placeholder: "Enter Remark",
             },
         ],
@@ -869,7 +869,7 @@ const AssemblyProduction = () => {
                 key: "productCode",
                 label: "Select product",
                 type: "select",
-                required: true,
+                isRequired: true,
                 placeholder: "Select Finished Good",
                 options: makeOptionsWithPlaceholder(
                     "Select Finished Good",
@@ -880,14 +880,14 @@ const AssemblyProduction = () => {
                 key: "quantity",
                 label: "Finished Qty",
                 type: "number",
-                required: true,
+                isRequired: true,
                 placeholder: "Enter Quantity",
             },
             {
                 key: "rate",
                 label: "Finished Rate",
                 type: "number",
-                required: true,
+                isRequired: true,
                 placeholder: "Enter Rate",
             },
             // {
@@ -904,7 +904,7 @@ const AssemblyProduction = () => {
                 label: "Raw Material",
                 type: "select",
                 width: "260px",
-                required: true,
+                isRequired: true,
                 placeholder: "Select Raw Material",
                 options: 
                    
@@ -916,14 +916,14 @@ const AssemblyProduction = () => {
                 label: "Qty",
                 type: "number",
                 width: "130px",
-                required: true,
+                isRequired: true,
             },
             {
                 key: "rate",
                 label: "Rate",
                 type: "number",
                 width: "140px",
-                required: true,
+                isRequired: true,
             },
             {
                 key: "amount",

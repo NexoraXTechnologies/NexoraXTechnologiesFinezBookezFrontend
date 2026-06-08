@@ -1,900 +1,1620 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Plus, Trash2 } from "lucide-react";
-import { toast } from "react-toastify";
+import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { PrimaryButton, SecondaryButton } from "../../../../components/buttons";
-import SearchInput from "../../../../components/searchInput";
-import Modal from "../../../../components/modal";
-import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
-import DataTable, { ColumnWiseTable } from "../../../../components/DataTable";
+import { toast } from "react-toastify";
+import { fmtMoney, formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
+import professionalAxios from "../../../../services/professionalAxios";
+import { addPurchaseOrder, deletePurchaseOrder, getPurchaseOrderList, updatePurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
+import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
+import Badge from "../../../../components/badge";
 import Toggle from "../../../../components/toggle";
+import SearchInput from "../../../../components/searchInput";
+import { DataCreateButton, DataREfreshButton } from "../../../../components/buttons";
+import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
-import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
-import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
+import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 
 
+const defaultPagination = {
+    offset: 0,
+    limit: 10,
+    totalDocs: 0,
+    totalPages: 1,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+};
 
-const mainColumns = [
-    {
-        key: "openingStockVoucherNumber",
-        title: "Voucher",
-    },
-    {
-        key: "openingStockDate",
-        title: "Date",
-        type: "date"
-    },
-    {
-        key: "totalQuantity",
-        title: "Total Qty",
-        render: (row: any) => <span>{row?.openingStockFooter?.totalQuantity || 0}</span>,
-    },
-    {
-        key: "totalNetAmount",
-        title: "Net Amount",
-        render: (row: any) => (
-            <span className="rounded-md bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
-                {money(row?.openingStockFooter?.totalNetAmount)}
-            </span>
-        ),
-    },
-    {
-        key: "openingStockStatus",
-        title: "Status",
-        render: (row: any) => (
-            <span
-                className={`rounded-md px-2 py-1 text-xs capitalize ${row?.openingStockStatus === "close"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-blue-100 text-blue-700"
-                    }`}
-            >
-                {row?.openingStockStatus || "open"}
-            </span>
-        ),
-    },
-];
+const emptyProductRow = {
+    id: Date.now(),
 
-const productColumns = [
-    {
-        key: "productName",
-        title: "Product",
-    },
-    {
-        key: "quantity",
-        title: "Qty",
-    },
-    {
-        key: "unitName",
-        title: "Unit",
-    },
-    {
-        key: "rate",
-        title: "Rate",
-        render: (row: any) => <span>{money(row?.rate)}</span>,
-    },
-    {
-        key: "grossAmount",
-        title: "Gross",
-        render: (row: any) => <span>{money(row?.grossAmount)}</span>,
-    },
-    {
-        key: "netTotal",
-        title: "Net Total",
-        render: (row: any) => (
-            <span className="rounded-md bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
-                {money(row?.netTotal)}
-            </span>
-        ),
-    },
-];
+    productCode: "",
+    productName: "",
+    productId: "",
 
-const mainInputData = [
-    {
-        grid: 2,
-        child: [
-            {
-                key: "openingStockVoucherNumber",
-                label: "Voucher No",
-                type: "text",
-                isRequired: false,
-                disabled: true,
-            },
-            {
-                key: "openingStockDate",
-                label: "Date",
-                type: "date",
-                isRequired: false,
-                disabled: true,
-            },
-        ],
-    },
-    {
-        key: "remark",
-        label: "Remark",
-        type: "textarea",
-        isRequired: false,
-    },
-];
+    productDescription: "",
+    description: "",
+    productHSNCode: "",
+
+    remarks: "",
+
+    quantity: "",
+
+    uom: "",
+    unit: "",
+    unitName: "",
+
+    rate: "",
+
+    gross: 0,
+    grossAmount: 0,
+
+    discount: "",
+    discountPercentage: "",
+    discountAmount: 0,
+
+    taxableAmount: 0,
+
+    cgst: "",
+    cgstPercentage: "",
+    cgstAmount: 0,
+
+    sgst: "",
+    sgstPercentage: "",
+    sgstAmount: 0,
+
+    igst: "",
+    igstPercentage: "",
+    igstAmount: 0,
+
+    taxAmount: 0,
+
+    otherAmount: "",
+
+    netAmount: 0,
+    netTotal: 0,
+};
+
+const getDefaultForm = () => ({
+    pOrdVoucherNumber: "AUTO",
+    pOrdVoucherDate: todayYMD(),
+
+    pOrdPurchaseAccount: "",
+
+    pOrdVendorCode: "",
+    pOrdVendorName: "",
+
+    pOrdStatus: "draft",
+    pOrdDocStatus: "open",
+
+    pOrdRemark: "",
+    pOrdStatusRemark: "",
+    pOrdStatusHistory: [],
+    isAutoPost: false,
+
+    products: [{ ...emptyProductRow, id: Date.now() }],
+
+    grossAmount: "0.00",
+    discountAmount: "0.00",
+    cgstAmount: "0.00",
+    sgstAmount: "0.00",
+    igstAmount: "0.00",
+    taxAmount: "0.00",
+    otherAmount: "0.00",
+    netAmount: "0.00",
+});
+
+/* ===================================================
+   COMMON RECORD EXTRACTOR
+=================================================== */
+
+const getRecords = (res: any) => {
+    return Array.isArray(res?.items)
+        ? res.items
+        : Array.isArray(res?.records)
+            ? res.records
+            : Array.isArray(res?.docs)
+                ? res.docs
+                : Array.isArray(res?.data?.items)
+                    ? res.data.items
+                    : Array.isArray(res?.data?.records)
+                        ? res.data.records
+                        : Array.isArray(res?.data?.docs)
+                            ? res.data.docs
+                            : Array.isArray(res?.data)
+                                ? res.data
+                                : Array.isArray(res)
+                                    ? res
+                                    : [];
+};
+
+/* ===================================================
+   LOAD OPTIONS FOR FIELDS HAVING api KEY
+=================================================== */
+
+export const loadFieldOptions = async (fields: any[]) => {
+    const updatedFields = await Promise.all(
+        (fields || []).map(async (field) => {
+            if (!field?.api) return field;
+
+            try {
+                const res = await professionalAxios.get(
+                    `/eTaxSolnMongoApiBackend${field.api}`,
+                    {
+                        params: field.queryParams || {},
+                    }
+                );
+
+                const records = getRecords(res.data);
+
+                const options = Array.isArray(records)
+                    ? records.map((item: any) => ({
+                        label: item?.[field.labelField] || "",
+                        value: item?.[field.valueField] || "",
+                        raw: item,
+                    }))
+                    : [];
+
+                return {
+                    ...field,
+                    options,
+                };
+            } catch (error) {
+                console.log(`Failed to load options for ${field.key}`, error);
+
+                return {
+                    ...field,
+                    options: [],
+                };
+            }
+        })
+    );
+
+    return updatedFields;
+};
+
+/* ===================================================
+   LOAD OPTIONS FOR HEADER BODY FOOTER
+=================================================== */
+
+const loadAllTemplateOptions = async (templateData: any) => {
+    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
+        loadFieldOptions(templateData?.header || []),
+        loadFieldOptions(templateData?.body || []),
+        loadFieldOptions(templateData?.footer || []),
+    ]);
+
+    return {
+        ...templateData,
+        header: updatedHeader,
+        body: updatedBody,
+        footer: updatedFooter,
+    };
+};
+
+/* ===================================================
+   PURCHASE ORDER
+=================================================== */
 
 const PurchaseOrder = () => {
     const dispatch = useDispatch();
-    const { products } = useSelector((s: any) => s.productMaster);
-    const {
-        purchaseOrderList,
-        listingLoader,
-        pagination,
-        addLoader,
-        deleteLoader,
-    } = useSelector((s: any) => s.purchaseOrder);
-    const [search, setSearch] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
+
+    const purchaseOrderState = useSelector(
+        (state: any) => state.purchaseOrder
+    );
+
+    const { transactionsSchema } = useSelector(
+        (state: any) => state.getAllTransactionSchema
+    );
+
+    const purchaseOrders =
+        purchaseOrderState?.purchaseOrders ||
+        purchaseOrderState?.purchaseOrderList ||
+        [];
+
+    const pagination =
+        purchaseOrderState?.pagination || defaultPagination;
+
+    const loading =
+        purchaseOrderState?.loading ||
+        purchaseOrderState?.listingLoader ||
+        false;
+
+    const createLoading =
+        purchaseOrderState?.createLoading ||
+        purchaseOrderState?.addLoader ||
+        false;
+
+    const updateLoading =
+        purchaseOrderState?.updateLoading || false;
+
+    const deleteLoading =
+        purchaseOrderState?.deleteLoading ||
+        purchaseOrderState?.deleteLoader ||
+        false;
+
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
+
+    const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
     const [showModal, setShowModal] = useState(false);
-    const [showProductModal, setShowProductModal] = useState(false);
-    const [edit, setEdit] = useState(false);
-    const [editingProductId, setEditingProductId] = useState<any>(null);
+    const [editingRecord, setEditingRecord] = useState<any>(false);
+    const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-    const [productErrors, setProductErrors] = useState<any>({});
+
+    const [templateFields, setTemplateFields] = useState<any>({
+        header: [],
+        body: [],
+        footer: [],
+    });
+
+    const [fieldsLoading, setFieldsLoading] = useState(false);
+
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
         x: null,
         y: null,
-        openingStockVoucherNumber: null,
+        voucherNumber: null,
     });
 
-    const [form, setForm] = useState<any>({
-        openingStockVoucherNumber: "OPSTOCK",
-        openingStockDate: todayYMD(),
-        remark: "",
-        openingStockBody: [],
-    });
-    const [productForm, setProductForm] = useState<any>({
-        productCode: "", description: "", remarks: "", quantity: "", unit: "", rate: "", discountPercentage: "", cgstPercentage: "", sgstPercentage: "", igstPercentage: "", otherAmount: "",
-    });
+    /* ===================================================
+       FIELD HELPERS
+    =================================================== */
 
-    const productOptions = useMemo(() => {
-        return (products || []).map((item: any) => ({
-            label: item?.productName || item?.name || item?.productCode,
-            value: item?.productCode,
-            raw: item,
-        }));
-    }, [products]);
+    const getHeaderFieldByKey = (key: string) => {
+        return templateFields?.header?.find(
+            (field: any) => field.key === key
+        );
+    };
 
-    const unitOptions = useMemo(() => {
-        return (products || []).map((item: any) => ({
-            label: item?.unit || item?.name || item?.label,
-            value: item?.unit || item?._id || item?.value,
-            raw: item,
-        }));
-    }, [products]);
+    const getBodyFieldByKey = (key: string) => {
+        return templateFields?.body?.find(
+            (field: any) => field.key === key
+        );
+    };
 
-    // Product calculations
-    const productCalc = useMemo(() => {
-        const quantity = num(productForm.quantity);
-        const rate = num(productForm.rate);
-        const grossAmount = quantity * rate;
-        const discountPercentage = safePercent(productForm.discountPercentage);
-        const cgstPercentage = safePercent(productForm.cgstPercentage);
-        const sgstPercentage = safePercent(productForm.sgstPercentage);
-        const igstPercentage = safePercent(productForm.igstPercentage);
-        const discountAmount = (grossAmount * discountPercentage) / 100;
-        const taxableAmount = grossAmount - discountAmount;
-        const cgstAmount = (taxableAmount * cgstPercentage) / 100;
-        const sgstAmount = (taxableAmount * sgstPercentage) / 100;
-        const igstAmount = (taxableAmount * igstPercentage) / 100;
-        const otherAmount = num(productForm.otherAmount);
+    const getOptionByValue = (field: any, selectedValue: any) => {
+        return field?.options?.find(
+            (opt: any) => String(opt.value) === String(selectedValue)
+        );
+    };
+
+    const applyMappedFields = (
+        field: any,
+        selectedValue: any,
+        oldData: any
+    ) => {
+        if (!field) return oldData;
+
+        const selectedOption = getOptionByValue(field, selectedValue);
+
+        const updated = {
+            ...oldData,
+            [field.key]: selectedValue,
+        };
+
+        if (field?.mapFields && selectedOption?.raw) {
+            Object.entries(field.mapFields).forEach(
+                ([targetKey, sourceKey]) => {
+                    updated[targetKey] =
+                        selectedOption.raw?.[sourceKey as string] ?? "";
+                }
+            );
+        }
+
+        return updated;
+    };
+
+    const getUnitLabelFromSchema = (unitCode: string) => {
+        const unitField = templateFields?.body?.find(
+            (field: any) => field.key === "uom" || field.key === "unit"
+        );
+
+        const selectedUnit = unitField?.options?.find(
+            (item: any) => String(item.value) === String(unitCode)
+        );
+
+        return selectedUnit?.label || unitCode || "";
+    };
+
+    const normalizeRowKeys = (row: any) => {
+        const updated = { ...row };
+
+        if (updated.uom && !updated.unit) {
+            updated.unit = updated.uom;
+        }
+
+        if (updated.unit && !updated.uom) {
+            updated.uom = updated.unit;
+        }
+
+        if (updated.productDescription && !updated.description) {
+            updated.description = updated.productDescription;
+        }
+
+        if (updated.description && !updated.productDescription) {
+            updated.productDescription = updated.description;
+        }
+
+        if (updated.netAmount && !updated.netTotal) {
+            updated.netTotal = updated.netAmount;
+        }
+
+        if (updated.netTotal && !updated.netAmount) {
+            updated.netAmount = updated.netTotal;
+        }
+
+        if (updated.gross && !updated.grossAmount) {
+            updated.grossAmount = updated.gross;
+        }
+
+        if (updated.grossAmount && !updated.gross) {
+            updated.gross = updated.grossAmount;
+        }
+
+        updated.unitName = getUnitLabelFromSchema(
+            updated.unit || updated.uom
+        );
+
+        return updated;
+    };
+
+    /* ===================================================
+       CALCULATIONS
+    =================================================== */
+
+    // const calculateRow = (row: any) => {
+    //     const quantity = num(row.quantity);
+    //     const rate = num(row.rate);
+    //     const grossAmount = quantity * rate;
+
+    //     const discountPercentage = safePercent(
+    //         row.discountPercentage || row.discount
+    //     );
+
+    //     const discountAmount = (grossAmount * discountPercentage) / 100;
+    //     const taxableAmount = grossAmount - discountAmount;
+
+    //     const cgstPercentage = safePercent(row.cgstPercentage || row.cgst);
+    //     const sgstPercentage = safePercent(row.sgstPercentage || row.sgst);
+    //     const igstPercentage = safePercent(row.igstPercentage || row.igst);
+
+    //     const cgstAmount = (taxableAmount * cgstPercentage) / 100;
+    //     const sgstAmount = (taxableAmount * sgstPercentage) / 100;
+    //     const igstAmount = (taxableAmount * igstPercentage) / 100;
+
+    //     const otherAmount = num(row.otherAmount);
+
+    //     const taxAmount = cgstAmount + sgstAmount + igstAmount;
+    //     const netAmount = taxableAmount + taxAmount + otherAmount;
+
+    //     return {
+    //         ...row,
+    //         quantity,
+    //         rate,
+
+    //         gross: grossAmount,
+    //         grossAmount,
+
+    //         discount: discountPercentage,
+    //         discountPercentage,
+    //         discountAmount,
+
+    //         taxableAmount,
+
+    //         cgst: cgstPercentage,
+    //         cgstPercentage,
+    //         cgstAmount,
+
+    //         sgst: sgstPercentage,
+    //         sgstPercentage,
+    //         sgstAmount,
+
+    //         igst: igstPercentage,
+    //         igstPercentage,
+    //         igstAmount,
+
+    //         otherAmount,
+
+    //         taxAmount,
+    //         netAmount,
+    //         netTotal: netAmount,
+
+    //         unit: row.unit || row.uom || "",
+    //         uom: row.uom || row.unit || "",
+
+    //         description: row.description || row.productDescription || "",
+    //         productDescription:
+    //             row.productDescription || row.description || "",
+    //     };
+    // };
+
+    const calculateRow = (row: any) => {
+        const quantity = num(row.quantity);
+        const rate = num(row.rate);
+
+        const gross = quantity * rate;
+
+        const discountPercent = safePercent(
+            row.discount !== undefined && row.discount !== null && row.discount !== ""
+                ? row.discount
+                : row.discountPercentage
+        );
+
+        const cgstPercent = safePercent(
+            row.cgst !== undefined && row.cgst !== null && row.cgst !== ""
+                ? row.cgst
+                : row.cgstPercentage
+        );
+
+        const sgstPercent = safePercent(
+            row.sgst !== undefined && row.sgst !== null && row.sgst !== ""
+                ? row.sgst
+                : row.sgstPercentage
+        );
+
+        const igstPercent = safePercent(
+            row.igst !== undefined && row.igst !== null && row.igst !== ""
+                ? row.igst
+                : row.igstPercentage
+        );
+
+        const discountAmount = (gross * discountPercent) / 100;
+        const taxableAmount = gross - discountAmount;
+
+        const cgstAmount = (taxableAmount * cgstPercent) / 100;
+        const sgstAmount = (taxableAmount * sgstPercent) / 100;
+        const igstAmount = (taxableAmount * igstPercent) / 100;
+
+        const otherAmount = num(row.otherAmount);
+
         const taxAmount = cgstAmount + sgstAmount + igstAmount;
-        const netTotal = taxableAmount + taxAmount + otherAmount;
+        const netAmount = taxableAmount + taxAmount + otherAmount;
 
-        return { quantity, rate, grossAmount, discountPercentage, discountAmount, taxableAmount, cgstPercentage, cgstAmount, sgstPercentage, sgstAmount, igstPercentage, igstAmount, otherAmount, taxAmount, netTotal };
-    }, [productForm]);
+        return {
+            ...row,
 
-    // total
-    const footerTotals = useMemo(() => {
-        return form.openingStockBody.reduce(
+            // ✅ keep typed/input values as it is
+            quantity: row.quantity,
+            rate: row.rate,
+
+            discount: row.discount,
+            discountPercentage: row.discountPercentage,
+
+            cgst: row.cgst,
+            cgstPercentage: row.cgstPercentage,
+
+            sgst: row.sgst,
+            sgstPercentage: row.sgstPercentage,
+
+            igst: row.igst,
+            igstPercentage: row.igstPercentage,
+
+            otherAmount: row.otherAmount,
+
+            // ✅ calculated values
+            gross,
+            grossAmount: gross,
+
+            discountAmount,
+            taxableAmount,
+
+            cgstAmount,
+            sgstAmount,
+            igstAmount,
+
+            taxAmount,
+
+            netAmount,
+            netTotal: netAmount,
+
+            unit: row.unit || row.uom || "",
+            uom: row.uom || row.unit || "",
+
+            description: row.description || row.productDescription || "",
+            productDescription: row.productDescription || row.description || "",
+        };
+    };
+
+
+    // const calculateFooter = (products: any[]) => {
+    //     return products.reduce(
+    //         (acc: any, item: any) => {
+    //             acc.totalQuantity += num(item.quantity);
+    //             acc.totalGrossAmount += num(item.grossAmount || item.gross);
+    //             acc.totalDiscountAmount += num(item.discountAmount);
+    //             acc.totalCgstAmount += num(item.cgstAmount);
+    //             acc.totalSgstAmount += num(item.sgstAmount);
+    //             acc.totalIgstAmount += num(item.igstAmount);
+    //             acc.totalTaxAmount += num(item.taxAmount);
+    //             acc.totalOtherAmount += num(item.otherAmount);
+    //             acc.totalNetAmount += num(item.netTotal || item.netAmount);
+
+    //             return acc;
+    //         },
+    //         {
+    //             totalQuantity: 0,
+    //             totalGrossAmount: 0,
+    //             totalDiscountAmount: 0,
+    //             totalCgstAmount: 0,
+    //             totalSgstAmount: 0,
+    //             totalIgstAmount: 0,
+    //             totalTaxAmount: 0,
+    //             totalOtherAmount: 0,
+    //             totalNetAmount: 0,
+    //         }
+    //     );
+    // };
+
+    const calculateFooter = (products: any[]) => {
+        return (products || []).reduce(
             (acc: any, item: any) => {
                 acc.totalQuantity += num(item.quantity);
-                acc.totalGrossAmount += num(item.grossAmount);
+
+                acc.totalGrossAmount += num(item.grossAmount || item.gross);
                 acc.totalDiscountAmount += num(item.discountAmount);
+
                 acc.totalCgstAmount += num(item.cgstAmount);
                 acc.totalSgstAmount += num(item.sgstAmount);
                 acc.totalIgstAmount += num(item.igstAmount);
+
                 acc.totalTaxAmount += num(item.taxAmount);
                 acc.totalOtherAmount += num(item.otherAmount);
-                acc.totalNetAmount += num(item.netTotal);
+
+                acc.totalNetAmount += num(item.netAmount || item.netTotal);
+
                 return acc;
             },
-            { totalQuantity: 0, totalGrossAmount: 0, totalDiscountAmount: 0, totalCgstAmount: 0, totalSgstAmount: 0, totalIgstAmount: 0, totalTaxAmount: 0, totalOtherAmount: 0, totalNetAmount: 0 }
+            {
+                totalQuantity: 0,
+                totalGrossAmount: 0,
+                totalDiscountAmount: 0,
+                totalCgstAmount: 0,
+                totalSgstAmount: 0,
+                totalIgstAmount: 0,
+                totalTaxAmount: 0,
+                totalOtherAmount: 0,
+                totalNetAmount: 0,
+            }
         );
-    }, [form.openingStockBody]);
-
-    // Handle Change
-    const handleChange = (key: string, value: any) => {
-        setForm((prev: any) => ({ ...prev, [key]: value, }));
-        setErrors((prev: any) => ({ ...prev, [key]: "", }));
     };
 
-    const handleProductChange = (key: string, value: any) => {
-        setProductForm((prev: any) => {
+    const footerTotals = useMemo(() => {
+        return calculateFooter(form.products || []);
+    }, [form.products]);
+
+    const grossAmount = footerTotals.totalGrossAmount;
+    const discountAmount = footerTotals.totalDiscountAmount;
+    const cgstAmount = footerTotals.totalCgstAmount;
+    const sgstAmount = footerTotals.totalSgstAmount;
+    const igstAmount = footerTotals.totalIgstAmount;
+    const netAmount = footerTotals.totalNetAmount;
+
+    /* ===================================================
+       API CALLS
+    =================================================== */
+
+    const fetchPurchaseOrders = async () => {
+        await dispatch(
+            getPurchaseOrderList({
+                offset: localOffset,
+                limit: localLimit,
+                search: debouncedSearch,
+                // status: status,
+            }) as any
+        );
+    };
+
+    useEffect(() => {
+        dispatch(getAllTransactionSchema("purchaseOrder") as any);
+    }, [dispatch]);
+
+    useEffect(() => {
+        fetchPurchaseOrders();
+    }, [localOffset, localLimit, debouncedSearch, status]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    /* ===================================================
+       LOAD TRANSACTION SCHEMA WITH API OPTIONS
+    =================================================== */
+
+    useEffect(() => {
+        const prepareFields = async () => {
+            if (!transactionsSchema) return;
+
+            const hasSchema =
+                Array.isArray(transactionsSchema?.header) ||
+                Array.isArray(transactionsSchema?.body) ||
+                Array.isArray(transactionsSchema?.footer);
+
+            if (!hasSchema) return;
+
+            try {
+                setFieldsLoading(true);
+
+                const updatedData =
+                    await loadAllTemplateOptions(transactionsSchema);
+
+                setTemplateFields(updatedData);
+            } catch (error) {
+                console.log("Failed to prepare template fields", error);
+            } finally {
+                setFieldsLoading(false);
+            }
+        };
+
+        prepareFields();
+    }, [transactionsSchema]);
+
+    /* ===================================================
+       LIST COLUMNS
+    =================================================== */
+
+    const columns = [
+        {
+            key: "pOrdVoucherNumber",
+            title: "Voucher No",
+        },
+        {
+            key: "pOrdVoucherDate",
+            title: "Date",
+            render: (row: any) =>
+                row?.pOrdVoucherDate
+                    ? formatDateForList(row.pOrdVoucherDate)
+                    : "-",
+        },
+        {
+            key: "pOrdVendorName",
+            title: "Vendor",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-slate-800">
+                        {row?.pOrdVendorName || "-"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                        {row?.pOrdVendorCode || "-"}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: "pOrdBody",
+            title: "Items",
+            render: (row: any) => row?.pOrdBody?.length || 0,
+        },
+        {
+            key: "pOrdFooter",
+            title: "Net Amount",
+            render: (row: any) => (
+                <span className="font-semibold text-indigo-700">
+                    {money(row?.pOrdFooter?.netAmount || 0)}
+                </span>
+            ),
+        },
+        // {
+        //     key: "pOrdDocStatus",
+        //     title: "Doc Status",
+        //     render: (row: any) => (
+        //         <span
+        //             className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
+        //                 row?.pOrdDocStatus === "open"
+        //                     ? "border-green-200 bg-green-50 text-green-700"
+        //                     : "border-red-200 bg-red-50 text-red-700"
+        //             }`}
+        //         >
+        //             {row?.pOrdDocStatus || "-"}
+        //         </span>
+        //     ),
+        // },
+        {
+            key: "pOrdStatus",
+            title: "Order Status",
+            render: (row: any) => (
+                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                    {row?.pOrdStatus || "-"}
+                </span>
+            ),
+        },
+    ];
+
+    /* ===================================================
+       ACTIONS
+    =================================================== */
+
+    const handleStatusChange = (nextStatus: string) => {
+        setStatus(nextStatus);
+        setLocalOffset(0);
+    };
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+
+        try {
+            await fetchPurchaseOrders();
+            toast.success("Purchase order list refreshed");
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    const resetMainForm = () => {
+        setEditingRecord(null);
+        setErrors({});
+        setForm(getDefaultForm());
+    };
+
+    const openAddModal = () => {
+        resetMainForm();
+        setShowModal(true);
+    };
+
+    const openEditModal = (record: any) => {
+        const footer = record?.pOrdFooter || {};
+
+        const products =
+            record?.pOrdBody?.length > 0
+                ? record.pOrdBody.map((item: any) => {
+                    const unitCode = item?.unit || item?.uom || "";
+
+                    return calculateRow(
+                        normalizeRowKeys({
+                            id: item?.id || Date.now() + Math.random(),
+
+                            productCode: item?.productCode || "",
+                            productName: item?.productName || "",
+                            productId: item?.productId || "",
+
+                            productDescription:
+                                item?.productDescription ||
+                                item?.description ||
+                                "",
+
+                            description:
+                                item?.description ||
+                                item?.productDescription ||
+                                "",
+
+                            productHSNCode: item?.productHSNCode || "",
+
+                            remarks: item?.remarks || "",
+
+                            quantity: item?.quantity || "",
+
+                            unit: unitCode,
+                            uom: unitCode,
+                            unitName:
+                                item?.unitName ||
+                                getUnitLabelFromSchema(unitCode),
+
+                            rate: item?.rate || "",
+
+                            gross: item?.gross || item?.grossAmount || 0,
+                            grossAmount:
+                                item?.grossAmount || item?.gross || 0,
+
+                            discount:
+                                item?.discount ||
+                                item?.discountPercentage ||
+                                "",
+
+                            discountPercentage:
+                                item?.discountPercentage ||
+                                item?.discount ||
+                                "",
+
+                            discountAmount: item?.discountAmount || 0,
+
+                            taxableAmount: item?.taxableAmount || 0,
+
+                            cgst:
+                                item?.cgst ||
+                                item?.cgstPercentage ||
+                                "",
+
+                            cgstPercentage:
+                                item?.cgstPercentage ||
+                                item?.cgst ||
+                                "",
+
+                            cgstAmount: item?.cgstAmount || 0,
+
+                            sgst:
+                                item?.sgst ||
+                                item?.sgstPercentage ||
+                                "",
+
+                            sgstPercentage:
+                                item?.sgstPercentage ||
+                                item?.sgst ||
+                                "",
+
+                            sgstAmount: item?.sgstAmount || 0,
+
+                            igst:
+                                item?.igst ||
+                                item?.igstPercentage ||
+                                "",
+
+                            igstPercentage:
+                                item?.igstPercentage ||
+                                item?.igst ||
+                                "",
+
+                            igstAmount: item?.igstAmount || 0,
+
+                            taxAmount: item?.taxAmount || 0,
+
+                            otherAmount: item?.otherAmount || 0,
+
+                            netAmount:
+                                item?.netAmount ||
+                                item?.netTotal ||
+                                0,
+
+                            netTotal:
+                                item?.netTotal ||
+                                item?.netAmount ||
+                                0,
+                        })
+                    );
+                })
+                : [{ ...emptyProductRow, id: Date.now() }];
+
+        setEditingRecord(true);
+        setErrors({});
+
+        setForm({
+            pOrdVoucherNumber: record?.pOrdVoucherNumber || "AUTO",
+
+            pOrdVoucherDate: formatDateForInput(
+                record?.pOrdVoucherDate
+            ),
+
+            pOrdVendorCode: record?.pOrdVendorCode || "",
+            pOrdVendorName: record?.pOrdVendorName || "",
+
+            pOrdPurchaseAccount: record?.pOrdPurchaseAccount || "",
+
+            pOrdDocStatus: record?.pOrdDocStatus || "open",
+            pOrdStatus: record?.pOrdStatus || "draft",
+
+            pOrdRemark: record?.pOrdRemark || "",
+            pOrdStatusRemark: record?.pOrdStatusRemark || "",
+            pOrdStatusHistory: record?.pOrdStatusHistory || [],
+
+            isAutoPost: record?.isAutoPost || false,
+
+            products,
+
+            grossAmount:
+                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+
+            discountAmount:
+                footer?.discountAmount ||
+                footer?.totalDiscountAmount ||
+                "0.00",
+
+            cgstAmount:
+                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+
+            sgstAmount:
+                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+
+            igstAmount:
+                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+
+            taxAmount:
+                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+
+            otherAmount:
+                footer?.otherAmount ||
+                footer?.totalOtherAmount ||
+                "0.00",
+
+            netAmount:
+                footer?.netAmount || footer?.totalNetAmount || "0.00",
+        });
+
+        setShowModal(true);
+    };
+
+    /* ===================================================
+       DYNAMIC HEADER CHANGE
+    =================================================== */
+
+    const handleMainChange = (key: string, value: any) => {
+        setForm((prev: any) => {
+            const currentField = getHeaderFieldByKey(key);
+
             let updated = {
                 ...prev,
                 [key]: value,
             };
 
-            if (key === "productCode") {
-                const selectedProduct = productOptions.find((item: any) => item.value === value)?.raw;
-                updated.description = selectedProduct?.productDescription || selectedProduct?.description || "";
-                updated.rate = selectedProduct?.sellingPrice || selectedProduct?.saleRate || selectedProduct?.rate || "";
-                updated.unit = selectedProduct?.unit || selectedProduct?.uom || selectedProduct?.unitCode || "";
+            if (currentField?.mapFields) {
+                updated = applyMappedFields(currentField, value, updated);
             }
 
-            if (key === "cgstPercentage" || key === "sgstPercentage") {
-                if (num(value) > 0) { updated.igstPercentage = ""; }
-            }
-
-            if (key === "igstPercentage") {
-                if (num(value) > 0) {
-                    updated.cgstPercentage = "";
-                    updated.sgstPercentage = "";
-                }
-            }
             return updated;
         });
 
-        setProductErrors((prev: any) => ({ ...prev, [key]: "", tax: "", }));
+        setErrors((prev: any) => ({
+            ...prev,
+            [key]: "",
+        }));
     };
 
-    // validation
-    const validateMainForm = () => {
-        const err: any = {};
-        if (!form.openingStockDate) err.openingStockDate = "Date is required"
-        if (!form.openingStockBody || form.openingStockBody.length === 0) err.openingStockBody = "Please add at least one product";
-        setErrors(err);
-        return Object.keys(err).length === 0;
+    /* ===================================================
+       DYNAMIC BODY ROW CHANGE
+    =================================================== */
+
+    const handleAddRow = () => {
+        setForm((prev: any) => ({
+            ...prev,
+            products: [
+                ...(prev.products || []),
+                {
+                    ...emptyProductRow,
+                    id: Date.now(),
+                },
+            ],
+        }));
     };
 
-    const validateProductForm = () => {
-        const err: any = {};
-        if (!productForm.productCode) { err.productCode = "Product is required"; }
-        if (!productForm.quantity || num(productForm.quantity) <= 0) { err.quantity = "Quantity is required"; }
-        if (!productForm.unit) { err.unit = "Unit is required"; }
-        if (!productForm.rate || num(productForm.rate) <= 0) { err.rate = "Rate is required"; }
-        const cgst = num(productForm.cgstPercentage);
-        const sgst = num(productForm.sgstPercentage);
-        const igst = num(productForm.igstPercentage);
+    const handleDeleteRow = (index: number) => {
+        setForm((prev: any) => {
+            const updatedProducts = (prev.products || []).filter(
+                (_: any, i: number) => i !== index
+            );
 
-        if (igst > 0 && (cgst > 0 || sgst > 0)) {
-            err.tax = "You can enter either IGST or CGST/SGST";
-            err.igstPercentage = "Only one tax type allowed";
-            err.cgstPercentage = "Only one tax type allowed";
-            err.sgstPercentage = "Only one tax type allowed";
+            return {
+                ...prev,
+                products:
+                    updatedProducts.length > 0
+                        ? updatedProducts
+                        : [{ ...emptyProductRow, id: Date.now() }],
+            };
+        });
+    };
+
+    // const handleRowChange = (index: number, key: string, value: any) => {
+    //     setForm((prev: any) => {
+    //         const updatedProducts = [...(prev.products || [])];
+
+    //         const currentRow = updatedProducts[index] || {};
+    //         const currentField = getBodyFieldByKey(key);
+
+    //         let updatedRow = {
+    //             ...currentRow,
+    //             [key]: value,
+    //         };
+
+    //         if (currentField?.mapFields) {
+    //             updatedRow = applyMappedFields(
+    //                 currentField,
+    //                 value,
+    //                 updatedRow
+    //             );
+    //         }
+
+    //         const selectedOption = getOptionByValue(currentField, value);
+
+    //         if (selectedOption?.raw?._id && !updatedRow.productId) {
+    //             updatedRow.productId = selectedOption.raw._id;
+    //         }
+
+    //         updatedRow = normalizeRowKeys(updatedRow);
+
+    //         const lowerKey = String(key).toLowerCase();
+    //         const isCgstOrSgst =
+    //             lowerKey.includes("cgst") || lowerKey.includes("sgst");
+    //         const isIgst = lowerKey.includes("igst");
+
+    //         if (isCgstOrSgst && num(value) > 0) {
+    //             updatedRow.igst = "";
+    //             updatedRow.igstPercentage = "";
+    //             updatedRow.igstAmount = 0;
+    //         }
+
+    //         if (isIgst && num(value) > 0) {
+    //             updatedRow.cgst = "";
+    //             updatedRow.sgst = "";
+    //             updatedRow.cgstPercentage = "";
+    //             updatedRow.sgstPercentage = "";
+    //             updatedRow.cgstAmount = 0;
+    //             updatedRow.sgstAmount = 0;
+    //         }
+
+    //         updatedRow = calculateRow(updatedRow);
+    //         updatedProducts[index] = updatedRow;
+
+    //         return {
+    //             ...prev,
+    //             products: updatedProducts,
+    //         };
+    //     });
+
+    //     setErrors((prev: any) => ({
+    //         ...prev,
+    //         products: "",
+    //         [`row_${index}_${key}`]: "",
+    //         [`row_${index}_tax`]: "",
+    //     }));
+    // };
+
+
+    const handleRowChange = (index: number, key: string, value: any) => {
+        setForm((prev: any) => {
+            const updatedProducts = [...(prev.products || [])];
+
+            const currentRow = updatedProducts[index] || {};
+            const currentField = getBodyFieldByKey(key);
+
+            let updatedRow = {
+                ...currentRow,
+                [key]: value,
+            };
+
+            if (currentField?.mapFields) {
+                updatedRow = applyMappedFields(
+                    currentField,
+                    value,
+                    updatedRow
+                );
+            }
+
+            const selectedOption = getOptionByValue(currentField, value);
+
+            if (selectedOption?.raw?._id && !updatedRow.productId) {
+                updatedRow.productId = selectedOption.raw._id;
+            }
+
+            updatedRow = normalizeRowKeys(updatedRow);
+
+            const lowerKey = String(key).toLowerCase();
+
+            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
+            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
+            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
+
+            // ✅ CGST/SGST selected, so clear IGST
+            if ((isCgst || isSgst) && num(value) > 0) {
+                updatedRow.igst = "";
+                updatedRow.igstPercentage = "";
+                updatedRow.igstAmount = 0;
+            }
+
+            // ✅ IGST selected, so clear CGST/SGST
+            if (isIgst && num(value) > 0) {
+                updatedRow.cgst = "";
+                updatedRow.sgst = "";
+                updatedRow.cgstPercentage = "";
+                updatedRow.sgstPercentage = "";
+                updatedRow.cgstAmount = 0;
+                updatedRow.sgstAmount = 0;
+            }
+
+            updatedRow = calculateRow(updatedRow);
+
+            updatedProducts[index] = updatedRow;
+
+            return {
+                ...prev,
+                products: updatedProducts,
+            };
+        });
+
+        setErrors((prev: any) => ({
+            ...prev,
+            products: "",
+            [`row_${index}_${key}`]: "",
+            [`row_${index}_tax`]: "",
+            [`row_${index}_igstPercentage`]: "",
+            [`row_${index}_cgstPercentage`]: "",
+            [`row_${index}_sgstPercentage`]: "",
+            [`row_${index}_igst`]: "",
+            [`row_${index}_cgst`]: "",
+            [`row_${index}_sgst`]: "",
+        }));
+    };
+    /* ===================================================
+       DYNAMIC VALIDATION
+    =================================================== */
+
+    const getFilledRows = () => {
+        const bodyKeys = (templateFields?.body || [])
+            .filter((field: any) => !field.isHidden)
+            .map((field: any) => field.key);
+
+        return (form.products || []).filter((row: any) => {
+            return bodyKeys.some((key: string) => {
+                const value = row?.[key];
+                return value !== undefined && value !== null && value !== "";
+            });
+        });
+    };
+
+    const validateForm = () => {
+        const err: any = {};
+
+        (templateFields?.header || []).forEach((field: any) => {
+            if (field.isHidden) return;
+            if (!field.isRequired) return;
+
+            const value = form?.[field.key];
+
+            if (value === undefined || value === null || value === "") {
+                err[field.key] = `${field.label || field.key} is required`;
+            }
+        });
+
+        const filledRows = getFilledRows();
+
+        if (filledRows.length === 0) {
+            err.products = "Please add at least one product";
         }
 
-        setProductErrors(err);
+        (form.products || []).forEach((row: any, index: number) => {
+            const hasAnyValue = (templateFields?.body || []).some(
+                (field: any) => {
+                    const value = row?.[field.key];
+
+                    return (
+                        value !== undefined &&
+                        value !== null &&
+                        value !== ""
+                    );
+                }
+            );
+
+            if (!hasAnyValue) return;
+
+            (templateFields?.body || []).forEach((field: any) => {
+                if (field.isHidden) return;
+                if (!field.isRequired) return;
+
+                const value = row?.[field.key];
+
+                if (
+                    value === undefined ||
+                    value === null ||
+                    value === ""
+                ) {
+                    err[`row_${index}_${field.key}`] = `${field.label || field.key
+                        } is required`;
+                }
+            });
+
+            const cgst = num(row.cgstPercentage || row.cgst);
+            const sgst = num(row.sgstPercentage || row.sgst);
+            const igst = num(row.igstPercentage || row.igst);
+
+            if (igst > 0 && (cgst > 0 || sgst > 0)) {
+                err[`row_${index}_tax`] =
+                    "You can enter either IGST or CGST/SGST";
+
+                err[`row_${index}_igstPercentage`] =
+                    "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] =
+                    "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] =
+                    "Only one tax type allowed";
+
+                err[`row_${index}_igst`] = "Only one tax type allowed";
+                err[`row_${index}_cgst`] = "Only one tax type allowed";
+                err[`row_${index}_sgst`] = "Only one tax type allowed";
+            }
+        });
+
+        setErrors(err);
+
+        if (err.products) {
+            toast.error(err.products);
+        }
+
         return Object.keys(err).length === 0;
     };
 
-    // Add Update delete product
-    const resetProductForm = () => {
-        setProductForm({ productCode: "", description: "", remarks: "", quantity: "", unit: "", rate: "", discountPercentage: "", cgstPercentage: "", sgstPercentage: "", igstPercentage: "", otherAmount: "" });
-        setEditingProductId(null);
-        setProductErrors({});
+    const cleanRows = () => {
+        const bodyKeys = (templateFields?.body || []).map(
+            (field: any) => field.key
+        );
+
+        return (form.products || [])
+            .filter((row: any) => {
+                return bodyKeys.some((key: string) => {
+                    const value = row?.[key];
+
+                    return (
+                        value !== undefined &&
+                        value !== null &&
+                        value !== ""
+                    );
+                });
+            })
+            .map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
-    const handleAddProduct = () => {
-        if (!validateProductForm()) return;
-        const selectedProduct = productOptions.find((item: any) => item.value === productForm.productCode);
-        const selectedUnit = unitOptions.find((item: any) => item.value === productForm.unit);
+    /* ===================================================
+       SUBMIT
+    =================================================== */
 
-        const newProduct = {
-            id: editingProductId || Date.now(),
-            productCode: productForm.productCode,
-            productName: selectedProduct?.label || "",
-            productId: selectedProduct?.raw?._id || "",
-            description: productForm.description || "",
-            remarks: productForm.remarks || "",
-            quantity: productCalc.quantity,
-            unit: productForm.unit,
-            unitName: selectedUnit?.label || "",
-            rate: productCalc.rate,
-            grossAmount: productCalc.grossAmount,
-            discountPercentage: productCalc.discountPercentage,
-            discountAmount: productCalc.discountAmount,
-            taxableAmount: productCalc.taxableAmount,
-            cgstPercentage: productCalc.cgstPercentage,
-            cgstAmount: productCalc.cgstAmount,
-            sgstPercentage: productCalc.sgstPercentage,
-            sgstAmount: productCalc.sgstAmount,
-            igstPercentage: productCalc.igstPercentage,
-            igstAmount: productCalc.igstAmount,
-            taxAmount: productCalc.taxAmount,
-            otherAmount: productCalc.otherAmount,
-            netTotal: productCalc.netTotal,
-        };
 
-        setForm((prev: any) => {
-            const alreadyExists = prev.openingStockBody.some((item: any) => item.productCode === newProduct.productCode && item.id !== editingProductId);
-
-            if (alreadyExists) {
-                toast.error("This product is already added");
-                return prev;
-            }
-            const updatedBody = editingProductId ? prev.openingStockBody.map((item: any) => item.id === editingProductId ? newProduct : item) : [...prev.openingStockBody, newProduct];
-            return { ...prev, openingStockBody: updatedBody, };
-        });
-
-        setErrors((prev: any) => ({ ...prev, openingStockBody: "", }));
-        resetProductForm();
-        setShowProductModal(false);
+    const getTaxValue = (primary: any, fallback: any) => {
+        return primary !== undefined && primary !== null && primary !== ""
+            ? primary
+            : fallback !== undefined && fallback !== null
+                ? fallback
+                : "";
     };
-
-    const handleEditProduct = (row: any) => {
-        setEditingProductId(row.id);
-        setProductForm({
-            productCode: row.productCode || "",
-            description: row.description || "",
-            remarks: row.remarks || "",
-            quantity: row.quantity || "",
-            unit: row.unit || "",
-            rate: row.rate || "",
-            discountPercentage: row.discountPercentage || "",
-            cgstPercentage: row.cgstPercentage || "",
-            sgstPercentage: row.sgstPercentage || "",
-            igstPercentage: row.igstPercentage || "",
-            otherAmount: row.otherAmount || "",
-        });
-        setProductErrors({});
-        setShowProductModal(true);
-    };
-
-    const handleDeleteProduct = (id: any) => {
-        setForm((prev: any) => ({ ...prev, openingStockBody: prev.openingStockBody.filter((item: any) => item.id !== id) }));
-    };
-
-    const resetMainForm = () => {
-        setForm({
-            openingStockVoucherNumber: "OPSTOCK",
-            openingStockDate: todayYMD(),
-            remark: "",
-            openingStockBody: [],
-        });
-        setEdit(false);
-        setErrors({});
-        resetProductForm();
-    };
-
     const handleSubmit = async () => {
-        if (!validateMainForm()) return;
+        if (!validateForm()) return;
 
-        const payload = {
-            openingStockDate: form.openingStockDate,
-            remark: form.remark || "",
-            openingStockStatus: form.openingStockStatus || status || "open",
-            openingStockBody: form.openingStockBody,
-            openingStockFooter: footerTotals,
+        const products = cleanRows();
+        const footer = calculateFooter(products);
+
+        const payload: any = {
+            pOrdVoucherDate: form.pOrdVoucherDate,
+
+            pOrdVendorCode: form.pOrdVendorCode,
+            pOrdVendorName: form.pOrdVendorName,
+
+            pOrdPurchaseAccount: form.pOrdPurchaseAccount,
+
+            pOrdStatus: form.pOrdStatus || "draft",
+            pOrdDocStatus: form.pOrdDocStatus || "open",
+
+            pOrdRemark: form.pOrdRemark,
+
+            pOrdBody: products.map((item: any) => ({
+                productCode: item.productCode,
+                productName: item.productName,
+                productId: item.productId,
+
+                productDescription:
+                    item.productDescription || item.description,
+
+                description:
+                    item.description || item.productDescription,
+
+                productHSNCode: item.productHSNCode,
+
+                remarks: item.remarks,
+
+                quantity: String(item.quantity),
+
+                unit: item.unit || item.uom,
+                uom: item.uom || item.unit,
+
+                rate: String(item.rate),
+
+                gross: fmtMoney(item.grossAmount),
+                grossAmount: fmtMoney(item.grossAmount),
+
+                discount: String(
+                    item.discountPercentage || item.discount || ""
+                ),
+
+                discountPercentage: String(
+                    item.discountPercentage || item.discount || ""
+                ),
+
+                discountAmount: fmtMoney(item.discountAmount),
+
+                taxableAmount: fmtMoney(item.taxableAmount),
+
+                cgst: String(getTaxValue(item.cgst, item.cgstPercentage)),
+                cgstPercentage: String(getTaxValue(item.cgstPercentage, item.cgst)),
+
+                sgst: String(getTaxValue(item.sgst, item.sgstPercentage)),
+                sgstPercentage: String(getTaxValue(item.sgstPercentage, item.sgst)),
+
+                igst: String(getTaxValue(item.igst, item.igstPercentage)),
+                igstPercentage: String(getTaxValue(item.igstPercentage, item.igst)),
+                igstAmount: fmtMoney(item.igstAmount),
+
+                taxAmount: fmtMoney(item.taxAmount),
+
+                otherAmount: fmtMoney(item.otherAmount),
+
+                netAmount: fmtMoney(item.netAmount || item.netTotal),
+                netTotal: fmtMoney(item.netTotal || item.netAmount),
+            })),
+
+            pOrdFooter: {
+                grossAmount: fmtMoney(footer.totalGrossAmount),
+                discountAmount: fmtMoney(footer.totalDiscountAmount),
+                cgstAmount: fmtMoney(footer.totalCgstAmount),
+                sgstAmount: fmtMoney(footer.totalSgstAmount),
+                igstAmount: fmtMoney(footer.totalIgstAmount),
+                taxAmount: fmtMoney(footer.totalTaxAmount),
+                otherAmount: fmtMoney(footer.totalOtherAmount),
+                netAmount: fmtMoney(footer.totalNetAmount),
+
+                adjustedAmount: "0",
+                balanceAmount: fmtMoney(footer.totalNetAmount),
+
+                totalQuantity: footer.totalQuantity,
+                totalGrossAmount: fmtMoney(footer.totalGrossAmount),
+                totalDiscountAmount: fmtMoney(
+                    footer.totalDiscountAmount
+                ),
+                totalCgstAmount: fmtMoney(footer.totalCgstAmount),
+                totalSgstAmount: fmtMoney(footer.totalSgstAmount),
+                totalIgstAmount: fmtMoney(footer.totalIgstAmount),
+                totalTaxAmount: fmtMoney(footer.totalTaxAmount),
+                totalOtherAmount: fmtMoney(footer.totalOtherAmount),
+                totalNetAmount: fmtMoney(footer.totalNetAmount),
+            },
         };
 
         try {
-            if (edit) {
+            if (editingRecord) {
                 await dispatch(
-                    updateOpeningStock({
+                    updatePurchaseOrder({
+                        pOrdVoucherNumber: form?.pOrdVoucherNumber,
                         payload,
-                        openingStockVoucherNumber: form?.openingStockVoucherNumber,
                     }) as any
-                );
+                ).unwrap();
+
+                toast.success("Purchase order updated successfully");
             } else {
-                await dispatch(addOpeningStock({ payload }) as any);
+                await dispatch(addPurchaseOrder({ payload }) as any).unwrap();
+
+                toast.success("Purchase order created successfully");
             }
-
-            await dispatch(
-                getOpeningStockList({
-                    limit: localLimit,
-                    offset: localOffset,
-                    status,
-                    search: debouncedSearch,
-                }) as any
-            );
-
-            toast.success(`Opening stock ${edit ? "updated" : "added"} successfully`);
 
             setShowModal(false);
             resetMainForm();
-        } catch (error: any) {
-            toast.error(error?.message || "Something went wrong");
+
+            fetchPurchaseOrders();
+        } catch (err: any) {
+            toast.error(err?.message || "Operation failed");
         }
     };
 
-    const handleDeleteOpeningStock = async (voucherNumber: any) => {
+    const handleDeleteConfirm = async () => {
         try {
-            await dispatch(deleteOpeningStock({ openingStockVoucherNumber: voucherNumber, }) as any);
-            await dispatch(getOpeningStockList({ limit: localLimit, offset: localOffset, status, search: debouncedSearch, }) as any);
-            toast.success("Opening stock deleted successfully");
-        } catch (error: any) {
-            toast.error(error?.message || "Delete failed");
+            const voucherNumber = confirmTooltip?.voucherNumber;
+
+            if (!voucherNumber) {
+                toast.error("Purchase order voucher number not found");
+                return;
+            }
+
+            await dispatch(
+                deletePurchaseOrder({
+                    pOrdVoucherNumber: voucherNumber,
+                }) as any
+            ).unwrap();
+
+            toast.success("Purchase order deleted successfully");
+
+            await fetchPurchaseOrders();
+        } catch (err: any) {
+            toast.error(
+                err?.message ||
+                err?.payload?.message ||
+                "Failed to delete purchase order"
+            );
         } finally {
-            setConfirmTooltip({ show: false, x: null, y: null, openingStockVoucherNumber: null, });
+            setConfirmTooltip({
+                show: false,
+                x: null,
+                y: null,
+                voucherNumber: null,
+            });
         }
     };
 
-    const renderMainField = (field: any) => {
-        const value = form?.[field.key] ?? "";
+    /* ===================================================
+       DYNAMIC FOOTER
+    =================================================== */
 
-        const commonProps = {
-            label: field.label,
-            mandatory: field.isRequired,
-            value: field.type === "date" ? value.split("T")[0] : value,
-            placeholder: `Enter ${field.label}`,
-            error: errors?.[field.key],
-            disabled: field.disabled,
+    const footerValues = useMemo(() => {
+        return {
+            grossAmount,
+            discountAmount,
+            cgstAmount,
+            sgstAmount,
+            igstAmount,
+            netAmount,
+            adjustedAmount: 0,
+            balanceAmount: netAmount,
         };
+    }, [
+        grossAmount,
+        discountAmount,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
+        netAmount,
+    ]);
 
-        if (field.type === "date") {
-            return (
-                <TextInput
-                    key={field.key}
-                    {...commonProps}
-                    type="date"
-                    onChange={(e: any) => handleChange(field.key, e.target.value)}
-                />
-            );
-        }
+    const dynamicFooterArray = useMemo(() => {
+        return (templateFields?.footer || [])
+            .filter((field: any) => !field.isHidden)
+            .map((field: any) => {
+                const rawValue =
+                    footerValues[field.key as keyof typeof footerValues] ?? 0;
 
-        if (field.type === "textarea") {
-            return (
-                <TextArea
-                    key={field.key}
-                    {...commonProps}
-                    onChange={(e: any) => handleChange(field.key, e.target.value)}
-                />
-            );
-        }
-
-        return (
-            <TextInput
-                key={field.key}
-                {...commonProps}
-                type="text"
-                onChange={(e: any) => handleChange(field.key, e.target.value)}
-            />
-        );
-    };
-
-    const renderProductField = (field: any) => {
-        const value = productForm?.[field.key] ?? "";
-
-        const commonProps = {
-            label: field.label,
-            mandatory: field.isRequired,
-            value,
-            placeholder: field.placeholder || `Enter ${field.label}`,
-            error: productErrors?.[field.key],
-        };
-
-        if (field.type === "select") {
-            return (
-                <SelectInput
-                    key={field.key}
-                    label={field.label}
-                    mandatory={field.isRequired}
-                    value={value}
-                    placeholder={field.placeholder || `Select ${field.label}`}
-                    error={productErrors?.[field.key]}
-                    onChange={(e: any) => handleProductChange(field.key, e?.target?.value)}
-                    options={[
-                        { label: field.placeholder || `Select ${field.label}`, value: "" },
-                        ...(field.options || []),
-                    ]}
-                />
-            );
-        }
-
-        if (field.type === "textarea") {
-            return (
-                <TextArea
-                    key={field.key}
-                    {...commonProps}
-                    onChange={(e: any) => handleProductChange(field.key, e.target.value)}
-                />
-            );
-        }
-
-        return (
-            <TextInput
-                key={field.key}
-                {...commonProps}
-                type={field.type || "text"}
-                onChange={(e: any) => handleProductChange(field.key, e.target.value)}
-            />
-        );
-    };
-
-    useEffect(() => {
-        dispatch(getOpeningStockList({ limit: localLimit, offset: localOffset, status, search: debouncedSearch, }) as any);
-    }, [dispatch, localLimit, localOffset, status, debouncedSearch]);
-
-    useEffect(() => {
-        dispatch(getAllProducts({ limit: 200, offset: 0 }) as any);
-    }, [dispatch]);
-
-    useEffect(() => {
-        const t = setTimeout(() => {
-            setDebouncedSearch(search.trim());
-            setLocalOffset(0);
-        }, 400);
-
-        return () => clearTimeout(t);
-    }, [search]);
-
-    const productInputData = [
-        {
-            key: "productCode",
-            label: "Product",
-            type: "select",
-            isRequired: true,
-            placeholder: "Select Product",
-            options: productOptions,
-        },
-        {
-            key: "description",
-            label: "Description",
-            type: "text",
-            isRequired: false,
-            placeholder: "Description",
-        },
-        {
-            key: "remarks",
-            label: "Remarks",
-            type: "text",
-            isRequired: false,
-            placeholder: "Remarks",
-        },
-        {
-            grid: 2,
-            child: [
-                {
-                    key: "quantity",
-                    label: "Quantity",
-                    type: "number",
-                    isRequired: true,
-                    placeholder: "Quantity",
-                },
-                {
-                    key: "unit",
-                    label: "Unit",
-                    type: "select",
-                    isRequired: true,
-                    placeholder: "Unit",
-                    options: unitOptions,
-                },
-            ],
-        },
-        {
-            key: "rate",
-            label: "Rate",
-            type: "number",
-            isRequired: true,
-            placeholder: "Rate",
-        },
-    ];
-
-    const percentAmountRows = [
-        {
-            label: "Discount",
-            percentKey: "discountPercentage",
-            amount: productCalc.discountAmount,
-        },
-        {
-            label: "CGST",
-            percentKey: "cgstPercentage",
-            amount: productCalc.cgstAmount,
-        },
-        {
-            label: "SGST",
-            percentKey: "sgstPercentage",
-            amount: productCalc.sgstAmount,
-        },
-        {
-            label: "IGST",
-            percentKey: "igstPercentage",
-            amount: productCalc.igstAmount,
-        },
-        {
-            label: "Other Amount",
-            percentKey: "otherAmount",
-            amount: productCalc.otherAmount,
-            isAmountInput: true,
-        },
-    ];
+                return {
+                    ...field,
+                    value: money(rawValue),
+                    rawValue,
+                };
+            });
+    }, [templateFields?.footer, footerValues]);
 
     return (
-        <>
-            <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-                    <Toggle
+        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+            <div
+                id="purchase-order-header"
+                className="mb-3 flex items-center"
+            >
+                <div
+                    id="purchase-order-summary"
+                    className="flex items-start gap-3"
+                >
+                    <Badge
                         {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: setStatus,
-                        }}
-                    />
-
-                    <div className="me-2">
-                        <SearchInput {...{ search, setSearch }} />
-                    </div>
-
-                    <PrimaryButton
-                        {...{
-                            text: "Add",
-                            icon: <Plus size={16} />,
-                            callBackFn: () => {
-                                resetMainForm();
-                                setShowModal(true);
-                            },
+                            count: pagination?.totalDocs ?? 0,
+                            text: "Total Purchase Orders:",
+                            varient: "primary",
                         }}
                     />
                 </div>
 
-                <DataTable
-                    columns={mainColumns}
-                    data={purchaseOrderList || []}
-                    loading={listingLoader}
-                    emptyMessage="No opening stocks found"
-                    actions={(row: any) => (
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setForm({
-                                        ...row,
-                                        openingStockBody: row?.openingStockBody || [],
-                                    });
-                                    setEdit(true);
-                                    setErrors({});
-                                    setShowModal(true);
-                                }}
-                                className="cursor-pointer rounded-lg p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                            >
-                                <Edit size={16} />
-                            </button>
-
-                            <button
-                                type="button"
-                                disabled={deleteLoader}
-                                onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-                                    const y = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        openingStockVoucherNumber: row?.openingStockVoucherNumber,
-                                    });
-                                }}
-                                className="text-red-500 hover:text-red-700 disabled:opacity-60"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-                    )}
-                />
-
-                {pagination?.totalDocs > 0 && (
-                    <Pagination
+                <div className="ml-auto flex items-center gap-2">
+                    <Toggle
                         {...{
-                            localLimit,
-                            selectCb: (e: any) => {
-                                setLocalLimit(Number(e.target.value));
-                                setLocalOffset(0);
-                            },
-                            preDisabled: !pagination?.hasPrevPage,
-                            nextDisabled: !pagination?.hasNextPage,
-                            setLocalOffset,
-                            pagination,
+                            arr: ["open", "close"],
+                            state: status,
+                            setState: handleStatusChange,
                         }}
                     />
-                )}
+
+                    <SearchInput {...{ search, setSearch }} />
+
+                    <DataREfreshButton
+                        {...{
+                            callBackFn: handleRefresh,
+                            loading: refreshing,
+                        }}
+                    />
+
+                    {/* @ts-ignore */}
+                    <DataCreateButton
+                        {...{
+                            callBackFn: openAddModal,
+                            text: "Add Purchase Order",
+                        }}
+                    />
+                </div>
             </div>
+
+            <DataTable
+                columns={columns}
+                data={purchaseOrders}
+                loading={loading}
+                emptyMessage={`No ${status} purchase order found`}
+                actions={(record: any) => (
+                    <div className="flex items-center gap-2">
+                        <button
+                            id="purchase-order-edit-button"
+                            onClick={() => openEditModal(record)}
+                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                        >
+                            <Edit size={16} />
+                        </button>
+
+                        <button
+                            id="purchase-order-delete-button"
+                            disabled={deleteLoading}
+                            onClick={(e) => {
+                                const rect =
+                                    e.currentTarget.getBoundingClientRect();
+
+                                let x = rect.left - 150;
+                                if (x < 10) x = 10;
+
+                                const y = rect.top + window.scrollY - 5;
+
+                                setConfirmTooltip({
+                                    show: true,
+                                    x,
+                                    y,
+                                    voucherNumber: record?.pOrdVoucherNumber,
+                                });
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                )}
+            />
+
+            {pagination?.totalDocs > 0 && (
+                <Pagination
+                    {...{
+                        localLimit,
+                        selectCb: (e: any) => {
+                            setLocalLimit(Number(e.target.value));
+                            setLocalOffset(0);
+                        },
+                        preDisabled: !pagination?.hasPrevPage,
+                        nextDisabled: !pagination?.hasNextPage,
+                        setLocalOffset,
+                        pagination,
+                    }}
+                />
+            )}
 
             {confirmTooltip.show && (
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message="Are you sure you want to delete this opening stock?"
+                    message="Are you sure you want to delete this purchase order?"
                     confirmText="Delete"
                     cancelText="Cancel"
-                    onConfirm={() =>
-                        handleDeleteOpeningStock(confirmTooltip?.openingStockVoucherNumber)
-                    }
+                    onConfirm={handleDeleteConfirm}
                     onCancel={() =>
                         setConfirmTooltip({
                             show: false,
                             x: null,
                             y: null,
-                            openingStockVoucherNumber: null,
+                            voucherNumber: null,
                         })
                     }
                 />
             )}
 
-            {/* MAIN OPENING STOCK MODAL */}
-            {/* @ts-ignore */}
-            <Modal
-                {...{
-                    show: showModal,
-                    setShow: setShowModal,
-                    handleClose: resetMainForm,
-                    handleSubmit,
-                    loader: addLoader,
-                    state: edit,
-                    gridCols: 12,
-                    title: "Opening Stock",
-                    body: (
-                        <>
-                            <div>
-                                <div>
-                                    {mainInputData.map((field: any, index: number) => (
-                                        <div
-                                            key={field.key || index}
-                                            className={`mb-2 grid gap-2 ${field?.grid === 2 ? "grid-cols-2" : "grid-cols-1"
-                                                }`}
-                                        >
-                                            {field?.child?.length
-                                                ? field.child.map((child: any) => renderMainField(child))
-                                                : renderMainField(field)}
-                                        </div>
-                                    ))}
-                                </div>
+            {!fieldsLoading && (
+                <DynamicAddForm
+                    {...{
+                        show: showModal,
+                        setShow: setShowModal,
+                        edit: Boolean(editingRecord),
+                        title: "Purchase Order",
+                        subtitle: "Fill in the purchase order details below",
+                        loading: createLoading || updateLoading,
+                        onClose: () => {
+                            setShowModal(false);
+                            resetMainForm();
+                        },
+                        onSubmit: handleSubmit,
+                        form,
+                        errors,
+                        handleAddRow,
+                        handleDeleteRow,
+                        handleRowChange,
+                        footerTotals,
 
-                                <div className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <h3 className="text-base font-semibold text-slate-800">
-                                            Products
-                                        </h3>
+                        // dynamic schema with options
+                        inputData: {
+                            ...templateFields,
+                            footer: dynamicFooterArray,
+                        },
 
-                                        <SecondaryButton
-                                            {...{
-                                                text: "Add Product",
-                                                icon: <Plus size={16} />,
-                                                callBackFn: () => {
-                                                    resetProductForm();
-                                                    setShowProductModal(true);
-                                                },
-                                            }}
-                                        />
-                                    </div>
-
-                                    {errors?.openingStockBody && (
-                                        <p className="mb-2 text-sm text-red-500">
-                                            {errors.openingStockBody}
-                                        </p>
-                                    )}
-
-                                    {form.openingStockBody.length === 0 ? (
-                                        <div className="rounded-lg border border-slate-200 p-5 text-center text-sm text-slate-500">
-                                            No products added
-                                        </div>
-                                    ) : (
-                                        <div className="w-full overflow-auto">
-
-                                            <ColumnWiseTable
-                                                data={form.openingStockBody}
-                                                fields={productColumns}
-                                                showRecordNumber={true}
-                                                emptyMessage="No data"
-                                                onEdit={(row: any,) => handleEditProduct(row?.id)}
-                                                onDelete={(row: any,) => handleDeleteProduct(row?.id)}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-                                    <div className="grid grid-cols-1 gap-3 text-sm font-semibold text-slate-800 md:grid-cols-2">
-                                        <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                                            <span>Total Quantity</span>
-                                            <span>{footerTotals.totalQuantity}</span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                                            <span>Gross Amount</span>
-                                            <span>{money(footerTotals.totalGrossAmount)}</span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                                            <span>Tax Amount</span>
-                                            <span>{money(footerTotals.totalTaxAmount)}</span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                                            <span>Net Amount</span>
-                                            <span>{money(footerTotals.totalNetAmount)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ),
-                }}
-            />
-
-            {/* ADD PRODUCT MODAL */}
-            <Modal
-                {...{
-                    show: showProductModal,
-                    setShow: setShowProductModal,
-                    handleClose: resetProductForm,
-                    handleSubmit: handleAddProduct,
-                    loader: false,
-                    maxWidth: "lg",
-                    state: Boolean(editingProductId),
-                    gridCols: 1,
-                    title: editingProductId ? "Edit Product" : "Add Product",
-                    body: (
-                        <>
-                            <div>
-                                {productInputData.map((field: any, index: number) => (
-                                    <div
-                                        key={field.key || index}
-                                        className={`mb-3 grid gap-3 ${field?.grid === 2 ? "grid-cols-2" : "grid-cols-1"
-                                            }`}
-                                    >
-                                        {field?.child?.length
-                                            ? field.child.map((child: any) => renderProductField(child))
-                                            : renderProductField(field)}
-                                    </div>
-                                ))}
-
-                                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="mb-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-800">
-                                        <span>Gross Amount</span>
-                                        <span>{money(productCalc.grossAmount)}</span>
-                                    </div>
-
-                                    <div className="mb-2 grid grid-cols-2 gap-3 px-1 text-center text-sm font-semibold text-slate-800">
-                                        <span>Percentage</span>
-                                        <span>Amount</span>
-                                    </div>
-
-                                    {percentAmountRows.map((row) => (
-                                        <div key={row.label} className="mb-3 grid grid-cols-2 gap-3">
-                                            <TextInput
-                                                label={row.label}
-                                                value={productForm?.[row.percentKey] ?? ""}
-                                                placeholder={row.isAmountInput ? "Amount" : "0"}
-                                                type="number"
-                                                error={productErrors?.[row.percentKey]}
-                                                onChange={(e: any) =>
-                                                    handleProductChange(row.percentKey, e.target.value)
-                                                }
-                                            />
-
-                                            <div className="flex min-h-[42px] items-center justify-end rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800">
-                                                {money(row.amount)}
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {productErrors?.tax && (
-                                        <p className="mb-3 text-sm text-red-500">{productErrors.tax}</p>
-                                    )}
-
-                                    <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-base font-semibold text-slate-900">
-                                        <span>Net Total</span>
-                                        <span>{money(productCalc.netTotal)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ),
-                }}
-            />
-        </>
+                        bodyKey: "products",
+                        handleChange: handleMainChange,
+                    }}
+                />
+            )}
+        </div>
     );
 };
 
