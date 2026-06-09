@@ -202,9 +202,13 @@ export const loadFieldOptions = async (fields: any[]) => {
 
 const rejectedReasonOptions = [
     { label: "Damaged Product", value: "Damaged Product" },
-    { label: "Wrong Item", value: "Wrong Item" },
-    { label: "Quality Issue", value: "Quality Issue" },
-    { label: "Short Supply", value: "Short Supply" },
+    { label: "Wrong Item Received", value: "Wrong Item Received" },
+    { label: "Quality Mismatch", value: "Quality Mismatch" },
+    { label: "Poor Quality / Defective", value: "Poor Quality / Defective" },
+    { label: "Expired Product", value: "Expired Product" },
+    { label: "Packaging Damaged", value: "Packaging Damaged" },
+    { label: "Specification Mismatch", value: "Specification Mismatch" },
+    { label: "Duplicate Delivery", value: "Duplicate Delivery" },
     { label: "Other", value: "Other" },
 ];
 
@@ -219,7 +223,6 @@ const injectGrnBodyFields = (bodyFields: any[] = []) => {
         (field: any) => field.key === "acceptedQuantity"
     );
 
-    // remove quantity completely from UI
     const bodyWithoutQuantity = bodyFields.filter(
         (field: any) => field.key !== "quantity"
     );
@@ -264,25 +267,10 @@ const injectGrnBodyFields = (bodyFields: any[] = []) => {
 
     return updatedBody;
 };
+
 /* ===================================================
    LOAD OPTIONS FOR HEADER BODY FOOTER
 =================================================== */
-
-// const loadAllTemplateOptions = async (templateData: any) => {
-//     const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
-//         loadFieldOptions(templateData?.header || []),
-//         loadFieldOptions(templateData?.body || []),
-//         loadFieldOptions(templateData?.footer || []),
-//     ]);
-
-//     return {
-//         ...templateData,
-//         header: updatedHeader,
-//         body: updatedBody,
-//         footer: updatedFooter,
-//     };
-
-// };
 
 const loadAllTemplateOptions = async (templateData: any) => {
     const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
@@ -491,13 +479,21 @@ const Grn = () => {
        CALCULATIONS
     =================================================== */
 
+    const getFinalQuantity = (row: any) => {
+        const originalQuantity = num(row.quantity);
+        const acceptedQuantity = num(row.acceptedQuantity);
+        const rejectedQuantity = num(row.rejectedQuantity);
+
+        return originalQuantity > 0
+            ? originalQuantity
+            : acceptedQuantity + rejectedQuantity;
+    };
+
     const calculateRow = (row: any) => {
-        const quantity = num(row.quantity);
-
-
+        const finalQuantity = getFinalQuantity(row);
         const rate = num(row.rate);
 
-        const gross = quantity * rate;
+        const gross = finalQuantity * rate;
 
         const discountPercent = safePercent(
             row.discount !== undefined && row.discount !== null && row.discount !== ""
@@ -538,7 +534,7 @@ const Grn = () => {
         return {
             ...row,
 
-            quantity: row.quantity,
+            quantity: finalQuantity ? String(finalQuantity) : row.quantity,
             rate: row.rate,
 
             acceptedQuantity:
@@ -597,7 +593,7 @@ const Grn = () => {
     const calculateFooter = (products: any[]) => {
         return (products || []).reduce(
             (acc: any, item: any) => {
-                acc.totalQuantity += num(item.quantity);
+                acc.totalQuantity += getFinalQuantity(item);
 
                 acc.totalGrossAmount += num(item.grossAmount || item.gross);
                 acc.totalDiscountAmount += num(item.discountAmount);
@@ -817,6 +813,87 @@ const Grn = () => {
         setSelectedPurchaseOrder(purchaseOrder);
     };
 
+    const buildGrnProductRow = (item: any) => {
+        const unitCode = item?.unit || item?.uom || "";
+
+        return calculateRow(
+            normalizeRowKeys({
+                id: item?.id || Date.now() + Math.random(),
+
+                productCode: item?.productCode || "",
+                productName: item?.productName || "",
+                productId: item?.productId || "",
+
+                productDescription:
+                    item?.productDescription ||
+                    item?.description ||
+                    "",
+
+                description:
+                    item?.description ||
+                    item?.productDescription ||
+                    "",
+
+                productHSNCode: item?.productHSNCode || "",
+                remarks: item?.remarks || "",
+
+                quantity: item?.quantity || "",
+
+                acceptedQuantity:
+                    item?.acceptedQuantity !== undefined &&
+                        item?.acceptedQuantity !== null &&
+                        item?.acceptedQuantity !== ""
+                        ? item.acceptedQuantity
+                        : item?.quantity || "",
+
+                rejectedQuantity:
+                    item?.rejectedQuantity !== undefined &&
+                        item?.rejectedQuantity !== null &&
+                        item?.rejectedQuantity !== ""
+                        ? item.rejectedQuantity
+                        : "0",
+
+                rejectedReason: item?.rejectedReason || "",
+
+                unit: unitCode,
+                uom: unitCode,
+                unitName:
+                    item?.unitName ||
+                    getUnitLabelFromSchema(unitCode),
+
+                rate: item?.rate || "",
+
+                gross: item?.gross || item?.grossAmount || 0,
+                grossAmount: item?.grossAmount || item?.gross || 0,
+
+                discount: item?.discount || item?.discountPercentage || "",
+                discountPercentage:
+                    item?.discountPercentage || item?.discount || "",
+                discountAmount: item?.discountAmount || 0,
+
+                taxableAmount: item?.taxableAmount || 0,
+
+                cgst: item?.cgst || item?.cgstPercentage || "",
+                cgstPercentage: item?.cgstPercentage || item?.cgst || "",
+                cgstAmount: item?.cgstAmount || 0,
+
+                sgst: item?.sgst || item?.sgstPercentage || "",
+                sgstPercentage: item?.sgstPercentage || item?.sgst || "",
+                sgstAmount: item?.sgstAmount || 0,
+
+                igst: item?.igst || item?.igstPercentage || "",
+                igstPercentage: item?.igstPercentage || item?.igst || "",
+                igstAmount: item?.igstAmount || 0,
+
+                taxAmount: item?.taxAmount || 0,
+                otherAmount: item?.otherAmount || 0,
+
+                netAmount: item?.netAmount || item?.netTotal || 0,
+                netTotal: item?.netTotal || item?.netAmount || 0,
+            })
+        );
+    };
+
     const handlePurchaseOrderModalClose = () => {
         setShowPurchaseOrderModal(false);
         setSelectedPurchaseOrder(null);
@@ -838,76 +915,7 @@ const Grn = () => {
 
         const products =
             poBody.length > 0
-                ? poBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
-
-                    return calculateRow(
-                        normalizeRowKeys({
-                            id: Date.now() + Math.random(),
-
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
-
-                            productDescription: item?.productDescription || "",
-                            description: item?.description || "",
-
-                            productHSNCode: item?.productHSNCode || "",
-                            remarks: item?.remarks || "",
-
-                            quantity: item?.quantity || "",
-
-                            acceptedQuantity: item?.acceptedQuantity || item?.quantity || "",
-                            rejectedQuantity: item?.rejectedQuantity || "0",
-                            rejectedReason: item?.rejectedReason || "",
-
-                            unit: unitCode,
-                            uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
-
-                            rate: item?.rate || "",
-
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
-
-                            discount: item?.discount || "",
-                            discountPercentage:
-                                item?.discountPercentage || "",
-                            discountAmount: item?.discountAmount || 0,
-
-                            taxableAmount: item?.taxableAmount || 0,
-
-                            cgst: item?.cgst || "",
-                            cgstPercentage: item?.cgstPercentage || "",
-                            cgstAmount: item?.cgstAmount || 0,
-
-                            sgst: item?.sgst || "",
-                            sgstPercentage: item?.sgstPercentage || "",
-                            sgstAmount: item?.sgstAmount || 0,
-
-                            igst: item?.igst || "",
-                            igstPercentage: item?.igstPercentage || "",
-                            igstAmount: item?.igstAmount || 0,
-
-                            taxAmount: item?.taxAmount || 0,
-
-                            otherAmount: item?.otherAmount || 0,
-
-                            netAmount:
-                                item?.netAmount ||
-                                item?.netTotal ||
-                                0,
-
-                            netTotal:
-                                item?.netTotal ||
-                                item?.netAmount ||
-                                0,
-                        })
-                    );
-                })
+                ? poBody.map((item: any) => buildGrnProductRow(item))
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setForm({
@@ -932,124 +940,7 @@ const Grn = () => {
 
         const products =
             record?.grnBody?.length > 0
-                ? record.grnBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
-
-                    return calculateRow(
-                        normalizeRowKeys({
-                            id: item?.id || Date.now() + Math.random(),
-
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
-
-                            productDescription:
-                                item?.productDescription ||
-                                item?.description ||
-                                "",
-
-                            description:
-                                item?.description ||
-                                item?.productDescription ||
-                                "",
-
-                            productHSNCode: item?.productHSNCode || "",
-
-                            remarks: item?.remarks || "",
-
-                            quantity: item?.quantity || "",
-                            acceptedQuantity:
-                                item?.acceptedQuantity !== undefined &&
-                                    item?.acceptedQuantity !== null
-                                    ? item.acceptedQuantity
-                                    : item?.quantity || "",
-
-                            rejectedQuantity:
-                                item?.rejectedQuantity !== undefined &&
-                                    item?.rejectedQuantity !== null
-                                    ? item.rejectedQuantity
-                                    : "0",
-
-                            rejectedReason: item?.rejectedReason || "",
-
-                            unit: unitCode,
-                            uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
-
-                            rate: item?.rate || "",
-
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
-
-                            discount:
-                                item?.discount ||
-                                item?.discountPercentage ||
-                                "",
-
-                            discountPercentage:
-                                item?.discountPercentage ||
-                                item?.discount ||
-                                "",
-
-                            discountAmount: item?.discountAmount || 0,
-
-                            taxableAmount: item?.taxableAmount || 0,
-
-                            cgst:
-                                item?.cgst ||
-                                item?.cgstPercentage ||
-                                "",
-
-                            cgstPercentage:
-                                item?.cgstPercentage ||
-                                item?.cgst ||
-                                "",
-
-                            cgstAmount: item?.cgstAmount || 0,
-
-                            sgst:
-                                item?.sgst ||
-                                item?.sgstPercentage ||
-                                "",
-
-                            sgstPercentage:
-                                item?.sgstPercentage ||
-                                item?.sgst ||
-                                "",
-
-                            sgstAmount: item?.sgstAmount || 0,
-
-                            igst:
-                                item?.igst ||
-                                item?.igstPercentage ||
-                                "",
-
-                            igstPercentage:
-                                item?.igstPercentage ||
-                                item?.igst ||
-                                "",
-
-                            igstAmount: item?.igstAmount || 0,
-
-                            taxAmount: item?.taxAmount || 0,
-
-                            otherAmount: item?.otherAmount || 0,
-
-                            netAmount:
-                                item?.netAmount ||
-                                item?.netTotal ||
-                                0,
-
-                            netTotal:
-                                item?.netTotal ||
-                                item?.netAmount ||
-                                0,
-                        })
-                    );
-                })
+                ? record.grnBody.map((item: any) => buildGrnProductRow(item))
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setEditingRecord(true);
@@ -1168,36 +1059,44 @@ const Grn = () => {
 
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
-
-
             const updatedProducts = [...(prev.products || [])];
-
 
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
+
+            const isPurchaseOrderGrn = Boolean(prev?.pOrdVoucherNumber);
 
             let updatedRow = {
                 ...currentRow,
                 [key]: value,
             };
 
-            // hardcoded feilds
             updatedRow = normalizeRowKeys(updatedRow);
 
-
             if (key === "acceptedQuantity") {
-                const quantity = num(updatedRow.quantity);
+                const originalQuantity = num(updatedRow.quantity);
                 const acceptedQuantity = num(value);
+                const rejectedQuantity = num(updatedRow.rejectedQuantity);
 
-                if (acceptedQuantity > quantity) {
+                if (
+                    isPurchaseOrderGrn &&
+                    originalQuantity > 0 &&
+                    acceptedQuantity > originalQuantity
+                ) {
                     updatedRow.acceptedQuantity = updatedRow.quantity || "";
                     toast.error("Accepted quantity cannot be greater than quantity");
                 }
 
-                updatedRow.rejectedQuantity = Math.max(
-                    quantity - num(updatedRow.acceptedQuantity),
-                    0
-                ).toString();
+                if (isPurchaseOrderGrn && originalQuantity > 0) {
+                    updatedRow.rejectedQuantity = Math.max(
+                        originalQuantity - num(updatedRow.acceptedQuantity),
+                        0
+                    ).toString();
+                }
+
+                if (!isPurchaseOrderGrn) {
+                    updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
+                }
 
                 if (num(updatedRow.rejectedQuantity) === 0) {
                     updatedRow.rejectedReason = "";
@@ -1205,56 +1104,29 @@ const Grn = () => {
             }
 
             if (key === "rejectedQuantity") {
-                const quantity = num(updatedRow.quantity);
+                const originalQuantity = num(updatedRow.quantity);
                 const rejectedQuantity = num(value);
+                const acceptedQuantity = num(updatedRow.acceptedQuantity);
 
-                if (rejectedQuantity > quantity) {
+                if (
+                    isPurchaseOrderGrn &&
+                    originalQuantity > 0 &&
+                    rejectedQuantity > originalQuantity
+                ) {
                     updatedRow.rejectedQuantity = "0";
                     toast.error("Rejected quantity cannot be greater than quantity");
                 }
 
-                updatedRow.acceptedQuantity = Math.max(
-                    quantity - num(updatedRow.rejectedQuantity),
-                    0
-                ).toString();
-
-                if (num(updatedRow.rejectedQuantity) === 0) {
-                    updatedRow.rejectedReason = "";
-                }
-            } 
-
-            if (key === "acceptedQuantity") {
-                const quantity = num(updatedRow.quantity);
-                const acceptedQuantity = num(value);
-
-                if (acceptedQuantity > quantity) {
-                    updatedRow.acceptedQuantity = updatedRow.quantity || "";
-                    toast.error("Accepted quantity cannot be greater than quantity");
+                if (isPurchaseOrderGrn && originalQuantity > 0) {
+                    updatedRow.acceptedQuantity = Math.max(
+                        originalQuantity - num(updatedRow.rejectedQuantity),
+                        0
+                    ).toString();
                 }
 
-                updatedRow.rejectedQuantity = Math.max(
-                    quantity - num(updatedRow.acceptedQuantity),
-                    0
-                ).toString();
-
-                if (num(updatedRow.rejectedQuantity) === 0) {
-                    updatedRow.rejectedReason = "";
+                if (!isPurchaseOrderGrn) {
+                    updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
                 }
-            }
-
-            if (key === "rejectedQuantity") {
-                const quantity = num(updatedRow.quantity);
-                const rejectedQuantity = num(value);
-
-                if (rejectedQuantity > quantity) {
-                    updatedRow.rejectedQuantity = "0";
-                    toast.error("Rejected quantity cannot be greater than quantity");
-                }
-
-                updatedRow.acceptedQuantity = Math.max(
-                    quantity - num(updatedRow.rejectedQuantity),
-                    0
-                ).toString();
 
                 if (num(updatedRow.rejectedQuantity) === 0) {
                     updatedRow.rejectedReason = "";
@@ -1312,6 +1184,7 @@ const Grn = () => {
             ...prev,
             products: "",
             [`row_${index}_${key}`]: "",
+            [`row_${index}_rejectedReason`]: "",
             [`row_${index}_tax`]: "",
             [`row_${index}_igstPercentage`]: "",
             [`row_${index}_cgstPercentage`]: "",
@@ -1409,6 +1282,13 @@ const Grn = () => {
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
             }
+
+            const rejectedQuantity = num(row.rejectedQuantity);
+
+            if (rejectedQuantity > 0 && !row.rejectedReason) {
+                err[`row_${index}_rejectedReason`] =
+                    "Rejected reason is required";
+            }
         });
 
         setErrors(err);
@@ -1493,6 +1373,7 @@ const Grn = () => {
                     productHSNCode: item.productHSNCode,
 
                     remarks: item.remarks,
+
                     quantity: String(
                         num(item.acceptedQuantity) + num(item.rejectedQuantity)
                     ),
