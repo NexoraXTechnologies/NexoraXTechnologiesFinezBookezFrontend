@@ -9,6 +9,7 @@ import TransactionDashboard from "../components/TransactionDashboard";
 import SalesQuotations from "./salesQuations/SalesQuations";
 import SalesOrder from "./salesOrder/SalesOrder";
 import SalesInVoice from "./salesInvoice/SalesInvoice";
+import SalesReturn from "./salesReturn";
 
 const cards: any = [
   {
@@ -32,7 +33,7 @@ const cards: any = [
   {
     title: "Sales Return",
     description: "Manage sales return transactions.",
-    path: "/professional/transaction/sale-workflow/sales-return",
+    component: SalesReturn,
     icon: <RotateCcw size={22} />,
   },
 ];

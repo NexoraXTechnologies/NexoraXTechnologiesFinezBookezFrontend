@@ -25,27 +25,10 @@ import {
     todayYMD,
 } from "../../../../../utils/helperFunctions";
 
-import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
-
-import {
-    createSalesInvoice,
-    deleteSalesInvoice,
-    getAllSalesInvoice,
-    updateSalesInvoice,
-} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
-
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
-
-const defaultPagination = {
-    offset: 0,
-    limit: 10,
-    totalDocs: 0,
-    totalPages: 1,
-    currentPage: 1,
-    hasNextPage: false,
-    hasPrevPage: false,
-};
+import { loadFieldOptions } from "../salesQuations/SalesQuations";
+import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 
 const emptyProductRow = {
     id: Date.now(),
@@ -98,13 +81,13 @@ const emptyProductRow = {
 };
 
 const getDefaultForm = () => ({
-    sInvVoucherNumber: "AUTO",
-    sInvVoucherDate: todayYMD(),
+    sInvReturnVoucherNumber: "AUTO",
+    sInvReturnVoucherDate: todayYMD(),
     sInvCustomerCode: "",
-    sInvCustomerName: "",
+    sInvReturnCustomerName: "",
     sInvSalesAccount: "SA021",
     sInvStatus: "open",
-    sInvDocStatus: "open",
+    sInvReturnStatus: "open",
     sInvRemark: "",
     sInvRemarks: "",
     isAutoPost: false,
@@ -118,75 +101,6 @@ const getDefaultForm = () => ({
     otherAmount: "0.00",
     netAmount: "0.00",
 });
-
-/* ===================================================
-   COMMON RECORD EXTRACTOR
-=================================================== */
-
-const getRecords = (res: any) => {
-    return Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.records)
-            ? res.records
-            : Array.isArray(res?.docs)
-                ? res.docs
-                : Array.isArray(res?.data?.items)
-                    ? res.data.items
-                    : Array.isArray(res?.data?.records)
-                        ? res.data.records
-                        : Array.isArray(res?.data?.docs)
-                            ? res.data.docs
-                            : Array.isArray(res?.data)
-                                ? res.data
-                                : Array.isArray(res)
-                                    ? res
-                                    : [];
-};
-
-/* ===================================================
-   LOAD OPTIONS FOR FIELDS HAVING api KEY
-=================================================== */
-
-export const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all(
-        (fields || []).map(async (field) => {
-            if (!field?.api) return field;
-
-            try {
-                const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    {
-                        params: field.queryParams || {},
-                    }
-                );
-
-                const records = getRecords(res.data);
-
-                const options = Array.isArray(records)
-                    ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
-                        raw: item,
-                    }))
-                    : [];
-
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
-
-                return {
-                    ...field,
-                    options: [],
-                };
-            }
-        })
-    );
-
-    return updatedFields;
-};
 
 const loadAllTemplateOptions = async (templateData: any) => {
     const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
@@ -203,35 +117,18 @@ const loadAllTemplateOptions = async (templateData: any) => {
     };
 };
 
-const SalesInVoice = () => {
+const SalesReturn = () => {
     const dispatch = useDispatch<any>();
-
-    const salesInvoiceState = useSelector((state: any) => state.salesInvoice);
-
-    const { transactionsSchema } = useSelector(
-        (state: any) => state.getAllTransactionSchema
-    );
-
-    const {
-        salesInvoices = [],
-        pagination = defaultPagination,
-        loading = false,
-        createLoading = false,
-        updateLoading = false,
-        deleteLoading = false,
-    } = salesInvoiceState || {};
-
+    const { salesInvoiceReturns, pagination, loading, createLoading, updateLoading, deleteLoading } = useSelector((state: any) => state.salesInvoiceReturn);
+    const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<"open" | "close">("open");
-
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(false);
-
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
 
@@ -254,7 +151,7 @@ const SalesInVoice = () => {
     /* ===================================================
        FIELD HELPERS
     =================================================== */
-
+    console.log({ salesInvoiceReturns })
     const getHeaderFieldByKey = (key: string) => {
         return templateFields?.header?.find(
             (field: any) => field.key === key
@@ -454,7 +351,7 @@ const SalesInVoice = () => {
 
     const fetchSalesInvoices = async () => {
         await dispatch(
-            getAllSalesInvoice({
+            getAllSalesInvoiceReturn({
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
@@ -464,7 +361,7 @@ const SalesInVoice = () => {
     };
 
     useEffect(() => {
-        dispatch(getAllTransactionSchema("salesInvoice") as any);
+        dispatch(getAllTransactionSchema("salesReturn") as any);
     }, [dispatch]);
 
     useEffect(() => {
@@ -518,24 +415,24 @@ const SalesInVoice = () => {
 
     const columns = [
         {
-            key: "sInvVoucherNumber",
+            key: "sInvReturnVoucherNumber",
             title: "Voucher",
         },
         {
-            key: "sInvVoucherDate",
+            key: "sInvReturnVoucherDate",
             title: "Date",
             render: (row: any) =>
-                row?.sInvVoucherDate
-                    ? formatDateForList(row.sInvVoucherDate)
+                row?.sInvReturnVoucherDate
+                    ? formatDateForList(row.sInvReturnVoucherDate)
                     : "-",
         },
         {
-            key: "sInvCustomerName",
+            key: "sInvReturnCustomerName",
             title: "Customer",
             render: (row: any) => (
                 <div>
                     <div className="font-medium text-slate-800">
-                        {row?.sInvCustomerName || "-"}
+                        {row?.sInvReturnCustomerName || "-"}
                     </div>
                     <div className="text-xs text-slate-500">
                         {row?.sInvCustomerCode || "-"}
@@ -544,30 +441,30 @@ const SalesInVoice = () => {
             ),
         },
         {
-            key: "sInvBody",
+            key: "sInvReturnBody",
             title: "Items",
-            render: (row: any) => row?.sInvBody?.length || 0,
+            render: (row: any) => row?.sInvReturnBody?.length || 0,
         },
         {
-            key: "sInvFooter",
+            key: "sInvReturnFooter",
             title: "Net Amount",
             render: (row: any) => (
                 <span className="font-semibold text-indigo-700">
-                    {money(row?.sInvFooter?.netAmount || 0)}
+                    {money(row?.sInvReturnFooter?.netAmount || 0)}
                 </span>
             ),
         },
         {
-            key: "sInvDocStatus",
+            key: "sInvReturnStatus",
             title: "Doc Status",
             render: (row: any) => (
                 <span
-                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvDocStatus || row?.sInvStatus) === "open"
-                            ? "border-green-200 bg-green-50 text-green-700"
-                            : "border-red-200 bg-red-50 text-red-700"
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvReturnStatus || row?.sInvStatus) === "open"
+                        ? "border-green-200 bg-green-50 text-green-700"
+                        : "border-red-200 bg-red-50 text-red-700"
                         }`}
                 >
-                    {row?.sInvDocStatus || row?.sInvStatus || "-"}
+                    {row?.sInvReturnStatus || row?.sInvStatus || "-"}
                 </span>
             ),
         },
@@ -605,11 +502,11 @@ const SalesInVoice = () => {
     };
 
     const openEditModal = (record: any) => {
-        const footer = record?.sInvFooter || {};
+        const footer = record?.sInvReturnFooter || {};
 
         const products =
-            record?.sInvBody?.length > 0
-                ? record.sInvBody.map((item: any) => {
+            record?.sInvReturnBody?.length > 0
+                ? record.sInvReturnBody.map((item: any) => {
                     const unitCode = item?.unit || item?.uom || "";
 
                     return calculateRow(
@@ -689,18 +586,18 @@ const SalesInVoice = () => {
         setErrors({});
 
         setForm({
-            sInvVoucherNumber: record?.sInvVoucherNumber || "AUTO",
-            sInvVoucherDate: formatDateForInput(record?.sInvVoucherDate),
+            sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber || "AUTO",
+            sInvReturnVoucherDate: formatDateForInput(record?.sInvReturnVoucherDate),
 
             sInvCustomerCode: record?.sInvCustomerCode || "",
-            sInvCustomerName: record?.sInvCustomerName || "",
+            sInvReturnCustomerName: record?.sInvReturnCustomerName || "",
 
             sInvSalesAccount: record?.sInvSalesAccount || "SA021",
 
-            sInvDocStatus:
-                record?.sInvDocStatus || record?.sInvStatus || "open",
+            sInvReturnStatus:
+                record?.sInvReturnStatus || record?.sInvStatus || "open",
             sInvStatus:
-                record?.sInvStatus || record?.sInvDocStatus || "open",
+                record?.sInvStatus || record?.sInvReturnStatus || "open",
 
             sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
             sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
@@ -974,13 +871,13 @@ const SalesInVoice = () => {
         const footer = calculateFooter(products);
         const payload: any = {
             sInvCustomerCode: form.sInvCustomerCode,
-            sInvCustomerName: form.sInvCustomerName,
-            sInvVoucherDate: form.sInvVoucherDate,
-            sInvStatus: form.sInvStatus || form.sInvDocStatus || "open",
+            sInvReturnCustomerName: form.sInvReturnCustomerName,
+            sInvReturnVoucherDate: form.sInvReturnVoucherDate,
+            sInvStatus: form.sInvStatus || form.sInvReturnStatus || "open",
             sInvRemarks: form.sInvRemarks || form.sInvRemark || "",
             sInvSalesAccount: form.sInvSalesAccount || "SA021",
-            sInvDocStatus: form.sInvDocStatus || form.sInvStatus || "open",
-            sInvBody: products.map((item: any) => ({
+            sInvReturnStatus: form.sInvReturnStatus || form.sInvStatus || "open",
+            sInvReturnBody: products.map((item: any) => ({
                 productCode: item.productCode,
                 productName: item.productName,
                 productId: item.productId,
@@ -1014,7 +911,7 @@ const SalesInVoice = () => {
                 netTotal: fmtMoney(item.netTotal || item.netAmount),
             })),
 
-            sInvFooter: {
+            sInvReturnFooter: {
                 grossAmount: fmtMoney(footer.totalGrossAmount),
                 discountAmount: fmtMoney(footer.totalDiscountAmount),
                 cgstAmount: fmtMoney(footer.totalCgstAmount),
@@ -1041,15 +938,15 @@ const SalesInVoice = () => {
             if (editingRecord) {
                 console.log({ form })
                 await dispatch(
-                    updateSalesInvoice({
-                        sInvVoucherNumber: form?.sInvVoucherNumber,
+                    updateSalesInvoiceReturn({
+                        sInvReturnVoucherNumber: form?.sInvReturnVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
 
                 toast.success("Sales invoice updated successfully");
             } else {
-                await dispatch(createSalesInvoice({ payload }) as any).unwrap();
+                await dispatch(createSalesInvoiceReturn({ payload }) as any).unwrap();
 
                 toast.success("Sales invoice created successfully");
             }
@@ -1066,11 +963,7 @@ const SalesInVoice = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-
-            await dispatch(
-                deleteSalesInvoice(confirmTooltip.voucherNumber) as any
-            ).unwrap();
-
+            await dispatch(deleteSalesInvoiceReturn(confirmTooltip.voucherNumber) as any).unwrap();
             toast.success("Sales invoice deleted successfully");
             fetchSalesInvoices();
         } catch (err: any) {
@@ -1130,7 +1023,7 @@ const SalesInVoice = () => {
                 <div id="sales-invoice-summary" className="flex items-start gap-3">
                     <Badge
                         {...{
-                            count: pagination?.totalDocs ?? salesInvoices?.length ?? 0,
+                            count: pagination?.totalDocs ?? salesInvoiceReturns?.length ?? 0,
                             text: "Total Sales Invoices:",
                             varient: "primary",
                         }}
@@ -1167,7 +1060,7 @@ const SalesInVoice = () => {
 
             <DataTable
                 columns={columns}
-                data={salesInvoices}
+                data={salesInvoiceReturns}
                 loading={loading}
                 emptyMessage={`No ${status} sales invoice found`}
                 actions={(record: any) => (
@@ -1196,7 +1089,7 @@ const SalesInVoice = () => {
                                     show: true,
                                     x,
                                     y,
-                                    voucherNumber: record?.sInvVoucherNumber,
+                                    voucherNumber: record?.sInvReturnVoucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
@@ -1275,4 +1168,4 @@ const SalesInVoice = () => {
     );
 };
 
-export default SalesInVoice;
+export default SalesReturn;
