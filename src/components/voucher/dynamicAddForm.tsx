@@ -3,6 +3,7 @@ import EditableLineTable from "./EditableLineTable";
 import SummaryCards from "./SummaryCards";
 import VoucherFormModal from "./VoucherFormModal";
 import { DynamicFormContentSkeleton } from "../skeleton/SkeletonLoader";
+import { useState } from "react";
 
 const DynamicAddForm = ({
     show,
@@ -23,11 +24,13 @@ const DynamicAddForm = ({
     handleChange,
     footerTotals,
     headerChildTitle,
+    isAddButton=true,
 
     // ✅ New props for skeleton
     contentLoading = false,
     contentSkeleton,
 }: any) => {
+
     const renderInput = (e: any) => {
         if (e?.type === "date") {
             return (
@@ -177,6 +180,7 @@ const DynamicAddForm = ({
                                 onDeleteRow={handleDeleteRow}
                                 onChange={handleRowChange}
                                 emptyText="No products added"
+                                isAddButton={isAddButton}
                             />
                         </div>
 

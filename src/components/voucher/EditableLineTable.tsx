@@ -18,6 +18,7 @@ export type EditableColumn = {
 
 type EditableLineTableProps = {
     title: string;
+    isAddButton: boolean;
     addButtonText?: string;
     rows: any[];
     columns: EditableColumn[];
@@ -37,8 +38,13 @@ const EditableLineTable = ({
     onAddRow,
     onDeleteRow,
     onChange,
+    isAddButton,
     emptyText = "No data found",
 }: EditableLineTableProps) => {
+
+
+
+
 
     return (
         <div className="w-full max-w-full">
@@ -47,14 +53,18 @@ const EditableLineTable = ({
                     {title}
                 </h3>
 
-                <button
-                    type="button"
-                    onClick={onAddRow}
-                    className="flex items-center gap-2 rounded border border-sky-600 px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50"
-                >
-                    <Plus size={16} />
-                    {addButtonText}
-                </button>
+
+                {isAddButton && (
+
+                    <button
+                        type="button"
+                        onClick={onAddRow}
+                        className="flex items-center gap-2 rounded border border-sky-600 px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50"
+                    >
+                        <Plus size={16} />
+                        {addButtonText}
+                    </button>
+                )}
             </div>
 
             {/* ✅ Only this section will scroll horizontally */}
@@ -200,7 +210,7 @@ const EditableLineTable = ({
                     </table>
                 </div>
             </div>
-            </div>
-            );
+        </div>
+    );
 };
 export default EditableLineTable;
