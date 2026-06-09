@@ -38,6 +38,9 @@ import {
 } from "../../../../components/buttons";
 
 import { getPurchaseOrderList } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
+import ModulePageSkeleton, {
+    ModalListSkeleton,
+} from "../../../../components/skeleton/SkeletonLoader";
 
 const defaultPagination = {
     offset: 0,
@@ -358,6 +361,11 @@ const Grn = () => {
     const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
     const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
 
+    // ✅ Local modal loading states to stop blinking
+    const [purchaseOrderModalLoading, setPurchaseOrderModalLoading] =
+        useState(false);
+    const [purchaseOrderLoaded, setPurchaseOrderLoaded] = useState(false);
+
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
         body: [],
@@ -650,14 +658,25 @@ const Grn = () => {
     };
 
     const fetchPurchaseOrders = async (searchText = "") => {
-        await dispatch(
-            getPurchaseOrderList({
-                offset: 0,
-                limit: 20,
-                search: searchText,
-                status: "open",
-            }) as any
-        );
+        setPurchaseOrderModalLoading(true);
+
+        try {
+            await dispatch(
+                getPurchaseOrderList({
+                    offset: 0,
+                    limit: 20,
+                    search: searchText,
+                    status: "open",
+                }) as any
+            ).unwrap();
+
+            setPurchaseOrderLoaded(true);
+        } catch (error) {
+            setPurchaseOrderLoaded(true);
+            toast.error("Failed to load purchase orders");
+        } finally {
+            setPurchaseOrderModalLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -679,13 +698,14 @@ const Grn = () => {
 
     useEffect(() => {
         if (!showPurchaseOrderModal) return;
+        if (!purchaseOrderLoaded) return;
 
         const timer = setTimeout(() => {
             fetchPurchaseOrders(purchaseOrderSearch.trim());
         }, 400);
 
         return () => clearTimeout(timer);
-    }, [purchaseOrderSearch, showPurchaseOrderModal]);
+    }, [purchaseOrderSearch]);
 
     /* ===================================================
        LOAD TRANSACTION SCHEMA WITH API OPTIONS
@@ -801,12 +821,15 @@ const Grn = () => {
         setForm(getDefaultForm());
     };
 
-    const openAddModal = () => {
+    const openAddModal = async () => {
         resetMainForm();
         setSelectedPurchaseOrder(null);
         setPurchaseOrderSearch("");
+        setPurchaseOrderLoaded(false);
+
         setShowPurchaseOrderModal(true);
-        fetchPurchaseOrders("");
+
+        await fetchPurchaseOrders("");
     };
 
     const handlePurchaseOrderSelect = (purchaseOrder: any) => {
@@ -898,6 +921,8 @@ const Grn = () => {
         setShowPurchaseOrderModal(false);
         setSelectedPurchaseOrder(null);
         setPurchaseOrderSearch("");
+        setPurchaseOrderLoaded(false);
+        setPurchaseOrderModalLoading(false);
 
         setEditingRecord(null);
         setErrors({});
@@ -932,6 +957,8 @@ const Grn = () => {
         setErrors({});
         setEditingRecord(null);
         setShowPurchaseOrderModal(false);
+        setPurchaseOrderLoaded(false);
+        setPurchaseOrderModalLoading(false);
         setShowModal(true);
     };
 
@@ -1565,6 +1592,20 @@ const Grn = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+    const showInitialSkeleton =
+        !refreshing &&
+        grns.length === 0 &&
+        (loading || fieldsLoading);
+
+    if (showInitialSkeleton) {
+        return <ModulePageSkeleton rows={8} columns={6} />;
+    }
+
+    const showPurchaseOrderSkeleton =
+        purchaseOrderModalLoading ||
+        purchaseOrderLoading ||
+        !purchaseOrderLoaded;
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div
@@ -1696,7 +1737,7 @@ const Grn = () => {
                 state={false}
                 handleSubmit={handlePurchaseOrderConfirm}
                 handleClose={handlePurchaseOrderModalClose}
-                loader={purchaseOrderLoading}
+                loader={purchaseOrderModalLoading || purchaseOrderLoading}
                 gridCols={1}
                 maxWidth="2xl"
                 modalClassName="rounded-xl"
@@ -1723,10 +1764,8 @@ const Grn = () => {
                         </div>
 
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                            {purchaseOrderLoading ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
-                                    Loading purchase orders...
-                                </div>
+                            {showPurchaseOrderSkeleton ? (
+                                <ModalListSkeleton rows={3} />
                             ) : purchaseOrders.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
                                     No purchase order found
@@ -1751,7 +1790,7 @@ const Grn = () => {
 
                                         return (
                                             <button
-                                                key={poNumber || index}
+                                                key={`${poNumber}-${index}`}
                                                 type="button"
                                                 onClick={() =>
                                                     handlePurchaseOrderSelect(po)
@@ -1815,7 +1854,6 @@ const Grn = () => {
                             ...templateFields,
                             footer: dynamicFooterArray,
                         },
-
                         bodyKey: "products",
                         handleChange: handleMainChange,
                     }}

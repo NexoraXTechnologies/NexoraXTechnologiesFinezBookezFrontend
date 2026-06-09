@@ -2,6 +2,7 @@ import { SelectInput, TextArea, TextInput } from "../inputs";
 import EditableLineTable from "./EditableLineTable";
 import SummaryCards from "./SummaryCards";
 import VoucherFormModal from "./VoucherFormModal";
+import { DynamicFormContentSkeleton } from "../skeleton/SkeletonLoader";
 
 const DynamicAddForm = ({
     show,
@@ -22,6 +23,10 @@ const DynamicAddForm = ({
     handleChange,
     footerTotals,
     headerChildTitle,
+
+    // ✅ New props for skeleton
+    contentLoading = false,
+    contentSkeleton,
 }: any) => {
     const renderInput = (e: any) => {
         if (e?.type === "date") {
@@ -59,16 +64,25 @@ const DynamicAddForm = ({
             );
         }
 
-        if (e?.type == "select") return <SelectInput
-            label={e?.label}
-            value={form?.[e?.key] || ""}
-            mandatory={e?.isRequired}
-            placeholder={e?.placeholder}
-            disabled={e?.disabled || e?.isReadonly}
-            error={errors?.[e?.key]}
-            onChange={(event: any) => handleChange(e?.key, event.target.value)}
-            options={[{label:`Select ${e?.label}`},...e?.options]}
-        />
+        if (e?.type === "select") {
+            return (
+                <SelectInput
+                    label={e?.label}
+                    value={form?.[e?.key] || ""}
+                    mandatory={e?.isRequired}
+                    placeholder={e?.placeholder}
+                    disabled={e?.disabled || e?.isReadonly}
+                    error={errors?.[e?.key]}
+                    onChange={(event: any) =>
+                        handleChange(e?.key, event.target.value)
+                    }
+                    options={[
+                        { label: `Select ${e?.label}`, value: "" },
+                        ...(e?.options || []),
+                    ]}
+                />
+            );
+        }
 
         return (
             <TextInput
@@ -97,65 +111,93 @@ const DynamicAddForm = ({
             onSubmit={onSubmit}
         >
             <div className="w-full max-w-full">
-                <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
-                    {inputData?.header?.map((e: any, index: number) => {
-                        if (e?.isHidden) return
-                      return (
-                        <div key={e?.key || index}>
-                            {renderInput(e)}
-                        </div>
-                        )
-                    })}
-                </div>
+                {contentLoading ? (
+                    contentSkeleton || (
+                        <DynamicFormContentSkeleton
+                            headerFields={5}
+                            bodyRows={2}
+                            bodyColumns={7}
+                            footerFields={6}
+                        />
+                    )
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
+                            {inputData?.header?.map((e: any, index: number) => {
+                                if (e?.isHidden) return null;
 
-                {inputData?.headerChild && inputData.headerChild.length > 0 && (
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="mb-4 border-b border-slate-200 pb-3">
-                            <h1 className="text-lg font-bold text-slate-900">
-                                {headerChildTitle}
-                            </h1>
+                                return (
+                                    <div key={e?.key || index}>
+                                        {renderInput(e)}
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-3">
-                            {inputData.headerChild.map((e: any, index: number) => (
-                                <div key={e?.key || index}>
-                                    {renderInput(e)}
+                        {inputData?.headerChild &&
+                            inputData.headerChild.length > 0 && (
+                                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                                    <div className="mb-4 border-b border-slate-200 pb-3">
+                                        <h1 className="text-lg font-bold text-slate-900">
+                                            {headerChildTitle}
+                                        </h1>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-3">
+                                        {inputData.headerChild.map(
+                                            (e: any, index: number) => {
+                                                if (e?.isHidden) return null;
+
+                                                return (
+                                                    <div key={e?.key || index}>
+                                                        {renderInput(e)}
+                                                    </div>
+                                                );
+                                            }
+                                        )}
+                                    </div>
                                 </div>
-                            ))}
+                            )}
+
+                        {errors?.[bodyKey] && (
+                            <p className="mt-4 text-sm text-red-500">
+                                {errors?.[bodyKey]}
+                            </p>
+                        )}
+
+                        {/* ✅ Only EditableLineTable has horizontal scroll inside itself */}
+                        <div className="mt-3 w-full max-w-full">
+                            <EditableLineTable
+                                title="Products"
+                                addButtonText="Add Product"
+                                rows={form?.[bodyKey] || []}
+                                columns={inputData?.body || []}
+                                errors={errors}
+                                onAddRow={handleAddRow}
+                                onDeleteRow={handleDeleteRow}
+                                onChange={handleRowChange}
+                                emptyText="No products added"
+                            />
                         </div>
-                    </div>
+
+                        {Object.keys(errors || {})
+                            .filter((key) => key.includes("_tax"))
+                            .map((key) => (
+                                <p
+                                    key={key}
+                                    className="mt-2 text-sm text-red-500"
+                                >
+                                    {errors[key]}
+                                </p>
+                            ))}
+
+                        {/* ✅ Summary stays outside table scroll */}
+                        <SummaryCards
+                            footerTotals={footerTotals}
+                            items={inputData?.footer || []}
+                        />
+                    </>
                 )}
-                {errors?.[bodyKey] && (
-                    <p className="mt-4 text-sm text-red-500">
-                        {errors?.[bodyKey]}
-                    </p>
-                )}
-
-                {/* ✅ Only EditableLineTable has horizontal scroll inside itself */}
-                <div className="mt-3 w-full max-w-full">
-                    <EditableLineTable
-                        title="Products"
-                        addButtonText="Add Product"
-                        rows={form?.[bodyKey] || []}
-                        columns={inputData?.body || []}
-                        errors={errors}
-                        onAddRow={handleAddRow}
-                        onDeleteRow={handleDeleteRow}
-                        onChange={handleRowChange}
-                        emptyText="No products added"
-                    />
-                </div>
-
-                {Object.keys(errors || {})
-                    .filter((key) => key.includes("_tax"))
-                    .map((key) => (
-                        <p key={key} className="mt-2 text-sm text-red-500">
-                            {errors[key]}
-                        </p>
-                    ))}
-
-                {/* ✅ Summary stays outside table scroll */}
-                <SummaryCards footerTotals={footerTotals} items={inputData?.footer || []} />
             </div>
         </VoucherFormModal>
     );
