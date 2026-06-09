@@ -29,6 +29,8 @@ import { getAllTransactionSchema } from "../../../../../redux/slices/professiona
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { loadFieldOptions } from "../salesQuations/SalesQuations";
 import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
+import Modal from "../../../../../components/modal";
+import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 
 const emptyProductRow = {
     id: Date.now(),
@@ -131,7 +133,10 @@ const SalesReturn = () => {
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
+    const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
+    const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
+    const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
+    const { salesInvoices, loading: invoiceLoader } = useSelector((state: any) => state.salesInvoice);
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
         body: [],
@@ -365,8 +370,18 @@ const SalesReturn = () => {
     }, [dispatch]);
 
     useEffect(() => {
-        fetchSalesInvoices();
-    }, [localOffset, localLimit, debouncedSearch, status]);
+        (async () => {
+            console.log("calll")
+            await dispatch(getAllSalesInvoice({
+                offset: localOffset,
+                limit: localLimit,
+                search: debouncedSearch,
+                status,
+            }) as any
+            );
+        })()
+
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -498,12 +513,12 @@ const SalesReturn = () => {
 
     const openAddModal = () => {
         resetMainForm();
-        setShowModal(true);
+        // setShowModal(true);
+        setShowPurchaseOrderModal(true);
     };
 
     const openEditModal = (record: any) => {
         const footer = record?.sInvReturnFooter || {};
-
         const products =
             record?.sInvReturnBody?.length > 0
                 ? record.sInvReturnBody.map((item: any) => {
@@ -512,69 +527,35 @@ const SalesReturn = () => {
                     return calculateRow(
                         normalizeRowKeys({
                             id: item?.id || Date.now() + Math.random(),
-
                             productCode: item?.productCode || "",
                             productName: item?.productName || "",
                             productId: item?.productId || "",
-
-                            productDescription:
-                                item?.productDescription ||
-                                item?.description ||
-                                "",
-                            description:
-                                item?.description ||
-                                item?.productDescription ||
-                                "",
-
+                            productDescription: item?.productDescription || item?.description || "",
+                            description: item?.description || item?.productDescription || "",
                             productHSNCode: item?.productHSNCode || "",
-
                             remarks: item?.remarks || "",
-
                             quantity: item?.quantity || "",
-
                             unit: unitCode,
                             uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
-
+                            unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
                             rate: item?.rate || "",
-
                             gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
-
-                            discount:
-                                item?.discount ||
-                                item?.discountPercentage ||
-                                "",
-                            discountPercentage:
-                                item?.discountPercentage ||
-                                item?.discount ||
-                                "",
+                            grossAmount: item?.grossAmount || item?.gross || 0,
+                            discount: item?.discount || item?.discountPercentage || "",
+                            discountPercentage: item?.discountPercentage || item?.discount || "",
                             discountAmount: item?.discountAmount || 0,
-
                             taxableAmount: item?.taxableAmount || 0,
-
                             cgst: item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage:
-                                item?.cgstPercentage || item?.cgst || "",
+                            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
                             cgstAmount: item?.cgstAmount || 0,
-
                             sgst: item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage:
-                                item?.sgstPercentage || item?.sgst || "",
+                            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
                             sgstAmount: item?.sgstAmount || 0,
-
                             igst: item?.igst || item?.igstPercentage || "",
-                            igstPercentage:
-                                item?.igstPercentage || item?.igst || "",
+                            igstPercentage: item?.igstPercentage || item?.igst || "",
                             igstAmount: item?.igstAmount || 0,
-
                             taxAmount: item?.taxAmount || 0,
-
                             otherAmount: item?.otherAmount || 0,
-
                             netAmount: item?.netAmount || item?.netTotal || 0,
                             netTotal: item?.netTotal || item?.netAmount || 0,
                         })
@@ -588,40 +569,23 @@ const SalesReturn = () => {
         setForm({
             sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber || "AUTO",
             sInvReturnVoucherDate: formatDateForInput(record?.sInvReturnVoucherDate),
-
             sInvCustomerCode: record?.sInvCustomerCode || "",
             sInvReturnCustomerName: record?.sInvReturnCustomerName || "",
-
             sInvSalesAccount: record?.sInvSalesAccount || "SA021",
-
-            sInvReturnStatus:
-                record?.sInvReturnStatus || record?.sInvStatus || "open",
-            sInvStatus:
-                record?.sInvStatus || record?.sInvReturnStatus || "open",
-
+            sInvReturnStatus: record?.sInvReturnStatus || record?.sInvStatus || "open",
+            sInvStatus: record?.sInvStatus || record?.sInvReturnStatus || "open",
             sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
             sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
-
             isAutoPost: record?.isAutoPost || false,
-
             products,
-
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-            discountAmount:
-                footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-            otherAmount:
-                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
         });
 
         setShowModal(true);
@@ -634,16 +598,10 @@ const SalesReturn = () => {
     const handleMainChange = (key: string, value: any) => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
-
-            let updated = {
-                ...prev,
-                [key]: value,
-            };
-
+            let updated = { ...prev, [key]: value, };
             if (currentField?.mapFields) {
                 updated = applyMappedFields(currentField, value, updated);
             }
-
             return updated;
         });
 
@@ -672,16 +630,9 @@ const SalesReturn = () => {
 
     const handleDeleteRow = (index: number) => {
         setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter(
-                (_: any, i: number) => i !== index
-            );
-
+            const updatedProducts = (prev.products || []).filter((_: any, i: number) => i !== index);
             return {
-                ...prev,
-                products:
-                    updatedProducts.length > 0
-                        ? updatedProducts
-                        : [{ ...emptyProductRow, id: Date.now() }],
+                ...prev, products: updatedProducts.length > 0 ? updatedProducts : [{ ...emptyProductRow, id: Date.now() }],
             };
         });
     };
@@ -744,15 +695,9 @@ const SalesReturn = () => {
         }));
     };
 
-    /* ===================================================
-       VALIDATION
-    =================================================== */
-
+    //    VALIDATION
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
-
+        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
         return (form.products || []).filter((row: any) => {
             return bodyKeys.some((key: string) => {
                 const value = row?.[key];
@@ -860,10 +805,7 @@ const SalesReturn = () => {
             .map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
-    /* ===================================================
-       SUBMIT
-    =================================================== */
-
+    //    SUBMIT 
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
@@ -936,7 +878,6 @@ const SalesReturn = () => {
 
         try {
             if (editingRecord) {
-                console.log({ form })
                 await dispatch(
                     updateSalesInvoiceReturn({
                         sInvReturnVoucherNumber: form?.sInvReturnVoucherNumber,
@@ -978,6 +919,107 @@ const SalesReturn = () => {
         }
     };
 
+    const handlePurchaseOrderSelect = (purchaseOrder: any) => {
+        setSelectedPurchaseOrder(purchaseOrder);
+    };
+
+    const handlePurchaseOrderConfirm = () => {
+        if (!selectedPurchaseOrder) {
+            toast.error("Please select purchase order");
+            return;
+        }
+
+        const poBody = selectedPurchaseOrder?.pOrdBody || [];
+
+        const products = poBody.length > 0 ? poBody.map((item: any) => {
+            const unitCode = item?.unit || item?.uom || "";
+
+            return calculateRow(
+                normalizeRowKeys({
+                    id: Date.now() + Math.random(),
+
+                    productCode: item?.productCode || "",
+                    productName: item?.productName || "",
+                    productId: item?.productId || "",
+
+                    productDescription: item?.productDescription || "",
+                    description: item?.description || "",
+
+                    productHSNCode: item?.productHSNCode || "",
+                    remarks: item?.remarks || "",
+
+                    quantity: item?.quantity || "",
+
+                    acceptedQuantity: item?.acceptedQuantity || item?.quantity || "",
+                    rejectedQuantity: item?.rejectedQuantity || "0",
+                    rejectedReason: item?.rejectedReason || "",
+
+                    unit: unitCode,
+                    uom: unitCode,
+                    unitName:
+                        item?.unitName ||
+                        getUnitLabelFromSchema(unitCode),
+
+                    rate: item?.rate || "",
+
+                    gross: item?.gross || item?.grossAmount || 0,
+                    grossAmount:
+                        item?.grossAmount || item?.gross || 0,
+
+                    discount: item?.discount || "",
+                    discountPercentage:
+                        item?.discountPercentage || "",
+                    discountAmount: item?.discountAmount || 0,
+
+                    taxableAmount: item?.taxableAmount || 0,
+
+                    cgst: item?.cgst || "",
+                    cgstPercentage: item?.cgstPercentage || "",
+                    cgstAmount: item?.cgstAmount || 0,
+
+                    sgst: item?.sgst || "",
+                    sgstPercentage: item?.sgstPercentage || "",
+                    sgstAmount: item?.sgstAmount || 0,
+
+                    igst: item?.igst || "",
+                    igstPercentage: item?.igstPercentage || "",
+                    igstAmount: item?.igstAmount || 0,
+
+                    taxAmount: item?.taxAmount || 0,
+
+                    otherAmount: item?.otherAmount || 0,
+
+                    netAmount:
+                        item?.netAmount ||
+                        item?.netTotal ||
+                        0,
+
+                    netTotal:
+                        item?.netTotal ||
+                        item?.netAmount ||
+                        0,
+                })
+            );
+        })
+            : [{ ...emptyProductRow, id: Date.now() }];
+
+        setForm({
+            ...getDefaultForm(),
+
+            pOrdVoucherNumber: selectedPurchaseOrder?.pOrdVoucherNumber || "",
+
+            grnVendorCode: selectedPurchaseOrder?.pOrdVendorCode || "",
+            grnVendorName: selectedPurchaseOrder?.pOrdVendorName || "",
+
+            products,
+        });
+
+        setErrors({});
+        setEditingRecord(null);
+        setShowPurchaseOrderModal(false);
+        setShowModal(true);
+    };
+
     /* ===================================================
        DYNAMIC FOOTER
     =================================================== */
@@ -1017,30 +1059,22 @@ const SalesReturn = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+    useEffect(() => {
+        fetchSalesInvoices();
+    }, []);
+
+    console.log({ salesInvoices })
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
                 <div id="sales-invoice-summary" className="flex items-start gap-3">
-                    <Badge
-                        {...{
-                            count: pagination?.totalDocs ?? salesInvoiceReturns?.length ?? 0,
-                            text: "Total Sales Invoices:",
-                            varient: "primary",
-                        }}
-                    />
+                    <Badge {...{ count: pagination?.totalDocs ?? salesInvoiceReturns?.length ?? 0, text: "Total Sales Invoices:", varient: "primary", }} />
                 </div>
 
                 <div className="ml-auto flex items-center gap-2">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: handleStatusChange,
-                        }}
-                    />
-
+                    <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange, }} />
                     <SearchInput {...{ search, setSearch }} />
-
                     <DataREfreshButton
                         {...{
                             callBackFn: handleRefresh,
@@ -1077,20 +1111,11 @@ const SalesReturn = () => {
                             id="sales-invoice-delete-button"
                             disabled={deleteLoading}
                             onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
+                                const rect = e.currentTarget.getBoundingClientRect();
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
-
                                 const y = rect.top + window.scrollY - 5;
-
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber: record?.sInvReturnVoucherNumber,
-                                });
+                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber, });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
@@ -1164,6 +1189,93 @@ const SalesReturn = () => {
                     }}
                 />
             )}
+
+            <Modal
+                show={showPurchaseOrderModal}
+                setShow={setShowPurchaseOrderModal}
+                title="Select Purchase Order"
+                state={false}
+                // handleSubmit={handlePurchaseOrderConfirm}
+                // handleClose={handlePurchaseOrderModalClose}
+                // loader={purchaseOrderLoading}
+                gridCols={1}
+                maxWidth="2xl"
+                modalClassName="rounded-xl"
+                headerClassName="bg-white"
+                footerClassName="bg-white"
+                bodyClassName="!block !p-0"
+                body={
+                    <div className="flex h-[520px] flex-col">
+                        <div className="border-b border-gray-200 p-5">
+                            <input
+                                value={purchaseOrderSearch}
+                                onChange={(e) =>
+                                    setPurchaseOrderSearch(e.target.value)
+                                }
+                                placeholder="Search Purchase Order code..."
+                                className="
+                                    w-full rounded-xl border border-gray-200 bg-gray-50
+                                    px-4 py-3 text-sm font-medium text-gray-700
+                                    outline-none transition
+                                    placeholder:text-gray-400
+                                    focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
+                                "
+                            />
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                            {invoiceLoader ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    Loading purchase orders...
+                                </div>
+                            ) : salesInvoices.length === 0 ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    No purchase order found
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {salesInvoices.map((e: any, index: number) => {
+                                        const poNumber = e?.pOrdVoucherNumber || "-";
+                                        const isSelected = (selectedPurchaseOrder?.sInvVoucherNumber == e?.sInvVoucherNumber);
+                                        return (
+                                            <button
+                                                key={poNumber || index}
+                                                type="button"
+                                                onClick={() => handlePurchaseOrderSelect(e)}
+                                                className={`
+                                                    w-full rounded-xl border px-4 py-4 text-left transition
+                                                    ${isSelected
+                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                    }
+                                                `}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-base font-bold text-gray-900">
+                                                            {e?.sInvVoucherNumber || "NA"} - {e?.sInvCustomerName || "NA"}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                            Items: {e?.sInvBody?.length || 0}
+                                                        </p>
+                                                    </div>
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                            Selected
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                }
+            />
         </div>
     );
 };
