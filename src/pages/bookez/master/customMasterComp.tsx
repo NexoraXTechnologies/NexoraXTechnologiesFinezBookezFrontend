@@ -325,7 +325,7 @@ const CustomMasterComp = ({
 					handleSubmit,
 					loader: submitLoader,
 					state: edit,
-					title: "Account",
+					title: "Add New Account",
 					body: (
 						<>
 							{schemaLoading ? (

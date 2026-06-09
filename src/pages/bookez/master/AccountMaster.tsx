@@ -786,7 +786,7 @@ const AccountMaster = () => {
 					setShow: setShowModal,
 					handleSubmit,
 					state: editingAccount,
-					title: "Account",
+					title: "Add New Account",
 					body: (
 						<>
 							{schemaLoading ? (

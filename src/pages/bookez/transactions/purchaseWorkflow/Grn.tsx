@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+
 import {
     fmtMoney,
     formatDateForInput,
@@ -11,8 +12,10 @@ import {
     safePercent,
     todayYMD,
 } from "../../../../utils/helperFunctions";
+
 import professionalAxios from "../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
+
 import Badge from "../../../../components/badge";
 import Toggle from "../../../../components/toggle";
 import SearchInput from "../../../../components/searchInput";
@@ -20,16 +23,21 @@ import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
+import Modal from "../../../../components/modal";
+
 import {
     addGrn,
     deleteGrn,
     getGrnList,
     updateGrn,
 } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
+
 import {
     DataCreateButton,
     DataREfreshButton,
 } from "../../../../components/buttons";
+
+import { getPurchaseOrderList } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 
 const defaultPagination = {
     offset: 0,
@@ -55,6 +63,10 @@ const emptyProductRow = {
     remarks: "",
 
     quantity: "",
+
+    acceptedQuantity: "",
+    rejectedQuantity: "0",
+    rejectedReason: "",
 
     uom: "",
     unit: "",
@@ -95,13 +107,12 @@ const getDefaultForm = () => ({
     grnVoucherNumber: "AUTO",
     grnVoucherDate: todayYMD(),
 
-    grnPurchaseAccount: "",
+    pOrdVoucherNumber: "",
 
     grnVendorCode: "",
     grnVendorName: "",
 
-    grnStatus: "draft",
-    grnDocStatus: "open",
+    grnStatus: "open",
 
     grnRemark: "",
     grnStatusRemark: "",
@@ -189,9 +200,89 @@ export const loadFieldOptions = async (fields: any[]) => {
     return updatedFields;
 };
 
+const rejectedReasonOptions = [
+    { label: "Damaged Product", value: "Damaged Product" },
+    { label: "Wrong Item", value: "Wrong Item" },
+    { label: "Quality Issue", value: "Quality Issue" },
+    { label: "Short Supply", value: "Short Supply" },
+    { label: "Other", value: "Other" },
+];
+
+const injectGrnBodyFields = (bodyFields: any[] = []) => {
+    const quantityIndex = bodyFields.findIndex(
+        (field: any) => field.key === "quantity"
+    );
+
+    if (quantityIndex === -1) return bodyFields;
+
+    const alreadyAdded = bodyFields.some(
+        (field: any) => field.key === "acceptedQuantity"
+    );
+
+    // remove quantity completely from UI
+    const bodyWithoutQuantity = bodyFields.filter(
+        (field: any) => field.key !== "quantity"
+    );
+
+    if (alreadyAdded) {
+        return bodyWithoutQuantity;
+    }
+
+    const extraFields = [
+        {
+            key: "acceptedQuantity",
+            label: "Accepted Quantity",
+            type: "number",
+            inputType: "number",
+            isRequired: true,
+            isHidden: false,
+        },
+        {
+            key: "rejectedQuantity",
+            label: "Rejected Quantity",
+            type: "number",
+            inputType: "number",
+            isRequired: false,
+            isHidden: false,
+        },
+        {
+            key: "rejectedReason",
+            label: "Rejected Reason",
+            type: "select",
+            inputType: "select",
+            isRequired: false,
+            isHidden: false,
+            options: rejectedReasonOptions,
+        },
+    ];
+
+    const insertIndex = Math.max(quantityIndex, 0);
+
+    const updatedBody = [...bodyWithoutQuantity];
+
+    updatedBody.splice(insertIndex, 0, ...extraFields);
+
+    return updatedBody;
+};
 /* ===================================================
    LOAD OPTIONS FOR HEADER BODY FOOTER
 =================================================== */
+
+// const loadAllTemplateOptions = async (templateData: any) => {
+//     const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
+//         loadFieldOptions(templateData?.header || []),
+//         loadFieldOptions(templateData?.body || []),
+//         loadFieldOptions(templateData?.footer || []),
+//     ]);
+
+//     return {
+//         ...templateData,
+//         header: updatedHeader,
+//         body: updatedBody,
+//         footer: updatedFooter,
+//     };
+
+// };
 
 const loadAllTemplateOptions = async (templateData: any) => {
     const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
@@ -203,7 +294,7 @@ const loadAllTemplateOptions = async (templateData: any) => {
     return {
         ...templateData,
         header: updatedHeader,
-        body: updatedBody,
+        body: injectGrnBodyFields(updatedBody),
         footer: updatedFooter,
     };
 };
@@ -216,6 +307,7 @@ const Grn = () => {
     const dispatch = useDispatch();
 
     const grnState = useSelector((state: any) => state.grn);
+    const purchaseOrderState = useSelector((state: any) => state.purchaseOrder);
 
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
@@ -227,6 +319,20 @@ const Grn = () => {
         grnState?.grnRecords ||
         grnState?.grnData ||
         [];
+
+    const purchaseOrders =
+        purchaseOrderState?.purchaseOrders ||
+        purchaseOrderState?.purchaseOrderList ||
+        purchaseOrderState?.purchaseOrderRecords ||
+        purchaseOrderState?.purchaseOrderData ||
+        purchaseOrderState?.purchaseOrdersData ||
+        [];
+
+    const purchaseOrderLoading =
+        purchaseOrderState?.loading ||
+        purchaseOrderState?.listingLoader ||
+        purchaseOrderState?.listLoading ||
+        false;
 
     const pagination = grnState?.pagination || defaultPagination;
 
@@ -254,10 +360,15 @@ const Grn = () => {
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
+
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
+
+    const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
+    const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
+    const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -382,6 +493,8 @@ const Grn = () => {
 
     const calculateRow = (row: any) => {
         const quantity = num(row.quantity);
+
+
         const rate = num(row.rate);
 
         const gross = quantity * rate;
@@ -427,6 +540,22 @@ const Grn = () => {
 
             quantity: row.quantity,
             rate: row.rate,
+
+            acceptedQuantity:
+                row.acceptedQuantity !== undefined &&
+                    row.acceptedQuantity !== null &&
+                    row.acceptedQuantity !== ""
+                    ? row.acceptedQuantity
+                    : row.quantity || "",
+
+            rejectedQuantity:
+                row.rejectedQuantity !== undefined &&
+                    row.rejectedQuantity !== null &&
+                    row.rejectedQuantity !== ""
+                    ? row.rejectedQuantity
+                    : "0",
+
+            rejectedReason: row.rejectedReason || "",
 
             discount: row.discount,
             discountPercentage: row.discountPercentage,
@@ -519,7 +648,18 @@ const Grn = () => {
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
-                // status,
+                status,
+            }) as any
+        );
+    };
+
+    const fetchPurchaseOrders = async (searchText = "") => {
+        await dispatch(
+            getPurchaseOrderList({
+                offset: 0,
+                limit: 20,
+                search: searchText,
+                status: "open",
             }) as any
         );
     };
@@ -540,6 +680,16 @@ const Grn = () => {
 
         return () => clearTimeout(timer);
     }, [search]);
+
+    useEffect(() => {
+        if (!showPurchaseOrderModal) return;
+
+        const timer = setTimeout(() => {
+            fetchPurchaseOrders(purchaseOrderSearch.trim());
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [purchaseOrderSearch, showPurchaseOrderModal]);
 
     /* ===================================================
        LOAD TRANSACTION SCHEMA WITH API OPTIONS
@@ -657,6 +807,123 @@ const Grn = () => {
 
     const openAddModal = () => {
         resetMainForm();
+        setSelectedPurchaseOrder(null);
+        setPurchaseOrderSearch("");
+        setShowPurchaseOrderModal(true);
+        fetchPurchaseOrders("");
+    };
+
+    const handlePurchaseOrderSelect = (purchaseOrder: any) => {
+        setSelectedPurchaseOrder(purchaseOrder);
+    };
+
+    const handlePurchaseOrderModalClose = () => {
+        setShowPurchaseOrderModal(false);
+        setSelectedPurchaseOrder(null);
+        setPurchaseOrderSearch("");
+
+        setEditingRecord(null);
+        setErrors({});
+        setForm(getDefaultForm());
+        setShowModal(true);
+    };
+
+    const handlePurchaseOrderConfirm = () => {
+        if (!selectedPurchaseOrder) {
+            toast.error("Please select purchase order");
+            return;
+        }
+
+        const poBody = selectedPurchaseOrder?.pOrdBody || [];
+
+        const products =
+            poBody.length > 0
+                ? poBody.map((item: any) => {
+                    const unitCode = item?.unit || item?.uom || "";
+
+                    return calculateRow(
+                        normalizeRowKeys({
+                            id: Date.now() + Math.random(),
+
+                            productCode: item?.productCode || "",
+                            productName: item?.productName || "",
+                            productId: item?.productId || "",
+
+                            productDescription: item?.productDescription || "",
+                            description: item?.description || "",
+
+                            productHSNCode: item?.productHSNCode || "",
+                            remarks: item?.remarks || "",
+
+                            quantity: item?.quantity || "",
+
+                            acceptedQuantity: item?.acceptedQuantity || item?.quantity || "",
+                            rejectedQuantity: item?.rejectedQuantity || "0",
+                            rejectedReason: item?.rejectedReason || "",
+
+                            unit: unitCode,
+                            uom: unitCode,
+                            unitName:
+                                item?.unitName ||
+                                getUnitLabelFromSchema(unitCode),
+
+                            rate: item?.rate || "",
+
+                            gross: item?.gross || item?.grossAmount || 0,
+                            grossAmount:
+                                item?.grossAmount || item?.gross || 0,
+
+                            discount: item?.discount || "",
+                            discountPercentage:
+                                item?.discountPercentage || "",
+                            discountAmount: item?.discountAmount || 0,
+
+                            taxableAmount: item?.taxableAmount || 0,
+
+                            cgst: item?.cgst || "",
+                            cgstPercentage: item?.cgstPercentage || "",
+                            cgstAmount: item?.cgstAmount || 0,
+
+                            sgst: item?.sgst || "",
+                            sgstPercentage: item?.sgstPercentage || "",
+                            sgstAmount: item?.sgstAmount || 0,
+
+                            igst: item?.igst || "",
+                            igstPercentage: item?.igstPercentage || "",
+                            igstAmount: item?.igstAmount || 0,
+
+                            taxAmount: item?.taxAmount || 0,
+
+                            otherAmount: item?.otherAmount || 0,
+
+                            netAmount:
+                                item?.netAmount ||
+                                item?.netTotal ||
+                                0,
+
+                            netTotal:
+                                item?.netTotal ||
+                                item?.netAmount ||
+                                0,
+                        })
+                    );
+                })
+                : [{ ...emptyProductRow, id: Date.now() }];
+
+        setForm({
+            ...getDefaultForm(),
+
+            pOrdVoucherNumber: selectedPurchaseOrder?.pOrdVoucherNumber || "",
+
+            grnVendorCode: selectedPurchaseOrder?.pOrdVendorCode || "",
+            grnVendorName: selectedPurchaseOrder?.pOrdVendorName || "",
+
+            products,
+        });
+
+        setErrors({});
+        setEditingRecord(null);
+        setShowPurchaseOrderModal(false);
         setShowModal(true);
     };
 
@@ -691,6 +958,19 @@ const Grn = () => {
                             remarks: item?.remarks || "",
 
                             quantity: item?.quantity || "",
+                            acceptedQuantity:
+                                item?.acceptedQuantity !== undefined &&
+                                    item?.acceptedQuantity !== null
+                                    ? item.acceptedQuantity
+                                    : item?.quantity || "",
+
+                            rejectedQuantity:
+                                item?.rejectedQuantity !== undefined &&
+                                    item?.rejectedQuantity !== null
+                                    ? item.rejectedQuantity
+                                    : "0",
+
+                            rejectedReason: item?.rejectedReason || "",
 
                             unit: unitCode,
                             uom: unitCode,
@@ -780,13 +1060,12 @@ const Grn = () => {
 
             grnVoucherDate: formatDateForInput(record?.grnVoucherDate),
 
+            pOrdVoucherNumber: record?.pOrdVoucherNumber || "",
+
             grnVendorCode: record?.grnVendorCode || "",
             grnVendorName: record?.grnVendorName || "",
 
-            grnPurchaseAccount: record?.grnPurchaseAccount || "",
-
-            grnDocStatus: record?.grnDocStatus || "open",
-            grnStatus: record?.grnStatus || "draft",
+            grnStatus: record?.grnStatus || "open",
 
             grnRemark: record?.grnRemark || "",
             grnStatusRemark: record?.grnStatusRemark || "",
@@ -889,7 +1168,10 @@ const Grn = () => {
 
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
+
+
             const updatedProducts = [...(prev.products || [])];
+
 
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
@@ -898,6 +1180,86 @@ const Grn = () => {
                 ...currentRow,
                 [key]: value,
             };
+
+            // hardcoded feilds
+            updatedRow = normalizeRowKeys(updatedRow);
+
+
+            if (key === "acceptedQuantity") {
+                const quantity = num(updatedRow.quantity);
+                const acceptedQuantity = num(value);
+
+                if (acceptedQuantity > quantity) {
+                    updatedRow.acceptedQuantity = updatedRow.quantity || "";
+                    toast.error("Accepted quantity cannot be greater than quantity");
+                }
+
+                updatedRow.rejectedQuantity = Math.max(
+                    quantity - num(updatedRow.acceptedQuantity),
+                    0
+                ).toString();
+
+                if (num(updatedRow.rejectedQuantity) === 0) {
+                    updatedRow.rejectedReason = "";
+                }
+            }
+
+            if (key === "rejectedQuantity") {
+                const quantity = num(updatedRow.quantity);
+                const rejectedQuantity = num(value);
+
+                if (rejectedQuantity > quantity) {
+                    updatedRow.rejectedQuantity = "0";
+                    toast.error("Rejected quantity cannot be greater than quantity");
+                }
+
+                updatedRow.acceptedQuantity = Math.max(
+                    quantity - num(updatedRow.rejectedQuantity),
+                    0
+                ).toString();
+
+                if (num(updatedRow.rejectedQuantity) === 0) {
+                    updatedRow.rejectedReason = "";
+                }
+            } 
+
+            if (key === "acceptedQuantity") {
+                const quantity = num(updatedRow.quantity);
+                const acceptedQuantity = num(value);
+
+                if (acceptedQuantity > quantity) {
+                    updatedRow.acceptedQuantity = updatedRow.quantity || "";
+                    toast.error("Accepted quantity cannot be greater than quantity");
+                }
+
+                updatedRow.rejectedQuantity = Math.max(
+                    quantity - num(updatedRow.acceptedQuantity),
+                    0
+                ).toString();
+
+                if (num(updatedRow.rejectedQuantity) === 0) {
+                    updatedRow.rejectedReason = "";
+                }
+            }
+
+            if (key === "rejectedQuantity") {
+                const quantity = num(updatedRow.quantity);
+                const rejectedQuantity = num(value);
+
+                if (rejectedQuantity > quantity) {
+                    updatedRow.rejectedQuantity = "0";
+                    toast.error("Rejected quantity cannot be greater than quantity");
+                }
+
+                updatedRow.acceptedQuantity = Math.max(
+                    quantity - num(updatedRow.rejectedQuantity),
+                    0
+                ).toString();
+
+                if (num(updatedRow.rejectedQuantity) === 0) {
+                    updatedRow.rejectedReason = "";
+                }
+            }
 
             if (currentField?.mapFields) {
                 updatedRow = applyMappedFields(
@@ -1090,6 +1452,14 @@ const Grn = () => {
                 : "";
     };
 
+    const removeEmptyValues = (obj: any) => {
+        return Object.fromEntries(
+            Object.entries(obj).filter(([_, value]) => {
+                return value !== "" && value !== null && value !== undefined;
+            })
+        );
+    };
+
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
@@ -1102,74 +1472,94 @@ const Grn = () => {
             grnVendorCode: form.grnVendorCode,
             grnVendorName: form.grnVendorName,
 
-            grnPurchaseAccount: form.grnPurchaseAccount,
+            pOrdVoucherNumber: form?.pOrdVoucherNumber || "",
 
-            grnStatus: form.grnStatus || "draft",
-            grnDocStatus: form.grnDocStatus || "open",
+            grnStatus: form.grnStatus || "open",
 
             grnRemark: form.grnRemark,
 
-            grnBody: products.map((item: any) => ({
-                productCode: item.productCode,
-                productName: item.productName,
-                productId: item.productId,
+            grnBody: products.map((item: any) =>
+                removeEmptyValues({
+                    productCode: item.productCode,
+                    productName: item.productName,
+                    productId: item.productId,
 
-                productDescription:
-                    item.productDescription || item.description,
+                    productDescription:
+                        item.productDescription || item.description,
 
-                description:
-                    item.description || item.productDescription,
+                    description:
+                        item.description || item.productDescription,
 
-                productHSNCode: item.productHSNCode,
+                    productHSNCode: item.productHSNCode,
 
-                remarks: item.remarks,
+                    remarks: item.remarks,
+                    quantity: String(
+                        num(item.acceptedQuantity) + num(item.rejectedQuantity)
+                    ),
 
-                quantity: String(item.quantity),
+                    acceptedQuantity: String(
+                        item.acceptedQuantity !== undefined &&
+                            item.acceptedQuantity !== null &&
+                            item.acceptedQuantity !== ""
+                            ? item.acceptedQuantity
+                            : item.quantity
+                    ),
 
-                unit: item.unit || item.uom,
-                uom: item.uom || item.unit,
+                    rejectedQuantity: String(
+                        item.rejectedQuantity !== undefined &&
+                            item.rejectedQuantity !== null &&
+                            item.rejectedQuantity !== ""
+                            ? item.rejectedQuantity
+                            : "0"
+                    ),
 
-                rate: String(item.rate),
+                    rejectedReason: item.rejectedReason,
 
-                gross: fmtMoney(item.grossAmount),
-                grossAmount: fmtMoney(item.grossAmount),
+                    unit: item.unit || item.uom,
+                    uom: item.uom || item.unit,
 
-                discount: String(
-                    getTaxValue(item.discount, item.discountPercentage)
-                ),
-                discountPercentage: String(
-                    getTaxValue(item.discountPercentage, item.discount)
-                ),
+                    rate: String(item.rate),
 
-                discountAmount: fmtMoney(item.discountAmount),
+                    gross: fmtMoney(item.grossAmount),
+                    grossAmount: fmtMoney(item.grossAmount),
 
-                taxableAmount: fmtMoney(item.taxableAmount),
+                    discount: String(
+                        getTaxValue(item.discount, item.discountPercentage)
+                    ),
+                    discountPercentage: String(
+                        getTaxValue(item.discountPercentage, item.discount)
+                    ),
 
-                cgst: String(getTaxValue(item.cgst, item.cgstPercentage)),
-                cgstPercentage: String(
-                    getTaxValue(item.cgstPercentage, item.cgst)
-                ),
-                cgstAmount: fmtMoney(item.cgstAmount),
+                    discountAmount: fmtMoney(item.discountAmount),
 
-                sgst: String(getTaxValue(item.sgst, item.sgstPercentage)),
-                sgstPercentage: String(
-                    getTaxValue(item.sgstPercentage, item.sgst)
-                ),
-                sgstAmount: fmtMoney(item.sgstAmount),
+                    taxableAmount: fmtMoney(item.taxableAmount),
 
-                igst: String(getTaxValue(item.igst, item.igstPercentage)),
-                igstPercentage: String(
-                    getTaxValue(item.igstPercentage, item.igst)
-                ),
-                igstAmount: fmtMoney(item.igstAmount),
+                    cgst: String(getTaxValue(item.cgst, item.cgstPercentage)),
+                    cgstPercentage: String(
+                        getTaxValue(item.cgstPercentage, item.cgst)
+                    ),
+                    cgstAmount: fmtMoney(item.cgstAmount),
 
-                taxAmount: fmtMoney(item.taxAmount),
+                    sgst: String(getTaxValue(item.sgst, item.sgstPercentage)),
+                    sgstPercentage: String(
+                        getTaxValue(item.sgstPercentage, item.sgst)
+                    ),
+                    sgstAmount: fmtMoney(item.sgstAmount),
 
-                otherAmount: fmtMoney(item.otherAmount),
+                    igst: String(getTaxValue(item.igst, item.igstPercentage)),
+                    igstPercentage: String(
+                        getTaxValue(item.igstPercentage, item.igst)
+                    ),
+                    igstAmount: fmtMoney(item.igstAmount),
 
-                netAmount: fmtMoney(item.netAmount || item.netTotal),
-                netTotal: fmtMoney(item.netTotal || item.netAmount),
-            })),
+                    taxAmount: fmtMoney(item.taxAmount),
+
+                    otherAmount: fmtMoney(item.otherAmount),
+
+                    netAmount: fmtMoney(item.netAmount || item.netTotal),
+                    netTotal: fmtMoney(item.netTotal || item.netAmount),
+                })
+            ),
 
             grnFooter: {
                 grossAmount: fmtMoney(footer.totalGrossAmount),
@@ -1418,6 +1808,108 @@ const Grn = () => {
                 />
             )}
 
+            <Modal
+                show={showPurchaseOrderModal}
+                setShow={setShowPurchaseOrderModal}
+                title="Select Purchase Order"
+                state={false}
+                handleSubmit={handlePurchaseOrderConfirm}
+                handleClose={handlePurchaseOrderModalClose}
+                loader={purchaseOrderLoading}
+                gridCols={1}
+                maxWidth="2xl"
+                modalClassName="rounded-xl"
+                headerClassName="bg-white"
+                footerClassName="bg-white"
+                bodyClassName="!block !p-0"
+                body={
+                    <div className="flex h-[520px] flex-col">
+                        <div className="border-b border-gray-200 p-5">
+                            <input
+                                value={purchaseOrderSearch}
+                                onChange={(e) =>
+                                    setPurchaseOrderSearch(e.target.value)
+                                }
+                                placeholder="Search Purchase Order code..."
+                                className="
+                                    w-full rounded-xl border border-gray-200 bg-gray-50
+                                    px-4 py-3 text-sm font-medium text-gray-700
+                                    outline-none transition
+                                    placeholder:text-gray-400
+                                    focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
+                                "
+                            />
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                            {purchaseOrderLoading ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    Loading purchase orders...
+                                </div>
+                            ) : purchaseOrders.length === 0 ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    No purchase order found
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {purchaseOrders.map((po: any, index: number) => {
+                                        const poNumber =
+                                            po?.pOrdVoucherNumber || "-";
+
+                                        const vendorName =
+                                            po?.pOrdVendorName || "-";
+
+                                        const poBody = po?.pOrdBody || [];
+
+                                        const selectedPoNumber =
+                                            selectedPurchaseOrder?.pOrdVoucherNumber || "";
+
+                                        const isSelected =
+                                            String(selectedPoNumber) ===
+                                            String(poNumber);
+
+                                        return (
+                                            <button
+                                                key={poNumber || index}
+                                                type="button"
+                                                onClick={() =>
+                                                    handlePurchaseOrderSelect(po)
+                                                }
+                                                className={`
+                                                    w-full rounded-xl border px-4 py-4 text-left transition
+                                                    ${isSelected
+                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                    }
+                                                `}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-base font-bold text-gray-900">
+                                                            {poNumber} - {vendorName}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                            Items: {poBody?.length || 0}
+                                                        </p>
+                                                    </div>
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                            Selected
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                }
+            />
+
             {!fieldsLoading && (
                 <DynamicAddForm
                     {...{
@@ -1438,7 +1930,6 @@ const Grn = () => {
                         handleDeleteRow,
                         handleRowChange,
                         footerTotals,
-
                         inputData: {
                             ...templateFields,
                             footer: dynamicFooterArray,

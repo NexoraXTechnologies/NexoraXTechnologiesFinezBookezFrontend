@@ -321,7 +321,7 @@ const Modal = ({
                         >
                             <div>
                                 <h2 className="mb-0 text-xl font-semibold text-gray-800">
-                                    {state ? `Edit ${title}` : `Add New ${title}`}
+                                    {state ? `Edit ${title}` : `${title}`}
                                 </h2>
 
                                 <p className="text-sm text-gray-500">

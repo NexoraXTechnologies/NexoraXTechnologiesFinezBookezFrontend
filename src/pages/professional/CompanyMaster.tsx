@@ -687,7 +687,7 @@ const CompanyMaster = () => {
           setShow: setShowModal,
           handleSubmit,
           state: editingCompany,
-          title: "Company",
+          title: "Add New Company",
           gridCols: 3,
           maxWidth: "4xl",
           bodyClassName: "p-5 gap-3",

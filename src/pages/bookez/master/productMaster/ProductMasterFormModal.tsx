@@ -440,7 +440,7 @@ const ProductMasterFormModal = ({
         setShow,
         handleSubmit,
         state: editingProduct,
-        title: "Product",
+        title: "Add New Product",
         body: (
           <>
             {schemaLoading ? (

@@ -85,8 +85,8 @@ const getDefaultForm = () => ({
     pOrdVendorCode: "",
     pOrdVendorName: "",
 
-    pOrdStatus: "draft",
-    pOrdDocStatus: "open",
+    pOrdStatus: "open",
+ 
 
     pOrdRemark: "",
     pOrdStatusRemark: "",
@@ -506,7 +506,7 @@ const PurchaseOrder = () => {
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
-                // status: status,
+                status: status,
             }) as any
         );
     };
@@ -775,8 +775,8 @@ const PurchaseOrder = () => {
 
             pOrdPurchaseAccount: record?.pOrdPurchaseAccount || "",
 
-            pOrdDocStatus: record?.pOrdDocStatus || "open",
-            pOrdStatus: record?.pOrdStatus || "draft",
+          
+            pOrdStatus: record?.pOrdStatus || "open",
 
             pOrdRemark: record?.pOrdRemark || "",
             pOrdStatusRemark: record?.pOrdStatusRemark || "",
@@ -1096,8 +1096,8 @@ const PurchaseOrder = () => {
 
             pOrdPurchaseAccount: form.pOrdPurchaseAccount,
 
-            pOrdStatus: form.pOrdStatus || "draft",
-            pOrdDocStatus: form.pOrdDocStatus || "open",
+            pOrdStatus: form.pOrdStatus || "open",
+         
 
             pOrdRemark: form.pOrdRemark,
 

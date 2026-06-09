@@ -678,7 +678,7 @@ const ReportMapping = () => {
 					setShow: setShowModal,
 					handleSubmit: handleSaveReportMapping,
 					state: editingReport,
-					title: "Report Mapping",
+					title: "Add New Report Mapping",
 					body: (
 						<>
 							{/* Report Title */}
@@ -1019,7 +1019,7 @@ const ReportMapping = () => {
 					setShow: setShowFieldModal,
 					handleSubmit,
 					state: null,
-					title: "Key-Value Fields",
+					title: "Add New Key-Value Fields",
 					body: (
 						<>
 							{/* Tabs */}

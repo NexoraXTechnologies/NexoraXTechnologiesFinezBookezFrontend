@@ -505,7 +505,7 @@ const UnitMaster = () => {
 					setShow: setShowModal,
 					handleSubmit,
 					state: editingUnit,
-					title: "Unit",
+					title: "Add New Unit",
 					body: (
 						<>
 							{schemaLoading ? (
