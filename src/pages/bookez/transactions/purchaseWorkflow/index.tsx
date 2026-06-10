@@ -4,12 +4,13 @@ import {
   Truck,
   RotateCcw,
   ReceiptText,
-  
+
 } from "lucide-react";
 import TransactionDashboard from "../components/TransactionDashboard";
 import PurchaseOrder from "./PurchaseOrder";
 import Grn from "./Grn";
 import PurchaseReturn from "./PurchaseReturn";
+import PurchaseInvoice from "./PurchaseInvoice";
 
 const cards: any[] = [
   {
@@ -33,7 +34,7 @@ const cards: any[] = [
   {
     title: "Purchase Invoices",
     description: "Create and manage purchase invoices.",
-    path: "/professional/transaction/purchase-workflow/purchase-invoices",
+    component: PurchaseInvoice,
     icon: <ReceiptText size={22} />,
   },
 ];

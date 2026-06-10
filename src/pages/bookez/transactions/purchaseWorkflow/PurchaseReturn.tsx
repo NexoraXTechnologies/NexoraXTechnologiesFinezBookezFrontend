@@ -41,8 +41,6 @@ import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
 
-import { getGrnList } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
-
 const defaultPagination = {
     offset: 0,
     limit: 10,
@@ -229,7 +227,6 @@ const PurchaseReturn = () => {
     const dispatch = useDispatch();
 
     const purchaseReturnState = useSelector((state: any) => state.purchaseReturn);
-    const grnState = useSelector((state: any) => state.grn);
 
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
@@ -242,16 +239,18 @@ const PurchaseReturn = () => {
         purchaseReturnState?.purchaseReturnData ||
         [];
 
-    const grns =
-        grnState?.grns ||
-        grnState?.grnList ||
-        grnState?.grnRecords ||
-        grnState?.grnData ||
-        grnState?.data ||
-        [];
+    const [grns, setGrns] = useState<any[]>([]);
 
     const rejectedGrns = useMemo(() => {
         return (grns || []).filter((grn: any) => {
+            const pendingItems = grn?.pendingItems || grn?.record?.pendingItems || [];
+
+            if (Array.isArray(pendingItems) && pendingItems.length > 0) {
+                return pendingItems.some((item: any) => {
+                    return num(item?.balanceQuantity) > 0;
+                });
+            }
+
             const grnBody = grn?.grnBody || [];
 
             return grnBody.some((item: any) => {
@@ -260,11 +259,7 @@ const PurchaseReturn = () => {
         });
     }, [grns]);
 
-    const grnLoading =
-        grnState?.loading ||
-        grnState?.listingLoader ||
-        grnState?.listLoading ||
-        false;
+    const grnLoading = false;
 
     const pagination = purchaseReturnState?.pagination || defaultPagination;
 
@@ -573,54 +568,95 @@ const PurchaseReturn = () => {
         setGrnModalLoading(true);
 
         try {
-            await dispatch(
-                getGrnList({
-                    offset: 0,
-                    limit: 20,
-                    search: searchText,
-                    status: "open",
-                }) as any
-            ).unwrap();
+            const res = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/analysis/grnPendingPurchaseReturn",
+                {
+                    params: {
+                        offset: 0,
+                        limit: 20,
+                        search: searchText,
+                    },
+                }
+            );
 
+            const records = getRecords(res?.data);
+            const directRecords =
+                res?.data?.data?.records ||
+                res?.data?.records ||
+                res?.data?.data?.items ||
+                res?.data?.items ||
+                res?.data?.data?.docs ||
+                res?.data?.docs ||
+                [];
+
+            const list = records.length > 0 ? records : directRecords;
+
+            setGrns(Array.isArray(list) ? list : []);
             setGrnLoaded(true);
         } catch (error) {
             setGrnLoaded(true);
-            toast.error("Failed to load GRN list");
+            setGrns([]);
+            toast.error("Failed to load rejected GRN list");
         } finally {
             setGrnModalLoading(false);
         }
     };
 
+    const fetchPendingPurchaseReturnByGrn = async (grnVoucherNumber: string) => {
+        if (!grnVoucherNumber) return [];
+
+        const res = await professionalAxios.get(
+            `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/analysis/grnPendingPurchaseReturn/byGrn/${grnVoucherNumber}`
+        );
+
+        return (
+            res?.data?.data?.record?.pendingItems ||
+            res?.data?.record?.pendingItems ||
+            res?.data?.data?.pendingItems ||
+            res?.data?.pendingItems ||
+            []
+        );
+    };
+
+    const fetchGrnDetailByVoucherNumber = async (grnVoucherNumber: string) => {
+        if (!grnVoucherNumber) return null;
+
+        try {
+            const res = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/grn/getByVoucherNumber/${grnVoucherNumber}`
+            );
+
+            return (
+                res?.data?.data?.grn ||
+                res?.data?.grn ||
+                res?.data?.data ||
+                res?.data ||
+                null
+            );
+        } catch (error) {
+            console.log("Failed to load GRN detail", error);
+            return null;
+        }
+    };
+
     /*
        After creating/updating Purchase Return from GRN:
-       - Check remaining rejected quantity by GRN
-       - If pending rejected quantity is 0, close GRN
-       - Because GRN modal loads only open GRNs, closed GRN will disappear from modal list
+       - Check remaining rejected quantity from analysis API
+       - If no rejected quantity is pending, close GRN
+       - If rejected quantity is still pending, keep GRN open
+       - Because GRN modal loads only open GRNs, closed GRN will disappear from list
     */
     const syncGrnStatusAfterPurchaseReturn = async (grnVoucherNumber: string) => {
         if (!grnVoucherNumber) return "";
 
         try {
-            const data = await professionalAxios.get(
-                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/analysis/grnPendingPurchaseReturn/byGrn/${grnVoucherNumber}`
+            const pendingItems = await fetchPendingPurchaseReturnByGrn(
+                grnVoucherNumber
             );
-
-            const pendingItems =
-                data?.data?.data?.record?.pendingItems ||
-                data?.data?.record?.pendingItems ||
-                [];
 
             const totalPendingReturnQuantity = Array.isArray(pendingItems)
                 ? pendingItems.reduce((acc: number, item: any) => {
-                    return (
-                        acc +
-                        num(
-                            item?.balanceQuantity ||
-                            item?.rejectedQuantity ||
-                            item?.pendingQuantity ||
-                            0
-                        )
-                    );
+                    return acc + num(item?.balanceQuantity || 0);
                 }, 0)
                 : 0;
 
@@ -733,11 +769,7 @@ const PurchaseReturn = () => {
                 </div>
             ),
         },
-        {
-            key: "pRetBody",
-            title: "Items",
-            render: (row: any) => row?.pRetBody?.length || 0,
-        },
+     
         {
             key: "pRetFooter",
             title: "Net Amount",
@@ -747,15 +779,15 @@ const PurchaseReturn = () => {
                 </span>
             ),
         },
-        {
-            key: "pRetStatus",
-            title: "Status",
-            render: (row: any) => (
-                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-                    {row?.pRetStatus || "-"}
-                </span>
-            ),
-        },
+        // {
+        //     key: "pRetStatus",
+        //     title: "Status",
+        //     render: (row: any) => (
+        //         <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+        //             {row?.pRetStatus || "-"}
+        //         </span>
+        //     ),
+        // },
     ];
 
     /* ===================================================
@@ -824,7 +856,19 @@ const PurchaseReturn = () => {
                 productHSNCode: item?.productHSNCode || "",
                 remarks: item?.remarks || "",
 
-                quantity: item?.rejectedQuantity || "",
+                quantity:
+                    item?.balanceQuantity !== undefined &&
+                    item?.balanceQuantity !== null &&
+                    item?.balanceQuantity !== ""
+                        ? item.balanceQuantity
+                        : item?.rejectedQuantity || "",
+
+                maxQuantity:
+                    item?.balanceQuantity !== undefined &&
+                    item?.balanceQuantity !== null &&
+                    item?.balanceQuantity !== ""
+                        ? item.balanceQuantity
+                        : item?.rejectedQuantity || "",
 
                 unit: unitCode,
                 uom: unitCode,
@@ -878,45 +922,92 @@ const PurchaseReturn = () => {
         // setShowModal(true);
     };
 
-    const handleGrnConfirm = () => {
+    const handleGrnConfirm = async () => {
         if (!selectedGrn) {
             toast.error("Please select GRN");
             return;
         }
 
-        const grnBody = selectedGrn?.grnBody || [];
+        const grnVoucherNumber = selectedGrn?.grnVoucherNumber || "";
 
-        const rejectedItems = grnBody.filter((item: any) => {
-            return num(item?.rejectedQuantity) > 0;
-        });
+        try {
+            setGrnModalLoading(true);
 
-        const products =
-            rejectedItems.length > 0
-                ? rejectedItems.map((item: any) =>
-                    buildPurchaseReturnProductRow(item)
-                )
-                : [{ ...emptyProductRow, id: Date.now() }];
+            const [pendingItems, grnDetail] = await Promise.all([
+                fetchPendingPurchaseReturnByGrn(grnVoucherNumber),
+                fetchGrnDetailByVoucherNumber(grnVoucherNumber),
+            ]);
 
-        setForm({
-            ...getDefaultForm(),
+            const mergedGrn = {
+                ...selectedGrn,
+                ...(grnDetail || {}),
+            };
 
-            grnVoucherNumber: selectedGrn?.grnVoucherNumber || "",
-            pOrdVoucherNumber: selectedGrn?.pOrdVoucherNumber || "",
+            const grnBody =
+                Array.isArray(mergedGrn?.grnBody) && mergedGrn.grnBody.length > 0
+                    ? mergedGrn.grnBody
+                    : selectedGrn?.grnBody || [];
 
-            pRetVendorCode: selectedGrn?.grnVendorCode || "",
-            pRetVendorName: selectedGrn?.grnVendorName || "",
+            const products = Array.isArray(pendingItems)
+                ? pendingItems
+                    .map((pending: any) => {
+                        const bodyItem = grnBody.find((item: any) => {
+                            return (
+                                String(item?.productCode || "") ===
+                                String(pending?.productCode || "")
+                            );
+                        });
 
-            products,
-        });
+                        const pendingQty = num(pending?.balanceQuantity || 0);
 
-        setErrors({});
-        setEditingRecord(null);
+                        if (pendingQty <= 0) return null;
 
-        setShowGrnModal(false);
-        setGrnLoaded(false);
-        setGrnModalLoading(false);
+                        return buildPurchaseReturnProductRow({
+                            ...(bodyItem || {}),
+                            ...pending,
+                            quantity: String(pendingQty),
+                            rejectedQuantity: String(pendingQty),
+                            balanceQuantity: String(pendingQty),
+                        });
+                    })
+                    .filter(Boolean)
+                : [];
 
-        setShowModal(true);
+            if (!products.length) {
+                toast.error("No pending rejected quantity available for this GRN");
+
+                await syncGrnStatusAfterPurchaseReturn(grnVoucherNumber);
+                await fetchGrns(grnSearch.trim());
+
+                return;
+            }
+
+            setForm({
+                ...getDefaultForm(),
+
+                grnVoucherNumber,
+                pOrdVoucherNumber: mergedGrn?.pOrdVoucherNumber || "",
+
+                pRetVendorCode: mergedGrn?.grnVendorCode || "",
+                pRetVendorName: mergedGrn?.grnVendorName || "",
+
+                products,
+            });
+
+            setErrors({});
+            setEditingRecord(null);
+
+            setShowGrnModal(false);
+            setGrnLoaded(false);
+            setGrnModalLoading(false);
+
+            setShowModal(true);
+        } catch (error) {
+            console.log("Failed to prepare GRN for purchase return", error);
+            toast.error("Failed to prepare GRN for purchase return");
+        } finally {
+            setGrnModalLoading(false);
+        }
     };
 
     const openEditModal = (record: any) => {
@@ -1076,6 +1167,16 @@ const PurchaseReturn = () => {
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
+
+            if (key === "quantity") {
+                const maxQuantity = num(updatedRow.maxQuantity);
+                const enteredQuantity = num(value);
+
+                if (maxQuantity > 0 && enteredQuantity > maxQuantity) {
+                    updatedRow.quantity = String(maxQuantity);
+                    toast.error("Return quantity cannot be greater than pending rejected quantity");
+                }
+            }
 
             const lowerKey = String(key).toLowerCase();
 
@@ -1417,347 +1518,370 @@ const PurchaseReturn = () => {
             await fetchGrns("");
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
-        
-    }
-};
-
-const handleDeleteConfirm = async () => {
-    try {
-        const voucherNumber = confirmTooltip?.voucherNumber;
-
-        if (!voucherNumber) {
-            toast.error("Purchase return voucher number not found");
-            return;
         }
+    };
 
-        await dispatch(
-            deletePurchaseReturn({
-                purchaseReturnNumber: voucherNumber,
-            }) as any
-        ).unwrap();
+    const handleDeleteConfirm = async () => {
+        try {
+            const voucherNumber = confirmTooltip?.voucherNumber;
 
-        toast.success("Purchase return deleted successfully");
+            if (!voucherNumber) {
+                toast.error("Purchase return voucher number not found");
+                return;
+            }
 
-        await fetchPurchaseReturns();
-    } catch (err: any) {
-        toast.error(
-            err?.message ||
-            err?.payload?.message ||
-            "Failed to delete purchase return"
-        );
-    } finally {
-        setConfirmTooltip({
-            show: false,
-            x: null,
-            y: null,
-            voucherNumber: null,
-        });
-    }
-};
+            await dispatch(
+                deletePurchaseReturn({
+                    purchaseReturnNumber: voucherNumber,
+                }) as any
+            ).unwrap();
 
-/* ===================================================
-   DYNAMIC FOOTER
-=================================================== */
+            toast.success("Purchase return deleted successfully");
 
-const footerValues = useMemo(() => {
-    return {
+            await fetchPurchaseReturns();
+        } catch (err: any) {
+            toast.error(
+                err?.message ||
+                err?.payload?.message ||
+                "Failed to delete purchase return"
+            );
+        } finally {
+            setConfirmTooltip({
+                show: false,
+                x: null,
+                y: null,
+                voucherNumber: null,
+            });
+        }
+    };
+
+    /* ===================================================
+       DYNAMIC FOOTER
+    =================================================== */
+
+    const footerValues = useMemo(() => {
+        return {
+            grossAmount,
+            discountAmount,
+            cgstAmount,
+            sgstAmount,
+            igstAmount,
+            netAmount,
+            adjustedAmount: 0,
+            balanceAmount: netAmount,
+        };
+    }, [
         grossAmount,
         discountAmount,
         cgstAmount,
         sgstAmount,
         igstAmount,
         netAmount,
-        adjustedAmount: 0,
-        balanceAmount: netAmount,
-    };
-}, [
-    grossAmount,
-    discountAmount,
-    cgstAmount,
-    sgstAmount,
-    igstAmount,
-    netAmount,
-]);
+    ]);
 
-const dynamicFooterArray = useMemo(() => {
-    return (templateFields?.footer || [])
-        .filter((field: any) => !field.isHidden)
-        .map((field: any) => {
-            const rawValue =
-                footerValues[field.key as keyof typeof footerValues] ?? 0;
+    const dynamicFooterArray = useMemo(() => {
+        return (templateFields?.footer || [])
+            .filter((field: any) => !field.isHidden)
+            .map((field: any) => {
+                const rawValue =
+                    footerValues[field.key as keyof typeof footerValues] ?? 0;
 
-            return {
-                ...field,
-                value: money(rawValue),
-                rawValue,
-            };
-        });
-}, [templateFields?.footer, footerValues]);
+                return {
+                    ...field,
+                    value: money(rawValue),
+                    rawValue,
+                };
+            });
+    }, [templateFields?.footer, footerValues]);
 
-const showInitialSkeleton =
-    !refreshing &&
-    purchaseReturns.length === 0 &&
-    (loading || fieldsLoading);
+    const showInitialSkeleton =
+        !refreshing &&
+        purchaseReturns.length === 0 &&
+        (loading || fieldsLoading);
 
-if (showInitialSkeleton) {
-    return <ModulePageSkeleton rows={8} columns={6} />;
-}
+    if (showInitialSkeleton) {
+        return <ModulePageSkeleton rows={8} columns={6} />;
+    }
 
-const showGrnSkeleton =
-    grnModalLoading ||
-    grnLoading ||
-    !grnLoaded;
+    const showGrnSkeleton =
+        grnModalLoading ||
+        grnLoading ||
+        !grnLoaded;
 
-return (
-    <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <div
-            id="purchase-return-header"
-            className="mb-3 flex items-center"
-        >
+    return (
+        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div
-                id="purchase-return-summary"
-                className="flex items-start gap-3"
+                id="purchase-return-header"
+                className="mb-3 flex items-center"
             >
-                <Badge
-                    {...{
-                        count: pagination?.totalDocs ?? 0,
-                        text: "Total Purchase Returns:",
-                        varient: "primary",
-                    }}
-                />
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-                <Toggle
-                    {...{
-                        arr: ["open", "close"],
-                        state: status,
-                        setState: handleStatusChange,
-                    }}
-                />
-
-                <SearchInput {...{ search, setSearch }} />
-
-                <DataREfreshButton
-                    {...{
-                        callBackFn: handleRefresh,
-                        loading: refreshing,
-                    }}
-                />
-
-                {/* @ts-ignore */}
-                <DataCreateButton
-                    {...{
-                        callBackFn: openAddModal,
-                        text: "Add Purchase Return",
-                    }}
-                />
-            </div>
-        </div>
-
-        <DataTable
-            columns={columns}
-            data={purchaseReturns}
-            loading={loading}
-            emptyMessage={`No ${status} purchase return found`}
-            actions={(record: any) => (
-                <div className="flex items-center gap-2">
-                    <button
-                        id="purchase-return-edit-button"
-                        onClick={() => openEditModal(record)}
-                        className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                    >
-                        <Edit size={16} />
-                    </button>
-
-                    <button
-                        id="purchase-return-delete-button"
-                        disabled={deleteLoading}
-                        onClick={(e) => {
-                            const rect =
-                                e.currentTarget.getBoundingClientRect();
-
-                            let x = rect.left - 150;
-                            if (x < 10) x = 10;
-
-                            const y = rect.top + window.scrollY - 5;
-
-                            setConfirmTooltip({
-                                show: true,
-                                x,
-                                y,
-                                voucherNumber: record?.pRetVoucherNumber,
-                            });
+                <div
+                    id="purchase-return-summary"
+                    className="flex items-start gap-3"
+                >
+                    <Badge
+                        {...{
+                            count: pagination?.totalDocs ?? 0,
+                            text: "Total Purchase Returns:",
+                            varient: "primary",
                         }}
-                        className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                    >
-                        <Trash2 size={16} />
-                    </button>
+                    />
                 </div>
+
+                <div className="ml-auto flex items-center gap-2">
+                    <Toggle
+                        {...{
+                            arr: ["open", "close"],
+                            state: status,
+                            setState: handleStatusChange,
+                        }}
+                    />
+
+                    <SearchInput {...{ search, setSearch }} />
+
+                    <DataREfreshButton
+                        {...{
+                            callBackFn: handleRefresh,
+                            loading: refreshing,
+                        }}
+                    />
+
+                    {/* @ts-ignore */}
+                    <DataCreateButton
+                        {...{
+                            callBackFn: openAddModal,
+                            text: "Add Purchase Return",
+                        }}
+                    />
+                </div>
+            </div>
+
+            <DataTable
+                columns={columns}
+                data={purchaseReturns}
+                loading={loading}
+                emptyMessage={`No ${status} purchase return found`}
+                actions={(record: any) => (
+                    <div className="flex items-center gap-2">
+                        <button
+                            id="purchase-return-edit-button"
+                            onClick={() => openEditModal(record)}
+                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                        >
+                            <Edit size={16} />
+                        </button>
+
+                        <button
+                            id="purchase-return-delete-button"
+                            disabled={deleteLoading}
+                            onClick={(e) => {
+                                const rect =
+                                    e.currentTarget.getBoundingClientRect();
+
+                                let x = rect.left - 150;
+                                if (x < 10) x = 10;
+
+                                const y = rect.top + window.scrollY - 5;
+
+                                setConfirmTooltip({
+                                    show: true,
+                                    x,
+                                    y,
+                                    voucherNumber: record?.pRetVoucherNumber,
+                                });
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                )}
+            />
+
+            {pagination?.totalDocs > 0 && (
+                <Pagination
+                    {...{
+                        localLimit,
+                        selectCb: (e: any) => {
+                            setLocalLimit(Number(e.target.value));
+                            setLocalOffset(0);
+                        },
+                        preDisabled: !pagination?.hasPrevPage,
+                        nextDisabled: !pagination?.hasNextPage,
+                        setLocalOffset,
+                        pagination,
+                    }}
+                />
             )}
-        />
 
-        {pagination?.totalDocs > 0 && (
-            <Pagination
-                {...{
-                    localLimit,
-                    selectCb: (e: any) => {
-                        setLocalLimit(Number(e.target.value));
-                        setLocalOffset(0);
-                    },
-                    preDisabled: !pagination?.hasPrevPage,
-                    nextDisabled: !pagination?.hasNextPage,
-                    setLocalOffset,
-                    pagination,
-                }}
-            />
-        )}
+            {confirmTooltip.show && (
+                <ConfirmTooltip
+                    x={confirmTooltip.x}
+                    y={confirmTooltip.y}
+                    message="Are you sure you want to delete this purchase return?"
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() =>
+                        setConfirmTooltip({
+                            show: false,
+                            x: null,
+                            y: null,
+                            voucherNumber: null,
+                        })
+                    }
+                />
+            )}
 
-        {confirmTooltip.show && (
-            <ConfirmTooltip
-                x={confirmTooltip.x}
-                y={confirmTooltip.y}
-                message="Are you sure you want to delete this purchase return?"
-                confirmText="Delete"
-                cancelText="Cancel"
-                onConfirm={handleDeleteConfirm}
-                onCancel={() =>
-                    setConfirmTooltip({
-                        show: false,
-                        x: null,
-                        y: null,
-                        voucherNumber: null,
-                    })
-                }
-            />
-        )}
-
-        <Modal
-            show={showGrnModal}
-            setShow={setShowGrnModal}
-            title="Select GRN"
-            state={false}
-            handleSubmit={handleGrnConfirm}
-            handleClose={handleGrnModalClose}
-            loader={grnModalLoading || grnLoading}
-            gridCols={1}
-            maxWidth="2xl"
-            modalClassName="rounded-xl"
-            headerClassName="bg-white"
-            footerClassName="bg-white"
-            bodyClassName="!block !p-0"
-            body={
-                <div className="flex h-[520px] flex-col">
-                    <div className="border-b border-gray-200 p-5">
-                        <input
-                            value={grnSearch}
-                            onChange={(e) =>
-                                setGrnSearch(e.target.value)
-                            }
-                            placeholder="Search GRN code..."
-                            className="
+            <Modal
+                show={showGrnModal}
+                setShow={setShowGrnModal}
+                title="Select GRN"
+                state={false}
+                handleSubmit={handleGrnConfirm}
+                handleClose={handleGrnModalClose}
+                loader={grnModalLoading || grnLoading}
+                gridCols={1}
+                maxWidth="2xl"
+                modalClassName="rounded-xl"
+                headerClassName="bg-white"
+                footerClassName="bg-white"
+                bodyClassName="!block !p-0"
+                body={
+                    <div className="flex h-[520px] flex-col">
+                        <div className="border-b border-gray-200 p-5">
+                            <input
+                                value={grnSearch}
+                                onChange={(e) =>
+                                    setGrnSearch(e.target.value)
+                                }
+                                placeholder="Search GRN code..."
+                                className="
                                     w-full rounded-xl border border-gray-200 bg-gray-50
                                     px-4 py-3 text-sm font-medium text-gray-700
                                     outline-none transition
                                     placeholder:text-gray-400
                                     focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
                                 "
-                        />
-                    </div>
+                            />
+                        </div>
 
-                    <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                        {showGrnSkeleton ? (
-                            <ModalListSkeleton rows={3} />
-                        ) : rejectedGrns.length === 0 ? (
-                            <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
-                                No rejected GRN found
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {rejectedGrns.map((grn: any, index: number) => {
-                                    const grnNumber =
-                                        grn?.grnVoucherNumber || "-";
+                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                            {showGrnSkeleton ? (
+                                <ModalListSkeleton rows={3} />
+                            ) : rejectedGrns.length === 0 ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    No rejected GRN found
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {rejectedGrns.map((grn: any, index: number) => {
+                                        const grnNumber =
+                                            grn?.grnVoucherNumber || "-";
 
-                                    const vendorName =
-                                        grn?.grnVendorName || "-";
+                                        const vendorName =
+                                            grn?.grnVendorName || "-";
 
-                                    const selectedGrnNumber =
-                                        selectedGrn?.grnVoucherNumber || "";
+                                        const pendingItems =
+                                            grn?.pendingItems ||
+                                            grn?.record?.pendingItems ||
+                                            [];
 
-                                    const isSelected =
-                                        String(selectedGrnNumber) ===
-                                        String(grnNumber);
+                                        const pendingQuantity = Array.isArray(pendingItems)
+                                            ? pendingItems.reduce(
+                                                (acc: number, item: any) =>
+                                                    acc + num(item?.balanceQuantity || 0),
+                                                0
+                                            )
+                                            : 0;
 
-                                    return (
-                                        <button
-                                            key={`${grnNumber}-${index}`}
-                                            type="button"
-                                            onClick={() =>
-                                                handleGrnSelect(grn)
-                                            }
-                                            className={`
+                                        const pendingItemCount = Array.isArray(pendingItems)
+                                            ? pendingItems.filter(
+                                                (item: any) => num(item?.balanceQuantity || 0) > 0
+                                            ).length
+                                            : 0;
+
+                                        const selectedGrnNumber =
+                                            selectedGrn?.grnVoucherNumber || "";
+
+                                        const isSelected =
+                                            String(selectedGrnNumber) ===
+                                            String(grnNumber);
+
+                                        return (
+                                            <button
+                                                key={`${grnNumber}-${index}`}
+                                                type="button"
+                                                onClick={() =>
+                                                    handleGrnSelect(grn)
+                                                }
+                                                className={`
                                                     w-full rounded-xl border px-4 py-4 text-left transition
                                                     ${isSelected
-                                                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                    : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
-                                                }
+                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                    }
                                                 `}
-                                        >
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-base font-bold text-gray-900">
-                                                        {grnNumber} - {vendorName}
-                                                    </p>
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-base font-bold text-gray-900">
+                                                            {grnNumber} - {vendorName}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                            Pending return items: {pendingItemCount} | Qty: {pendingQuantity}
+                                                        </p>
+
+                                                    </div>
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                            Selected
+                                                        </span>
+                                                    )}
                                                 </div>
-
-                                                {isSelected && (
-                                                    <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                                                        Selected
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            }
-        />
-
-        {!fieldsLoading && (
-            <DynamicAddForm
-                {...{
-                    show: showModal,
-                    setShow: setShowModal,
-                    edit: Boolean(editingRecord),
-                    title: "Purchase Return",
-                    subtitle: "Fill in the purchase return details below",
-                    loading: createLoading || updateLoading,
-                    onClose: () => {
-                        setShowModal(false);
-                        resetMainForm();
-                    },
-                    onSubmit: handleSubmit,
-                    isAddButton: false,
-                    form,
-                    errors,
-                    handleAddRow,
-                    handleDeleteRow,
-                    handleRowChange,
-                    footerTotals,
-                    inputData: {
-                        ...templateFields,
-                        footer: dynamicFooterArray,
-                    },
-                    bodyKey: "products",
-                    handleChange: handleMainChange,
-                }}
+                }
             />
-        )}
-    </div>
-);
+
+            {!fieldsLoading && (
+                <DynamicAddForm
+                    {...{
+                        show: showModal,
+                        setShow: setShowModal,
+                        edit: Boolean(editingRecord),
+                        title: "Purchase Return",
+                        subtitle: "Fill in the purchase return details below",
+                        loading: createLoading || updateLoading,
+                        onClose: () => {
+                            setShowModal(false);
+                            resetMainForm();
+                        },
+                        onSubmit: handleSubmit,
+                        isAddButton:false,
+                        form,
+                        errors,
+                        handleAddRow,
+                        handleDeleteRow,
+                        handleRowChange,
+                        footerTotals,
+                        inputData: {
+                            ...templateFields,
+                            footer: dynamicFooterArray,
+                        },
+                        bodyKey: "products",
+                        handleChange: handleMainChange,
+                    }}
+                />
+            )}
+        </div>
+    );
 };
 
 export default PurchaseReturn;

@@ -591,11 +591,7 @@ const PurchaseOrder = () => {
                 </div>
             ),
         },
-        {
-            key: "pOrdBody",
-            title: "Items",
-            render: (row: any) => row?.pOrdBody?.length || 0,
-        },
+       
         {
             key: "pOrdFooter",
             title: "Net Amount",
@@ -606,15 +602,15 @@ const PurchaseOrder = () => {
             ),
         },
        
-        {
-            key: "pOrdStatus",
-            title: "Order Status",
-            render: (row: any) => (
-                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-                    {row?.pOrdStatus || "-"}
-                </span>
-            ),
-        },
+        // {
+        //     key: "pOrdStatus",
+        //     title: "Order Status",
+        //     render: (row: any) => (
+        //         <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+        //             {row?.pOrdStatus || "-"}
+        //         </span>
+        //     ),
+        // },
     ];
 
     /* ===================================================
