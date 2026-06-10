@@ -26,21 +26,22 @@ import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Modal from "../../../../components/modal";
 
 import {
-    addGrn,
-    deleteGrn,
-    getGrnList,
-    updateGrn,
-} from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
+    addPurchaseReturn,
+    deletePurchaseReturn,
+    getPurchaseReturnList,
+    updatePurchaseReturn,
+} from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 
 import {
     DataCreateButton,
     DataREfreshButton,
 } from "../../../../components/buttons";
 
-import { getPurchaseOrderList } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
+
+import { getGrnList } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -66,10 +67,6 @@ const emptyProductRow = {
     remarks: "",
 
     quantity: "",
-
-    acceptedQuantity: "",
-    rejectedQuantity: "0",
-    rejectedReason: "",
 
     uom: "",
     unit: "",
@@ -107,19 +104,21 @@ const emptyProductRow = {
 };
 
 const getDefaultForm = () => ({
-    grnVoucherNumber: "AUTO",
-    grnVoucherDate: todayYMD(),
+    pRetVoucherNumber: "AUTO",
+    pRetVoucherDate: todayYMD(),
 
+    grnVoucherNumber: "",
     pOrdVoucherNumber: "",
 
-    grnVendorCode: "",
-    grnVendorName: "",
+    pRetVendorCode: "",
+    pRetVendorName: "",
 
-    grnStatus: "open",
+    pRetStatus: "open",
 
-    grnRemark: "",
-    grnStatusRemark: "",
-    grnStatusHistory: [],
+    pRetRemark: "",
+    pRetStatusRemark: "",
+    pRetStatusHistory: [],
+
     isAutoPost: false,
 
     products: [{ ...emptyProductRow, id: Date.now() }],
@@ -203,74 +202,6 @@ export const loadFieldOptions = async (fields: any[]) => {
     return updatedFields;
 };
 
-const rejectedReasonOptions = [
-    { label: "Damaged Product", value: "Damaged Product" },
-    { label: "Wrong Item Received", value: "Wrong Item Received" },
-    { label: "Quality Mismatch", value: "Quality Mismatch" },
-    { label: "Poor Quality / Defective", value: "Poor Quality / Defective" },
-    { label: "Expired Product", value: "Expired Product" },
-    { label: "Packaging Damaged", value: "Packaging Damaged" },
-    { label: "Specification Mismatch", value: "Specification Mismatch" },
-    { label: "Duplicate Delivery", value: "Duplicate Delivery" },
-    { label: "Other", value: "Other" },
-];
-
-const injectGrnBodyFields = (bodyFields: any[] = []) => {
-    const quantityIndex = bodyFields.findIndex(
-        (field: any) => field.key === "quantity"
-    );
-
-    if (quantityIndex === -1) return bodyFields;
-
-    const alreadyAdded = bodyFields.some(
-        (field: any) => field.key === "acceptedQuantity"
-    );
-
-    const bodyWithoutQuantity = bodyFields.filter(
-        (field: any) => field.key !== "quantity"
-    );
-
-    if (alreadyAdded) {
-        return bodyWithoutQuantity;
-    }
-
-    const extraFields = [
-        {
-            key: "acceptedQuantity",
-            label: "Accepted Quantity",
-            type: "number",
-            inputType: "number",
-            isRequired: true,
-            isHidden: false,
-        },
-        {
-            key: "rejectedQuantity",
-            label: "Rejected Quantity",
-            type: "number",
-            inputType: "number",
-            isRequired: false,
-            isHidden: false,
-        },
-        {
-            key: "rejectedReason",
-            label: "Rejected Reason",
-            type: "select",
-            inputType: "select",
-            isRequired: false,
-            isHidden: false,
-            options: rejectedReasonOptions,
-        },
-    ];
-
-    const insertIndex = Math.max(quantityIndex, 0);
-
-    const updatedBody = [...bodyWithoutQuantity];
-
-    updatedBody.splice(insertIndex, 0, ...extraFields);
-
-    return updatedBody;
-};
-
 /* ===================================================
    LOAD OPTIONS FOR HEADER BODY FOOTER
 =================================================== */
@@ -285,63 +216,73 @@ const loadAllTemplateOptions = async (templateData: any) => {
     return {
         ...templateData,
         header: updatedHeader,
-        body: injectGrnBodyFields(updatedBody),
+        body: updatedBody,
         footer: updatedFooter,
     };
 };
 
 /* ===================================================
-   GRN
+   PURCHASE RETURN
 =================================================== */
 
-const Grn = () => {
+const PurchaseReturn = () => {
     const dispatch = useDispatch();
 
+    const purchaseReturnState = useSelector((state: any) => state.purchaseReturn);
     const grnState = useSelector((state: any) => state.grn);
-    const purchaseOrderState = useSelector((state: any) => state.purchaseOrder);
 
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
     );
+
+    const purchaseReturns =
+        purchaseReturnState?.purchaseReturns ||
+        purchaseReturnState?.purchaseReturnList ||
+        purchaseReturnState?.purchaseReturnRecords ||
+        purchaseReturnState?.purchaseReturnData ||
+        [];
 
     const grns =
         grnState?.grns ||
         grnState?.grnList ||
         grnState?.grnRecords ||
         grnState?.grnData ||
+        grnState?.data ||
         [];
 
-    const purchaseOrders =
-        purchaseOrderState?.purchaseOrders ||
-        purchaseOrderState?.purchaseOrderList ||
-        purchaseOrderState?.purchaseOrderRecords ||
-        purchaseOrderState?.purchaseOrderData ||
-        purchaseOrderState?.purchaseOrdersData ||
-        [];
+    const rejectedGrns = useMemo(() => {
+        return (grns || []).filter((grn: any) => {
+            const grnBody = grn?.grnBody || [];
 
-    const purchaseOrderLoading =
-        purchaseOrderState?.loading ||
-        purchaseOrderState?.listingLoader ||
-        purchaseOrderState?.listLoading ||
-        false;
+            return grnBody.some((item: any) => {
+                return num(item?.rejectedQuantity) > 0;
+            });
+        });
+    }, [grns]);
 
-    const pagination = grnState?.pagination || defaultPagination;
-
-    const loading =
+    const grnLoading =
         grnState?.loading ||
         grnState?.listingLoader ||
+        grnState?.listLoading ||
+        false;
+
+    const pagination = purchaseReturnState?.pagination || defaultPagination;
+
+    const loading =
+        purchaseReturnState?.loading ||
+        purchaseReturnState?.listingLoader ||
         false;
 
     const createLoading =
-        grnState?.createLoading ||
-        grnState?.addLoader ||
+        purchaseReturnState?.createLoading ||
+        purchaseReturnState?.addLoader ||
         false;
 
-    const updateLoading = grnState?.updateLoading || false;
+    const updateLoading = purchaseReturnState?.updateLoading || false;
 
     const deleteLoading =
-        grnState?.deleteLoading ||
-        grnState?.deleteLoader ||
+        purchaseReturnState?.deleteLoading ||
+        purchaseReturnState?.deleteLoader ||
         false;
 
     const [localOffset, setLocalOffset] = useState(0);
@@ -357,14 +298,12 @@ const Grn = () => {
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
 
-    const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
-    const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
-    const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
+    const [showGrnModal, setShowGrnModal] = useState(false);
+    const [grnSearch, setGrnSearch] = useState("");
+    const [selectedGrn, setSelectedGrn] = useState<any>(null);
 
-    // ✅ Local modal loading states to stop blinking
-    const [purchaseOrderModalLoading, setPurchaseOrderModalLoading] =
-        useState(false);
-    const [purchaseOrderLoaded, setPurchaseOrderLoaded] = useState(false);
+    const [grnModalLoading, setGrnModalLoading] = useState(false);
+    const [grnLoaded, setGrnLoaded] = useState(false);
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -487,21 +426,11 @@ const Grn = () => {
        CALCULATIONS
     =================================================== */
 
-    const getFinalQuantity = (row: any) => {
-        const originalQuantity = num(row.quantity);
-        const acceptedQuantity = num(row.acceptedQuantity);
-        const rejectedQuantity = num(row.rejectedQuantity);
-
-        return originalQuantity > 0
-            ? originalQuantity
-            : acceptedQuantity + rejectedQuantity;
-    };
-
     const calculateRow = (row: any) => {
-        const finalQuantity = getFinalQuantity(row);
+        const quantity = num(row.quantity);
         const rate = num(row.rate);
 
-        const gross = finalQuantity * rate;
+        const gross = quantity * rate;
 
         const discountPercent = safePercent(
             row.discount !== undefined && row.discount !== null && row.discount !== ""
@@ -542,24 +471,7 @@ const Grn = () => {
         return {
             ...row,
 
-            quantity: finalQuantity ? String(finalQuantity) : row.quantity,
-            rate: row.rate,
-
-            acceptedQuantity:
-                row.acceptedQuantity !== undefined &&
-                    row.acceptedQuantity !== null &&
-                    row.acceptedQuantity !== ""
-                    ? row.acceptedQuantity
-                    : row.quantity || "",
-
-            rejectedQuantity:
-                row.rejectedQuantity !== undefined &&
-                    row.rejectedQuantity !== null &&
-                    row.rejectedQuantity !== ""
-                    ? row.rejectedQuantity
-                    : "0",
-
-            rejectedReason: row.rejectedReason || "",
+            quantity: row.quantity,
 
             discount: row.discount,
             discountPercentage: row.discountPercentage,
@@ -601,7 +513,7 @@ const Grn = () => {
     const calculateFooter = (products: any[]) => {
         return (products || []).reduce(
             (acc: any, item: any) => {
-                acc.totalQuantity += getFinalQuantity(item);
+                acc.totalQuantity += num(item.quantity);
 
                 acc.totalGrossAmount += num(item.grossAmount || item.gross);
                 acc.totalDiscountAmount += num(item.discountAmount);
@@ -646,9 +558,9 @@ const Grn = () => {
        API CALLS
     =================================================== */
 
-    const fetchGrns = async () => {
+    const fetchPurchaseReturns = async () => {
         await dispatch(
-            getGrnList({
+            getPurchaseReturnList({
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
@@ -657,12 +569,12 @@ const Grn = () => {
         );
     };
 
-    const fetchPurchaseOrders = async (searchText = "") => {
-        setPurchaseOrderModalLoading(true);
+    const fetchGrns = async (searchText = "") => {
+        setGrnModalLoading(true);
 
         try {
             await dispatch(
-                getPurchaseOrderList({
+                getGrnList({
                     offset: 0,
                     limit: 20,
                     search: searchText,
@@ -670,75 +582,72 @@ const Grn = () => {
                 }) as any
             ).unwrap();
 
-            setPurchaseOrderLoaded(true);
+            setGrnLoaded(true);
         } catch (error) {
-            setPurchaseOrderLoaded(true);
-            toast.error("Failed to load purchase orders");
+            setGrnLoaded(true);
+            toast.error("Failed to load GRN list");
         } finally {
-            setPurchaseOrderModalLoading(false);
+            setGrnModalLoading(false);
         }
     };
 
     /*
-       After creating/updating GRN from Purchase Order:
-       - Check pending GRN quantity from analysis API
-       - If pending quantity is 0, close Purchase Order
-       - If pending quantity is still available, keep Purchase Order open
-       - Because PO modal loads only open POs, closed PO will disappear from list
+       After creating/updating Purchase Return from GRN:
+       - Check remaining rejected quantity by GRN
+       - If pending rejected quantity is 0, close GRN
+       - Because GRN modal loads only open GRNs, closed GRN will disappear from modal list
     */
-    const syncPurchaseOrderStatusAfterGrn = async (pOrdVoucherNumber: string) => {
-        if (!pOrdVoucherNumber) return "";
+    const syncGrnStatusAfterPurchaseReturn = async (grnVoucherNumber: string) => {
+        if (!grnVoucherNumber) return "";
 
         try {
-            const summaryRes = await professionalAxios.get(
-                `/eTaxSolnMongoApiBackend/users/bookez/analysis/grn/byPurchaseOrderVoucherNumber/${pOrdVoucherNumber}`
+            const data = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/analysis/grnPendingPurchaseReturn/byGrn/${grnVoucherNumber}`
             );
 
-            const summary =
-                summaryRes?.data?.data?.summary ||
-                summaryRes?.data?.summary ||
-                {};
+            const pendingItems =
+                data?.data?.data?.record?.pendingItems ||
+                data?.data?.record?.pendingItems ||
+                [];
 
-            const pendingRaw = summary?.totalPendingGrnQuantity;
+            const totalPendingReturnQuantity = Array.isArray(pendingItems)
+                ? pendingItems.reduce((acc: number, item: any) => {
+                    return (
+                        acc +
+                        num(
+                            item?.balanceQuantity ||
+                            item?.rejectedQuantity ||
+                            item?.pendingQuantity ||
+                            0
+                        )
+                    );
+                }, 0)
+                : 0;
 
-            if (
-                pendingRaw === undefined ||
-                pendingRaw === null ||
-                pendingRaw === ""
-            ) {
-                console.log(
-                    "GRN analysis summary missing totalPendingGrnQuantity",
-                    summaryRes?.data
-                );
-                return "";
-            }
-
-            const totalPendingGrnQuantity = num(pendingRaw);
-
-            const nextPoStatus =
-                totalPendingGrnQuantity === 0 ? "close" : "open";
+            const nextGrnStatus =
+                totalPendingReturnQuantity === 0 ? "close" : "open";
 
             await professionalAxios.put(
-                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseOrder/update/${pOrdVoucherNumber}`,
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/grn/update/${grnVoucherNumber}`,
                 {
-                    pOrdStatus: nextPoStatus,
+                    grnStatus: nextGrnStatus,
                 }
             );
 
-            return nextPoStatus;
+            return nextGrnStatus;
         } catch (error) {
-            console.log("Failed to sync Purchase Order status after GRN", error);
-            toast.error("GRN saved but failed to update purchase order status");
+            console.log("Failed to sync GRN status after Purchase Return", error);
+            toast.error("Purchase return saved but failed to update GRN status");
             return "";
         }
     };
 
     useEffect(() => {
-        dispatch(getAllTransactionSchema("grn") as any);
+        dispatch(getAllTransactionSchema("purchaseReturn") as any);
     }, [dispatch]);
 
     useEffect(() => {
-        fetchGrns();
+        fetchPurchaseReturns();
     }, [localOffset, localLimit, debouncedSearch, status]);
 
     useEffect(() => {
@@ -751,15 +660,15 @@ const Grn = () => {
     }, [search]);
 
     useEffect(() => {
-        if (!showPurchaseOrderModal) return;
-        if (!purchaseOrderLoaded) return;
+        if (!showGrnModal) return;
+        if (!grnLoaded) return;
 
         const timer = setTimeout(() => {
-            fetchPurchaseOrders(purchaseOrderSearch.trim());
+            fetchGrns(grnSearch.trim());
         }, 400);
 
         return () => clearTimeout(timer);
-    }, [purchaseOrderSearch]);
+    }, [grnSearch]);
 
     /* ===================================================
        LOAD TRANSACTION SCHEMA WITH API OPTIONS
@@ -799,51 +708,51 @@ const Grn = () => {
 
     const columns = [
         {
-            key: "grnVoucherNumber",
+            key: "pRetVoucherNumber",
             title: "Voucher No",
         },
         {
-            key: "grnVoucherDate",
+            key: "pRetVoucherDate",
             title: "Date",
             render: (row: any) =>
-                row?.grnVoucherDate
-                    ? formatDateForList(row.grnVoucherDate)
+                row?.pRetVoucherDate
+                    ? formatDateForList(row.pRetVoucherDate)
                     : "-",
         },
         {
-            key: "grnVendorName",
+            key: "pRetVendorName",
             title: "Vendor",
             render: (row: any) => (
                 <div>
                     <div className="font-medium text-slate-800">
-                        {row?.grnVendorName || "-"}
+                        {row?.pRetVendorName || "-"}
                     </div>
                     <div className="text-xs text-slate-500">
-                        {row?.grnVendorCode || "-"}
+                        {row?.pRetVendorCode || "-"}
                     </div>
                 </div>
             ),
         },
         {
-            key: "grnBody",
+            key: "pRetBody",
             title: "Items",
-            render: (row: any) => row?.grnBody?.length || 0,
+            render: (row: any) => row?.pRetBody?.length || 0,
         },
         {
-            key: "grnFooter",
+            key: "pRetFooter",
             title: "Net Amount",
             render: (row: any) => (
                 <span className="font-semibold text-indigo-700">
-                    {money(row?.grnFooter?.netAmount || 0)}
+                    {money(row?.pRetFooter?.netAmount || 0)}
                 </span>
             ),
         },
         {
-            key: "grnStatus",
-            title: "GRN Status",
+            key: "pRetStatus",
+            title: "Status",
             render: (row: any) => (
                 <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-                    {row?.grnStatus || "-"}
+                    {row?.pRetStatus || "-"}
                 </span>
             ),
         },
@@ -862,8 +771,8 @@ const Grn = () => {
         setRefreshing(true);
 
         try {
-            await fetchGrns();
-            toast.success("GRN list refreshed");
+            await fetchPurchaseReturns();
+            toast.success("Purchase return list refreshed");
         } finally {
             setRefreshing(false);
         }
@@ -877,20 +786,21 @@ const Grn = () => {
 
     const openAddModal = async () => {
         resetMainForm();
-        setSelectedPurchaseOrder(null);
-        setPurchaseOrderSearch("");
-        setPurchaseOrderLoaded(false);
 
-        setShowPurchaseOrderModal(true);
+        setSelectedGrn(null);
+        setGrnSearch("");
+        setGrnLoaded(false);
 
-        await fetchPurchaseOrders("");
+        setShowGrnModal(true);
+
+        await fetchGrns("");
     };
 
-    const handlePurchaseOrderSelect = (purchaseOrder: any) => {
-        setSelectedPurchaseOrder(purchaseOrder);
+    const handleGrnSelect = (grn: any) => {
+        setSelectedGrn(grn);
     };
 
-    const buildGrnProductRow = (item: any) => {
+    const buildPurchaseReturnProductRow = (item: any) => {
         const unitCode = item?.unit || item?.uom || "";
 
         return calculateRow(
@@ -914,23 +824,7 @@ const Grn = () => {
                 productHSNCode: item?.productHSNCode || "",
                 remarks: item?.remarks || "",
 
-                quantity: item?.quantity || "",
-
-                acceptedQuantity:
-                    item?.acceptedQuantity !== undefined &&
-                        item?.acceptedQuantity !== null &&
-                        item?.acceptedQuantity !== ""
-                        ? item.acceptedQuantity
-                        : item?.quantity || "",
-
-                rejectedQuantity:
-                    item?.rejectedQuantity !== undefined &&
-                        item?.rejectedQuantity !== null &&
-                        item?.rejectedQuantity !== ""
-                        ? item.rejectedQuantity
-                        : "0",
-
-                rejectedReason: item?.rejectedReason || "",
+                quantity: item?.rejectedQuantity || "",
 
                 unit: unitCode,
                 uom: unitCode,
@@ -940,108 +834,123 @@ const Grn = () => {
 
                 rate: item?.rate || "",
 
-                gross: item?.gross || item?.grossAmount || 0,
-                grossAmount: item?.grossAmount || item?.gross || 0,
+                gross: 0,
+                grossAmount: 0,
 
                 discount: item?.discount || item?.discountPercentage || "",
                 discountPercentage:
                     item?.discountPercentage || item?.discount || "",
-                discountAmount: item?.discountAmount || 0,
+                discountAmount: 0,
 
-                taxableAmount: item?.taxableAmount || 0,
+                taxableAmount: 0,
 
                 cgst: item?.cgst || item?.cgstPercentage || "",
                 cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-                cgstAmount: item?.cgstAmount || 0,
+                cgstAmount: 0,
 
                 sgst: item?.sgst || item?.sgstPercentage || "",
                 sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-                sgstAmount: item?.sgstAmount || 0,
+                sgstAmount: 0,
 
                 igst: item?.igst || item?.igstPercentage || "",
                 igstPercentage: item?.igstPercentage || item?.igst || "",
-                igstAmount: item?.igstAmount || 0,
+                igstAmount: 0,
 
-                taxAmount: item?.taxAmount || 0,
+                taxAmount: 0,
                 otherAmount: item?.otherAmount || 0,
 
-                netAmount: item?.netAmount || item?.netTotal || 0,
-                netTotal: item?.netTotal || item?.netAmount || 0,
+                netAmount: 0,
+                netTotal: 0,
             })
         );
     };
 
-    const handlePurchaseOrderModalClose = () => {
-        setShowPurchaseOrderModal(false);
-        setSelectedPurchaseOrder(null);
-        setPurchaseOrderSearch("");
-        setPurchaseOrderLoaded(false);
-        setPurchaseOrderModalLoading(false);
+    const handleGrnModalClose = () => {
+        setShowGrnModal(false);
+        setSelectedGrn(null);
+        setGrnSearch("");
+        setGrnLoaded(false);
+        setGrnModalLoading(false);
 
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
-        setShowModal(true);
+        // setShowModal(true);
     };
 
-    const handlePurchaseOrderConfirm = () => {
-        if (!selectedPurchaseOrder) {
-            toast.error("Please select purchase order");
+    const handleGrnConfirm = () => {
+        if (!selectedGrn) {
+            toast.error("Please select GRN");
             return;
         }
 
-        const poBody = selectedPurchaseOrder?.pOrdBody || [];
+        const grnBody = selectedGrn?.grnBody || [];
+
+        const rejectedItems = grnBody.filter((item: any) => {
+            return num(item?.rejectedQuantity) > 0;
+        });
 
         const products =
-            poBody.length > 0
-                ? poBody.map((item: any) => buildGrnProductRow(item))
+            rejectedItems.length > 0
+                ? rejectedItems.map((item: any) =>
+                    buildPurchaseReturnProductRow(item)
+                )
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setForm({
             ...getDefaultForm(),
 
-            pOrdVoucherNumber: selectedPurchaseOrder?.pOrdVoucherNumber || "",
+            grnVoucherNumber: selectedGrn?.grnVoucherNumber || "",
+            pOrdVoucherNumber: selectedGrn?.pOrdVoucherNumber || "",
 
-            grnVendorCode: selectedPurchaseOrder?.pOrdVendorCode || "",
-            grnVendorName: selectedPurchaseOrder?.pOrdVendorName || "",
+            pRetVendorCode: selectedGrn?.grnVendorCode || "",
+            pRetVendorName: selectedGrn?.grnVendorName || "",
 
             products,
         });
 
         setErrors({});
         setEditingRecord(null);
-        setShowPurchaseOrderModal(false);
-        setPurchaseOrderLoaded(false);
-        setPurchaseOrderModalLoading(false);
+
+        setShowGrnModal(false);
+        setGrnLoaded(false);
+        setGrnModalLoading(false);
+
         setShowModal(true);
     };
 
     const openEditModal = (record: any) => {
-        const footer = record?.grnFooter || {};
+        const footer = record?.pRetFooter || {};
 
         const products =
-            record?.grnBody?.length > 0
-                ? record.grnBody.map((item: any) => buildGrnProductRow(item))
+            record?.pRetBody?.length > 0
+                ? record.pRetBody.map((item: any) =>
+                    buildPurchaseReturnProductRow({
+                        ...item,
+                        rejectedQuantity: item?.quantity,
+                    })
+                )
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setEditingRecord(true);
         setErrors({});
 
         setForm({
-            grnVoucherNumber: record?.grnVoucherNumber || "AUTO",
+            pRetVoucherNumber: record?.pRetVoucherNumber || "AUTO",
 
-            grnVoucherDate: formatDateForInput(record?.grnVoucherDate),
+            pRetVoucherDate: formatDateForInput(record?.pRetVoucherDate),
 
+            grnVoucherNumber: record?.grnVoucherNumber || "",
             pOrdVoucherNumber: record?.pOrdVoucherNumber || "",
 
-            grnVendorCode: record?.grnVendorCode || "",
-            grnVendorName: record?.grnVendorName || "",
+            pRetVendorCode: record?.pRetVendorCode || "",
+            pRetVendorName: record?.pRetVendorName || "",
 
-            grnStatus: record?.grnStatus || "open",
+            pRetStatus: record?.pRetStatus || "open",
 
-            grnRemark: record?.grnRemark || "",
-            grnStatusRemark: record?.grnStatusRemark || "",
-            grnStatusHistory: record?.grnStatusHistory || [],
+            pRetRemark: record?.pRetRemark || "",
+            pRetStatusRemark: record?.pRetStatusRemark || "",
+            pRetStatusHistory: record?.pRetStatusHistory || [],
 
             isAutoPost: record?.isAutoPost || false,
 
@@ -1145,74 +1054,12 @@ const Grn = () => {
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
 
-            const isPurchaseOrderGrn = Boolean(prev?.pOrdVoucherNumber);
-
             let updatedRow = {
                 ...currentRow,
                 [key]: value,
             };
 
             updatedRow = normalizeRowKeys(updatedRow);
-
-            if (key === "acceptedQuantity") {
-                const originalQuantity = num(updatedRow.quantity);
-                const acceptedQuantity = num(value);
-                const rejectedQuantity = num(updatedRow.rejectedQuantity);
-
-                if (
-                    isPurchaseOrderGrn &&
-                    originalQuantity > 0 &&
-                    acceptedQuantity > originalQuantity
-                ) {
-                    updatedRow.acceptedQuantity = updatedRow.quantity || "";
-                    toast.error("Accepted quantity cannot be greater than quantity");
-                }
-
-                if (isPurchaseOrderGrn && originalQuantity > 0) {
-                    updatedRow.rejectedQuantity = Math.max(
-                        originalQuantity - num(updatedRow.acceptedQuantity),
-                        0
-                    ).toString();
-                }
-
-                if (!isPurchaseOrderGrn) {
-                    updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
-                }
-
-                if (num(updatedRow.rejectedQuantity) === 0) {
-                    updatedRow.rejectedReason = "";
-                }
-            }
-
-            if (key === "rejectedQuantity") {
-                const originalQuantity = num(updatedRow.quantity);
-                const rejectedQuantity = num(value);
-                const acceptedQuantity = num(updatedRow.acceptedQuantity);
-
-                if (
-                    isPurchaseOrderGrn &&
-                    originalQuantity > 0 &&
-                    rejectedQuantity > originalQuantity
-                ) {
-                    updatedRow.rejectedQuantity = "0";
-                    toast.error("Rejected quantity cannot be greater than quantity");
-                }
-
-                if (isPurchaseOrderGrn && originalQuantity > 0) {
-                    updatedRow.acceptedQuantity = Math.max(
-                        originalQuantity - num(updatedRow.rejectedQuantity),
-                        0
-                    ).toString();
-                }
-
-                if (!isPurchaseOrderGrn) {
-                    updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
-                }
-
-                if (num(updatedRow.rejectedQuantity) === 0) {
-                    updatedRow.rejectedReason = "";
-                }
-            }
 
             if (currentField?.mapFields) {
                 updatedRow = applyMappedFields(
@@ -1265,7 +1112,6 @@ const Grn = () => {
             ...prev,
             products: "",
             [`row_${index}_${key}`]: "",
-            [`row_${index}_rejectedReason`]: "",
             [`row_${index}_tax`]: "",
             [`row_${index}_igstPercentage`]: "",
             [`row_${index}_cgstPercentage`]: "",
@@ -1363,13 +1209,6 @@ const Grn = () => {
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
             }
-
-            const rejectedQuantity = num(row.rejectedQuantity);
-
-            if (rejectedQuantity > 0 && !row.rejectedReason) {
-                err[`row_${index}_rejectedReason`] =
-                    "Rejected reason is required";
-            }
         });
 
         setErrors(err);
@@ -1428,18 +1267,19 @@ const Grn = () => {
         const footer = calculateFooter(products);
 
         const payload: any = {
-            grnVoucherDate: form.grnVoucherDate,
+            pRetVoucherDate: form.pRetVoucherDate,
 
-            grnVendorCode: form.grnVendorCode,
-            grnVendorName: form.grnVendorName,
-
+            grnVoucherNumber: form?.grnVoucherNumber || "",
             pOrdVoucherNumber: form?.pOrdVoucherNumber || "",
 
-            grnStatus: form.grnStatus || "open",
+            pRetVendorCode: form.pRetVendorCode,
+            pRetVendorName: form.pRetVendorName,
 
-            grnRemark: form.grnRemark,
+            pRetStatus: form.pRetStatus || "open",
 
-            grnBody: products.map((item: any) =>
+            pRetRemark: form.pRetRemark,
+
+            pRetBody: products.map((item: any) =>
                 removeEmptyValues({
                     productCode: item.productCode,
                     productName: item.productName,
@@ -1455,27 +1295,7 @@ const Grn = () => {
 
                     remarks: item.remarks,
 
-                    quantity: String(
-                        num(item.acceptedQuantity) + num(item.rejectedQuantity)
-                    ),
-
-                    acceptedQuantity: String(
-                        item.acceptedQuantity !== undefined &&
-                            item.acceptedQuantity !== null &&
-                            item.acceptedQuantity !== ""
-                            ? item.acceptedQuantity
-                            : item.quantity
-                    ),
-
-                    rejectedQuantity: String(
-                        item.rejectedQuantity !== undefined &&
-                            item.rejectedQuantity !== null &&
-                            item.rejectedQuantity !== ""
-                            ? item.rejectedQuantity
-                            : "0"
-                    ),
-
-                    rejectedReason: item.rejectedReason,
+                    quantity: String(item.quantity || 0),
 
                     unit: item.unit || item.uom,
                     uom: item.uom || item.unit,
@@ -1523,7 +1343,7 @@ const Grn = () => {
                 })
             ),
 
-            grnFooter: {
+            pRetFooter: {
                 grossAmount: fmtMoney(footer.totalGrossAmount),
                 discountAmount: fmtMoney(footer.totalDiscountAmount),
                 cgstAmount: fmtMoney(footer.totalCgstAmount),
@@ -1551,397 +1371,393 @@ const Grn = () => {
         try {
             if (editingRecord) {
                 await dispatch(
-                    updateGrn({
-                        grnVoucherNumber: form?.grnVoucherNumber,
+                    updatePurchaseReturn({
+                        purchaseReturnNumber: form?.pRetVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
 
-                if (payload?.pOrdVoucherNumber) {
-                    await syncPurchaseOrderStatusAfterGrn(
-                        payload.pOrdVoucherNumber
+                if (payload?.grnVoucherNumber) {
+                    await syncGrnStatusAfterPurchaseReturn(
+                        payload.grnVoucherNumber
                     );
                 }
 
-                toast.success("GRN updated successfully");
+                toast.success("Purchase return updated successfully");
             } else {
-                await dispatch(addGrn({ payload }) as any).unwrap();
+                await dispatch(addPurchaseReturn({ payload }) as any).unwrap();
 
-                if (payload?.pOrdVoucherNumber) {
-                    const poStatus = await syncPurchaseOrderStatusAfterGrn(
-                        payload.pOrdVoucherNumber
+                if (payload?.grnVoucherNumber) {
+                    const grnStatus = await syncGrnStatusAfterPurchaseReturn(
+                        payload.grnVoucherNumber
                     );
 
-                    if (poStatus === "close") {
+                    if (grnStatus === "close") {
                         toast.success(
-                            "GRN created successfully and Purchase Order closed"
+                            "Purchase return created successfully and GRN closed"
                         );
                     } else {
-                        toast.success("GRN created successfully");
+                        toast.success("Purchase return created successfully");
                     }
                 } else {
-                    toast.success("GRN created successfully");
+                    toast.success("Purchase return created successfully");
                 }
             }
 
             setShowModal(false);
             resetMainForm();
 
-            setSelectedPurchaseOrder(null);
-            setPurchaseOrderSearch("");
-            setPurchaseOrderLoaded(false);
+            setSelectedGrn(null);
+            setGrnSearch("");
+            setGrnLoaded(false);
 
-            await fetchGrns();
+            await fetchPurchaseReturns();
 
-            // Refresh open Purchase Orders so closed PO is removed from modal list
-            await fetchPurchaseOrders("");
+            // Refresh open GRNs so closed GRN is removed from modal list
+            await fetchGrns("");
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
+        
+    }
+};
+
+const handleDeleteConfirm = async () => {
+    try {
+        const voucherNumber = confirmTooltip?.voucherNumber;
+
+        if (!voucherNumber) {
+            toast.error("Purchase return voucher number not found");
+            return;
         }
-    };
 
-    const handleDeleteConfirm = async () => {
-        try {
-            const voucherNumber = confirmTooltip?.voucherNumber;
+        await dispatch(
+            deletePurchaseReturn({
+                purchaseReturnNumber: voucherNumber,
+            }) as any
+        ).unwrap();
 
-            if (!voucherNumber) {
-                toast.error("GRN voucher number not found");
-                return;
-            }
+        toast.success("Purchase return deleted successfully");
 
-            await dispatch(
-                deleteGrn({
-                    grnVoucherNumber: voucherNumber,
-                }) as any
-            ).unwrap();
+        await fetchPurchaseReturns();
+    } catch (err: any) {
+        toast.error(
+            err?.message ||
+            err?.payload?.message ||
+            "Failed to delete purchase return"
+        );
+    } finally {
+        setConfirmTooltip({
+            show: false,
+            x: null,
+            y: null,
+            voucherNumber: null,
+        });
+    }
+};
 
-            toast.success("GRN deleted successfully");
+/* ===================================================
+   DYNAMIC FOOTER
+=================================================== */
 
-            await fetchGrns();
-        } catch (err: any) {
-            toast.error(
-                err?.message ||
-                err?.payload?.message ||
-                "Failed to delete GRN"
-            );
-        } finally {
-            setConfirmTooltip({
-                show: false,
-                x: null,
-                y: null,
-                voucherNumber: null,
-            });
-        }
-    };
-
-    /* ===================================================
-       DYNAMIC FOOTER
-    =================================================== */
-
-    const footerValues = useMemo(() => {
-        return {
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        };
-    }, [
+const footerValues = useMemo(() => {
+    return {
         grossAmount,
         discountAmount,
         cgstAmount,
         sgstAmount,
         igstAmount,
         netAmount,
-    ]);
+        adjustedAmount: 0,
+        balanceAmount: netAmount,
+    };
+}, [
+    grossAmount,
+    discountAmount,
+    cgstAmount,
+    sgstAmount,
+    igstAmount,
+    netAmount,
+]);
 
-    const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
+const dynamicFooterArray = useMemo(() => {
+    return (templateFields?.footer || [])
+        .filter((field: any) => !field.isHidden)
+        .map((field: any) => {
+            const rawValue =
+                footerValues[field.key as keyof typeof footerValues] ?? 0;
 
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
-            });
-    }, [templateFields?.footer, footerValues]);
+            return {
+                ...field,
+                value: money(rawValue),
+                rawValue,
+            };
+        });
+}, [templateFields?.footer, footerValues]);
 
-    const showInitialSkeleton =
-        !refreshing &&
-        grns.length === 0 &&
-        (loading || fieldsLoading);
+const showInitialSkeleton =
+    !refreshing &&
+    purchaseReturns.length === 0 &&
+    (loading || fieldsLoading);
 
-    if (showInitialSkeleton) {
-        return <ModulePageSkeleton rows={8} columns={6} />;
-    }
+if (showInitialSkeleton) {
+    return <ModulePageSkeleton rows={8} columns={6} />;
+}
 
-    const showPurchaseOrderSkeleton =
-        purchaseOrderModalLoading ||
-        purchaseOrderLoading ||
-        !purchaseOrderLoaded;
+const showGrnSkeleton =
+    grnModalLoading ||
+    grnLoading ||
+    !grnLoaded;
 
-    return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+return (
+    <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div
+            id="purchase-return-header"
+            className="mb-3 flex items-center"
+        >
             <div
-                id="grn-header"
-                className="mb-3 flex items-center"
+                id="purchase-return-summary"
+                className="flex items-start gap-3"
             >
-                <div
-                    id="grn-summary"
-                    className="flex items-start gap-3"
-                >
-                    <Badge
-                        {...{
-                            count: pagination?.totalDocs ?? 0,
-                            text: "Total GRNs:",
-                            varient: "primary",
-                        }}
-                    />
-                </div>
-
-                <div className="ml-auto flex items-center gap-2">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: handleStatusChange,
-                        }}
-                    />
-
-                    <SearchInput {...{ search, setSearch }} />
-
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
-
-                    {/* @ts-ignore */}
-                    <DataCreateButton
-                        {...{
-                            callBackFn: openAddModal,
-                            text: "Add GRN",
-                        }}
-                    />
-                </div>
-            </div>
-
-            <DataTable
-                columns={columns}
-                data={grns}
-                loading={loading}
-                emptyMessage={`No ${status} GRN found`}
-                actions={(record: any) => (
-                    <div className="flex items-center gap-2">
-                        <button
-                            id="grn-edit-button"
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
-                            <Edit size={16} />
-                        </button>
-
-                        <button
-                            id="grn-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-
-                                const y = rect.top + window.scrollY - 5;
-
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber: record?.grnVoucherNumber,
-                                });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                )}
-            />
-
-            {pagination?.totalDocs > 0 && (
-                <Pagination
+                <Badge
                     {...{
-                        localLimit,
-                        selectCb: (e: any) => {
-                            setLocalLimit(Number(e.target.value));
-                            setLocalOffset(0);
-                        },
-                        preDisabled: !pagination?.hasPrevPage,
-                        nextDisabled: !pagination?.hasNextPage,
-                        setLocalOffset,
-                        pagination,
+                        count: pagination?.totalDocs ?? 0,
+                        text: "Total Purchase Returns:",
+                        varient: "primary",
                     }}
                 />
-            )}
+            </div>
 
-            {confirmTooltip.show && (
-                <ConfirmTooltip
-                    x={confirmTooltip.x}
-                    y={confirmTooltip.y}
-                    message="Are you sure you want to delete this GRN?"
-                    confirmText="Delete"
-                    cancelText="Cancel"
-                    onConfirm={handleDeleteConfirm}
-                    onCancel={() =>
-                        setConfirmTooltip({
-                            show: false,
-                            x: null,
-                            y: null,
-                            voucherNumber: null,
-                        })
-                    }
+            <div className="ml-auto flex items-center gap-2">
+                <Toggle
+                    {...{
+                        arr: ["open", "close"],
+                        state: status,
+                        setState: handleStatusChange,
+                    }}
                 />
-            )}
 
-            <Modal
-                show={showPurchaseOrderModal}
-                setShow={setShowPurchaseOrderModal}
-                title="Select Purchase Order"
-                state={false}
-                handleSubmit={handlePurchaseOrderConfirm}
-                handleClose={handlePurchaseOrderModalClose}
-                loader={purchaseOrderModalLoading || purchaseOrderLoading}
-                gridCols={1}
-                maxWidth="2xl"
-                modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
-                body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
-                            <input
-                                value={purchaseOrderSearch}
-                                onChange={(e) =>
-                                    setPurchaseOrderSearch(e.target.value)
-                                }
-                                placeholder="Search Purchase Order code..."
-                                className="
+                <SearchInput {...{ search, setSearch }} />
+
+                <DataREfreshButton
+                    {...{
+                        callBackFn: handleRefresh,
+                        loading: refreshing,
+                    }}
+                />
+
+                {/* @ts-ignore */}
+                <DataCreateButton
+                    {...{
+                        callBackFn: openAddModal,
+                        text: "Add Purchase Return",
+                    }}
+                />
+            </div>
+        </div>
+
+        <DataTable
+            columns={columns}
+            data={purchaseReturns}
+            loading={loading}
+            emptyMessage={`No ${status} purchase return found`}
+            actions={(record: any) => (
+                <div className="flex items-center gap-2">
+                    <button
+                        id="purchase-return-edit-button"
+                        onClick={() => openEditModal(record)}
+                        className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                    >
+                        <Edit size={16} />
+                    </button>
+
+                    <button
+                        id="purchase-return-delete-button"
+                        disabled={deleteLoading}
+                        onClick={(e) => {
+                            const rect =
+                                e.currentTarget.getBoundingClientRect();
+
+                            let x = rect.left - 150;
+                            if (x < 10) x = 10;
+
+                            const y = rect.top + window.scrollY - 5;
+
+                            setConfirmTooltip({
+                                show: true,
+                                x,
+                                y,
+                                voucherNumber: record?.pRetVoucherNumber,
+                            });
+                        }}
+                        className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )}
+        />
+
+        {pagination?.totalDocs > 0 && (
+            <Pagination
+                {...{
+                    localLimit,
+                    selectCb: (e: any) => {
+                        setLocalLimit(Number(e.target.value));
+                        setLocalOffset(0);
+                    },
+                    preDisabled: !pagination?.hasPrevPage,
+                    nextDisabled: !pagination?.hasNextPage,
+                    setLocalOffset,
+                    pagination,
+                }}
+            />
+        )}
+
+        {confirmTooltip.show && (
+            <ConfirmTooltip
+                x={confirmTooltip.x}
+                y={confirmTooltip.y}
+                message="Are you sure you want to delete this purchase return?"
+                confirmText="Delete"
+                cancelText="Cancel"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() =>
+                    setConfirmTooltip({
+                        show: false,
+                        x: null,
+                        y: null,
+                        voucherNumber: null,
+                    })
+                }
+            />
+        )}
+
+        <Modal
+            show={showGrnModal}
+            setShow={setShowGrnModal}
+            title="Select GRN"
+            state={false}
+            handleSubmit={handleGrnConfirm}
+            handleClose={handleGrnModalClose}
+            loader={grnModalLoading || grnLoading}
+            gridCols={1}
+            maxWidth="2xl"
+            modalClassName="rounded-xl"
+            headerClassName="bg-white"
+            footerClassName="bg-white"
+            bodyClassName="!block !p-0"
+            body={
+                <div className="flex h-[520px] flex-col">
+                    <div className="border-b border-gray-200 p-5">
+                        <input
+                            value={grnSearch}
+                            onChange={(e) =>
+                                setGrnSearch(e.target.value)
+                            }
+                            placeholder="Search GRN code..."
+                            className="
                                     w-full rounded-xl border border-gray-200 bg-gray-50
                                     px-4 py-3 text-sm font-medium text-gray-700
                                     outline-none transition
                                     placeholder:text-gray-400
                                     focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
                                 "
-                            />
-                        </div>
+                        />
+                    </div>
 
-                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                            {showPurchaseOrderSkeleton ? (
-                                <ModalListSkeleton rows={3} />
-                            ) : purchaseOrders.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
-                                    No purchase order found
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {purchaseOrders.map((po: any, index: number) => {
-                                        const poNumber =
-                                            po?.pOrdVoucherNumber || "-";
+                    <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                        {showGrnSkeleton ? (
+                            <ModalListSkeleton rows={3} />
+                        ) : rejectedGrns.length === 0 ? (
+                            <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                No rejected GRN found
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {rejectedGrns.map((grn: any, index: number) => {
+                                    const grnNumber =
+                                        grn?.grnVoucherNumber || "-";
 
-                                        const vendorName =
-                                            po?.pOrdVendorName || "-";
+                                    const vendorName =
+                                        grn?.grnVendorName || "-";
 
-                                        const poBody = po?.pOrdBody || [];
+                                    const selectedGrnNumber =
+                                        selectedGrn?.grnVoucherNumber || "";
 
-                                        const selectedPoNumber =
-                                            selectedPurchaseOrder?.pOrdVoucherNumber || "";
+                                    const isSelected =
+                                        String(selectedGrnNumber) ===
+                                        String(grnNumber);
 
-                                        const isSelected =
-                                            String(selectedPoNumber) ===
-                                            String(poNumber);
-
-                                        return (
-                                            <button
-                                                key={`${poNumber}-${index}`}
-                                                type="button"
-                                                onClick={() =>
-                                                    handlePurchaseOrderSelect(po)
-                                                }
-                                                className={`
+                                    return (
+                                        <button
+                                            key={`${grnNumber}-${index}`}
+                                            type="button"
+                                            onClick={() =>
+                                                handleGrnSelect(grn)
+                                            }
+                                            className={`
                                                     w-full rounded-xl border px-4 py-4 text-left transition
                                                     ${isSelected
-                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
-                                                    }
+                                                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                    : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                }
                                                 `}
-                                            >
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div>
-                                                        <p className="text-base font-bold text-gray-900">
-                                                            {poNumber} - {vendorName}
-                                                        </p>
-
-                                                        <p className="mt-1 text-xs font-medium text-gray-500">
-                                                            Items: {poBody?.length || 0}
-                                                        </p>
-                                                    </div>
-
-                                                    {isSelected && (
-                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                                                            Selected
-                                                        </span>
-                                                    )}
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-base font-bold text-gray-900">
+                                                        {grnNumber} - {vendorName}
+                                                    </p>
                                                 </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                }
-            />
 
-            {!fieldsLoading && (
-                <DynamicAddForm
-                    {...{
-                        show: showModal,
-                        setShow: setShowModal,
-                        edit: Boolean(editingRecord),
-                        title: "GRN",
-                        subtitle: "Fill in the GRN details below",
-                        loading: createLoading || updateLoading,
-                        onClose: () => {
-                            setShowModal(false);
-                            resetMainForm();
-                        },
-                        onSubmit: handleSubmit,
-                        form,
-                        errors,
-                        handleAddRow,
-                        handleDeleteRow,
-                        handleRowChange,
-                        footerTotals,
-                        inputData: {
-                            ...templateFields,
-                            footer: dynamicFooterArray,
-                        },
-                        bodyKey: "products",
-                        handleChange: handleMainChange,
-                    }}
-                />
-            )}
-        </div>
-    );
+                                                {isSelected && (
+                                                    <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                        Selected
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            }
+        />
+
+        {!fieldsLoading && (
+            <DynamicAddForm
+                {...{
+                    show: showModal,
+                    setShow: setShowModal,
+                    edit: Boolean(editingRecord),
+                    title: "Purchase Return",
+                    subtitle: "Fill in the purchase return details below",
+                    loading: createLoading || updateLoading,
+                    onClose: () => {
+                        setShowModal(false);
+                        resetMainForm();
+                    },
+                    onSubmit: handleSubmit,
+                    isAddButton: false,
+                    form,
+                    errors,
+                    handleAddRow,
+                    handleDeleteRow,
+                    handleRowChange,
+                    footerTotals,
+                    inputData: {
+                        ...templateFields,
+                        footer: dynamicFooterArray,
+                    },
+                    bodyKey: "products",
+                    handleChange: handleMainChange,
+                }}
+            />
+        )}
+    </div>
+);
 };
 
-export default Grn;
+export default PurchaseReturn;
