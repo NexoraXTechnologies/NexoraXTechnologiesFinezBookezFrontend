@@ -679,6 +679,60 @@ const Grn = () => {
         }
     };
 
+    /*
+       After creating/updating GRN from Purchase Order:
+       - Check pending GRN quantity from analysis API
+       - If pending quantity is 0, close Purchase Order
+       - If pending quantity is still available, keep Purchase Order open
+       - Because PO modal loads only open POs, closed PO will disappear from list
+    */
+    const syncPurchaseOrderStatusAfterGrn = async (pOrdVoucherNumber: string) => {
+        if (!pOrdVoucherNumber) return "";
+
+        try {
+            const summaryRes = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/analysis/grn/byPurchaseOrderVoucherNumber/${pOrdVoucherNumber}`
+            );
+
+            const summary =
+                summaryRes?.data?.data?.summary ||
+                summaryRes?.data?.summary ||
+                {};
+
+            const pendingRaw = summary?.totalPendingGrnQuantity;
+
+            if (
+                pendingRaw === undefined ||
+                pendingRaw === null ||
+                pendingRaw === ""
+            ) {
+                console.log(
+                    "GRN analysis summary missing totalPendingGrnQuantity",
+                    summaryRes?.data
+                );
+                return "";
+            }
+
+            const totalPendingGrnQuantity = num(pendingRaw);
+
+            const nextPoStatus =
+                totalPendingGrnQuantity === 0 ? "close" : "open";
+
+            await professionalAxios.put(
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseOrder/update/${pOrdVoucherNumber}`,
+                {
+                    pOrdStatus: nextPoStatus,
+                }
+            );
+
+            return nextPoStatus;
+        } catch (error) {
+            console.log("Failed to sync Purchase Order status after GRN", error);
+            toast.error("GRN saved but failed to update purchase order status");
+            return "";
+        }
+    };
+
     useEffect(() => {
         dispatch(getAllTransactionSchema("grn") as any);
     }, [dispatch]);
@@ -1503,17 +1557,44 @@ const Grn = () => {
                     }) as any
                 ).unwrap();
 
+                if (payload?.pOrdVoucherNumber) {
+                    await syncPurchaseOrderStatusAfterGrn(
+                        payload.pOrdVoucherNumber
+                    );
+                }
+
                 toast.success("GRN updated successfully");
             } else {
                 await dispatch(addGrn({ payload }) as any).unwrap();
 
-                toast.success("GRN created successfully");
+                if (payload?.pOrdVoucherNumber) {
+                    const poStatus = await syncPurchaseOrderStatusAfterGrn(
+                        payload.pOrdVoucherNumber
+                    );
+
+                    if (poStatus === "close") {
+                        toast.success(
+                            "GRN created successfully and Purchase Order closed"
+                        );
+                    } else {
+                        toast.success("GRN created successfully");
+                    }
+                } else {
+                    toast.success("GRN created successfully");
+                }
             }
 
             setShowModal(false);
             resetMainForm();
 
-            fetchGrns();
+            setSelectedPurchaseOrder(null);
+            setPurchaseOrderSearch("");
+            setPurchaseOrderLoaded(false);
+
+            await fetchGrns();
+
+            // Refresh open Purchase Orders so closed PO is removed from modal list
+            await fetchPurchaseOrders("");
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }

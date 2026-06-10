@@ -591,6 +591,57 @@ const PurchaseReturn = () => {
         }
     };
 
+    /*
+       After creating/updating Purchase Return from GRN:
+       - Check remaining rejected quantity by GRN
+       - If pending rejected quantity is 0, close GRN
+       - Because GRN modal loads only open GRNs, closed GRN will disappear from modal list
+    */
+    const syncGrnStatusAfterPurchaseReturn = async (grnVoucherNumber: string) => {
+        if (!grnVoucherNumber) return "";
+
+        try {
+            const data = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/analysis/grnPendingPurchaseReturn/byGrn/${grnVoucherNumber}`
+            );
+
+            const pendingItems =
+                data?.data?.data?.record?.pendingItems ||
+                data?.data?.record?.pendingItems ||
+                [];
+
+            const totalPendingReturnQuantity = Array.isArray(pendingItems)
+                ? pendingItems.reduce((acc: number, item: any) => {
+                    return (
+                        acc +
+                        num(
+                            item?.balanceQuantity ||
+                            item?.rejectedQuantity ||
+                            item?.pendingQuantity ||
+                            0
+                        )
+                    );
+                }, 0)
+                : 0;
+
+            const nextGrnStatus =
+                totalPendingReturnQuantity === 0 ? "close" : "open";
+
+            await professionalAxios.put(
+                `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/grn/update/${grnVoucherNumber}`,
+                {
+                    grnStatus: nextGrnStatus,
+                }
+            );
+
+            return nextGrnStatus;
+        } catch (error) {
+            console.log("Failed to sync GRN status after Purchase Return", error);
+            toast.error("Purchase return saved but failed to update GRN status");
+            return "";
+        }
+    };
+
     useEffect(() => {
         dispatch(getAllTransactionSchema("purchaseReturn") as any);
     }, [dispatch]);
@@ -1326,367 +1377,387 @@ const PurchaseReturn = () => {
                     }) as any
                 ).unwrap();
 
+                if (payload?.grnVoucherNumber) {
+                    await syncGrnStatusAfterPurchaseReturn(
+                        payload.grnVoucherNumber
+                    );
+                }
+
                 toast.success("Purchase return updated successfully");
             } else {
                 await dispatch(addPurchaseReturn({ payload }) as any).unwrap();
 
-                toast.success("Purchase return created successfully");
+                if (payload?.grnVoucherNumber) {
+                    const grnStatus = await syncGrnStatusAfterPurchaseReturn(
+                        payload.grnVoucherNumber
+                    );
+
+                    if (grnStatus === "close") {
+                        toast.success(
+                            "Purchase return created successfully and GRN closed"
+                        );
+                    } else {
+                        toast.success("Purchase return created successfully");
+                    }
+                } else {
+                    toast.success("Purchase return created successfully");
+                }
             }
 
             setShowModal(false);
             resetMainForm();
 
-            fetchPurchaseReturns();
-        } catch (err: any) {
-            toast.error(err?.message || "Operation failed");
-        }
-    };
-
-    const handleDeleteConfirm = async () => {
-        try {
-            const voucherNumber = confirmTooltip?.voucherNumber;
-
-            if (!voucherNumber) {
-                toast.error("Purchase return voucher number not found");
-                return;
-            }
-
-            await dispatch(
-                deletePurchaseReturn({
-                    purchaseReturnNumber: voucherNumber,
-                }) as any
-            ).unwrap();
-
-            toast.success("Purchase return deleted successfully");
+            setSelectedGrn(null);
+            setGrnSearch("");
+            setGrnLoaded(false);
 
             await fetchPurchaseReturns();
+
+            // Refresh open GRNs so closed GRN is removed from modal list
+            await fetchGrns("");
         } catch (err: any) {
-            toast.error(
-                err?.message ||
-                err?.payload?.message ||
-                "Failed to delete purchase return"
-            );
-        } finally {
-            setConfirmTooltip({
-                show: false,
-                x: null,
-                y: null,
-                voucherNumber: null,
-            });
+            toast.error(err?.message || "Operation failed");
+        
+    }
+};
+
+const handleDeleteConfirm = async () => {
+    try {
+        const voucherNumber = confirmTooltip?.voucherNumber;
+
+        if (!voucherNumber) {
+            toast.error("Purchase return voucher number not found");
+            return;
         }
-    };
 
-    /* ===================================================
-       DYNAMIC FOOTER
-    =================================================== */
+        await dispatch(
+            deletePurchaseReturn({
+                purchaseReturnNumber: voucherNumber,
+            }) as any
+        ).unwrap();
 
-    const footerValues = useMemo(() => {
-        return {
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        };
-    }, [
+        toast.success("Purchase return deleted successfully");
+
+        await fetchPurchaseReturns();
+    } catch (err: any) {
+        toast.error(
+            err?.message ||
+            err?.payload?.message ||
+            "Failed to delete purchase return"
+        );
+    } finally {
+        setConfirmTooltip({
+            show: false,
+            x: null,
+            y: null,
+            voucherNumber: null,
+        });
+    }
+};
+
+/* ===================================================
+   DYNAMIC FOOTER
+=================================================== */
+
+const footerValues = useMemo(() => {
+    return {
         grossAmount,
         discountAmount,
         cgstAmount,
         sgstAmount,
         igstAmount,
         netAmount,
-    ]);
+        adjustedAmount: 0,
+        balanceAmount: netAmount,
+    };
+}, [
+    grossAmount,
+    discountAmount,
+    cgstAmount,
+    sgstAmount,
+    igstAmount,
+    netAmount,
+]);
 
-    const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
+const dynamicFooterArray = useMemo(() => {
+    return (templateFields?.footer || [])
+        .filter((field: any) => !field.isHidden)
+        .map((field: any) => {
+            const rawValue =
+                footerValues[field.key as keyof typeof footerValues] ?? 0;
 
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
-            });
-    }, [templateFields?.footer, footerValues]);
+            return {
+                ...field,
+                value: money(rawValue),
+                rawValue,
+            };
+        });
+}, [templateFields?.footer, footerValues]);
 
-    const showInitialSkeleton =
-        !refreshing &&
-        purchaseReturns.length === 0 &&
-        (loading || fieldsLoading);
+const showInitialSkeleton =
+    !refreshing &&
+    purchaseReturns.length === 0 &&
+    (loading || fieldsLoading);
 
-    if (showInitialSkeleton) {
-        return <ModulePageSkeleton rows={8} columns={6} />;
-    }
+if (showInitialSkeleton) {
+    return <ModulePageSkeleton rows={8} columns={6} />;
+}
 
-    const showGrnSkeleton =
-        grnModalLoading ||
-        grnLoading ||
-        !grnLoaded;
+const showGrnSkeleton =
+    grnModalLoading ||
+    grnLoading ||
+    !grnLoaded;
 
-    return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+return (
+    <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div
+            id="purchase-return-header"
+            className="mb-3 flex items-center"
+        >
             <div
-                id="purchase-return-header"
-                className="mb-3 flex items-center"
+                id="purchase-return-summary"
+                className="flex items-start gap-3"
             >
-                <div
-                    id="purchase-return-summary"
-                    className="flex items-start gap-3"
-                >
-                    <Badge
-                        {...{
-                            count: pagination?.totalDocs ?? 0,
-                            text: "Total Purchase Returns:",
-                            varient: "primary",
-                        }}
-                    />
-                </div>
-
-                <div className="ml-auto flex items-center gap-2">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: handleStatusChange,
-                        }}
-                    />
-
-                    <SearchInput {...{ search, setSearch }} />
-
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
-
-                    {/* @ts-ignore */}
-                    <DataCreateButton
-                        {...{
-                            callBackFn: openAddModal,
-                            text: "Add Purchase Return",
-                        }}
-                    />
-                </div>
-            </div>
-
-            <DataTable
-                columns={columns}
-                data={purchaseReturns}
-                loading={loading}
-                emptyMessage={`No ${status} purchase return found`}
-                actions={(record: any) => (
-                    <div className="flex items-center gap-2">
-                        <button
-                            id="purchase-return-edit-button"
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
-                            <Edit size={16} />
-                        </button>
-
-                        <button
-                            id="purchase-return-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-
-                                const y = rect.top + window.scrollY - 5;
-
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber: record?.pRetVoucherNumber,
-                                });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                )}
-            />
-
-            {pagination?.totalDocs > 0 && (
-                <Pagination
+                <Badge
                     {...{
-                        localLimit,
-                        selectCb: (e: any) => {
-                            setLocalLimit(Number(e.target.value));
-                            setLocalOffset(0);
-                        },
-                        preDisabled: !pagination?.hasPrevPage,
-                        nextDisabled: !pagination?.hasNextPage,
-                        setLocalOffset,
-                        pagination,
+                        count: pagination?.totalDocs ?? 0,
+                        text: "Total Purchase Returns:",
+                        varient: "primary",
                     }}
                 />
-            )}
+            </div>
 
-            {confirmTooltip.show && (
-                <ConfirmTooltip
-                    x={confirmTooltip.x}
-                    y={confirmTooltip.y}
-                    message="Are you sure you want to delete this purchase return?"
-                    confirmText="Delete"
-                    cancelText="Cancel"
-                    onConfirm={handleDeleteConfirm}
-                    onCancel={() =>
-                        setConfirmTooltip({
-                            show: false,
-                            x: null,
-                            y: null,
-                            voucherNumber: null,
-                        })
-                    }
+            <div className="ml-auto flex items-center gap-2">
+                <Toggle
+                    {...{
+                        arr: ["open", "close"],
+                        state: status,
+                        setState: handleStatusChange,
+                    }}
                 />
-            )}
 
-            <Modal
-                show={showGrnModal}
-                setShow={setShowGrnModal}
-                title="Select GRN"
-                state={false}
-                handleSubmit={handleGrnConfirm}
-                handleClose={handleGrnModalClose}
-                loader={grnModalLoading || grnLoading}
-                gridCols={1}
-                maxWidth="2xl"
-                modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
-                body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
-                            <input
-                                value={grnSearch}
-                                onChange={(e) =>
-                                    setGrnSearch(e.target.value)
-                                }
-                                placeholder="Search GRN code..."
-                                className="
+                <SearchInput {...{ search, setSearch }} />
+
+                <DataREfreshButton
+                    {...{
+                        callBackFn: handleRefresh,
+                        loading: refreshing,
+                    }}
+                />
+
+                {/* @ts-ignore */}
+                <DataCreateButton
+                    {...{
+                        callBackFn: openAddModal,
+                        text: "Add Purchase Return",
+                    }}
+                />
+            </div>
+        </div>
+
+        <DataTable
+            columns={columns}
+            data={purchaseReturns}
+            loading={loading}
+            emptyMessage={`No ${status} purchase return found`}
+            actions={(record: any) => (
+                <div className="flex items-center gap-2">
+                    <button
+                        id="purchase-return-edit-button"
+                        onClick={() => openEditModal(record)}
+                        className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                    >
+                        <Edit size={16} />
+                    </button>
+
+                    <button
+                        id="purchase-return-delete-button"
+                        disabled={deleteLoading}
+                        onClick={(e) => {
+                            const rect =
+                                e.currentTarget.getBoundingClientRect();
+
+                            let x = rect.left - 150;
+                            if (x < 10) x = 10;
+
+                            const y = rect.top + window.scrollY - 5;
+
+                            setConfirmTooltip({
+                                show: true,
+                                x,
+                                y,
+                                voucherNumber: record?.pRetVoucherNumber,
+                            });
+                        }}
+                        className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )}
+        />
+
+        {pagination?.totalDocs > 0 && (
+            <Pagination
+                {...{
+                    localLimit,
+                    selectCb: (e: any) => {
+                        setLocalLimit(Number(e.target.value));
+                        setLocalOffset(0);
+                    },
+                    preDisabled: !pagination?.hasPrevPage,
+                    nextDisabled: !pagination?.hasNextPage,
+                    setLocalOffset,
+                    pagination,
+                }}
+            />
+        )}
+
+        {confirmTooltip.show && (
+            <ConfirmTooltip
+                x={confirmTooltip.x}
+                y={confirmTooltip.y}
+                message="Are you sure you want to delete this purchase return?"
+                confirmText="Delete"
+                cancelText="Cancel"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() =>
+                    setConfirmTooltip({
+                        show: false,
+                        x: null,
+                        y: null,
+                        voucherNumber: null,
+                    })
+                }
+            />
+        )}
+
+        <Modal
+            show={showGrnModal}
+            setShow={setShowGrnModal}
+            title="Select GRN"
+            state={false}
+            handleSubmit={handleGrnConfirm}
+            handleClose={handleGrnModalClose}
+            loader={grnModalLoading || grnLoading}
+            gridCols={1}
+            maxWidth="2xl"
+            modalClassName="rounded-xl"
+            headerClassName="bg-white"
+            footerClassName="bg-white"
+            bodyClassName="!block !p-0"
+            body={
+                <div className="flex h-[520px] flex-col">
+                    <div className="border-b border-gray-200 p-5">
+                        <input
+                            value={grnSearch}
+                            onChange={(e) =>
+                                setGrnSearch(e.target.value)
+                            }
+                            placeholder="Search GRN code..."
+                            className="
                                     w-full rounded-xl border border-gray-200 bg-gray-50
                                     px-4 py-3 text-sm font-medium text-gray-700
                                     outline-none transition
                                     placeholder:text-gray-400
                                     focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
                                 "
-                            />
-                        </div>
+                        />
+                    </div>
 
-                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                            {showGrnSkeleton ? (
-                                <ModalListSkeleton rows={3} />
-                            ) : rejectedGrns.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
-                                    No rejected GRN found
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {rejectedGrns.map((grn: any, index: number) => {
-                                        const grnNumber =
-                                            grn?.grnVoucherNumber || "-";
+                    <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                        {showGrnSkeleton ? (
+                            <ModalListSkeleton rows={3} />
+                        ) : rejectedGrns.length === 0 ? (
+                            <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                No rejected GRN found
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {rejectedGrns.map((grn: any, index: number) => {
+                                    const grnNumber =
+                                        grn?.grnVoucherNumber || "-";
 
-                                        const vendorName =
-                                            grn?.grnVendorName || "-";
+                                    const vendorName =
+                                        grn?.grnVendorName || "-";
 
-                                        const grnBody = grn?.grnBody || [];
+                                    const selectedGrnNumber =
+                                        selectedGrn?.grnVoucherNumber || "";
 
-                                        const rejectedItems = grnBody.filter(
-                                            (item: any) =>
-                                                num(item?.rejectedQuantity) > 0
-                                        );
+                                    const isSelected =
+                                        String(selectedGrnNumber) ===
+                                        String(grnNumber);
 
-                                        const selectedGrnNumber =
-                                            selectedGrn?.grnVoucherNumber || "";
-
-                                        const isSelected =
-                                            String(selectedGrnNumber) ===
-                                            String(grnNumber);
-
-                                        return (
-                                            <button
-                                                key={`${grnNumber}-${index}`}
-                                                type="button"
-                                                onClick={() =>
-                                                    handleGrnSelect(grn)
-                                                }
-                                                className={`
+                                    return (
+                                        <button
+                                            key={`${grnNumber}-${index}`}
+                                            type="button"
+                                            onClick={() =>
+                                                handleGrnSelect(grn)
+                                            }
+                                            className={`
                                                     w-full rounded-xl border px-4 py-4 text-left transition
                                                     ${isSelected
-                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
-                                                    }
+                                                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                    : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                }
                                                 `}
-                                            >
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div>
-                                                        <p className="text-base font-bold text-gray-900">
-                                                            {grnNumber} - {vendorName}
-                                                        </p>
-
-                                                    </div>
-
-                                                    {isSelected && (
-                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                                                            Selected
-                                                        </span>
-                                                    )}
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-base font-bold text-gray-900">
+                                                        {grnNumber} - {vendorName}
+                                                    </p>
                                                 </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                }
-            />
 
-            {!fieldsLoading && (
-                <DynamicAddForm
-                    {...{
-                        show: showModal,
-                        setShow: setShowModal,
-                        edit: Boolean(editingRecord),
-                        title: "Purchase Return",
-                        subtitle: "Fill in the purchase return details below",
-                        loading: createLoading || updateLoading,
-                        onClose: () => {
-                            setShowModal(false);
-                            resetMainForm();
-                        },
-                        onSubmit: handleSubmit,
-                        isAddButton:false,
-                        form,
-                        errors,
-                        handleAddRow,
-                        handleDeleteRow,
-                        handleRowChange,
-                        footerTotals,
-                        inputData: {
-                            ...templateFields,
-                            footer: dynamicFooterArray,
-                        },
-                        bodyKey: "products",
-                        handleChange: handleMainChange,
-                    }}
-                />
-            )}
-        </div>
-    );
+                                                {isSelected && (
+                                                    <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                        Selected
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            }
+        />
+
+        {!fieldsLoading && (
+            <DynamicAddForm
+                {...{
+                    show: showModal,
+                    setShow: setShowModal,
+                    edit: Boolean(editingRecord),
+                    title: "Purchase Return",
+                    subtitle: "Fill in the purchase return details below",
+                    loading: createLoading || updateLoading,
+                    onClose: () => {
+                        setShowModal(false);
+                        resetMainForm();
+                    },
+                    onSubmit: handleSubmit,
+                    isAddButton: false,
+                    form,
+                    errors,
+                    handleAddRow,
+                    handleDeleteRow,
+                    handleRowChange,
+                    footerTotals,
+                    inputData: {
+                        ...templateFields,
+                        footer: dynamicFooterArray,
+                    },
+                    bodyKey: "products",
+                    handleChange: handleMainChange,
+                }}
+            />
+        )}
+    </div>
+);
 };
 
 export default PurchaseReturn;
