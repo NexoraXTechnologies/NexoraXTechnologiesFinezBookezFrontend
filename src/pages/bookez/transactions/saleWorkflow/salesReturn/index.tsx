@@ -156,7 +156,6 @@ const SalesReturn = () => {
     /* ===================================================
        FIELD HELPERS
     =================================================== */
-    console.log({ salesInvoiceReturns })
     const getHeaderFieldByKey = (key: string) => {
         return templateFields?.header?.find(
             (field: any) => field.key === key
@@ -365,65 +364,6 @@ const SalesReturn = () => {
         );
     };
 
-    useEffect(() => {
-        dispatch(getAllTransactionSchema("salesReturn") as any);
-    }, [dispatch]);
-
-    useEffect(() => {
-        (async () => {
-            console.log("calll")
-            await dispatch(getAllSalesInvoice({
-                offset: localOffset,
-                limit: localLimit,
-                search: debouncedSearch,
-                status,
-            }) as any
-            );
-        })()
-
-    }, []);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search.trim());
-            setLocalOffset(0);
-        }, 400);
-
-        return () => clearTimeout(timer);
-    }, [search]);
-
-    /* ===================================================
-       LOAD TRANSACTION SCHEMA WITH API OPTIONS
-    =================================================== */
-
-    useEffect(() => {
-        const prepareFields = async () => {
-            if (!transactionsSchema) return;
-
-            const hasSchema =
-                Array.isArray(transactionsSchema?.header) ||
-                Array.isArray(transactionsSchema?.body) ||
-                Array.isArray(transactionsSchema?.footer);
-
-            if (!hasSchema) return;
-
-            try {
-                setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
-                setTemplateFields(updatedData);
-            } catch (error) {
-                console.log("Failed to prepare template fields", error);
-            } finally {
-                setFieldsLoading(false);
-            }
-        };
-
-        prepareFields();
-    }, [transactionsSchema]);
-
     /* ===================================================
        LIST COLUMNS
     =================================================== */
@@ -519,11 +459,8 @@ const SalesReturn = () => {
 
     const openEditModal = (record: any) => {
         const footer = record?.sInvReturnFooter || {};
-        const products =
-            record?.sInvReturnBody?.length > 0
-                ? record.sInvReturnBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
-
+        const products = record?.sInvReturnBody?.length > 0 ? record.sInvReturnBody.map((item: any) => {
+            const unitCode = item?.unit || item?.uom || "";
                     return calculateRow(
                         normalizeRowKeys({
                             id: item?.id || Date.now() + Math.random(),
@@ -567,16 +504,16 @@ const SalesReturn = () => {
         setErrors({});
 
         setForm({
-            sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber || "AUTO",
-            sInvReturnVoucherDate: formatDateForInput(record?.sInvReturnVoucherDate),
-            sInvCustomerCode: record?.sInvCustomerCode || "",
-            sInvReturnCustomerName: record?.sInvReturnCustomerName || "",
-            sInvSalesAccount: record?.sInvSalesAccount || "SA021",
-            sInvReturnStatus: record?.sInvReturnStatus || record?.sInvStatus || "open",
-            sInvStatus: record?.sInvStatus || record?.sInvReturnStatus || "open",
-            sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
-            sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
-            isAutoPost: record?.isAutoPost || false,
+            sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber,
+            sInvVoucherNumber: record?.sInvVoucherNumber,
+            sInvReturnCustomerCode: record?.sInvReturnCustomerCode,
+            sInvCustomerCode: record.sInvCustomerCode,
+            sInvReturnCustomerName: record.sInvReturnCustomerName,
+            sInvReturnVoucherDate: record.sInvReturnVoucherDate,
+            sInvStatus: record.sInvStatus || record.sInvReturnStatus || "open",
+            sInvReturnRemark: record.sInvReturnRemark || record.sInvRemark || "",
+            sInvReturnSalesAccount: record.sInvReturnSalesAccount || "SA021",
+            sInvReturnStatus: record.sInvReturnStatus || record.sInvStatus || "open",
             products,
             grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
@@ -808,16 +745,17 @@ const SalesReturn = () => {
     //    SUBMIT 
     const handleSubmit = async () => {
         if (!validateForm()) return;
-
+        console.log({ form })
+        // return
         const products = cleanRows();
         const footer = calculateFooter(products);
         const payload: any = {
-            sInvCustomerCode: form.sInvCustomerCode,
-            sInvReturnCustomerName: form.sInvReturnCustomerName,
             sInvReturnVoucherDate: form.sInvReturnVoucherDate,
-            sInvStatus: form.sInvStatus || form.sInvReturnStatus || "open",
-            sInvRemarks: form.sInvRemarks || form.sInvRemark || "",
-            sInvSalesAccount: form.sInvSalesAccount || "SA021",
+            sInvReturnCustomerCode: form?.sInvReturnCustomerCode,
+            sInvVoucherNumber: form?.sInvVoucherNumber,
+            sInvReturnCustomerName: form.sInvReturnCustomerName,
+            sInvReturnRemark: form.sInvReturnRemark || form.sInvRemark || "",
+            sInvReturnSalesAccount: form.sInvReturnSalesAccount || "SA021",
             sInvReturnStatus: form.sInvReturnStatus || form.sInvStatus || "open",
             sInvReturnBody: products.map((item: any) => ({
                 productCode: item.productCode,
@@ -929,8 +867,7 @@ const SalesReturn = () => {
             return;
         }
 
-        const poBody = selectedPurchaseOrder?.pOrdBody || [];
-
+        const poBody = selectedPurchaseOrder?.sInvBody || [];
         const products = poBody.length > 0 ? poBody.map((item: any) => {
             const unitCode = item?.unit || item?.uom || "";
 
@@ -940,64 +877,35 @@ const SalesReturn = () => {
 
                     productCode: item?.productCode || "",
                     productName: item?.productName || "",
-                    productId: item?.productId || "",
-
-                    productDescription: item?.productDescription || "",
-                    description: item?.description || "",
-
+                    productId: item?.productId || "", // not update
+                    productDescription: item?.productDescription || item?.description || "",
+                    // description: item?.description || item?.productDescription || "",
                     productHSNCode: item?.productHSNCode || "",
                     remarks: item?.remarks || "",
-
                     quantity: item?.quantity || "",
-
-                    acceptedQuantity: item?.acceptedQuantity || item?.quantity || "",
-                    rejectedQuantity: item?.rejectedQuantity || "0",
-                    rejectedReason: item?.rejectedReason || "",
-
                     unit: unitCode,
-                    uom: unitCode,
-                    unitName:
-                        item?.unitName ||
-                        getUnitLabelFromSchema(unitCode),
-
+                    uom: item?.uom,
+                    unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
                     rate: item?.rate || "",
-
                     gross: item?.gross || item?.grossAmount || 0,
-                    grossAmount:
-                        item?.grossAmount || item?.gross || 0,
-
-                    discount: item?.discount || "",
-                    discountPercentage:
-                        item?.discountPercentage || "",
+                    grossAmount: item?.grossAmount || item?.gross || 0,
+                    discount: item?.discount || item?.discountPercentage || "",
+                    discountPercentage: item?.discountPercentage || item?.discount || "",
                     discountAmount: item?.discountAmount || 0,
-
                     taxableAmount: item?.taxableAmount || 0,
-
-                    cgst: item?.cgst || "",
-                    cgstPercentage: item?.cgstPercentage || "",
+                    cgst: item?.cgst || item?.cgstPercentage || "",
+                    cgstPercentage: item?.cgstPercentage || item?.cgst || "",
                     cgstAmount: item?.cgstAmount || 0,
-
-                    sgst: item?.sgst || "",
-                    sgstPercentage: item?.sgstPercentage || "",
+                    sgst: item?.sgst || item?.sgstPercentage || "",
+                    sgstPercentage: item?.sgstPercentage || item?.sgst || "",
                     sgstAmount: item?.sgstAmount || 0,
-
-                    igst: item?.igst || "",
-                    igstPercentage: item?.igstPercentage || "",
+                    igst: item?.igst || item?.igstPercentage || "",
+                    igstPercentage: item?.igstPercentage || item?.igst || "",
                     igstAmount: item?.igstAmount || 0,
-
                     taxAmount: item?.taxAmount || 0,
-
                     otherAmount: item?.otherAmount || 0,
-
-                    netAmount:
-                        item?.netAmount ||
-                        item?.netTotal ||
-                        0,
-
-                    netTotal:
-                        item?.netTotal ||
-                        item?.netAmount ||
-                        0,
+                    netAmount: item?.netAmount || item?.netTotal || 0,
+                    netTotal: item?.netTotal || item?.netAmount || 0,
                 })
             );
         })
@@ -1005,12 +913,14 @@ const SalesReturn = () => {
 
         setForm({
             ...getDefaultForm(),
-
-            pOrdVoucherNumber: selectedPurchaseOrder?.pOrdVoucherNumber || "",
-
-            grnVendorCode: selectedPurchaseOrder?.pOrdVendorCode || "",
-            grnVendorName: selectedPurchaseOrder?.pOrdVendorName || "",
-
+            sInvReturnSalesAccount: selectedPurchaseOrder.sInvSalesAccount || "SA021",
+            sInvReturnRemark: selectedPurchaseOrder.sInvRemark || selectedPurchaseOrder.sInvRemark || "",
+            sInvReturnCustomerCode: selectedPurchaseOrder.sInvCustomerCode,
+            sInvReturnCustomerName: selectedPurchaseOrder.sInvCustomerName,
+            sInvReturnVoucherDate: selectedPurchaseOrder.sInvVoucherDate,
+            sInvStatus: selectedPurchaseOrder.sInvStatus || selectedPurchaseOrder.sInvReturnStatus || "open",
+            sInvReturnStatus: selectedPurchaseOrder.sInvStatus || selectedPurchaseOrder.sInvStatus || "open",
+            sInvVoucherNumber: selectedPurchaseOrder?.sInvVoucherNumber,
             products,
         });
 
@@ -1019,7 +929,6 @@ const SalesReturn = () => {
         setShowPurchaseOrderModal(false);
         setShowModal(true);
     };
-
     /* ===================================================
        DYNAMIC FOOTER
     =================================================== */
@@ -1063,7 +972,54 @@ const SalesReturn = () => {
         fetchSalesInvoices();
     }, []);
 
-    console.log({ salesInvoices })
+    useEffect(() => {
+        dispatch(getAllTransactionSchema("salesReturn") as any);
+    }, [dispatch]);
+
+    useEffect(() => {
+        (async () => {
+            await dispatch(getAllSalesInvoice({
+                offset: localOffset,
+                limit: localLimit,
+                search: debouncedSearch,
+                status,
+            }) as any
+            );
+        })()
+
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    /* ===================================================
+       LOAD TRANSACTION SCHEMA WITH API OPTIONS
+    =================================================== */
+
+    useEffect(() => {
+        const prepareFields = async () => {
+            if (!transactionsSchema) return;
+            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
+            if (!hasSchema) return;
+            try {
+                setFieldsLoading(true);
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
+                setTemplateFields(updatedData);
+            } catch (error) {
+                console.log("Failed to prepare template fields", error);
+            } finally {
+                setFieldsLoading(false);
+            }
+        };
+
+        prepareFields();
+    }, [transactionsSchema]);
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
@@ -1086,7 +1042,7 @@ const SalesReturn = () => {
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
-                            text: "Add Sales Invoice",
+                            text: "Add Sales Return",
                         }}
                     />
                 </div>
@@ -1166,7 +1122,7 @@ const SalesReturn = () => {
                         show: showModal,
                         setShow: setShowModal,
                         edit: Boolean(editingRecord),
-                        title: "Sales Invoice",
+                        title: "Sales Return",
                         subtitle: "Fill in the sales invoice details below",
                         loading: createLoading || updateLoading,
                         onClose: () => {
@@ -1195,7 +1151,7 @@ const SalesReturn = () => {
                 setShow={setShowPurchaseOrderModal}
                 title="Select Purchase Order"
                 state={false}
-                // handleSubmit={handlePurchaseOrderConfirm}
+                handleSubmit={handlePurchaseOrderConfirm}
                 // handleClose={handlePurchaseOrderModalClose}
                 // loader={purchaseOrderLoading}
                 gridCols={1}
