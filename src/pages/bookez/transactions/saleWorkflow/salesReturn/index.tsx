@@ -29,6 +29,8 @@ import { getAllTransactionSchema } from "../../../../../redux/slices/professiona
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { loadFieldOptions } from "../salesQuations/SalesQuations";
 import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
+import Modal from "../../../../../components/modal";
+import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 
 const emptyProductRow = {
     id: Date.now(),
@@ -131,7 +133,10 @@ const SalesReturn = () => {
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
+    const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
+    const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
+    const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
+    const { salesInvoices, loading: invoiceLoader } = useSelector((state: any) => state.salesInvoice);
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
         body: [],
@@ -151,7 +156,6 @@ const SalesReturn = () => {
     /* ===================================================
        FIELD HELPERS
     =================================================== */
-    console.log({ salesInvoiceReturns })
     const getHeaderFieldByKey = (key: string) => {
         return templateFields?.header?.find(
             (field: any) => field.key === key
@@ -360,55 +364,6 @@ const SalesReturn = () => {
         );
     };
 
-    useEffect(() => {
-        dispatch(getAllTransactionSchema("salesReturn") as any);
-    }, [dispatch]);
-
-    useEffect(() => {
-        fetchSalesInvoices();
-    }, [localOffset, localLimit, debouncedSearch, status]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search.trim());
-            setLocalOffset(0);
-        }, 400);
-
-        return () => clearTimeout(timer);
-    }, [search]);
-
-    /* ===================================================
-       LOAD TRANSACTION SCHEMA WITH API OPTIONS
-    =================================================== */
-
-    useEffect(() => {
-        const prepareFields = async () => {
-            if (!transactionsSchema) return;
-
-            const hasSchema =
-                Array.isArray(transactionsSchema?.header) ||
-                Array.isArray(transactionsSchema?.body) ||
-                Array.isArray(transactionsSchema?.footer);
-
-            if (!hasSchema) return;
-
-            try {
-                setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
-                setTemplateFields(updatedData);
-            } catch (error) {
-                console.log("Failed to prepare template fields", error);
-            } finally {
-                setFieldsLoading(false);
-            }
-        };
-
-        prepareFields();
-    }, [transactionsSchema]);
-
     /* ===================================================
        LIST COLUMNS
     =================================================== */
@@ -498,83 +453,46 @@ const SalesReturn = () => {
 
     const openAddModal = () => {
         resetMainForm();
-        setShowModal(true);
+        // setShowModal(true);
+        setShowPurchaseOrderModal(true);
     };
 
     const openEditModal = (record: any) => {
         const footer = record?.sInvReturnFooter || {};
-
-        const products =
-            record?.sInvReturnBody?.length > 0
-                ? record.sInvReturnBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
-
+        const products = record?.sInvReturnBody?.length > 0 ? record.sInvReturnBody.map((item: any) => {
+            const unitCode = item?.unit || item?.uom || "";
                     return calculateRow(
                         normalizeRowKeys({
                             id: item?.id || Date.now() + Math.random(),
-
                             productCode: item?.productCode || "",
                             productName: item?.productName || "",
                             productId: item?.productId || "",
-
-                            productDescription:
-                                item?.productDescription ||
-                                item?.description ||
-                                "",
-                            description:
-                                item?.description ||
-                                item?.productDescription ||
-                                "",
-
+                            productDescription: item?.productDescription || item?.description || "",
+                            description: item?.description || item?.productDescription || "",
                             productHSNCode: item?.productHSNCode || "",
-
                             remarks: item?.remarks || "",
-
                             quantity: item?.quantity || "",
-
                             unit: unitCode,
                             uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
-
+                            unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
                             rate: item?.rate || "",
-
                             gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
-
-                            discount:
-                                item?.discount ||
-                                item?.discountPercentage ||
-                                "",
-                            discountPercentage:
-                                item?.discountPercentage ||
-                                item?.discount ||
-                                "",
+                            grossAmount: item?.grossAmount || item?.gross || 0,
+                            discount: item?.discount || item?.discountPercentage || "",
+                            discountPercentage: item?.discountPercentage || item?.discount || "",
                             discountAmount: item?.discountAmount || 0,
-
                             taxableAmount: item?.taxableAmount || 0,
-
                             cgst: item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage:
-                                item?.cgstPercentage || item?.cgst || "",
+                            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
                             cgstAmount: item?.cgstAmount || 0,
-
                             sgst: item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage:
-                                item?.sgstPercentage || item?.sgst || "",
+                            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
                             sgstAmount: item?.sgstAmount || 0,
-
                             igst: item?.igst || item?.igstPercentage || "",
-                            igstPercentage:
-                                item?.igstPercentage || item?.igst || "",
+                            igstPercentage: item?.igstPercentage || item?.igst || "",
                             igstAmount: item?.igstAmount || 0,
-
                             taxAmount: item?.taxAmount || 0,
-
                             otherAmount: item?.otherAmount || 0,
-
                             netAmount: item?.netAmount || item?.netTotal || 0,
                             netTotal: item?.netTotal || item?.netAmount || 0,
                         })
@@ -586,42 +504,25 @@ const SalesReturn = () => {
         setErrors({});
 
         setForm({
-            sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber || "AUTO",
-            sInvReturnVoucherDate: formatDateForInput(record?.sInvReturnVoucherDate),
-
-            sInvCustomerCode: record?.sInvCustomerCode || "",
-            sInvReturnCustomerName: record?.sInvReturnCustomerName || "",
-
-            sInvSalesAccount: record?.sInvSalesAccount || "SA021",
-
-            sInvReturnStatus:
-                record?.sInvReturnStatus || record?.sInvStatus || "open",
-            sInvStatus:
-                record?.sInvStatus || record?.sInvReturnStatus || "open",
-
-            sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
-            sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
-
-            isAutoPost: record?.isAutoPost || false,
-
+            sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber,
+            sInvVoucherNumber: record?.sInvVoucherNumber,
+            sInvReturnCustomerCode: record?.sInvReturnCustomerCode,
+            sInvCustomerCode: record.sInvCustomerCode,
+            sInvReturnCustomerName: record.sInvReturnCustomerName,
+            sInvReturnVoucherDate: record.sInvReturnVoucherDate,
+            sInvStatus: record.sInvStatus || record.sInvReturnStatus || "open",
+            sInvReturnRemark: record.sInvReturnRemark || record.sInvRemark || "",
+            sInvReturnSalesAccount: record.sInvReturnSalesAccount || "SA021",
+            sInvReturnStatus: record.sInvReturnStatus || record.sInvStatus || "open",
             products,
-
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-            discountAmount:
-                footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-            otherAmount:
-                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
         });
 
         setShowModal(true);
@@ -634,16 +535,10 @@ const SalesReturn = () => {
     const handleMainChange = (key: string, value: any) => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
-
-            let updated = {
-                ...prev,
-                [key]: value,
-            };
-
+            let updated = { ...prev, [key]: value, };
             if (currentField?.mapFields) {
                 updated = applyMappedFields(currentField, value, updated);
             }
-
             return updated;
         });
 
@@ -672,16 +567,9 @@ const SalesReturn = () => {
 
     const handleDeleteRow = (index: number) => {
         setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter(
-                (_: any, i: number) => i !== index
-            );
-
+            const updatedProducts = (prev.products || []).filter((_: any, i: number) => i !== index);
             return {
-                ...prev,
-                products:
-                    updatedProducts.length > 0
-                        ? updatedProducts
-                        : [{ ...emptyProductRow, id: Date.now() }],
+                ...prev, products: updatedProducts.length > 0 ? updatedProducts : [{ ...emptyProductRow, id: Date.now() }],
             };
         });
     };
@@ -744,15 +632,9 @@ const SalesReturn = () => {
         }));
     };
 
-    /* ===================================================
-       VALIDATION
-    =================================================== */
-
+    //    VALIDATION
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
-
+        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
         return (form.products || []).filter((row: any) => {
             return bodyKeys.some((key: string) => {
                 const value = row?.[key];
@@ -860,22 +742,20 @@ const SalesReturn = () => {
             .map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
-    /* ===================================================
-       SUBMIT
-    =================================================== */
-
+    //    SUBMIT 
     const handleSubmit = async () => {
         if (!validateForm()) return;
-
+        console.log({ form })
+        // return
         const products = cleanRows();
         const footer = calculateFooter(products);
         const payload: any = {
-            sInvCustomerCode: form.sInvCustomerCode,
-            sInvReturnCustomerName: form.sInvReturnCustomerName,
             sInvReturnVoucherDate: form.sInvReturnVoucherDate,
-            sInvStatus: form.sInvStatus || form.sInvReturnStatus || "open",
-            sInvRemarks: form.sInvRemarks || form.sInvRemark || "",
-            sInvSalesAccount: form.sInvSalesAccount || "SA021",
+            sInvReturnCustomerCode: form?.sInvReturnCustomerCode,
+            sInvVoucherNumber: form?.sInvVoucherNumber,
+            sInvReturnCustomerName: form.sInvReturnCustomerName,
+            sInvReturnRemark: form.sInvReturnRemark || form.sInvRemark || "",
+            sInvReturnSalesAccount: form.sInvReturnSalesAccount || "SA021",
             sInvReturnStatus: form.sInvReturnStatus || form.sInvStatus || "open",
             sInvReturnBody: products.map((item: any) => ({
                 productCode: item.productCode,
@@ -936,7 +816,6 @@ const SalesReturn = () => {
 
         try {
             if (editingRecord) {
-                console.log({ form })
                 await dispatch(
                     updateSalesInvoiceReturn({
                         sInvReturnVoucherNumber: form?.sInvReturnVoucherNumber,
@@ -978,6 +857,78 @@ const SalesReturn = () => {
         }
     };
 
+    const handlePurchaseOrderSelect = (purchaseOrder: any) => {
+        setSelectedPurchaseOrder(purchaseOrder);
+    };
+
+    const handlePurchaseOrderConfirm = () => {
+        if (!selectedPurchaseOrder) {
+            toast.error("Please select purchase order");
+            return;
+        }
+
+        const poBody = selectedPurchaseOrder?.sInvBody || [];
+        const products = poBody.length > 0 ? poBody.map((item: any) => {
+            const unitCode = item?.unit || item?.uom || "";
+
+            return calculateRow(
+                normalizeRowKeys({
+                    id: Date.now() + Math.random(),
+
+                    productCode: item?.productCode || "",
+                    productName: item?.productName || "",
+                    productId: item?.productId || "", // not update
+                    productDescription: item?.productDescription || item?.description || "",
+                    // description: item?.description || item?.productDescription || "",
+                    productHSNCode: item?.productHSNCode || "",
+                    remarks: item?.remarks || "",
+                    quantity: item?.quantity || "",
+                    unit: unitCode,
+                    uom: item?.uom,
+                    unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
+                    rate: item?.rate || "",
+                    gross: item?.gross || item?.grossAmount || 0,
+                    grossAmount: item?.grossAmount || item?.gross || 0,
+                    discount: item?.discount || item?.discountPercentage || "",
+                    discountPercentage: item?.discountPercentage || item?.discount || "",
+                    discountAmount: item?.discountAmount || 0,
+                    taxableAmount: item?.taxableAmount || 0,
+                    cgst: item?.cgst || item?.cgstPercentage || "",
+                    cgstPercentage: item?.cgstPercentage || item?.cgst || "",
+                    cgstAmount: item?.cgstAmount || 0,
+                    sgst: item?.sgst || item?.sgstPercentage || "",
+                    sgstPercentage: item?.sgstPercentage || item?.sgst || "",
+                    sgstAmount: item?.sgstAmount || 0,
+                    igst: item?.igst || item?.igstPercentage || "",
+                    igstPercentage: item?.igstPercentage || item?.igst || "",
+                    igstAmount: item?.igstAmount || 0,
+                    taxAmount: item?.taxAmount || 0,
+                    otherAmount: item?.otherAmount || 0,
+                    netAmount: item?.netAmount || item?.netTotal || 0,
+                    netTotal: item?.netTotal || item?.netAmount || 0,
+                })
+            );
+        })
+            : [{ ...emptyProductRow, id: Date.now() }];
+
+        setForm({
+            ...getDefaultForm(),
+            sInvReturnSalesAccount: selectedPurchaseOrder.sInvSalesAccount || "SA021",
+            sInvReturnRemark: selectedPurchaseOrder.sInvRemark || selectedPurchaseOrder.sInvRemark || "",
+            sInvReturnCustomerCode: selectedPurchaseOrder.sInvCustomerCode,
+            sInvReturnCustomerName: selectedPurchaseOrder.sInvCustomerName,
+            sInvReturnVoucherDate: selectedPurchaseOrder.sInvVoucherDate,
+            sInvStatus: selectedPurchaseOrder.sInvStatus || selectedPurchaseOrder.sInvReturnStatus || "open",
+            sInvReturnStatus: selectedPurchaseOrder.sInvStatus || selectedPurchaseOrder.sInvStatus || "open",
+            sInvVoucherNumber: selectedPurchaseOrder?.sInvVoucherNumber,
+            products,
+        });
+
+        setErrors({});
+        setEditingRecord(null);
+        setShowPurchaseOrderModal(false);
+        setShowModal(true);
+    };
     /* ===================================================
        DYNAMIC FOOTER
     =================================================== */
@@ -1017,30 +968,69 @@ const SalesReturn = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+    useEffect(() => {
+        fetchSalesInvoices();
+    }, []);
+
+    useEffect(() => {
+        dispatch(getAllTransactionSchema("salesReturn") as any);
+    }, [dispatch]);
+
+    useEffect(() => {
+        (async () => {
+            await dispatch(getAllSalesInvoice({
+                offset: localOffset,
+                limit: localLimit,
+                search: debouncedSearch,
+                status,
+            }) as any
+            );
+        })()
+
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    /* ===================================================
+       LOAD TRANSACTION SCHEMA WITH API OPTIONS
+    =================================================== */
+
+    useEffect(() => {
+        const prepareFields = async () => {
+            if (!transactionsSchema) return;
+            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
+            if (!hasSchema) return;
+            try {
+                setFieldsLoading(true);
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
+                setTemplateFields(updatedData);
+            } catch (error) {
+                console.log("Failed to prepare template fields", error);
+            } finally {
+                setFieldsLoading(false);
+            }
+        };
+
+        prepareFields();
+    }, [transactionsSchema]);
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
                 <div id="sales-invoice-summary" className="flex items-start gap-3">
-                    <Badge
-                        {...{
-                            count: pagination?.totalDocs ?? salesInvoiceReturns?.length ?? 0,
-                            text: "Total Sales Invoices:",
-                            varient: "primary",
-                        }}
-                    />
+                    <Badge {...{ count: pagination?.totalDocs ?? salesInvoiceReturns?.length ?? 0, text: "Total Sales Invoices:", varient: "primary", }} />
                 </div>
 
                 <div className="ml-auto flex items-center gap-2">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: handleStatusChange,
-                        }}
-                    />
-
+                    <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange, }} />
                     <SearchInput {...{ search, setSearch }} />
-
                     <DataREfreshButton
                         {...{
                             callBackFn: handleRefresh,
@@ -1052,7 +1042,7 @@ const SalesReturn = () => {
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
-                            text: "Add Sales Invoice",
+                            text: "Add Sales Return",
                         }}
                     />
                 </div>
@@ -1077,20 +1067,11 @@ const SalesReturn = () => {
                             id="sales-invoice-delete-button"
                             disabled={deleteLoading}
                             onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
+                                const rect = e.currentTarget.getBoundingClientRect();
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
-
                                 const y = rect.top + window.scrollY - 5;
-
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber: record?.sInvReturnVoucherNumber,
-                                });
+                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber, });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
@@ -1141,7 +1122,7 @@ const SalesReturn = () => {
                         show: showModal,
                         setShow: setShowModal,
                         edit: Boolean(editingRecord),
-                        title: "Sales Invoice",
+                        title: "Sales Return",
                         subtitle: "Fill in the sales invoice details below",
                         loading: createLoading || updateLoading,
                         onClose: () => {
@@ -1164,6 +1145,93 @@ const SalesReturn = () => {
                     }}
                 />
             )}
+
+            <Modal
+                show={showPurchaseOrderModal}
+                setShow={setShowPurchaseOrderModal}
+                title="Select Purchase Order"
+                state={false}
+                handleSubmit={handlePurchaseOrderConfirm}
+                // handleClose={handlePurchaseOrderModalClose}
+                // loader={purchaseOrderLoading}
+                gridCols={1}
+                maxWidth="2xl"
+                modalClassName="rounded-xl"
+                headerClassName="bg-white"
+                footerClassName="bg-white"
+                bodyClassName="!block !p-0"
+                body={
+                    <div className="flex h-[520px] flex-col">
+                        <div className="border-b border-gray-200 p-5">
+                            <input
+                                value={purchaseOrderSearch}
+                                onChange={(e) =>
+                                    setPurchaseOrderSearch(e.target.value)
+                                }
+                                placeholder="Search Purchase Order code..."
+                                className="
+                                    w-full rounded-xl border border-gray-200 bg-gray-50
+                                    px-4 py-3 text-sm font-medium text-gray-700
+                                    outline-none transition
+                                    placeholder:text-gray-400
+                                    focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
+                                "
+                            />
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                            {invoiceLoader ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    Loading purchase orders...
+                                </div>
+                            ) : salesInvoices.length === 0 ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    No purchase order found
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {salesInvoices.map((e: any, index: number) => {
+                                        const poNumber = e?.pOrdVoucherNumber || "-";
+                                        const isSelected = (selectedPurchaseOrder?.sInvVoucherNumber == e?.sInvVoucherNumber);
+                                        return (
+                                            <button
+                                                key={poNumber || index}
+                                                type="button"
+                                                onClick={() => handlePurchaseOrderSelect(e)}
+                                                className={`
+                                                    w-full rounded-xl border px-4 py-4 text-left transition
+                                                    ${isSelected
+                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                    }
+                                                `}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-base font-bold text-gray-900">
+                                                            {e?.sInvVoucherNumber || "NA"} - {e?.sInvCustomerName || "NA"}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                            Items: {e?.sInvBody?.length || 0}
+                                                        </p>
+                                                    </div>
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                            Selected
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                }
+            />
         </div>
     );
 };

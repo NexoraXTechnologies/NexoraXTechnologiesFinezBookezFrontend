@@ -356,23 +356,17 @@ const SalesInVoice = () => {
     const calculateRow = (row: any) => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
-
         const gross = quantity * rate;
-
         const discountPercent = safePercent(row.discount);
         const cgstPercent = safePercent(row.cgst);
         const sgstPercent = safePercent(row.sgst);
         const igstPercent = safePercent(row.igst);
-
         const discountAmount = (gross * discountPercent) / 100;
         const taxableAmount = gross - discountAmount;
-
         const cgstAmount = (taxableAmount * cgstPercent) / 100;
         const sgstAmount = (taxableAmount * sgstPercent) / 100;
         const igstAmount = (taxableAmount * igstPercent) / 100;
-
         const otherAmount = num(row.otherAmount);
-
         const taxAmount = cgstAmount + sgstAmount + igstAmount;
         const netAmount = taxableAmount + taxAmount + otherAmount;
 
@@ -462,55 +456,6 @@ const SalesInVoice = () => {
             }) as any
         );
     };
-
-    useEffect(() => {
-        dispatch(getAllTransactionSchema("salesInvoice") as any);
-    }, [dispatch]);
-
-    useEffect(() => {
-        fetchSalesInvoices();
-    }, [localOffset, localLimit, debouncedSearch, status]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search.trim());
-            setLocalOffset(0);
-        }, 400);
-
-        return () => clearTimeout(timer);
-    }, [search]);
-
-    /* ===================================================
-       LOAD TRANSACTION SCHEMA WITH API OPTIONS
-    =================================================== */
-
-    useEffect(() => {
-        const prepareFields = async () => {
-            if (!transactionsSchema) return;
-
-            const hasSchema =
-                Array.isArray(transactionsSchema?.header) ||
-                Array.isArray(transactionsSchema?.body) ||
-                Array.isArray(transactionsSchema?.footer);
-
-            if (!hasSchema) return;
-
-            try {
-                setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
-                setTemplateFields(updatedData);
-            } catch (error) {
-                console.log("Failed to prepare template fields", error);
-            } finally {
-                setFieldsLoading(false);
-            }
-        };
-
-        prepareFields();
-    }, [transactionsSchema]);
 
     /* ===================================================
        LIST COLUMNS
@@ -606,7 +551,6 @@ const SalesInVoice = () => {
 
     const openEditModal = (record: any) => {
         const footer = record?.sInvFooter || {};
-
         const products =
             record?.sInvBody?.length > 0
                 ? record.sInvBody.map((item: any) => {
@@ -615,69 +559,35 @@ const SalesInVoice = () => {
                     return calculateRow(
                         normalizeRowKeys({
                             id: item?.id || Date.now() + Math.random(),
-
                             productCode: item?.productCode || "",
                             productName: item?.productName || "",
                             productId: item?.productId || "",
-
-                            productDescription:
-                                item?.productDescription ||
-                                item?.description ||
-                                "",
-                            description:
-                                item?.description ||
-                                item?.productDescription ||
-                                "",
-
+                            productDescription: item?.productDescription || item?.description || "",
+                            description: item?.description || item?.productDescription || "",
                             productHSNCode: item?.productHSNCode || "",
-
                             remarks: item?.remarks || "",
-
                             quantity: item?.quantity || "",
-
                             unit: unitCode,
                             uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
-
+                            unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
                             rate: item?.rate || "",
-
                             gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
-
-                            discount:
-                                item?.discount ||
-                                item?.discountPercentage ||
-                                "",
-                            discountPercentage:
-                                item?.discountPercentage ||
-                                item?.discount ||
-                                "",
+                            grossAmount: item?.grossAmount || item?.gross || 0,
+                            discount: item?.discount || item?.discountPercentage || "",
+                            discountPercentage: item?.discountPercentage || item?.discount || "",
                             discountAmount: item?.discountAmount || 0,
-
                             taxableAmount: item?.taxableAmount || 0,
-
                             cgst: item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage:
-                                item?.cgstPercentage || item?.cgst || "",
+                            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
                             cgstAmount: item?.cgstAmount || 0,
-
                             sgst: item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage:
-                                item?.sgstPercentage || item?.sgst || "",
+                            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
                             sgstAmount: item?.sgstAmount || 0,
-
                             igst: item?.igst || item?.igstPercentage || "",
-                            igstPercentage:
-                                item?.igstPercentage || item?.igst || "",
+                            igstPercentage: item?.igstPercentage || item?.igst || "",
                             igstAmount: item?.igstAmount || 0,
-
                             taxAmount: item?.taxAmount || 0,
-
                             otherAmount: item?.otherAmount || 0,
-
                             netAmount: item?.netAmount || item?.netTotal || 0,
                             netTotal: item?.netTotal || item?.netAmount || 0,
                         })
@@ -691,40 +601,23 @@ const SalesInVoice = () => {
         setForm({
             sInvVoucherNumber: record?.sInvVoucherNumber || "AUTO",
             sInvVoucherDate: formatDateForInput(record?.sInvVoucherDate),
-
             sInvCustomerCode: record?.sInvCustomerCode || "",
             sInvCustomerName: record?.sInvCustomerName || "",
-
             sInvSalesAccount: record?.sInvSalesAccount || "SA021",
-
-            sInvDocStatus:
-                record?.sInvDocStatus || record?.sInvStatus || "open",
-            sInvStatus:
-                record?.sInvStatus || record?.sInvDocStatus || "open",
-
+            sInvDocStatus: record?.sInvDocStatus || record?.sInvStatus || "open",
+            sInvStatus: record?.sInvStatus || record?.sInvDocStatus || "open",
             sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
             sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
-
             isAutoPost: record?.isAutoPost || false,
-
             products,
-
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-            discountAmount:
-                footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-            otherAmount:
-                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
         });
 
         setShowModal(true);
@@ -775,27 +668,16 @@ const SalesInVoice = () => {
 
     const handleDeleteRow = (index: number) => {
         setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter(
-                (_: any, i: number) => i !== index
-            );
-
-            return {
-                ...prev,
-                products:
-                    updatedProducts.length > 0
-                        ? updatedProducts
-                        : [{ ...emptyProductRow, id: Date.now() }],
-            };
+            const updatedProducts = (prev.products || []).filter((_: any, i: number) => i !== index);
+            return { ...prev, products: updatedProducts.length > 0 ? updatedProducts : [{ ...emptyProductRow, id: Date.now() }] };
         });
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
-
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-
             let updatedRow = {
                 ...currentRow,
                 [key]: value,
@@ -808,43 +690,30 @@ const SalesInVoice = () => {
                     updatedRow
                 );
             }
-
             const selectedOption = getOptionByValue(currentField, value);
-
             if (selectedOption?.raw?._id && !updatedRow.productId) {
                 updatedRow.productId = selectedOption.raw._id;
             }
-
             updatedRow = normalizeRowKeys(updatedRow);
-
             if ((key === "cgst" || key === "sgst") && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstAmount = 0;
             }
-
             if (key === "igst" && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
                 updatedRow.cgstAmount = 0;
                 updatedRow.sgstAmount = 0;
             }
-
             updatedRow = calculateRow(updatedRow);
-
             updatedProducts[index] = updatedRow;
-
             return {
                 ...prev,
                 products: updatedProducts,
             };
         });
 
-        setErrors((prev: any) => ({
-            ...prev,
-            products: "",
-            [`row_${index}_${key}`]: "",
-            [`row_${index}_tax`]: "",
-        }));
+        setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "", [`row_${index}_tax`]: "", }));
     };
 
     /* ===================================================
@@ -852,10 +721,7 @@ const SalesInVoice = () => {
     =================================================== */
 
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
-
+        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
         return (form.products || []).filter((row: any) => {
             return bodyKeys.some((key: string) => {
                 const value = row?.[key];
@@ -866,24 +732,18 @@ const SalesInVoice = () => {
 
     const validateForm = () => {
         const err: any = {};
-
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden) return;
             if (!field.isRequired) return;
-
             const value = form?.[field.key];
-
             if (value === undefined || value === null || value === "") {
                 err[field.key] = `${field.label || field.title || field.key} is required`;
             }
         });
-
         const filledRows = getFilledRows();
-
         if (filledRows.length === 0) {
             err.products = "Please add at least one product";
         }
-
         (form.products || []).forEach((row: any, index: number) => {
             const hasAnyValue = (templateFields?.body || []).some(
                 (field: any) => {
@@ -901,16 +761,9 @@ const SalesInVoice = () => {
             (templateFields?.body || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
-
                 const value = row?.[field.key];
-
-                if (
-                    value === undefined ||
-                    value === null ||
-                    value === ""
-                ) {
-                    err[`row_${index}_${field.key}`] = `${field.label || field.title || field.key
-                        } is required`;
+                if (value === undefined || value === null || value === "") {
+                    err[`row_${index}_${field.key}`] = `${field.label || field.title || field.key} is required`;
                 }
             });
 
@@ -919,16 +772,10 @@ const SalesInVoice = () => {
             const igst = num(row.igstPercentage || row.igst);
 
             if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] =
-                    "You can enter either IGST or CGST/SGST";
-
-                err[`row_${index}_igstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] =
-                    "Only one tax type allowed";
-
+                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
+                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
                 err[`row_${index}_igst`] = "Only one tax type allowed";
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
@@ -936,18 +783,12 @@ const SalesInVoice = () => {
         });
 
         setErrors(err);
-
-        if (err.products) {
-            toast.error(err.products);
-        }
-
+        if (err.products) toast.error(err.products)
         return Object.keys(err).length === 0;
     };
 
     const cleanRows = () => {
-        const bodyKeys = (templateFields?.body || []).map(
-            (field: any) => field.key
-        );
+        const bodyKeys = (templateFields?.body || []).map((field: any) => field.key);
 
         return (form.products || [])
             .filter((row: any) => {
@@ -1014,49 +855,24 @@ const SalesInVoice = () => {
                 netTotal: fmtMoney(item.netTotal || item.netAmount),
             })),
 
-            sInvFooter: {
-                grossAmount: fmtMoney(footer.totalGrossAmount),
-                discountAmount: fmtMoney(footer.totalDiscountAmount),
-                cgstAmount: fmtMoney(footer.totalCgstAmount),
-                sgstAmount: fmtMoney(footer.totalSgstAmount),
-                igstAmount: fmtMoney(footer.totalIgstAmount),
-                taxAmount: fmtMoney(footer.totalTaxAmount),
-                otherAmount: fmtMoney(footer.totalOtherAmount),
-                netAmount: fmtMoney(footer.totalNetAmount),
-                adjustedAmount: "0",
-                balanceAmount: fmtMoney(footer.totalNetAmount),
-                totalQuantity: footer.totalQuantity,
-                totalGrossAmount: fmtMoney(footer.totalGrossAmount),
-                totalDiscountAmount: fmtMoney(footer.totalDiscountAmount),
-                totalCgstAmount: fmtMoney(footer.totalCgstAmount),
-                totalSgstAmount: fmtMoney(footer.totalSgstAmount),
-                totalIgstAmount: fmtMoney(footer.totalIgstAmount),
-                totalTaxAmount: fmtMoney(footer.totalTaxAmount),
-                totalOtherAmount: fmtMoney(footer.totalOtherAmount),
-                totalNetAmount: fmtMoney(footer.totalNetAmount),
-            },
+            sInvFooter: { grossAmount: fmtMoney(footer.totalGrossAmount), discountAmount: fmtMoney(footer.totalDiscountAmount), cgstAmount: fmtMoney(footer.totalCgstAmount), sgstAmount: fmtMoney(footer.totalSgstAmount), igstAmount: fmtMoney(footer.totalIgstAmount), taxAmount: fmtMoney(footer.totalTaxAmount), otherAmount: fmtMoney(footer.totalOtherAmount), netAmount: fmtMoney(footer.totalNetAmount), adjustedAmount: "0", balanceAmount: fmtMoney(footer.totalNetAmount), totalQuantity: footer.totalQuantity, totalGrossAmount: fmtMoney(footer.totalGrossAmount), totalDiscountAmount: fmtMoney(footer.totalDiscountAmount), totalCgstAmount: fmtMoney(footer.totalCgstAmount), totalSgstAmount: fmtMoney(footer.totalSgstAmount), totalIgstAmount: fmtMoney(footer.totalIgstAmount), totalTaxAmount: fmtMoney(footer.totalTaxAmount), totalOtherAmount: fmtMoney(footer.totalOtherAmount), totalNetAmount: fmtMoney(footer.totalNetAmount), },
         };
 
         try {
             if (editingRecord) {
-                console.log({ form })
                 await dispatch(
                     updateSalesInvoice({
                         sInvVoucherNumber: form?.sInvVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
-
                 toast.success("Sales invoice updated successfully");
             } else {
                 await dispatch(createSalesInvoice({ payload }) as any).unwrap();
-
                 toast.success("Sales invoice created successfully");
             }
-
             setShowModal(false);
             resetMainForm();
-
             fetchSalesInvoices();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
@@ -1066,11 +882,7 @@ const SalesInVoice = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-
-            await dispatch(
-                deleteSalesInvoice(confirmTooltip.voucherNumber) as any
-            ).unwrap();
-
+            await dispatch(deleteSalesInvoice(confirmTooltip.voucherNumber) as any).unwrap();
             toast.success("Sales invoice deleted successfully");
             fetchSalesInvoices();
         } catch (err: any) {
@@ -1090,23 +902,8 @@ const SalesInVoice = () => {
     =================================================== */
 
     const footerValues = useMemo(() => {
-        return {
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        };
-    }, [
-        grossAmount,
-        discountAmount,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-        netAmount,
+        return { grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount };
+    }, [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount,
     ]);
 
     const dynamicFooterArray = useMemo(() => {
@@ -1124,6 +921,47 @@ const SalesInVoice = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+
+    useEffect(() => {
+        dispatch(getAllTransactionSchema("salesInvoice") as any);
+    }, [dispatch]);
+
+    useEffect(() => {
+        fetchSalesInvoices();
+    }, [localOffset, localLimit, debouncedSearch, status]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    /* ===================================================
+       LOAD TRANSACTION SCHEMA WITH API OPTIONS
+    =================================================== */
+
+    useEffect(() => {
+        const prepareFields = async () => {
+            if (!transactionsSchema) return;
+            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
+            if (!hasSchema) return;
+            try {
+                setFieldsLoading(true);
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
+                setTemplateFields(updatedData);
+            } catch (error) {
+                console.log("Failed to prepare template fields", error);
+            } finally {
+                setFieldsLoading(false);
+            }
+        };
+
+        prepareFields();
+    }, [transactionsSchema]);
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
@@ -1136,7 +974,6 @@ const SalesInVoice = () => {
                         }}
                     />
                 </div>
-
                 <div className="ml-auto flex items-center gap-2">
                     <Toggle
                         {...{
@@ -1145,9 +982,7 @@ const SalesInVoice = () => {
                             setState: handleStatusChange,
                         }}
                     />
-
                     <SearchInput {...{ search, setSearch }} />
-
                     <DataREfreshButton
                         {...{
                             callBackFn: handleRefresh,
@@ -1184,14 +1019,10 @@ const SalesInVoice = () => {
                             id="sales-invoice-delete-button"
                             disabled={deleteLoading}
                             onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
+                                const rect = e.currentTarget.getBoundingClientRect();
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
-
                                 const y = rect.top + window.scrollY - 5;
-
                                 setConfirmTooltip({
                                     show: true,
                                     x,

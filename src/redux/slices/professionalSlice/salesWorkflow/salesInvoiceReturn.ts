@@ -53,11 +53,11 @@ export const createSalesInvoiceReturn = createAsyncThunk<
   { rejectValue: RejectValue }
 >(
   "salesInvoiceReturn/createSalesInvoiceReturn",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/save",
-        payload
+        { ...payload }
       );
 
       if (!res.data?.success) {
@@ -180,11 +180,11 @@ export const updateSalesInvoiceReturn = createAsyncThunk<
   { rejectValue: RejectValue }
 >(
   "salesInvoiceReturn/updateSalesInvoiceReturn",
-  async ({ voucherNumber, data }, { rejectWithValue }) => {
+  async ({ sInvReturnVoucherNumber, payload }: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.put(
-        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/update/${voucherNumber}`,
-        data
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/update/${sInvReturnVoucherNumber}`,
+        { ...payload }
       );
 
       if (!res.data?.success) {
