@@ -732,7 +732,6 @@ const Grn = () => {
             return "";
         }
     };
-
     useEffect(() => {
         dispatch(getAllTransactionSchema("grn") as any);
     }, [dispatch]);

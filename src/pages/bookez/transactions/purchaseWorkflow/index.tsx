@@ -4,6 +4,7 @@ import {
   Truck,
   RotateCcw,
   ReceiptText,
+  WalletCards,
 
 } from "lucide-react";
 import TransactionDashboard from "../components/TransactionDashboard";
@@ -11,6 +12,7 @@ import PurchaseOrder from "./PurchaseOrder";
 import Grn from "./Grn";
 import PurchaseReturn from "./PurchaseReturn";
 import PurchaseInvoice from "./PurchaseInvoice";
+import Payment from "./Payment";
 
 const cards: any[] = [
   {
@@ -37,6 +39,12 @@ const cards: any[] = [
     component: PurchaseInvoice,
     icon: <ReceiptText size={22} />,
   },
+  {
+    title: "Payment",
+    description: "Create and manage payments.",
+    component: Payment,
+    icon: <WalletCards size={22} />,
+  }
 ];
 
 const PurchaseWorkflowDashboard = () => {

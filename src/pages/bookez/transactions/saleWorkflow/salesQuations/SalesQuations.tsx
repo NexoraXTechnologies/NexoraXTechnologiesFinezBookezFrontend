@@ -34,7 +34,7 @@ import {
 
 import type {
     ConfirmTooltipState,
-    ProductLine,
+   
 } from "../salesWorkflowTypes";
 
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
@@ -1045,7 +1045,7 @@ const SalesQuotations = () => {
             if (!confirmTooltip.voucherNumber) return;
 
             await dispatch(
-                deleteSalesQuotation(confirmTooltip.voucherNumber) as any
+                deleteSalesQuotation({ sQuoteVoucherNumber: confirmTooltip.voucherNumber }) as any
             ).unwrap();
 
             toast.success("Sales quotation deleted");

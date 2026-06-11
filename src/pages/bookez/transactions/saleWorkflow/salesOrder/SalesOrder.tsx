@@ -234,7 +234,7 @@ const SalesOrder = () => {
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
-    const [status, setStatus] = useState("open");
+    const [status, setStatus] = useState<"open" | "close" | undefined>("open");
 
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(false);

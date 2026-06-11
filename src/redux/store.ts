@@ -48,10 +48,12 @@ import contraVoucherReducer from "./slices/professionalSlice/openingBalancesStoc
 import creditNoteReducer from "./slices/professionalSlice/openingBalancesStocks/creditNoteSlice";
 import debitNoteReducer from "./slices/professionalSlice/openingBalancesStocks/debitNoteSlice";
 import purchaseOrderSlice from "./slices/professionalSlice/purchaseWorkflow/purchaseOrder";
+import paymentReducer from "./slices/professionalSlice/purchaseWorkflow/paymentSlice"
 import grnReducer from "./slices/professionalSlice//purchaseWorkflow/grnSlice";
 import purchaseReturnReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 import purchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import getAllTransactionSchema from "./slices/professionalSlice/transactionSchema";
+
 
 export const store = configureStore({
   reducer: {
@@ -107,6 +109,7 @@ export const store = configureStore({
     grn:grnReducer,
     purchaseReturn:purchaseReturnReducer,
     purchaseInvoice: purchaseInvoiceReducer,
+    payment:paymentReducer,
     getAllTransactionSchema
 
 

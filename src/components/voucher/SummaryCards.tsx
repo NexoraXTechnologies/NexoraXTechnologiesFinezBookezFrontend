@@ -5,6 +5,7 @@ type SummaryItem = {
 
 type SummaryCardsProps = {
     items?: SummaryItem[];
+    footerTotals?: SummaryItem[];
 };
 
 const SummaryCards = ({ items = [], footerTotals }: SummaryCardsProps) => {

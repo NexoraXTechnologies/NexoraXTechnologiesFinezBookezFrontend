@@ -1779,7 +1779,7 @@ const PurchaseInvoice = () => {
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
-                        isAddButton: false,
+                        
                         form,
                         errors,
                         handleAddRow,

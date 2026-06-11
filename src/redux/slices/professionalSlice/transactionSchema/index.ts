@@ -4,7 +4,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 export const getAllTransactionSchema = createAsyncThunk(
     "transaction/getAllTransactionSchema",
     async (
-        module, { rejectWithValue }
+        module:string, { rejectWithValue }
     ) => {
         try {
             const params = { module };
