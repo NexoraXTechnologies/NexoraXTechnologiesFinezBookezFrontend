@@ -1198,6 +1198,16 @@ const SalesOrder = () => {
         );
     };
 
+    const handlePurchaseOrderModalClose = () => {
+        setShowPurchaseOrderModal(false);
+        setSelectedPurchaseOrder(null);
+        setPurchaseOrderSearch("");
+        setEditingRecord(null);
+        setErrors({});
+        setForm(getDefaultForm());
+        setShowModal(true);
+    };
+
     useEffect(() => {
         fetchSalesQuotations();
     }, [purchaseOrderSearch]);
@@ -1241,7 +1251,6 @@ const SalesOrder = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
-    console.log({ salesQuotations, filtter: salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open") })
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-order-header" className="mb-3 flex items-center">
@@ -1399,7 +1408,7 @@ const SalesOrder = () => {
                 title="Select Sales Quotations"
                 state={false}
                 handleSubmit={handlePurchaseOrderConfirm}
-                // handleClose={handlePurchaseOrderModalClose}
+                handleClose={handlePurchaseOrderModalClose}
                 // loader={purchaseOrderLoading}
                 gridCols={1}
                 maxWidth="2xl"
