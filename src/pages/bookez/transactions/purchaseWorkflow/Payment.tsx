@@ -667,12 +667,22 @@ const Payment = () => {
                 </div>
             ),
         },
+        
         {
             key: "payBody",
             title: "Amount",
             render: (row: any) => (
                 <span className="font-semibold text-indigo-700">
                     {money(row?.payFooter?.netAmount || 0)}
+                </span>
+            ),
+        },
+         {
+            key: "payStatus",
+            title: "Status",
+            render: (row: any) => (
+                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                    {row?.payStatus || "-"}
                 </span>
             ),
         },

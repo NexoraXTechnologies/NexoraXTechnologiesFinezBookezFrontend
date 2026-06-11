@@ -724,6 +724,11 @@ const PurchaseInvoice = () => {
         //     render: (row: any) => row?.grnVoucherNumber || "-",
         // },
        
+         {
+            key: "pInvBody",
+            title: "Items",
+            render: (row: any) => row?.pInvBody?.length || 0,
+        },
         {
             key: "pInvFooter",
             title: "Net Amount",
@@ -733,15 +738,15 @@ const PurchaseInvoice = () => {
                 </span>
             ),
         },
-        // {
-        //     key: "pInvStatus",
-        //     title: "Status",
-        //     render: (row: any) => (
-        //         <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-        //             {row?.pInvStatus || "-"}
-        //         </span>
-        //     ),
-        // },
+        {
+            key: "pInvStatus",
+            title: "Status",
+            render: (row: any) => (
+                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                    {row?.pInvStatus || "-"}
+                </span>
+            ),
+        },
     ];
 
     /* ===================================================

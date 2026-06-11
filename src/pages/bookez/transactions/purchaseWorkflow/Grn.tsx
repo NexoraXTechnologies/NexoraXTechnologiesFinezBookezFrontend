@@ -823,6 +823,11 @@ const Grn = () => {
                 </div>
             ),
         },
+         {
+            key: "grnBody",
+            title: "Items",
+            render: (row: any) => row?.grnBody?.length || 0,
+        },
        
         {
             key: "grnFooter",
@@ -833,15 +838,15 @@ const Grn = () => {
                 </span>
             ),
         },
-        // {
-        //     key: "grnStatus",
-        //     title: "GRN Status",
-        //     render: (row: any) => (
-        //         <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-        //             {row?.grnStatus || "-"}
-        //         </span>
-        //     ),
-        // },
+        {
+            key: "grnStatus",
+            title: "GRN Status",
+            render: (row: any) => (
+                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                    {row?.grnStatus || "-"}
+                </span>
+            ),
+        },
     ];
 
     /* ===================================================

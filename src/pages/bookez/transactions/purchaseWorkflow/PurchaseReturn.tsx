@@ -769,7 +769,11 @@ const PurchaseReturn = () => {
                 </div>
             ),
         },
-     
+       {
+            key: "pRefBody",
+            title: "Items",
+            render: (row: any) => row?.pRefBody?.length || 0,
+        },
         {
             key: "pRetFooter",
             title: "Net Amount",
@@ -779,15 +783,15 @@ const PurchaseReturn = () => {
                 </span>
             ),
         },
-        // {
-        //     key: "pRetStatus",
-        //     title: "Status",
-        //     render: (row: any) => (
-        //         <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-        //             {row?.pRetStatus || "-"}
-        //         </span>
-        //     ),
-        // },
+        {
+            key: "pRetStatus",
+            title: "Status",
+            render: (row: any) => (
+                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                    {row?.pRetStatus || "-"}
+                </span>
+            ),
+        },
     ];
 
     /* ===================================================
