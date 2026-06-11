@@ -1665,6 +1665,7 @@ const Payment = () => {
                         setShow: setShowModal,
                         edit: Boolean(editingRecord),
                         title: "Payment",
+                        bodyTitle:"Accounts",
                         subtitle: "Fill in the payment details below",
                         loading: createLoading || updateLoading,
                         onClose: () => {
