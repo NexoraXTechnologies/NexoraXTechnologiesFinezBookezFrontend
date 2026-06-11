@@ -12,7 +12,6 @@ import {
     todayYMD,
 } from "../../../../utils/helperFunctions";
 
-import professionalAxios from "../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
 
 import Badge from "../../../../components/badge";
@@ -169,6 +168,26 @@ const Payment = () => {
         voucherNumber: null,
     });
 
+
+    const getRecords = (res: any) => {
+        return Array.isArray(res?.items)
+            ? res.items
+            : Array.isArray(res?.records)
+                ? res.records
+                : Array.isArray(res?.docs)
+                    ? res.docs
+                    : Array.isArray(res?.data?.items)
+                        ? res.data.items
+                        : Array.isArray(res?.data?.records)
+                            ? res.data.records
+                            : Array.isArray(res?.data?.docs)
+                                ? res.data.docs
+                                : Array.isArray(res?.data)
+                                    ? res.data
+                                    : Array.isArray(res)
+                                        ? res
+                                        : [];
+    };
     /* ===================================================
        FIELD HELPERS
     =================================================== */
@@ -572,7 +591,7 @@ const Payment = () => {
                 </div>
             ),
         },
-        
+
         {
             key: "payBody",
             title: "Amount",
@@ -582,7 +601,7 @@ const Payment = () => {
                 </span>
             ),
         },
-         {
+        {
             key: "payStatus",
             title: "Status",
             render: (row: any) => (
@@ -854,7 +873,7 @@ const Payment = () => {
 
             const existingRef = existingReferenceMap.get(String(purchaseInvoice));
 
-            const remainingBillAmount :any=
+            const remainingBillAmount: any =
                 getInvoiceRemainingAmount(invoice) +
                 num(existingRef?.adjustedAmount || 0);
 
@@ -1665,7 +1684,7 @@ const Payment = () => {
                         setShow: setShowModal,
                         edit: Boolean(editingRecord),
                         title: "Payment",
-                        bodyTitle:"Accounts",
+                        bodyTitle: "Accounts",
                         subtitle: "Fill in the payment details below",
                         loading: createLoading || updateLoading,
                         onClose: () => {
