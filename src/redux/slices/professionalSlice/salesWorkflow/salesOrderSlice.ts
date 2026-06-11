@@ -86,7 +86,7 @@ export const getAllSalesOrder = createAsyncThunk<
 >(
   "salesOrder/getAllSalesOrder",
   async (
-    { limit = 200, offset = 0, search = "", status = "open" } = {},
+    { limit = 200, offset = 0, search = "", status = "" }: any,
     { rejectWithValue }
   ) => {
     try {

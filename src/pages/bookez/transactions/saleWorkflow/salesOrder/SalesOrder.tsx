@@ -36,6 +36,8 @@ import {
 } from "../../../../../utils/helperFunctions";
 
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
+import Modal from "../../../../../components/modal";
+import { getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -212,12 +214,8 @@ const loadAllTemplateOptions = async (templateData: any) => {
 
 const SalesOrder = () => {
     const dispatch = useDispatch();
-
     const salesOrderState = useSelector((state: any) => state.salesOrder);
-
-    const { transactionsSchema } = useSelector(
-        (state: any) => state.getAllTransactionSchema
-    );
+    const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
 
     const {
         salesOrders = [],
@@ -241,7 +239,10 @@ const SalesOrder = () => {
 
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
+    const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
+    const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
+    const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
+    const { salesQuotations, loading: salesQuatationLoader } = useSelector((state: any) => state.salesQuotation);
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
         body: [],
@@ -608,7 +609,8 @@ const SalesOrder = () => {
 
     const openAddModal = () => {
         resetMainForm();
-        setShowModal(true);
+        // setShowModal(true);
+        setShowPurchaseOrderModal(true);
     };
 
     const openEditModal = (record: any) => {
@@ -973,66 +975,57 @@ const SalesOrder = () => {
     /* ===================================================
        SUBMIT
     =================================================== */
+    const syncPurchaseOrderStatusAfterGrn = async (e: string) => {
+        if (!e) return "";
+        try {
+            await dispatch(updateSalesQuotation({ payload: { sQuoteDocStatus: "close" }, sQuoteVoucherNumber: e }))
+            await fetchSalesQuotations();
+        } catch (error) {
+            toast.error("GRN saved but failed to update purchase order status");
+            return "";
+        }
+    };
 
     const handleSubmit = async () => {
         if (!validateForm()) return;
-
         const products = cleanRows();
         const footer = calculateFooter(products);
-
         const payload: any = {
             sOrderVoucherDate: form.sOrderVoucherDate,
-
+            sOrderQuotationVoucherNumber: form?.sOrderQuotationVoucherNumber,
             sOrderCustomerCode: form.sOrderCustomerCode,
             sOrderCustomerName: form.sOrderCustomerName,
-
             sOrderSalesAccount: form.sOrderSalesAccount || "SA021",
-
             sOrderStatus: form.sOrderStatus || form.sOrderDocStatus || "open",
             sOrderDocStatus: form.sOrderDocStatus || form.sOrderStatus || "open",
-
             sOrderRemark: form.sOrderRemark || form.sOrderRemarks || "",
             sOrderRemarks: form.sOrderRemarks || form.sOrderRemark || "",
-
             isAutoPost: form.isAutoPost || false,
-
             sOrderBody: products.map((item: any) => ({
                 productCode: item.productCode,
                 productName: item.productName,
                 productId: item.productId,
-
                 productDescription: item.productDescription || item.description,
                 description: item.description || item.productDescription,
-
                 productHSNCode: item.productHSNCode,
-
                 remarks: item.remarks,
-
                 quantity: String(item.quantity),
-
                 unit: item.unit || item.uom,
                 uom: item.uom || item.unit,
                 unitName: item.unitName,
-
                 rate: String(item.rate),
-
                 gross: fmtMoney(item.grossAmount),
                 grossAmount: fmtMoney(item.grossAmount),
-
                 discount: String(item.discountPercentage || item.discount || ""),
                 discountPercentage: String(item.discountPercentage || item.discount || ""),
                 discountAmount: fmtMoney(item.discountAmount),
-
                 taxableAmount: fmtMoney(item.taxableAmount),
-
                 cgst: String(item.cgstPercentage || item.cgst || ""),
                 cgstPercentage: String(item.cgstPercentage || item.cgst || ""),
                 cgstAmount: fmtMoney(item.cgstAmount),
-
                 sgst: String(item.sgstPercentage || item.sgst || ""),
                 sgstPercentage: String(item.sgstPercentage || item.sgst || ""),
                 sgstAmount: fmtMoney(item.sgstAmount),
-
                 igst: String(item.igstPercentage || item.igst || ""),
                 igstPercentage: String(item.igstPercentage || item.igst || ""),
                 igstAmount: fmtMoney(item.igstAmount),
@@ -1082,7 +1075,16 @@ const SalesOrder = () => {
                 toast.success("Sales order updated successfully");
             } else {
                 await dispatch(createSalesOrder(payload) as any).unwrap();
-
+                if (form?.sOrderQuotationVoucherNumber) {
+                    const poStatus = await syncPurchaseOrderStatusAfterGrn(form?.sOrderQuotationVoucherNumber);
+                    if (poStatus === "close") {
+                        toast.success("GRN created successfully and Purchase Order closed");
+                    } else {
+                        toast.success("GRN created successfully");
+                    }
+                } else {
+                    toast.success("GRN created successfully");
+                }
                 toast.success("Sales order created successfully");
             }
 
@@ -1116,6 +1118,89 @@ const SalesOrder = () => {
             });
         }
     };
+
+    const handlePurchaseOrderConfirm = () => {
+        if (!selectedPurchaseOrder) {
+            toast.error("Please select purchase order");
+            return;
+        }
+        const poBody = selectedPurchaseOrder?.sQuoteBody || [];
+        const products = poBody?.length > 0 ? poBody?.map((item: any) => {
+            return calculateRow(
+                normalizeRowKeys({
+                    id: Date.now() + Math.random(),
+                    productCode: item.productCode,
+                    productName: item.productName,
+                    productId: item.productId,
+                    productDescription: item.productDescription || item.description,
+                    description: item.description || item.productDescription,
+                    productHSNCode: item.productHSNCode,
+                    remarks: item.remarks,
+                    quantity: String(item.quantity),
+                    unit: item.unit || item.uom,
+                    uom: item.uom || item.unit,
+                    rate: String(item.rate),
+                    gross: fmtMoney(item.grossAmount),
+                    grossAmount: fmtMoney(item.grossAmount),
+                    discount: String(item.discountPercentage || item.discount || ""),
+                    discountPercentage: String(item.discountPercentage || item.discount || ""),
+                    discountAmount: fmtMoney(item.discountAmount),
+                    taxableAmount: fmtMoney(item.taxableAmount),
+                    cgst: String(item.cgstPercentage || item.cgst || ""),
+                    cgstPercentage: String(item.cgstPercentage || item.cgst || ""),
+                    cgstAmount: fmtMoney(item.cgstAmount),
+                    sgst: String(item.sgstPercentage || item.sgst || ""),
+                    sgstPercentage: String(item.sgstPercentage || item.sgst || ""),
+                    sgstAmount: fmtMoney(item.sgstAmount),
+                    igst: String(item.igstPercentage || item.igst || ""),
+                    igstPercentage: String(item.igstPercentage || item.igst || ""),
+                    igstAmount: fmtMoney(item.igstAmount),
+                    taxAmount: fmtMoney(item.taxAmount),
+                    otherAmount: fmtMoney(item.otherAmount),
+                    netAmount: fmtMoney(item.netAmount || item.netTotal),
+                    netTotal: fmtMoney(item.netTotal || item.netAmount),
+                })
+            );
+        })
+            : [{ ...emptyProductRow, id: Date.now() }];
+
+        setForm({
+            ...getDefaultForm(),
+            sOrderQuotationVoucherNumber: selectedPurchaseOrder?.sQuoteVoucherNumber,
+            sOrderVoucherDate: selectedPurchaseOrder.sQuoteVoucherDate,
+            sOrderCustomerCode: selectedPurchaseOrder.sQuoteCustomerCode,
+            sOrderCustomerName: selectedPurchaseOrder.sQuoteCustomerName,
+            sOrderSalesAccount: selectedPurchaseOrder.sQuoteSalesAccount || "SA021",
+            sOrderStatus: selectedPurchaseOrder.sQuoteStatus || selectedPurchaseOrder.sOrderDocStatus || "open",
+            sOrderDocStatus: selectedPurchaseOrder.sQuoteDocStatus || selectedPurchaseOrder.sOrderStatus || "open",
+            sOrderRemark: selectedPurchaseOrder.sQuoteRemark || selectedPurchaseOrder.sOrderRemarks || "",
+            sOrderRemarks: selectedPurchaseOrder.sQuoteRemarks || selectedPurchaseOrder.sOrderRemark || "",
+            isAutoPost: selectedPurchaseOrder.isAutoPost || false,
+            products,
+        });
+
+        setErrors({});
+        setEditingRecord(null);
+        setShowPurchaseOrderModal(false);
+        setShowModal(true);
+    };
+
+    const handlePurchaseOrderSelect = (purchaseOrder: any) => setSelectedPurchaseOrder(purchaseOrder);
+
+    const fetchSalesQuotations = async () => {
+        await dispatch(
+            getSalesQuotationList({
+                offset: 0,
+                limit: 100,
+                search: purchaseOrderSearch,
+                status: "won"
+            }) as any
+        );
+    };
+
+    useEffect(() => {
+        fetchSalesQuotations();
+    }, [purchaseOrderSearch]);
 
     /* ===================================================
        DYNAMIC FOOTER
@@ -1156,6 +1241,7 @@ const SalesOrder = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+    console.log({ salesQuotations, filtter: salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open") })
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-order-header" className="mb-3 flex items-center">
@@ -1283,7 +1369,7 @@ const SalesOrder = () => {
                         show: showModal,
                         setShow: setShowModal,
                         edit: Boolean(editingRecord),
-                        title: "Sales Order",
+                        title: "Sales Orders",
                         subtitle: "Fill in the sales order details below",
                         loading: createLoading || updateLoading,
                         onClose: () => {
@@ -1306,6 +1392,93 @@ const SalesOrder = () => {
                     }}
                 />
             )}
+
+            <Modal
+                show={showPurchaseOrderModal}
+                setShow={setShowPurchaseOrderModal}
+                title="Select Sales Quotations"
+                state={false}
+                handleSubmit={handlePurchaseOrderConfirm}
+                // handleClose={handlePurchaseOrderModalClose}
+                // loader={purchaseOrderLoading}
+                gridCols={1}
+                maxWidth="2xl"
+                modalClassName="rounded-xl"
+                headerClassName="bg-white"
+                footerClassName="bg-white"
+                bodyClassName="!block !p-0"
+                body={
+                    <div className="flex h-[520px] flex-col">
+                        <div className="border-b border-gray-200 p-5">
+                            <input
+                                value={purchaseOrderSearch}
+                                onChange={(e) =>
+                                    setPurchaseOrderSearch(e.target.value)
+                                }
+                                placeholder="Search Purchase Order code..."
+                                className="
+                                    w-full rounded-xl border border-gray-200 bg-gray-50
+                                    px-4 py-3 text-sm font-medium text-gray-700
+                                    outline-none transition
+                                    placeholder:text-gray-400
+                                    focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
+                                "
+                            />
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                            {salesQuatationLoader ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    Loading purchase orders...
+                                </div>
+                            ) : salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open")?.length === 0 ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    No purchase order found
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open")?.map((e: any, index: number) => {
+                                        const poNumber = e?.sQuoteVoucherNumber || "-";
+                                        const isSelected = (selectedPurchaseOrder?.sQuoteVoucherNumber == e?.sQuoteVoucherNumber);
+                                        return (
+                                            <button
+                                                key={poNumber || index}
+                                                type="button"
+                                                onClick={() => handlePurchaseOrderSelect(e)}
+                                                className={`
+                                                    w-full rounded-xl border px-4 py-4 text-left transition
+                                                    ${isSelected
+                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                    }
+                                                `}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-base font-bold text-gray-900">
+                                                            {e?.sQuoteVoucherNumber || "NA"} - {e?.sQuoteCustomerName || "NA"}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                            Items: {e?.sQuoteBody?.length || 0}
+                                                        </p>
+                                                    </div>
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                            Selected
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                }
+            />
         </div>
     );
 };

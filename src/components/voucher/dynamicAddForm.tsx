@@ -72,6 +72,8 @@ const DynamicAddForm = ({
         }
 
         if (e?.type === "select") {
+
+            
             return (
                 <SelectInput
                     label={e?.label}
