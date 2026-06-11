@@ -1022,6 +1022,16 @@ const SalesInVoice = () => {
         );
     };
 
+    const handlePurchaseOrderModalClose = () => {
+        setShowPurchaseOrderModal(false);
+        setSelectedPurchaseOrder(null);
+        setPurchaseOrderSearch("");
+        setEditingRecord(null);
+        setErrors({});
+        setForm(getDefaultForm());
+        setShowModal(true);
+    };
+
     useEffect(() => {
         fetchSalesOrders();
     }, [purchaseOrderSearch]);
@@ -1213,7 +1223,7 @@ const SalesInVoice = () => {
                 title="Select Sales Order"
                 state={false}
                 handleSubmit={handlePurchaseOrderConfirm}
-                // handleClose={handlePurchaseOrderModalClose}
+                handleClose={handlePurchaseOrderModalClose}
                 // loader={purchaseOrderLoading}
                 gridCols={1}
                 maxWidth="2xl"

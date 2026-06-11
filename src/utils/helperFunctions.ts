@@ -1,3 +1,5 @@
+import professionalAxios from "../services/professionalAxios";
+
 export const todayYMD = () => new Date().toISOString().split("T")[0];
 
 export const num = (value: any) => {
@@ -13,8 +15,6 @@ export const safePercent = (value: any) => {
     if (n > 100) return 100;
     return n;
 };
-
-
 
 export const formatDateForInput = (value: any) => {
     if (!value) return todayYMD();
@@ -38,8 +38,36 @@ export const formatDateForList = (value: any) => {
     });
 };
 
+const getRecords = (res: any) => {
+    return Array.isArray(res?.items) ? res.items : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+};
 
+const loadFieldOptions = async (fields: any[], param: Record<string, any> = {}) => {
+    const updatedFields = await Promise.all(
+        (fields || []).map(async (field) => {
+            if (!!field?.options?.length) {
+                const options = Array.isArray(field?.options) ? field?.options.map((item: any) => ({ label: item || "", value: item || "", raw: item })) : [];
+                return { ...field, options };
+            }
+            if (!field?.api) return field;
+            try {
+                const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend${field.api}`, { params: { ...(field.queryParams || {}), ...param, } });
+                const records = getRecords(res.data);
+                const options = Array.isArray(records) ? records.map((item: any) => ({ label: item?.[field.labelField] || "", value: item?.[field.valueField] || "", raw: item })) : [];
+                return { ...field, options };
+            } catch (error) {
+                console.log(`Failed to load options for ${field.key}`, error);
+                return { ...field, options: [] };
+            }
+        })
+    );
+    return updatedFields;
+};
 
+export const loadAllTemplateOptions = async (templateData: any, param: any = {}) => {
+    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([loadFieldOptions(templateData?.header || [], param?.header), loadFieldOptions(templateData?.body || [], param?.body), loadFieldOptions(templateData?.footer || [], param?.footer)]);
+    return { ...templateData, header: updatedHeader, body: updatedBody, footer: updatedFooter };
+};
 
 export const fmtMoney = (value: any) => num(value).toFixed(2);
 
