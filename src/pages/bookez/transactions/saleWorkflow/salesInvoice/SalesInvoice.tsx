@@ -36,6 +36,8 @@ import {
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
+import Modal from "../../../../../components/modal";
+import { getAllSalesOrder, updateSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -231,7 +233,9 @@ const SalesInVoice = () => {
 
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(false);
-
+    const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
+    const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
+    const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<any>(null);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
 
@@ -240,6 +244,7 @@ const SalesInVoice = () => {
         body: [],
         footer: [],
     });
+    const { salesOrders, loading: orderLoader } = useSelector((state: any) => state.salesOrder);
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
@@ -546,14 +551,13 @@ const SalesInVoice = () => {
 
     const openAddModal = () => {
         resetMainForm();
-        setShowModal(true);
+        setShowPurchaseOrderModal(true);
+        // setShowModal(true);
     };
 
     const openEditModal = (record: any) => {
         const footer = record?.sInvFooter || {};
-        const products =
-            record?.sInvBody?.length > 0
-                ? record.sInvBody.map((item: any) => {
+        const products = record?.sInvBody?.length > 0 ? record.sInvBody.map((item: any) => {
                     const unitCode = item?.unit || item?.uom || "";
 
                     return calculateRow(
@@ -866,9 +870,15 @@ const SalesInVoice = () => {
                         payload,
                     }) as any
                 ).unwrap();
+
                 toast.success("Sales invoice updated successfully");
             } else {
                 await dispatch(createSalesInvoice({ payload }) as any).unwrap();
+                if (form?.sInvVoucherNumber) {
+                    await syncPurchaseOrderStatusAfterGrn(
+                        form.sInvVoucherNumber
+                    );
+                }
                 toast.success("Sales invoice created successfully");
             }
             setShowModal(false);
@@ -901,6 +911,17 @@ const SalesInVoice = () => {
        DYNAMIC FOOTER
     =================================================== */
 
+    const syncPurchaseOrderStatusAfterGrn = async (e: string) => {
+        if (!e) return "";
+        try {
+            await dispatch(updateSalesOrder({ data: { sOrderStatus: "close" }, voucherNumber: e }))
+            await fetchSalesOrders();
+        } catch (error) {
+            toast.error("GRN saved but failed to update purchase order status");
+            return "";
+        }
+    };
+
     const footerValues = useMemo(() => {
         return { grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount };
     }, [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount,
@@ -921,6 +942,89 @@ const SalesInVoice = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+    const handlePurchaseOrderConfirm = () => {
+        if (!selectedPurchaseOrder) {
+            toast.error("Please select purchase order");
+            return;
+        }
+        const poBody = selectedPurchaseOrder?.sOrderBody || [];
+        const products = poBody?.length > 0 ? poBody?.map((item: any) => {
+            return calculateRow(
+                normalizeRowKeys({
+                    id: Date.now() + Math.random(),
+                    productCode: item?.productCode || "",
+                    productName: item?.productName || "",
+                    productId: item?.productId || "",
+                    productDescription: item?.productDescription || item?.description || "",
+                    description: item?.description || item?.productDescription || "",
+                    productHSNCode: item?.productHSNCode || "",
+                    remarks: item?.remarks || "",
+                    quantity: item?.quantity || "",
+                    unit: item?.unit,
+                    uom: item?.uom,
+                    unitName: item?.unitName || getUnitLabelFromSchema(item?.unitName),
+                    rate: item?.rate || "",
+                    gross: item?.gross || item?.grossAmount || 0,
+                    grossAmount: item?.grossAmount || item?.gross || 0,
+                    discount: item?.discount || item?.discountPercentage || "",
+                    discountPercentage: item?.discountPercentage || item?.discount || "",
+                    discountAmount: item?.discountAmount || 0,
+                    taxableAmount: item?.taxableAmount || 0,
+                    cgst: item?.cgst || item?.cgstPercentage || "",
+                    cgstPercentage: item?.cgstPercentage || item?.cgst || "",
+                    cgstAmount: item?.cgstAmount || 0,
+                    sgst: item?.sgst || item?.sgstPercentage || "",
+                    sgstPercentage: item?.sgstPercentage || item?.sgst || "",
+                    sgstAmount: item?.sgstAmount || 0,
+                    igst: item?.igst || item?.igstPercentage || "",
+                    igstPercentage: item?.igstPercentage || item?.igst || "",
+                    igstAmount: item?.igstAmount || 0,
+                    taxAmount: item?.taxAmount || 0,
+                    otherAmount: item?.otherAmount || 0,
+                    netAmount: item?.netAmount || item?.netTotal || 0,
+                    netTotal: item?.netTotal || item?.netAmount || 0,
+                })
+            );
+        })
+            : [{ ...emptyProductRow, id: Date.now() }];
+
+        setForm({
+            ...getDefaultForm(),
+            sInvVoucherNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "AUTO",
+            sInvVoucherDate: formatDateForInput(selectedPurchaseOrder?.sOrderVoucherDate),
+            sInvCustomerCode: selectedPurchaseOrder?.sOrderCustomerCode || "",
+            sInvCustomerName: selectedPurchaseOrder?.sOrderCustomerName || "",
+            sInvSalesAccount: selectedPurchaseOrder?.sOrderSalesAccount || "SA021",
+            sInvDocStatus: selectedPurchaseOrder?.sOrderDocStatus || selectedPurchaseOrder?.sInvStatus || "open",
+            sInvStatus: selectedPurchaseOrder?.sOrderStatus || selectedPurchaseOrder?.sInvDocStatus || "open",
+            sInvRemark: selectedPurchaseOrder?.sOrderRemark || selectedPurchaseOrder?.sInvRemarks || "",
+            sInvRemarks: selectedPurchaseOrder?.sOrderRemark || selectedPurchaseOrder?.sInvRemark || "",
+            isAutoPost: selectedPurchaseOrder?.isAutoPost || false,
+            products,
+        });
+
+        setErrors({});
+        setEditingRecord(null);
+        setShowPurchaseOrderModal(false);
+        setShowModal(true);
+    };
+
+    const handlePurchaseOrderSelect = (purchaseOrder: any) => setSelectedPurchaseOrder(purchaseOrder);
+
+    const fetchSalesOrders = async () => {
+        await dispatch(
+            getAllSalesOrder({
+                offset: 0,
+                limit: 100,
+                search: purchaseOrderSearch,
+                status: "open"
+            }) as any
+        );
+    };
+
+    useEffect(() => {
+        fetchSalesOrders();
+    }, [purchaseOrderSearch]);
 
     useEffect(() => {
         dispatch(getAllTransactionSchema("salesInvoice") as any);
@@ -1102,6 +1206,93 @@ const SalesInVoice = () => {
                     }}
                 />
             )}
+
+            <Modal
+                show={showPurchaseOrderModal}
+                setShow={setShowPurchaseOrderModal}
+                title="Select Sales Order"
+                state={false}
+                handleSubmit={handlePurchaseOrderConfirm}
+                // handleClose={handlePurchaseOrderModalClose}
+                // loader={purchaseOrderLoading}
+                gridCols={1}
+                maxWidth="2xl"
+                modalClassName="rounded-xl"
+                headerClassName="bg-white"
+                footerClassName="bg-white"
+                bodyClassName="!block !p-0"
+                body={
+                    <div className="flex h-[520px] flex-col">
+                        <div className="border-b border-gray-200 p-5">
+                            <input
+                                value={purchaseOrderSearch}
+                                onChange={(e) =>
+                                    setPurchaseOrderSearch(e.target.value)
+                                }
+                                placeholder="Search Purchase Order code..."
+                                className="
+                                    w-full rounded-xl border border-gray-200 bg-gray-50
+                                    px-4 py-3 text-sm font-medium text-gray-700
+                                    outline-none transition
+                                    placeholder:text-gray-400
+                                    focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
+                                "
+                            />
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                            {orderLoader ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    Loading purchase orders...
+                                </div>
+                            ) : salesOrders?.length === 0 ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                    No purchase order found
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {salesOrders?.map((e: any, index: number) => {
+                                        const poNumber = e?.sOrderVoucherNumber || "-";
+                                        const isSelected = (selectedPurchaseOrder?.sOrderVoucherNumber == e?.sOrderVoucherNumber);
+                                        return (
+                                            <button
+                                                key={poNumber || index}
+                                                type="button"
+                                                onClick={() => handlePurchaseOrderSelect(e)}
+                                                className={`
+                                                    w-full rounded-xl border px-4 py-4 text-left transition
+                                                    ${isSelected
+                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                    }
+                                                `}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-base font-bold text-gray-900">
+                                                            {e?.sOrderVoucherNumber || "NA"} - {e?.sOrderCustomerName || "NA"}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                            Items: {e?.sOrderBody?.length || 0}
+                                                        </p>
+                                                    </div>
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                            Selected
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                }
+            />
         </div>
     );
 };

@@ -30,7 +30,8 @@ import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { loadFieldOptions } from "../salesQuations/SalesQuations";
 import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 import Modal from "../../../../../components/modal";
-import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import professionalAxios from "../../../../../services/professionalAxios";
 
 const emptyProductRow = {
     id: Date.now(),
@@ -356,10 +357,9 @@ const SalesReturn = () => {
     const fetchSalesInvoices = async () => {
         await dispatch(
             getAllSalesInvoiceReturn({
-                offset: localOffset,
-                limit: localLimit,
-                search: debouncedSearch,
-                status,
+                offset: 0,
+                limit: 100,
+                search: purchaseOrderSearch,
             }) as any
         );
     };
@@ -528,6 +528,30 @@ const SalesReturn = () => {
         setShowModal(true);
     };
 
+    const syncPurchaseOrderStatusAfterGrn = async (pOrdVoucherNumber: string) => {
+        if (!pOrdVoucherNumber) return "";
+
+        try {
+            // users/bookez/salesFlow/salesInvoiceReturn/analysis/byInvoiceVoucharNumber/SINV-21
+            const summaryRes = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/analysis/byInvoiceVoucharNumber/${pOrdVoucherNumber}`
+            );
+            const summary = summaryRes?.data?.data || {};
+            const pendingRaw = summary?.pendingReturnQuantity?.totalPendingQty;
+            if (pendingRaw === undefined || pendingRaw === null || pendingRaw === "") {
+                console.log("GRN analysis summary missing totalPendingGrnQuantity", summaryRes?.data);
+                return "";
+            }
+
+            const totalPendingGrnQuantity = num(pendingRaw);
+            const nextPoStatus = totalPendingGrnQuantity === 0 ? "close" : "open";
+            dispatch(updateSalesInvoice({ sInvVoucherNumber: pOrdVoucherNumber, payload: { sInvStatus: nextPoStatus } }))
+            return nextPoStatus;
+        } catch (error) {
+            console.log("Failed to sync Purchase Order status after GRN", error);
+            toast.error("GRN saved but failed to update purchase order status");
+            return "";
+        }
+    };
     /* ===================================================
        DYNAMIC HEADER CHANGE
     =================================================== */
@@ -745,8 +769,6 @@ const SalesReturn = () => {
     //    SUBMIT 
     const handleSubmit = async () => {
         if (!validateForm()) return;
-        console.log({ form })
-        // return
         const products = cleanRows();
         const footer = calculateFooter(products);
         const payload: any = {
@@ -822,17 +844,24 @@ const SalesReturn = () => {
                         payload,
                     }) as any
                 ).unwrap();
-
                 toast.success("Sales invoice updated successfully");
             } else {
                 await dispatch(createSalesInvoiceReturn({ payload }) as any).unwrap();
-
+                if (form?.sInvVoucherNumber) {
+                    const poStatus = await syncPurchaseOrderStatusAfterGrn(form?.sInvVoucherNumber);
+                    await fetchSalesInvoices();
+                    if (poStatus === "close") {
+                        toast.success("GRN created successfully and Purchase Order closed");
+                    } else {
+                        toast.success("GRN created successfully");
+                    }
+                } else {
+                    toast.success("GRN created successfully");
+                }
                 toast.success("Sales invoice created successfully");
             }
-
             setShowModal(false);
             resetMainForm();
-
             fetchSalesInvoices();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
@@ -857,16 +886,13 @@ const SalesReturn = () => {
         }
     };
 
-    const handlePurchaseOrderSelect = (purchaseOrder: any) => {
-        setSelectedPurchaseOrder(purchaseOrder);
-    };
+    const handlePurchaseOrderSelect = (purchaseOrder: any) => setSelectedPurchaseOrder(purchaseOrder);
 
     const handlePurchaseOrderConfirm = () => {
         if (!selectedPurchaseOrder) {
             toast.error("Please select purchase order");
             return;
         }
-
         const poBody = selectedPurchaseOrder?.sInvBody || [];
         const products = poBody.length > 0 ? poBody.map((item: any) => {
             const unitCode = item?.unit || item?.uom || "";
@@ -968,13 +994,9 @@ const SalesReturn = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
-    useEffect(() => {
-        fetchSalesInvoices();
-    }, []);
+    useEffect(() => { fetchSalesInvoices() }, []);
 
-    useEffect(() => {
-        dispatch(getAllTransactionSchema("salesReturn") as any);
-    }, [dispatch]);
+    useEffect(() => { dispatch(getAllTransactionSchema("salesReturn") as any) }, [dispatch]);
 
     useEffect(() => {
         (async () => {
@@ -986,7 +1008,6 @@ const SalesReturn = () => {
             }) as any
             );
         })()
-
     }, []);
 
     useEffect(() => {
@@ -1149,7 +1170,7 @@ const SalesReturn = () => {
             <Modal
                 show={showPurchaseOrderModal}
                 setShow={setShowPurchaseOrderModal}
-                title="Select Purchase Order"
+                title="Select Invoice Order"
                 state={false}
                 handleSubmit={handlePurchaseOrderConfirm}
                 // handleClose={handlePurchaseOrderModalClose}

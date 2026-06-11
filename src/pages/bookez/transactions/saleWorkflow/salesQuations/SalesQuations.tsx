@@ -34,7 +34,6 @@ import {
 
 import type {
     ConfirmTooltipState,
-    ProductLine,
 } from "../salesWorkflowTypes";
 
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
@@ -160,8 +159,20 @@ const getRecords = (res: any) => {
 export const loadFieldOptions = async (fields: any[]) => {
     const updatedFields = await Promise.all(
         (fields || []).map(async (field) => {
+            if (!!field?.options?.length) {
+                const options = Array.isArray(field?.options)
+                    ? field?.options.map((item: any) => ({
+                        label: item || "",
+                        value: item || "",
+                        raw: item,
+                    }))
+                    : [];
+                return {
+                    ...field,
+                    options,
+                };
+            }
             if (!field?.api) return field;
-
             try {
                 const res = await professionalAxios.get(
                     `/eTaxSolnMongoApiBackend${field.api}`,
@@ -171,7 +182,6 @@ export const loadFieldOptions = async (fields: any[]) => {
                 );
 
                 const records = getRecords(res.data);
-
                 const options = Array.isArray(records)
                     ? records.map((item: any) => ({
                         label: item?.[field.labelField] || "",
@@ -257,7 +267,6 @@ const SalesQuotations = () => {
         body: [],
         footer: [],
     });
-
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
     const [confirmTooltip, setConfirmTooltip] =
@@ -764,10 +773,8 @@ const SalesQuotations = () => {
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
-
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-
             let updatedRow = {
                 ...currentRow,
                 [key]: value,
@@ -1061,9 +1068,6 @@ const SalesQuotations = () => {
             });
         }
     };
-
-
-
 
     const footerValues = useMemo(() => {
         return {
