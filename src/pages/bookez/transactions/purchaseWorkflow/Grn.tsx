@@ -7,6 +7,7 @@ import {
     fmtMoney,
     formatDateForInput,
     formatDateForList,
+    loadAllTemplateOptions,
     money,
     num,
     safePercent,
@@ -134,74 +135,7 @@ const getDefaultForm = () => ({
     netAmount: "0.00",
 });
 
-/* ===================================================
-   COMMON RECORD EXTRACTOR
-=================================================== */
 
-const getRecords = (res: any) => {
-    return Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.records)
-            ? res.records
-            : Array.isArray(res?.docs)
-                ? res.docs
-                : Array.isArray(res?.data?.items)
-                    ? res.data.items
-                    : Array.isArray(res?.data?.records)
-                        ? res.data.records
-                        : Array.isArray(res?.data?.docs)
-                            ? res.data.docs
-                            : Array.isArray(res?.data)
-                                ? res.data
-                                : Array.isArray(res)
-                                    ? res
-                                    : [];
-};
-
-/* ===================================================
-   LOAD OPTIONS FOR FIELDS HAVING api KEY
-=================================================== */
-
-export const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all(
-        (fields || []).map(async (field) => {
-            if (!field?.api) return field;
-
-            try {
-                const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    {
-                        params: field.queryParams || {},
-                    }
-                );
-
-                const records = getRecords(res.data);
-
-                const options = Array.isArray(records)
-                    ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
-                        raw: item,
-                    }))
-                    : [];
-
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
-
-                return {
-                    ...field,
-                    options: [],
-                };
-            }
-        })
-    );
-
-    return updatedFields;
-};
 
 const rejectedReasonOptions = [
     { label: "Damaged Product", value: "Damaged Product" },
@@ -271,24 +205,6 @@ const injectGrnBodyFields = (bodyFields: any[] = []) => {
     return updatedBody;
 };
 
-/* ===================================================
-   LOAD OPTIONS FOR HEADER BODY FOOTER
-=================================================== */
-
-const loadAllTemplateOptions = async (templateData: any) => {
-    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
-        loadFieldOptions(templateData?.header || []),
-        loadFieldOptions(templateData?.body || []),
-        loadFieldOptions(templateData?.footer || []),
-    ]);
-
-    return {
-        ...templateData,
-        header: updatedHeader,
-        body: injectGrnBodyFields(updatedBody),
-        footer: updatedFooter,
-    };
-};
 
 /* ===================================================
    GRN

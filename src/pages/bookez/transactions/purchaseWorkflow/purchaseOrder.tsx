@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { fmtMoney, formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
 import professionalAxios from "../../../../services/professionalAxios";
 import { addPurchaseOrder, deletePurchaseOrder, getPurchaseOrderList, updatePurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
@@ -104,88 +104,6 @@ const getDefaultForm = () => ({
     otherAmount: "0.00",
     netAmount: "0.00",
 });
-
-/* ===================================================
-   COMMON RECORD EXTRACTOR
-=================================================== */
-
-const getRecords = (res: any) => {
-    return Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.records)
-            ? res.records
-            : Array.isArray(res?.docs)
-                ? res.docs
-                : Array.isArray(res?.data?.items)
-                    ? res.data.items
-                    : Array.isArray(res?.data?.records)
-                        ? res.data.records
-                                    : [];
-};
-
-/* ===================================================
-   LOAD OPTIONS FOR FIELDS HAVING api KEY
-=================================================== */
-
-export const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all(
-        (fields || []).map(async (field) => {
-            if (!field?.api) return field;
-
-            try {
-                const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    {
-                        params: field.queryParams || {},
-                    }
-                );
-
-                const records = getRecords(res.data);
-
-                const options = Array.isArray(records)
-                    ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
-                        raw: item,
-                    }))
-                    : [];
-
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
-
-                return {
-                    ...field,
-                    options: [],
-                };
-            }
-        })
-    );
-
-    return updatedFields;
-};
-
-/* ===================================================
-   LOAD OPTIONS FOR HEADER BODY FOOTER
-=================================================== */
-
-const loadAllTemplateOptions = async (templateData: any) => {
-    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
-        loadFieldOptions(templateData?.header || []),
-        loadFieldOptions(templateData?.body || []),
-        loadFieldOptions(templateData?.footer || []),
-    ]);
-
-    return {
-        ...templateData,
-        header: updatedHeader,
-        body: updatedBody,
-        footer: updatedFooter,
-    };
-};
 
 /* ===================================================
    PURCHASE ORDER
