@@ -25,9 +25,12 @@ type EditableLineTableProps = {
     errors?: any;
     onAddRow: () => void;
     onDeleteRow: (index: number) => void;
+    onRefrenceRow: (index: number, row?: any) => void;
+    RefrenceBtnText?: string | ((row: any, index: number) => string);
     onChange: (index: number, key: string, value: any) => void;
     emptyText?: string;
-};
+    isRefrenceAction: boolean;
+}
 
 const EditableLineTable = ({
     title,
@@ -37,12 +40,27 @@ const EditableLineTable = ({
     errors = {},
     onAddRow,
     onDeleteRow,
+    onRefrenceRow,
     onChange,
     isAddButton,
+    isRefrenceAction,
+    RefrenceBtnText,
     emptyText = "No data found",
 }: EditableLineTableProps) => {
 
+    const getReferenceButtonText = (row: any, rowIndex: number) => {
+        if (typeof RefrenceBtnText === "function") {
+            return RefrenceBtnText(row, rowIndex);
+        }
 
+        if (RefrenceBtnText) {
+            return RefrenceBtnText;
+        }
+
+        return Array.isArray(row?.references) && row.references.length > 0
+            ? "Edit Reference"
+            : "Add Reference";
+    };
 
 
 
@@ -94,7 +112,7 @@ const EditableLineTable = ({
                                     </th>
                                 ))}
 
-                                <th className="w-[80px] border border-slate-500 px-3 py-2 text-center">
+                                <th className="border border-slate-500 px-3 py-2 text-center">
                                     Action
                                 </th>
                             </tr>
@@ -192,7 +210,20 @@ const EditableLineTable = ({
                                             </td>
                                         ))}
 
-                                        <td className="border border-slate-200 px-3 py-2 text-center">
+                                        {/* <td className="border border-slate-200 px-3 py-2 text-center">
+
+                                            {isRefrenceAction && (
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        onDeleteRow(rowIndex)
+                                                    }
+                                                    className="text-red-500 hover:text-red-700 "
+                                                >
+                                                    <Plus size={16} />{RefrenceBtnText}
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() =>
@@ -202,6 +233,47 @@ const EditableLineTable = ({
                                             >
                                                 <Trash2 size={16} />
                                             </button>
+
+
+
+                                        </td> */}
+
+
+                                        <td className="border border-slate-200 px-3 py-2">
+                                            <div className="flex items-center justify-center gap-2">
+                                                {isRefrenceAction && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onRefrenceRow(rowIndex, row)}
+                                                        className="
+                                                                inline-flex min-w-[105px] items-center justify-center gap-1.5 rounded-lg
+                                                                border border-blue-200 bg-blue-50 px-2.5 py-1.5
+                                                                font-semibold text-blue-600
+                                                                transition hover:bg-blue-100 hover:text-blue-700
+                                                            "
+                                                        style={{ fontSize: "9px" }}
+                                                    >
+                                                        <Plus size={14} />
+                                                        <span className="whitespace-nowrap">
+                                                            {getReferenceButtonText(row, rowIndex)}
+                                                        </span>
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onDeleteRow(rowIndex)}
+                                                    className="
+                                                        inline-flex h-8 w-8 items-center justify-center rounded-lg
+                                                        border border-red-200 bg-red-50
+                                                        text-red-500 transition
+                                                        hover:bg-red-100 hover:text-red-700
+                                                    "
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

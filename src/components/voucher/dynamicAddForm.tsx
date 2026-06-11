@@ -3,7 +3,7 @@ import EditableLineTable from "./EditableLineTable";
 import SummaryCards from "./SummaryCards";
 import VoucherFormModal from "./VoucherFormModal";
 import { DynamicFormContentSkeleton } from "../skeleton/SkeletonLoader";
-import { useState } from "react";
+
 
 const DynamicAddForm = ({
     show,
@@ -17,14 +17,18 @@ const DynamicAddForm = ({
     form,
     errors,
     handleAddRow,
+    handleRefRow,
     handleDeleteRow,
     handleRowChange,
     inputData,
     bodyKey,
+    addButtonText,
     handleChange,
     footerTotals,
     headerChildTitle,
-    isAddButton=true,
+    isAddButton = true,
+    isRefrenceAction = false,
+    RefrenceBtnText,
 
     // ✅ New props for skeleton
     contentLoading = false,
@@ -174,15 +178,18 @@ const DynamicAddForm = ({
                         <div className="mt-3 w-full max-w-full">
                             <EditableLineTable
                                 title="Products"
-                                addButtonText="Add Product"
+                                addButtonText={addButtonText||"Add Product"}
                                 rows={form?.[bodyKey] || []}
                                 columns={inputData?.body || []}
                                 errors={errors}
                                 onAddRow={handleAddRow}
+                                onRefrenceRow={handleRefRow}
                                 onDeleteRow={handleDeleteRow}
                                 onChange={handleRowChange}
                                 emptyText="No products added"
                                 isAddButton={isAddButton}
+                                RefrenceBtnText={RefrenceBtnText}
+                                isRefrenceAction={isRefrenceAction}
                             />
                         </div>
 

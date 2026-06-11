@@ -732,7 +732,6 @@ const Grn = () => {
             return "";
         }
     };
-
     useEffect(() => {
         dispatch(getAllTransactionSchema("grn") as any);
     }, [dispatch]);
@@ -824,11 +823,12 @@ const Grn = () => {
                 </div>
             ),
         },
-        {
+         {
             key: "grnBody",
             title: "Items",
             render: (row: any) => row?.grnBody?.length || 0,
         },
+       
         {
             key: "grnFooter",
             title: "Net Amount",

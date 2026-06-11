@@ -591,11 +591,12 @@ const PurchaseOrder = () => {
                 </div>
             ),
         },
-        {
+         {
             key: "pOrdBody",
             title: "Items",
             render: (row: any) => row?.pOrdBody?.length || 0,
         },
+       
         {
             key: "pOrdFooter",
             title: "Net Amount",

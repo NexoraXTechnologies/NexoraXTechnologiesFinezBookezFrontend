@@ -13,8 +13,8 @@ type GetAllSalesInvoiceReturnParams = {
 };
 
 type UpdateSalesInvoiceReturnPayload = {
-  voucherNumber: string;
-  data: any;
+  sInvReturnVoucherNumber: string;
+  payload: any;
 };
 
 type SalesInvoiceReturnState = {

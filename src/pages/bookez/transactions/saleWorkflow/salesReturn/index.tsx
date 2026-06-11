@@ -17,7 +17,6 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 
 import {
     fmtMoney,
-    formatDateForInput,
     formatDateForList,
     money,
     num,
