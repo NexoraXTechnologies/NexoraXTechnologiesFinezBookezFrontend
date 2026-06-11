@@ -1,259 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Delete, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-
 import Badge from "../../../../../components/badge";
 import SearchInput from "../../../../../components/searchInput";
-import {
-    DataCreateButton,
-    DataREfreshButton,
-} from "../../../../../components/buttons";
+import { DataCreateButton, DataREfreshButton } from "../../../../../components/buttons";
 import DataTable from "../../../../../components/DataTable";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import Toggle from "../../../../../components/toggle";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
-
-import {
-    addSalesQuotation,
-    deleteSalesQuotation,
-    getSalesQuotationList,
-    updateSalesQuotation,
-} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
-
-import {
-    fmtMoney,
-    formatDateForInput,
-    formatDateForList,
-    money,
-    num,
-    safePercent,
-    todayYMD,
-} from "../../../../../utils/helperFunctions";
-
-import type {
-    ConfirmTooltipState,
-} from "../salesWorkflowTypes";
-
+import { addSalesQuotation, deleteSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
+import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
-import professionalAxios from "../../../../../services/professionalAxios";
 
-const defaultPagination = {
-    offset: 0,
-    limit: 10,
-    totalDocs: 0,
-    totalPages: 1,
-    currentPage: 1,
-    hasNextPage: false,
-    hasPrevPage: false,
-};
+const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
+const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
 
-const emptyProductRow = {
-    id: Date.now(),
-
-    productCode: "",
-    productName: "",
-    productId: "",
-
-    productDescription: "",
-    description: "",
-    productHSNCode: "",
-
-    remarks: "",
-
-    quantity: "",
-
-    uom: "",
-    unit: "",
-    unitName: "",
-
-    rate: "",
-
-    gross: 0,
-    grossAmount: 0,
-
-    discount: "",
-    discountPercentage: "",
-    discountAmount: 0,
-
-    taxableAmount: 0,
-
-    cgst: "",
-    cgstPercentage: "",
-    cgstAmount: 0,
-
-    sgst: "",
-    sgstPercentage: "",
-    sgstAmount: 0,
-
-    igst: "",
-    igstPercentage: "",
-    igstAmount: 0,
-
-    taxAmount: 0,
-
-    otherAmount: "",
-
-    netAmount: 0,
-    netTotal: 0,
-};
-
-const getDefaultForm = () => ({
-    sQuoteVoucherNumber: "AUTO",
-    sQuoteVoucherDate: todayYMD(),
-
-    sQuoteSalesAccount: "SA021",
-
-    sQuoteCustomerCode: "",
-    sQuoteCustomerName: "",
-
-    sQuoteStatus: "draft",
-    sQuoteDocStatus: "open",
-
-    sQuoteRemark: "",
-    sQuoteStatusRemark: "",
-    sQuoteStatusHistory: [],
-    isAutoPost: false,
-
-    products: [{ ...emptyProductRow, id: Date.now() }],
-
-    grossAmount: "0.00",
-    discountAmount: "0.00",
-    cgstAmount: "0.00",
-    sgstAmount: "0.00",
-    igstAmount: "0.00",
-    taxAmount: "0.00",
-    otherAmount: "0.00",
-    netAmount: "0.00",
-});
-
-/* ===================================================
-   COMMON RECORD EXTRACTOR
-=================================================== */
-
-const getRecords = (res: any) => {
-    return Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.records)
-            ? res.records
-            : Array.isArray(res?.docs)
-                ? res.docs
-                : Array.isArray(res?.data?.items)
-                    ? res.data.items
-                    : Array.isArray(res?.data?.records)
-                        ? res.data.records
-                        : Array.isArray(res?.data?.docs)
-                            ? res.data.docs
-                            : Array.isArray(res?.data)
-                                ? res.data
-                                : Array.isArray(res)
-                                    ? res
-                                    : [];
-};
-
-/* ===================================================
-   LOAD OPTIONS FOR FIELDS HAVING api KEY
-=================================================== */
-
-export const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all(
-        (fields || []).map(async (field) => {
-            if (!!field?.options?.length) {
-                const options = Array.isArray(field?.options)
-                    ? field?.options.map((item: any) => ({
-                        label: item || "",
-                        value: item || "",
-                        raw: item,
-                    }))
-                    : [];
-                return {
-                    ...field,
-                    options,
-                };
-            }
-            if (!field?.api) return field;
-            try {
-                const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    {
-                        params: field.queryParams || {},
-                    }
-                );
-
-                const records = getRecords(res.data);
-                const options = Array.isArray(records)
-                    ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
-                        raw: item,
-                    }))
-                    : [];
-
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
-
-                return {
-                    ...field,
-                    options: [],
-                };
-            }
-        })
-    );
-
-    return updatedFields;
-};
-
-/* ===================================================
-   LOAD OPTIONS FOR HEADER BODY FOOTER
-=================================================== */
-
-const loadAllTemplateOptions = async (templateData: any) => {
-    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
-        loadFieldOptions(templateData?.header || []),
-        loadFieldOptions(templateData?.body || []),
-        loadFieldOptions(templateData?.footer || []),
-    ]);
-
-    return {
-        ...templateData,
-        header: updatedHeader,
-        body: updatedBody,
-        footer: updatedFooter,
-    };
-};
-
-/* ===================================================
-   SALES QUOTATIONS
-=================================================== */
+const getDefaultForm = () => ({ sQuoteVoucherNumber: "AUTO", sQuoteVoucherDate: todayYMD(), sQuoteSalesAccount: "SA021", sQuoteCustomerCode: "", sQuoteCustomerName: "", sQuoteStatus: "draft", sQuoteDocStatus: "open", sQuoteRemark: "", sQuoteStatusRemark: "", sQuoteStatusHistory: [], isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
 
 const SalesQuotations = () => {
     const dispatch = useDispatch();
-
-    const salesQuotationState = useSelector(
-        (state: any) => state.salesQuotation
-    );
-
-    const { transactionsSchema } = useSelector(
-        (state: any) => state.getAllTransactionSchema
-    );
-
-    const {
-        salesQuotations = [],
-        pagination = defaultPagination,
-        loading = false,
-        createLoading = false,
-        updateLoading = false,
-        deleteLoading = false,
-    } = salesQuotationState || {};
-
+    const { salesQuotations = [], pagination = defaultPagination, loading = false, createLoading = false, updateLoading = false, deleteLoading = false } = useSelector((state: any) => state.salesQuotation);
+    const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
@@ -262,211 +34,93 @@ const SalesQuotations = () => {
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-    const [templateFields, setTemplateFields] = useState<any>({
-        header: [],
-        body: [],
-        footer: [],
-    });
+    const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
     const [fieldsLoading, setFieldsLoading] = useState(false);
+    const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
 
-    const [confirmTooltip, setConfirmTooltip] =
-        useState<ConfirmTooltipState>({
-            show: false,
-            x: null,
-            y: null,
-            voucherNumber: null,
-        });
-
-    /* ===================================================
-       FIELD HELPERS
-    =================================================== */
-
-    const getHeaderFieldByKey = (key: string) => {
-        return templateFields?.header?.find(
-            (field: any) => field.key === key
-        );
-    };
+    const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
 
     const getBodyFieldByKey = (key: string) => {
         return templateFields?.body?.find((field: any) => field.key === key);
     };
 
     const getOptionByValue = (field: any, selectedValue: any) => {
-        return field?.options?.find(
-            (opt: any) => String(opt.value) === String(selectedValue)
-        );
+        return field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
     };
 
-    const applyMappedFields = (
-        field: any,
-        selectedValue: any,
-        oldData: any
-    ) => {
+    const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
-
         const selectedOption = getOptionByValue(field, selectedValue);
-
-        const updated = {
-            ...oldData,
-            [field.key]: selectedValue,
-        };
-
+        const updated = { ...oldData, [field.key]: selectedValue };
         if (field?.mapFields && selectedOption?.raw) {
-            Object.entries(field.mapFields).forEach(
-                ([targetKey, sourceKey]) => {
-                    updated[targetKey] =
-                        selectedOption.raw?.[sourceKey as string] ?? "";
-                }
-            );
+            Object.entries(field.mapFields).forEach(([targetKey, sourceKey]) => {
+                updated[targetKey] = selectedOption.raw?.[sourceKey as string] ?? "";
+            });
         }
-
         return updated;
     };
 
     const getUnitLabelFromSchema = (unitCode: string) => {
-        const unitField = templateFields?.body?.find(
-            (field: any) => field.key === "uom" || field.key === "unit"
-        );
-
-        const selectedUnit = unitField?.options?.find(
-            (item: any) => String(item.value) === String(unitCode)
-        );
-
+        const unitField = templateFields?.body?.find((field: any) => field.key === "uom" || field.key === "unit");
+        const selectedUnit = unitField?.options?.find((item: any) => String(item.value) === String(unitCode));
         return selectedUnit?.label || unitCode || "";
     };
 
     const normalizeRowKeys = (row: any) => {
         const updated = { ...row };
-
-        if (updated.uom && !updated.unit) {
-            updated.unit = updated.uom;
-        }
-
-        if (updated.unit && !updated.uom) {
-            updated.uom = updated.unit;
-        }
-
-        if (updated.productDescription && !updated.description) {
-            updated.description = updated.productDescription;
-        }
-
-        if (updated.description && !updated.productDescription) {
-            updated.productDescription = updated.description;
-        }
-
-        if (updated.netAmount && !updated.netTotal) {
-            updated.netTotal = updated.netAmount;
-        }
-
-        if (updated.netTotal && !updated.netAmount) {
-            updated.netAmount = updated.netTotal;
-        }
-        if (updated.gross && !updated.grossAmount) {
-            updated.grossAmount = updated.gross;
-        }
-
-        if (updated.grossAmount && !updated.gross) {
-            updated.gross = updated.grossAmount;
-        }
-
+        if (updated.uom && !updated.unit) updated.unit = updated.uom;
+        if (updated.unit && !updated.uom) updated.uom = updated.unit;
+        if (updated.productDescription && !updated.description) updated.description = updated.productDescription;
+        if (updated.description && !updated.productDescription) updated.productDescription = updated.description;
+        if (updated.netAmount && !updated.netTotal) updated.netTotal = updated.netAmount;
+        if (updated.netTotal && !updated.netAmount) updated.netAmount = updated.netTotal;
+        if (updated.gross && !updated.grossAmount) updated.grossAmount = updated.gross;
+        if (updated.grossAmount && !updated.gross) updated.gross = updated.grossAmount;
         updated.unitName = getUnitLabelFromSchema(updated.unit || updated.uom);
-
         return updated;
     };
-
-    /* ===================================================
-       CALCULATIONS
-    =================================================== */
 
     const calculateRow = (row: any) => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
-
         const gross = quantity * rate;
-
         const discountPercent = safePercent(row.discount);
         const cgstPercent = safePercent(row.cgst);
         const sgstPercent = safePercent(row.sgst);
         const igstPercent = safePercent(row.igst);
-
         const discountAmount = (gross * discountPercent) / 100;
         const taxableAmount = gross - discountAmount;
-
         const cgstAmount = (taxableAmount * cgstPercent) / 100;
         const sgstAmount = (taxableAmount * sgstPercent) / 100;
         const igstAmount = (taxableAmount * igstPercent) / 100;
-
         const otherAmount = num(row.otherAmount);
-
         const taxAmount = cgstAmount + sgstAmount + igstAmount;
         const netAmount = taxableAmount + taxAmount + otherAmount;
-
-        return {
-            ...row,
-
-            // keep typing values as string
-            quantity: row.quantity,
-            rate: row.rate,
-            discount: row.discount,
-            cgst: row.cgst,
-            sgst: row.sgst,
-            igst: row.igst,
-            otherAmount: row.otherAmount,
-
-            // calculated values
-            gross,
-            grossAmount: gross,
-
-            discountAmount,
-            taxableAmount,
-
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-
-            taxAmount,
-
-            netAmount,
-            netTotal: netAmount,
-        };
+        return { ...row, quantity: row.quantity, rate: row.rate, discount: row.discount, cgst: row.cgst, sgst: row.sgst, igst: row.igst, otherAmount: row.otherAmount, gross, grossAmount: gross, discountAmount, taxableAmount, cgstAmount, sgstAmount, igstAmount, taxAmount, netAmount, netTotal: netAmount };
     };
 
     const calculateFooter = (products: any[]) => {
         return (products || []).reduce(
             (acc: any, item: any) => {
                 acc.totalQuantity += num(item.quantity);
-
-            acc.totalGrossAmount += num(item.gross);
-            acc.totalDiscountAmount += num(item.discountAmount);
-
-            acc.totalCgstAmount += num(item.cgstAmount);
-            acc.totalSgstAmount += num(item.sgstAmount);
-            acc.totalIgstAmount += num(item.igstAmount);
-
-            acc.totalTaxAmount += num(item.taxAmount);
-            acc.totalOtherAmount += num(item.otherAmount);
-
-            acc.totalNetAmount += num(item.netAmount);
-
-            return acc;
-        },
-        {
-            totalQuantity: 0,
-            totalGrossAmount: 0,
-            totalDiscountAmount: 0,
-            totalCgstAmount: 0,
-            totalSgstAmount: 0,
-            totalIgstAmount: 0,
-            totalTaxAmount: 0,
-            totalOtherAmount: 0,
-            totalNetAmount: 0,
-        }
-    );
+                acc.totalGrossAmount += num(item.gross);
+                acc.totalDiscountAmount += num(item.discountAmount);
+                acc.totalCgstAmount += num(item.cgstAmount);
+                acc.totalSgstAmount += num(item.sgstAmount);
+                acc.totalIgstAmount += num(item.igstAmount);
+                acc.totalTaxAmount += num(item.taxAmount);
+                acc.totalOtherAmount += num(item.otherAmount);
+                acc.totalNetAmount += num(item.netAmount);
+                return acc;
+            },
+            { totalQuantity: 0, totalGrossAmount: 0, totalDiscountAmount: 0, totalCgstAmount: 0, totalSgstAmount: 0, totalIgstAmount: 0, totalTaxAmount: 0, totalOtherAmount: 0, totalNetAmount: 0 }
+        );
     };
 
     const footerTotals = useMemo(() => {
         return calculateFooter(form.products || []);
     }, [form.products]);
+
     const grossAmount = footerTotals.totalGrossAmount;
     const discountAmount = footerTotals.totalDiscountAmount;
     const cgstAmount = footerTotals.totalCgstAmount;
@@ -474,125 +128,34 @@ const SalesQuotations = () => {
     const igstAmount = footerTotals.totalIgstAmount;
     const netAmount = footerTotals.totalNetAmount;
 
-    /* ===================================================
-       API CALLS
-    =================================================== */
-
     const fetchSalesQuotations = async () => {
-        await dispatch(
-            getSalesQuotationList({
-                offset: localOffset,
-                limit: localLimit,
-                search: debouncedSearch,
-                docStatus: status,
-            }) as any
-        );
+        await dispatch(getSalesQuotationList({ offset: localOffset, limit: localLimit, search: debouncedSearch, docStatus: status }) as any);
     };
 
-    useEffect(() => {
-        dispatch(getAllTransactionSchema("salesQuotation") as any);
-    }, [dispatch]);
-
-    useEffect(() => {
-        fetchSalesQuotations();
-    }, [localOffset, localLimit, debouncedSearch, status]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search.trim());
-            setLocalOffset(0);
-        }, 400);
-
-        return () => clearTimeout(timer);
-    }, [search]);
-
-    /* ===================================================
-       LOAD TRANSACTION SCHEMA WITH API OPTIONS
-    =================================================== */
-
-    useEffect(() => {
-        const prepareFields = async () => {
-            if (!transactionsSchema) return;
-
-            const hasSchema =
-                Array.isArray(transactionsSchema?.header) ||
-                Array.isArray(transactionsSchema?.body) ||
-                Array.isArray(transactionsSchema?.footer);
-
-            if (!hasSchema) return;
-
-            try {
-                setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
-                setTemplateFields(updatedData);
-            } catch (error) {
-                console.log("Failed to prepare template fields", error);
-            } finally {
-                setFieldsLoading(false);
-            }
-        };
-
-        prepareFields();
-    }, [transactionsSchema]);
-
-    /* ===================================================
-       LIST COLUMNS
-    =================================================== */
-
     const columns = [
-        {
-            key: "sQuoteVoucherNumber",
-            title: "Voucher No",
-        },
-        {
-            key: "sQuoteVoucherDate",
-            title: "Date",
-            render: (row: any) =>
-                row?.sQuoteVoucherDate
-                    ? formatDateForList(row.sQuoteVoucherDate)
-                    : "-",
-        },
+        { key: "sQuoteVoucherNumber", title: "Voucher No" },
+        { key: "sQuoteVoucherDate", title: "Date", render: (row: any) => row?.sQuoteVoucherDate ? formatDateForList(row.sQuoteVoucherDate) : "-" },
         {
             key: "sQuoteCustomerName",
             title: "Customer",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">
-                        {row?.sQuoteCustomerName || "-"}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                        {row?.sQuoteCustomerCode || "-"}
-                    </div>
+                    <div className="font-medium text-slate-800">{row?.sQuoteCustomerName || "-"}</div>
+                    <div className="text-xs text-slate-500">{row?.sQuoteCustomerCode || "-"}</div>
                 </div>
             ),
         },
-        {
-            key: "sQuoteBody",
-            title: "Items",
-            render: (row: any) => row?.sQuoteBody?.length || 0,
-        },
+        { key: "sQuoteBody", title: "Items", render: (row: any) => row?.sQuoteBody?.length || 0 },
         {
             key: "sQuoteFooter",
             title: "Net Amount",
-            render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
-                    {money(row?.sQuoteFooter?.netAmount || 0)}
-                </span>
-            ),
+            render: (row: any) => <span className="font-semibold text-indigo-700">{money(row?.sQuoteFooter?.netAmount || 0)}</span>,
         },
         {
             key: "sQuoteDocStatus",
             title: "Doc Status",
             render: (row: any) => (
-                <span
-                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.sQuoteDocStatus === "open"
-                        ? "border-green-200 bg-green-50 text-green-700"
-                        : "border-red-200 bg-red-50 text-red-700"
-                        }`}
-                >
+                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.sQuoteDocStatus === "open" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
                     {row?.sQuoteDocStatus || "-"}
                 </span>
             ),
@@ -600,17 +163,9 @@ const SalesQuotations = () => {
         {
             key: "sQuoteStatus",
             title: "Quote Status",
-            render: (row: any) => (
-                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
-                    {row?.sQuoteStatus || "-"}
-                </span>
-            ),
+            render: (row: any) => <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">{row?.sQuoteStatus || "-"}</span>,
         },
     ];
-
-    /* ===================================================
-       ACTIONS
-    =================================================== */
 
     const handleStatusChange = (nextStatus: string) => {
         setStatus(nextStatus);
@@ -619,7 +174,6 @@ const SalesQuotations = () => {
 
     const handleRefresh = async () => {
         setRefreshing(true);
-
         try {
             await fetchSalesQuotations();
             toast.success("Sales quotation list refreshed");
@@ -643,130 +197,33 @@ const SalesQuotations = () => {
         const footer = record?.sQuoteFooter || {};
         const products = record?.sQuoteBody?.length > 0 ? record.sQuoteBody.map((item: any) => {
             const unitCode = item?.unit || item?.uom || "";
-                    return calculateRow(
-                        normalizeRowKeys({
-                            id: item?.id || Date.now() + Math.random(),
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
-                            productDescription: item?.productDescription || item?.description || "",
-                            description: item?.description || item?.productDescription || "",
-                            productHSNCode: item?.productHSNCode || "",
-                            remarks: item?.remarks || "",
-                            quantity: item?.quantity || "",
-                            unit: unitCode,
-                            uom: unitCode,
-                            unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
-                            rate: item?.rate || "",
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount: item?.grossAmount || item?.gross || 0,
-                            discount: item?.discount || item?.discountPercentage || "",
-                            discountPercentage: item?.discountPercentage || item?.discount || "",
-                            discountAmount: item?.discountAmount || 0,
-                            taxableAmount: item?.taxableAmount || 0,
-                            cgst: item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-                            cgstAmount: item?.cgstAmount || 0,
-                            sgst: item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-                            sgstAmount: item?.sgstAmount || 0,
-                            igst: item?.igst || item?.igstPercentage || "",
-                            igstPercentage: item?.igstPercentage || item?.igst || "",
-                            igstAmount: item?.igstAmount || 0,
-                            taxAmount: item?.taxAmount || 0,
-                            otherAmount: item?.otherAmount || 0,
-                            netAmount: item?.netAmount || item?.netTotal || 0,
-                            netTotal: item?.netTotal || item?.netAmount || 0,
-                        })
-                    );
-                })
-                : [{ ...emptyProductRow, id: Date.now() }];
+            return calculateRow(normalizeRowKeys({ id: item?.id || Date.now() + Math.random(), productCode: item?.productCode || "", productName: item?.productName || "", productId: item?.productId || "", productDescription: item?.productDescription || item?.description || "", description: item?.description || item?.productDescription || "", productHSNCode: item?.productHSNCode || "", remarks: item?.remarks || "", quantity: item?.quantity || "", unit: unitCode, uom: unitCode, unitName: item?.unitName || getUnitLabelFromSchema(unitCode), rate: item?.rate || "", gross: item?.gross || item?.grossAmount || 0, grossAmount: item?.grossAmount || item?.gross || 0, discount: item?.discount || item?.discountPercentage || "", discountPercentage: item?.discountPercentage || item?.discount || "", discountAmount: item?.discountAmount || 0, taxableAmount: item?.taxableAmount || 0, cgst: item?.cgst || item?.cgstPercentage || "", cgstPercentage: item?.cgstPercentage || item?.cgst || "", cgstAmount: item?.cgstAmount || 0, sgst: item?.sgst || item?.sgstPercentage || "", sgstPercentage: item?.sgstPercentage || item?.sgst || "", sgstAmount: item?.sgstAmount || 0, igst: item?.igst || item?.igstPercentage || "", igstPercentage: item?.igstPercentage || item?.igst || "", igstAmount: item?.igstAmount || 0, taxAmount: item?.taxAmount || 0, otherAmount: item?.otherAmount || 0, netAmount: item?.netAmount || item?.netTotal || 0, netTotal: item?.netTotal || item?.netAmount || 0 }));
+        }) : [{ ...emptyProductRow, id: Date.now() }];
 
         setEditingRecord(true);
         setErrors({});
-
-        setForm({
-            sQuoteVoucherNumber: record?.sQuoteVoucherNumber || "AUTO",
-            sQuoteVoucherDate: formatDateForInput(
-                record?.sQuoteVoucherDate
-            ),
-
-            sQuoteCustomerCode: record?.sQuoteCustomerCode || "",
-            sQuoteCustomerName: record?.sQuoteCustomerName || "",
-            sQuoteSalesAccount: record?.sQuoteSalesAccount || "SA021",
-            sQuoteDocStatus: record?.sQuoteDocStatus || "open",
-            sQuoteStatus: record?.sQuoteStatus || "draft",
-            sQuoteRemark: record?.sQuoteRemark || "",
-            sQuoteStatusRemark: record?.sQuoteStatusRemark || "",
-            sQuoteStatusHistory: record?.sQuoteStatusHistory || [],
-            isAutoPost: record?.isAutoPost || false,
-            products,
-            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-            discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-            otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
-        });
-
+        setForm({ sQuoteVoucherNumber: record?.sQuoteVoucherNumber || "AUTO", sQuoteVoucherDate: formatDateForInput(record?.sQuoteVoucherDate), sQuoteCustomerCode: record?.sQuoteCustomerCode || "", sQuoteCustomerName: record?.sQuoteCustomerName || "", sQuoteSalesAccount: record?.sQuoteSalesAccount || "SA021", sQuoteDocStatus: record?.sQuoteDocStatus || "open", sQuoteStatus: record?.sQuoteStatus || "draft", sQuoteRemark: record?.sQuoteRemark || "", sQuoteStatusRemark: record?.sQuoteStatusRemark || "", sQuoteStatusHistory: record?.sQuoteStatusHistory || [], isAutoPost: record?.isAutoPost || false, products, grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00", discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00", cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00", sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00", igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00", taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00", otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00", netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00" });
         setShowModal(true);
     };
-
-    /* ===================================================
-       DYNAMIC HEADER CHANGE
-    =================================================== */
 
     const handleMainChange = (key: string, value: any) => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
-
-            let updated = {
-                ...prev,
-                [key]: value,
-            };
-
-            if (currentField?.mapFields) {
-                updated = applyMappedFields(currentField, value, updated);
-            }
-
+            let updated = { ...prev, [key]: value };
+            if (currentField?.mapFields) updated = applyMappedFields(currentField, value, updated);
             return updated;
         });
-
-        setErrors((prev: any) => ({
-            ...prev,
-            [key]: "",
-        }));
+        setErrors((prev: any) => ({ ...prev, [key]: "" }));
     };
 
-    /* ===================================================
-       DYNAMIC BODY ROW CHANGE
-    =================================================== */
-
     const handleAddRow = () => {
-        setForm((prev: any) => ({
-            ...prev,
-            products: [
-                ...(prev.products || []),
-                {
-                    ...emptyProductRow,
-                    id: Date.now(),
-                },
-            ],
-        }));
+        setForm((prev: any) => ({ ...prev, products: [...(prev.products || []), { ...emptyProductRow, id: Date.now() }] }));
     };
 
     const handleDeleteRow = (index: number) => {
         setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter(
-                (_: any, i: number) => i !== index
-            );
-
-            return {
-                ...prev,
-                products: updatedProducts.length > 0 ? updatedProducts : [{ ...emptyProductRow, id: Date.now() }],
-            };
+            const updatedProducts = (prev.products || []).filter((_: any, i: number) => i !== index);
+            return { ...prev, products: updatedProducts.length > 0 ? updatedProducts : [{ ...emptyProductRow, id: Date.now() }] };
         });
     };
 
@@ -775,125 +232,61 @@ const SalesQuotations = () => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-            let updatedRow = {
-                ...currentRow,
-                [key]: value,
-            };
-
-            // ✅ Dynamic mapFields logic
-            if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(
-                    currentField,
-                    value,
-                    updatedRow
-                );
-            }
-
+            let updatedRow = { ...currentRow, [key]: value };
+            if (currentField?.mapFields) updatedRow = applyMappedFields(currentField, value, updatedRow);
             const selectedOption = getOptionByValue(currentField, value);
-
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
-            }
-
+            if (selectedOption?.raw?._id && !updatedRow.productId) updatedRow.productId = selectedOption.raw._id;
             updatedRow = normalizeRowKeys(updatedRow);
-
-            // ✅ Tax mutual exclusion
             if ((key === "cgst" || key === "sgst") && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstAmount = 0;
             }
-
             if (key === "igst" && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
                 updatedRow.cgstAmount = 0;
                 updatedRow.sgstAmount = 0;
             }
-
-            // ✅ Calculate amounts without changing typed discount/cgst/sgst/igst
             updatedRow = calculateRow(updatedRow);
-
             updatedProducts[index] = updatedRow;
-
-            return {
-                ...prev,
-                products: updatedProducts,
-            };
+            return { ...prev, products: updatedProducts };
         });
-
-        setErrors((prev: any) => ({
-            ...prev,
-            products: "",
-            [`row_${index}_${key}`]: "",
-            [`row_${index}_tax`]: "",
-        }));
+        setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "", [`row_${index}_tax`]: "" }));
     };
 
-    /* ===================================================
-       DYNAMIC VALIDATION
-    =================================================== */
-
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
-
-        return (form.products || []).filter((row: any) => {
-            return bodyKeys.some((key: string) => {
-                const value = row?.[key];
-                return value !== undefined && value !== null && value !== "";
-            });
-        });
+        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
+        return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
+            const value = row?.[key];
+            return value !== undefined && value !== null && value !== "";
+        }));
     };
 
     const validateForm = () => {
         const err: any = {};
-
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden) return;
             if (!field.isRequired) return;
-
             const value = form?.[field.key];
-
-            if (value === undefined || value === null || value === "") {
-                err[field.key] = `${field.label || field.key} is required`;
-            }
+            if (value === undefined || value === null || value === "") err[field.key] = `${field.label || field.key} is required`;
         });
 
         const filledRows = getFilledRows();
-
-        if (filledRows.length === 0) {
-            err.products = "Please add at least one product";
-        }
+        if (filledRows.length === 0) err.products = "Please add at least one product";
 
         (form.products || []).forEach((row: any, index: number) => {
-            const hasAnyValue = (templateFields?.body || []).some(
-                (field: any) => {
-                    const value = row?.[field.key];
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
-                }
-            );
+            const hasAnyValue = (templateFields?.body || []).some((field: any) => {
+                const value = row?.[field.key];
+                return value !== undefined && value !== null && value !== "";
+            });
 
             if (!hasAnyValue) return;
 
             (templateFields?.body || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
-
                 const value = row?.[field.key];
-
-                if (
-                    value === undefined ||
-                    value === null ||
-                    value === ""
-                ) {
-                    err[`row_${index}_${field.key}`] = `${field.label || field.key
-                        } is required`;
-                }
+                if (value === undefined || value === null || value === "") err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
             });
 
             const cgst = num(row.cgstPercentage || row.cgst);
@@ -901,16 +294,10 @@ const SalesQuotations = () => {
             const igst = num(row.igstPercentage || row.igst);
 
             if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] =
-                    "You can enter either IGST or CGST/SGST";
-
-                err[`row_${index}_igstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] =
-                    "Only one tax type allowed";
-
+                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
+                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
                 err[`row_${index}_igst`] = "Only one tax type allowed";
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
@@ -918,36 +305,18 @@ const SalesQuotations = () => {
         });
 
         setErrors(err);
-
-        if (err.products) {
-            toast.error(err.products);
-        }
-
+        if (err.products) toast.error(err.products);
         return Object.keys(err).length === 0;
     };
 
     const cleanRows = () => {
-        const bodyKeys = (templateFields?.body || []).map(
-            (field: any) => field.key
-        );
-
-        return (form.products || [])
-            .filter((row: any) => {
-                return bodyKeys.some((key: string) => {
-                    const value = row?.[key];
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
-                });
-            })
-            .map((row: any) => calculateRow(normalizeRowKeys(row)));
+        const bodyKeys = (templateFields?.body || []).map((field: any) => field.key);
+        return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
+            const value = row?.[key];
+            return value !== undefined && value !== null && value !== "";
+        })).map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
-    /* ===================================================
-       SUBMIT
-    =================================================== */
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
@@ -962,85 +331,20 @@ const SalesQuotations = () => {
             sQuoteStatus: form.sQuoteStatus || "draft",
             sQuoteDocStatus: form.sQuoteDocStatus || "open",
             sQuoteRemark: form.sQuoteRemark,
-            sQuoteBody: products.map((item: any) => ({
-                productCode: item.productCode,
-                productName: item.productName,
-                productId: item.productId,
-                productDescription: item.productDescription || item.description,
-                description: item.description || item.productDescription,
-                productHSNCode: item.productHSNCode,
-                remarks: item.remarks,
-                quantity: String(item.quantity),
-                unit: item.unit || item.uom,
-                uom: item.uom || item.unit,
-                rate: String(item.rate),
-                gross: fmtMoney(item.grossAmount),
-                grossAmount: fmtMoney(item.grossAmount),
-                discount: String(item.discountPercentage || item.discount || ""),
-                discountPercentage: String(item.discountPercentage || item.discount || ""),
-                discountAmount: fmtMoney(item.discountAmount),
-                taxableAmount: fmtMoney(item.taxableAmount),
-                cgst: String(item.cgstPercentage || item.cgst || ""),
-                cgstPercentage: String(item.cgstPercentage || item.cgst || ""),
-                cgstAmount: fmtMoney(item.cgstAmount),
-                sgst: String(item.sgstPercentage || item.sgst || ""),
-                sgstPercentage: String(item.sgstPercentage || item.sgst || ""),
-                sgstAmount: fmtMoney(item.sgstAmount),
-                igst: String(item.igstPercentage || item.igst || ""),
-                igstPercentage: String(item.igstPercentage || item.igst || ""),
-                igstAmount: fmtMoney(item.igstAmount),
-                taxAmount: fmtMoney(item.taxAmount),
-                otherAmount: fmtMoney(item.otherAmount),
-                netAmount: fmtMoney(item.netAmount || item.netTotal),
-                netTotal: fmtMoney(item.netTotal || item.netAmount),
-            })),
-
-            sQuoteFooter: {
-                grossAmount: fmtMoney(footer.totalGrossAmount),
-                discountAmount: fmtMoney(footer.totalDiscountAmount),
-                cgstAmount: fmtMoney(footer.totalCgstAmount),
-                sgstAmount: fmtMoney(footer.totalSgstAmount),
-                igstAmount: fmtMoney(footer.totalIgstAmount),
-                taxAmount: fmtMoney(footer.totalTaxAmount),
-                otherAmount: fmtMoney(footer.totalOtherAmount),
-                netAmount: fmtMoney(footer.totalNetAmount),
-
-                adjustedAmount: "0",
-                balanceAmount: fmtMoney(footer.totalNetAmount),
-
-                totalQuantity: footer.totalQuantity,
-                totalGrossAmount: fmtMoney(footer.totalGrossAmount),
-                totalDiscountAmount: fmtMoney(
-                    footer.totalDiscountAmount
-                ),
-                totalCgstAmount: fmtMoney(footer.totalCgstAmount),
-                totalSgstAmount: fmtMoney(footer.totalSgstAmount),
-                totalIgstAmount: fmtMoney(footer.totalIgstAmount),
-                totalTaxAmount: fmtMoney(footer.totalTaxAmount),
-                totalOtherAmount: fmtMoney(footer.totalOtherAmount),
-                totalNetAmount: fmtMoney(footer.totalNetAmount),
-            },
+            sQuoteBody: products.map((item: any) => ({ productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) })),
+            sQuoteFooter: { grossAmount: fmtMoney(footer.totalGrossAmount), discountAmount: fmtMoney(footer.totalDiscountAmount), cgstAmount: fmtMoney(footer.totalCgstAmount), sgstAmount: fmtMoney(footer.totalSgstAmount), igstAmount: fmtMoney(footer.totalIgstAmount), taxAmount: fmtMoney(footer.totalTaxAmount), otherAmount: fmtMoney(footer.totalOtherAmount), netAmount: fmtMoney(footer.totalNetAmount), adjustedAmount: "0", balanceAmount: fmtMoney(footer.totalNetAmount), totalQuantity: footer.totalQuantity, totalGrossAmount: fmtMoney(footer.totalGrossAmount), totalDiscountAmount: fmtMoney(footer.totalDiscountAmount), totalCgstAmount: fmtMoney(footer.totalCgstAmount), totalSgstAmount: fmtMoney(footer.totalSgstAmount), totalIgstAmount: fmtMoney(footer.totalIgstAmount), totalTaxAmount: fmtMoney(footer.totalTaxAmount), totalOtherAmount: fmtMoney(footer.totalOtherAmount), totalNetAmount: fmtMoney(footer.totalNetAmount) },
         };
 
         try {
             if (editingRecord) {
-                await dispatch(
-                    updateSalesQuotation({
-                        sQuoteVoucherNumber: form?.sQuoteVoucherNumber,
-                        payload,
-                    }) as any
-                ).unwrap();
-
+                await dispatch(updateSalesQuotation({ sQuoteVoucherNumber: form?.sQuoteVoucherNumber, payload }) as any).unwrap();
                 toast.success("Sales quotation updated successfully");
             } else {
                 await dispatch(addSalesQuotation({ payload }) as any).unwrap();
-
                 toast.success("Sales quotation created successfully");
             }
-
             setShowModal(false);
             resetMainForm();
-
             fetchSalesQuotations();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
@@ -1050,99 +354,73 @@ const SalesQuotations = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-
-            await dispatch(
-                deleteSalesQuotation({ sQuoteVoucherNumber: confirmTooltip.voucherNumber }) as any
-            ).unwrap();
-
+            await dispatch(deleteSalesQuotation({ sQuoteVoucherNumber: confirmTooltip.voucherNumber }) as any).unwrap();
             toast.success("Sales quotation deleted");
             fetchSalesQuotations();
         } catch (err: any) {
             toast.error(err?.message || "Failed to delete sales quotation");
         } finally {
-            setConfirmTooltip({
-                show: false,
-                x: null,
-                y: null,
-                voucherNumber: null,
-            });
+            setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
         }
     };
 
     const footerValues = useMemo(() => {
-        return {
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        };
-    }, [
-        grossAmount,
-        discountAmount,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-        netAmount,
-    ]);
+        return { grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount };
+    }, [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount]);
 
     const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
-
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
-            });
+        return (templateFields?.footer || []).filter((field: any) => !field.isHidden).map((field: any) => {
+            const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
+            return { ...field, value: money(rawValue), rawValue };
+        });
     }, [templateFields?.footer, footerValues]);
+
+    useEffect(() => {
+        dispatch(getAllTransactionSchema("salesQuotation") as any);
+    }, [dispatch]);
+
+    useEffect(() => {
+        fetchSalesQuotations();
+    }, [localOffset, localLimit, debouncedSearch, status]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    useEffect(() => {
+        const prepareFields = async () => {
+            if (!transactionsSchema) return;
+            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
+            if (!hasSchema) return;
+            try {
+                setFieldsLoading(true);
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
+                setTemplateFields(updatedData);
+            } catch (error) {
+                console.log("Failed to prepare template fields", error);
+            } finally {
+                setFieldsLoading(false);
+            }
+        };
+        prepareFields();
+    }, [transactionsSchema]);
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">
-                <div
-                    id="sales-quotation-summary"
-                    className="flex items-start gap-3"
-                >
-                    <Badge
-                        {...{
-                            count: pagination?.totalDocs ?? 0,
-                            text: "Total Sales Quotations:",
-                            varient: "primary",
-                        }}
-                    />
+                <div id="sales-quotation-summary" className="flex items-start gap-3">
+                    <Badge {...{ count: pagination?.totalDocs ?? 0, text: "Total Sales Quotations:", varient: "primary" }} />
                 </div>
-
                 <div className="ml-auto flex items-center gap-2">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: handleStatusChange,
-                        }}
-                    />
-
+                    <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
                     <SearchInput {...{ search, setSearch }} />
-
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
+                    <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
                     {/* @ts-ignore */}
-                    <DataCreateButton
-                        {...{
-                            callBackFn: openAddModal,
-                            text: "Add Sales Quotation",
-                        }}
-                    />
+                    <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Quotation" }} />
                 </div>
             </div>
 
@@ -1153,33 +431,21 @@ const SalesQuotations = () => {
                 emptyMessage={`No ${status} sales quotation found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button
-                            id="sales-quotation-edit-button"
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
+                        <button id="sales-quotation-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                            <Delete size={16} />
+                        </button>
+                        <button id="sales-quotation-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Edit size={16} />
                         </button>
-
                         <button
                             id="sales-quotation-delete-button"
                             disabled={deleteLoading}
                             onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
+                                const rect = e.currentTarget.getBoundingClientRect();
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
-
                                 const y = rect.top + window.scrollY - 5;
-
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber:
-                                        record?.sQuoteVoucherNumber,
-                                });
+                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sQuoteVoucherNumber });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
@@ -1213,14 +479,7 @@ const SalesQuotations = () => {
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteConfirm}
-                    onCancel={() =>
-                        setConfirmTooltip({
-                            show: false,
-                            x: null,
-                            y: null,
-                            voucherNumber: null,
-                        })
-                    }
+                    onCancel={() => setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null })}
                 />
             )}
 
@@ -1244,9 +503,7 @@ const SalesQuotations = () => {
                         handleDeleteRow,
                         handleRowChange,
                         footerTotals,
-                        // dynamic schema with options
                         inputData: { ...templateFields, footer: dynamicFooterArray },
-
                         bodyKey: "products",
                         handleChange: handleMainChange,
                     }}
