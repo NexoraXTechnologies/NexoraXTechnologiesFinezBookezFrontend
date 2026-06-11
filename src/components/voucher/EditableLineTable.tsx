@@ -2,7 +2,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { SelectInput, TextInput } from "../inputs";
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 import { AnimatePresence, motion } from "framer-motion"
-import { useRef, useState } from "react";
 type ColumnType = "select" | "text" | "number";
 
 export type EditableColumn = {
@@ -20,7 +19,7 @@ export type EditableColumn = {
 };
 
 type EditableLineTableProps = {
-    title: string;
+    bodyTitle: string;
     isAddButton: boolean;
     addButtonText?: string;
     rows: any[];
@@ -36,7 +35,7 @@ type EditableLineTableProps = {
 };
 
 const EditableLineTable = ({
-    title,
+    bodyTitle,
     addButtonText = "Add Row",
     rows = [],
     columns = [],
@@ -69,7 +68,7 @@ const EditableLineTable = ({
     };
 
     const getColumnMinWidth = (col: EditableColumn) => {
-        return col?.width || "230px";
+        return col?.width || "220px";
     };
 
     const getTextAlignClass = (align?: "left" | "right" | "center") => {
@@ -78,26 +77,13 @@ const EditableLineTable = ({
         return "text-left";
     };
 
-    const scrollRef = useRef<HTMLDivElement | null>(null);
 
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(false);
-
-    const handleTableScroll = () => {
-        const el = scrollRef.current;
-        if (!el) return;
-
-        setCanScrollLeft(el.scrollLeft > 4);
-        setCanScrollRight(
-            el.scrollLeft + el.clientWidth < el.scrollWidth - 4
-        );
-    };
 
     return (
         <div className="w-full max-w-full min-w-0">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                <h3 className="text-sm font-semibold text-slate-800">
-                    {title}
+                <h3 className="text-md font-bold text-slate-800">
+                    {bodyTitle}
                 </h3>
 
                 {isAddButton && (

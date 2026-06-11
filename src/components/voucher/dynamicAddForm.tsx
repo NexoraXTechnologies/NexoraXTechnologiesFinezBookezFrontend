@@ -29,6 +29,7 @@ const DynamicAddForm = ({
     isAddButton = true,
     isRefrenceAction = false,
     RefrenceBtnText,
+    bodyTitle,
 
     // ✅ New props for skeleton
     contentLoading = false,
@@ -177,7 +178,7 @@ const DynamicAddForm = ({
                         {/* ✅ Only EditableLineTable has horizontal scroll inside itself */}
                         <div className="mt-3 w-full max-w-full">
                             <EditableLineTable
-                                title="Products"
+                                bodyTitle={bodyTitle||"Products"}
                                 addButtonText={addButtonText||"Add Product"}
                                 rows={form?.[bodyKey] || []}
                                 columns={inputData?.body || []}
