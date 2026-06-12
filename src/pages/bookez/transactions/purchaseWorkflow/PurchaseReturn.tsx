@@ -7,6 +7,7 @@ import {
     fmtMoney,
     formatDateForInput,
     formatDateForList,
+    loadAllTemplateOptions,
     money,
     num,
     safePercent,
@@ -155,69 +156,6 @@ const getRecords = (res: any) => {
                                     : [];
 };
 
-/* ===================================================
-   LOAD OPTIONS FOR FIELDS HAVING api KEY
-=================================================== */
-
-export const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all(
-        (fields || []).map(async (field) => {
-            if (!field?.api) return field;
-
-            try {
-                const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    {
-                        params: field.queryParams || {},
-                    }
-                );
-
-                const records = getRecords(res.data);
-
-                const options = Array.isArray(records)
-                    ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
-                        raw: item,
-                    }))
-                    : [];
-
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
-
-                return {
-                    ...field,
-                    options: [],
-                };
-            }
-        })
-    );
-
-    return updatedFields;
-};
-
-/* ===================================================
-   LOAD OPTIONS FOR HEADER BODY FOOTER
-=================================================== */
-
-const loadAllTemplateOptions = async (templateData: any) => {
-    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
-        loadFieldOptions(templateData?.header || []),
-        loadFieldOptions(templateData?.body || []),
-        loadFieldOptions(templateData?.footer || []),
-    ]);
-
-    return {
-        ...templateData,
-        header: updatedHeader,
-        body: updatedBody,
-        footer: updatedFooter,
-    };
-};
 
 /* ===================================================
    PURCHASE RETURN
