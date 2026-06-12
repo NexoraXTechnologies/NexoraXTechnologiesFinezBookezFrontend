@@ -300,15 +300,43 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
     }
   };
 
+  const isItemActive = (item: any, pathname: string) => {
+    if (item.path && pathname === item.path) return true;
+
+    if (item.matchPaths?.includes(pathname)) return true;
+
+    return false;
+  };
+
+  const hasActiveChild = (item: any, pathname: string): boolean => {
+    if (!item.children?.length) return false;
+
+    return item.children.some((child: any) => {
+      const childActive =
+        (child.path && pathname.startsWith(child.path)) ||
+        child.matchPaths?.includes(pathname);
+
+      return childActive || hasActiveChild(child, pathname);
+    });
+  };
+
   const SidebarItem = ({ item, level = 0, isExpanded, openMenus, setOpenMenus, }: any) => {
     const navigate = useNavigate();
     const location = useLocation();
     const hasChildren = item.children?.length > 0;
 
     // ACTIVE CHECK
-    const isActive = location.pathname === item.path || item.matchPaths?.includes(location.pathname);
+    // const isActive = location.pathname === item.path || item.matchPaths?.includes(location.pathname);
+
+    // const isParentActive = item.children?.some((child: any) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
+    // const isOpen = openMenus[item.name] || false;
+
+    // ACTIVE CHECK
+    const isActive = isItemActive(item, location.pathname);
+
     // PARENT ACTIVE CHECK
-    const isParentActive = item.children?.some((child: any) => location.pathname.startsWith(child.path || '') || child.matchPaths?.includes(location.pathname));
+    const isParentActive = hasActiveChild(item, location.pathname);
+
     const isOpen = openMenus[item.name] || false;
 
     // TOGGLE MENU
@@ -403,18 +431,36 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
       onMouseLeave={() => setIsExpanded(false)}>
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-3">
-        <h1 className="font-bold text-xl bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
-          {/* Mobile: always show full logo (drawer is w-64).
-              Desktop: show full when expanded, icon when collapsed */}
-          <span className="lg:hidden">
-            <img src={FinEzLogo} alt="FinEZ Logo" className="w-30 h-10" />
+
+        <h1
+          className={`font-bold text-xl bg-white border border-white/10 flex items-center justify-center overflow-hidden ${isExpanded ? "w-full rounded-xl px-3 py-1" : "w-12 h-12 rounded-full p-2"
+            }`}
+        >
+          <span className="lg:hidden flex items-center justify-center w-full">
+            <img
+              src={FinEzLogo}
+              alt="FinEZ Logo"
+              className="w-30 h-10 object-contain"
+            />
           </span>
-          <span className="hidden lg:block">
-            {isExpanded
-              ? <img src={FinEzLogo} alt="FinEZ Logo" className="w-30 h-10" />
-              : <img src={EZLogo} alt="EZ Logo" className="w-8 h-8" />}
+
+          <span className="hidden lg:flex items-center justify-center w-full h-full">
+            {isExpanded ? (
+              <img
+                src={FinEzLogo}
+                alt="FinEZ Logo"
+                className="w-30 h-10 object-contain"
+              />
+            ) : (
+              <img
+                src={EZLogo}
+                alt="EZ Logo"
+                className="w-full h-full object-contain rounded-full"
+              />
+            )}
           </span>
         </h1>
+
         {/* Close button — mobile only */}
         <button
           onClick={onMobileClose}
