@@ -54,6 +54,10 @@ import purchaseReturnReducer from "./slices/professionalSlice/purchaseWorkflow/p
 import purchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import getAllTransactionSchema from "./slices/professionalSlice/transactionSchema";
 
+// ledger report
+import accountReceivableReducer from "./slices/professionalSlice/ledgerReports/accountsReceivableSlice"
+import accountLedgerReducer from "./slices/professionalSlice/ledgerReports/accountLedgerSlice";
+
 
 export const store = configureStore({
   reducer: {
@@ -102,15 +106,21 @@ export const store = configureStore({
     openingStock: openingStockSlice,
     journalVoucher: journalVoucherReducer,
     contraVoucher: contraVoucherReducer,
-    creditNote:creditNoteReducer,
-    debitNote:debitNoteReducer,
+    creditNote: creditNoteReducer,
+    debitNote: debitNoteReducer,
 
     purchaseOrder: purchaseOrderSlice,
-    grn:grnReducer,
-    purchaseReturn:purchaseReturnReducer,
+    grn: grnReducer,
+    purchaseReturn: purchaseReturnReducer,
     purchaseInvoice: purchaseInvoiceReducer,
-    payment:paymentReducer,
-    getAllTransactionSchema
+    payment: paymentReducer,
+    getAllTransactionSchema,
+    
+    // ledger report 
+    accountReceivable: accountReceivableReducer,
+    accountLedger:accountLedgerReducer
+
+
 
 
   },
