@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown, LogOut, Bell, X, Trash2, Menu } from "lucide-react";
-import ConfirmTooltip from "./common/ConfirmTooltip";
 // import * as OneSignal from "react-onesignal";
 import { useSelector } from 'react-redux';
-
+import { LogoutModal } from "./modal";
 
 const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
   const navigate = useNavigate();
@@ -16,21 +15,8 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
     (state: any) => state.professionalProfile
   );
 
-  const openConfirm = (e: any) => {
-    const btn = e.currentTarget.getBoundingClientRect();
-    const gap = 4;
-    const tipW = 176;
-    const tipH = 64;
+  const openConfirm = () => setConfirm({ show: true });
 
-    let left = btn.left - tipW - gap;
-    let top = btn.bottom + gap;
-
-    const pad = 4;
-    left = Math.max(pad, Math.min(left, window.innerWidth - tipW - pad));
-    top = Math.max(pad, Math.min(top, window.innerHeight - tipH - pad));
-
-    setConfirm({ show: true, x: left, y: top });
-  };
   // @ts-ignore
   const storedUser = JSON.parse(localStorage.getItem("professionalUser")) || {};
   const user = {
@@ -87,29 +73,10 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
   const profileRef = useRef(null);
 
   const handleLogout = async () => {
-    try {
-      // 1) read headers (who is logged in)
-      // const headers = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
-
-      // const loginuser = headers?.loginuser; // userMobileNumberHash
-      // const dbName = headers?.['x-db-name'];
-      // const payload = {
-      //   loginuser: String(loginuser),
-      //   'x-db-name': String(dbName),
-      //   isLogin: false,
-      // };
-      // parentUserMobileNumber
-    } catch (err: any) {
-      // Don't block logout if API fails
-      console.warn("Logout sync failed:", err?.message || err);
-    } finally {
-      // 3) clear local session always
       localStorage.removeItem('professionalHeaders');
-      localStorage.removeItem('professionalUser');
-
+    localStorage.removeItem('professionalUser');
       // 4) redirect
-      navigate('/login');
-    }
+    navigate('/login');
   };
 
   /* ------------------------- 🔔 NOTIFICATIONS -------------------------- */
@@ -294,19 +261,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
               </div>
             </div>
           )}
-
-          <ConfirmTooltip
-            x={confirm.x}
-            y={confirm.y}
-            message="Are you sure you want to logout?"
-            confirmText="Yes"
-            cancelText="No"
-            onConfirm={() => {
-              handleLogout();
-              setConfirm({ show: false, x: null, y: null });
-            }}
-            onCancel={() => setConfirm({ show: false, x: null, y: null })}
-          />
+          <LogoutModal {...{ show: confirm?.show, setShow: () => setConfirm((pre: any) => ({ ...pre, show: !confirm?.show })), handleSubmit: handleLogout }} />
         </div>
       </div>
     </nav>

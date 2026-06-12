@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PrimaryButton, SecondaryButton } from "./buttons";
-import { X } from "lucide-react";
+import { LogOut, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { reportGeneratePdf } from "../redux/slices/professionalSlice/reportMappingSlice";
 import { getCompany } from "../redux/slices/professionalSlice/professionalCompanyMaster.slice";
@@ -191,6 +191,92 @@ const Modal = ({
 
 export default Modal;
 
+const LogoutModal = ({
+    show,
+    setShow,
+    loading,
+    handleSubmit,
+}: any) => {
+    return (
+        <AnimatePresence>
+            {show && (
+                <motion.div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 260,
+                            damping: 20,
+                        }}
+                        className="relative w-full max-w-md overflow-hidden rounded-md border border-gray-100 bg-white shadow-2xl"
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-gray-300 bg-gray-50 px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                                    <LogOut size={20} className="text-red-600" />
+                                </div>
+
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-800">
+                                        Logout
+                                    </h2>
+                                    <p className="text-sm text-gray-500">
+                                        Confirm logout action
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setShow(false)}
+                                className="rounded-full p-2 transition hover:bg-gray-200"
+                            >
+                                <X size={18} className="text-gray-600" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-6 py-5">
+                            <p className="text-sm text-gray-600">
+                                Are you sure you want to logout from your account?
+                                You will need to sign in again to access the
+                                dashboard.
+                            </p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-end gap-3 border-t border-gray-300 bg-gray-50 px-6 py-4">
+                            <button
+                                onClick={() => setShow(false)}
+                                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                disabled={loading}
+                                onClick={handleSubmit}
+                                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {loading ? "Logging out..." : "Logout"}
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    )
+} 
+
 // warning modal
 
 type NoDataConfirmAlertProps = {
@@ -250,12 +336,8 @@ const WarningModel = ({
 const ListingModel = ({
     show,
     title = "No Data Found",
-    cancelText = "Confirm",
     report,
     rowData,
-    confirmText = "Yes",
-    onCancel = () => null,
-    onConfirm = () => null,
 }: any) => {
     const [data, setData] = useState();
     const [gstType, setGstType] = useState("With GST");
@@ -439,7 +521,7 @@ const ListingModel = ({
         </AnimatePresence>
     );
 };
-export { WarningModel, ListingModel };
+export { WarningModel, ListingModel, LogoutModal };
 
 const html = ({ companyName, companyAddress, companyMobile, companyEmail, gstNumber, CustomerCode, selectedAccount }) => {
     //entryType
