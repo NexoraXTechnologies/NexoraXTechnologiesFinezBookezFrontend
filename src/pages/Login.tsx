@@ -176,10 +176,10 @@ const Login = () => {
     setIsVerifying(true); // Start verifying mode
     // @ts-ignore
     dispatchP(verifyProfessionalOtp({
-        mobile,
-        requestID: professionalRequestID,
-        otp: finalOtp,
-      })
+      mobile,
+      requestID: professionalRequestID,
+      otp: finalOtp,
+    })
     )
       .unwrap()
       .then(async (res: any) => {
@@ -254,19 +254,19 @@ const Login = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#f5f7ff] to-[#eef1ff]">
-      {/* ================= BACKGROUND SECTION ================= */}
+    <div className="relative overflow-hidden bg-gradient-to-b from-[#f5f7ff] to-[#eef1ff]">
+     {/* ================= BACKGROUND SECTION ================= */}
       <motion.div
         initial={{ scale: 1.1, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 1.2 }}
-        className="absolute top-0 left-0 w-full h-[380px] md:h-[420px] bg-cover bg-center"
+        className="absolute top-0 left-0 w-full h-[390px] md:h-[600px] bg-cover bg-center"
         style={{ backgroundImage: `url(${LoginImgae})` }}
       >
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/80 via-indigo-900/70 to-violet-900/70 backdrop-blur-[2px]"></div>
-        {/* Floating Dots */}
-        {/* Floating Particles */}
+        <div className="absolute inset-0 "></div>
+
+
         <div className="absolute inset-0 overflow-hidden">
 
           <motion.span
@@ -344,32 +344,27 @@ const Login = () => {
         </div>
 
       </motion.div >
+
       {/* ================= CURVE SHAPE ================= */}
-      < div className="absolute top-[250px] md:top-[322px] left-0 w-full overflow-hidden leading-none" >
+      <div className="absolute top-[230px] md:top-[330px] left-0 z-10 w-full overflow-hidden leading-none pointer-events-none">
         <svg
           viewBox="0 0 1440 320"
-          className="block w-full h-[120px] md:h-[160px]"
+          className="block w-full h-[190px] md:h-[230px]"
           preserveAspectRatio="none"
         >
           <path
-            fill="#f3f3f9"
+            fill="#ffffff"
             d="M0,96L1440,224L1440,320L0,320Z"
-          ></path>
+          />
         </svg>
       </div>
 
+      {/* ✅ WHITE AREA STARTS FROM ABOVE POSITION */}
+      <div className="absolute top-[360px] md:top-[470px] left-0 z-10 w-full bottom-0 bg-white pointer-events-none" />
       {/* ================= LOGIN CARD ================= */}
       < div className="relative z-20 flex flex-col items-center justify-center gap-10 min-h-screen px-4 py-10" >
         <div className="flex flex-col items-center space-y-5 w-full ">
-          <motion.img
-            src={eTaxSoln}
-            alt="Professional"
-            className="w-50 mx-auto my-0 px-3 py-1 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 mb-1"
-            initial={{ y: -40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8 }}
-          />
-          <h4 className="text-white/80 mb-3">Finance & Tax Made Easy</h4>
+
           <motion.div
             initial={{ y: 40, opacity: 0, scale: 0.96 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -380,6 +375,16 @@ const Login = () => {
             className=" w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] border border-white/20 p-6 sm:p-8 transition-all duration-300">
             {/* Heading */}
             <div className="text-center mb-3">
+
+              <motion.img
+                src={eTaxSoln}
+                alt="Professional"
+                className="w-50 mx-auto my-0 px-3 py-1 rounded-xl border border-white/10 mb-1"
+                initial={{ y: -40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.8 }}
+              />
+              <h4 className=" mb-3">Finance & Tax Made Easy</h4>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-indigo-950">Welcome to FinEZ!</h2>
               <p className="text-gray-400 tracking-wide mt-2 text-sm sm:text-base leading-relaxed">
                 Sign in to continue FinEZ.
@@ -420,7 +425,7 @@ const Login = () => {
               </>
             ) : <>
               <div>
-                <label htmlFor="mobileNumber" className="block mb-2 font-medium text-sm text-gray-700">Enter Mobile Number</label>
+                {/* <label htmlFor="mobileNumber" className="block mb-2 font-medium text-sm text-gray-700">Enter Mobile Number</label> */}
                 <div className=" flex items-center border border-gray-300 rounded-xl overflow-hidden mb-4 bg-gray-50 focus-within:ring-4 focus-within:ring-indigo-100 focus-within:border-indigo-500 transition-all duration-200">
                   <span className="px-4 py-3 bg-gray-100 text-gray-700 font-medium border-r border-gray-200 select-none">+91</span>
                   <input
