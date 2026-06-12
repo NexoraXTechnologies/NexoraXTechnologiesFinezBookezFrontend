@@ -5,13 +5,13 @@ import { X } from "lucide-react";
 
 type ModalProps = {
     show: boolean;
-    setShow: (value: boolean) => void;
-    handleSubmit: () => void;
-    handleClose: () => void;
-    state: boolean;
-    body: React.ReactNode;
-    title: string;
-    loader: boolean;
+    setShow?: (value: boolean) => void;
+    handleSubmit?: () => void;
+    handleClose?: () => void;
+    state?: boolean;
+    body?: React.ReactNode;
+    title?: string | any;
+    loader?: boolean;
 
     // Optional dynamic props
     gridCols?: 1 | 2 | 3 | 4 | 12;
@@ -128,6 +128,7 @@ const Modal = ({
                                 type="button"
                                 onClick={() => {
                                     handleClose();
+                                    // @ts-ignore 
                                     setShow(false);
                                 }}
                                 className="cursor-pointer rounded-full p-2 transition hover:bg-gray-200"
@@ -156,6 +157,7 @@ const Modal = ({
                                 <SecondaryButton
                                     callBackFn={() => {
                                         handleClose();
+                                        // @ts-ignore 
                                         setShow(false);
                                     }}
                                     text="Cancel"

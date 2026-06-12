@@ -142,19 +142,19 @@ const FieldSelector = ({
 
 type DataTableProps<T> = {
 	columns: any[];
-  data: T[];
-  loading?: boolean;
-  emptyMessage?: string;
-  actions?: (row: T) => React.ReactNode;
+	data: T[];
+	loading?: boolean;
+	emptyMessage?: string;
+	actions?: (row: T) => React.ReactNode;
 	showFieldSelector?: boolean;
 };
 
 export default function DataTable<T>({
 	columns = [],
-  data,
-  loading,
-  emptyMessage = "No data found",
-  actions,
+	data,
+	loading,
+	emptyMessage = "No data found",
+	actions,
 	showFieldSelector = true,
 }: DataTableProps<T>) {
 	const [visibleKeys, setVisibleKeys] = useState<string[]>(
@@ -171,46 +171,109 @@ export default function DataTable<T>({
 		);
 	}, [columns, visibleKeys]);
 
-  return (
-    <div className="min-h-0 flex-1 w-full">
-		  <div className="h-full">
-			  {showFieldSelector && columns.length > 0 && <div className="mb-3 flex justify-end">
-				  <FieldSelector columns={columns} visibleKeys={visibleKeys} setVisibleKeys={setVisibleKeys} />
-			  </div>}
+	return (
+		<div className="flex h-full min-h-0 w-full flex-col">
+			{showFieldSelector && columns.length > 0 && (
+				<div className="mb-3 flex shrink-0 justify-end">
+					<FieldSelector
+						columns={columns}
+						visibleKeys={visibleKeys}
+						setVisibleKeys={setVisibleKeys}
+					/>
+				</div>
+			)}
 
-			  <div id="account-table-container" className="h-full min-h-0 overflow-auto rounded-md border border-gray-200 bg-white shadow-sm">
-				  <table className="min-w-[900px] w-full text-sm text-gray-700 border-separate border-spacing-0">
-					  <thead className="sticky top-0 z-10 bg-gray-50">
-						  <tr>
-							  {visibleColumns?.map((col: any) => <th key={String(col.key)} className={`px-4 py-4 border-b border-gray-200 text-left font-semibold text-gray-600 bg-gray-50 whitespace-nowrap ${col.className || ""}`}>{col.title}</th>)}
-							  {actions && <th className="px-4 py-4 border-b border-gray-200 text-left font-semibold text-gray-600 bg-gray-50 whitespace-nowrap w-[120px]">Actions</th>}
-						  </tr>
-					  </thead>
+			<div
+				id="account-table-container"
+				className="min-h-0 flex-1 overflow-auto rounded-md border border-gray-200 bg-white shadow-sm pb-3"
+			>
+				<table className="min-w-[900px] w-full border-separate border-spacing-0 text-sm text-gray-700">
+					<thead className="sticky top-0 z-20 bg-gray-50">
+						<tr>
+							{visibleColumns?.map((col: any) => (
+								<th
+									key={String(col.key)}
+									className={`px-4 py-4 border-b border-gray-200 bg-gray-50 text-left font-semibold text-gray-600 whitespace-nowrap ${col.className || ""}`}
+								>
+									{col.title}
+								</th>
+							))}
 
-					  <tbody>
-						  {loading ? (
-							  <tr><td colSpan={visibleColumns?.length + (actions ? 1 : 0)} className="text-center py-10 text-gray-500"><div className="flex flex-col items-center gap-2"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /><span>Loading...</span></div></td></tr>
-						  ) : data?.length ? (
-							  data?.map((row, index) => (
-								  <tr key={index} className="hover:bg-indigo-50/40 transition-all duration-200">
-									  {visibleColumns?.map((col: any) => {
-										  const value = row?.[col?.key as keyof T];
+							{actions && (
+								<th className="w-[120px] px-4 py-4 border-b border-gray-200 bg-gray-50 text-left font-semibold text-gray-600 whitespace-nowrap">
+									Actions
+								</th>
+							)}
+						</tr>
+					</thead>
 
-										  return <td key={String(col.key)} className="px-4 py-3 border-b border-gray-200 font-medium text-gray-800 whitespace-nowrap">{col.type === "date" ? (value ? new Date(value as any).toLocaleString() : "—") : col.type === "readMoreText" ? <ReadMoreText text={(value as string) || "—"} charLimit={20} /> : col.render ? col.render(row, index) : (value as React.ReactNode) || "—"}</td>;
-									  })}
+					<tbody>
+						{loading ? (
+							<tr>
+								<td
+									colSpan={visibleColumns?.length + (actions ? 1 : 0)}
+									className="py-10 text-center text-gray-500"
+								>
+									<div className="flex flex-col items-center gap-2">
+										<div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+										<span>Loading...</span>
+									</div>
+								</td>
+							</tr>
+						) : data?.length ? (
+							data.map((row, index) => (
+								<tr
+									key={index}
+									className="transition-all duration-200 hover:bg-indigo-50/40"
+								>
+									{visibleColumns?.map((col: any) => {
+										const value = row?.[col?.key as keyof T];
 
-									  {actions && <td className="px-4 py-3 border-b border-gray-200 whitespace-nowrap">{actions(row)}</td>}
-								  </tr>
-							  ))
-							  ) : (
-							  <tr><td colSpan={visibleColumns.length + (actions ? 1 : 0)} className="text-center py-10 text-gray-500">{emptyMessage}</td></tr>
-						  )}
-					  </tbody>
-				  </table>
-			  </div>
-		  </div>
-    </div>
-  );
+										return (
+											<td
+												key={String(col.key)}
+												className="px-4 py-3 border-b border-gray-200 font-medium text-gray-800 whitespace-nowrap"
+											>
+												{col.type === "date"
+													? value
+														? new Date(value as any).toLocaleString()
+														: "—"
+													: col.type === "readMoreText"
+														? (
+															<ReadMoreText
+																text={(value as string) || "—"}
+																charLimit={20}
+															/>
+														)
+														: col.render
+															? col.render(row, index)
+															: (value as React.ReactNode) || "—"}
+											</td>
+										);
+									})}
+
+									{actions && (
+										<td className="px-4 py-3 border-b border-gray-200 whitespace-nowrap">
+											{actions(row)}
+										</td>
+									)}
+								</tr>
+							))
+						) : (
+							<tr>
+								<td
+									colSpan={visibleColumns.length + (actions ? 1 : 0)}
+									className="py-10 text-center text-gray-500"
+								>
+									{emptyMessage}
+								</td>
+							</tr>
+						)}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	);
 }
 
 /* ===================================================

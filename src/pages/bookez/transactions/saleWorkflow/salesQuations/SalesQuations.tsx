@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Delete, Download, Edit, Trash, Trash2 } from "lucide-react";
+import {  Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Badge from "../../../../../components/badge";
@@ -516,192 +516,192 @@ const SalesQuotations = () => {
 export default SalesQuotations;
 
 
-const downloadPdfWithoutLibrary = () => {
-    try {
-        const iframe = document.createElement("iframe");
+// const downloadPdfWithoutLibrary = () => {
+//     try {
+//         const iframe = document.createElement("iframe");
 
-        iframe.style.position = "fixed";
-        iframe.style.right = "0";
-        iframe.style.bottom = "0";
-        iframe.style.width = "0";
-        iframe.style.height = "0";
-        iframe.style.border = "0";
+//         iframe.style.position = "fixed";
+//         iframe.style.right = "0";
+//         iframe.style.bottom = "0";
+//         iframe.style.width = "0";
+//         iframe.style.height = "0";
+//         iframe.style.border = "0";
 
-        document.body.appendChild(iframe);
+//         document.body.appendChild(iframe);
 
-        const iframeDoc =
-            iframe.contentDocument || iframe.contentWindow?.document;
+//         const iframeDoc =
+//             iframe.contentDocument || iframe.contentWindow?.document;
 
-        if (!iframeDoc) {
-            console.log("Unable to create PDF iframe");
-            return;
-        }
+//         if (!iframeDoc) {
+//             console.log("Unable to create PDF iframe");
+//             return;
+//         }
 
-        iframeDoc.open();
-        iframeDoc.write(html); // ✅ your full HTML string
-        iframeDoc.close();
+//         iframeDoc.open();
+//         iframeDoc.write(html); // ✅ your full HTML string
+//         iframeDoc.close();
 
-        iframe.onload = () => {
-            setTimeout(() => {
-                iframe.contentWindow?.focus();
-                iframe.contentWindow?.print();
+//         iframe.onload = () => {
+//             setTimeout(() => {
+//                 iframe.contentWindow?.focus();
+//                 iframe.contentWindow?.print();
 
-                // cleanup after print dialog opens
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                }, 1000);
-            }, 500);
-        };
-    } catch (error) {
-        console.log("PDF print failed:", error);
-    }
-};
-const PRIMARY = ""
-const companyName = ""
-const companyAddress = ""
-const companyGstBlock = ""
-const companyLogo = ""
-const entryType = ""
-const companyMobile = ""
-const companyEmail = ""
-const billToName = ""
-const billGstBlock = ""
-const billToAddress =""
-const invNo =""
-const invDate =""
-const gstHeaderTh =""
-const includeGst =""
-const totalAccQty =""
-const items =[]
+//                 // cleanup after print dialog opens
+//                 setTimeout(() => {
+//                     document.body.removeChild(iframe);
+//                 }, 1000);
+//             }, 500);
+//         };
+//     } catch (error) {
+//         console.log("PDF print failed:", error);
+//     }
+// };
+// const PRIMARY = ""
+// const companyName = ""
+// const companyAddress = ""
+// const companyGstBlock = ""
+// const companyLogo = ""
+// const entryType = ""
+// const companyMobile = ""
+// const companyEmail = ""
+// const billToName = ""
+// const billGstBlock = ""
+// const billToAddress =""
+// const invNo =""
+// const invDate =""
+// const gstHeaderTh =""
+// const includeGst =""
+// const totalAccQty =""
+// const items =[]
 
 
-const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sample PDF Document</title>
+// const html = `<!DOCTYPE html>
+// <html lang="en">
+// <head>
+// <meta charset="UTF-8">
+// <meta name="viewport" content="width=device-width, initial-scale=1.0">
+// <title>Sample PDF Document</title>
 
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f0f0f0;
-        margin: 0;
-        padding: 20px;
-    }
+// <style>
+//     body {
+//         font-family: Arial, sans-serif;
+//         background: #f0f0f0;
+//         margin: 0;
+//         padding: 20px;
+//     }
 
-    .page {
-        width: 210mm;
-        min-height: 297mm;
-        margin: 0 auto;
-        padding: 20mm;
-        background: white;
-        box-shadow: 0 0 10px rgba(0,0,0,0.2);
-        box-sizing: border-box;
-    }
+//     .page {
+//         width: 210mm;
+//         min-height: 297mm;
+//         margin: 0 auto;
+//         padding: 20mm;
+//         background: white;
+//         box-shadow: 0 0 10px rgba(0,0,0,0.2);
+//         box-sizing: border-box;
+//     }
 
-    h1 {
-        color: #2c3e50;
-        margin-bottom: 10px;
-    }
+//     h1 {
+//         color: #2c3e50;
+//         margin-bottom: 10px;
+//     }
 
-    h2 {
-        color: #34495e;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 5px;
-    }
+//     h2 {
+//         color: #34495e;
+//         border-bottom: 1px solid #ddd;
+//         padding-bottom: 5px;
+//     }
 
-    p {
-        line-height: 1.6;
-        color: #333;
-    }
+//     p {
+//         line-height: 1.6;
+//         color: #333;
+//     }
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-    }
+//     table {
+//         width: 100%;
+//         border-collapse: collapse;
+//         margin-top: 10px;
+//     }
 
-    table, th, td {
-        border: 1px solid #ccc;
-    }
+//     table, th, td {
+//         border: 1px solid #ccc;
+//     }
 
-    th {
-        background: #f5f5f5;
-    }
+//     th {
+//         background: #f5f5f5;
+//     }
 
-    th, td {
-        padding: 10px;
-        text-align: left;
-    }
+//     th, td {
+//         padding: 10px;
+//         text-align: left;
+//     }
 
-    @media print {
-        body {
-            background: white;
-            padding: 0;
-        }
+//     @media print {
+//         body {
+//             background: white;
+//             padding: 0;
+//         }
 
-        .page {
-            box-shadow: none;
-            margin: 0;
-            width: auto;
-            min-height: auto;
-        }
-    }
-</style>
-</head>
-<body>
+//         .page {
+//             box-shadow: none;
+//             margin: 0;
+//             width: auto;
+//             min-height: auto;
+//         }
+//     }
+// </style>
+// </head>
+// <body>
 
-<div class="page">
-    <h1>Sample PDF Document</h1>
-    <p>
-        This is a sample HTML document designed for PDF generation.
-        You can print this page as PDF using your browser.
-    </p>
+// <div class="page">
+//     <h1>Sample PDF Document</h1>
+//     <p>
+//         This is a sample HTML document designed for PDF generation.
+//         You can print this page as PDF using your browser.
+//     </p>
 
-    <h2>Overview</h2>
-    <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-    </p>
+//     <h2>Overview</h2>
+//     <p>
+//         Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+//         Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+//     </p>
 
-    <h2>Sample Table</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Department</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>001</td>
-                <td>John Doe</td>
-                <td>Engineering</td>
-            </tr>
-            <tr>
-                <td>002</td>
-                <td>Jane Smith</td>
-                <td>Marketing</td>
-            </tr>
-            <tr>
-                <td>003</td>
-                <td>Michael Brown</td>
-                <td>Finance</td>
-            </tr>
-        </tbody>
-    </table>
+//     <h2>Sample Table</h2>
+//     <table>
+//         <thead>
+//             <tr>
+//                 <th>ID</th>
+//                 <th>Name</th>
+//                 <th>Department</th>
+//             </tr>
+//         </thead>
+//         <tbody>
+//             <tr>
+//                 <td>001</td>
+//                 <td>John Doe</td>
+//                 <td>Engineering</td>
+//             </tr>
+//             <tr>
+//                 <td>002</td>
+//                 <td>Jane Smith</td>
+//                 <td>Marketing</td>
+//             </tr>
+//             <tr>
+//                 <td>003</td>
+//                 <td>Michael Brown</td>
+//                 <td>Finance</td>
+//             </tr>
+//         </tbody>
+//     </table>
 
-    <h2>Conclusion</h2>
-    <p>
-        This document demonstrates headings, paragraphs, and tables
-        formatted for PDF export.
-    </p>
-</div>
+//     <h2>Conclusion</h2>
+//     <p>
+//         This document demonstrates headings, paragraphs, and tables
+//         formatted for PDF export.
+//     </p>
+// </div>
 
-</body>
-</html>`
+// </body>
+// </html>`
 // const html = `
 //   <html>
 //     <head>

@@ -362,7 +362,7 @@ const SalesOrder = () => {
             await dispatch(updateSalesQuotation({ payload: { sQuoteDocStatus: "close" }, sQuoteVoucherNumber: e }) as any);
             await fetchSalesQuotations();
         } catch (error) {
-            toast.error("GRN saved but failed to update purchase order status");
+            toast.error("sales Quotation saved but failed to update purchase order status");
             return "";
         }
     };
@@ -392,11 +392,11 @@ const SalesOrder = () => {
             } else {
                 await dispatch(createSalesOrder(payload) as any).unwrap();
                 if (form?.sOrderQuotationVoucherNumber) {
-                    const poStatus = await syncPurchaseOrderStatusAfterGrn(form?.sOrderQuotationVoucherNumber);
-                    if (poStatus === "close") toast.success("GRN created successfully and Purchase Order closed");
-                    else toast.success("GRN created successfully");
+                    const poStatus:any = await syncPurchaseOrderStatusAfterGrn(form?.sOrderQuotationVoucherNumber);
+                    if (poStatus === "close") toast.success("Sales order created successfully and Sales Quotation closed");
+                    else toast.success("Sales order created successfully");
                 } else {
-                    toast.success("GRN created successfully");
+                    toast.success("Sales order created successfully");
                 }
                 toast.success("Sales order created successfully");
             }
