@@ -440,9 +440,8 @@ const SalesQuotations = () => {
                 emptyMessage={`No ${status} sales quotation found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        {console.log({ record })}
                         <button id="sales-quotation-edit-button" onClick={(e) => {
-                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
                             // downloadPdfWithoutLibrary()
                         }
 
@@ -509,7 +508,7 @@ const SalesQuotations = () => {
                 />
             )}
 
-            <ListingModel {...{ show: downlaodPDF?.show, rowData: downlaodPDF, report, title: "Download Sales Order PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
 
             {!fieldsLoading && (
                 <DynamicAddForm
