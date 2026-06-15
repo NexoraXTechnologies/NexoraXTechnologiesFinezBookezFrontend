@@ -60,10 +60,21 @@ const Subscription = () => {
         dispatch(getAllPlans({ offset: 0, limit: 100, search: "", }))
     };
 
+    // const filteredPlans = useMemo(() => {
+    //     const filter = plans?.filter((e: any) => e?.name == selectedCategory);
+    //     return !!filter?.length ? filter : plans;
+    // }, [plans, search, selectedCategory]);
+    
     const filteredPlans = useMemo(() => {
-        const filter = plans?.filter((e: any) => e?.name == selectedCategory);
-        return !!filter?.length ? filter : plans;
-    }, [plans, search, selectedCategory]);
+        return plans?.filter((plan: any) => {
+            const name = plan?.name?.toLowerCase() || "";
+
+            return (
+                !name.includes("month") &&
+                !name.startsWith("itr")
+            );
+        }) || [];
+    }, [plans]);
 
     useEffect(() => {
         fetchAccounts();

@@ -494,7 +494,7 @@ const Login = () => {
             <p className="text-xs text-gray-400">
               Designed & Developed by
               <span className="text-indigo-600 font-medium ml-1">
-                NexoraX
+                NexoraX Technology Pvt. Ltd.
               </span>
             </p>
 
