@@ -8,7 +8,7 @@ import {
 
 } from "lucide-react";
 import TransactionDashboard from "../components/TransactionDashboard";
-import PurchaseOrder from "./PurchaseOrder";
+import PurchaseOrder from "./purchaseOrder";
 import Grn from "./Grn";
 import PurchaseReturn from "./PurchaseReturn";
 import PurchaseInvoice from "./PurchaseInvoice";

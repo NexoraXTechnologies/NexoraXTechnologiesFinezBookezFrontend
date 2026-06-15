@@ -429,7 +429,8 @@ const Login = () => {
                 <div className=" flex items-center border border-gray-300 rounded-xl overflow-hidden mb-4 bg-gray-50 focus-within:ring-4 focus-within:ring-indigo-100 focus-within:border-indigo-500 transition-all duration-200">
                   <span className="px-4 py-3 bg-gray-100 text-gray-700 font-medium border-r border-gray-200 select-none">+91</span>
                   <input
-                    type="text"
+                      type="text"
+                      maxLength={10}
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                     onKeyDown={(e) => {

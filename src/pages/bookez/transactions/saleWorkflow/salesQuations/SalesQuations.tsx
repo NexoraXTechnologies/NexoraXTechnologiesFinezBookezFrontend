@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {  Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Badge from "../../../../../components/badge";
@@ -14,6 +14,9 @@ import { addSalesQuotation, deleteSalesQuotation, getSalesQuotationList, updateS
 import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
+import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
+import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
+import { ListingModel } from "../../../../../components/modal";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
@@ -37,7 +40,9 @@ const SalesQuotations = () => {
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
-
+    const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
+  
+    const { report } = useSelector((s: any) => s.reportMapping);
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
 
     const getBodyFieldByKey = (key: string) => {
@@ -409,6 +414,10 @@ const SalesQuotations = () => {
         prepareFields();
     }, [transactionsSchema]);
 
+    useEffect(() => {
+        dispatch(getAllReportMapping({ moduleType: "salesQuotation" }))
+    }, [])
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">
@@ -431,9 +440,14 @@ const SalesQuotations = () => {
                 emptyMessage={`No ${status} sales quotation found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        {/* <button id="sales-quotation-edit-button" onClick={downloadPdfWithoutLibrary} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                        <button id="sales-quotation-edit-button" onClick={(e) => {
+                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                            // downloadPdfWithoutLibrary()
+                        }
+
+                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Download size={16} />
-                        </button> */}
+                        </button>
                         <button id="sales-quotation-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Edit size={16} />
                         </button>
@@ -445,7 +459,7 @@ const SalesQuotations = () => {
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
                                 const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sQuoteVoucherNumber });
+                                setDownlaodPDF({ show: true, x, y });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
@@ -482,6 +496,19 @@ const SalesQuotations = () => {
                     onCancel={() => setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null })}
                 />
             )}
+            {downlaodPDF.show && (
+                <ConfirmTooltip
+                    x={downlaodPDF.x}
+                    y={downlaodPDF.y}
+                    message="Are you sure you want to delete this sales quotation?"
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    // onConfirm={handleDeleteConfirm}
+                    onCancel={() => setDownlaodPDF({ show: false, x: null, y: null, })}
+                />
+            )}
+
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
 
             {!fieldsLoading && (
                 <DynamicAddForm
@@ -516,486 +543,5 @@ const SalesQuotations = () => {
 export default SalesQuotations;
 
 
-// const downloadPdfWithoutLibrary = () => {
-//     try {
-//         const iframe = document.createElement("iframe");
-
-//         iframe.style.position = "fixed";
-//         iframe.style.right = "0";
-//         iframe.style.bottom = "0";
-//         iframe.style.width = "0";
-//         iframe.style.height = "0";
-//         iframe.style.border = "0";
-
-//         document.body.appendChild(iframe);
-
-//         const iframeDoc =
-//             iframe.contentDocument || iframe.contentWindow?.document;
-
-//         if (!iframeDoc) {
-//             console.log("Unable to create PDF iframe");
-//             return;
-//         }
-
-//         iframeDoc.open();
-//         iframeDoc.write(html); // ✅ your full HTML string
-//         iframeDoc.close();
-
-//         iframe.onload = () => {
-//             setTimeout(() => {
-//                 iframe.contentWindow?.focus();
-//                 iframe.contentWindow?.print();
-
-//                 // cleanup after print dialog opens
-//                 setTimeout(() => {
-//                     document.body.removeChild(iframe);
-//                 }, 1000);
-//             }, 500);
-//         };
-//     } catch (error) {
-//         console.log("PDF print failed:", error);
-//     }
-// };
-// const PRIMARY = ""
-// const companyName = ""
-// const companyAddress = ""
-// const companyGstBlock = ""
-// const companyLogo = ""
-// const entryType = ""
-// const companyMobile = ""
-// const companyEmail = ""
-// const billToName = ""
-// const billGstBlock = ""
-// const billToAddress =""
-// const invNo =""
-// const invDate =""
-// const gstHeaderTh =""
-// const includeGst =""
-// const totalAccQty =""
-// const items =[]
 
 
-// const html = `<!DOCTYPE html>
-// <html lang="en">
-// <head>
-// <meta charset="UTF-8">
-// <meta name="viewport" content="width=device-width, initial-scale=1.0">
-// <title>Sample PDF Document</title>
-
-// <style>
-//     body {
-//         font-family: Arial, sans-serif;
-//         background: #f0f0f0;
-//         margin: 0;
-//         padding: 20px;
-//     }
-
-//     .page {
-//         width: 210mm;
-//         min-height: 297mm;
-//         margin: 0 auto;
-//         padding: 20mm;
-//         background: white;
-//         box-shadow: 0 0 10px rgba(0,0,0,0.2);
-//         box-sizing: border-box;
-//     }
-
-//     h1 {
-//         color: #2c3e50;
-//         margin-bottom: 10px;
-//     }
-
-//     h2 {
-//         color: #34495e;
-//         border-bottom: 1px solid #ddd;
-//         padding-bottom: 5px;
-//     }
-
-//     p {
-//         line-height: 1.6;
-//         color: #333;
-//     }
-
-//     table {
-//         width: 100%;
-//         border-collapse: collapse;
-//         margin-top: 10px;
-//     }
-
-//     table, th, td {
-//         border: 1px solid #ccc;
-//     }
-
-//     th {
-//         background: #f5f5f5;
-//     }
-
-//     th, td {
-//         padding: 10px;
-//         text-align: left;
-//     }
-
-//     @media print {
-//         body {
-//             background: white;
-//             padding: 0;
-//         }
-
-//         .page {
-//             box-shadow: none;
-//             margin: 0;
-//             width: auto;
-//             min-height: auto;
-//         }
-//     }
-// </style>
-// </head>
-// <body>
-
-// <div class="page">
-//     <h1>Sample PDF Document</h1>
-//     <p>
-//         This is a sample HTML document designed for PDF generation.
-//         You can print this page as PDF using your browser.
-//     </p>
-
-//     <h2>Overview</h2>
-//     <p>
-//         Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-//         Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-//     </p>
-
-//     <h2>Sample Table</h2>
-//     <table>
-//         <thead>
-//             <tr>
-//                 <th>ID</th>
-//                 <th>Name</th>
-//                 <th>Department</th>
-//             </tr>
-//         </thead>
-//         <tbody>
-//             <tr>
-//                 <td>001</td>
-//                 <td>John Doe</td>
-//                 <td>Engineering</td>
-//             </tr>
-//             <tr>
-//                 <td>002</td>
-//                 <td>Jane Smith</td>
-//                 <td>Marketing</td>
-//             </tr>
-//             <tr>
-//                 <td>003</td>
-//                 <td>Michael Brown</td>
-//                 <td>Finance</td>
-//             </tr>
-//         </tbody>
-//     </table>
-
-//     <h2>Conclusion</h2>
-//     <p>
-//         This document demonstrates headings, paragraphs, and tables
-//         formatted for PDF export.
-//     </p>
-// </div>
-
-// </body>
-// </html>`
-// const html = `
-//   <html>
-//     <head>
-//       <meta charset="utf-8" />
-//       <style>
-//         @page {
-//           margin-top: 40px;
-//           margin-bottom: 40px;
-//           margin-left: 30px;
-//           margin-right: 30px;
-//         }
-//         * { box-sizing: border-box; }
-//         body { font-family: Helvetica, Arial, sans-serif; color: #111; font-size: 12px; }
-//         .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-//         .company h1 { margin: 0 0 6px 0; font-size: 22px; font-weight: 700; }
-//         .company p { margin: 0; line-height: 1.6; }
-//         .logo { width: 90px; height: 90px; object-fit: contain; }
-//         .divider { height: 2px; background: ${PRIMARY}; margin: 14px 0 14px; opacity: 0.9; }
-//         .title { text-align: center; font-size: 22px; font-weight: 700; color: ${PRIMARY}; margin: 0 0 8px; }
-//         .sectionRow { display: flex; justify-content: space-between; margin-top: 10px; }
-//         .bill, .details { width: 48%; }
-//         .sectionTitle {  font-weight: 700; margin-bottom: 10px; }
-//         .bill p { margin: 0 0 8px; }
-//         .details .sectionTitle { text-align: right; }
-//         .details .kv { text-align: right; margin: 0 0 8px; }
-//         table { width: 100%; border-collapse: collapse; margin-top: 18px; border: 0.5px solid #bbb; font-size: 12px; }
-//         thead th {
-//           background: ${PRIMARY};
-//           color: #fff;
-//           padding: 9px 6px;
-//           text-align: center;
-//           border: 0.5px solid #aad;
-//         }
-//         tbody td {
-//           padding: 9px 6px;
-//           vertical-align: top;
-//           text-align: center;
-//           border: 0.5px solid #ccc;
-//         }
-//         .colNum  { width: 28px; }
-//         .colItem { width: 200px; text-align: left; }
-//         .colQty  { width: 90px; }
-//         .colPrice{ width: 100px; }
-//         .colGst  { width: 140px; }
-//         .colAmt  { width: 120px; }
-//         .gstSmall { display: block; margin-top: 3px; color: #555; font-size: 9px; }
-//         .money { white-space: nowrap; }
-//         .itemMeta { display: block; margin-top: 3px; font-size: 10px; color: #666; }
-//         .dimCell { color: #999; }
-//         .tableTotal td {
-//           border-top: 1px solid #999;
-//           border-bottom: 1px solid #999;
-//           font-weight: 700;
-//           padding-top: 10px;
-//           padding-bottom: 10px;
-//         }
-//         .belowRow { display:flex; justify-content:space-between; gap: 18px; margin-top: 18px; }
-//         .belowLeft { flex: 1; }
-//         .belowRight { width: 460px; }
-//         .blkTitle { font-weight: 700; margin: 0 0 10px; }
-//         .blkText { line-height: 1.6; margin: 0; }
-//         .sumTable { width:100%; border-collapse:collapse;  }
-//         .sumTable td { padding: 8px 10px; }
-//         .sumLabel { width: 55%; }
-//         .sumAmt { width: 45%; text-align:right; white-space:nowrap; }
-//         .sumTotalRow td { background:${PRIMARY}; color:#fff; font-weight:700; }
-//         .payRow { display:flex; justify-content:space-between; align-items:flex-start; gap: 18px; margin-top: 18px; }
-//         .payLeft { flex: 1; display:flex; gap: 16px; align-items:flex-start; }
-//         /* ✅ bigger QR -> scannable after PDF render */
-//         .qr { width: 160px; height: 160px; object-fit: contain; border: 1px solid #ddd; padding: 6px; }
-//         .payInfo {  line-height: 1.7; }
-//         .payInfo b { font-weight: 700; }
-//         .signRight { width: 360px; text-align:right; }
-//         .signRight .for {  margin-bottom: 10px; }
-//         .signImg { height: 70px; object-fit: contain; margin: 10px 0; }
-//         .signText { font-weight: 700; margin-top: 6px; }
-//         .upiLink {
-//           display:inline-block;
-//           margin-top: 8px;
-//           font-weight: 700;
-//           color: #0b63ff;
-//           text-decoration: none;
-//         }
-//         .upiMeta { color: #555; margin-top: 4px; }
-//         .siteNote { text-align:left; margin-top: 10px;  color: #0b63ff; }
-//       </style>
-//     </head>
-//     <body>
-//       <div class="row">
-//         <div class="company" style="max-width: 50%;">
-//           <h1>${escapeHtml(companyName || 'Company Name')}</h1>
-//           <p><strong>Address:</strong> ${escapeHtml(companyAddress)}</p>
-//           <p><strong>Phone no:</strong> ${escapeHtml(companyMobile)}</p>
-//           <p><strong>Email:</strong> ${escapeHtml(companyEmail)}</p>
-//           ${companyGstBlock}
-//         </div>
-//         ${companyLogo
-//         ? `<img class="logo" src="${companyLogo}" />`
-//         : `<div style="width:90px;height:90px;"></div>`
-//     }
-//       </div>
-//       <div class="divider"></div>
-//       <div class="title">${escapeHtml(
-//         titleCase(entryType || 'Tax Invoice'),
-//     )}</div>
-//       <div class="sectionRow">
-//         <div class="bill">
-//           <div class="sectionTitle">Bill To</div>
-//           <p><strong>Name:</strong> ${escapeHtml(billToName)}</p>
-//           <p><strong>Address:</strong> ${escapeHtml(billToAddress)}</p>
-//           ${billGstBlock}
-//         </div>
-//         <div class="details">
-//           <div class="sectionTitle">Invoice Details</div>
-//           <p class="kv"><strong>Invoice No.:</strong> ${escapeHtml(invNo)}</p>
-//           <p class="kv"><strong>Date:</strong> ${escapeHtml(
-//         formatDate(invDate),
-//     )}</p>
-//         </div>
-//       </div>
-//       <table>
-//         <thead>
-//           <tr>
-//             <th class="colNum">#</th>
-//             <th class="colItem">Item Name</th>
-//             ${entryType === 'GRN'
-//         ? `<th class="colQty">Accepted Qty</th><th class="colQty">Rejected Qty</th>`
-//         : `<th class="colQty">Quantity</th>`
-//     }
-//             <th class="colPrice">Rate</th>
-//             <th class="colPrice">Discount % </th>
-//             ${gstHeaderTh}
-//             <th class="colAmt">Amount</th>
-//           </tr>
-//         </thead>
-//         <tbody>
-//           ${items
-//         .map((it, idx) => {
-//             return `
-//                 <tr>
-//                   <td class="colNum">${idx + 1}</td>
-//                   <td class="colItem">
-//                     ${escapeHtml(it.productName || '—')}
-//                     ${it.productHSNCode
-//                     ? `<span class="itemMeta">HSN: ${escapeHtml(
-//                         it.productHSNCode,
-//                     )}</span>`
-//                     : ''
-//                 }
-//                   </td>
-//                   ${entryType === 'GRN'
-//                     ? `<td class="colQty">${escapeHtml(
-//                         String(it.acceptedQuantity ?? ''),
-//                     )}${it.uomLabel && it.uomLabel !== '-'
-//                         ? `<span class="itemMeta">${escapeHtml(
-//                             it.uomLabel,
-//                         )}</span>`
-//                         : ''
-//                     }</td>
-//                          <td class="colQty">${escapeHtml(
-//                         String(it.rejectedQuantity ?? ''),
-//                     )}${it.uomLabel && it.uomLabel !== '-'
-//                         ? `<span class="itemMeta">${escapeHtml(
-//                             it.uomLabel,
-//                         )}</span>`
-//                         : ''
-//                     }</td>`
-//                     : `<td class="colQty">${escapeHtml(
-//                         String(it.qty || ''),
-//                     )}${it.uomLabel && it.uomLabel !== '-'
-//                         ? `<span class="itemMeta">${escapeHtml(
-//                             it.uomLabel,
-//                         )}</span>`
-//                         : ''
-//                     }</td>`
-//                 }
-//                   <td class="colPrice"><span class="money">₹ ${formatIndianNumber(
-//                     it.rate,
-//                 )}</span></td>
-//                   <td class="colPrice">${toNum(it.discount) > 0
-//                     ? `<span class="money">₹ ${formatIndianNumber(
-//                         it.discount,
-//                     )} % </span>`
-//                     : `<span class="dimCell">—</span>`
-//                 }</td>
-//                   ${includeGst
-//                     ? `<td class="colGst">${renderGstHtml(it)}</td>`
-//                     : ''
-//                 }
-//                   <td class="colAmt"><span class="money">₹ ${formatIndianNumber(
-//                     includeGst ? it.net : it.taxable,
-//                 )}</span></td>
-//                 </tr>
-//               `;
-//         })
-//         .join('')}
-//           <tr class="tableTotal">
-//             <td class="colNum"></td>
-//             <td class="colItem"><strong>Total</strong></td>
-//             ${entryType === 'GRN'
-//         ? `<td class="colQty"><strong>${formatIndianNumber(
-//             totalAccQty,
-//         )}</strong></td>
-//                    <td class="colQty"><strong>${formatIndianNumber(
-//             totalRejQty,
-//         )}</strong></td>`
-//         : `<td class="colQty"><strong>${formatIndianNumber(
-//             totalQty,
-//         )}</strong></td>`
-//     }
-//             <td class="colPrice"></td>
-//             <td class="colPrice"></td>
-//             ${includeGst ? `<td class="colGst"></td>` : ''}
-//             <td class="colAmt"><strong>₹ ${formatIndianNumber(
-//         pdfGrandTotal,
-//     )}</strong></td>
-//           </tr>
-//         </tbody>
-//       </table>
-//       <div class="belowRow">
-//         <div class="belowLeft">
-//           <div class="blkTitle">Invoice Amount In Words</div>
-//           <p class="blkText">${escapeHtml(amountWords)}</p>
-//           <div style="height:16px;"></div>
-//           <div class="blkTitle">Thank you for doing business with us.</div>
-//           ${entryType === 'sales-invoice'
-//         ? `${upiUrl
-//             ? `<a class="upiLink" href="${upiUrl}">Pay with UPI (GPay / PhonePe)</a>
-//                  <div class="upiMeta">UPI ID: ${escapeHtml(
-//                 upiId,
-//             )} • Amount: ₹ ${formatIndianNumber(pdfGrandTotal)}</div>`
-//             : `<div class="upiMeta">UPI not configured in Company Master.</div>`
-//         }`
-//         : ''
-//     }
-//           <div style="height:16px;"></div>
-//           ${normalized.doc.sInvRemark
-//         ? ` <div class="blkTitle">
-//                 Remark:- ${normalized?.doc?.sInvRemark}
-//               </div>`
-//         : ''
-//     }
-//         </div>
-//         <div class="belowRight">
-//          <table class="sumTable">
-//         <tr>
-//           <td class="sumLabel">Sub Total</td>
-//           <td class="sumAmt">₹ ${formatIndianNumber(sumTableSubTotal)}</td>
-//         </tr>
- 
-//         ${gstSummaryRows}
-//          ${discountAmt > 0
-//         ? `<tr>
-//         <td class="sumLabel">Discount</td>
-//         <td class="sumAmt">₹ ${formatIndianNumber(discountAmt)}</td>
-//       </tr>`
-//         : ''
-//     }
-//         ${extraFooterRows}
-//         <tr class="sumTotalRow">
-//           <td class="sumLabel">Total</td>
-//           <td class="sumAmt">₹ ${formatIndianNumber(pdfGrandTotal)}</td>
-//         </tr>
-//       </table>
-//         </div>
-//       </div>
-//       <div class="payRow">
-//         ${entryType === 'sales-invoice'
-//         ? `<div class="payLeft">
-//           ${upiQrUri
-//             ? `<img class="qr" src="${upiQrUri}" />`
-//             : `<div class="qr" style="display:flex;align-items:center;justify-content:center;color:#888;">
-//                    UPI QR not available
-//                  </div>`
-//         }
-//           <div class="payInfo">
-//             <div><b>Pay To:</b></div>
-//             <div>Bank Name: ${escapeHtml(bankName)}</div>
-//             <div>Bank Account No: ${escapeHtml(bankAcc)}</div>
-//             <div>Bank IFSC code: ${escapeHtml(bankIfsc)}</div>
-//             <div>Account Holder's Name: ${escapeHtml(companyName)}</div>
-//           </div>
-//         </div>`
-//         : `<div class="payLeft"></div>`
-//     }
-//         <div class="signRight">
-//           <div class="for">For: ${escapeHtml(companyName)}</div>
-//           ${signatureUri
-//         ? `<img class="signImg" src="${signatureUri}" />`
-//         : `<div style="height:70px;"></div>`
-//     }
-//           <div class="signText">Authorized Signatory</div>
-//         </div>
-//       </div>
-//     </body>
-//   </html>
-//   `;

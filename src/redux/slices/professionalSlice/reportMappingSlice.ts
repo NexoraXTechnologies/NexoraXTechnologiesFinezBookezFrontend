@@ -41,6 +41,30 @@ export const getAllModulesWiseKey = createAsyncThunk(
     }
 );
 
+export const reportGeneratePdf = createAsyncThunk(
+    "reportMapping/reportGeneratePdf",
+    async (
+        { moduleType, templateFileId, CustomerCode, voucherNumber }: any = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/generatePdf/${moduleType}/${voucherNumber}/${templateFileId}/${CustomerCode}`,
+                {
+                    responseType: "blob", // ✅ important for PDF
+                }
+            );
+
+            return res.data; // ✅ this is PDF blob
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message || "Failed to generate PDF",
+            });
+        }
+    }
+);
+
 
 
 
@@ -113,7 +137,7 @@ export const getAllReportMapping = createAsyncThunk(
                 params.moduleType = moduleType;
             }
 
-
+            
             const res = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/getAll",
                 { params }
