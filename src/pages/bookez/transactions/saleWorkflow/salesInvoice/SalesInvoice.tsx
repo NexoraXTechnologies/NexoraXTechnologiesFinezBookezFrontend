@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DataTable from "../../../../../components/DataTable";
@@ -15,8 +15,9 @@ import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { createSalesInvoice, deleteSalesInvoice, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
-import Modal from "../../../../../components/modal";
+import Modal, { ListingModel } from "../../../../../components/modal";
 import { getAllSalesOrder, updateSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
+import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
@@ -71,6 +72,8 @@ const SalesInVoice = () => {
     const { salesOrders, loading: orderLoader } = useSelector((state: any) => state.salesOrder);
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
+    const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
+    const { report } = useSelector((s: any) => s.reportMapping);
 
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
@@ -451,6 +454,10 @@ const SalesInVoice = () => {
         prepareFields();
     }, [transactionsSchema]);
 
+    useEffect(() => {
+        dispatch(getAllReportMapping({ moduleType: "salesInvoice" }))
+    }, [])
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
@@ -473,6 +480,13 @@ const SalesInVoice = () => {
                 emptyMessage={`No ${status} sales invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <button id="sales-quotation-edit-button" onClick={(e) => {
+                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                        }
+
+                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                            <Download size={16} />
+                        </button>
                         <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Edit size={16} />
                         </button>
@@ -605,6 +619,8 @@ const SalesInVoice = () => {
                     </div>
                 }
             />
+
+            <ListingModel {...{ show: downlaodPDF?.show, setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), downlaodPDF, entryType: "sales-invoice", rowData: downlaodPDF?.record, report, title: "Download Sales Invoice PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
         </div>
     );
 };

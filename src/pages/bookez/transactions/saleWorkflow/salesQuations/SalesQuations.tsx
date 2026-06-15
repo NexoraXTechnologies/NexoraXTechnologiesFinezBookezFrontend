@@ -442,7 +442,6 @@ const SalesQuotations = () => {
                     <div className="flex items-center gap-2">
                         <button id="sales-quotation-edit-button" onClick={(e) => {
                             setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
-                            // downloadPdfWithoutLibrary()
                         }
 
                         } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
@@ -459,7 +458,7 @@ const SalesQuotations = () => {
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
                                 const y = rect.top + window.scrollY - 5;
-                                setDownlaodPDF({ show: true, x, y });
+                                setConfirmTooltip({ show: true, x, y });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
@@ -508,7 +507,7 @@ const SalesQuotations = () => {
                 />
             )}
 
-            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-quotation", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Quotation PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
 
             {!fieldsLoading && (
                 <DynamicAddForm

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DataTable from "../../../../../components/DataTable";
@@ -14,9 +14,10 @@ import { fmtMoney, formatDateForList, loadAllTemplateOptions, money, num, safePe
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
-import Modal from "../../../../../components/modal";
+import Modal, { ListingModel } from "../../../../../components/modal";
 import { getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import professionalAxios from "../../../../../services/professionalAxios";
+import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
@@ -43,6 +44,8 @@ const SalesReturn = () => {
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
+    const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
+    const { report } = useSelector((s: any) => s.reportMapping);
 
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
@@ -427,6 +430,10 @@ const SalesReturn = () => {
         prepareFields();
     }, [transactionsSchema]);
 
+    useEffect(() => {
+        dispatch(getAllReportMapping({ moduleType: "salesReturn" }))
+    }, [])
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
@@ -449,6 +456,13 @@ const SalesReturn = () => {
                 emptyMessage={`No ${status} sales invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <button id="sales-quotation-edit-button" onClick={(e) => {
+                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                        }
+
+                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                            <Download size={16} />
+                        </button>
                         <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Edit size={16} />
                         </button>
@@ -580,6 +594,7 @@ const SalesReturn = () => {
                     </div>
                 }
             />
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-return", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Return PDF" }} />
         </div>
     );
 };
