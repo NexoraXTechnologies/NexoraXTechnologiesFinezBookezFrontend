@@ -136,93 +136,89 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
       ],
     },
 
-    {
-      name: 'TaxEZ',
+    // {
+    //   name: 'TaxEZ',
 
-      icon: <IndianRupee size={20} />,
-      children: [
-        // {
-        //   name: 'Company Master',
-        //   path: '/professional/master/company',
-        //   icon: <Building2 size={14} />,
-        // },
-        {
-          name: 'Document Management',
-          path: '/documentmngt',
-          icon: <FileCheck size={20} />,
-        },
-        {
-          name: 'Task Management',
-          path: '/taskmngt',
-          icon: <ListTodo size={20} />,
-        },
-        {
-          name: 'Income Tax Law',
-          path: '/incometx',
-          icon: <Scale size={20} />,
-        },
-        {
-          name: 'Income Tax',
-          path: '/incomFetax',
-          icon: <ReceiptIndianRupee size={20} />,
-          children: [
-            {
-              name: 'Add Tax Payer',
-              path: '/incometax/addtaxpayer',
-              icon: <UserPlus size={14} />,
-            },
-            {
-              name: 'File ITR',
-              path: '/incometax/fileitrlist',
-              // IMPORTANT
-              matchPaths: ['/incometax/fileitr', '/incometax/fileitrlist'],
-              icon: <FileArchive size={14} />,
-            },
+    //   icon: <IndianRupee size={20} />,
+    //   children: [
+      
+    //     {
+    //       name: 'Document Management',
+    //       path: '/documentmngt',
+    //       icon: <FileCheck size={20} />,
+    //     },
+    //     {
+    //       name: 'Task Management',
+    //       path: '/taskmngt',
+    //       icon: <ListTodo size={20} />,
+    //     },
+    //     {
+    //       name: 'Income Tax Law',
+    //       path: '/incometx',
+    //       icon: <Scale size={20} />,
+    //     },
+    //     {
+    //       name: 'Income Tax',
+    //       path: '/incomFetax',
+    //       icon: <ReceiptIndianRupee size={20} />,
+    //       children: [
+    //         {
+    //           name: 'Add Tax Payer',
+    //           path: '/incometax/addtaxpayer',
+    //           icon: <UserPlus size={14} />,
+    //         },
+    //         {
+    //           name: 'File ITR',
+    //           path: '/incometax/fileitrlist',
+    //           // IMPORTANT
+    //           matchPaths: ['/incometax/fileitr', '/incometax/fileitrlist'],
+    //           icon: <FileArchive size={14} />,
+    //         },
 
-            {
-              name: 'Form 26AS',
-              path: '/incometax/form26as',
-              icon: <BookCheck size={14} />,
-            },
-            {
-              name: 'Annual Information Statement', // FULL TITLE
-              label: 'AIS', // SIDEBAR TEXT
-              path: '/incometax/ais',
-              icon: <Contact size={14} />,
-            },
-            {
-              name: 'Taxpayer Information Summary',
-              label: 'TIS',
-              path: '/incometax/tis',
-              icon: <BookUser size={14} />,
-            },
+    //         {
+    //           name: 'Form 26AS',
+    //           path: '/incometax/form26as',
+    //           icon: <BookCheck size={14} />,
+    //         },
+    //         {
+    //           name: 'Annual Information Statement', // FULL TITLE
+    //           label: 'AIS', // SIDEBAR TEXT
+    //           path: '/incometax/ais',
+    //           icon: <Contact size={14} />,
+    //         },
+    //         {
+    //           name: 'Taxpayer Information Summary',
+    //           label: 'TIS',
+    //           path: '/incometax/tis',
+    //           icon: <BookUser size={14} />,
+    //         },
 
-            {
-              name: 'Check Your Refund Status',
-              label: 'Refund Status',
-              path: '/incometax/refund',
-              icon: <BanknoteArrowDown size={14} />,
-            },
-            {
-              name: 'Reset Your IncomeTax Password',
-              label: 'Reset Password',
-              path: '/incometax/resetitrpassword',
-              icon: <ListRestart size={14} />,
-            },
-            {
-              name: 'Upload Form 16',
-              path: '/incometax/uploadform16',
-              icon: <CloudUpload size={14} />,
-            },
-            {
-              name: 'Download ITRs',
-              path: '/incometax/downloaditr',
-              icon: <Download size={14} />,
-            },
-          ],
-        },
-      ],
-    },
+    //         {
+    //           name: 'Check Your Refund Status',
+    //           label: 'Refund Status',
+    //           path: '/incometax/refund',
+    //           icon: <BanknoteArrowDown size={14} />,
+    //         },
+    //         {
+    //           name: 'Reset Your IncomeTax Password',
+    //           label: 'Reset Password',
+    //           path: '/incometax/resetitrpassword',
+    //           icon: <ListRestart size={14} />,
+    //         },
+    //         {
+    //           name: 'Upload Form 16',
+    //           path: '/incometax/uploadform16',
+    //           icon: <CloudUpload size={14} />,
+    //         },
+    //         {
+    //           name: 'Download ITRs',
+    //           path: '/incometax/downloaditr',
+    //           icon: <Download size={14} />,
+    //         },
+    //       ],
+    //     },
+    //   ],
+    // },
     {
       name: 'Company Master',
       path: '/master/company',

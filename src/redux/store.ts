@@ -62,6 +62,11 @@ import stockLedgerReducer from "./slices/professionalSlice/ledgerReports/stockLe
 
 // bookEz register
 import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
+import purchaseRegisterReducer from "./slices/professionalSlice/bookEzRegister/purchaseRegisterSlice";
+import receiptRegisterReducer from "./slices/professionalSlice/bookEzRegister/receiptRegisterSlice";
+import paymentRegisterReducer from "./slices/professionalSlice/bookEzRegister/paymentRegisterSlice";
+
+
 
 export const store = configureStore({
   reducer: {
@@ -127,6 +132,11 @@ export const store = configureStore({
 
     // bookEz register
     salesregister: salesRegisterReducer,
+    purchaseRegister: purchaseRegisterReducer,
+    receiptRegister: receiptRegisterReducer,
+    paymentRegister: paymentRegisterReducer,
+
+
 
   },
 });
