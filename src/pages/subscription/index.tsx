@@ -48,7 +48,7 @@ const formatDuration = (months: any) => {
 const Subscription = () => {
     const dispatch = useDispatch();
     const { plans, currentPlan } = useSelector((e: any) => e.plans);
-    const [selectedCategory] = useState("All Plans");
+    // const [selectedCategory] = useState("All Plans");
     const [search, setSearch] = useState("");
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [coupon, setCoupon] = useState("");

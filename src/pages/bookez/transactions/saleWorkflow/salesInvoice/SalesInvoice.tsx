@@ -480,7 +480,7 @@ const SalesInVoice = () => {
                 emptyMessage={`No ${status} sales invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button id="sales-quotation-edit-button" onClick={(e) => {
+                        <button id="sales-quotation-edit-button" onClick={() => {
                             setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
                         }
 
@@ -619,7 +619,7 @@ const SalesInVoice = () => {
                     </div>
                 }
             />
-
+            {/* @ts-ignore  */}
             <ListingModel {...{ show: downlaodPDF?.show, setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), downlaodPDF, entryType: "sales-invoice", rowData: downlaodPDF?.record, report, title: "Download Sales Invoice PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
         </div>
     );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Building2, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, Factory, BadgeIndianRupee, ShoppingCart } from 'lucide-react';
+import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, Factory, BadgeIndianRupee, ShoppingCart } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'

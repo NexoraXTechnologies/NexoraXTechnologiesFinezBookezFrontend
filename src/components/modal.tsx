@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PrimaryButton, SecondaryButton } from "./buttons";
 import { LogOut, X } from "lucide-react";

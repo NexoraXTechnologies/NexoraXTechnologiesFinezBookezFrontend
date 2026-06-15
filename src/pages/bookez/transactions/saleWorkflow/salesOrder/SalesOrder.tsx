@@ -468,6 +468,7 @@ const SalesOrder = () => {
     }, [templateFields?.footer, footerValues]);
 
     useEffect(() => {
+        // @ts-ignore 
         dispatch(getAllReportMapping({ moduleType: "salesOrder" }))
     }, [])
 
@@ -493,7 +494,7 @@ const SalesOrder = () => {
                 emptyMessage={`No ${status} sales order found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button id="sales-quotation-edit-button" onClick={(e) => {
+                        <button id="sales-quotation-edit-button" onClick={() => {
                             setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
                         }
 
@@ -632,7 +633,7 @@ const SalesOrder = () => {
                     </div>
                 }
             />
-
+            {/* @ts-ignore  */}
             <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-order", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF"}} />
         </div>
     );

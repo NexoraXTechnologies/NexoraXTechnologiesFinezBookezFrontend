@@ -14,7 +14,6 @@ import { addSalesQuotation, deleteSalesQuotation, getSalesQuotationList, updateS
 import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
-import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { ListingModel } from "../../../../../components/modal";
 
@@ -39,8 +38,8 @@ const SalesQuotations = () => {
     const [errors, setErrors] = useState<any>({});
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-    const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
-    const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
+    const [confirmTooltip, setConfirmTooltip]:any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
   
     const { report } = useSelector((s: any) => s.reportMapping);
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
@@ -415,6 +414,7 @@ const SalesQuotations = () => {
     }, [transactionsSchema]);
 
     useEffect(() => {
+        {/* @ts-ignore  */ }
         dispatch(getAllReportMapping({ moduleType: "salesQuotation" }))
     }, [])
 
@@ -440,8 +440,8 @@ const SalesQuotations = () => {
                 emptyMessage={`No ${status} sales quotation found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button id="sales-quotation-edit-button" onClick={(e) => {
-                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                        <button id="sales-quotation-edit-button" onClick={() => {
+                            setDownlaodPDF((pre: any) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
                         }
 
                         } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
@@ -506,7 +506,7 @@ const SalesQuotations = () => {
                     onCancel={() => setDownlaodPDF({ show: false, x: null, y: null, })}
                 />
             )}
-
+            {/* @ts-ignore  */}
             <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-quotation", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Quotation PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
 
             {!fieldsLoading && (
