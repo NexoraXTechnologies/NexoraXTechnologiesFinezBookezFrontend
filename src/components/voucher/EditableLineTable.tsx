@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import { SelectInput, TextInput } from "../inputs";
+import { AutoSelectInput, SelectInput, TextInput } from "../inputs";
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 import { AnimatePresence, motion } from "framer-motion"
 type ColumnType = "select" | "text" | "number";
@@ -258,7 +258,7 @@ const EditableLineTable = ({
                                                 >
                                                     <div className="min-w-0">
                                                         {col.type === "select" ? (
-                                                            <SelectInput
+                                                            <AutoSelectInput
                                                                 label=""
                                                                 mandatory={false}
                                                                 value={row[col.key] || ""}

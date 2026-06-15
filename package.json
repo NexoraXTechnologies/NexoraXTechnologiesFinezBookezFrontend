@@ -27,6 +27,7 @@
     "react-onesignal": "^3.0.1",
     "react-redux": "^9.3.0",
     "react-router-dom": "^7.15.1",
+    "react-select": "^5.10.2",
     "react-spinners": "^0.17.0",
     "react-toastify": "^11.1.0",
     "tailwindcss": "^4.3.0",

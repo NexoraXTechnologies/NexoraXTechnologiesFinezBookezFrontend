@@ -11,6 +11,7 @@ type AccountParams = {
     accountCode?: string,
     fromDate?: string,
     toDate?: string
+    exportType?: "" | "pdf" | "excel";
 }
 
 export const getAccountLedger = createAsyncThunk<
@@ -26,11 +27,16 @@ export const getAccountLedger = createAsyncThunk<
             accountCode = "",
             fromDate = "",
             toDate = "",
+            exportType = "",
+
         }: AccountParams = {},
 
         { rejectWithValue }) => {
         try {
-            const params: any = { offset, limit, accountCode, fromDate, toDate }
+            const params: any = { offset, limit, accountCode, fromDate, toDate, exportType }
+            if (exportType) {
+                params.exportType = exportType;
+            }
 
             const res = await professionalAxios.get("/eTaxSolnMongoApiBackend/users/reporting/ledger/transactions", { params })
             if (!res.data?.success) {
@@ -55,7 +61,7 @@ const accountLedgerSlice = createSlice({
         addLoader: false,
         listingLoader: false,
         deleteLoader: false,
-
+        totals: {},
         accountLedger: [] as any[],
         error: null as string | null,
         pagination: {
@@ -88,7 +94,8 @@ const accountLedgerSlice = createSlice({
             .addCase(getAccountLedger.fulfilled, (state, action) => {
                 state.listingLoader = false;
                 state.pagination = action.payload?.pagination ?? state.pagination;
-                state.accountLedger = action.payload?.records ?? [];
+                state.accountLedger = action.payload?.transactions ?? [];
+                state.totals = action.payload?.totals ?? {};
             })
             .addCase(getAccountLedger.rejected, (state, action) => {
                 state.listingLoader = false;
@@ -100,5 +107,6 @@ const accountLedgerSlice = createSlice({
 
 
 
-export const {clearAccountLedgerState}=accountLedgerSlice.actions;
+export const { clearAccountLedgerState } = accountLedgerSlice.actions;
 export default accountLedgerSlice.reducer;
+

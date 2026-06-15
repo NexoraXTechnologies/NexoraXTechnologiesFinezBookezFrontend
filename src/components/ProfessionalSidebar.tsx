@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Building2, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, Factory, BadgeIndianRupee, ShoppingCart } from 'lucide-react';
+import { LogOut, IdCard, Users, FileCheck, ListTodo, Settings, ChevronDown, ChevronRight, Building2, ReceiptIndianRupee, BookCheck, Contact, BookUser, UserPlus, FileArchive, CloudUpload, Sliders, CloudCog, Scale, BanknoteArrowDown, Download, ListRestart, IndianRupee, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, Factory, BadgeIndianRupee, ShoppingCart, BarChart3 } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
@@ -127,11 +127,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
 
 
-        // {
-        //   name: 'Company Master',
-        //   path: '/professional/master/company',
-        //   icon: <Building2 size={14} />,
-        // },
+        {
+          name: "Reports",
+          path: "/bookEz/reports",
+          icon: <BarChart3 size={14} />,
+        },
 
       ],
     },
@@ -141,7 +141,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
     //   icon: <IndianRupee size={20} />,
     //   children: [
-      
+
     //     {
     //       name: 'Document Management',
     //       path: '/documentmngt',
