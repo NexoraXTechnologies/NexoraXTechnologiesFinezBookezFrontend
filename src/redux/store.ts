@@ -57,6 +57,15 @@ import getAllTransactionSchema from "./slices/professionalSlice/transactionSchem
 // ledger report
 import accountReceivableReducer from "./slices/professionalSlice/ledgerReports/accountsReceivableSlice"
 import accountLedgerReducer from "./slices/professionalSlice/ledgerReports/accountLedgerSlice";
+import stockLedgerReducer from "./slices/professionalSlice/ledgerReports/stockLedgerSlice";
+
+
+// bookEz register
+import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
+import purchaseRegisterReducer from "./slices/professionalSlice/bookEzRegister/purchaseRegisterSlice";
+import receiptRegisterReducer from "./slices/professionalSlice/bookEzRegister/receiptRegisterSlice";
+import paymentRegisterReducer from "./slices/professionalSlice/bookEzRegister/paymentRegisterSlice";
+
 
 
 export const store = configureStore({
@@ -115,11 +124,17 @@ export const store = configureStore({
     purchaseInvoice: purchaseInvoiceReducer,
     payment: paymentReducer,
     getAllTransactionSchema,
-    
+
     // ledger report 
     accountReceivable: accountReceivableReducer,
-    accountLedger:accountLedgerReducer
+    accountLedger: accountLedgerReducer,
+    stockLedger: stockLedgerReducer,
 
+    // bookEz register
+    salesregister: salesRegisterReducer,
+    purchaseRegister: purchaseRegisterReducer,
+    receiptRegister: receiptRegisterReducer,
+    paymentRegister: paymentRegisterReducer,
 
 
 

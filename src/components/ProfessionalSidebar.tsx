@@ -141,11 +141,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
     //   icon: <IndianRupee size={20} />,
     //   children: [
-    //     // {
-    //     //   name: 'Company Master',
-    //     //   path: '/professional/master/company',
-    //     //   icon: <Building2 size={14} />,
-    //     // },
+      
     //     {
     //       name: 'Document Management',
     //       path: '/documentmngt',
