@@ -9,6 +9,7 @@ type GetAllSalesInvoiceReturnParams = {
   limit?: number;
   offset?: number;
   search?: string;
+  voucherNumber?: string;
   status?: "open" | "close";
 };
 
@@ -89,7 +90,7 @@ export const getAllSalesInvoiceReturn = createAsyncThunk<
 >(
   "salesInvoiceReturn/getAllSalesInvoiceReturn",
   async (
-    { limit = 200, offset = 0, search = "", status = "open" } = {},
+    { limit = 200, offset = 0, search = "", status = "open", voucherNumber = "" } = {},
     { rejectWithValue }
   ) => {
     try {
@@ -97,6 +98,7 @@ export const getAllSalesInvoiceReturn = createAsyncThunk<
         limit,
         offset,
         status,
+        voucherNumber,
       };
 
       if (search?.trim()) {
@@ -131,44 +133,6 @@ export const getAllSalesInvoiceReturn = createAsyncThunk<
   }
 );
 
-/* ===================================================
-   GET SALES INVOICE RETURN BY VOUCHER NUMBER
-=================================================== */
-
-export const getSalesInvoiceReturnByVoucherNumber = createAsyncThunk<
-  any,
-  string,
-  { rejectValue: RejectValue }
->(
-  "salesInvoiceReturn/getSalesInvoiceReturnByVoucherNumber",
-  async (voucherNumber, { rejectWithValue }) => {
-    try {
-      const res = await professionalAxios.get(
-        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/getByVoucherNumber/${voucherNumber}`
-      );
-
-      if (!res.data?.success) {
-        return rejectWithValue({
-          message: res.data?.message || "Failed to fetch sales invoice return",
-        });
-      }
-
-      return (
-        res.data?.data?.salesInvoiceReturn ||
-        res.data?.data?.record ||
-        res.data?.data ||
-        null
-      );
-    } catch (err: any) {
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          "Failed to fetch sales invoice return",
-      });
-    }
-  }
-);
 
 /* ===================================================
    UPDATE SALES INVOICE RETURN
@@ -308,28 +272,6 @@ const salesInvoiceReturnSlice = createSlice({
         state.pagination = null;
       })
 
-      /* ================= GET BY VOUCHER ================= */
-      .addCase(getSalesInvoiceReturnByVoucherNumber.pending, (state) => {
-        state.detailsLoading = true;
-        state.error = null;
-        state.selectedSalesInvoiceReturn = null;
-      })
-      .addCase(
-        getSalesInvoiceReturnByVoucherNumber.fulfilled,
-        (state, action) => {
-          state.detailsLoading = false;
-          state.selectedSalesInvoiceReturn = action.payload;
-        }
-      )
-      .addCase(
-        getSalesInvoiceReturnByVoucherNumber.rejected,
-        (state, action) => {
-          state.detailsLoading = false;
-          state.error =
-            action.payload?.message || "Failed to fetch sales invoice return";
-          state.selectedSalesInvoiceReturn = null;
-        }
-      )
 
       /* ================= UPDATE ================= */
       .addCase(updateSalesInvoiceReturn.pending, (state) => {

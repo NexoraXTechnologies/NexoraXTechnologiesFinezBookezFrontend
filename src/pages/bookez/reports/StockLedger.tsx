@@ -404,8 +404,8 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                     getAllSalesInvoiceReturn({
                         offset: 0,
                         limit: 10,
-                        search: voucherNumber,
-                        status: "",
+                        voucherNumber: voucherNumber,
+                        // status: "",
                     }) as any
                 ).unwrap();
 
@@ -439,8 +439,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                     getAllSalesInvoice({
                         offset: 0,
                         limit: 10,
-                        sInvVoucherNumber: voucherNumber,
-                        status: "",
+                        search: voucherNumber,
                     }) as any
                 ).unwrap();
 
