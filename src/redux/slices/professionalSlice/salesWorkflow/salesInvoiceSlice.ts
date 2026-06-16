@@ -129,45 +129,6 @@ export const getAllSalesInvoice = createAsyncThunk<
 );
 
 /* ===================================================
-   GET SALES INVOICE BY VOUCHER NUMBER
-=================================================== */
-
-export const getSalesInvoiceByVoucherNumber = createAsyncThunk<
-  any,
-  string,
-  { rejectValue: RejectValue }
->(
-  "salesInvoice/getSalesInvoiceByVoucherNumber",
-  async (voucherNumber, { rejectWithValue }) => {
-    try {
-      const res = await professionalAxios.get(
-        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/getByVoucherNumber/${voucherNumber}`
-      );
-
-      if (!res.data?.success) {
-        return rejectWithValue({
-          message: res.data?.message || "Failed to fetch sales invoice",
-        });
-      }
-
-      return (
-        res.data?.data?.salesInvoice ||
-        res.data?.data?.record ||
-        res.data?.data ||
-        null
-      );
-    } catch (err: any) {
-      return rejectWithValue({
-        message:
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          "Failed to fetch sales invoice",
-      });
-    }
-  }
-);
-
-/* ===================================================
    UPDATE SALES INVOICE
 =================================================== */
 
@@ -305,22 +266,7 @@ const salesInvoiceSlice = createSlice({
         state.pagination = null;
       })
 
-      /* ================= GET BY VOUCHER ================= */
-      .addCase(getSalesInvoiceByVoucherNumber.pending, (state) => {
-        state.detailsLoading = true;
-        state.error = null;
-        state.selectedSalesInvoice = null;
-      })
-      .addCase(getSalesInvoiceByVoucherNumber.fulfilled, (state, action) => {
-        state.detailsLoading = false;
-        state.selectedSalesInvoice = action.payload;
-      })
-      .addCase(getSalesInvoiceByVoucherNumber.rejected, (state, action) => {
-        state.detailsLoading = false;
-        state.error =
-          action.payload?.message || "Failed to fetch sales invoice";
-        state.selectedSalesInvoice = null;
-      })
+      
 
       /* ================= UPDATE ================= */
       .addCase(updateSalesInvoice.pending, (state) => {
