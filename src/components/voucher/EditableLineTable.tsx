@@ -21,6 +21,7 @@ export type EditableColumn = {
 type EditableLineTableProps = {
     bodyTitle: string;
     isAddButton: boolean;
+    isView: boolean;
     addButtonText?: string;
     rows: any[];
     columns: EditableColumn[];
@@ -36,6 +37,7 @@ type EditableLineTableProps = {
 
 const EditableLineTable = ({
     bodyTitle,
+    isView,
     addButtonText = "Add Row",
     rows = [],
     columns = [],
@@ -86,15 +88,22 @@ const EditableLineTable = ({
                     {bodyTitle}
                 </h3>
 
-                {isAddButton && (
-                    <button
-                        type="button"
-                        onClick={onAddRow}
-                        className="flex items-center gap-2 rounded border border-sky-600 px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50"
-                    >
-                        <Plus size={16} />
-                        {addButtonText}
-                    </button>
+                {isView ? (
+                    <></>
+                ) : (
+
+                    <>
+                        {isAddButton && (
+                            <button
+                                type="button"
+                                onClick={onAddRow}
+                                className="flex items-center gap-2 rounded border border-sky-600 px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50"
+                            >
+                                <Plus size={16} />
+                                {addButtonText}
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
             <div className="relative w-full max-w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
@@ -148,18 +157,25 @@ const EditableLineTable = ({
                                 ))}
 
                                 {/* RIGHT STICKY HEADER */}
-                                <th
-                                    className="
-                                    sticky right-0 top-0 z-[80]
-                                    w-auto whitespace-nowrap
-                                    bg-slate-100
-                                    border-b border-l border-slate-200
-                                    px-4 py-3
-                                    text-center text-xs font-bold uppercase tracking-wide text-slate-700
-                                "
-                                >
-                                    Action
-                                </th>
+
+                                {isView ? (
+                                    <>
+                                    </>
+                                ) : (
+
+                                    <th
+                                        className="
+                                       sticky right-0 top-0 z-[80]
+                                       w-auto whitespace-nowrap
+                                       bg-slate-100
+                                       border-b border-l border-slate-200
+                                       px-4 py-3
+                                       text-center text-xs font-bold uppercase tracking-wide text-slate-700
+                                       "
+                                    >
+                                        Action
+                                    </th>
+                                )}
                             </tr>
                         </thead>
 
@@ -325,9 +341,15 @@ const EditableLineTable = ({
                                             ))}
 
                                             {/* RIGHT STICKY ACTION CELL */}
-                                            <motion.td
-                                                layout
-                                                className="
+
+                                            {isView ? (
+                                                <></>
+                                            ) : (
+
+
+                                                <motion.td
+                                                    layout
+                                                    className="
                                                     sticky right-0 z-[50]
                                                     w-auto whitespace-nowrap
                                                     bg-white
@@ -337,15 +359,15 @@ const EditableLineTable = ({
                                                     transition-colors
                                                     group-hover:bg-slate-50
                                                 "
-                                            >
-                                                <div className="flex w-max items-center justify-center gap-2">
-                                                    {isRefrenceAction && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                onRefrenceRow(rowIndex, row)
-                                                            }
-                                                            className="
+                                                >
+                                                    <div className="flex w-max items-center justify-center gap-2">
+                                                        {isRefrenceAction && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    onRefrenceRow(rowIndex, row)
+                                                                }
+                                                                className="
                                                                     inline-flex items-center justify-center gap-1.5
                                                                     rounded-lg
                                                                     border border-blue-200
@@ -357,22 +379,22 @@ const EditableLineTable = ({
                                                                     hover:border-blue-300 hover:bg-blue-100 hover:text-blue-700
                                                                     active:scale-[0.98]
                                                                 "
-                                                        >
-                                                            <Plus size={14} />
+                                                            >
+                                                                <Plus size={14} />
 
-                                                            <span className="whitespace-nowrap">
-                                                                {getReferenceButtonText(
-                                                                    row,
-                                                                    rowIndex
-                                                                )}
-                                                            </span>
-                                                        </button>
-                                                    )}
+                                                                <span className="whitespace-nowrap">
+                                                                    {getReferenceButtonText(
+                                                                        row,
+                                                                        rowIndex
+                                                                    )}
+                                                                </span>
+                                                            </button>
+                                                        )}
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onDeleteRow(rowIndex)}
-                                                        className="
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onDeleteRow(rowIndex)}
+                                                            className="
                                                     inline-flex h-7 w-7 items-center justify-center
                                                     rounded-lg
                                                     border border-red-200
@@ -383,12 +405,13 @@ const EditableLineTable = ({
                                                     hover:border-red-300 hover:bg-red-100 hover:text-red-700
                                                     active:scale-[0.96]
                                                 "
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </motion.td>
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </motion.td>
+                                            )}
                                         </motion.tr>
                                     ))}
                                 </AnimatePresence>

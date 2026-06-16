@@ -98,7 +98,7 @@ const AccountLedger = () => {
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-const todayDate = new Date().toISOString().split("T")[0];
+    const todayDate = new Date().toISOString().split("T")[0];
     const [fromDate, setFromDate] = useState(todayDate);
     const [toDate, setToDate] = useState(todayDate);
     const [account, setAccount] = useState("");
@@ -282,28 +282,56 @@ const todayDate = new Date().toISOString().split("T")[0];
                 "
             >
                 <ReportFilterCard
-                    fromDate={fromDate}
-                    toDate={toDate}
-                    accountValue={account}
-                    accountOptions={accountOptions}
-                    onFromDateChange={(value: string) => {
-                        setFromDate(value);
-                        setLocalOffset(0);
-                    }}
-                    onToDateChange={(value: string) => {
-                        setToDate(value);
-                        setLocalOffset(0);
-                    }}
-                    onAccountChange={(value: string) => {
-                        setAccount(value);
-                        setLocalOffset(0);
-                    }}
+                    title="Account Ledger Filters"
+                    fields={[
+                        {
+                            key: "fromDate",
+                            type: "date",
+                            label: "From Date",
+                            value: fromDate,
+                            onChange: (value) => {
+                                setFromDate(value);
+                                setLocalOffset(0);
+                            },
+                            required: true,
+                        },
+                        {
+                            key: "toDate",
+                            type: "date",
+                            label: "To Date",
+                            value: toDate,
+                            onChange: (value) => {
+                                setToDate(value);
+                                setLocalOffset(0);
+                            },
+                            required: true,
+                        },
+                        {
+                            key: "account",
+                            type: "select",
+                            label: "Customer / Vendor",
+                            placeholder: "Select Customer / Vendor",
+                            value: account,
+                            options: accountOptions,
+                            onChange: (value) => {
+                                setAccount(value);
+                                setLocalOffset(0);
+                            },
+                            required: true,
+
+                            // ✅ This makes select field full width
+                            colSpan: "full",
+                        },
+                    ]}
+                    gridCols="2"
                     onDownloadPdf={handleDownloadPdf}
                     onDownloadExcel={handleDownloadExcel}
                     downloadDisabled={!account || exportLoader}
+                    downloadDisabledMessage="Please select customer/vendor to download report."
                 />
 
                 <AccountSummaryCard
+                    title="Account"
                     accountName={selectedAccountName}
                     summaryItems={summaryItems}
                     finalLabel="Remaining Balance"

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 type VoucherFormModalProps = {
     show: boolean;
+    isView: boolean;
     setShow: (value: boolean) => void;
     title: string;
     subtitle?: string;
@@ -16,6 +17,7 @@ type VoucherFormModalProps = {
 
 const VoucherFormModal = ({
     show,
+    isView,
     setShow,
     title,
     edit = false,
@@ -62,15 +64,28 @@ const VoucherFormModal = ({
                                     <ArrowLeft size={20} />
                                 </button>
 
-                                <div className="min-w-0">
-                                    <h2 className="truncate text-lg font-semibold text-slate-900">
-                                        {edit ? `Edit ${title}` : `Add New ${title}`}
-                                    </h2>
+                                {isView ? (
+                                    <div className="min-w-0">
+                                        <h2 className="truncate text-lg font-semibold text-slate-900">
+                                            {edit ? `${title}` : `${title}`}
+                                        </h2>
 
-                                    <p className="truncate text-sm text-slate-500">
-                                        Fill in the {title.toLowerCase()} details below
-                                    </p>
-                                </div>
+                                        <p className="truncate text-sm text-slate-500">
+                                            {title.toLowerCase()} details below
+                                        </p>
+                                    </div>
+                                ) : (
+
+                                    <div className="min-w-0">
+                                        <h2 className="truncate text-lg font-semibold text-slate-900">
+                                            {edit ? `Edit ${title}` : `Add New ${title}`}
+                                        </h2>
+
+                                        <p className="truncate text-sm text-slate-500">
+                                            Fill in the {title.toLowerCase()} details below
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             <button
@@ -91,25 +106,31 @@ const VoucherFormModal = ({
                         </main>
 
                         {/* Footer */}
-                        <footer className="shrink-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-6">
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handleClose}
-                                    className="rounded-md bg-slate-100 px-6 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
-                                >
-                                    Cancel
-                                </button>
 
-                                <button
-                                    type="button"
-                                    onClick={onSubmit}
-                                    disabled={loading}
-                                    className="rounded-md bg-violet-600 px-7 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {loading ? "Saving..." : edit ? "Update" : "Save"}
-                                </button>
-                            </div>
+                        <footer className="shrink-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-6">
+                            {isView ? (
+                                <></>
+                            ) : (
+
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleClose}
+                                        className="rounded-md bg-slate-100 px-6 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={onSubmit}
+                                        disabled={loading}
+                                        className="rounded-md bg-violet-600 px-7 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {loading ? "Saving..." : edit ? "Update" : "Save"}
+                                    </button>
+                                </div>
+                            )}
                         </footer>
                     </motion.div>
                 </motion.div>
