@@ -5,6 +5,7 @@ import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import ReportFilterCard from "./ReportFilterCard";
 import AccountSummaryCard from "./AccountSummaryCard";
+
 import { getAccountLedger } from "../../../redux/slices/professionalSlice/ledgerReports/accountLedgerSlice";
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
 
@@ -19,6 +20,30 @@ const mainColumns = [
         render: (row: any) => (
             <span className="font-semibold text-slate-900">
                 {row?.module || "-"}
+            </span>
+        ),
+    },
+    {
+        key: "voucherDate",
+        title: "Voucher Date",
+        render: (row: any) => {
+            const date = row?.voucherDate
+                ? new Date(row.voucherDate).toLocaleDateString("en-IN")
+                : "-";
+
+            return (
+                <span className="font-medium text-slate-700">
+                    {date}
+                </span>
+            );
+        },
+    },
+    {
+        key: "remark",
+        title: "Remark",
+        render: (row: any) => (
+            <span className="text-slate-700">
+                {row?.remark || "-"}
             </span>
         ),
     },
@@ -57,6 +82,7 @@ const AccountLedger = () => {
     const {
         accountLedger = [],
         listingLoader = false,
+        exportLoader = false,
         pagination = {},
         totals = {},
     } = useSelector((s: any) => s.accountLedger);
@@ -72,23 +98,21 @@ const AccountLedger = () => {
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
-    const [fromDate, setFromDate] = useState("2026-06-15");
-    const [toDate, setToDate] = useState("2026-06-15");
+const todayDate = new Date().toISOString().split("T")[0];
+    const [fromDate, setFromDate] = useState(todayDate);
+    const [toDate, setToDate] = useState(todayDate);
     const [account, setAccount] = useState("");
 
-    // Account dropdown API - only once
     useEffect(() => {
         dispatch(
             getAllAccounts({
                 offset: 0,
                 limit: 500,
-                accountType: "customer",
+                accountType: "customer , vendor",
             })
         );
     }, [dispatch]);
 
-    // Account Ledger API - hit on date/account/pagination change
     useEffect(() => {
         dispatch(
             getAccountLedger({
@@ -97,83 +121,141 @@ const AccountLedger = () => {
                 accountCode: account,
                 offset: localOffset,
                 limit: localLimit,
-                exportType: ""
             })
         );
     }, [dispatch, fromDate, toDate, account, localOffset, localLimit]);
 
+    const downloadBlobFile = (
+        blob: Blob,
+        fileName: string
+    ) => {
+        const url = window.URL.createObjectURL(blob);
 
-    const handleDownloadPdf = () => {
-        if (!account) return;
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
 
-        dispatch(
-            getAccountLedger({
-                fromDate,
-                toDate,
-                accountCode: account,
-                offset: localOffset,
-                limit: localLimit,
-                exportType: "pdf",
-            })
-        );
+        document.body.appendChild(link);
+        link.click();
+
+        link.remove();
+        window.URL.revokeObjectURL(url);
     };
 
-    const handleDownloadExcel = () => {
+    const handleDownloadPdf = async () => {
         if (!account) return;
 
-        dispatch(
-            getAccountLedger({
-                fromDate,
-                toDate,
-                accountCode: account,
-                offset: localOffset,
-                limit: localLimit,
-                exportType: "excel",
-            })
-        );
+        try {
+            const res = await dispatch(
+                getAccountLedger({
+                    fromDate,
+                    toDate,
+                    accountCode: account,
+                    offset: localOffset,
+                    limit: localLimit,
+                    exportType: "pdf",
+                })
+            ).unwrap();
+
+            if (res?.blob) {
+                downloadBlobFile(
+                    res.blob,
+                    `account-ledger-${account}.pdf`
+                );
+            }
+        } catch (error) {
+            console.log("PDF download failed", error);
+        }
     };
 
-    const formatAmount = (amount: any, type: "Dr" | "Cr" = "Dr") => {
-    return `₹${Number(amount || 0).toFixed(2)} ${type}`;
-};
+    const handleDownloadExcel = async () => {
+        if (!account) return;
+
+        try {
+            const res = await dispatch(
+                getAccountLedger({
+                    fromDate,
+                    toDate,
+                    accountCode: account,
+                    offset: localOffset,
+                    limit: localLimit,
+                    exportType: "excel",
+                })
+            ).unwrap();
+
+            if (res?.blob) {
+                downloadBlobFile(
+                    res.blob,
+                    `account-ledger-${account}.xlsx`
+                );
+            }
+        } catch (error) {
+            console.log("Excel download failed", error);
+        }
+    };
+
+    const normalizeType = (
+        type?: string,
+        fallback: "Dr" | "Cr" = "Dr"
+    ): "Dr" | "Cr" => {
+        if (type === "DEBIT") return "Dr";
+        if (type === "CREDIT") return "Cr";
+        if (type === "Dr" || type === "Cr") return type;
+
+        return fallback;
+    };
+
+    const formatAmount = (
+        amount: any,
+        type: "Dr" | "Cr" = "Dr"
+    ) => {
+        return `₹${Math.abs(Number(amount || 0)).toFixed(2)} ${type}`;
+    };
 
     const selectedAccountName =
         accountOptions.find((item: any) => item.value === account)?.label || "-";
+
+    const remainingBalanceType: "Dr" | "Cr" =
+        totals?.remainingBalanceType
+            ? normalizeType(totals?.remainingBalanceType, "Dr")
+            : Number(totals?.remainingBalance || 0) >= 0
+                ? "Dr"
+                : "Cr";
 
     const summaryItems = [
         {
             label: "Opening Balance Net Total",
             value: formatAmount(
                 totals?.openingBalanceNetTotal,
-                totals?.openingBalanceNetType || "Dr"
+                normalizeType(totals?.openingBalanceType, "Dr")
             ),
         },
         {
             label: "Sales Invoice Total",
             value: formatAmount(
                 totals?.salesInvoiceNetTotal,
-                totals?.salesInvoiceType || "Dr"
+                "Dr"
             ),
         },
         {
             label: "Sales Return Total",
             value: formatAmount(
-                totals?.salesReturnTotal,
-                totals?.salesReturnType || "Cr"
+                totals?.salesReturnNetTotal,
+                "Cr"
             ),
         },
         {
             label: "Receipt Total",
             value: formatAmount(
                 totals?.receiptNetTotal,
-                totals?.receiptType || "Cr"
+                "Cr"
             ),
         },
     ];
 
     const remainingBalance = formatAmount(
         totals?.remainingBalance,
-        totals?.remainingBalanceType || "Dr"
+        remainingBalanceType
     );
 
     return (
@@ -204,12 +286,21 @@ const AccountLedger = () => {
                     toDate={toDate}
                     accountValue={account}
                     accountOptions={accountOptions}
-                    onFromDateChange={setFromDate}
-                    onToDateChange={setToDate}
-                    onAccountChange={setAccount}
+                    onFromDateChange={(value: string) => {
+                        setFromDate(value);
+                        setLocalOffset(0);
+                    }}
+                    onToDateChange={(value: string) => {
+                        setToDate(value);
+                        setLocalOffset(0);
+                    }}
+                    onAccountChange={(value: string) => {
+                        setAccount(value);
+                        setLocalOffset(0);
+                    }}
                     onDownloadPdf={handleDownloadPdf}
                     onDownloadExcel={handleDownloadExcel}
-                    downloadDisabled={!account}
+                    downloadDisabled={!account || exportLoader}
                 />
 
                 <AccountSummaryCard
