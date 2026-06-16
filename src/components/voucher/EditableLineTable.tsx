@@ -35,21 +35,7 @@ type EditableLineTableProps = {
     isRefrenceAction: boolean;
 };
 
-const EditableLineTable = ({
-    bodyTitle,
-    isView,
-    addButtonText = "Add Row",
-    rows = [],
-    columns = [],
-    errors = {},
-    onAddRow,
-    onDeleteRow,
-    onRefrenceRow,
-    onChange,
-    isAddButton,
-    isRefrenceAction,
-    RefrenceBtnText,
-    emptyText = "No data found",
+const EditableLineTable = ({ bodyTitle, isView, addButtonText = "Add Row", rows = [], columns = [], errors = {}, onAddRow, onDeleteRow, onRefrenceRow, onChange, isAddButton, isRefrenceAction, RefrenceBtnText, emptyText = "No data found",
 }: EditableLineTableProps) => {
     const getReferenceButtonText = (row: any, rowIndex: number) => {
         if (typeof RefrenceBtnText === "function") {
@@ -78,8 +64,6 @@ const EditableLineTable = ({
         if (align === "center") return "text-center";
         return "text-left";
     };
-
-
 
     return (
         <div className="w-full max-w-full min-w-0">

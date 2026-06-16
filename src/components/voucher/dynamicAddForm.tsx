@@ -5,36 +5,8 @@ import VoucherFormModal from "./VoucherFormModal";
 import { DynamicFormContentSkeleton } from "../skeleton/SkeletonLoader";
 
 
-const DynamicAddForm = ({
-    show,
-    setShow,
-    edit,
-    title,
-    subtitle,
-    loading,
-    onClose,
-    onSubmit,
-    form,
-    errors,
-    handleAddRow,
-    handleRefRow,
-    handleDeleteRow,
-    handleRowChange,
-    inputData,
-    bodyKey,
-    addButtonText,
-    handleChange,
-    footerTotals,
-    headerChildTitle,
-    isAddButton = true,
-    isRefrenceAction = false,
-    RefrenceBtnText,
-    bodyTitle,
-    isView = false,
-
-    // ✅ New props for skeleton
-    contentLoading = false,
-    contentSkeleton,
+const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleRefRow, handleDeleteRow, handleRowChange, inputData, bodyKey, addButtonText, handleChange, footerTotals, headerChildTitle, isAddButton = true, isRefrenceAction = false, RefrenceBtnText, bodyTitle, isView = false,
+    contentLoading = false, contentSkeleton,
 }: any) => {
 
     const renderInput = (e: any) => {

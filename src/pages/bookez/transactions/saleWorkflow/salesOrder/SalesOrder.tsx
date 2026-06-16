@@ -277,6 +277,11 @@ const SalesOrder = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
+        if (duplicate) {
+            setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
+            return
+        }
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
