@@ -41,7 +41,7 @@ const cards: any = [
     title: "Sales Receipt",
     description: "Manage sales return transactions.",
     component: SalesReceipt,
-    icon: <RotateCcw size={22} />,
+    icon: <ReceiptText size={22} />,
   },
 ];
 

@@ -17,7 +17,7 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import ModulePageSkeleton from "../../../../../components/skeleton/SkeletonLoader";
 
 import {
-    fmtMoney,
+
     formatDateForInput,
     formatDateForList,
     loadAllTemplateOptions,
@@ -35,7 +35,6 @@ import {
     updateSalesReceipt,
     deleteSalesReceipt,
     getSalesReceiptList,
-    getSalesReceiptReferences,
     clearSalesReceiptReferences,
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
 import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
@@ -103,7 +102,6 @@ const SalesReceipt = () => {
 
     const {
         salesReceipt = [],
-        receiptReferences = [],
         pagination = defaultPagination,
         listingLoader = false,
         addLoader = false,

@@ -1031,6 +1031,7 @@ const ProductMaster = () => {
   }, [HSNCode])
 
   useEffect(() => {
+    // @ts-ignore 
     dispatch(getHSNCode({}))
   }, [])
 

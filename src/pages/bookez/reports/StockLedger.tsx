@@ -405,6 +405,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                         offset: 0,
                         limit: 10,
                         search: voucherNumber,
+                        // @ts-ignore 
                         status: "",
                     }) as any
                 ).unwrap();
@@ -440,6 +441,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                         offset: 0,
                         limit: 10,
                         sInvVoucherNumber: voucherNumber,
+                        // @ts-ignore 
                         status: "",
                     }) as any
                 ).unwrap();
