@@ -10,6 +10,7 @@ import SalesQuotations from "./salesQuations/SalesQuations";
 import SalesOrder from "./salesOrder/SalesOrder";
 import SalesInVoice from "./salesInvoice/SalesInvoice";
 import SalesReturn from "./salesReturn";
+import SalesReceipt from "./salesReceipt";
 
 const cards: any = [
   {
@@ -36,6 +37,12 @@ const cards: any = [
     component: SalesReturn,
     icon: <RotateCcw size={22} />,
   },
+  // {
+  //   title: "Sales Receipt",
+  //   description: "Manage sales return transactions.",
+  //   component: SalesReceipt,
+  //   icon: <RotateCcw size={22} />,
+  // },
 ];
 
 const SaleWorkflowDashboard = () => {
