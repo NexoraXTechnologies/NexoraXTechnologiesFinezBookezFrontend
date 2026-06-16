@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import eTaxSoln from '../assets/FinEZ.png';
 import LoginImgae from "../assets/loginBackground.jpg";
 import { sendProfessionalOtp, verifyProfessionalOtp, } from "../redux/slices/professionalSlice/professionalAuthSlice";
-import OneSignal from 'react-onesignal';
+// import OneSignal from 'react-onesignal';
 import { motion } from "framer-motion";
 import { AuthButton } from "../components/buttons";
 
@@ -186,8 +186,8 @@ const Login = () => {
         toast.success("OTP Verified!");
 
         // ✅ If user already exists
-        if (res.existingUser && res.userData) {
-          const user = res.userData;
+		  if (res.existingUser && res.userData) {
+			  const user = res.userData;
 
           const loginuser = user?.userMobileNumberHash; // required header loginuser
           const authtoken = user?.authTokenDigest; // required header authtoken
@@ -217,16 +217,15 @@ const Login = () => {
             }),
           );
           try {
-            if (user.userEmail) {
-              await OneSignal.login(user.userEmail);
-              console.log('📲 OneSignal logged in (PROFESSIONAL):', user.userEmail);
-            } else {
+			  if (user.userEmail) {
+				  // await OneSignal.login(user.userEmail);
+				  console.log('📲 OneSignal logged in (PROFESSIONAL):', user.userEmail);
+			  } else {
               console.warn('⚠️ No professional userEmail found for OneSignal login');
             }
           } catch (err) {
             console.error('❌ OneSignal PRO login error:', err);
           }
-
           navigate('/');
         }
 

@@ -1,3 +1,6 @@
+import Select from "react-select";
+
+
 const TextInput = (({ label = "", value, onChange, placeholder, name = "", mandatory = false, error = "", type = "text", maxLength = null, className = "", disabled = false }: any) => {
     return (
         <div className="w-full flex flex-col gap-1">
@@ -63,4 +66,168 @@ const SelectInput = (({ label, value, onChange, options, mandatory = false, erro
     </div>
 ))
 
-export { TextInput, SelectInput, TextArea }
+
+const AutoSelectInput = ({
+    label = "",
+    value,
+    onChange,
+    options = [],
+    mandatory = false,
+    error = "",
+    name = "",
+    placeholder = "Select",
+    disabled = false,
+}: any) => {
+    const normalizedOptions = (options || []).map((option: any, idx: number) => {
+        if (
+            option &&
+            typeof option === "object" &&
+            "label" in option &&
+            "value" in option
+        ) {
+            return {
+                ...option,
+                value: idx === 0 && option?.value === "" ? "" : option.value,
+            };
+        }
+
+        return {
+            label: String(option || ""),
+            value: option,
+        };
+    });
+
+    const selectedOption =
+        normalizedOptions.find(
+            (option: any) => String(option.value) === String(value ?? "")
+        ) || null;
+
+    return (
+        <div className="w-full flex flex-col gap-1">
+            {!!label?.length && (
+                <label className="text-sm font-medium text-gray-700">
+                    {label}
+                    {mandatory && <span className="text-red-500">*</span>}
+                </label>
+            )}
+
+            <Select
+                name={name}
+                value={selectedOption}
+                options={normalizedOptions}
+                placeholder={placeholder}
+                isDisabled={disabled}
+                isSearchable
+               isClearable={false}
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
+                classNamePrefix="common-select"
+                styles={{
+                    control: (base: any, state: any) => ({
+                        ...base,
+                        minHeight: "32px",
+                        height: "32px",
+                        borderRadius: "0.2rem",
+                        borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+                        boxShadow: state.isFocused
+                            ? "0 0 0 1px #bfdbfe"
+                            : "none",
+                        backgroundColor: disabled ? "#f9fafb" : "#ffffff",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        transition: "all 200ms",
+                        "&:hover": {
+                            borderColor: state.isFocused ? "#3b82f6" : "#9ca3af",
+                        },
+                    }),
+
+                    valueContainer: (base: any) => ({
+                        ...base,
+                        height: "30px",
+                        padding: "0 12px",
+                    }),
+
+                    input: (base: any) => ({
+                        ...base,
+                        margin: 0,
+                        padding: 0,
+                        color: "#1f2937",
+                        fontSize: "14px",
+                    }),
+
+                    singleValue: (base: any) => ({
+                        ...base,
+                        color: "#1f2937",
+                        fontSize: "14px",
+                    }),
+
+                    placeholder: (base: any) => ({
+                        ...base,
+                        color: "#9ca3af",
+                        fontSize: "14px",
+                    }),
+
+                    indicatorsContainer: (base: any) => ({
+                        ...base,
+                        height: "30px",
+                    }),
+
+                    dropdownIndicator: (base: any) => ({
+                        ...base,
+                        padding: "4px",
+                        color: "#6b7280",
+                    }),
+
+                    clearIndicator: (base: any) => ({
+                        ...base,
+                        padding: "4px",
+                        color: "#6b7280",
+                    }),
+
+                    indicatorSeparator: () => ({
+                        display: "none",
+                    }),
+
+                    menu: (base: any) => ({
+                        ...base,
+                        zIndex: 9999,
+                        fontSize: "14px",
+                    }),
+
+                    menuPortal: (base: any) => ({
+                        ...base,
+                        zIndex: 9999,
+                    }),
+
+                    option: (base: any, state: any) => ({
+                        ...base,
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        backgroundColor: state.isSelected
+                            ? "#dbeafe"
+                            : state.isFocused
+                                ? "#f3f4f6"
+                                : "#ffffff",
+                        color: "#1f2937",
+                    }),
+                }}
+                onChange={(selected: any) => {
+                    onChange({
+                        target: {
+                            name,
+                            value: selected?.value || "",
+                        },
+                    });
+                }}
+                noOptionsMessage={() => "No options found"}
+            />
+
+            {!!error?.length && (
+                <p className="text-xs text-red-500">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+};
+
+export { TextInput, SelectInput, TextArea,AutoSelectInput }

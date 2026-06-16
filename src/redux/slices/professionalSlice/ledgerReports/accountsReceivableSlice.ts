@@ -15,7 +15,7 @@ export const getAccountReceivable = createAsyncThunk<
     "accountReceivable/getAccountReceivable", async (_, { rejectWithValue }) => {
 
         try {
-            const res = await professionalAxios.get("/eTaxSolnMongoApiBackend/users/bookEZ/reporting/accountsReceivable")
+            const res = await professionalAxios.get("/eTaxSolnMongoApiBackend/users/bookEZ/reporting/accountsReceivable/customers")
 
             if (!res.data?.success) {
                 return rejectWithValue({
@@ -45,6 +45,11 @@ const accountReceivableSlice = createSlice({
         deleteLoader: false,
         accountReceivable: [] as any[],
         error: null as string | null,
+        summary: {
+            totalReceivableAmount: 0,
+        },
+
+        count: 0,
         pagination: {
             offset: 0,
             limit: 20,
@@ -78,13 +83,21 @@ const accountReceivableSlice = createSlice({
             })
             .addCase(getAccountReceivable.fulfilled, (state, action) => {
                 state.listingLoader = false;
-                state.pagination = action.payload?.pagination ?? state.pagination;
-                state.accountReceivable = action.payload?.records ?? [];
+                state.pagination = action.payload?.data?.pagination ?? state.pagination;
+                state.accountReceivable = action.payload?.data?.records ?? [];
+                state.summary=action.payload?.data?.summary
+                state.count=action.payload?.data?.count
             })
             .addCase(getAccountReceivable.rejected, (state, action) => {
                 state.listingLoader = false;
-                state.error = action.payload?.message || "failed to fetch account receivable";
-                state.accountReceivable = []
+                state.error =
+                    action.payload?.message || "failed to fetch account receivable";
+
+                state.accountReceivable = [];
+                state.summary = {
+                    totalReceivableAmount: 0,
+                };
+                state.count = 0;
             })
     }
 })

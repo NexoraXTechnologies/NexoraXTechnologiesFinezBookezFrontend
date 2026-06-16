@@ -14,13 +14,13 @@ export const getAllAccountMasterSchema = createAsyncThunk(
       isSearchable = "",
       isRequired = "",
       isFilterable = "",
-    } : {
+    }: {
       offset?: number;
       limit?: number;
       isSearchable?: string;
       isRequired?: string;
       isFilterable?: string;
-     },
+    },
     { rejectWithValue }
   ) => {
     try {
@@ -88,32 +88,89 @@ export const createAccount = createAsyncThunk(
 /* ===================================================
     GET ALL ACCOUNTS
 =================================================== */
+// export const getAllAccounts = createAsyncThunk(
+//   "accountMaster/getAllAccounts",
+//   async ({ offset = 0, limit = 10, search = "" ,accountType=""} : { offset?: number; limit?: number; search?: string ,accountType:string}, { rejectWithValue }) => {
+//     try {
+//       const params: { offset?: number; limit?: number; search?: string ,accountType?:string} = { offset, limit };
+//       if (search.trim()) params.search = search.trim();
+
+//       const res = await professionalAxios.get(
+//         "/eTaxSolnMongoApiBackend/accountMaster/getAllAccounts",
+//         { params }
+//       );
+
+//       if (!res.data?.success)
+//         return rejectWithValue({
+//           message: res.data?.message || "Failed to fetch accounts",
+//         });
+
+//       return res.data?.data;
+//     } catch (err: any) {
+//       return rejectWithValue({
+//         message: err?.response?.data?.message || "Failed to fetch accounts",
+//       });
+//     }
+//   }
+// );
+
+
 export const getAllAccounts = createAsyncThunk(
   "accountMaster/getAllAccounts",
-  async ({ offset = 0, limit = 10, search = "" } : { offset?: number; limit?: number; search?: string }, { rejectWithValue }) => {
+  async (
+    {
+      offset = 0,
+      limit = 10,
+      search = "",
+      accountType = "",
+    }: {
+      offset?: number;
+      limit?: number;
+      search?: string;
+      accountType?: string;
+    },
+    { rejectWithValue }
+  ) => {
     try {
-      const params: { offset?: number; limit?: number; search?: string } = { offset, limit };
-      if (search.trim()) params.search = search.trim();
+      const params: {
+        offset?: number;
+        limit?: number;
+        search?: string;
+        accountType?: string;
+      } = {
+        offset,
+        limit,
+      };
+
+      if (search.trim()) {
+        params.search = search.trim();
+      }
+
+      if (accountType.trim()) {
+        params.accountType = accountType.trim();
+      }
 
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/accountMaster/getAllAccounts",
         { params }
       );
 
-      if (!res.data?.success)
+      if (!res.data?.success) {
         return rejectWithValue({
           message: res.data?.message || "Failed to fetch accounts",
         });
+      }
 
       return res.data?.data;
     } catch (err: any) {
       return rejectWithValue({
-        message: err?.response?.data?.message || "Failed to fetch accounts",
+        message:
+          err?.response?.data?.message ||
+          "Failed to fetch accounts",
       });
     }
   }
 );
-
 /* ===================================================
     GET ACCOUNT BY CODE
 =================================================== */
@@ -182,7 +239,7 @@ export const deleteAccount = createAsyncThunk(
         });
 
       return accountCode;
-    } catch (err: any ) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to delete account",
       });
@@ -236,18 +293,18 @@ const accountMasterSlice = createSlice({
   extraReducers: (builder) => {
     /* ---------- GET ALL ---------- */
     builder
-      .addCase(getAllAccounts.pending, (state:any) => {
+      .addCase(getAllAccounts.pending, (state: any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(getAllAccounts.fulfilled, (state:any, action:any ) => {
+      .addCase(getAllAccounts.fulfilled, (state: any, action: any) => {
         state.loading = false;
         const data = action.payload;
 
         state.accounts = data.items ?? [];
         state.pagination = data.pagination ?? state.pagination;
       })
-      .addCase(getAllAccounts.rejected, (state:any, action:any) => {
+      .addCase(getAllAccounts.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.accounts = [];
@@ -255,14 +312,14 @@ const accountMasterSlice = createSlice({
 
     /* ---------- GET BY ACCOUNT CODE ---------- */
     builder
-      .addCase(getAccountByCode.pending, (state:any) => {
+      .addCase(getAccountByCode.pending, (state: any) => {
         state.loading = true;
       })
-      .addCase(getAccountByCode.fulfilled, (state:any, action:any) => {
+      .addCase(getAccountByCode.fulfilled, (state: any, action: any) => {
         state.loading = false;
         state.selectedAccount = action.payload ?? null;
       })
-      .addCase(getAccountByCode.rejected, (state:any, action:any) => {
+      .addCase(getAccountByCode.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -270,17 +327,17 @@ const accountMasterSlice = createSlice({
 
     /* ----------  Form ACCOUNT Master ---------- */
     builder
-      .addCase(getAllAccountMasterSchema.pending, (state:any) => {
+      .addCase(getAllAccountMasterSchema.pending, (state: any) => {
         state.schemaLoading = true;
         state.error = null;
       })
 
-      .addCase(getAllAccountMasterSchema.fulfilled, (state:any, action:any) => {
+      .addCase(getAllAccountMasterSchema.fulfilled, (state: any, action: any) => {
         state.schemaLoading = false;
         state.accountMasterSchemaFields = action.payload?.fields || [];
       })
 
-      .addCase(getAllAccountMasterSchema.rejected, (state:any, action:any) => {
+      .addCase(getAllAccountMasterSchema.rejected, (state: any, action: any) => {
         state.schemaLoading = false;
         state.error =
           action.payload?.message || "Failed to fetch account schema";
@@ -288,10 +345,10 @@ const accountMasterSlice = createSlice({
 
     /* ---------- CREATE ACCOUNT ---------- */
     builder
-      .addCase(createAccount.pending, (state:any) => {
+      .addCase(createAccount.pending, (state: any) => {
         state.createLoading = true;
       })
-      .addCase(createAccount.fulfilled, (state:any, action:any) => {
+      .addCase(createAccount.fulfilled, (state: any, action: any) => {
         state.createLoading = false;
 
         if (action.payload) {
@@ -299,17 +356,17 @@ const accountMasterSlice = createSlice({
           state.pagination.totalDocs += 1;
         }
       })
-      .addCase(createAccount.rejected, (state:any, action:any) => {
+      .addCase(createAccount.rejected, (state: any, action: any) => {
         state.createLoading = false;
         state.error = action.payload?.message;
       });
 
     /* ---------- UPDATE ACCOUNT ---------- */
     builder
-      .addCase(updateAccount.pending, (state:any) => {
+      .addCase(updateAccount.pending, (state: any) => {
         state.updateLoading = true;
       })
-      .addCase(updateAccount.fulfilled, (state:any, action:any) => {
+      .addCase(updateAccount.fulfilled, (state: any, action: any) => {
         state.updateLoading = false;
 
         const updated = action.payload;
@@ -319,17 +376,17 @@ const accountMasterSlice = createSlice({
           acc.accountCode === updated.accountCode ? updated : acc
         );
       })
-      .addCase(updateAccount.rejected, (state:any, action:any) => {
+      .addCase(updateAccount.rejected, (state: any, action: any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });
 
     /* ---------- DELETE ACCOUNT ---------- */
     builder
-      .addCase(deleteAccount.pending, (state:any) => {
+      .addCase(deleteAccount.pending, (state: any) => {
         state.deleteLoading = true;
       })
-      .addCase(deleteAccount.fulfilled, (state:any, action:any) => {
+      .addCase(deleteAccount.fulfilled, (state: any, action: any) => {
         state.deleteLoading = false;
 
         const removedCode = action.payload;
@@ -342,7 +399,7 @@ const accountMasterSlice = createSlice({
           state.pagination.totalDocs - 1
         );
       })
-      .addCase(deleteAccount.rejected, (state:any, action:any) => {
+      .addCase(deleteAccount.rejected, (state: any, action: any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message;
       });

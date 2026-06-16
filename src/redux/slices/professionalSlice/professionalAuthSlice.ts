@@ -72,10 +72,11 @@ export const verifyProfessionalOtp = createAsyncThunk(
 
         const exists = checkUserRes.data.success === true;
         const userData = exists ? checkUserRes.data.data.ChildUsers : null;
-
+        console.log("Done in thunk")
         return { existingUser: exists, userData };
       } catch (err: any) {
         if (err.response?.status === 404) {
+          console.log({ err })
           return { existingUser: false, userData: null };
         }
         throw err;
