@@ -4,6 +4,7 @@ type SummaryItem = {
 };
 
 type AccountSummaryCardProps = {
+    title: string;
     accountName: string;
     summaryItems: SummaryItem[];
     finalLabel?: string;
@@ -11,18 +12,19 @@ type AccountSummaryCardProps = {
 };
 
 const AccountSummaryCard = ({
+    title,
     accountName,
     summaryItems = [],
     finalLabel = "Remaining Balance",
     finalValue = 0,
 }: AccountSummaryCardProps) => {
 
-    console.log(summaryItems)
+    // console.log(summaryItems)
     return (
         <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-2 border-b border-slate-200 pb-2">
                 <p className="text-sm font-bold text-slate-600">
-                    Account
+                    {title || "Account"}
                 </p>
 
                 <h3 className=" text-xl font-extrabold text-slate-900">

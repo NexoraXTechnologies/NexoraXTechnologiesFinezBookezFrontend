@@ -7,6 +7,7 @@ import {
 import TransactionDashboard from "../transactions/components/TransactionDashboard";
 import AccountsReceivable from "./AccountsReceivable";
 import AccountLedger from "./AccountLedger";
+import StockLedger from "./StockLedger";
 
 const cards: any[] = [
   {
@@ -18,13 +19,13 @@ const cards: any[] = [
   {
     title: "Account Ledger",
     description: "Review account-wise debit, credit, and running balance transactions.",
-    component:AccountLedger,
+    component: AccountLedger,
     icon: <PackageMinus size={22} />,
   },
   {
     title: "Stock Ledger",
     description: "Track item-wise stock movements, quantities, and inventory balances.",
-    path: "/professional/transaction/production/receipts-from-production",
+    component: StockLedger,
     icon: <PackagePlus size={22} />,
   },
 ];

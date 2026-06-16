@@ -128,7 +128,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
 
         {
-          name: "Reports",
+          name: "Ledger Reports",
           path: "/bookEz/reports",
           icon: <BarChart3 size={14} />,
         },
