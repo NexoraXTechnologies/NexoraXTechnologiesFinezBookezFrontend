@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -38,6 +38,8 @@ import {
     clearSalesReceiptReferences,
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
 import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { ListingModel } from "../../../../../components/modal";
+import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -131,11 +133,11 @@ const SalesReceipt = () => {
     });
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
-
+    const { report } = useSelector((s: any) => s.reportMapping);
     const [showReferenceModal, setShowReferenceModal] = useState(false);
     const [selectedReferenceRowIndex, setSelectedReferenceRowIndex] =
         useState<number | null>(null);
-
+    const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
     const [referenceRows, setReferenceRows] = useState<any[]>([]);
     const [referenceError, setReferenceError] = useState("");
     const [referenceLoading, setReferenceLoading] = useState(false);
@@ -1223,10 +1225,16 @@ const SalesReceipt = () => {
         salesReceipt.length === 0 &&
         (listingLoader || fieldsLoading);
 
+   
+
+    useEffect(() => {
+        // @ts-ignore 
+        dispatch(getAllReportMapping({ moduleType: "receipt" }))
+    }, [])
+
     if (showInitialSkeleton) {
         return <ModulePageSkeleton rows={8} columns={5} />;
     }
-
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center">
@@ -1268,6 +1276,13 @@ const SalesReceipt = () => {
                 emptyMessage={`No ${status} sales receipt found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <button id="sales-quotation-edit-button" onClick={() => {
+                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                        }
+
+                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                            <Download size={16} />
+                        </button>
                         <button
                             onClick={() => openEditModal(record)}
                             className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
@@ -1418,6 +1433,9 @@ const SalesReceipt = () => {
                     }}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "receipt", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Receipt PDF" }} />
         </div>
     );
 };
