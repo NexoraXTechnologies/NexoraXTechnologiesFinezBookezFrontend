@@ -756,6 +756,7 @@ import Badge from "../../../../components/badge";
 import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 
 import ProductMasterFormModal from "./ProductMasterFormModal";
+import { getHSNCode } from "../../../../redux/slices/professionalSlice/hsnCode";
 
 /* =====================================================
    PRODUCT MASTER LIST COMPONENT
@@ -786,8 +787,9 @@ const ProductMaster = () => {
     productMasterSchemaFields = [],
     schemaLoading,
   } = useSelector((s: any) => s.productMaster);
-
+  console.log({ productMasterSchemaFields })
   const { units = [] } = useSelector((s: any) => s.unitMaster || {});
+  const { HSNCode } = useSelector((s: any) => s.HSNCode || {});
 
   /* ================= LOCAL STATES ================= */
   const [localOffset, setLocalOffset] = useState(0);
@@ -800,6 +802,7 @@ const ProductMaster = () => {
   const [showModal, setShowModal] = useState(false);
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [customeField, setCustomeField] = useState<any>([]);
 
   /* ================= DELETE CONFIRM TOOLTIP STATE ================= */
   const [confirmTooltip, setConfirmTooltip] = useState<any>({
@@ -809,6 +812,7 @@ const ProductMaster = () => {
     productCode: null,
   });
 
+  console.log({ HSNCode })
   /* =====================================================
      FETCH PRODUCT MASTER SCHEMA
 
@@ -952,6 +956,14 @@ const ProductMaster = () => {
      Modal sends final payload here.
   ===================================================== */
   const handleProductSubmit = async (payload: any) => {
+    console.log({ payload })
+    payload = {
+      ...payload,
+      csgst: payload.cgst ? Number(payload.cgst) : 0,
+      igst: payload.igst ? Number(payload.igst) : 0,
+      purchasePrice: payload.purchasePrice ? Number(payload.purchasePrice) : 0,
+      sellingPrice: payload.sellingPrice ? Number(payload.sellingPrice) : 0,
+    };
     try {
       if (editingProduct) {
         await dispatch(
@@ -996,6 +1008,31 @@ const ProductMaster = () => {
       });
     }
   };
+
+  useEffect(() => {
+    const options = HSNCode?.map((e: any) => ({
+      label: `${e?.code} - ${e?.description}`,
+      value: e?.code,
+      ...e
+    }))
+
+    const _ = productMasterSchemaFields?.map((c: any) => {
+      if (c?.key === "productHSNCode") {
+        return {
+          ...c,
+          options: options,
+          type: "select",
+        };
+      }
+      return c;
+    });
+
+    setCustomeField(_)
+  }, [HSNCode])
+
+  useEffect(() => {
+    dispatch(getHSNCode({}))
+  }, [])
 
   return (
     <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
@@ -1106,7 +1143,7 @@ const ProductMaster = () => {
         show={showModal}
         setShow={setShowModal}
         editingProduct={editingProduct}
-        productMasterSchemaFields={productMasterSchemaFields}
+        productMasterSchemaFields={customeField}
         schemaLoading={schemaLoading}
         units={units}
         onSubmit={handleProductSubmit}

@@ -11,6 +11,7 @@ import {
   registerChildProfessional,
 } from "../redux/slices/professionalSlice/professionalAuthSlice";
 import { verifyPan, resetVerifyPan } from '../redux/slices/professionalSlice/panVerify/panVerify';
+import { saveSeeder, seedDefaultAccounts, seedDefaultUnits } from "../redux/slices/professionalSlice/seeder";
 
 const ProfessionalRegister = () => {
   const { parentUserData, loading } = useSelector(
@@ -72,6 +73,48 @@ const ProfessionalRegister = () => {
     }
   };
 
+  const seedDefaultBookezData = async () => {
+
+    const defaultConfigPayload = {
+      configurationName: 'Default System Config',
+      systemConfiguration: {
+        salesQuotation: {
+          enableLocation: false,
+        },
+      },
+      inventoryConfiguration: {
+        maintainInventory: false,
+        inventoryTagLevel: 'WAREHOUSE_LOCATION_BATCH_BIN',
+        inventoryPickMethod: 'FIFO',
+        negativeStockPolicy: 'ALLOW',
+      },
+      financeConfiguration: {
+        isActive: true,
+      },
+      anyOtherField: 'Custom Value',
+    };
+
+    const [unitsRes, accountsRes]: any = await Promise.all([
+      // @ts-ignore 
+      dispatch(seedDefaultUnits()),
+      // @ts-ignore 
+      dispatch(seedDefaultAccounts()),
+      // @ts-ignore 
+      dispatch(saveSeeder(JSON.stringify(defaultConfigPayload))),
+    ]);
+
+    if (!unitsRes.ok) {
+      const errText = await unitsRes.text();
+      throw new Error(errText || 'Failed to seed default units.');
+    }
+
+    if (!accountsRes.ok) {
+      const errText = await accountsRes.text();
+      throw new Error(errText || 'Failed to seed default accounts.');
+    }
+    return true;
+  };
+
   const onSubmit = async (data: any) => {
     try {
       data.userPAN = data.userPAN.toUpperCase();
@@ -83,7 +126,8 @@ const ProfessionalRegister = () => {
         // --- Parent Registration ---
         // @ts-ignore
         const res = await dispatch(registerProfessional(payload)).unwrap();
-
+        console.log({ res })
+        seedDefaultBookezData()
         toast.success(res.message || "Parent Registered Successfully!");
         navigate("/professional");
       } else {
@@ -98,7 +142,7 @@ const ProfessionalRegister = () => {
             childData,
           })
         ).unwrap();
-
+        seedDefaultBookezData()
         toast.success(res.message || "Child User Added Successfully!");
         navigate("/professional");
       }
@@ -106,6 +150,7 @@ const ProfessionalRegister = () => {
       toast.error(err.message || "Registration failed");
     }
   };
+
   const handleVerifyPan = async () => {
     const pan = watch('userPAN')?.toUpperCase()?.trim();
 

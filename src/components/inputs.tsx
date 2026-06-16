@@ -41,7 +41,7 @@ const TextArea = (({ label, value, onChange, placeholder, mandatory = false, err
     )
 })
 
-const SelectInput = (({ label, value, onChange, options, mandatory = false, error = "", name = "" }: any) => (
+const SelectInputNormal = (({ label, value, onChange, options, mandatory = false, error = "", name = "" }: any) => (
     <div className="w-full flex flex-col gap-1">
         <label className="text-sm font-medium text-gray-700">
             {label}{mandatory && <span className="text-red-500">*</span>}
@@ -67,7 +67,7 @@ const SelectInput = (({ label, value, onChange, options, mandatory = false, erro
 ))
 
 
-const AutoSelectInput = ({
+const SelectInput = ({
     label = "",
     value,
     onChange,
@@ -230,4 +230,4 @@ const AutoSelectInput = ({
     );
 };
 
-export { TextInput, SelectInput, TextArea,AutoSelectInput }
+export { TextInput, SelectInput, TextArea, SelectInputNormal }

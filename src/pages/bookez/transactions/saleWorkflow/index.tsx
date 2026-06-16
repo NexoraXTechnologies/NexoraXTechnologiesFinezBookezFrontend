@@ -37,12 +37,12 @@ const cards: any = [
     component: SalesReturn,
     icon: <RotateCcw size={22} />,
   },
-  // {
-  //   title: "Sales Receipt",
-  //   description: "Manage sales return transactions.",
-  //   component: SalesReceipt,
-  //   icon: <RotateCcw size={22} />,
-  // },
+  {
+    title: "Sales Receipt",
+    description: "Manage sales return transactions.",
+    component: SalesReceipt,
+    icon: <RotateCcw size={22} />,
+  },
 ];
 
 const SaleWorkflowDashboard = () => {

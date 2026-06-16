@@ -118,73 +118,78 @@ const ProfessionalDashboard = () => {
     { type: 'info', title: 'Missing documents', description: 'Form 16 / 26AS upload missing for some clients.' },
   ], []);
 
-  useEffect(() => {
-    // @ts-ignore
-    dispatch(fetchProfessionalDashboardAnalytics());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   // @ts-ignore
+  //   dispatch(fetchProfessionalDashboardAnalytics());
+  // }, [dispatch]);
 
   if (loading) return <p className="text-center mt-10 text-lg animate-pulse">Loading dashboard...</p>;
   if (error) return <p className="text-red-500 text-center mt-10">{error}</p>;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="p-4 sm:p-6 bg-gray-50 min-h-screen relative overflow-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Professional Dashboard</h2>
-          <p className="text-sm text-gray-500">Filing overview, compliance status, and workload summary.</p>
-        </div>
-
-        <ProQuickLinks
-          links={[
-            { label: 'Add Taxpayer', to: '/professional/incometax/addtaxpayer' },
-            { label: 'File ITR', to: '/professional/incometax/fileitrlist' },
-            // { label: 'Add Team/Employee', to: '/professional/users' },
-          ]}
-        />
+    <>
+      <div className='h-full flex items-center justify-center'>
+        <h2 className='text-2xl'>Coming Soon...</h2>
       </div>
+    </>
+    // <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="p-4 sm:p-6 bg-gray-50 min-h-screen relative overflow-auto">
+    //   {/* Header */}
+    //   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
+    //     <div>
+    //       <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Professional Dashboard</h2>
+    //       <p className="text-sm text-gray-500">Filing overview, compliance status, and workload summary.</p>
+    //     </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-8">
-        {cards.map((c) => <ProDashboardCart key={c.title} {...c} />)}
-      </div>
+    //     <ProQuickLinks
+    //       links={[
+    //         { label: 'Add Taxpayer', to: '/professional/incometax/addtaxpayer' },
+    //         { label: 'File ITR', to: '/professional/incometax/fileitrlist' },
+    //         // { label: 'Add Team/Employee', to: '/professional/users' },
+    //       ]}
+    //     />
+    //   </div>
 
-      {/* Charts + Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
-        <ProStatDonutChart title="Tasks Status" items={taskDonut} />
-        <ProStatDonutChart title="ITR Status" items={itrDonut} />
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">Alerts</h3>
-            <span className="text-xs text-gray-500">Action needed</span>
-          </div>
-          <ProAlertsList items={alerts} />
-        </div>
-      </div>
+    //   {/* Cards */}
+    //   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-8">
+    //     {cards.map((c) => <ProDashboardCart key={c.title} {...c} />)}
+    //   </div>
 
-      {/* Trend + Taxpayer Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-20">
-        <div className="lg:col-span-2">
-          <ProTrendLineChart
-            title="Weekly ITR Activity"
-            data={{
-              labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-              filed: [1, 2, 1, 3, 2, 4, 3],
-              draft: [2, 1, 2, 1, 3, 2, 1],
-            }}
-          />
-        </div>
-        <ProStatDonutChart title="Taxpayer Status" items={taxpayerDonut} />
-      </div>
+    //   {/* Charts + Alerts */}
+    //   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+    //     <ProStatDonutChart title="Tasks Status" items={taskDonut} />
+    //     <ProStatDonutChart title="ITR Status" items={itrDonut} />
+    //     <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+    //       <div className="flex items-center justify-between mb-3">
+    //         <h3 className="font-semibold text-gray-900">Alerts</h3>
+    //         <span className="text-xs text-gray-500">Action needed</span>
+    //       </div>
+    //       <ProAlertsList items={alerts} />
+    //     </div>
+    //   </div>
 
-      {/* AI Floating Button */}
-      <div className="fixed bottom-8 right-6 z-50">
-        <AiChatBox onClick={() => setOpenChat(true)} />
-      </div>
+    //   {/* Trend + Taxpayer Status */}
+    //   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-20">
+    //     <div className="lg:col-span-2">
+    //       <ProTrendLineChart
+    //         title="Weekly ITR Activity"
+    //         data={{
+    //           labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    //           filed: [1, 2, 1, 3, 2, 4, 3],
+    //           draft: [2, 1, 2, 1, 3, 2, 1],
+    //         }}
+    //       />
+    //     </div>
+    //     <ProStatDonutChart title="Taxpayer Status" items={taxpayerDonut} />
+    //   </div>
 
-      {/* AI Drawer */}
-      <AiTaxCopilotDrawer open={openChat} onClose={() => setOpenChat(false)} />
-    </motion.div>
+    //   {/* AI Floating Button */}
+    //   <div className="fixed bottom-8 right-6 z-50">
+    //     <AiChatBox onClick={() => setOpenChat(true)} />
+    //   </div>
+
+    //   {/* AI Drawer */}
+    //   <AiTaxCopilotDrawer open={openChat} onClose={() => setOpenChat(false)} />
+    // </motion.div>
   );
 };
 

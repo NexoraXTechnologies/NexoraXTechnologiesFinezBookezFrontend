@@ -5,7 +5,7 @@ type RejectValue = {
     message: string;
 };
 
-type SalesQuotationParams = {
+type SalesReceiptParams = {
     offset?: number;
     limit?: number;
     status?: string;
@@ -14,26 +14,31 @@ type SalesQuotationParams = {
     isAutoPost?: string | boolean;
 };
 
-type SalesQuotationPayload = {
+type SalesReceiptPayload = {
     payload: any;
 };
 
-type UpdateSalesQuotationPayload = {
+type UpdateSalesReceiptPayload = {
     payload: any;
-    sQuoteVoucherNumber: string;
+    receiptVoucherNumber: string;
 };
 
-type DeleteSalesQuotationPayload = {
-    sQuoteVoucherNumber: string;
+type DeleteSalesReceiptPayload = {
+    receiptVoucherNumber: string;
+};
+
+type SalesReceiptReferenceParams = {
+    customerCode?: string;
+    search?: string;
 };
 
 /* ===================================================
-   ADD SALES QUOTATION
+   ADD SALES RECEIPT
 =================================================== */
 
 export const addSalesReceipt = createAsyncThunk<
     any,
-    SalesQuotationPayload,
+    SalesReceiptPayload,
     { rejectValue: RejectValue }
 >(
     "salesReceipt/addSalesReceipt",
@@ -46,7 +51,7 @@ export const addSalesReceipt = createAsyncThunk<
 
             if (!res.data?.success) {
                 return rejectWithValue({
-                    message: res.data?.message || "Failed to create sales quotation",
+                    message: res.data?.message || "Failed to create sales receipt",
                 });
             }
 
@@ -56,32 +61,32 @@ export const addSalesReceipt = createAsyncThunk<
                 message:
                     err?.response?.data?.message ||
                     err?.response?.data?.error ||
-                    "Failed to create sales quotation",
+                    "Failed to create sales receipt",
             });
         }
     }
 );
 
 /* ===================================================
-   UPDATE SALES QUOTATION
+   UPDATE SALES RECEIPT
 =================================================== */
 
 export const updateSalesReceipt = createAsyncThunk<
     any,
-    UpdateSalesQuotationPayload,
+    UpdateSalesReceiptPayload,
     { rejectValue: RejectValue }
 >(
     "salesReceipt/updateSalesReceipt",
-    async ({ payload, sQuoteVoucherNumber }, { rejectWithValue }) => {
+    async ({ payload, receiptVoucherNumber }, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.put(
-                `/eTaxSolnMongoApiBackend/users/bookEZ/salesFlow/receipt/update/${sQuoteVoucherNumber}`,
+                `/eTaxSolnMongoApiBackend/users/bookEZ/salesFlow/receipt/update/${receiptVoucherNumber}`,
                 { ...payload }
             );
 
             if (!res.data?.success) {
                 return rejectWithValue({
-                    message: res.data?.message || "Failed to update sales quotation",
+                    message: res.data?.message || "Failed to update sales receipt",
                 });
             }
 
@@ -91,56 +96,56 @@ export const updateSalesReceipt = createAsyncThunk<
                 message:
                     err?.response?.data?.message ||
                     err?.response?.data?.error ||
-                    "Failed to update sales quotation",
+                    "Failed to update sales receipt",
             });
         }
     }
 );
 
 /* ===================================================
-   DELETE SALES QUOTATION
+   DELETE SALES RECEIPT
 =================================================== */
 
-export const deleteSalesQuotation = createAsyncThunk<
-    any,
-    DeleteSalesQuotationPayload,
+export const deleteSalesReceipt = createAsyncThunk<
+    string,
+    DeleteSalesReceiptPayload,
     { rejectValue: RejectValue }
 >(
-    "salesQuotation/deleteSalesQuotation",
-    async (sQuoteVoucherNumber, { rejectWithValue }) => {
+    "salesReceipt/deleteSalesReceipt",
+    async ({ receiptVoucherNumber }, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.delete(
-                `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/delete/${sQuoteVoucherNumber}`
+                `/eTaxSolnMongoApiBackend/users/bookEZ/salesFlow/receipt/delete/${receiptVoucherNumber}`
             );
 
             if (!res.data?.success) {
                 return rejectWithValue({
-                    message: res.data?.message || "Failed to delete sales quotation",
+                    message: res.data?.message || "Failed to delete sales receipt",
                 });
             }
 
-            return sQuoteVoucherNumber;
+            return receiptVoucherNumber;
         } catch (err: any) {
             return rejectWithValue({
                 message:
                     err?.response?.data?.message ||
                     err?.response?.data?.error ||
-                    "Failed to delete sales quotation",
+                    "Failed to delete sales receipt",
             });
         }
     }
 );
 
 /* ===================================================
-   GET SALES QUOTATION LIST
+   GET SALES RECEIPT LIST
 =================================================== */
 
-export const getSalesQuotationList = createAsyncThunk<
+export const getSalesReceiptList = createAsyncThunk<
     any,
-    SalesQuotationParams | undefined,
+    SalesReceiptParams | undefined,
     { rejectValue: RejectValue }
 >(
-    "salesQuotation/getSalesQuotationList",
+    "salesReceipt/getSalesReceiptList",
     async (
         {
             offset = 0,
@@ -179,13 +184,13 @@ export const getSalesQuotationList = createAsyncThunk<
             }
 
             const res = await professionalAxios.get(
-                "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/getAll",
+                "/eTaxSolnMongoApiBackend/users/bookEZ/salesFlow/receipt/getAll",
                 { params }
             );
 
             if (!res.data?.success) {
                 return rejectWithValue({
-                    message: res.data?.message || "Failed to fetch sales quotations",
+                    message: res.data?.message || "Failed to fetch sales receipts",
                 });
             }
 
@@ -200,48 +205,162 @@ export const getSalesQuotationList = createAsyncThunk<
                 message:
                     err?.response?.data?.message ||
                     err?.response?.data?.error ||
-                    "Failed to fetch sales quotations",
+                    "Failed to fetch sales receipts",
             });
         }
     }
 );
 
 /* ===================================================
+   GET SALES RECEIPT REFERENCES
+   Used for Add Reference modal
+=================================================== */
+
+export const getSalesReceiptReferences = createAsyncThunk<
+    any,
+    SalesReceiptReferenceParams | undefined,
+    { rejectValue: RejectValue }
+>(
+    "salesReceipt/getSalesReceiptReferences",
+    async ({ customerCode = "", search = "" } = {}, { rejectWithValue }) => {
+        try {
+            const params: any = {};
+
+            if (customerCode) {
+                params.customerCode = customerCode;
+            }
+
+            if (search.trim()) {
+                params.search = search.trim();
+            }
+
+            const res = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookEZ/salesFlow/receipt/references",
+                { params }
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message ||
+                        "Failed to fetch sales receipt references",
+                });
+            }
+
+            return res.data?.data ?? [];
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    err?.response?.data?.error ||
+                    "Failed to fetch sales receipt references",
+            });
+        }
+    }
+);
+
+/* ===================================================
+   STATE TYPE
+=================================================== */
+
+type SalesReceiptState = {
+    addLoader: boolean;
+    listingLoader: boolean;
+    deleteLoader: boolean;
+    referenceLoader: boolean;
+
+    salesReceipt: any[];
+    receiptReferences: any[];
+
+    selectedSalesReceipt: any;
+
+    error: string | null;
+
+    pagination: {
+        offset: number;
+        limit: number;
+        totalDocs: number;
+        totalPages: number;
+        currentPage: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+    };
+};
+
+/* ===================================================
+   INITIAL STATE
+=================================================== */
+
+const initialState: SalesReceiptState = {
+    addLoader: false,
+    listingLoader: false,
+    deleteLoader: false,
+    referenceLoader: false,
+
+    salesReceipt: [],
+    receiptReferences: [],
+
+    selectedSalesReceipt: null,
+
+    error: null,
+
+    pagination: {
+        offset: 0,
+        limit: 10,
+        totalDocs: 0,
+        totalPages: 1,
+        currentPage: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+    },
+};
+
+/* ===================================================
    SLICE
 =================================================== */
 
 const salesReceiptSlice = createSlice({
-    name: "salesQuotation",
+    name: "salesReceipt",
 
-    initialState: {
-        addLoader: false,
-        listingLoader: false,
-        deleteLoader: false,
-
-        salesQuotations: [] as any[],
-        selectedSalesQuotation: null as any,
-
-        error: null as string | null,
-
-        pagination: {
-            offset: 0,
-            limit: 10,
-            totalDocs: 0,
-            totalPages: 1,
-            currentPage: 1,
-            hasNextPage: false,
-            hasPrevPage: false,
-        },
-    },
+    initialState,
 
     reducers: {
+        clearSalesReceiptState: (state) => {
+            state.addLoader = false;
+            state.listingLoader = false;
+            state.deleteLoader = false;
+            state.referenceLoader = false;
 
+            state.salesReceipt = [];
+            state.receiptReferences = [];
+            state.selectedSalesReceipt = null;
+
+            state.error = null;
+
+            state.pagination = {
+                offset: 0,
+                limit: 10,
+                totalDocs: 0,
+                totalPages: 1,
+                currentPage: 1,
+                hasNextPage: false,
+                hasPrevPage: false,
+            };
+        },
+
+        clearSalesReceiptError: (state) => {
+            state.error = null;
+        },
+
+        clearSalesReceiptReferences: (state) => {
+            state.receiptReferences = [];
+        },
     },
 
     extraReducers: (builder) => {
         builder
 
-            /* ---------- ADD SALES QUOTATION ---------- */
+            /* ---------- ADD SALES RECEIPT ---------- */
             .addCase(addSalesReceipt.pending, (state) => {
                 state.addLoader = true;
                 state.error = null;
@@ -251,28 +370,36 @@ const salesReceiptSlice = createSlice({
             })
             .addCase(addSalesReceipt.rejected, (state, action) => {
                 state.addLoader = false;
-                state.error = action.payload?.message || "Failed to create sales quotation";
+                state.error =
+                    action.payload?.message || "Failed to create sales receipt";
             })
 
-            /* ---------- SALES QUOTATION LISTING ---------- */
-            .addCase(getSalesQuotationList.pending, (state) => {
+            /* ---------- SALES RECEIPT LISTING ---------- */
+            .addCase(getSalesReceiptList.pending, (state) => {
                 state.listingLoader = true;
                 state.error = null;
             })
-            .addCase(getSalesQuotationList.fulfilled, (state, action) => {
+            .addCase(getSalesReceiptList.fulfilled, (state, action) => {
                 state.listingLoader = false;
 
-                state.pagination = action.payload?.pagination ?? state.pagination;
-                state.salesQuotations = action.payload?.records ?? [];
+                const data: any = action.payload;
+
+                state.salesReceipt = Array.isArray(data)
+                    ? data
+                    : data?.records ?? data?.docs ?? [];
+
+                state.pagination =
+                    data?.pagination ??
+                    state.pagination;
             })
-            .addCase(getSalesQuotationList.rejected, (state, action) => {
+            .addCase(getSalesReceiptList.rejected, (state, action) => {
                 state.listingLoader = false;
                 state.error =
-                    action.payload?.message || "Failed to fetch sales quotations";
-                state.salesQuotations = [];
+                    action.payload?.message || "Failed to fetch sales receipts";
+                state.salesReceipt = [];
             })
 
-            /* ---------- UPDATE SALES QUOTATION ---------- */
+            /* ---------- UPDATE SALES RECEIPT ---------- */
             .addCase(updateSalesReceipt.pending, (state) => {
                 state.addLoader = true;
                 state.error = null;
@@ -282,28 +409,29 @@ const salesReceiptSlice = createSlice({
             })
             .addCase(updateSalesReceipt.rejected, (state, action) => {
                 state.addLoader = false;
-                state.error = action.payload?.message || "Failed to update sales quotation";
+                state.error =
+                    action.payload?.message || "Failed to update sales receipt";
             })
 
-            /* ---------- DELETE SALES QUOTATION ---------- */
-            .addCase(deleteSalesQuotation.pending, (state) => {
+            /* ---------- DELETE SALES RECEIPT ---------- */
+            .addCase(deleteSalesReceipt.pending, (state) => {
                 state.deleteLoader = true;
                 state.error = null;
             })
-            .addCase(deleteSalesQuotation.fulfilled, (state, action) => {
+            .addCase(deleteSalesReceipt.fulfilled, (state, action) => {
                 state.deleteLoader = false;
 
-                state.salesQuotations = state.salesQuotations.filter(
+                state.salesReceipt = state.salesReceipt.filter(
                     (item: any) =>
-                        item?.sQuoteVoucherNumber !== action.payload &&
+                        item?.receiptVoucherNumber !== action.payload &&
                         item?.voucherNumber !== action.payload
                 );
 
                 if (
-                    state.selectedSalesQuotation?.sQuoteVoucherNumber === action.payload ||
-                    state.selectedSalesQuotation?.voucherNumber === action.payload
+                    state.selectedSalesReceipt?.receiptVoucherNumber === action.payload ||
+                    state.selectedSalesReceipt?.voucherNumber === action.payload
                 ) {
-                    state.selectedSalesQuotation = null;
+                    state.selectedSalesReceipt = null;
                 }
 
                 state.pagination.totalDocs = Math.max(
@@ -311,14 +439,40 @@ const salesReceiptSlice = createSlice({
                     state.pagination.totalDocs - 1
                 );
             })
-            .addCase(deleteSalesQuotation.rejected, (state, action) => {
+            .addCase(deleteSalesReceipt.rejected, (state, action) => {
                 state.deleteLoader = false;
                 state.error =
-                    action.payload?.message || "Failed to delete sales quotation";
+                    action.payload?.message || "Failed to delete sales receipt";
+            })
+
+            /* ---------- SALES RECEIPT REFERENCES ---------- */
+            .addCase(getSalesReceiptReferences.pending, (state) => {
+                state.referenceLoader = true;
+                state.error = null;
+            })
+            .addCase(getSalesReceiptReferences.fulfilled, (state, action) => {
+                state.referenceLoader = false;
+
+                const data: any = action.payload;
+
+                state.receiptReferences = Array.isArray(data)
+                    ? data
+                    : data?.records ?? data?.docs ?? [];
+            })
+            .addCase(getSalesReceiptReferences.rejected, (state, action) => {
+                state.referenceLoader = false;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to fetch sales receipt references";
+                state.receiptReferences = [];
             });
     },
 });
 
-export const { } = salesReceiptSlice.actions;
+export const {
+    clearSalesReceiptState,
+    clearSalesReceiptError,
+    clearSalesReceiptReferences,
+} = salesReceiptSlice.actions;
 
 export default salesReceiptSlice.reducer;

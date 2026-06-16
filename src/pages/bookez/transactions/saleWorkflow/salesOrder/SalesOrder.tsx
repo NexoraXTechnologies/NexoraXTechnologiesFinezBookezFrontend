@@ -471,7 +471,6 @@ const SalesOrder = () => {
         // @ts-ignore 
         dispatch(getAllReportMapping({ moduleType: "salesOrder" }))
     }, [])
-
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-order-header" className="mb-3 flex items-center">

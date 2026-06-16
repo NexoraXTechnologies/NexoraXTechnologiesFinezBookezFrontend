@@ -62,11 +62,12 @@ import stockLedgerReducer from "./slices/professionalSlice/ledgerReports/stockLe
 
 // bookEz register
 import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
+import salesReceiptReducer from "./slices/professionalSlice/salesWorkflow/salesReceipt";
 import purchaseRegisterReducer from "./slices/professionalSlice/bookEzRegister/purchaseRegisterSlice";
 import receiptRegisterReducer from "./slices/professionalSlice/bookEzRegister/receiptRegisterSlice";
 import paymentRegisterReducer from "./slices/professionalSlice/bookEzRegister/paymentRegisterSlice";
-
-
+import HSNCodeReducer from "./slices/professionalSlice/hsnCode"
+import seederConfgReducer from "./slices/professionalSlice/seeder"
 
 export const store = configureStore({
   reducer: {
@@ -132,10 +133,12 @@ export const store = configureStore({
 
     // bookEz register
     salesregister: salesRegisterReducer,
+    salesreceipt: salesReceiptReducer,
     purchaseRegister: purchaseRegisterReducer,
     receiptRegister: receiptRegisterReducer,
     paymentRegister: paymentRegisterReducer,
-
+    HSNCode: HSNCodeReducer,
+    seederConfg: seederConfgReducer
 
 
   },

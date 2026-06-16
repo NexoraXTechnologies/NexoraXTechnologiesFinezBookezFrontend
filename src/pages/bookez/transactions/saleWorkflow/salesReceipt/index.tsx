@@ -1,138 +1,115 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
 import DataTable from "../../../../../components/DataTable";
+import Pagination from "../../../../../components/pagination";
+import SearchInput from "../../../../../components/searchInput";
+import Badge from "../../../../../components/badge";
+import Toggle from "../../../../../components/toggle";
 import {
     DataCreateButton,
     DataREfreshButton,
 } from "../../../../../components/buttons";
-import Toggle from "../../../../../components/toggle";
-import Badge from "../../../../../components/badge";
-import SearchInput from "../../../../../components/searchInput";
-import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
-import Modal, { ListingModel } from "../../../../../components/modal";
+import ModulePageSkeleton from "../../../../../components/skeleton/SkeletonLoader";
 
 import {
     fmtMoney,
+    formatDateForInput,
     formatDateForList,
     loadAllTemplateOptions,
     money,
     num,
-    safePercent,
     todayYMD,
 } from "../../../../../utils/helperFunctions";
 
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
+
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 
 import {
-    createSalesInvoiceReturn,
-    deleteSalesInvoiceReturn,
-    getAllSalesInvoiceReturn,
-    updateSalesInvoiceReturn,
-} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
+    addSalesReceipt,
+    updateSalesReceipt,
+    deleteSalesReceipt,
+    getSalesReceiptList,
+    getSalesReceiptReferences,
+    clearSalesReceiptReferences,
+} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
+import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 
-import {
-    getAllSalesInvoice,
-    updateSalesInvoice,
-} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+const defaultPagination = {
+    offset: 0,
+    limit: 10,
+    totalDocs: 0,
+    totalPages: 1,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+};
 
-import professionalAxios from "../../../../../services/professionalAxios";
-import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
-
-const emptyProductRow = {
+const emptyReceiptRow = {
     id: Date.now(),
-    productCode: "",
-    productName: "",
-    productId: "",
-    productDescription: "",
-    description: "",
-    productHSNCode: "",
+    accountCode: "",
+    accountName: "",
+    amount: "",
+    netAmount: "",
+    references: [],
     remarks: "",
-    quantity: "",
-    uom: "",
-    unit: "",
-    unitName: "",
-    rate: "",
-    gross: 0,
-    grossAmount: 0,
-    discount: "",
-    discountPercentage: "",
-    discountAmount: 0,
-    taxableAmount: 0,
-    cgst: "",
-    cgstPercentage: "",
-    cgstAmount: 0,
-    sgst: "",
-    sgstPercentage: "",
-    sgstAmount: 0,
-    igst: "",
-    igstPercentage: "",
-    igstAmount: 0,
-    taxAmount: 0,
-    otherAmount: "",
-    netAmount: 0,
-    netTotal: 0,
+};
+
+const emptyReferenceRow = {
+    id: Date.now(),
+    saleInvoice: "",
+    docDate: "",
+    netAmount: "",
+    remainingBillAmount: "",
+    adjustedAmount: "",
 };
 
 const getDefaultForm = () => ({
-    sInvReturnVoucherNumber: "AUTO",
-    sInvReturnVoucherDate: todayYMD(),
+    recVoucherNumber: "AUTO",
+    recVoucherDate: todayYMD(),
 
-    sInvVoucherNumber: "",
-    sInvCustomerCode: "",
-    sInvReturnCustomerCode: "",
-    sInvReturnCustomerName: "",
+    recAccountCode: "",
+    recAccountName: "",
 
-    sInvSalesAccount: "SA021",
-    sInvReturnSalesAccount: "SA021",
+    recStatus: "open",
+    recRemark: "",
 
-    sInvStatus: "open",
-    sInvReturnStatus: "open",
+    paymentMode: "",
+    bankReferenceNumber: "",
+    receivedBy: "",
 
-    sInvRemark: "",
-    sInvRemarks: "",
-    sInvReturnRemark: "",
+    recBody: [{ ...emptyReceiptRow, id: Date.now() }],
 
-    isAutoPost: false,
-
-    products: [{ ...emptyProductRow, id: Date.now() }],
-
-    grossAmount: "0.00",
-    discountAmount: "0.00",
-    cgstAmount: "0.00",
-    sgstAmount: "0.00",
-    igstAmount: "0.00",
-    taxAmount: "0.00",
-    otherAmount: "0.00",
     netAmount: "0.00",
+    adjustedAmount: "0.00",
+    balanceAmount: "0.00",
 });
 
-const SalesReturn = () => {
+const SalesReceipt = () => {
     const dispatch = useDispatch<any>();
 
-    const {
-        salesInvoiceReturns,
-        pagination,
-        loading,
-        createLoading,
-        updateLoading,
-        deleteLoading,
-    } = useSelector((state: any) => state.salesInvoiceReturn);
+    const salesReceiptState = useSelector(
+        (state: any) => state.salesReceipt || state.salesreceipt || {}
+    );
 
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
     );
 
-    const { salesInvoices, loading: invoiceLoader } = useSelector(
-        (state: any) => state.salesInvoice
-    );
-
-    const { report } = useSelector((s: any) => s.reportMapping);
+    const {
+        salesReceipt = [],
+        receiptReferences = [],
+        pagination = defaultPagination,
+        listingLoader = false,
+        addLoader = false,
+        deleteLoader = false,
+        referenceLoader = false,
+    } = salesReceiptState;
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
@@ -140,20 +117,14 @@ const SalesReturn = () => {
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
-    const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<"open" | "close">("open");
+    const [refreshing, setRefreshing] = useState(false);
 
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(null);
 
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
-    const [showInvoiceReferenceModal, setShowInvoiceReferenceModal] =
-        useState(false);
-    const [invoiceReferenceSearch, setInvoiceReferenceSearch] = useState("");
-    const [selectedInvoiceReference, setSelectedInvoiceReference] =
-        useState<any>(null);
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -163,6 +134,14 @@ const SalesReturn = () => {
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
+    const [showReferenceModal, setShowReferenceModal] = useState(false);
+    const [selectedReferenceRowIndex, setSelectedReferenceRowIndex] =
+        useState<number | null>(null);
+
+    const [referenceRows, setReferenceRows] = useState<any[]>([]);
+    const [referenceError, setReferenceError] = useState("");
+    const [referenceLoading, setReferenceLoading] = useState(false);
+    console.log({ referenceRows })
     const [confirmTooltip, setConfirmTooltip] =
         useState<ConfirmTooltipState>({
             show: false,
@@ -171,23 +150,39 @@ const SalesReturn = () => {
             voucherNumber: null,
         });
 
-    const [downlaodPDF, setDownlaodPDF] = useState<any>({
-        show: false,
-        x: null,
-        y: null,
-        type: "",
-    });
+    const getRecords = (res: any) => {
+        return Array.isArray(res?.items)
+            ? res.items
+            : Array.isArray(res?.records)
+                ? res.records
+                : Array.isArray(res?.docs)
+                    ? res.docs
+                    : Array.isArray(res?.data?.items)
+                        ? res.data.items
+                        : Array.isArray(res?.data?.records)
+                            ? res.data.records
+                            : Array.isArray(res?.data?.docs)
+                                ? res.data.docs
+                                : Array.isArray(res?.data)
+                                    ? res.data
+                                    : Array.isArray(res)
+                                        ? res
+                                        : [];
+    };
 
-    const getHeaderFieldByKey = (key: string) =>
-        templateFields?.header?.find((field: any) => field.key === key);
+    const getHeaderFieldByKey = (key: string) => {
+        return templateFields?.header?.find((field: any) => field.key === key);
+    };
 
-    const getBodyFieldByKey = (key: string) =>
-        templateFields?.body?.find((field: any) => field.key === key);
+    const getBodyFieldByKey = (key: string) => {
+        return templateFields?.body?.find((field: any) => field.key === key);
+    };
 
-    const getOptionByValue = (field: any, selectedValue: any) =>
-        field?.options?.find(
+    const getOptionByValue = (field: any, selectedValue: any) => {
+        return field?.options?.find(
             (opt: any) => String(opt.value) === String(selectedValue)
         );
+    };
 
     const applyMappedFields = (
         field: any,
@@ -197,7 +192,11 @@ const SalesReturn = () => {
         if (!field) return oldData;
 
         const selectedOption = getOptionByValue(field, selectedValue);
-        const updated = { ...oldData, [field.key]: selectedValue };
+
+        const updated = {
+            ...oldData,
+            [field.key]: selectedValue,
+        };
 
         if (field?.mapFields && selectedOption?.raw) {
             Object.entries(field.mapFields).forEach(
@@ -211,135 +210,173 @@ const SalesReturn = () => {
         return updated;
     };
 
-    const getUnitLabelFromSchema = (unitCode: string) => {
-        const unitField = templateFields?.body?.find(
-            (field: any) => field.key === "uom" || field.key === "unit"
-        );
+    const bodyFieldsWithoutReference = useMemo(() => {
+        return (templateFields?.body || []).filter((field: any) => {
+            const key = String(field?.key || "").toLowerCase();
 
-        const selectedUnit = unitField?.options?.find(
-            (item: any) => String(item.value) === String(unitCode)
-        );
+            return ![
+                "reference",
+                "references",
+                "referencebody",
+                "referencelist",
+                "recsalesinvoicerefs",
+            ].includes(key);
+        });
+    }, [templateFields?.body]);
 
-        return selectedUnit?.label || unitCode || "";
-    };
+    const referenceTableFields = useMemo(() => {
+        return [
+            {
+                key: "saleInvoice",
+                label: "Sale Invoice",
+                type: "text",
+                isReadOnly: true,
+            },
+            {
+                key: "docDate",
+                label: "Doc Date",
+                type: "date",
+                isReadOnly: true,
+            },
+            {
+                key: "netAmount",
+                label: "Net",
+                type: "text",
+                isReadOnly: true,
+            },
+            {
+                key: "adjustedAmount",
+                label: "Adjusted Amount",
+                type: "number",
+                isRequired: true,
+            },
+        ];
+    }, []);
 
-    const normalizeRowKeys = (row: any) => {
-        const updated = { ...row };
+    const calculateFooter = (rows: any[]) => {
+        return (rows || []).reduce(
+            (acc: any, row: any) => {
+                const amount = num(row?.amount || row?.netAmount);
+                const netAmount = num(row?.netAmount || row?.amount);
 
-        if (updated.uom && !updated.unit) updated.unit = updated.uom;
-        if (updated.unit && !updated.uom) updated.uom = updated.unit;
+                const adjustedAmount = Array.isArray(row?.references)
+                    ? row.references.reduce((sum: number, ref: any) => {
+                        return sum + num(ref?.adjustedAmount);
+                    }, 0)
+                    : 0;
 
-        if (updated.productDescription && !updated.description) {
-            updated.description = updated.productDescription;
-        }
+                acc.netAmount += netAmount || amount;
+                acc.adjustedAmount += adjustedAmount;
 
-        if (updated.description && !updated.productDescription) {
-            updated.productDescription = updated.description;
-        }
-
-        if (updated.netAmount && !updated.netTotal) {
-            updated.netTotal = updated.netAmount;
-        }
-
-        if (updated.netTotal && !updated.netAmount) {
-            updated.netAmount = updated.netTotal;
-        }
-
-        if (updated.gross && !updated.grossAmount) {
-            updated.grossAmount = updated.gross;
-        }
-
-        if (updated.grossAmount && !updated.gross) {
-            updated.gross = updated.grossAmount;
-        }
-
-        updated.unitName = getUnitLabelFromSchema(updated.unit || updated.uom);
-
-        return updated;
-    };
-
-    const calculateRow = (row: any) => {
-        const quantity = num(row.quantity);
-        const rate = num(row.rate);
-
-        const gross = quantity * rate;
-
-        const discountPercent = safePercent(
-            row.discountPercentage || row.discount
-        );
-        const cgstPercent = safePercent(row.cgstPercentage || row.cgst);
-        const sgstPercent = safePercent(row.sgstPercentage || row.sgst);
-        const igstPercent = safePercent(row.igstPercentage || row.igst);
-
-        const discountAmount = (gross * discountPercent) / 100;
-        const taxableAmount = gross - discountAmount;
-
-        const cgstAmount = (taxableAmount * cgstPercent) / 100;
-        const sgstAmount = (taxableAmount * sgstPercent) / 100;
-        const igstAmount = (taxableAmount * igstPercent) / 100;
-
-        const otherAmount = num(row.otherAmount);
-        const taxAmount = cgstAmount + sgstAmount + igstAmount;
-        const netAmount = taxableAmount + taxAmount + otherAmount;
-
-        return {
-            ...row,
-            gross,
-            grossAmount: gross,
-            discountAmount,
-            taxableAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            taxAmount,
-            netAmount,
-            netTotal: netAmount,
-        };
-    };
-
-    const calculateFooter = (products: any[]) => {
-        return (products || []).reduce(
-            (acc: any, item: any) => {
-                acc.totalQuantity += num(item.quantity);
-                acc.totalGrossAmount += num(item.grossAmount || item.gross);
-                acc.totalDiscountAmount += num(item.discountAmount);
-                acc.totalCgstAmount += num(item.cgstAmount);
-                acc.totalSgstAmount += num(item.sgstAmount);
-                acc.totalIgstAmount += num(item.igstAmount);
-                acc.totalTaxAmount += num(item.taxAmount);
-                acc.totalOtherAmount += num(item.otherAmount);
-                acc.totalNetAmount += num(item.netAmount || item.netTotal);
                 return acc;
             },
             {
-                totalQuantity: 0,
-                totalGrossAmount: 0,
-                totalDiscountAmount: 0,
-                totalCgstAmount: 0,
-                totalSgstAmount: 0,
-                totalIgstAmount: 0,
-                totalTaxAmount: 0,
-                totalOtherAmount: 0,
-                totalNetAmount: 0,
+                netAmount: 0,
+                adjustedAmount: 0,
+                balanceAmount: 0,
             }
         );
     };
 
-    const footerTotals = useMemo(
-        () => calculateFooter(form.products || []),
-        [form.products]
-    );
+    const footerTotals = useMemo(() => {
+        const totals = calculateFooter(form.recBody || []);
 
-    const grossAmount = footerTotals.totalGrossAmount;
-    const discountAmount = footerTotals.totalDiscountAmount;
-    const cgstAmount = footerTotals.totalCgstAmount;
-    const sgstAmount = footerTotals.totalSgstAmount;
-    const igstAmount = footerTotals.totalIgstAmount;
-    const netAmount = footerTotals.totalNetAmount;
+        return {
+            ...totals,
+            balanceAmount: totals.netAmount - totals.adjustedAmount,
+        };
+    }, [form.recBody]);
 
-    const fetchSalesReturns = async () => {
+    const selectedReferenceRow = useMemo(() => {
+        if (selectedReferenceRowIndex === null) return null;
+
+        return form?.recBody?.[selectedReferenceRowIndex] || null;
+    }, [form?.recBody, selectedReferenceRowIndex]);
+
+    const selectedReferenceMaxAmount = useMemo(() => {
+        return num(
+            selectedReferenceRow?.netAmount ||
+            selectedReferenceRow?.amount ||
+            0
+        );
+    }, [selectedReferenceRow]);
+
+    const referenceTotalAdjusted = useMemo(() => {
+        return (referenceRows || []).reduce((sum: number, row: any) => {
+            return sum + num(row?.adjustedAmount);
+        }, 0);
+    }, [referenceRows]);
+
+    const newReferenceAmount = useMemo(() => {
+        return selectedReferenceMaxAmount - referenceTotalAdjusted;
+    }, [selectedReferenceMaxAmount, referenceTotalAdjusted]);
+
+    const dynamicFooterArray = useMemo(() => {
+        return (templateFields?.footer || [])
+            .filter((field: any) => !field.isHidden)
+            .map((field: any) => {
+                const rawValue =
+                    footerTotals[field.key as keyof typeof footerTotals] ?? 0;
+
+                return {
+                    ...field,
+                    value: money(rawValue),
+                    rawValue,
+                };
+            });
+    }, [templateFields?.footer, footerTotals]);
+
+    const getReferenceActionText = (row: any) => {
+        const hasReferences =
+            Array.isArray(row?.references) &&
+            row.references.some((ref: any) => {
+                return (
+                    ref?.saleInvoice ||
+                    ref?.newReference ||
+                    num(ref?.adjustedAmount) > 0
+                );
+            });
+
+        return hasReferences ? "Edit Reference" : "Add Reference";
+    };
+
+    const getReferenceVoucherNumber = (item: any) => {
+        return (
+            item?.voucherNumber ||
+            item?.saleInvoice ||
+            item?.sInvVoucherNumber ||
+            item?.sInvReturnVoucherNumber ||
+            item?.receiptVoucherNumber ||
+            ""
+        );
+    };
+
+    const getReferenceDate = (item: any) => {
+        return (
+            item?.docDate ||
+            item?.voucherDate ||
+            item?.sInvVoucherDate ||
+            item?.sInvReturnVoucherDate ||
+            ""
+        );
+    };
+
+    const getReferenceAmount = (item: any) => {
+        return num(
+            item?.remainingBillAmount ||
+            item?.balanceAmount ||
+            item?.netAmount ||
+            item?.sInvFooter?.balanceAmount ||
+            item?.sInvFooter?.netAmount ||
+            item?.sInvReturnFooter?.balanceAmount ||
+            item?.sInvReturnFooter?.netAmount ||
+            0
+        );
+    };
+
+    const fetchSalesReceipts = async () => {
         await dispatch(
-            getAllSalesInvoiceReturn({
+            getSalesReceiptList({
                 offset: localOffset,
                 limit: localLimit,
                 search: debouncedSearch,
@@ -348,287 +385,127 @@ const SalesReturn = () => {
         );
     };
 
-    const fetchInvoiceReferences = async () => {
-        await dispatch(
-            getAllSalesInvoice({
-                offset: 0,
-                limit: 100,
-                search: invoiceReferenceSearch,
-                status: "open",
-            }) as any
-        );
-    };
+    const fetchReceiptReferences = async (selectedRow: any) => {
+        const customerCode = selectedRow?.accountCode;
 
-    const columns = [
-        {
-            key: "sInvReturnVoucherNumber",
-            title: "Voucher",
-        },
-        {
-            key: "sInvReturnVoucherDate",
-            title: "Date",
-            render: (row: any) =>
-                row?.sInvReturnVoucherDate
-                    ? formatDateForList(row.sInvReturnVoucherDate)
-                    : "-",
-        },
-        {
-            key: "sInvReturnCustomerName",
-            title: "Customer",
-            render: (row: any) => (
-                <div>
-                    <div className="font-medium text-slate-800">
-                        {row?.sInvReturnCustomerName || "-"}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                        {row?.sInvReturnCustomerCode ||
-                            row?.sInvCustomerCode ||
-                            "-"}
-                    </div>
-                </div>
-            ),
-        },
-        {
-            key: "sInvVoucherNumber",
-            title: "Invoice Ref",
-            render: (row: any) => row?.sInvVoucherNumber || "-",
-        },
-        {
-            key: "sInvReturnBody",
-            title: "Items",
-            render: (row: any) => row?.sInvReturnBody?.length || 0,
-        },
-        {
-            key: "sInvReturnFooter",
-            title: "Net Amount",
-            render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
-                    {money(row?.sInvReturnFooter?.netAmount || 0)}
-                </span>
-            ),
-        },
-        {
-            key: "sInvReturnStatus",
-            title: "Doc Status",
-            render: (row: any) => (
-                <span
-                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvReturnStatus || row?.sInvStatus) === "open"
-                            ? "border-green-200 bg-green-50 text-green-700"
-                            : "border-red-200 bg-red-50 text-red-700"
-                        }`}
-                >
-                    {row?.sInvReturnStatus || row?.sInvStatus || "-"}
-                </span>
-            ),
-        },
-    ];
-
-    const handleStatusChange = (nextStatus: "open" | "close") => {
-        setStatus(nextStatus);
-        setLocalOffset(0);
-    };
-
-    const handleRefresh = async () => {
-        setRefreshing(true);
+        if (!customerCode) {
+            toast.error("Please select account first");
+            return [];
+        }
 
         try {
-            await fetchSalesReturns();
-            toast.success("Sales return list refreshed");
+            setReferenceLoading(true);
+
+            const res: any = await dispatch(
+                getAllSalesInvoice({
+                    offset: 0,
+                    limit: 500,
+                    search: customerCode,
+                    status: "open",
+                }) as any
+            ).unwrap();
+
+            const records = getRecords(res);
+
+            const customerInvoices = records.filter((invoice: any) => {
+                const invoiceCustomerCode =
+                    invoice?.sInvCustomerCode ||
+                    invoice?.customerCode ||
+                    invoice?.accountCode ||
+                    "";
+
+                return String(invoiceCustomerCode) === String(customerCode);
+            });
+
+            return customerInvoices;
+        } catch (error) {
+            console.log("Failed to load sales invoices", error);
+            toast.error("Failed to load sales invoices");
+            return [];
         } finally {
-            setRefreshing(false);
+            setReferenceLoading(false);
         }
     };
 
     const resetMainForm = () => {
         setEditingRecord(null);
-        setSelectedInvoiceReference(null);
         setErrors({});
+        setReferenceRows([]);
+        setReferenceError("");
+        setSelectedReferenceRowIndex(null);
         setForm(getDefaultForm());
+        dispatch(clearSalesReceiptReferences());
     };
 
     const openAddModal = () => {
         resetMainForm();
-        setInvoiceReferenceSearch("");
-        setShowInvoiceReferenceModal(true);
+        setShowModal(true);
     };
 
     const openEditModal = (record: any) => {
-        const footer = record?.sInvReturnFooter || {};
+        const footer = record?.recFooter || {};
 
-        const products =
-            record?.sInvReturnBody?.length > 0
-                ? record.sInvReturnBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
+        const body =
+            record?.recBody?.length > 0
+                ? record.recBody.map((row: any) => ({
+                    id: row?._id || Date.now() + Math.random(),
 
-                    return calculateRow(
-                        normalizeRowKeys({
-                            id: item?.id || Date.now() + Math.random(),
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
-                            productDescription:
-                                item?.productDescription ||
-                                item?.description ||
-                                "",
-                            description:
-                                item?.description ||
-                                item?.productDescription ||
-                                "",
-                            productHSNCode: item?.productHSNCode || "",
-                            remarks: item?.remarks || "",
-                            quantity: item?.quantity || "",
-                            unit: unitCode,
-                            uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
-                            rate: item?.rate || "",
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
-                            discount:
-                                item?.discount ||
-                                item?.discountPercentage ||
-                                "",
-                            discountPercentage:
-                                item?.discountPercentage ||
-                                item?.discount ||
-                                "",
-                            discountAmount: item?.discountAmount || 0,
-                            taxableAmount: item?.taxableAmount || 0,
-                            cgst:
-                                item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage:
-                                item?.cgstPercentage || item?.cgst || "",
-                            cgstAmount: item?.cgstAmount || 0,
-                            sgst:
-                                item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage:
-                                item?.sgstPercentage || item?.sgst || "",
-                            sgstAmount: item?.sgstAmount || 0,
-                            igst:
-                                item?.igst || item?.igstPercentage || "",
-                            igstPercentage:
-                                item?.igstPercentage || item?.igst || "",
-                            igstAmount: item?.igstAmount || 0,
-                            taxAmount: item?.taxAmount || 0,
-                            otherAmount: item?.otherAmount || 0,
-                            netAmount:
-                                item?.netAmount || item?.netTotal || 0,
-                            netTotal:
-                                item?.netTotal || item?.netAmount || 0,
-                        })
-                    );
-                })
-                : [{ ...emptyProductRow, id: Date.now() }];
+                    accountCode: row?.accountCode || "",
+                    accountName: row?.accountName || "",
+
+                    amount: row?.amount || row?.netAmount || "",
+                    netAmount: row?.netAmount || row?.amount || "",
+
+                    references: Array.isArray(row?.references)
+                        ? row.references
+                        : [],
+
+                    remarks: row?.remarks || "",
+                }))
+                : [{ ...emptyReceiptRow, id: Date.now() }];
 
         setEditingRecord(record);
         setErrors({});
 
         setForm({
-            sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber,
-            sInvVoucherNumber: record?.sInvVoucherNumber || "",
-
-            sInvReturnCustomerCode:
-                record?.sInvReturnCustomerCode ||
-                record?.sInvCustomerCode ||
+            recVoucherNumber:
+                record?.recVoucherNumber ||
+                record?.receiptVoucherNumber ||
+                record?.voucherNumber ||
                 "",
-            sInvCustomerCode: record?.sInvCustomerCode || "",
 
-            sInvReturnCustomerName: record?.sInvReturnCustomerName || "",
-            sInvReturnVoucherDate:
-                record?.sInvReturnVoucherDate || todayYMD(),
+            recVoucherDate: formatDateForInput(
+                record?.recVoucherDate || record?.receiptVoucherDate
+            ),
 
-            sInvStatus:
-                record?.sInvStatus || record?.sInvReturnStatus || "open",
-            sInvReturnStatus:
-                record?.sInvReturnStatus || record?.sInvStatus || "open",
+            recAccountCode: record?.recAccountCode || "",
+            recAccountName: record?.recAccountName || "",
 
-            sInvReturnRemark:
-                record?.sInvReturnRemark || record?.sInvRemark || "",
-            sInvReturnSalesAccount:
-                record?.sInvReturnSalesAccount || "SA021",
+            recStatus: record?.recStatus || "open",
+            recRemark: record?.recRemark || "",
 
-            products,
+            paymentMode: record?.paymentMode || "",
+            bankReferenceNumber: record?.bankReferenceNumber || "",
+            receivedBy: record?.receivedBy || "",
 
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-            discountAmount:
-                footer?.discountAmount ||
-                footer?.totalDiscountAmount ||
-                "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-            otherAmount:
-                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            recBody: body,
+
+            netAmount: footer?.netAmount || "0.00",
+            adjustedAmount: footer?.adjustedAmount || "0.00",
+            balanceAmount: footer?.balanceAmount || "0.00",
         });
 
         setShowModal(true);
     };
 
-    const syncSalesInvoiceStatusAfterReturn = async (
-        sInvVoucherNumber: string
-    ) => {
-        if (!sInvVoucherNumber) return "";
-
-        try {
-            const summaryRes = await professionalAxios.get(
-                `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/analysis/byInvoiceVoucharNumber/${sInvVoucherNumber}`
-            );
-
-            const summary = summaryRes?.data?.data || {};
-            const pendingRaw = summary?.pendingReturnQuantity?.totalPendingQty;
-
-            if (
-                pendingRaw === undefined ||
-                pendingRaw === null ||
-                pendingRaw === ""
-            ) {
-                console.log(
-                    "Sales return analysis missing totalPendingQty",
-                    summaryRes?.data
-                );
-                return "";
-            }
-
-            const totalPendingReturnQuantity = num(pendingRaw);
-            const nextInvoiceStatus =
-                totalPendingReturnQuantity === 0 ? "close" : "open";
-
-            await dispatch(
-                updateSalesInvoice({
-                    sInvVoucherNumber,
-                    payload: {
-                        sInvStatus: nextInvoiceStatus,
-                    },
-                }) as any
-            );
-
-            return nextInvoiceStatus;
-        } catch (error) {
-            console.log(
-                "Failed to sync Sales Invoice status after return",
-                error
-            );
-            toast.error(
-                "Sales return saved but failed to update sales invoice status"
-            );
-            return "";
-        }
-    };
-
     const handleMainChange = (key: string, value: any) => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
-            let updated = { ...prev, [key]: value };
+
+            let updated = {
+                ...prev,
+                [key]: value,
+            };
 
             if (currentField?.mapFields) {
                 updated = applyMappedFields(currentField, value, updated);
@@ -637,95 +514,356 @@ const SalesReturn = () => {
             return updated;
         });
 
-        setErrors((prev: any) => ({ ...prev, [key]: "" }));
+        setErrors((prev: any) => ({
+            ...prev,
+            [key]: "",
+        }));
     };
 
     const handleAddRow = () => {
         setForm((prev: any) => ({
             ...prev,
-            products: [
-                ...(prev.products || []),
-                { ...emptyProductRow, id: Date.now() },
+            recBody: [
+                ...(prev.recBody || []),
+                {
+                    ...emptyReceiptRow,
+                    id: Date.now(),
+                },
             ],
         }));
     };
 
     const handleDeleteRow = (index: number) => {
         setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter(
+            const updatedRows = (prev.recBody || []).filter(
                 (_: any, i: number) => i !== index
             );
 
             return {
                 ...prev,
-                products:
-                    updatedProducts.length > 0
-                        ? updatedProducts
-                        : [{ ...emptyProductRow, id: Date.now() }],
+                recBody:
+                    updatedRows.length > 0
+                        ? updatedRows
+                        : [{ ...emptyReceiptRow, id: Date.now() }],
             };
         });
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
-            const updatedProducts = [...(prev.products || [])];
-            const currentRow = updatedProducts[index] || {};
+            const updatedRows = [...(prev.recBody || [])];
+
+            const currentRow = updatedRows[index] || {};
             const currentField = getBodyFieldByKey(key);
 
-            let updatedRow = { ...currentRow, [key]: value };
+            let updatedRow = {
+                ...currentRow,
+                [key]: value,
+            };
 
             if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(currentField, value, updatedRow);
+                updatedRow = applyMappedFields(
+                    currentField,
+                    value,
+                    updatedRow
+                );
             }
 
-            const selectedOption = getOptionByValue(currentField, value);
-
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
+            if (key === "accountCode" || key === "accountName") {
+                updatedRow.references = [];
             }
 
-            updatedRow = normalizeRowKeys(updatedRow);
-
-            if ((key === "cgst" || key === "sgst") && num(value) > 0) {
-                updatedRow.igst = "";
-                updatedRow.igstPercentage = "";
-                updatedRow.igstAmount = 0;
+            if (key === "amount") {
+                updatedRow.netAmount = value;
+                updatedRow.references = [];
             }
 
-            if (key === "igst" && num(value) > 0) {
-                updatedRow.cgst = "";
-                updatedRow.sgst = "";
-                updatedRow.cgstPercentage = "";
-                updatedRow.sgstPercentage = "";
-                updatedRow.cgstAmount = 0;
-                updatedRow.sgstAmount = 0;
+            if (key === "netAmount") {
+                updatedRow.amount = value;
+                updatedRow.references = [];
             }
 
-            updatedRow = calculateRow(updatedRow);
-            updatedProducts[index] = updatedRow;
+            updatedRows[index] = updatedRow;
 
-            return { ...prev, products: updatedProducts };
+            return {
+                ...prev,
+                recBody: updatedRows,
+            };
         });
 
         setErrors((prev: any) => ({
             ...prev,
-            products: "",
+            recBody: "",
             [`row_${index}_${key}`]: "",
-            [`row_${index}_tax`]: "",
+            [`row_${index}_references`]: "",
         }));
     };
 
+    const handleOpenReferenceModal = async (rowIndex: number) => {
+        const selectedRow = form?.recBody?.[rowIndex];
+
+        if (!selectedRow) {
+            toast.error("Receipt row not found");
+            return;
+        }
+
+        if (!selectedRow?.accountCode) {
+            toast.error("Please select account first");
+            return;
+        }
+
+        if (!selectedRow?.amount && !selectedRow?.netAmount) {
+            toast.error("Please enter amount first");
+            return;
+        }
+
+        setSelectedReferenceRowIndex(rowIndex);
+        setReferenceError("");
+        setReferenceRows([]);
+        setShowReferenceModal(true);
+
+        const existingReferences = Array.isArray(selectedRow?.references)
+            ? selectedRow.references
+            : [];
+
+        const existingReferenceMap = new Map<string, any>(
+            existingReferences
+                .filter((ref: any) => {
+                    return (
+                        String(ref?.referenceType || "SINV").toUpperCase() ===
+                        "SINV" && ref?.saleInvoice
+                    );
+                })
+                .map((ref: any) => [String(ref.saleInvoice), ref])
+        );
+
+        const refs = await fetchReceiptReferences(selectedRow);
+
+        const openRefs = (refs || []).filter((item: any) => {
+            const invoiceNo = getReferenceVoucherNumber(item);
+            const existingRef = existingReferenceMap.get(String(invoiceNo));
+
+            const remainingAmount =
+                getReferenceAmount(item) + num(existingRef?.adjustedAmount || 0);
+
+            return remainingAmount > 0;
+        });
+
+        if (!openRefs || openRefs.length === 0) {
+            setReferenceRows([]);
+            return;
+        }
+
+        const mappedReferences = openRefs.map((item: any) => {
+            const saleInvoice = getReferenceVoucherNumber(item);
+            const existingRef = existingReferenceMap.get(String(saleInvoice));
+
+            const remainingBillAmount =
+                getReferenceAmount(item) + num(existingRef?.adjustedAmount || 0);
+
+            return {
+                id: item?._id || Date.now() + Math.random(),
+
+                referenceType: "SINV",
+                saleInvoice,
+
+                docDate: formatDateForInput(getReferenceDate(item)),
+
+                billDueDate: formatDateForInput(getReferenceDate(item)),
+                billAmount: String(
+                    item?.netAmount ||
+                    item?.sInvFooter?.netAmount ||
+                    getReferenceAmount(item)
+                ),
+                netAmount: String(
+                    item?.netAmount ||
+                    item?.sInvFooter?.netAmount ||
+                    getReferenceAmount(item)
+                ),
+
+                remainingBillAmount: String(remainingBillAmount),
+
+                adjustedAmount:
+                    existingRef?.adjustedAmount !== undefined
+                        ? String(existingRef.adjustedAmount)
+                        : "",
+            };
+        });
+
+        setReferenceRows(mappedReferences);
+    };
+
+    const handleReferenceRowChange = (
+        index: number,
+        key: string,
+        value: any
+    ) => {
+        setReferenceRows((prev: any[]) => {
+            const updatedRows = [...prev];
+
+            updatedRows[index] = {
+                ...updatedRows[index],
+                [key]: value,
+            };
+
+            return updatedRows;
+        });
+
+        setReferenceError("");
+    };
+
+    const handleAddReferenceRow = () => {
+        setReferenceRows((prev: any[]) => [
+            ...prev,
+            {
+                ...emptyReferenceRow,
+                id: Date.now(),
+            },
+        ]);
+    };
+
+    const handleDeleteReferenceRow = (index: number) => {
+        setReferenceRows((prev: any[]) =>
+            prev.filter((_: any, i: number) => i !== index)
+        );
+    };
+
+    const handleCloseReferenceModal = () => {
+        setShowReferenceModal(false);
+        setSelectedReferenceRowIndex(null);
+        setReferenceRows([]);
+        setReferenceError("");
+        setReferenceLoading(false);
+    };
+
+    const buildNewReferenceRow = (amount: number) => ({
+        referenceType: "NEW",
+        newReference: "ADV",
+        billDueDate: "",
+        billAmount: String(amount),
+        adjustedAmount: String(amount),
+    });
+
+    const handleSaveReferences = () => {
+        if (selectedReferenceRowIndex === null) {
+            toast.error("Receipt row not selected");
+            return;
+        }
+        const maxAmount = selectedReferenceMaxAmount;
+        let referencesToSave: any[] = [];
+        const hasInvoiceList =
+            Array.isArray(referenceRows) &&
+            referenceRows.some((row: any) => {
+                return (
+                    String(row?.referenceType || "SINV").toUpperCase() ===
+                    "SINV" && row?.saleInvoice
+                );
+            });
+
+        if (hasInvoiceList) {
+            const rowsWithAdjustedAmount = (referenceRows || []).filter(
+                (row: any) => num(row?.adjustedAmount) > 0
+            );
+
+            if (rowsWithAdjustedAmount.length === 0) {
+                toast.error("Please enter adjusted amount in at least one invoice");
+                return;
+            }
+
+            let extraNewReferenceAmount = 0;
+
+            referencesToSave = rowsWithAdjustedAmount.flatMap((row: any) => {
+                const adjustedAmount = num(row?.adjustedAmount);
+                const remainingBillAmount = num(row?.remainingBillAmount);
+
+                const invoiceAdjustedAmount =
+                    remainingBillAmount > 0
+                        ? Math.min(adjustedAmount, remainingBillAmount)
+                        : adjustedAmount;
+
+                const extraAmount = adjustedAmount - invoiceAdjustedAmount;
+
+                if (extraAmount > 0) {
+                    extraNewReferenceAmount += extraAmount;
+                }
+
+                if (invoiceAdjustedAmount <= 0) {
+                    return [];
+                }
+
+                return [
+                    {
+                        referenceType: "SINV",
+                        saleInvoice: row?.saleInvoice || "",
+                        docDate: row?.docDate || "",
+                        billDueDate: row?.billDueDate || row?.docDate || "",
+                        billAmount: String(row?.billAmount || row?.netAmount || 0),
+                        netAmount: String(row?.netAmount || row?.billAmount || 0),
+                        remainingBillAmount: String(row?.remainingBillAmount || 0),
+                        adjustedAmount: String(invoiceAdjustedAmount),
+                    },
+                ];
+            });
+
+            if (extraNewReferenceAmount > 0) {
+                referencesToSave.push({
+                    referenceType: "NEW",
+                    newReference: "ADV",
+                    billDueDate: "",
+                    billAmount: String(extraNewReferenceAmount),
+                    adjustedAmount: String(extraNewReferenceAmount),
+                });
+            }
+        } else {
+            referencesToSave = [buildNewReferenceRow(maxAmount)];
+        }
+
+        const totalAdjusted = referencesToSave.reduce(
+            (sum: number, row: any) => sum + num(row?.adjustedAmount),
+            0
+        );
+
+        if (totalAdjusted <= 0) {
+            toast.error("Reference amount should be greater than 0");
+            return;
+        }
+
+        if (Math.abs(totalAdjusted - maxAmount) > 0.01) {
+            const message = `Reference adjusted amount must be same as body amount ${money(maxAmount)}`;
+            setReferenceError(message);
+            toast.error(message);
+            return;
+        }
+
+        setForm((prev: any) => {
+            const updatedRows = [...(prev.recBody || [])];
+
+            updatedRows[selectedReferenceRowIndex] = {
+                ...updatedRows[selectedReferenceRowIndex],
+                references: referencesToSave,
+            };
+
+            return {
+                ...prev,
+                recBody: updatedRows,
+            };
+        });
+
+        handleCloseReferenceModal();
+    };
+
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
+        const bodyKeys = (bodyFieldsWithoutReference || [])
             .filter((field: any) => !field.isHidden)
             .map((field: any) => field.key);
 
-        return (form.products || []).filter((row: any) =>
-            bodyKeys.some((key: string) => {
+        return (form.recBody || []).filter((row: any) => {
+            return bodyKeys.some((key: string) => {
                 const value = row?.[key];
+
                 return value !== undefined && value !== null && value !== "";
-            })
-        );
+            });
+        });
     };
 
     const validateForm = () => {
@@ -738,234 +876,202 @@ const SalesReturn = () => {
             const value = form?.[field.key];
 
             if (value === undefined || value === null || value === "") {
-                err[field.key] = `${field.label || field.title || field.key
-                    } is required`;
+                err[field.key] = `${field.label || field.key} is required`;
             }
         });
-
-        if (!form?.sInvVoucherNumber) {
-            err.sInvVoucherNumber = "Sales invoice reference is required";
-        }
 
         const filledRows = getFilledRows();
 
         if (filledRows.length === 0) {
-            err.products = "Please add at least one product";
+            err.recBody = "Please add at least one receipt row";
         }
 
-        (form.products || []).forEach((row: any, index: number) => {
-            const hasAnyValue = (templateFields?.body || []).some(
+        (form.recBody || []).forEach((row: any, index: number) => {
+            const hasAnyValue = (bodyFieldsWithoutReference || []).some(
                 (field: any) => {
                     const value = row?.[field.key];
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
+
+                    return value !== undefined && value !== null && value !== "";
                 }
             );
 
             if (!hasAnyValue) return;
 
-            (templateFields?.body || []).forEach((field: any) => {
+            (bodyFieldsWithoutReference || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
 
                 const value = row?.[field.key];
 
                 if (value === undefined || value === null || value === "") {
-                    err[`row_${index}_${field.key}`] = `${field.label || field.title || field.key
-                        } is required`;
+                    err[`row_${index}_${field.key}`] =
+                        `${field.label || field.key} is required`;
                 }
             });
 
-            const cgst = num(row.cgstPercentage || row.cgst);
-            const sgst = num(row.sgstPercentage || row.sgst);
-            const igst = num(row.igstPercentage || row.igst);
+            const rowAmount = num(row?.netAmount || row?.amount || 0);
 
-            if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] =
-                    "You can enter either IGST or CGST/SGST";
-                err[`row_${index}_igstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_igst`] = "Only one tax type allowed";
-                err[`row_${index}_cgst`] = "Only one tax type allowed";
-                err[`row_${index}_sgst`] = "Only one tax type allowed";
+            const hasReferences =
+                Array.isArray(row?.references) && row.references.length > 0;
+
+            const referenceAdjusted = hasReferences
+                ? row.references.reduce((sum: number, ref: any) => {
+                    return sum + num(ref?.adjustedAmount);
+                }, 0)
+                : 0;
+
+            if (!hasReferences || referenceAdjusted <= 0) {
+                err[`row_${index}_references`] = "Please add reference first";
+                return;
+            }
+
+            if (referenceAdjusted > rowAmount) {
+                err[`row_${index}_references`] =
+                    `Reference total cannot exceed ${money(rowAmount)}`;
+                return;
+            }
+
+            if (Math.abs(referenceAdjusted - rowAmount) > 0.01) {
+                err[`row_${index}_references`] =
+                    `Reference adjusted amount must be same as body amount ${money(rowAmount)}`;
             }
         });
 
         setErrors(err);
 
-        if (err.sInvVoucherNumber) toast.error(err.sInvVoucherNumber);
-        if (err.products) toast.error(err.products);
+        if (err.recBody) {
+            toast.error(err.recBody);
+        }
+
+        const referenceErrorKey = Object.keys(err).find((key) =>
+            key.includes("_references")
+        );
+
+        if (referenceErrorKey) {
+            toast.error(err[referenceErrorKey]);
+        }
 
         return Object.keys(err).length === 0;
     };
 
     const cleanRows = () => {
-        const bodyKeys = (templateFields?.body || []).map(
-            (field: any) => field.key
-        );
+        return (form.recBody || [])
+            .filter((row: any) => {
+                return (
+                    row?.accountCode ||
+                    row?.accountName ||
+                    row?.amount ||
+                    row?.netAmount
+                );
+            })
+            .map((row: any) => ({
+                accountCode: row?.accountCode || "",
+                accountName: row?.accountName || "",
 
-        return (form.products || [])
-            .filter((row: any) =>
-                bodyKeys.some((key: string) => {
-                    const value = row?.[key];
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
-                })
-            )
-            .map((row: any) => calculateRow(normalizeRowKeys(row)));
+                amount: String(row?.amount || row?.netAmount || 0),
+                netAmount: String(row?.netAmount || row?.amount || 0),
+
+                references: Array.isArray(row?.references)
+                    ? row.references.map((ref: any) => {
+                        const referenceType = String(
+                            ref?.referenceType || "SINV"
+                        ).toUpperCase();
+
+                        if (referenceType === "NEW") {
+                            return {
+                                referenceType: "NEW",
+                                newReference: ref?.newReference || "ADV",
+                                billDueDate: ref?.billDueDate || "",
+                                billAmount: String(
+                                    ref?.billAmount ||
+                                    ref?.adjustedAmount ||
+                                    0
+                                ),
+                                adjustedAmount: String(
+                                    ref?.adjustedAmount ||
+                                    ref?.billAmount ||
+                                    0
+                                ),
+                            };
+                        }
+
+                        return {
+                            referenceType: "SINV",
+                            saleInvoice: ref?.saleInvoice || "",
+                            docDate: ref?.docDate || ref?.billDueDate || "",
+                            billDueDate: ref?.billDueDate || ref?.docDate || "",
+                            billAmount: String(
+                                ref?.billAmount || ref?.netAmount || 0
+                            ),
+                            netAmount: String(
+                                ref?.netAmount || ref?.billAmount || 0
+                            ),
+                            remainingBillAmount: String(
+                                ref?.remainingBillAmount || 0
+                            ),
+                            adjustedAmount: String(ref?.adjustedAmount || 0),
+                        };
+                    })
+                    : [],
+
+                remarks: row?.remarks || null,
+            }));
     };
 
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
-        const products = cleanRows();
-        const footer = calculateFooter(products);
+        const rows = cleanRows();
+        const totals = calculateFooter(rows);
+
+        const netAmount = totals.netAmount;
+        const adjustedAmount = totals.adjustedAmount;
+        const balanceAmount = netAmount - adjustedAmount;
 
         const payload: any = {
-            sInvReturnVoucherDate: form.sInvReturnVoucherDate,
+            recVoucherDate: form.recVoucherDate,
 
-            sInvVoucherNumber: form?.sInvVoucherNumber,
+            recAccountCode: form.recAccountCode,
+            recAccountName: form.recAccountName,
 
-            sInvCustomerCode:
-                form?.sInvCustomerCode || form?.sInvReturnCustomerCode,
-            sInvReturnCustomerCode:
-                form?.sInvReturnCustomerCode || form?.sInvCustomerCode,
+            recStatus: form.recStatus || "open",
+            recRemark: form.recRemark,
 
-            sInvReturnCustomerName: form.sInvReturnCustomerName,
+            paymentMode: form.paymentMode,
+            bankReferenceNumber: form.bankReferenceNumber,
+            receivedBy: form.receivedBy,
 
-            sInvReturnRemark:
-                form.sInvReturnRemark || form.sInvRemark || "",
-            sInvReturnSalesAccount:
-                form.sInvReturnSalesAccount || form.sInvSalesAccount || "SA021",
-            sInvReturnStatus:
-                form.sInvReturnStatus || form.sInvStatus || "open",
+            recBody: rows,
 
-            sInvReturnReference: {
-                referenceType: "salesInvoice",
-                sInvVoucherNumber: form?.sInvVoucherNumber || "",
-                customerCode:
-                    form?.sInvReturnCustomerCode ||
-                    form?.sInvCustomerCode ||
-                    "",
-                customerName: form?.sInvReturnCustomerName || "",
-            },
-
-            sInvReturnBody: products.map((item: any) => ({
-                productCode: item.productCode,
-                productName: item.productName,
-                productId: item.productId,
-                productDescription:
-                    item.productDescription || item.description,
-                description: item.description || item.productDescription,
-                productHSNCode: item.productHSNCode,
-                remarks: item.remarks,
-                quantity: String(item.quantity),
-                unit: item.unit || item.uom,
-                uom: item.uom || item.unit,
-                unitName: item.unitName,
-                rate: String(item.rate),
-                gross: fmtMoney(item.grossAmount),
-                grossAmount: fmtMoney(item.grossAmount),
-                discount: String(item.discountPercentage || item.discount || ""),
-                discountPercentage: String(
-                    item.discountPercentage || item.discount || ""
-                ),
-                discountAmount: fmtMoney(item.discountAmount),
-                taxableAmount: fmtMoney(item.taxableAmount),
-                cgst: String(item.cgstPercentage || item.cgst || ""),
-                cgstPercentage: String(
-                    item.cgstPercentage || item.cgst || ""
-                ),
-                cgstAmount: fmtMoney(item.cgstAmount),
-                sgst: String(item.sgstPercentage || item.sgst || ""),
-                sgstPercentage: String(
-                    item.sgstPercentage || item.sgst || ""
-                ),
-                sgstAmount: fmtMoney(item.sgstAmount),
-                igst: String(item.igstPercentage || item.igst || ""),
-                igstPercentage: String(
-                    item.igstPercentage || item.igst || ""
-                ),
-                igstAmount: fmtMoney(item.igstAmount),
-                taxAmount: fmtMoney(item.taxAmount),
-                otherAmount: fmtMoney(item.otherAmount),
-                netAmount: fmtMoney(item.netAmount || item.netTotal),
-                netTotal: fmtMoney(item.netTotal || item.netAmount),
-            })),
-
-            sInvReturnFooter: {
-                grossAmount: fmtMoney(footer.totalGrossAmount),
-                discountAmount: fmtMoney(footer.totalDiscountAmount),
-                cgstAmount: fmtMoney(footer.totalCgstAmount),
-                sgstAmount: fmtMoney(footer.totalSgstAmount),
-                igstAmount: fmtMoney(footer.totalIgstAmount),
-                taxAmount: fmtMoney(footer.totalTaxAmount),
-                otherAmount: fmtMoney(footer.totalOtherAmount),
-                netAmount: fmtMoney(footer.totalNetAmount),
-                adjustedAmount: "0",
-                balanceAmount: fmtMoney(footer.totalNetAmount),
-
-                totalQuantity: footer.totalQuantity,
-                totalGrossAmount: fmtMoney(footer.totalGrossAmount),
-                totalDiscountAmount: fmtMoney(footer.totalDiscountAmount),
-                totalCgstAmount: fmtMoney(footer.totalCgstAmount),
-                totalSgstAmount: fmtMoney(footer.totalSgstAmount),
-                totalIgstAmount: fmtMoney(footer.totalIgstAmount),
-                totalTaxAmount: fmtMoney(footer.totalTaxAmount),
-                totalOtherAmount: fmtMoney(footer.totalOtherAmount),
-                totalNetAmount: fmtMoney(footer.totalNetAmount),
+            recFooter: {
+                netAmount: String(netAmount),
+                adjustedAmount: String(adjustedAmount),
+                balanceAmount: String(balanceAmount),
             },
         };
 
         try {
             if (editingRecord) {
                 await dispatch(
-                    updateSalesInvoiceReturn({
-                        sInvReturnVoucherNumber:
-                            form?.sInvReturnVoucherNumber,
+                    updateSalesReceipt({
+                        receiptVoucherNumber: form.recVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
 
-                toast.success("Sales return updated successfully");
+                toast.success("Sales receipt updated successfully");
             } else {
-                await dispatch(
-                    createSalesInvoiceReturn({ payload }) as any
-                ).unwrap();
+                await dispatch(addSalesReceipt({ payload }) as any).unwrap();
 
-                if (form?.sInvVoucherNumber) {
-                    const invoiceStatus =
-                        await syncSalesInvoiceStatusAfterReturn(
-                            form?.sInvVoucherNumber
-                        );
-
-                    if (invoiceStatus === "close") {
-                        toast.success(
-                            "Sales return created successfully and Sales Invoice closed"
-                        );
-                    } else {
-                        toast.success("Sales return created successfully");
-                    }
-                } else {
-                    toast.success("Sales return created successfully");
-                }
+                toast.success("Sales receipt created successfully");
             }
 
             setShowModal(false);
             resetMainForm();
-            fetchSalesReturns();
-        } catch (err: any) {
-            toast.error(err?.message || "Operation failed");
+
+            await fetchSalesReceipts();
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to save sales receipt");
         }
     };
 
@@ -974,13 +1080,16 @@ const SalesReturn = () => {
             if (!confirmTooltip.voucherNumber) return;
 
             await dispatch(
-                deleteSalesInvoiceReturn(confirmTooltip.voucherNumber) as any
+                deleteSalesReceipt({
+                    receiptVoucherNumber: confirmTooltip.voucherNumber,
+                }) as any
             ).unwrap();
 
-            toast.success("Sales return deleted successfully");
-            fetchSalesReturns();
-        } catch (err: any) {
-            toast.error(err?.message || "Failed to delete sales return");
+            toast.success("Sales receipt deleted successfully");
+
+            await fetchSalesReceipts();
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to delete sales receipt");
         } finally {
             setConfirmTooltip({
                 show: false,
@@ -991,156 +1100,83 @@ const SalesReturn = () => {
         }
     };
 
-    const handleInvoiceReferenceSelect = (invoice: any) => {
-        setSelectedInvoiceReference(invoice);
-    };
+    const handleRefresh = async () => {
+        setRefreshing(true);
 
-    const handleInvoiceReferenceConfirm = () => {
-        if (!selectedInvoiceReference) {
-            toast.error("Please select sales invoice reference");
-            return;
+        try {
+            await fetchSalesReceipts();
+            toast.success("Sales receipt list refreshed");
+        } finally {
+            setRefreshing(false);
         }
-
-        const invoiceBody = selectedInvoiceReference?.sInvBody || [];
-
-        const products =
-            invoiceBody.length > 0
-                ? invoiceBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
-
-                    return calculateRow(
-                        normalizeRowKeys({
-                            id: Date.now() + Math.random(),
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
-                            productDescription:
-                                item?.productDescription ||
-                                item?.description ||
-                                "",
-                            description:
-                                item?.description ||
-                                item?.productDescription ||
-                                "",
-                            productHSNCode: item?.productHSNCode || "",
-                            remarks: item?.remarks || "",
-                            quantity: item?.quantity || "",
-                            unit: unitCode,
-                            uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
-                            rate: item?.rate || "",
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
-                            discount:
-                                item?.discount ||
-                                item?.discountPercentage ||
-                                "",
-                            discountPercentage:
-                                item?.discountPercentage ||
-                                item?.discount ||
-                                "",
-                            discountAmount: item?.discountAmount || 0,
-                            taxableAmount: item?.taxableAmount || 0,
-                            cgst:
-                                item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage:
-                                item?.cgstPercentage || item?.cgst || "",
-                            cgstAmount: item?.cgstAmount || 0,
-                            sgst:
-                                item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage:
-                                item?.sgstPercentage || item?.sgst || "",
-                            sgstAmount: item?.sgstAmount || 0,
-                            igst:
-                                item?.igst || item?.igstPercentage || "",
-                            igstPercentage:
-                                item?.igstPercentage || item?.igst || "",
-                            igstAmount: item?.igstAmount || 0,
-                            taxAmount: item?.taxAmount || 0,
-                            otherAmount: item?.otherAmount || 0,
-                            netAmount:
-                                item?.netAmount || item?.netTotal || 0,
-                            netTotal:
-                                item?.netTotal || item?.netAmount || 0,
-                        })
-                    );
-                })
-                : [{ ...emptyProductRow, id: Date.now() }];
-
-        setForm({
-            ...getDefaultForm(),
-
-            sInvVoucherNumber: selectedInvoiceReference?.sInvVoucherNumber,
-
-            sInvCustomerCode: selectedInvoiceReference?.sInvCustomerCode || "",
-            sInvReturnCustomerCode:
-                selectedInvoiceReference?.sInvCustomerCode || "",
-            sInvReturnCustomerName:
-                selectedInvoiceReference?.sInvCustomerName || "",
-
-            sInvReturnSalesAccount:
-                selectedInvoiceReference?.sInvSalesAccount || "SA021",
-
-            sInvReturnRemark: selectedInvoiceReference?.sInvRemark || "",
-
-            sInvStatus: selectedInvoiceReference?.sInvStatus || "open",
-            sInvReturnStatus: "open",
-
-            products,
-        });
-
-        setErrors({});
-        setEditingRecord(null);
-        setShowInvoiceReferenceModal(false);
-        setShowModal(true);
     };
 
-    const footerValues = useMemo(
-        () => ({
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        }),
-        [
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-        ]
-    );
-
-    const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
-
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
-            });
-    }, [templateFields?.footer, footerValues]);
+    const columns = [
+        {
+            key: "recVoucherNumber",
+            title: "Voucher",
+            render: (row: any) =>
+                row?.recVoucherNumber || row?.voucherNumber || "-",
+        },
+        {
+            key: "recVoucherDate",
+            title: "Date",
+            render: (row: any) =>
+                row?.recVoucherDate
+                    ? formatDateForList(row.recVoucherDate)
+                    : "-",
+        },
+        {
+            key: "recAccountName",
+            title: "Cash/Bank Account",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-slate-800">
+                        {row?.recAccountName || "-"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                        {row?.recAccountCode || "-"}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: "recBody",
+            title: "Accounts",
+            render: (row: any) => row?.recBody?.length || 0,
+        },
+        {
+            key: "receiptAmount",
+            title: "Receipt Amount",
+            render: (row: any) => (
+                <span className="font-semibold text-indigo-700">
+                    {money(row?.recFooter?.netAmount || 0)}
+                </span>
+            ),
+        },
+        {
+            key: "recStatus",
+            title: "Status",
+            render: (row: any) => (
+                <span
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.recStatus === "open"
+                        ? "border-green-200 bg-green-50 text-green-700"
+                        : "border-red-200 bg-red-50 text-red-700"
+                        }`}
+                >
+                    {row?.recStatus || "-"}
+                </span>
+            ),
+        },
+    ];
 
     useEffect(() => {
-        dispatch(getAllTransactionSchema("salesReturn") as any);
+        dispatch(getAllTransactionSchema("receipt") as any);
     }, [dispatch]);
 
     useEffect(() => {
-        dispatch(getAllReportMapping({ moduleType: "salesReturn" }));
-    }, [dispatch]);
+        fetchSalesReceipts();
+    }, [localOffset, localLimit, debouncedSearch, status]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -1150,20 +1186,6 @@ const SalesReturn = () => {
 
         return () => clearTimeout(timer);
     }, [search]);
-
-    useEffect(() => {
-        fetchSalesReturns();
-    }, [localOffset, localLimit, debouncedSearch, status]);
-
-    useEffect(() => {
-        if (!showInvoiceReferenceModal) return;
-
-        const timer = setTimeout(() => {
-            fetchInvoiceReferences();
-        }, 400);
-
-        return () => clearTimeout(timer);
-    }, [showInvoiceReferenceModal, invoiceReferenceSearch]);
 
     useEffect(() => {
         const prepareFields = async () => {
@@ -1179,11 +1201,17 @@ const SalesReturn = () => {
             try {
                 setFieldsLoading(true);
                 const updatedData = await loadAllTemplateOptions(
-                    transactionsSchema
+                    transactionsSchema,
+                    {
+                        header: { accountType: "bank,cash", },
+                        body: { accountType: "customer", },
+                    }
                 );
-                setTemplateFields(updatedData);
+
+                const header = updatedData?.header?.filter((e: any) => e?.key !== "isPosPosting")
+                setTemplateFields({ ...updatedData, header });
             } catch (error) {
-                console.log("Failed to prepare template fields", error);
+                console.log("Failed to prepare sales receipt fields", error);
             } finally {
                 setFieldsLoading(false);
             }
@@ -1192,26 +1220,32 @@ const SalesReturn = () => {
         prepareFields();
     }, [transactionsSchema]);
 
+    const showInitialSkeleton =
+        !refreshing &&
+        salesReceipt.length === 0 &&
+        (listingLoader || fieldsLoading);
+
+    if (showInitialSkeleton) {
+        return <ModulePageSkeleton rows={8} columns={5} />;
+    }
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center">
-                <div className="flex items-start gap-3">
-                    <Badge
-                        count={
-                            pagination?.totalDocs ??
-                            salesInvoiceReturns?.length ??
-                            0
-                        }
-                        text="Total Sales Returns:"
-                        varient="primary"
-                    />
-                </div>
+                <Badge
+                    count={pagination?.totalDocs ?? salesReceipt?.length ?? 0}
+                    text="Total Sales Receipts:"
+                    varient="primary"
+                />
 
                 <div className="ml-auto flex items-center gap-2">
                     <Toggle
                         arr={["open", "close"]}
                         state={status}
-                        setState={handleStatusChange}
+                        setState={(nextStatus: "open" | "close") => {
+                            setStatus(nextStatus);
+                            setLocalOffset(0);
+                        }}
                     />
 
                     <SearchInput search={search} setSearch={setSearch} />
@@ -1224,37 +1258,18 @@ const SalesReturn = () => {
                     {/* @ts-ignore */}
                     <DataCreateButton
                         callBackFn={openAddModal}
-                        text="Add Sales Return"
+                        text="Add Sales Receipt"
                     />
                 </div>
             </div>
 
             <DataTable
                 columns={columns}
-                data={salesInvoiceReturns}
-                loading={loading}
-                emptyMessage={`No ${status} sales return found`}
+                data={salesReceipt}
+                loading={listingLoader}
+                emptyMessage={`No ${status} sales receipt found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => {
-                                setDownlaodPDF((pre: any) => ({
-                                    ...pre,
-                                    show: true,
-                                    moduleType: "salesReturn",
-                                    record,
-                                    CustomerCode:
-                                        record?.sInvReturnCustomerCode ||
-                                        record?.sInvCustomerCode,
-                                    voucherNumber:
-                                        record?.sInvReturnVoucherNumber,
-                                }));
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
-                            <Download size={16} />
-                        </button>
-
                         <button
                             onClick={() => openEditModal(record)}
                             className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
@@ -1263,7 +1278,7 @@ const SalesReturn = () => {
                         </button>
 
                         <button
-                            disabled={deleteLoading}
+                            disabled={deleteLoader}
                             onClick={(e) => {
                                 const rect =
                                     e.currentTarget.getBoundingClientRect();
@@ -1278,7 +1293,9 @@ const SalesReturn = () => {
                                     x,
                                     y,
                                     voucherNumber:
-                                        record?.sInvReturnVoucherNumber,
+                                        record?.recVoucherNumber ||
+                                        record?.receiptVoucherNumber ||
+                                        record?.voucherNumber,
                                 });
                             }}
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
@@ -1307,7 +1324,7 @@ const SalesReturn = () => {
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message="Are you sure you want to delete this sales return?"
+                    message="Are you sure you want to delete this sales receipt?"
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteConfirm}
@@ -1324,156 +1341,87 @@ const SalesReturn = () => {
 
             {!fieldsLoading && (
                 <DynamicAddForm
-                    show={showModal}
-                    setShow={setShowModal}
-                    edit={Boolean(editingRecord)}
-                    title="Sales Return"
-                    subtitle="Fill in the sales return details below"
-                    loading={createLoading || updateLoading}
-                    onClose={() => {
-                        setShowModal(false);
-                        resetMainForm();
+                    {...{
+                        show: showModal,
+                        setShow: setShowModal,
+                        edit: Boolean(editingRecord),
+                        title: "Receipt",
+                        bodyTitle: "Accounts",
+                        subtitle: "Fill in the receipt details below",
+                        loading: addLoader,
+                        onClose: () => {
+                            setShowModal(false);
+                            resetMainForm();
+                        },
+
+                        onSubmit: handleSubmit,
+
+                        RefrenceBtnText: getReferenceActionText,
+                        isRefrenceAction: true,
+                        handleRefRow: handleOpenReferenceModal,
+
+                        addButtonText: "Add Account",
+
+                        form,
+                        errors,
+                        handleAddRow,
+                        handleDeleteRow,
+                        handleRowChange,
+                        footerTotals,
+                        inputData: {
+                            ...templateFields,
+                            body: bodyFieldsWithoutReference,
+                            footer: dynamicFooterArray,
+                        },
+                        bodyKey: "recBody",
+                        handleChange: handleMainChange,
                     }}
-                    onSubmit={handleSubmit}
-                    form={form}
-                    errors={errors}
-                    handleAddRow={handleAddRow}
-                    handleDeleteRow={handleDeleteRow}
-                    handleRowChange={handleRowChange}
-                    footerTotals={footerTotals}
-                    inputData={{
-                        ...templateFields,
-                        footer: dynamicFooterArray,
-                    }}
-                    bodyKey="products"
-                    handleChange={handleMainChange}
                 />
             )}
 
-            <Modal
-                show={showInvoiceReferenceModal}
-                setShow={setShowInvoiceReferenceModal}
-                title="Select Sales Invoice Reference"
-                state={false}
-                handleSubmit={handleInvoiceReferenceConfirm}
-                loader={invoiceLoader}
-                gridCols={1}
-                maxWidth="2xl"
-                modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
-                body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
-                            <input
-                                value={invoiceReferenceSearch}
-                                onChange={(e) =>
-                                    setInvoiceReferenceSearch(e.target.value)
-                                }
-                                placeholder="Search sales invoice number or customer..."
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                            />
-                        </div>
+            {showReferenceModal && (
+                <DynamicAddForm
+                    {...{
+                        show: showReferenceModal,
+                        setShow: setShowReferenceModal,
+                        edit: false,
+                        title: "Reference",
+                        subtitle: selectedReferenceRow?.accountName ? `Sales invoices for ${selectedReferenceRow.accountCode}` : "",
+                        loading: referenceLoading || referenceLoader,
+                        onClose: handleCloseReferenceModal,
+                        onSubmit: handleSaveReferences,
+                        addButtonText: "Add Reference",
+                        isAddButton: false,
+                        Addbutton: false,
+                        form: {
+                            newReference: money(newReferenceAmount),
+                            referenceBody: referenceRows,
+                        },
+                        errors: { referenceBody: referenceError, },
+                        handleAddRow: handleAddReferenceRow,
+                        handleDeleteRow: handleDeleteReferenceRow,
+                        handleRowChange: handleReferenceRowChange,
+                        footerTotals: {},
+                        inputData: {
+                            header: [
+                                {
+                                    key: "newReference",
+                                    label: "New Reference",
+                                    type: "text",
+                                    isReadOnly: true,
+                                },
+                            ],
 
-                        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                            {invoiceLoader ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
-                                    Loading sales invoices...
-                                </div>
-                            ) : salesInvoices.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
-                                    No sales invoice found
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {salesInvoices.map(
-                                        (e: any, index: number) => {
-                                            const invoiceNumber =
-                                                e?.sInvVoucherNumber || "-";
-
-                                            const isSelected =
-                                                selectedInvoiceReference?.sInvVoucherNumber ===
-                                                e?.sInvVoucherNumber;
-
-                                            return (
-                                                <button
-                                                    key={
-                                                        invoiceNumber || index
-                                                    }
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleInvoiceReferenceSelect(
-                                                            e
-                                                        )
-                                                    }
-                                                    className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
-                                                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                            : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <div>
-                                                            <p className="text-base font-bold text-gray-900">
-                                                                {e?.sInvVoucherNumber ||
-                                                                    "NA"}{" "}
-                                                                -{" "}
-                                                                {e?.sInvCustomerName ||
-                                                                    "NA"}
-                                                            </p>
-
-                                                            <p className="mt-1 text-xs font-medium text-gray-500">
-                                                                Items:{" "}
-                                                                {e?.sInvBody
-                                                                    ?.length ||
-                                                                    0}
-                                                            </p>
-
-                                                            <p className="mt-1 text-xs font-medium text-gray-500">
-                                                                Amount:{" "}
-                                                                {money(
-                                                                    e
-                                                                        ?.sInvFooter
-                                                                        ?.netAmount ||
-                                                                    0
-                                                                )}
-                                                            </p>
-                                                        </div>
-
-                                                        {isSelected && (
-                                                            <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                                                                Selected
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </button>
-                                            );
-                                        }
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                }
-            />
-
-            {/* @ts-ignore */}
-            <ListingModel
-                show={downlaodPDF?.show}
-                downlaodPDF={downlaodPDF}
-                entryType="sales-return"
-                setShow={() =>
-                    setDownlaodPDF((pre: any) => ({
-                        ...pre,
-                        show: !downlaodPDF?.show,
-                    }))
-                }
-                rowData={downlaodPDF?.record}
-                report={report}
-                title="Download Sales Return PDF"
-            />
+                            body: referenceTableFields,
+                            footer: [],
+                        },
+                        bodyKey: "referenceBody",
+                        handleChange: () => { },
+                    }}
+                />
+            )}
         </div>
     );
 };
 
-export default SalesReturn;
+export default SalesReceipt;

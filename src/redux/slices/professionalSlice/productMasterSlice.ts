@@ -85,7 +85,6 @@ export const createProduct = createAsyncThunk(
         "/eTaxSolnMongoApiBackend/productMaster/createProduct",
         payload
       );
-
       if (!res.data?.success) {
         return rejectWithValue(res.data);
       }
