@@ -46,6 +46,7 @@ import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkf
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReportsDashboard from './pages/bookez/reports';
+import RegistersDashboard from './pages/bookez/registers';
 
 function App() {
 
@@ -111,6 +112,10 @@ function App() {
         <Route
             path="/bookEz/reports"
           element={<ReportsDashboard/>}
+        />
+        <Route
+            path="/bookEz/registers"
+          element={<RegistersDashboard/>}
         />
 
         {/* configuration */}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, Factory, BadgeIndianRupee, ShoppingCart, BarChart3 } from 'lucide-react';
+import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, Factory, BadgeIndianRupee, ShoppingCart, BarChart3, BookOpenCheck, ReceiptText } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
@@ -99,7 +99,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
           name: 'Transaction',
           // path: '/professional/transaction',
-          icon: <BrickWallShield size={20} />,
+          icon: <ReceiptText size={20} />,
           children: [
             {
               name: "Opening Balances / Stocks",
@@ -128,9 +128,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
 
         {
-          name: "Ledger Reports",
+          name: "Reports",
           path: "/bookEz/reports",
           icon: <BarChart3 size={14} />,
+        },
+        {
+          name: "Registers",
+          path: "/bookEz/registers",
+          icon: <BookOpenCheck size={14} />,
         },
 
       ],

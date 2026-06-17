@@ -22,13 +22,6 @@ import { getPurchaseReturnList } from "../../../redux/slices/professionalSlice/p
 import { getAllPayment } from "../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
 
 
-const cleanNumber = (value: any) => {
-    const num = Number(value || 0);
-
-    return Number.isInteger(num)
-        ? String(num)
-        : String(num).replace(/\.?0+$/, "");
-};
 
 const mainColumns = [
     {
@@ -180,55 +173,35 @@ const AccountLedger = () => {
         return [];
     };
 
-    // const getVoucherNumber = (row: any) => {
-    //     return (
-    //         row?.voucherNumber ||
-    //         row?.voucherNo ||
-    //         row?.sInvVoucherNumber ||
-    //         row?.sInvReturnVoucherNumber ||
-    //         row?.receiptVoucherNumber ||
-    //         row?.salesReceiptVoucherNumber ||
-    //         row?.sReceiptVoucherNumber ||
-    //         ""
-    //     );
-    // };
 
-   const getVoucherNumber = (row: any) => {
-    return (
-        row?.voucherNumber ||
-        row?.voucherNo ||
 
-        row?.sInvVoucherNumber ||
-        row?.sInvReturnVoucherNumber ||
+    const getVoucherNumber = (row: any) => {
+        return (
+            row?.voucherNumber ||
+            row?.voucherNo ||
 
-        row?.recVoucherNumber ||
-        row?.receiptVoucherNumber ||
-        row?.salesReceiptVoucherNumber ||
-        row?.sReceiptVoucherNumber ||
+            row?.sInvVoucherNumber ||
+            row?.sInvReturnVoucherNumber ||
 
-        row?.payVoucherNumber ||
-        row?.paymentVoucherNumber ||
+            row?.recVoucherNumber ||
+            row?.receiptVoucherNumber ||
+            row?.salesReceiptVoucherNumber ||
+            row?.sReceiptVoucherNumber ||
 
-        row?.pInvVoucherNumber ||
+            row?.payVoucherNumber ||
+            row?.paymentVoucherNumber ||
 
-        // ✅ Purchase Return
-        row?.pRetVoucherNumber ||
-        row?.pReturnVoucherNumber ||
-        row?.purReturnVoucherNumber ||
-        row?.purchaseReturnVoucherNumber ||
+            row?.pInvVoucherNumber ||
 
-        ""
-    );
-};
-    const getModuleName = (row: any) => {
-        return String(
-            row?.module ||
-            row?.moduleName ||
-            row?.voucherType ||
-            row?.type ||
+            row?.pRetVoucherNumber ||
+            row?.pReturnVoucherNumber ||
+            row?.purReturnVoucherNumber ||
+            row?.purchaseReturnVoucherNumber ||
+
             ""
-        ).toLowerCase();
+        );
     };
+
 
     const normalizeInvoiceForView = (record: any) => {
         const footer = record?.sInvFooter || {};
@@ -617,196 +590,303 @@ const AccountLedger = () => {
         };
     };
 
-   const normalizePurchaseReturnForView = (record: any) => {
-    const footer = record?.pRetFooter || {};
+    const normalizePurchaseReturnForView = (record: any) => {
+        const footer = record?.pRetFooter || {};
 
-    const products = (record?.pRetBody || []).map((item: any) => ({
-        ...item,
+        const products = (record?.pRetBody || []).map((item: any) => ({
+            ...item,
 
-        productCode: item?.productCode || "",
-        productName: item?.productName || "",
-        productId: item?.productId || "",
+            productCode: item?.productCode || "",
+            productName: item?.productName || "",
+            productId: item?.productId || "",
 
-        productDescription:
-            item?.productDescription || item?.description || "",
-        description:
-            item?.description || item?.productDescription || "",
-        productHSNCode: item?.productHSNCode || "",
+            productDescription:
+                item?.productDescription || item?.description || "",
+            description:
+                item?.description || item?.productDescription || "",
+            productHSNCode: item?.productHSNCode || "",
 
-        quantity: item?.quantity || "",
-        uom: item?.uom || item?.unit || "",
-        unit: item?.unit || item?.uom || "",
+            quantity: item?.quantity || "",
+            uom: item?.uom || item?.unit || "",
+            unit: item?.unit || item?.uom || "",
 
-        rate: item?.rate || "",
+            rate: item?.rate || "",
 
-        gross: item?.gross || item?.grossAmount || "",
-        grossAmount: item?.grossAmount || item?.gross || "",
+            gross: item?.gross || item?.grossAmount || "",
+            grossAmount: item?.grossAmount || item?.gross || "",
 
-        discount: item?.discount || item?.discountPercentage || "",
-        discountAmount: item?.discountAmount || "",
+            discount: item?.discount || item?.discountPercentage || "",
+            discountAmount: item?.discountAmount || "",
 
-        taxableAmount: item?.taxableAmount || "",
+            taxableAmount: item?.taxableAmount || "",
 
-        cgst: item?.cgst || item?.cgstPercentage || "",
-        cgstAmount: item?.cgstAmount || "",
+            cgst: item?.cgst || item?.cgstPercentage || "",
+            cgstAmount: item?.cgstAmount || "",
 
-        sgst: item?.sgst || item?.sgstPercentage || "",
-        sgstAmount: item?.sgstAmount || "",
+            sgst: item?.sgst || item?.sgstPercentage || "",
+            sgstAmount: item?.sgstAmount || "",
 
-        igst: item?.igst || item?.igstPercentage || "",
-        igstAmount: item?.igstAmount || "",
+            igst: item?.igst || item?.igstPercentage || "",
+            igstAmount: item?.igstAmount || "",
 
-        taxAmount: item?.taxAmount || "",
-        otherAmount: item?.otherAmount || "",
+            taxAmount: item?.taxAmount || "",
+            otherAmount: item?.otherAmount || "",
 
-        netAmount: item?.netAmount || item?.netTotal || "",
-        netTotal: item?.netTotal || item?.netAmount || "",
-    }));
+            netAmount: item?.netAmount || item?.netTotal || "",
+            netTotal: item?.netTotal || item?.netAmount || "",
+        }));
 
-    return {
-        ...record,
+        return {
+            ...record,
 
-        // ✅ Important: use pRet keys because schema/API has pRet keys
-        pRetVoucherNumber:
-            record?.pRetVoucherNumber || record?.voucherNumber || "",
+            // ✅ Important: use pRet keys because schema/API has pRet keys
+            pRetVoucherNumber:
+                record?.pRetVoucherNumber || record?.voucherNumber || "",
 
-        pRetVoucherDate:
-            record?.pRetVoucherDate || record?.voucherDate || "",
+            pRetVoucherDate:
+                record?.pRetVoucherDate || record?.voucherDate || "",
 
-        grnVoucherNumber:
-            record?.grnVoucherNumber || "",
+            grnVoucherNumber:
+                record?.grnVoucherNumber || "",
 
-        pOrdVoucherNumber:
-            record?.pOrdVoucherNumber || "",
+            pOrdVoucherNumber:
+                record?.pOrdVoucherNumber || "",
 
-        pRetVendorCode:
-            record?.pRetVendorCode || record?.vendorCode || record?.accountCode || "",
+            pRetVendorCode:
+                record?.pRetVendorCode || record?.vendorCode || record?.accountCode || "",
 
-        pRetVendorName:
-            record?.pRetVendorName || record?.vendorName || record?.accountName || "",
+            pRetVendorName:
+                record?.pRetVendorName || record?.vendorName || record?.accountName || "",
 
-        pRetPurAccount:
-            record?.pRetPurAccount || "",
+            pRetPurAccount:
+                record?.pRetPurAccount || "",
 
-        pRetStatus:
-            record?.pRetStatus || "open",
+            pRetStatus:
+                record?.pRetStatus || "open",
 
-        pRetRemark:
-            record?.pRetRemark || record?.remark || "",
+            pRetRemark:
+                record?.pRetRemark || record?.remark || "",
 
-        // ✅ Body key data
-        products,
+            // ✅ Body key data
+            products,
 
-        // ✅ Also keep original key, in case schema bodyKey is pRetBody
-        pRetBody: products,
+            // ✅ Also keep original key, in case schema bodyKey is pRetBody
+            pRetBody: products,
 
-        grossAmount:
-            footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            grossAmount:
+                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
 
-        discountAmount:
-            footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+            discountAmount:
+                footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
 
-        cgstAmount:
-            footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            cgstAmount:
+                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
 
-        sgstAmount:
-            footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            sgstAmount:
+                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
 
-        igstAmount:
-            footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            igstAmount:
+                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
 
-        taxAmount:
-            footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            taxAmount:
+                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
 
-        otherAmount:
-            footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            otherAmount:
+                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
 
-        netAmount:
-            footer?.netAmount || footer?.totalNetAmount || "0.00",
+            netAmount:
+                footer?.netAmount || footer?.totalNetAmount || "0.00",
 
-        adjustedAmount:
-            footer?.adjustedAmount || "0.00",
+            adjustedAmount:
+                footer?.adjustedAmount || "0.00",
 
-        balanceAmount:
-            footer?.balanceAmount ||
-            footer?.netAmount ||
-            footer?.totalNetAmount ||
-            "0.00",
+            balanceAmount:
+                footer?.balanceAmount ||
+                footer?.netAmount ||
+                footer?.totalNetAmount ||
+                "0.00",
 
-        totalQuantity:
-            footer?.totalQuantity || "0",
+            totalQuantity:
+                footer?.totalQuantity || "0",
+        };
     };
-};
 
-    const handleViewVoucher = async (row: any) => {
-        const voucherNumber = getVoucherNumber(row);
-        const moduleName = getModuleName(row);
-
-        const normalizedModule = moduleName
+    const normalizeModuleKey = (module: any) => {
+        return String(module || "")
             .replaceAll(" ", "")
             .replaceAll("_", "")
             .replaceAll("-", "")
             .toLowerCase();
+    };
 
-        // const isReceipt =
-        //     normalizedModule.includes("receipt") ||
-        //     normalizedModule.includes("rec");
+    const findVoucherRecord = (
+        records: any[],
+        voucherNumber: string,
+        voucherKeys: string[]
+    ) => {
+        return (
+            records.find((item: any) =>
+                voucherKeys.some((key) => item?.[key] === voucherNumber)
+            ) || records[0]
+        );
+    };
 
-        // const isSalesReturn =
-        //     normalizedModule.includes("salesinvoicereturns") ||
-        //     normalizedModule.includes("salesinvoicereturn") ||
-        //     normalizedModule.includes("salesreturn") ||
-        //     normalizedModule.includes("invoicereturn");
+    const moduleViewConfig: any = {
+        salesinvoice: {
+            title: "View Sales Invoice",
+            schemaKey: "salesInvoice",
+            bodyKey: "products",
+            action: getAllSalesInvoice,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+            }),
+            voucherKeys: ["sInvVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeInvoiceForView,
+        },
 
-        // const isSalesInvoice =
-        //     !isSalesReturn &&
-        //     !isReceipt &&
-        //     (
-        //         normalizedModule.includes("salesinvoice") ||
-        //         normalizedModule.includes("invoice")
-        //     );
+        salesinvoicereturns: {
+            title: "View Sales Return",
+            schemaKey: "salesReturn",
+            bodyKey: "products",
+            action: getAllSalesInvoiceReturn,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+            }),
+            voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeSalesReturnForView,
+        },
 
+        salesinvoicereturn: {
+            title: "View Sales Return",
+            schemaKey: "salesReturn",
+            bodyKey: "products",
+            action: getAllSalesInvoiceReturn,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+            }),
+            voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeSalesReturnForView,
+        },
 
-        const isPayment =
-            normalizedModule.includes("payment");
+        salesreturn: {
+            title: "View Sales Return",
+            schemaKey: "salesReturn",
+            bodyKey: "products",
+            action: getAllSalesInvoiceReturn,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+            }),
+            voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeSalesReturnForView,
+        },
 
-        const isPurchaseReturn =
-            normalizedModule.includes("purchasereturn") ||
-            normalizedModule.includes("purchasereturns");
+        receipt: {
+            title: "View Receipt",
+            schemaKey: "receipt",
+            bodyKey: "recBody",
+            action: getSalesReceiptList,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+                status: "",
+            }),
+            voucherKeys: ["recVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeReceiptForView,
+        },
 
-        const isPurchaseInvoice =
-            !isPurchaseReturn &&
-            (
-                normalizedModule.includes("purchaseinvoice") ||
-                normalizedModule.includes("pinvoice")
-            );
+        payment: {
+            title: "View Payment",
+            schemaKey: "payment",
+            bodyKey: "payBody",
+            action: getAllPayment,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+                status: "",
+            }),
+            voucherKeys: [
+                "payVoucherNumber",
+                "paymentVoucherNumber",
+                "voucherNumber",
+                "voucherNo",
+            ],
+            normalize: normalizePaymentForView,
+        },
 
-        const isReceipt =
-            normalizedModule.includes("receipt") ||
-            normalizedModule === "rec";
+        purchaseinvoice: {
+            title: "View Purchase Invoice",
+            schemaKey: "purchaseInvoice",
+            bodyKey: "products",
+            action: getPurchaseInvoiceList,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+                status: "",
+            }),
+            voucherKeys: ["pInvVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizePurchaseInvoiceForView,
+        },
 
-        const isSalesReturn =
-            normalizedModule.includes("salesinvoicereturns") ||
-            normalizedModule.includes("salesinvoicereturn") ||
-            normalizedModule.includes("salesreturn") ||
-            normalizedModule.includes("invoicereturn");
+        purchasereturn: {
+            title: "View Purchase Return",
+            schemaKey: "purchaseReturn",
+            bodyKey: "products",
+            action: getPurchaseReturnList,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+                status: "",
+            }),
+            voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizePurchaseReturnForView,
+        },
 
-        const isSalesInvoice =
-            !isSalesReturn &&
-            !isReceipt &&
-            !isPayment &&
-            !isPurchaseInvoice &&
-            !isPurchaseReturn &&
-            (
-                normalizedModule.includes("salesinvoice") ||
-                normalizedModule === "invoice"
-            );
+        purchasereturns: {
+            title: "View Purchase Return",
+            schemaKey: "purchaseReturn",
+            bodyKey: "products",
+            action: getPurchaseReturnList,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+                status: "",
+            }),
+            voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizePurchaseReturnForView,
+        },
+    };
 
-
-
+    const handleViewVoucher = async (row: any) => {
+        const voucherNumber = getVoucherNumber(row);
+        const moduleKey = normalizeModuleKey(row?.module);
 
         if (!voucherNumber) {
             console.log("Voucher number missing in ledger row:", row);
+            return;
+        }
+
+        const config = moduleViewConfig[moduleKey];
+
+        if (!config) {
+            console.log("Unsupported account ledger module:", {
+                row,
+                module: row?.module,
+                moduleKey,
+                voucherNumber,
+            });
             return;
         }
 
@@ -815,255 +895,30 @@ const AccountLedger = () => {
             setViewLoading(true);
             setViewErrors({});
             setViewForm({});
+            setViewTitle(config.title);
+            setViewBodyKey(config.bodyKey);
 
-            /*
-                ✅ RECEIPT
-                API response fields:
-                recVoucherNumber
-                recVoucherDate
-                recAccountCode
-                recAccountName
-                recBody
-                recFooter
-            */
-            if (isReceipt) {
-                setViewTitle("View Receipt");
-                setViewBodyKey("recBody");
+            await dispatch(getAllTransactionSchema(config.schemaKey) as any);
 
-                await dispatch(getAllTransactionSchema("receipt") as any);
+            const res = await dispatch(
+                config.action(config.params(voucherNumber)) as any
+            ).unwrap();
 
-                const res = await dispatch(
-                    getSalesReceiptList({
-                        offset: 0,
-                        limit: 10,
-                        search: voucherNumber,
-                        status: "",
-                    }) as any
-                ).unwrap();
+            const records = getRecords(res);
 
-                const records = getRecords(res);
-
-                const record =
-                    records.find(
-                        (item: any) =>
-                            item?.recVoucherNumber === voucherNumber ||
-                            item?.voucherNumber === voucherNumber ||
-                            item?.voucherNo === voucherNumber
-                    ) || records[0];
-
-                if (!record) {
-                    console.log("Receipt not found:", voucherNumber, res);
-                    setViewForm({});
-                    return;
-                }
-
-                setViewForm(normalizeReceiptForView(record));
-                return;
-            }
-
-            /*
-                ✅ SALES RETURN
-            */
-            if (isSalesReturn) {
-                setViewTitle("View Sales Return");
-                setViewBodyKey("products");
-
-                await dispatch(getAllTransactionSchema("salesReturn") as any);
-
-                const res = await dispatch(
-                    getAllSalesInvoiceReturn({
-                        offset: 0,
-                        limit: 10,
-                        search: voucherNumber,
-                        // status: "",
-                    }) as any
-                ).unwrap();
-
-                const records = getRecords(res);
-
-                const record =
-                    records.find(
-                        (item: any) =>
-                            item?.sInvReturnVoucherNumber === voucherNumber ||
-                            item?.voucherNumber === voucherNumber ||
-                            item?.voucherNo === voucherNumber
-                    ) || records[0];
-
-                if (!record) {
-                    console.log("Sales return not found:", voucherNumber, res);
-                    setViewForm({});
-                    return;
-                }
-
-                setViewForm(normalizeSalesReturnForView(record));
-                return;
-            }
-
-            /*
-                ✅ SALES INVOICE
-            */
-            if (isSalesInvoice) {
-                setViewTitle("View Sales Invoice");
-                setViewBodyKey("products");
-
-                await dispatch(getAllTransactionSchema("salesInvoice") as any);
-
-                const res = await dispatch(
-                    getAllSalesInvoice({
-                        offset: 0,
-                        limit: 10,
-
-                        search: voucherNumber,
-                        // status: "",
-                    }) as any
-                ).unwrap();
-
-                const records = getRecords(res);
-
-                const record =
-                    records.find(
-                        (item: any) =>
-                            item?.sInvVoucherNumber === voucherNumber ||
-                            item?.voucherNumber === voucherNumber ||
-                            item?.voucherNo === voucherNumber
-                    ) || records[0];
-
-                if (!record) {
-                    console.log("Sales invoice not found:", voucherNumber, res);
-                    setViewForm({});
-                    return;
-                }
-
-                setViewForm(normalizeInvoiceForView(record));
-                return;
-            }
-
-
-            /*
-    ✅ PAYMENT
-*/
-            if (isPayment) {
-                setViewTitle("View Payment");
-                setViewBodyKey("payBody");
-
-                await dispatch(getAllTransactionSchema("payment") as any);
-
-                const res = await dispatch(
-                    getAllPayment({
-                        offset: 0,
-                        limit: 10,
-                        search: voucherNumber,
-                        status: "",
-                    }) as any
-                ).unwrap();
-
-                const records = getRecords(res);
-
-                const record =
-                    records.find(
-                        (item: any) =>
-                            item?.payVoucherNumber === voucherNumber ||
-                            item?.paymentVoucherNumber === voucherNumber ||
-                            item?.voucherNumber === voucherNumber ||
-                            item?.voucherNo === voucherNumber
-                    ) || records[0];
-
-                if (!record) {
-                    console.log("Payment not found:", voucherNumber, res);
-                    setViewForm({});
-                    return;
-                }
-
-                setViewForm(normalizePaymentForView(record));
-                return;
-            }
-
-            /*
-                ✅ PURCHASE RETURN
-            */
-          if (isPurchaseReturn) {
-    setViewTitle("View Purchase Return");
-
-    // ✅ Use products if your DynamicAddForm common table uses products
-    setViewBodyKey("products");
-
-    await dispatch(getAllTransactionSchema("purchaseReturn") as any);
-
-    const res = await dispatch(
-        getPurchaseReturnList({
-            offset: 0,
-            limit: 10,
-            search: voucherNumber,
-            status: "",
-        }) as any
-    ).unwrap();
-
-    const records = getRecords(res);
-
-    const record =
-        records.find(
-            (item: any) =>
-                item?.pRetVoucherNumber === voucherNumber ||
-                item?.voucherNumber === voucherNumber ||
-                item?.voucherNo === voucherNumber
-        ) || records[0];
-
-    if (!record) {
-        console.log("Purchase return not found:", voucherNumber, res);
-        setViewForm({});
-        return;
-    }
-
-    setViewForm(normalizePurchaseReturnForView(record));
-    return;
-}
-
-            /*
-                ✅ PURCHASE INVOICE
-            */
-            if (isPurchaseInvoice) {
-                setViewTitle("View Purchase Invoice");
-                setViewBodyKey("products");
-
-                await dispatch(getAllTransactionSchema("purchaseInvoice") as any);
-
-                const res = await dispatch(
-                    getPurchaseInvoiceList({
-                        offset: 0,
-                        limit: 10,
-                        search: voucherNumber,
-                        status: "",
-                    }) as any
-                ).unwrap();
-
-                const records = getRecords(res);
-
-                const record =
-                    records.find(
-                        (item: any) =>
-                            item?.pInvVoucherNumber === voucherNumber ||
-                            item?.voucherNumber === voucherNumber ||
-                            item?.voucherNo === voucherNumber
-                    ) || records[0];
-
-                if (!record) {
-                    console.log("Purchase invoice not found:", voucherNumber, res);
-                    setViewForm({});
-                    return;
-                }
-
-                setViewForm(normalizePurchaseInvoiceForView(record));
-                return;
-            }
-
-            console.log("Unsupported account ledger module:", {
-                row,
-                moduleName,
-                normalizedModule,
+            const record = findVoucherRecord(
+                records,
                 voucherNumber,
-            });
+                config.voucherKeys
+            );
 
-            setViewForm({});
+            if (!record) {
+                console.log(`${config.title} not found:`, voucherNumber, res);
+                setViewForm({});
+                return;
+            }
+
+            setViewForm(config.normalize(record));
         } catch (error) {
             console.log("View voucher failed", error);
             setViewForm({});
