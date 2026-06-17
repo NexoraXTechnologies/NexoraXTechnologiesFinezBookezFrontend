@@ -66,7 +66,6 @@ const SelectInputNormal = (({ label, value, onChange, options, mandatory = false
     </div>
 ))
 
-
 const SelectInput = ({
     label = "",
     value,
@@ -77,6 +76,9 @@ const SelectInput = ({
     name = "",
     placeholder = "Select",
     disabled = false,
+
+    // ✅ only new prop
+    styles: customStyles = {},
 }: any) => {
     const normalizedOptions = (options || []).map((option: any, idx: number) => {
         if (
@@ -102,6 +104,93 @@ const SelectInput = ({
             (option: any) => String(option.value) === String(value ?? "")
         ) || null;
 
+    const defaultStyles = {
+        control: (base: any, state: any) => ({
+            ...base,
+            minHeight: "32px",
+            height: "32px",
+            borderRadius: "0.2rem",
+            borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+            boxShadow: state.isFocused ? "0 0 0 1px #bfdbfe" : "none",
+            backgroundColor: disabled ? "#f9fafb" : "#ffffff",
+            cursor: disabled ? "not-allowed" : "pointer",
+            transition: "all 200ms",
+            "&:hover": {
+                borderColor: state.isFocused ? "#3b82f6" : "#9ca3af",
+            },
+        }),
+
+        valueContainer: (base: any) => ({
+            ...base,
+            height: "30px",
+            padding: "0 12px",
+        }),
+
+        input: (base: any) => ({
+            ...base,
+            margin: 0,
+            padding: 0,
+            color: "#1f2937",
+            fontSize: "14px",
+        }),
+
+        singleValue: (base: any) => ({
+            ...base,
+            color: "#1f2937",
+            fontSize: "14px",
+        }),
+
+        placeholder: (base: any) => ({
+            ...base,
+            color: "#9ca3af",
+            fontSize: "14px",
+        }),
+
+        indicatorsContainer: (base: any) => ({
+            ...base,
+            height: "30px",
+        }),
+
+        dropdownIndicator: (base: any) => ({
+            ...base,
+            padding: "4px",
+            color: "#6b7280",
+        }),
+
+        clearIndicator: (base: any) => ({
+            ...base,
+            padding: "4px",
+            color: "#6b7280",
+        }),
+
+        indicatorSeparator: () => ({
+            display: "none",
+        }),
+
+        menu: (base: any) => ({
+            ...base,
+            zIndex: 9999,
+            fontSize: "14px",
+        }),
+
+        menuPortal: (base: any) => ({
+            ...base,
+            zIndex: 9999,
+        }),
+
+        option: (base: any, state: any) => ({
+            ...base,
+            fontSize: "14px",
+            cursor: "pointer",
+            backgroundColor: state.isSelected
+                ? "#dbeafe"
+                : state.isFocused
+                    ? "#f3f4f6"
+                    : "#ffffff",
+            color: "#1f2937",
+        }),
+    };
+
     return (
         <div className="w-full flex flex-col gap-1">
             {!!label?.length && (
@@ -118,97 +207,13 @@ const SelectInput = ({
                 placeholder={placeholder}
                 isDisabled={disabled}
                 isSearchable
-               isClearable={false}
+                isClearable={false}
                 menuPortalTarget={document.body}
                 menuPosition="fixed"
                 classNamePrefix="common-select"
                 styles={{
-                    control: (base: any, state: any) => ({
-                        ...base,
-                        minHeight: "32px",
-                        height: "32px",
-                        borderRadius: "0.2rem",
-                        borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
-                        boxShadow: state.isFocused
-                            ? "0 0 0 1px #bfdbfe"
-                            : "none",
-                        backgroundColor: disabled ? "#f9fafb" : "#ffffff",
-                        cursor: disabled ? "not-allowed" : "pointer",
-                        transition: "all 200ms",
-                        "&:hover": {
-                            borderColor: state.isFocused ? "#3b82f6" : "#9ca3af",
-                        },
-                    }),
-
-                    valueContainer: (base: any) => ({
-                        ...base,
-                        height: "30px",
-                        padding: "0 12px",
-                    }),
-
-                    input: (base: any) => ({
-                        ...base,
-                        margin: 0,
-                        padding: 0,
-                        color: "#1f2937",
-                        fontSize: "14px",
-                    }),
-
-                    singleValue: (base: any) => ({
-                        ...base,
-                        color: "#1f2937",
-                        fontSize: "14px",
-                    }),
-
-                    placeholder: (base: any) => ({
-                        ...base,
-                        color: "#9ca3af",
-                        fontSize: "14px",
-                    }),
-
-                    indicatorsContainer: (base: any) => ({
-                        ...base,
-                        height: "30px",
-                    }),
-
-                    dropdownIndicator: (base: any) => ({
-                        ...base,
-                        padding: "4px",
-                        color: "#6b7280",
-                    }),
-
-                    clearIndicator: (base: any) => ({
-                        ...base,
-                        padding: "4px",
-                        color: "#6b7280",
-                    }),
-
-                    indicatorSeparator: () => ({
-                        display: "none",
-                    }),
-
-                    menu: (base: any) => ({
-                        ...base,
-                        zIndex: 9999,
-                        fontSize: "14px",
-                    }),
-
-                    menuPortal: (base: any) => ({
-                        ...base,
-                        zIndex: 9999,
-                    }),
-
-                    option: (base: any, state: any) => ({
-                        ...base,
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        backgroundColor: state.isSelected
-                            ? "#dbeafe"
-                            : state.isFocused
-                                ? "#f3f4f6"
-                                : "#ffffff",
-                        color: "#1f2937",
-                    }),
+                    ...defaultStyles,
+                    ...customStyles,
                 }}
                 onChange={(selected: any) => {
                     onChange({

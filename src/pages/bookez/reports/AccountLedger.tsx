@@ -18,6 +18,15 @@ import { getAllSalesInvoiceReturn } from "../../../redux/slices/professionalSlic
 import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 import { getSalesReceiptList } from "../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
 
+
+const cleanNumber = (value: any) => {
+    const num = Number(value || 0);
+
+    return Number.isInteger(num)
+        ? String(num)
+        : String(num).replace(/\.?0+$/, "");
+};
+
 const mainColumns = [
     {
         key: "voucherNumber",
@@ -548,7 +557,7 @@ const AccountLedger = () => {
                     getAllSalesInvoice({
                         offset: 0,
                         limit: 10,
-                       
+
                         search: voucherNumber,
                         // status: "",
                     }) as any
@@ -794,7 +803,7 @@ const AccountLedger = () => {
             });
     }, [viewTemplateFields?.footer, viewFooterTotals]);
 
-  
+
 
     const viewInputData = useMemo(() => {
         const hiddenBodyKeys = [

@@ -21,18 +21,18 @@ const AccountSummaryCard = ({
 
     // console.log(summaryItems)
     return (
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-2 border-b border-slate-200 pb-2">
+        <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className=" flex justify-between mb-1 border-b border-slate-200 pb-1">
                 <p className="text-sm font-bold text-slate-600">
                     {title || "Account"}
                 </p>
 
-                <h3 className=" text-xl font-extrabold text-slate-900">
+                <h3 className=" text-md font-bold text-slate-900">
                     {accountName || "-"}
                 </h3>
             </div>
 
-            <div className="flex flex-col gap-3 border-b border-slate-200 pb-4">
+            <div className="flex flex-col gap-3 border-b border-slate-200 pb-1">
                 {summaryItems.map((item) => (
                     <div
                         key={item.label}
@@ -42,7 +42,7 @@ const AccountSummaryCard = ({
                             {item.label}
                         </p>
 
-                        <p className="text-sm font-extrabold text-slate-900">
+                        <p className="text-sm font-bold text-slate-900">
                             {item.value}
                         </p>
                     </div>
@@ -50,11 +50,11 @@ const AccountSummaryCard = ({
             </div>
 
             <div className="mt-1 flex items-center justify-between gap-4">
-                <p className="text-sm font-extrabold text-slate-700">
+                <p className="text-sm font-bold text-slate-700">
                     {finalLabel}
                 </p>
 
-                <p className="text-lg font-extrabold text-slate-900">
+                <p className="text-md font-bold text-slate-900">
                     {finalValue}
                 </p>
             </div>
