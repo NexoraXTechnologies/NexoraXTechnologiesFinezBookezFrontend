@@ -439,6 +439,9 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                     getAllSalesInvoice({
                         offset: 0,
                         limit: 10,
+                        sInvVoucherNumber: voucherNumber,
+                        // @ts-ignore 
+                        status: "",
                         search: voucherNumber,
                     }) as any
                 ).unwrap();

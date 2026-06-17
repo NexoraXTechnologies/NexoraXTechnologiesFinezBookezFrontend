@@ -17,6 +17,18 @@ import { getAllSalesInvoiceReturn } from "../../../redux/slices/professionalSlic
 
 import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 import { getSalesReceiptList } from "../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
+import { getPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+import { getPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
+import { getAllPayment } from "../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
+
+
+const cleanNumber = (value: any) => {
+    const num = Number(value || 0);
+
+    return Number.isInteger(num)
+        ? String(num)
+        : String(num).replace(/\.?0+$/, "");
+};
 
 const mainColumns = [
     {
@@ -83,7 +95,7 @@ const mainColumns = [
 
             if (debit > 0) {
                 return (
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                    <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
                         Debit
                     </span>
                 );
@@ -91,7 +103,7 @@ const mainColumns = [
 
             if (credit > 0) {
                 return (
-                    <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                         Credit
                     </span>
                 );
@@ -168,19 +180,46 @@ const AccountLedger = () => {
         return [];
     };
 
-    const getVoucherNumber = (row: any) => {
-        return (
-            row?.voucherNumber ||
-            row?.voucherNo ||
-            row?.sInvVoucherNumber ||
-            row?.sInvReturnVoucherNumber ||
-            row?.receiptVoucherNumber ||
-            row?.salesReceiptVoucherNumber ||
-            row?.sReceiptVoucherNumber ||
-            ""
-        );
-    };
+    // const getVoucherNumber = (row: any) => {
+    //     return (
+    //         row?.voucherNumber ||
+    //         row?.voucherNo ||
+    //         row?.sInvVoucherNumber ||
+    //         row?.sInvReturnVoucherNumber ||
+    //         row?.receiptVoucherNumber ||
+    //         row?.salesReceiptVoucherNumber ||
+    //         row?.sReceiptVoucherNumber ||
+    //         ""
+    //     );
+    // };
 
+   const getVoucherNumber = (row: any) => {
+    return (
+        row?.voucherNumber ||
+        row?.voucherNo ||
+
+        row?.sInvVoucherNumber ||
+        row?.sInvReturnVoucherNumber ||
+
+        row?.recVoucherNumber ||
+        row?.receiptVoucherNumber ||
+        row?.salesReceiptVoucherNumber ||
+        row?.sReceiptVoucherNumber ||
+
+        row?.payVoucherNumber ||
+        row?.paymentVoucherNumber ||
+
+        row?.pInvVoucherNumber ||
+
+        // ✅ Purchase Return
+        row?.pRetVoucherNumber ||
+        row?.pReturnVoucherNumber ||
+        row?.purReturnVoucherNumber ||
+        row?.purchaseReturnVoucherNumber ||
+
+        ""
+    );
+};
     const getModuleName = (row: any) => {
         return String(
             row?.module ||
@@ -357,8 +396,6 @@ const AccountLedger = () => {
         };
     };
 
-
-
     const normalizeReceiptForView = (record: any) => {
         const footer = record?.recFooter || {};
 
@@ -412,6 +449,295 @@ const AccountLedger = () => {
             igstAmount: "0.00",
         };
     };
+
+    const normalizePaymentForView = (record: any) => {
+        const footer = record?.payFooter || record?.paymentFooter || {};
+
+        const payBody = (
+            record?.payBody ||
+            record?.paymentBody ||
+            record?.body ||
+            []
+        ).map((item: any) => ({
+            accountCode: item?.accountCode || "",
+            accountName: item?.accountName || "",
+            amount: item?.amount || "0",
+            netAmount: item?.netAmount || item?.amount || "0",
+        }));
+
+        return {
+            ...record,
+
+            payVoucherNumber:
+                record?.payVoucherNumber ||
+                record?.paymentVoucherNumber ||
+                record?.voucherNumber ||
+                "",
+
+            payVoucherDate:
+                record?.payVoucherDate ||
+                record?.paymentVoucherDate ||
+                record?.voucherDate ||
+                "",
+
+            payAccountCode:
+                record?.payAccountCode ||
+                record?.paymentAccountCode ||
+                record?.accountCode ||
+                "",
+
+            payAccountName:
+                record?.payAccountName ||
+                record?.paymentAccountName ||
+                record?.accountName ||
+                "",
+
+            payStatus:
+                record?.payStatus ||
+                record?.paymentStatus ||
+                "open",
+
+            payRemark:
+                record?.payRemark ||
+                record?.paymentRemark ||
+                record?.remark ||
+                "",
+
+            payBody,
+
+            grossAmount: "0.00",
+            discountAmount: "0.00",
+            cgstAmount: "0.00",
+            sgstAmount: "0.00",
+            igstAmount: "0.00",
+
+            netAmount:
+                footer?.netAmount ||
+                record?.netAmount ||
+                "0.00",
+
+            adjustedAmount:
+                footer?.adjustedAmount ||
+                record?.adjustedAmount ||
+                "0.00",
+
+            balanceAmount:
+                footer?.balanceAmount ||
+                record?.balanceAmount ||
+                "0.00",
+        };
+    };
+
+    const normalizePurchaseInvoiceForView = (record: any) => {
+        const footer = record?.pInvFooter || {};
+
+        const products = (record?.pInvBody || []).map((item: any) => ({
+            ...item,
+
+            productCode: item?.productCode || "",
+            productName: item?.productName || "",
+            productDescription:
+                item?.productDescription || item?.description || "",
+            description:
+                item?.description || item?.productDescription || "",
+            productHSNCode: item?.productHSNCode || "",
+
+            quantity: item?.quantity || "",
+            uom: item?.uom || item?.unit || "",
+            unit: item?.unit || item?.uom || "",
+
+            rate: item?.rate || "",
+            gross: item?.gross || item?.grossAmount || "",
+            grossAmount: item?.grossAmount || item?.gross || "",
+
+            discount: item?.discount || item?.discountPercentage || "",
+            discountAmount: item?.discountAmount || "",
+
+            cgst: item?.cgst || item?.cgstPercentage || "",
+            cgstAmount: item?.cgstAmount || "",
+
+            sgst: item?.sgst || item?.sgstPercentage || "",
+            sgstAmount: item?.sgstAmount || "",
+
+            igst: item?.igst || item?.igstPercentage || "",
+            igstAmount: item?.igstAmount || "",
+
+            netAmount: item?.netAmount || item?.netTotal || "",
+            netTotal: item?.netTotal || item?.netAmount || "",
+        }));
+
+        return {
+            ...record,
+
+            pInvVoucherNumber:
+                record?.pInvVoucherNumber || record?.voucherNumber || "",
+
+            pInvVoucherDate:
+                record?.pInvVoucherDate || record?.voucherDate || "",
+
+            pInvVendorCode:
+                record?.pInvVendorCode ||
+                record?.vendorCode ||
+                record?.accountCode ||
+                "",
+
+            pInvVendorName:
+                record?.pInvVendorName ||
+                record?.vendorName ||
+                record?.accountName ||
+                "",
+
+            pInvStatus:
+                record?.pInvStatus || "open",
+
+            pInvRemark:
+                record?.pInvRemark || record?.remark || "",
+
+            products,
+
+            grossAmount:
+                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            discountAmount:
+                footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+            cgstAmount:
+                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount:
+                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount:
+                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            netAmount:
+                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            adjustedAmount:
+                footer?.adjustedAmount || "0.00",
+            balanceAmount:
+                footer?.balanceAmount ||
+                footer?.netAmount ||
+                footer?.totalNetAmount ||
+                "0.00",
+        };
+    };
+
+   const normalizePurchaseReturnForView = (record: any) => {
+    const footer = record?.pRetFooter || {};
+
+    const products = (record?.pRetBody || []).map((item: any) => ({
+        ...item,
+
+        productCode: item?.productCode || "",
+        productName: item?.productName || "",
+        productId: item?.productId || "",
+
+        productDescription:
+            item?.productDescription || item?.description || "",
+        description:
+            item?.description || item?.productDescription || "",
+        productHSNCode: item?.productHSNCode || "",
+
+        quantity: item?.quantity || "",
+        uom: item?.uom || item?.unit || "",
+        unit: item?.unit || item?.uom || "",
+
+        rate: item?.rate || "",
+
+        gross: item?.gross || item?.grossAmount || "",
+        grossAmount: item?.grossAmount || item?.gross || "",
+
+        discount: item?.discount || item?.discountPercentage || "",
+        discountAmount: item?.discountAmount || "",
+
+        taxableAmount: item?.taxableAmount || "",
+
+        cgst: item?.cgst || item?.cgstPercentage || "",
+        cgstAmount: item?.cgstAmount || "",
+
+        sgst: item?.sgst || item?.sgstPercentage || "",
+        sgstAmount: item?.sgstAmount || "",
+
+        igst: item?.igst || item?.igstPercentage || "",
+        igstAmount: item?.igstAmount || "",
+
+        taxAmount: item?.taxAmount || "",
+        otherAmount: item?.otherAmount || "",
+
+        netAmount: item?.netAmount || item?.netTotal || "",
+        netTotal: item?.netTotal || item?.netAmount || "",
+    }));
+
+    return {
+        ...record,
+
+        // ✅ Important: use pRet keys because schema/API has pRet keys
+        pRetVoucherNumber:
+            record?.pRetVoucherNumber || record?.voucherNumber || "",
+
+        pRetVoucherDate:
+            record?.pRetVoucherDate || record?.voucherDate || "",
+
+        grnVoucherNumber:
+            record?.grnVoucherNumber || "",
+
+        pOrdVoucherNumber:
+            record?.pOrdVoucherNumber || "",
+
+        pRetVendorCode:
+            record?.pRetVendorCode || record?.vendorCode || record?.accountCode || "",
+
+        pRetVendorName:
+            record?.pRetVendorName || record?.vendorName || record?.accountName || "",
+
+        pRetPurAccount:
+            record?.pRetPurAccount || "",
+
+        pRetStatus:
+            record?.pRetStatus || "open",
+
+        pRetRemark:
+            record?.pRetRemark || record?.remark || "",
+
+        // ✅ Body key data
+        products,
+
+        // ✅ Also keep original key, in case schema bodyKey is pRetBody
+        pRetBody: products,
+
+        grossAmount:
+            footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+
+        discountAmount:
+            footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+
+        cgstAmount:
+            footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+
+        sgstAmount:
+            footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+
+        igstAmount:
+            footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+
+        taxAmount:
+            footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+
+        otherAmount:
+            footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+
+        netAmount:
+            footer?.netAmount || footer?.totalNetAmount || "0.00",
+
+        adjustedAmount:
+            footer?.adjustedAmount || "0.00",
+
+        balanceAmount:
+            footer?.balanceAmount ||
+            footer?.netAmount ||
+            footer?.totalNetAmount ||
+            "0.00",
+
+        totalQuantity:
+            footer?.totalQuantity || "0",
+    };
+};
+
     const handleViewVoucher = async (row: any) => {
         const voucherNumber = getVoucherNumber(row);
         const moduleName = getModuleName(row);
@@ -422,9 +748,42 @@ const AccountLedger = () => {
             .replaceAll("-", "")
             .toLowerCase();
 
+        // const isReceipt =
+        //     normalizedModule.includes("receipt") ||
+        //     normalizedModule.includes("rec");
+
+        // const isSalesReturn =
+        //     normalizedModule.includes("salesinvoicereturns") ||
+        //     normalizedModule.includes("salesinvoicereturn") ||
+        //     normalizedModule.includes("salesreturn") ||
+        //     normalizedModule.includes("invoicereturn");
+
+        // const isSalesInvoice =
+        //     !isSalesReturn &&
+        //     !isReceipt &&
+        //     (
+        //         normalizedModule.includes("salesinvoice") ||
+        //         normalizedModule.includes("invoice")
+        //     );
+
+
+        const isPayment =
+            normalizedModule.includes("payment");
+
+        const isPurchaseReturn =
+            normalizedModule.includes("purchasereturn") ||
+            normalizedModule.includes("purchasereturns");
+
+        const isPurchaseInvoice =
+            !isPurchaseReturn &&
+            (
+                normalizedModule.includes("purchaseinvoice") ||
+                normalizedModule.includes("pinvoice")
+            );
+
         const isReceipt =
             normalizedModule.includes("receipt") ||
-            normalizedModule.includes("rec");
+            normalizedModule === "rec";
 
         const isSalesReturn =
             normalizedModule.includes("salesinvoicereturns") ||
@@ -435,10 +794,15 @@ const AccountLedger = () => {
         const isSalesInvoice =
             !isSalesReturn &&
             !isReceipt &&
+            !isPayment &&
+            !isPurchaseInvoice &&
+            !isPurchaseReturn &&
             (
                 normalizedModule.includes("salesinvoice") ||
-                normalizedModule.includes("invoice")
+                normalizedModule === "invoice"
             );
+
+
 
 
         if (!voucherNumber) {
@@ -548,7 +912,7 @@ const AccountLedger = () => {
                     getAllSalesInvoice({
                         offset: 0,
                         limit: 10,
-                       
+
                         search: voucherNumber,
                         // status: "",
                     }) as any
@@ -571,6 +935,124 @@ const AccountLedger = () => {
                 }
 
                 setViewForm(normalizeInvoiceForView(record));
+                return;
+            }
+
+
+            /*
+    ✅ PAYMENT
+*/
+            if (isPayment) {
+                setViewTitle("View Payment");
+                setViewBodyKey("payBody");
+
+                await dispatch(getAllTransactionSchema("payment") as any);
+
+                const res = await dispatch(
+                    getAllPayment({
+                        offset: 0,
+                        limit: 10,
+                        search: voucherNumber,
+                        status: "",
+                    }) as any
+                ).unwrap();
+
+                const records = getRecords(res);
+
+                const record =
+                    records.find(
+                        (item: any) =>
+                            item?.payVoucherNumber === voucherNumber ||
+                            item?.paymentVoucherNumber === voucherNumber ||
+                            item?.voucherNumber === voucherNumber ||
+                            item?.voucherNo === voucherNumber
+                    ) || records[0];
+
+                if (!record) {
+                    console.log("Payment not found:", voucherNumber, res);
+                    setViewForm({});
+                    return;
+                }
+
+                setViewForm(normalizePaymentForView(record));
+                return;
+            }
+
+            /*
+                ✅ PURCHASE RETURN
+            */
+          if (isPurchaseReturn) {
+    setViewTitle("View Purchase Return");
+
+    // ✅ Use products if your DynamicAddForm common table uses products
+    setViewBodyKey("products");
+
+    await dispatch(getAllTransactionSchema("purchaseReturn") as any);
+
+    const res = await dispatch(
+        getPurchaseReturnList({
+            offset: 0,
+            limit: 10,
+            search: voucherNumber,
+            status: "",
+        }) as any
+    ).unwrap();
+
+    const records = getRecords(res);
+
+    const record =
+        records.find(
+            (item: any) =>
+                item?.pRetVoucherNumber === voucherNumber ||
+                item?.voucherNumber === voucherNumber ||
+                item?.voucherNo === voucherNumber
+        ) || records[0];
+
+    if (!record) {
+        console.log("Purchase return not found:", voucherNumber, res);
+        setViewForm({});
+        return;
+    }
+
+    setViewForm(normalizePurchaseReturnForView(record));
+    return;
+}
+
+            /*
+                ✅ PURCHASE INVOICE
+            */
+            if (isPurchaseInvoice) {
+                setViewTitle("View Purchase Invoice");
+                setViewBodyKey("products");
+
+                await dispatch(getAllTransactionSchema("purchaseInvoice") as any);
+
+                const res = await dispatch(
+                    getPurchaseInvoiceList({
+                        offset: 0,
+                        limit: 10,
+                        search: voucherNumber,
+                        status: "",
+                    }) as any
+                ).unwrap();
+
+                const records = getRecords(res);
+
+                const record =
+                    records.find(
+                        (item: any) =>
+                            item?.pInvVoucherNumber === voucherNumber ||
+                            item?.voucherNumber === voucherNumber ||
+                            item?.voucherNo === voucherNumber
+                    ) || records[0];
+
+                if (!record) {
+                    console.log("Purchase invoice not found:", voucherNumber, res);
+                    setViewForm({});
+                    return;
+                }
+
+                setViewForm(normalizePurchaseInvoiceForView(record));
                 return;
             }
 
@@ -794,7 +1276,7 @@ const AccountLedger = () => {
             });
     }, [viewTemplateFields?.footer, viewFooterTotals]);
 
-  
+
 
     const viewInputData = useMemo(() => {
         const hiddenBodyKeys = [

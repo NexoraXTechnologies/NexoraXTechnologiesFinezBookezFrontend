@@ -398,39 +398,196 @@ const OpeningStock = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
+
     const inputData = {
-        headerInput: [
-            { key: "openingStockVoucherNumber", title: "Voucher No", type: "text", disabled: true },
-            { key: "openingStockDate", title: "Date", type: "date", disabled: true },
-            { key: "remark", title: "Remark", type: "textarea", required: false, placeholder: "Enter Remark" }
+        header: [
+            {
+                key: "openingStockVoucherNumber",
+                label: "Voucher No",
+                type: "text",
+                disabled: true,
+            },
+            {
+                key: "openingStockDate",
+                label: "Date",
+                type: "date",
+                disabled: false,
+            },
+            {
+                key: "remark",
+                label: "Remark",
+                type: "textarea",
+                required: false,
+                placeholder: "Enter Remark",
+                colSpan: "full",
+            },
         ],
-        editTable: [
-            { key: "productCode", title: "Product", type: "select", width: "240px", required: true, options: productOptions },
-            { key: "description", title: "Description", type: "text", width: "220px" },
-            { key: "remarks", title: "Remarks", type: "text", width: "180px" },
-            { key: "quantity", title: "Qty", type: "number", width: "120px", required: true, align: "right" },
-            { key: "unit", title: "Unit", type: "select", width: "150px", required: true, options: unitOptions },
-            { key: "rate", title: "Rate", type: "number", width: "130px", required: true, align: "right" },
-            { key: "grossAmount", title: "Gross", type: "number", width: "130px", disabled: true, align: "right" },
-            { key: "discountPercentage", title: "Disc %", type: "number", width: "110px", align: "right" },
-            { key: "discountAmount", title: "Disc Amt", type: "number", width: "130px", disabled: true, align: "right" },
-            { key: "cgstPercentage", title: "CGST %", type: "number", width: "110px", align: "right" },
-            { key: "cgstAmount", title: "CGST Amt", type: "number", width: "130px", disabled: true, align: "right" },
-            { key: "sgstPercentage", title: "SGST %", type: "number", width: "110px", align: "right" },
-            { key: "sgstAmount", title: "SGST Amt", type: "number", width: "130px", disabled: true, align: "right" },
-            { key: "igstPercentage", title: "IGST %", type: "number", width: "110px", align: "right" },
-            { key: "igstAmount", title: "IGST Amt", type: "number", width: "130px", disabled: true, align: "right" },
-            { key: "otherAmount", title: "Other", type: "number", width: "130px", align: "right" },
-            { key: "taxAmount", title: "Tax", type: "number", width: "130px", disabled: true, align: "right" },
-            { key: "netTotal", title: "Net", type: "number", width: "130px", disabled: true, align: "right" }
+
+        body: [
+            {
+                key: "productCode",
+                title: "Product",
+                type: "select",
+                width: "240px",
+                required: true,
+                options: productOptions,
+            },
+            {
+                key: "description",
+                title: "Description",
+                type: "text",
+                width: "220px",
+            },
+            {
+                key: "remarks",
+                title: "Remarks",
+                type: "text",
+                width: "180px",
+            },
+            {
+                key: "quantity",
+                title: "Qty",
+                type: "number",
+                width: "120px",
+                required: true,
+                align: "right",
+            },
+            {
+                key: "unit",
+                title: "Unit",
+                type: "select",
+                width: "150px",
+                required: true,
+                options: unitOptions,
+            },
+            {
+                key: "rate",
+                title: "Rate",
+                type: "number",
+                width: "130px",
+                required: true,
+                align: "right",
+            },
+            {
+                key: "grossAmount",
+                title: "Gross",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "discountPercentage",
+                title: "Disc %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "discountAmount",
+                title: "Disc Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "cgstPercentage",
+                title: "CGST %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "cgstAmount",
+                title: "CGST Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "sgstPercentage",
+                title: "SGST %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "sgstAmount",
+                title: "SGST Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "igstPercentage",
+                title: "IGST %",
+                type: "number",
+                width: "110px",
+                align: "right",
+            },
+            {
+                key: "igstAmount",
+                title: "IGST Amt",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "otherAmount",
+                title: "Other",
+                type: "number",
+                width: "130px",
+                align: "right",
+            },
+            {
+                key: "taxAmount",
+                title: "Tax",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
+            {
+                key: "netTotal",
+                title: "Net",
+                type: "number",
+                width: "130px",
+                disabled: true,
+                align: "right",
+            },
         ],
-        footerCard: [
-            { label: "Total Quantity", value: footerTotals.totalQuantity },
-            { label: "Gross Amount", value: money(footerTotals.totalGrossAmount) },
-            { label: "Tax Amount", value: money(footerTotals.totalTaxAmount) },
-            { label: "Net Amount", value: money(footerTotals.totalNetAmount) }
-        ]
-    }
+
+        footer: [
+            {
+                key: "totalQuantity",
+                label: "Total Quantity",
+                value: footerTotals.totalQuantity,
+                rawValue: footerTotals.totalQuantity,
+            },
+            {
+                key: "totalGrossAmount",
+                label: "Gross Amount",
+                value: money(footerTotals.totalGrossAmount),
+                rawValue: footerTotals.totalGrossAmount,
+            },
+            {
+                key: "totalTaxAmount",
+                label: "Tax Amount",
+                value: money(footerTotals.totalTaxAmount),
+                rawValue: footerTotals.totalTaxAmount,
+            },
+            {
+                key: "totalNetAmount",
+                label: "Net Amount",
+                value: money(footerTotals.totalNetAmount),
+                rawValue: footerTotals.totalNetAmount,
+            },
+        ],
+    };
 
     return (
         <>
@@ -585,243 +742,30 @@ const OpeningStock = () => {
                 />
             )}
 
-            <DynamicAddForm {...{
-                show: showModal, setShow: setShowModal, edit, title: "Opening Stock", subtitle: "Fill in the opening stock details below", loading: addLoader, onClose: () => {
-                    setShowModal(false);
-                    resetMainForm();
-                }, onSubmit: handleSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange, inputData, bodyKey: "openingStockBody", handleChange
-            }} />
 
-            {/* <VoucherFormModal
+            <DynamicAddForm
                 show={showModal}
                 setShow={setShowModal}
+                edit={edit}
                 title="Opening Stock"
                 subtitle="Fill in the opening stock details below"
-                edit={edit}
                 loading={addLoader}
                 onClose={() => {
                     setShowModal(false);
                     resetMainForm();
                 }}
                 onSubmit={handleSubmit}
-            >
-                <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
-                    <TextInput
-                        label="Voucher No"
-                        value={form.openingStockVoucherNumber || ""}
-                        disabled
-                        onChange={(e: any) =>
-                            handleChange(
-                                "openingStockVoucherNumber",
-                                e.target.value
-                            )
-                        }
-                    />
+                form={form}
+                errors={errors}
+                handleAddRow={handleAddRow}
+                handleDeleteRow={handleDeleteRow}
+                handleRowChange={handleRowChange}
+                inputData={inputData}
+                bodyKey="openingStockBody"
+                handleChange={handleChange}
+            />
 
-                    <TextInput
-                        label="Date"
-                        type="date"
-                        value={form.openingStockDate ? String(form.openingStockDate).split("T")[0] : ""}
-                        error={errors?.openingStockDate}
-                        onChange={(e: any) =>
-                            handleChange("openingStockDate", e.target.value)
-                        }
-                    />
 
-                    <TextArea
-                        label="Remark"
-                        value={form.remark || ""}
-                        placeholder="Enter Remark"
-                        error={errors?.remark}
-                        onChange={(e: any) =>
-                            handleChange("remark", e.target.value)
-                        }
-                    />
-                </div>
-
-                {errors?.openingStockBody && (
-                    <p className="mt-4 text-sm text-red-500">
-                        {errors.openingStockBody}
-                    </p>
-                )}
-
-                <div className="col-span-2 space-y-5">
-                    <EditableLineTable
-                        title="Products"
-                        addButtonText="Add Product"
-                        rows={form.openingStockBody}
-                        columns={[
-                            {
-                                key: "productCode",
-                                title: "Product",
-                                type: "select",
-                                width: "240px",
-                                required: true,
-                                options: productOptions,
-                            },
-                            {
-                                key: "description",
-                                title: "Description",
-                                type: "text",
-                                width: "220px",
-                            },
-                            {
-                                key: "remarks",
-                                title: "Remarks",
-                                type: "text",
-                                width: "180px",
-                            },
-                            {
-                                key: "quantity",
-                                title: "Qty",
-                                type: "number",
-                                width: "120px",
-                                required: true,
-                                align: "right",
-                            },
-                            {
-                                key: "unit",
-                                title: "Unit",
-                                type: "select",
-                                width: "150px",
-                                required: true,
-                                options: unitOptions,
-                            },
-                            {
-                                key: "rate",
-                                title: "Rate",
-                                type: "number",
-                                width: "130px",
-                                required: true,
-                                align: "right",
-                            },
-                            {
-                                key: "grossAmount",
-                                title: "Gross",
-                                type: "number",
-                                width: "130px",
-                                disabled: true,
-                                align: "right",
-                            },
-                            {
-                                key: "discountPercentage",
-                                title: "Disc %",
-                                type: "number",
-                                width: "110px",
-                                align: "right",
-                            },
-                            {
-                                key: "discountAmount",
-                                title: "Disc Amt",
-                                type: "number",
-                                width: "130px",
-                                disabled: true,
-                                align: "right",
-                            },
-                            {
-                                key: "cgstPercentage",
-                                title: "CGST %",
-                                type: "number",
-                                width: "110px",
-                                align: "right",
-                            },
-                            {
-                                key: "cgstAmount",
-                                title: "CGST Amt",
-                                type: "number",
-                                width: "130px",
-                                disabled: true,
-                                align: "right",
-                            },
-                            {
-                                key: "sgstPercentage",
-                                title: "SGST %",
-                                type: "number",
-                                width: "110px",
-                                align: "right",
-                            },
-                            {
-                                key: "sgstAmount",
-                                title: "SGST Amt",
-                                type: "number",
-                                width: "130px",
-                                disabled: true,
-                                align: "right",
-                            },
-                            {
-                                key: "igstPercentage",
-                                title: "IGST %",
-                                type: "number",
-                                width: "110px",
-                                align: "right",
-                            },
-                            {
-                                key: "igstAmount",
-                                title: "IGST Amt",
-                                type: "number",
-                                width: "130px",
-                                disabled: true,
-                                align: "right",
-                            },
-                            {
-                                key: "otherAmount",
-                                title: "Other",
-                                type: "number",
-                                width: "130px",
-                                align: "right",
-                            },
-                            {
-                                key: "taxAmount",
-                                title: "Tax",
-                                type: "number",
-                                width: "130px",
-                                disabled: true,
-                                align: "right",
-                            },
-                            {
-                                key: "netTotal",
-                                title: "Net",
-                                type: "number",
-                                width: "130px",
-                                disabled: true,
-                                align: "right",
-                            },
-                        ]}
-                        errors={errors}
-                        onAddRow={handleAddRow}
-                        onDeleteRow={handleDeleteRow}
-                        onChange={handleRowChange}
-                        emptyText="No products added"
-                    />
-                </div>
-
-                {Object.keys(errors || {}).filter((key) => key.includes("_tax")).map((key) => (
-                    <p key={key} className="mt-2 text-sm text-red-500">
-                        {errors[key]}
-                    </p>
-                ))}
-
-                <SummaryCards
-                    items={[
-                        {
-                            label: "Total Quantity",
-                            value: footerTotals.totalQuantity,
-                        },
-                        {
-                            label: "Gross Amount",
-                            value: money(footerTotals.totalGrossAmount),
-                        },
-                        {
-                            label: "Tax Amount",
-                            value: money(footerTotals.totalTaxAmount),
-                        },
-                        {
-                            label: "Net Amount",
-                            value: money(footerTotals.totalNetAmount),
-                        },
-                    ]}
-                />
-            </VoucherFormModal> */}
         </>
     );
 };

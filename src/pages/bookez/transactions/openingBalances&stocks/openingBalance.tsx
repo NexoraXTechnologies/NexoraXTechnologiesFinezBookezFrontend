@@ -14,6 +14,10 @@ import { DataCreateButton, PrimaryButton } from "../../../../components/buttons"
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import Badge from "../../../../components/badge";
+import VoucherFormModal from "../../../../components/voucher/VoucherFormModal";
+import { TextArea, TextInput } from "../../../../components/inputs";
+import EditableLineTable from "../../../../components/voucher/EditableLineTable";
+import SummaryCards from "../../../../components/voucher/SummaryCards";
 
 const emptyEntryRow = {
     id: Date.now(),
@@ -62,6 +66,10 @@ const mainColumns = [
         title: "Status",
     },
 ];
+
+
+
+
 
 const OpeningBalance = () => {
     const dispatch = useDispatch();
@@ -372,24 +380,83 @@ const OpeningBalance = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
+
     const inputData = {
-        headerInput: [
-            { key: "voucherno", title: "Voucher No", type: "text", disabled: true },
-            { key: "openingBalDate", title: "Date", type: "date", disabled: true },
-            { key: "remark", title: "Remark", type: "textarea", required: false, placeholder: "Enter Remark" }
+        header: [
+            {
+                key: "voucherno",
+                label: "Voucher No",
+                type: "text",
+                disabled: true,
+            },
+            {
+                key: "openingBalDate",
+                label: "Date",
+                type: "date",
+                disabled: false,
+            },
+            {
+                key: "remark",
+                label: "Remark",
+                type: "textarea",
+                required: false,
+                placeholder: "Enter Remark",
+                colSpan: "full",
+            },
         ],
-        editTable: [
-            { key: "accountCode", title: "Account", type: "select", width: "260px", required: true, options: accountOptions },
-            { key: "debit", title: "Debit", type: "number", width: "150px", align: "right" },
-            { key: "credit", title: "Credit", type: "number", width: "150px", align: "right" },
-            { key: "reference", title: "Reference", type: "text", width: "200px" },
-            { key: "remarks", title: "Remarks", type: "text", width: "250px" }
+
+        body: [
+            {
+                key: "accountCode",
+                title: "Account",
+                type: "select",
+                width: "260px",
+                required: true,
+                options: accountOptions,
+            },
+            {
+                key: "debit",
+                title: "Debit",
+                type: "number",
+                width: "150px",
+                align: "right",
+            },
+            {
+                key: "credit",
+                title: "Credit",
+                type: "number",
+                width: "150px",
+                align: "right",
+            },
+            {
+                key: "reference",
+                title: "Reference",
+                type: "text",
+                width: "200px",
+            },
+            {
+                key: "remarks",
+                title: "Remarks",
+                type: "text",
+                width: "250px",
+            },
         ],
-        footerCard: [
-            { label: "Total Debit", value: `₹${totalDebit.toFixed(2)}` },
-            { label: "Total Credit", value: `₹${totalCredit.toFixed(2)}` }
-        ]
-    }
+
+        footer: [
+            {
+                key: "totalDebit",
+                label: "Total Debit",
+                value: `₹${totalDebit.toFixed(2)}`,
+                rawValue: totalDebit,
+            },
+            {
+                key: "totalCredit",
+                label: "Total Credit",
+                value: `₹${totalCredit.toFixed(2)}`,
+                rawValue: totalCredit,
+            },
+        ],
+    };
 
     return (
         <>
@@ -517,7 +584,9 @@ const OpeningBalance = () => {
                     message="Are you sure you want to delete this opening balance?"
                     confirmText="Delete"
                     cancelText="Cancel"
-                    onConfirm={() => handleDeleteVoucher(confirmTooltip?.openingBalVoucherNumber)}
+                    onConfirm={() =>
+                        handleDeleteVoucher(confirmTooltip?.openingBalVoucherNumber)
+                    }
                     onCancel={() =>
                         setConfirmTooltip({
                             show: false,
@@ -528,126 +597,29 @@ const OpeningBalance = () => {
                     }
                 />
             )}
-            <DynamicAddForm {...{
-                show: showModal, setShow: setShowModal, edit, title: "Opening Balance", subtitle: "Fill in the opening balance details below", loading: addLoader, onClose: () => {
-                    setShowModal(false);
-                    resetForm();
-                }, onSubmit: handleSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange, inputData, bodyKey: "openingBalBody", handleChange
-            }} />
 
-            {/* <VoucherFormModal
+            <DynamicAddForm
                 show={showModal}
                 setShow={setShowModal}
+                edit={edit}
                 title="Opening Balance"
                 subtitle="Fill in the opening balance details below"
-                edit={edit}
                 loading={addLoader}
                 onClose={() => {
                     setShowModal(false);
                     resetForm();
                 }}
                 onSubmit={handleSubmit}
-            >
-                <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
-                    <TextInput
-                        label="Voucher No"
-                        value={form.voucherno || ""}
-                        disabled
-                        error={errors?.voucherno}
-                        onChange={(e: any) =>
-                            handleChange("voucherno", e.target.value)
-                        }
-                    />
+                form={form}
+                errors={errors}
+                handleAddRow={handleAddRow}
+                handleDeleteRow={handleDeleteRow}
+                handleRowChange={handleRowChange}
+                inputData={inputData}
+                bodyKey="openingBalBody"
+                handleChange={handleChange}
+            />
 
-                    <TextInput
-                        label="Date"
-                        type="date"
-                        value={form.openingBalDate || ""}
-                        error={errors?.openingBalDate}
-                        onChange={(e: any) =>
-                            handleChange("openingBalDate", e.target.value)
-                        }
-                    />
-
-                    <div className="md:col-span-2">
-                        <TextArea
-                            label="Remark"
-                            value={form.remark || ""}
-                            placeholder="Enter Remark"
-                            error={errors?.remark}
-                            onChange={(e: any) =>
-                                handleChange("remark", e.target.value)
-                            }
-                        />
-                    </div>
-                </div>
-
-                {errors?.openingBalBody && (
-                    <p className="mt-4 text-sm text-red-500">
-                        {errors.openingBalBody}
-                    </p>
-                )}
-
-                <EditableLineTable
-                    title="Entries"
-                    addButtonText="Add Account"
-                    rows={form.openingBalBody}
-                    columns={[
-                        {
-                            key: "accountCode",
-                            title: "Account",
-                            type: "select",
-                            width: "260px",
-                            required: true,
-                            options: accountOptions,
-                        },
-                        {
-                            key: "debit",
-                            title: "Debit",
-                            type: "number",
-                            width: "150px",
-                            align: "right",
-                        },
-                        {
-                            key: "credit",
-                            title: "Credit",
-                            type: "number",
-                            width: "150px",
-                            align: "right",
-                        },
-                        {
-                            key: "reference",
-                            title: "Reference",
-                            type: "text",
-                            width: "200px",
-                        },
-                        {
-                            key: "remarks",
-                            title: "Remarks",
-                            type: "text",
-                            width: "250px",
-                        },
-                    ]}
-                    errors={errors}
-                    onAddRow={handleAddRow}
-                    onDeleteRow={handleDeleteRow}
-                    onChange={handleRowChange}
-                    emptyText="No accounts added"
-                />
-
-                <SummaryCards
-                    items={[
-                        {
-                            label: "Total Debit",
-                            value: `₹${totalDebit.toFixed(2)}`,
-                        },
-                        {
-                            label: "Total Credit",
-                            value: `₹${totalCredit.toFixed(2)}`,
-                        },
-                    ]}
-                />
-            </VoucherFormModal> */}
         </>
     );
 };

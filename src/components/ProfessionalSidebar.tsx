@@ -106,11 +106,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
               path: "/bookEz/transaction/opening-balances",
               icon: <WalletCards size={14} />,
             },
-            {
-              name: "Production",
-              path: "/bookEz/transaction/production",
-              icon: <Factory size={14} />,
-            },
+            // {
+            //   name: "Production",
+            //   path: "/bookEz/transaction/production",
+            //   icon: <Factory size={14} />,
+            // },
             {
               name: "Sale Workflow",
               path: "/bookEz/transaction/sale-workflow",
