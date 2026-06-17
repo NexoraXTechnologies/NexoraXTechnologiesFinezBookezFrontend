@@ -68,6 +68,7 @@ import receiptRegisterReducer from "./slices/professionalSlice/bookEzRegister/re
 import paymentRegisterReducer from "./slices/professionalSlice/bookEzRegister/paymentRegisterSlice";
 import HSNCodeReducer from "./slices/professionalSlice/hsnCode"
 import seederConfgReducer from "./slices/professionalSlice/seeder"
+import permissionReducer from "./slices/permissionSlice";
 
 export const store = configureStore({
   reducer: {
@@ -138,7 +139,8 @@ export const store = configureStore({
     receiptRegister: receiptRegisterReducer,
     paymentRegister: paymentRegisterReducer,
     HSNCode: HSNCodeReducer,
-    seederConfg: seederConfgReducer
+    seederConfg: seederConfgReducer,
+    permissions: permissionReducer,
 
 
   },

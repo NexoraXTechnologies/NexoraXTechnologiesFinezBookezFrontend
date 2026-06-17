@@ -13,6 +13,7 @@ import { SelectInput, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import { createReportMapping, deleteReportMapping, getAllReportMapping, updateReportMapping, getAllModules, getAllModulesWiseKey } from "../../../redux/slices/professionalSlice/reportMappingSlice";
 import { getTemplateKeyLabel } from "../../../utils/templateKeyLabel";
+import Permission from "../../../components/PermissionGuard";
 
 const ReportMapping = () => {
 	const dispatch = useDispatch();
@@ -568,8 +569,6 @@ const ReportMapping = () => {
 								...moduleOptions,
 							]}
 						/>
-
-
 					</div>
 
 					{/* Search */}
@@ -577,7 +576,7 @@ const ReportMapping = () => {
 
 					{/* Refresh */}
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
-
+					<Permission module="bookez" permissionKey="reportMappingMaster" action="create">
 					{/* Add Report */}
 					{/* @ts-ignore */}
 					<DataCreateButton
@@ -585,7 +584,8 @@ const ReportMapping = () => {
 							callBackFn: openAddModal,
 							text: "Add Report",
 						}}
-					/>
+						/>
+					</Permission>
 				</div>
 			</div>
 
@@ -598,6 +598,7 @@ const ReportMapping = () => {
 				actions={(report: any) => (
 					<div className="flex items-center gap-2">
 						{/* Edit Report */}
+						<Permission module="bookez" permissionKey="reportMappingMaster" action="update">
 						<button
 							id="unit-edit-button"
 							onClick={() => openEditModal(report)}
@@ -605,29 +606,23 @@ const ReportMapping = () => {
 						>
 							<Edit size={16} />
 						</button>
-
+						</Permission>
 						{/* Delete Report */}
+						<Permission module="bookez" permissionKey="reportMappingMaster" action="delete">
 						<button
 							id="unit-delete-button"
 							onClick={(e: any) => {
 								const rect: any = e.currentTarget.getBoundingClientRect();
-
 								let x: any = rect.left - 150;
 								if (x < 10) x = 10;
-
 								const y: any = rect.top + window.scrollY - 5;
-
-								setConfirmTooltip({
-									show: true,
-									x,
-									y,
-									templateFileId: report.templateFileId,
-								});
+								setConfirmTooltip({ show: true, x, y, templateFileId: report.templateFileId, });
 							}}
 							className="p-2 rounded-md text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
 							<Trash2 size={16} />
-						</button>
+							</button>
+						</Permission>
 					</div>
 				)}
 			/>

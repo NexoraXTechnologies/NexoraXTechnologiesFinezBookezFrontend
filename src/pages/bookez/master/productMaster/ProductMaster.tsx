@@ -757,6 +757,7 @@ import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMast
 
 import ProductMasterFormModal from "./ProductMasterFormModal";
 import { getHSNCode } from "../../../../redux/slices/professionalSlice/hsnCode";
+import Permission from "../../../../components/PermissionGuard";
 
 /* =====================================================
    PRODUCT MASTER LIST COMPONENT
@@ -1052,10 +1053,12 @@ const ProductMaster = () => {
         <div className="ml-auto flex items-center gap-2">
           <SearchInput {...{ search, setSearch }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
+          <Permission module="bookez" permissionKey="productMaster" action="update">
           {/* @ts-ignore */}
           <DataCreateButton
             {...{ callBackFn: openAddModal, text: "Add Product" }}
-          />
+            />
+          </Permission>
         </div>
       </div>
 
@@ -1068,6 +1071,7 @@ const ProductMaster = () => {
         actions={(prod: any) => (
           <div className="flex items-center gap-2">
             {/* EDIT BUTTON */}
+            <Permission module="bookez" permissionKey="productMaster" action="update">
             <button
               id="product-edit-button"
               onClick={() => openEditModal(prod)}
@@ -1075,7 +1079,8 @@ const ProductMaster = () => {
             >
               <Edit size={16} />
             </button>
-
+            </Permission>
+            <Permission module="bookez" permissionKey="productMaster" action="delete">
             {/* DELETE BUTTON */}
             <button
               id="product-delete-button"
@@ -1097,7 +1102,8 @@ const ProductMaster = () => {
               className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
             >
               <Trash2 size={16} />
-            </button>
+              </button>
+            </Permission>
           </div>
         )}
       />

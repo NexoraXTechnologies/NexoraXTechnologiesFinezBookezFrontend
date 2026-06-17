@@ -16,6 +16,7 @@ import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { ListingModel } from "../../../../../components/modal";
+import Permission from "../../../../../components/PermissionGuard";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
@@ -433,8 +434,10 @@ const SalesQuotations = () => {
                     <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
+                    <Permission module="bookez" permissionKey="salesQuotation" action="create">
                     {/* @ts-ignore */}
-                    <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Quotation" }} />
+                        <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Quotation" }} />
+                    </Permission>
                 </div>
             </div>
 
@@ -445,6 +448,7 @@ const SalesQuotations = () => {
                 emptyMessage={`No ${status} sales quotation found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+
                         <button id="sales-quotation-edit-button" onClick={() => {
                             setDownlaodPDF((pre: any) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
                         }
@@ -452,9 +456,12 @@ const SalesQuotations = () => {
                         } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Download size={16} />
                         </button>
+                        <Permission module="bookez" permissionKey="salesQuotation" action="update">
                         <button id="sales-quotation-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Edit size={16} />
-                        </button>
+                            </button>
+                        </Permission>
+                        <Permission module="bookez" permissionKey="salesQuotation" action="delete">
                         <button
                             id="sales-quotation-delete-button"
                             disabled={deleteLoading}
@@ -468,7 +475,8 @@ const SalesQuotations = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

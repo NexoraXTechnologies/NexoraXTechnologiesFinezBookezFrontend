@@ -17,36 +17,42 @@ const cards: any = [
     description: "Manage account-wise opening balances.",
     component: OpeningBalance,
     icon: <Landmark size={22} />,
+    permissionKey: "openingBalance"
   },
   {
     title: "Opening Stocks",
     description: "Manage product-wise opening stock entries.",
     component: OpeningStock,
     icon: <Boxes size={22} />,
+    permissionKey: "openingStock"
   },
   {
     title: "Journal Voucher",
     description: "Create and manage journal voucher entries.",
     path: "/professional/transaction/opening-balances/journal-voucher",
     icon: <BookOpenCheck size={22} />,
+    permissionKey: "journalVouchar"
   },
   {
     title: "Contra Voucher",
     description: "Manage cash and bank transfer entries.",
     path: "/professional/transaction/opening-balances/contra-voucher",
     icon: <ArrowLeftRight size={22} />,
+    permissionKey: "contraVoucher"
   },
   {
     title: "Credit Note",
     description: "Create and manage credit note entries.",
     path: "/professional/transaction/opening-balances/credit-note",
     icon: <FilePlus2 size={22} />,
+    permissionKey: "creditNote"
   },
   {
     title: "Debit Note",
     description: "Create and manage debit note entries.",
     path: "/professional/transaction/opening-balances/debit-note",
     icon: <FileMinus2 size={22} />,
+    permissionKey: "debitNotes"
   },
 ];
 

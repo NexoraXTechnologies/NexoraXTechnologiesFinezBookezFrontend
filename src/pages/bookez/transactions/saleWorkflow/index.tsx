@@ -18,30 +18,35 @@ const cards: any = [
     description: "Create and manage sales quotations.",
     component: SalesQuotations,
     icon: <FileText size={22} />,
+    permissionKey: "salesQuotation"
   },
   {
     title: "Sales Orders",
     description: "Create and manage sales orders.",
     component: SalesOrder,
     icon: <ClipboardList size={22} />,
+    permissionKey: "salesOrder"
   },
   {
     title: "Sales Invoices",
     description: "Create and manage sales invoices.",
     component: SalesInVoice,
     icon: <ReceiptText size={22} />,
+    permissionKey: "salesInvoice"
   },
   {
     title: "Sales Return",
     description: "Manage sales return transactions.",
     component: SalesReturn,
     icon: <RotateCcw size={22} />,
+    permissionKey: "salesReturn"
   },
   {
     title: "Sales Receipt",
     description: "Manage sales return transactions.",
     component: SalesReceipt,
     icon: <ReceiptText size={22} />,
+    permissionKey: "receipt"
   },
 ];
 

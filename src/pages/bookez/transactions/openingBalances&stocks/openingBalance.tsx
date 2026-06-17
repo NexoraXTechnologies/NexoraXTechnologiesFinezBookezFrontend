@@ -10,8 +10,10 @@ import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../
 
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import SearchInput from "../../../../components/searchInput";
-import { PrimaryButton } from "../../../../components/buttons";
+import { DataCreateButton, PrimaryButton } from "../../../../components/buttons";
 import DataTable from "../../../../components/DataTable";
+import Permission from "../../../../components/PermissionGuard";
+import Badge from "../../../../components/badge";
 import VoucherFormModal from "../../../../components/voucher/VoucherFormModal";
 import { TextArea, TextInput } from "../../../../components/inputs";
 import EditableLineTable from "../../../../components/voucher/EditableLineTable";
@@ -459,30 +461,35 @@ const OpeningBalance = () => {
     return (
         <>
             <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-end gap-3">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: setStatus,
-                        }}
-                    />
-
-                    <div className="me-2">
-                        <SearchInput {...{ search, setSearch }} />
+                <div id="account-header" className="flex flex-wrap items-center gap-2 mb-3">
+                    <div id="account-summary" className="flex items-start gap-3">
+                        <Badge {...{ count: pagination.totalDocs ?? 0, text: "Total Opening Balance:" }} />
                     </div>
+                    <div className="ml-auto flex flex-wrap items-center gap-2">
+                        <Toggle
+                            {...{
+                                arr: ["open", "close"],
+                                state: status,
+                                setState: setStatus,
+                            }}
+                        />
 
-                    <PrimaryButton
-                        {...{
-                            text: "Add",
-                            callBackFn: () => {
-                                resetForm();
-                                setShowModal(true);
-                            },
-                        }}
-                    />
+                        <div className="me-2">
+                            <SearchInput {...{ search, setSearch }} />
+                        </div>
+                        <Permission module="bookez" permissionKey="openingBalance" action="create">
+                            <DataCreateButton
+                                {...{
+                                    text: "Create Opening Balance",
+                                    callBackFn: () => {
+                                        resetForm();
+                                        setShowModal(true);
+                                    },
+                                }}
+                            />
+                        </Permission>
+                    </div>
                 </div>
-
                 <DataTable
                     columns={mainColumns}
                     data={openingBal}
@@ -490,6 +497,7 @@ const OpeningBalance = () => {
                     emptyMessage="No data found"
                     actions={(item: any) => (
                         <div className="flex items-center gap-2">
+                            <Permission module="bookez" permissionKey="openingBalance" action="update">
                             <button
                                 id="opening-balance-edit-button"
                                 onClick={() => {
@@ -528,7 +536,8 @@ const OpeningBalance = () => {
                             >
                                 <Edit size={16} />
                             </button>
-
+                            </Permission>
+                            <Permission module="bookez" permissionKey="openingBalance" action="delete">
                             <button
                                 type="button"
                                 onClick={(e: any) => {
@@ -545,7 +554,8 @@ const OpeningBalance = () => {
                                 }}
                                 className="text-red-500 hover:text-red-700">
                                 <Trash2 size={16} />
-                            </button>
+                                </button>
+                            </Permission>
                         </div>
                     )}
                 />

@@ -802,7 +802,6 @@ export const buildPdfHtml = ({
                 ${discountRow}
                 ${gstSummaryRows}
                 ${otherAmountRow}
-                ${totalFooterDisplayRows}
                 ${extraFooterRows}
 
                 <tr class="sumTotalRow">

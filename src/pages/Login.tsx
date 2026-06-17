@@ -9,6 +9,7 @@ import { sendProfessionalOtp, verifyProfessionalOtp, } from "../redux/slices/pro
 // import OneSignal from 'react-onesignal';
 import { motion } from "framer-motion";
 import { AuthButton } from "../components/buttons";
+import { getAllPermissions } from "../redux/slices/permissionSlice";
 
 const Section = ({ title, text }: any) => (
   <div className="space-y-1">
@@ -216,7 +217,17 @@ const Login = () => {
               ...user
             }),
           );
-          try {
+        try {
+          if (user?.parentUserMobileNumber && user?.userMobileNumberHash) {
+            dispatch(
+              getAllPermissions({
+                offset: 0,
+                limit: 100,
+                parentMobile: user?.parentUserMobileNumber,
+                childMobile: user?.userMobileNumberHash,
+              }) as any
+            );
+          }
 			  if (user.userEmail) {
 				  // await OneSignal.login(user.userEmail);
 				  console.log('📲 OneSignal logged in (PROFESSIONAL):', user.userEmail);
