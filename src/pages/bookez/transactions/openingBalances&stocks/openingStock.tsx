@@ -3,7 +3,7 @@ import { Edit, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 
-import { PrimaryButton } from "../../../../components/buttons";
+import { DataCreateButton, PrimaryButton } from "../../../../components/buttons";
 import SearchInput from "../../../../components/searchInput";
 import DataTable from "../../../../components/DataTable";
 import Toggle from "../../../../components/toggle";
@@ -15,31 +15,10 @@ import { getAllProducts } from "../../../../redux/slices/professionalSlice/produ
 import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
 import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
+import Permission from "../../../../components/PermissionGuard";
 
 const emptyProductRow = {
-    id: Date.now(),
-    productCode: "",
-    productName: "",
-    productId: "",
-    description: "",
-    remarks: "",
-    quantity: "",
-    unit: "",
-    unitName: "",
-    rate: "",
-    grossAmount: 0,
-    discountPercentage: "",
-    discountAmount: 0,
-    taxableAmount: 0,
-    cgstPercentage: "",
-    cgstAmount: 0,
-    sgstPercentage: "",
-    sgstAmount: 0,
-    igstPercentage: "",
-    igstAmount: 0,
-    taxAmount: 0,
-    otherAmount: "",
-    netTotal: 0,
+    id: Date.now(), productCode: "", productName: "", productId: "", description: "", remarks: "", quantity: "", unit: "", unitName: "", rate: "", grossAmount: 0, discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgstPercentage: "", cgstAmount: 0, sgstPercentage: "", sgstAmount: 0, igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netTotal: 0,
 };
 
 const emptyForm = {
@@ -172,24 +151,7 @@ const OpeningStock = () => {
         const taxAmount = cgstAmount + sgstAmount + igstAmount;
         const netTotal = taxableAmount + taxAmount + otherAmount;
 
-        return {
-            ...row,
-            quantity,
-            rate,
-            grossAmount,
-            discountPercentage,
-            discountAmount,
-            taxableAmount,
-            cgstPercentage,
-            cgstAmount,
-            sgstPercentage,
-            sgstAmount,
-            igstPercentage,
-            igstAmount,
-            otherAmount,
-            taxAmount,
-            netTotal,
-        };
+        return { ...row, quantity, rate, grossAmount, discountPercentage, discountAmount, taxableAmount, cgstPercentage, cgstAmount, sgstPercentage, sgstAmount, igstPercentage, igstAmount, otherAmount, taxAmount, netTotal, };
     };
 
     const footerTotals = useMemo(() => {
@@ -486,16 +448,18 @@ const OpeningStock = () => {
                         <SearchInput {...{ search, setSearch }} />
                     </div>
 
-                    <PrimaryButton
+                    <Permission module="bookez" permissionKey="openingStock" action="create">
+                        <DataCreateButton
                         {...{
-                            text: "Add",
+                                text: "Create Opening Stocks",
                             icon: <Plus size={16} />,
                             callBackFn: () => {
                                 resetMainForm();
                                 setShowModal(true);
                             },
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
 
                 <DataTable
@@ -505,6 +469,7 @@ const OpeningStock = () => {
                     emptyMessage="No opening stocks found"
                     actions={(row: any) => (
                         <div className="flex items-center gap-2">
+                            <Permission module="bookez" permissionKey="openingStock" action="update">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -552,8 +517,9 @@ const OpeningStock = () => {
                                 className="cursor-pointer rounded-lg p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
                             >
                                 <Edit size={16} />
-                            </button>
-
+                                </button>
+                            </Permission>
+                            <Permission module="bookez" permissionKey="openingStock" action="delete">
                             <button
                                 type="button"
                                 disabled={deleteLoader}
@@ -573,7 +539,8 @@ const OpeningStock = () => {
                                 className="text-red-500 hover:text-red-700 disabled:opacity-60"
                             >
                                 <Trash2 size={16} />
-                            </button>
+                                </button>
+                            </Permission>
                         </div>
                     )}
                 />

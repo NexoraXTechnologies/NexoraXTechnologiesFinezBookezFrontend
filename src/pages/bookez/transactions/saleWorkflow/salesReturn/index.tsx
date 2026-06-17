@@ -18,6 +18,7 @@ import Modal, { ListingModel } from "../../../../../components/modal";
 import { getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
+import Permission from "../../../../../components/PermissionGuard";
 
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
@@ -449,8 +450,10 @@ const SalesReturn = () => {
                     <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
+                    <Permission module="bookez" permissionKey="salesReturn" action="create">
                     {/* @ts-ignore */}
-                    <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Return" }} />
+                        <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Return" }} />
+                    </Permission>
                 </div>
             </div>
 
@@ -468,9 +471,12 @@ const SalesReturn = () => {
                         } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Download size={16} />
                         </button>
+                        <Permission module="bookez" permissionKey="salesReturn" action="update">
                         <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Edit size={16} />
-                        </button>
+                            </button>
+                        </Permission>
+                        <Permission module="bookez" permissionKey="salesReturn" action="delete">
                         <button
                             id="sales-invoice-delete-button"
                             disabled={deleteLoading}
@@ -484,7 +490,8 @@ const SalesReturn = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

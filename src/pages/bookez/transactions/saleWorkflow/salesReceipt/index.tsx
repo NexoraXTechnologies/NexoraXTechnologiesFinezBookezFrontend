@@ -40,6 +40,7 @@ import {
 import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { ListingModel } from "../../../../../components/modal";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
+import Permission from "../../../../../components/PermissionGuard";
 
 const defaultPagination = {
     offset: 0,
@@ -141,7 +142,7 @@ const SalesReceipt = () => {
     const [referenceRows, setReferenceRows] = useState<any[]>([]);
     const [referenceError, setReferenceError] = useState("");
     const [referenceLoading, setReferenceLoading] = useState(false);
-    console.log({ referenceRows })
+
     const [confirmTooltip, setConfirmTooltip] =
         useState<ConfirmTooltipState>({
             show: false,
@@ -230,26 +231,39 @@ const SalesReceipt = () => {
                 key: "saleInvoice",
                 label: "Sale Invoice",
                 type: "text",
-                isReadOnly: true,
+                disabled: true,
             },
             {
                 key: "docDate",
                 label: "Doc Date",
                 type: "date",
-                isReadOnly: true,
+                disabled: true,
             },
             {
-                key: "netAmount",
-                label: "Net",
+                key: "netBillAmount",
+                label: "Net Bill Amount",
+                type: "number",
+                disabled: true,
+            },
+            {
+                key: "netReturnAmount",
+                label: "Net return Amount",
                 type: "text",
-                isReadOnly: true,
+                disabled: true,
+            },
+            {
+                key: "remainingBillAmount",
+                label: "Remaining Bill Amount",
+                type: "number",
+                disabled: true,
             },
             {
                 key: "adjustedAmount",
                 label: "Adjusted Amount",
                 type: "number",
-                isRequired: true,
+                isRequired: false,
             },
+
         ];
     }, []);
 
@@ -653,13 +667,45 @@ const SalesReceipt = () => {
             setReferenceRows([]);
             return;
         }
+        const getInvoiceNetAmount = (item: any) => {
+            return num(
+                item?.netAmount ??
+                item?.sInvFooter?.netAmount ??
+                item?.sInvFooter?.totalNetAmount ??
+                getReferenceAmount(item)
+            );
+        };
+
+        const getNetReturnAmount = (item: any) => {
+            return num(
+                item?.netReturnAmount ??
+                item?.returnAmount ??
+                item?.totalReturnAmount ??
+                item?.sInvFooter?.returnAmount ??
+                0
+            );
+        };
+
+        const getAdjustedAmount = (existingRef: any) => {
+            return num(existingRef?.adjustedAmount || 0);
+        };
 
         const mappedReferences = openRefs.map((item: any) => {
             const saleInvoice = getReferenceVoucherNumber(item);
             const existingRef = existingReferenceMap.get(String(saleInvoice));
 
+            const netBillAmount = getInvoiceNetAmount(item);
+            const netReturnAmount = getNetReturnAmount(item);
+            const adjustedAmount = getAdjustedAmount(existingRef);
+
+            /**
+             * remaining bill = original invoice amount - return amount + existing adjusted amount
+             *
+             * existing adjusted amount is added because while editing,
+             * old adjusted amount should become available again.
+             */
             const remainingBillAmount =
-                getReferenceAmount(item) + num(existingRef?.adjustedAmount || 0);
+                netBillAmount - netReturnAmount + adjustedAmount;
 
             return {
                 id: item?._id || Date.now() + Math.random(),
@@ -668,19 +714,17 @@ const SalesReceipt = () => {
                 saleInvoice,
 
                 docDate: formatDateForInput(getReferenceDate(item)),
-
                 billDueDate: formatDateForInput(getReferenceDate(item)),
-                billAmount: String(
-                    item?.netAmount ||
-                    item?.sInvFooter?.netAmount ||
-                    getReferenceAmount(item)
-                ),
-                netAmount: String(
-                    item?.netAmount ||
-                    item?.sInvFooter?.netAmount ||
-                    getReferenceAmount(item)
-                ),
 
+                // Original invoice amount
+                billAmount: String(netBillAmount),
+                netBillAmount: String(netBillAmount),
+                netAmount: String(netBillAmount),
+
+                // Sales return amount
+                netReturnAmount: String(netReturnAmount),
+
+                // Remaining available amount
                 remainingBillAmount: String(remainingBillAmount),
 
                 adjustedAmount:
@@ -689,7 +733,6 @@ const SalesReceipt = () => {
                         : "",
             };
         });
-
         setReferenceRows(mappedReferences);
     };
 
@@ -1260,12 +1303,13 @@ const SalesReceipt = () => {
                         callBackFn={handleRefresh}
                         loading={refreshing}
                     />
-
+                    <Permission module="bookez" permissionKey="receipt" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         callBackFn={openAddModal}
                         text="Add Sales Receipt"
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1283,24 +1327,23 @@ const SalesReceipt = () => {
                         } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Download size={16} />
                         </button>
+                        <Permission module="bookez" permissionKey="receipt" action="update">
                         <button
                             onClick={() => openEditModal(record)}
                             className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
                         >
                             <Edit size={16} />
-                        </button>
-
+                            </button>
+                        </Permission>
+                        <Permission module="bookez" permissionKey="receipt" action="delete">
                         <button
                             disabled={deleteLoader}
                             onClick={(e) => {
                                 const rect =
                                     e.currentTarget.getBoundingClientRect();
-
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
-
                                 const y = rect.top + window.scrollY - 5;
-
                                 setConfirmTooltip({
                                     show: true,
                                     x,
@@ -1314,7 +1357,8 @@ const SalesReceipt = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />
@@ -1421,7 +1465,7 @@ const SalesReceipt = () => {
                                     key: "newReference",
                                     label: "New Reference",
                                     type: "text",
-                                    isReadOnly: true,
+                                    disabled: true,
                                 },
                             ],
 

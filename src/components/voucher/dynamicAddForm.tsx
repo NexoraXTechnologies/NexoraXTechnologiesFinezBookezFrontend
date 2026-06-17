@@ -16,6 +16,7 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                     label={e?.label}
                     mandatory={e?.isRequired}
                     disabled={e?.disabled || e?.isReadonly}
+                    read
                     type={e.type}
                     value={
                         form?.[e?.key]

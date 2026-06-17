@@ -45,18 +45,21 @@ const MasterDashboard = () => {
         description: "Manage customers, vendors, cash, bank and ledgers.",
         icon: <Wallet size={22} />,
         component: AccountMaster,
+        permissionKey: "accountMaster"
       },
       {
         title: "Product",
         description: "Manage products, services, pricing and inventory details.",
         icon: <PackageSearch size={22} />,
         component: ProductMaster,
+        permissionKey: "productMaster"
       },
       {
         title: "Unit",
         description: "Manage unit measurements for products and transactions.",
         icon: <Ruler size={22} />,
         component: UnitMaster,
+        permissionKey: "unitMaster"
       },
     ];
 
@@ -73,7 +76,7 @@ const MasterDashboard = () => {
         description:
           item?.description || `Manage ${moduleName} custom master data.`,
         icon: <Boxes size={22} />,
-        component: CustomMasterScreen,
+        component: CustomMasterScreen
       };
     });
 
@@ -83,6 +86,7 @@ const MasterDashboard = () => {
         description: "Configure templates and mapped report formats.",
         icon: <FaRegFilePowerpoint size={22} />,
         component: ReportMapping,
+        permissionKey:"reportMappingMaster"
       },
     ];
 

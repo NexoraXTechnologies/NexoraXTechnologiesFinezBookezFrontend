@@ -18,6 +18,7 @@ import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import Modal, { ListingModel } from "../../../../../components/modal";
 import { getAllSalesOrder, updateSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
+import Permission from "../../../../../components/PermissionGuard";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
@@ -473,8 +474,10 @@ const SalesInVoice = () => {
                     <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
+                    <Permission module="bookez" permissionKey="salesInvoice" action="create">
                     {/* @ts-ignore */}
-                    <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Invoice" }} />
+                        <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Invoice" }} />
+                    </Permission>
                 </div>
             </div>
 
@@ -492,9 +495,12 @@ const SalesInVoice = () => {
                         } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Download size={16} />
                         </button>
+                        <Permission module="bookez" permissionKey="salesInvoice" action="update">
                         <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Edit size={16} />
-                        </button>
+                            </button>
+                        </Permission>
+                        <Permission module="bookez" permissionKey="salesInvoice" action="delete">
                         <button
                             id="sales-invoice-delete-button"
                             disabled={deleteLoading}
@@ -508,7 +514,8 @@ const SalesInVoice = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

@@ -18,6 +18,7 @@ import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import Badge from "../../../components/badge";
 import { getCitiesByState, getStates } from "../../../redux/slices/professionalSlice/stateCitySlice";
+import Permission from "../../../components/PermissionGuard";
 
 const columns = [
 	{ key: 'accountCode', title: 'Account Code', },
@@ -709,8 +710,11 @@ const AccountMaster = () => {
 				<div className="ml-auto flex flex-wrap items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
-					{/* @ts-ignore */}
-					<DataCreateButton {...{ callBackFn: openAddModal }} />
+
+					<Permission module="bookez" permissionKey="accountMaster" action="create">
+						{/* @ts-ignore */}
+						<DataCreateButton {...{ callBackFn: openAddModal }} />
+					</Permission>
 				</div>
 			</div>
 
@@ -723,27 +727,30 @@ const AccountMaster = () => {
 				actions={(acc: any) => (
 					<div className="flex items-center gap-2">
 						{/* EDIT */}
-						<button
-							id="account-edit-button"
-							onClick={() => openEditModal(acc)}
-							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
-							<Edit size={16} />
-						</button>
-
+						<Permission module="bookez" permissionKey="accountMaster" action="update">
+							<button
+								id="account-edit-button"
+								onClick={() => openEditModal(acc)}
+								className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
+								<Edit size={16} />
+							</button>
+						</Permission>
 						{/* DELETE */}
-						<button
-							id="account-delete-button"
-							onClick={(e) => {
-								const rect = e.currentTarget.getBoundingClientRect();
-								let x: any = rect.left - 150;
-								if (x < 10) x = 10;
-								const y: any = rect.top + window.scrollY - 5;
-								setConfirmTooltip({ show: true, x, y, accountCode: acc.accountCode, });
-							}}
-							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
-						>
-							<Trash2 size={16} />
-						</button>
+						<Permission module="bookez" permissionKey="accountMaster" action="delete">
+							<button
+								id="account-delete-button"
+								onClick={(e) => {
+									const rect = e.currentTarget.getBoundingClientRect();
+									let x: any = rect.left - 150;
+									if (x < 10) x = 10;
+									const y: any = rect.top + window.scrollY - 5;
+									setConfirmTooltip({ show: true, x, y, accountCode: acc.accountCode, });
+								}}
+								className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+							>
+								<Trash2 size={16} />
+								</button>
+						</Permission>
 					</div>
 				)}
 			/>

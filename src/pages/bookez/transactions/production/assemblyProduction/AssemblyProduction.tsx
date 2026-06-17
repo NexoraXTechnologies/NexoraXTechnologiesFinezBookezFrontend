@@ -24,6 +24,7 @@ import {
     updateAssemblyProduction,
 } from "../../../../../redux/slices/professionalSlice/production/assemblyProductionSlice";
 import { fmtMoney, formatDateForInput, formatDateForList, money, num, todayYMD } from "../../../../../utils/helperFunctions";
+import Permission from "../../../../../components/PermissionGuard";
 
 /* ===================================================
     COMMON HELPERS
@@ -991,14 +992,15 @@ const AssemblyProduction = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    <Permission module="bookez" permissionKey="assemblyProduction" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
                             text: "Add Assembly Production",
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1010,14 +1012,16 @@ const AssemblyProduction = () => {
                 emptyMessage={`No ${status} assembly production found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="assemblyProduction" action="update">
                         <button
                             id="assembly-production-edit-button"
                             onClick={() => openEditModal(record)}
                             className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
                         >
                             <Edit size={16} />
-                        </button>
-
+                            </button>
+                        </Permission>
+                        <Permission module="bookez" permissionKey="assemblyProduction" action="delete">
                         <button
                             id="assembly-production-delete-button"
                             disabled={deleteLoader}
@@ -1040,7 +1044,8 @@ const AssemblyProduction = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

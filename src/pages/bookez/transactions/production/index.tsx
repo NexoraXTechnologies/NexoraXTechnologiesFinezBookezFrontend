@@ -14,18 +14,21 @@ const cards: any[] = [
     description: "Manage assembly and finished goods production.",
     component:AssemblyProduction,
     icon: <Factory size={22} />,
+    permissionKey: "productions.assemblyProduction"
   },
   {
     title: "Issues to Production",
     description: "Issue raw materials or items for production.",
     path: "/professional/transaction/production/issues-to-production",
     icon: <PackageMinus size={22} />,
+    permissionKey: "productions.issuesToProduction"
   },
   {
     title: "Receipts from Production",
     description: "Record finished goods received from production.",
     path: "/professional/transaction/production/receipts-from-production",
     icon: <PackagePlus size={22} />,
+    permissionKey: "productions.receiptFromProduction"
   },
 ];
 

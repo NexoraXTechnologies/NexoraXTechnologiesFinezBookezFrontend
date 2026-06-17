@@ -13,6 +13,7 @@ import Badge from "../../../components/badge";
 import { SelectInput, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import { createUnit, deleteUnit, getAllUnitMasterSchema, getAllUnits, updateUnit } from "../../../redux/slices/professionalSlice/unitMasterSlice";
+import Permission from "../../../components/PermissionGuard";
 
 const UnitMaster = () => {
 	const dispatch = useDispatch();
@@ -35,8 +36,6 @@ const UnitMaster = () => {
 	const [editingUnit, setEditingUnit]: any = useState(null);
 
 	const [errors, setErrors]: any = useState({});
-
-
 
 	useEffect(() => {
 		dispatch(
@@ -422,8 +421,10 @@ const UnitMaster = () => {
 				<div className="ml-auto flex items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
+					<Permission module="bookez" permissionKey="unitMaster" action="create">
 					{/* @ts-ignore */}
-					<DataCreateButton {...{ callBackFn: openAddModal, text: "Add Unit" }} />
+						<DataCreateButton {...{ callBackFn: openAddModal, text: "Add Unit" }} />
+					</Permission>
 				</div>
 			</div>
 
@@ -437,15 +438,15 @@ const UnitMaster = () => {
 				emptyMessage="No units found"
 				actions={(unit: any) => (
 					<div className="flex items-center gap-2">
-
+						<Permission module="bookez" permissionKey="unitMaster" action="update">
 						<button
 							id="unit-edit-button"
 							onClick={() => openEditModal(unit)}
 							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
 							<Edit size={16} />
 						</button>
-
-
+						</Permission>
+						<Permission module="bookez" permissionKey="unitMaster" action="delete">
 						<button
 							id="unit-delete-button"
 							onClick={(e) => {
@@ -458,7 +459,8 @@ const UnitMaster = () => {
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
 							<Trash2 size={16} />
-						</button>
+							</button>
+						</Permission>
 					</div>
 				)}
 			/>
