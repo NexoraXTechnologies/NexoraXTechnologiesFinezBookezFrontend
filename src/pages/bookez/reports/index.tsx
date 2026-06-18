@@ -15,18 +15,21 @@ const cards: any[] = [
     description: "View and track outstanding customer balances and pending receivables.",
     component: AccountsReceivable,
     icon: <Factory size={22} />,
+    permissionKey: "accountReceivable"
   },
   {
     title: "Account Ledger",
     description: "Review account-wise debit, credit, and running balance transactions.",
     component: AccountLedger,
     icon: <PackageMinus size={22} />,
+    permissionKey: "accountLedger"
   },
   {
     title: "Stock Ledger",
     description: "Track item-wise stock movements, quantities, and inventory balances.",
     component: StockLedger,
     icon: <PackagePlus size={22} />,
+    permissionKey: "stockLedger"
   },
 ];
 
