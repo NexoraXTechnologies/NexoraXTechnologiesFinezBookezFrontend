@@ -9,6 +9,7 @@ type SalesReceiptParams = {
     offset?: number;
     limit?: number;
     status?: string;
+    voucherNumber?: string;
     docStatus?: string;
     search?: string;
     isAutoPost?: string | boolean;
@@ -186,6 +187,53 @@ export const getSalesReceiptList = createAsyncThunk<
             const res = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/bookEZ/salesFlow/receipt/getAll",
                 { params }
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message: res.data?.message || "Failed to fetch sales receipts",
+                });
+            }
+
+            return (
+                res.data?.data ?? {
+                    records: [],
+                    pagination: null,
+                }
+            );
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    err?.response?.data?.error ||
+                    "Failed to fetch sales receipts",
+            });
+        }
+    }
+);
+
+/* ===================================================
+   getByVoucherNumber SALES RECEIPT LIST
+=================================================== */
+
+export const getByVoucherNumberSalesReceiptList = createAsyncThunk<
+    any,
+    SalesReceiptParams | undefined,
+    { rejectValue: RejectValue }
+>(
+    "salesReceipt/getByVoucherNumberSalesReceiptList",
+    async (
+        {
+            voucherNumber
+        } = {},
+        { rejectWithValue }
+    ) => {
+        try {
+
+
+            const res = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookEZ/salesFlow/receipt/getByVoucherNumber/${voucherNumber}`,
+
             );
 
             if (!res.data?.success) {
@@ -393,6 +441,30 @@ const salesReceiptSlice = createSlice({
                     state.pagination;
             })
             .addCase(getSalesReceiptList.rejected, (state, action) => {
+                state.listingLoader = false;
+                state.error =
+                    action.payload?.message || "Failed to fetch sales receipts";
+                state.salesReceipt = [];
+            })
+            /* ---------- SALES getByVoucherNumber RECEIPT LISTING ---------- */
+            .addCase(getByVoucherNumberSalesReceiptList.pending, (state) => {
+                state.listingLoader = true;
+                state.error = null;
+            })
+            .addCase(getByVoucherNumberSalesReceiptList.fulfilled, (state, action) => {
+                state.listingLoader = false;
+
+                const data: any = action.payload;
+
+                state.salesReceipt = Array.isArray(data)
+                    ? data
+                    : data?.records ?? data?.docs ?? [];
+
+                state.pagination =
+                    data?.pagination ??
+                    state.pagination;
+            })
+            .addCase(getByVoucherNumberSalesReceiptList.rejected, (state, action) => {
                 state.listingLoader = false;
                 state.error =
                     action.payload?.message || "Failed to fetch sales receipts";

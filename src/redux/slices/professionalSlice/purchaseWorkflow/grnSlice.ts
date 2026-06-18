@@ -10,6 +10,7 @@ type GrnParams = {
   limit?: number;
   status?: string;
   search?: string;
+  voucherNumber?: string;
 };
 
 type GrnPayload = {
@@ -114,6 +115,46 @@ export const deleteGrn = createAsyncThunk<
   }
 });
 
+/* ===================================================
+   getByVoucharNumber GRN LIST
+=================================================== */
+
+export const getByVoucharNumberGrnList = createAsyncThunk<
+  any,
+  GrnParams | undefined,
+  { rejectValue: RejectValue }
+>(
+  "grn/getgetByVoucharNumberGrnList",
+  async (
+    { voucherNumber} = {},
+    { rejectWithValue }
+  ) => {
+    try {
+      
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/grn/getByVoucherNumber/${voucherNumber}`,
+       
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch GRN list",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      return rejectWithValue({
+        message: err?.response?.data?.message || "Failed to fetch GRN list",
+      });
+    }
+  }
+);
 /* ===================================================
    GET GRN LIST
 =================================================== */
@@ -236,6 +277,22 @@ const grnSlice = createSlice({
         state.grnList = action.payload?.records ?? [];
       })
       .addCase(getGrnList.rejected, (state, action) => {
+        state.listingLoader = false;
+        state.error = action.payload?.message || "Failed to fetch GRN list";
+        state.grnList = [];
+      })
+      /* ---------- GRN LISTING ---------- */
+      .addCase(getByVoucharNumberGrnList.pending, (state) => {
+        state.listingLoader = true;
+        state.error = null;
+      })
+      .addCase(getByVoucharNumberGrnList.fulfilled, (state, action) => {
+        state.listingLoader = false;
+
+        state.pagination = action.payload?.pagination ?? state.pagination;
+        state.grnList = action.payload?.records ?? [];
+      })
+      .addCase(getByVoucharNumberGrnList.rejected, (state, action) => {
         state.listingLoader = false;
         state.error = action.payload?.message || "Failed to fetch GRN list";
         state.grnList = [];

@@ -132,6 +132,48 @@ export const getAllSalesInvoiceReturn = createAsyncThunk<
     }
   }
 );
+/* ===================================================
+   GET ALL SALES INVOICE RETURN
+=================================================== */
+
+export const getByVoucherNumberSalesInvoiceReturn = createAsyncThunk<
+  any,
+  GetAllSalesInvoiceReturnParams | undefined,
+  { rejectValue: RejectValue }
+>(
+  "salesInvoiceReturn/getByVoucherNumberSalesInvoiceReturn",
+  async (
+    {  voucherNumber = "" } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+      
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/getByVoucherNumber/${voucherNumber}`,
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch sales invoice returns",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to fetch sales invoice returns",
+      });
+    }
+  }
+);
 
 
 /* ===================================================
@@ -265,6 +307,26 @@ const salesInvoiceReturnSlice = createSlice({
         state.pagination = data?.pagination ?? null;
       })
       .addCase(getAllSalesInvoiceReturn.rejected, (state, action) => {
+        state.loading = false;
+        state.error =
+          action.payload?.message || "Failed to fetch sales invoice returns";
+        state.salesInvoiceReturns = [];
+        state.pagination = null;
+      })
+      /* ================= GET ALL by vaucher number ================= */
+      .addCase(getByVoucherNumberSalesInvoiceReturn.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getByVoucherNumberSalesInvoiceReturn.fulfilled, (state, action) => {
+        state.loading = false;
+
+        const data: any = action.payload;
+
+        state.salesInvoiceReturns = data?.records ?? [];
+        state.pagination = data?.pagination ?? null;
+      })
+      .addCase(getByVoucherNumberSalesInvoiceReturn.rejected, (state, action) => {
         state.loading = false;
         state.error =
           action.payload?.message || "Failed to fetch sales invoice returns";

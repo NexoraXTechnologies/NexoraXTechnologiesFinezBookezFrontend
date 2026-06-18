@@ -10,6 +10,7 @@ type PurchaseReturnParams = {
   limit?: number;
   status?: string;
   search?: string;
+  voucherNumber?: string;
 };
 
 type PurchaseReturnPayload = {
@@ -176,6 +177,48 @@ export const getPurchaseReturnList = createAsyncThunk<
     }
   }
 );
+/* ===================================================
+   GET PURCHASE RETURN LIST
+=================================================== */
+
+export const getByVoucherNumberPurchaseReturnList = createAsyncThunk<
+  any,
+  PurchaseReturnParams | undefined,
+  { rejectValue: RejectValue }
+>(
+  "purchaseReturn/getByVoucherNumberPurchaseReturnList",
+  async (
+    { voucherNumber } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+    
+
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseReturn/getByVoucherNumber/${voucherNumber}`,
+        
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch purchase returns",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message || "Failed to fetch purchase returns",
+      });
+    }
+  }
+);
 
 /* ===================================================
    SLICE
@@ -247,6 +290,23 @@ const purchaseReturnSlice = createSlice({
         state.purchaseReturnList = action.payload?.records ?? [];
       })
       .addCase(getPurchaseReturnList.rejected, (state, action) => {
+        state.listingLoader = false;
+        state.error =
+          action.payload?.message || "Failed to fetch purchase returns";
+        state.purchaseReturnList = [];
+      })
+      /* ---------- PURCHASE  RETURN LISTING by VoucherNumber ---------- */
+      .addCase(getByVoucherNumberPurchaseReturnList.pending, (state) => {
+        state.listingLoader = true;
+        state.error = null;
+      })
+      .addCase(getByVoucherNumberPurchaseReturnList.fulfilled, (state, action) => {
+        state.listingLoader = false;
+
+        state.pagination = action.payload?.pagination ?? state.pagination;
+        state.purchaseReturnList = action.payload?.records ?? [];
+      })
+      .addCase(getByVoucherNumberPurchaseReturnList.rejected, (state, action) => {
         state.listingLoader = false;
         state.error =
           action.payload?.message || "Failed to fetch purchase returns";

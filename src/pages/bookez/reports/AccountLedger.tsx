@@ -12,14 +12,14 @@ import { getAccountLedger } from "../../../redux/slices/professionalSlice/ledger
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
 
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
-import { getAllSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
-import { getAllSalesInvoiceReturn } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
+import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { getByVoucherNumberSalesInvoiceReturn } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 
 import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
-import { getSalesReceiptList } from "../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
-import { getPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
-import { getPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
-import { getAllPayment } from "../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
+import { getByVoucherNumberSalesReceiptList } from "../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
+import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+import { getByVoucherNumberPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
+import { getByVoucherNumberPayment } from "../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
 
 
 
@@ -157,20 +157,59 @@ const AccountLedger = () => {
         }));
     }, [accounts]);
 
-    const getRecords = (res: any) => {
-        if (Array.isArray(res)) return res;
+    
 
-        if (Array.isArray(res?.items)) return res.items;
-        if (Array.isArray(res?.records)) return res.records;
-        if (Array.isArray(res?.docs)) return res.docs;
-        if (Array.isArray(res?.data)) return res.data;
 
-        if (Array.isArray(res?.data?.items)) return res.data.items;
-        if (Array.isArray(res?.data?.records)) return res.data.records;
-        if (Array.isArray(res?.data?.docs)) return res.data.docs;
-        if (Array.isArray(res?.data?.data)) return res.data.data;
+    const getVoucherRecordFromResponse = (
+        res: any,
+        voucherNumber: string,
+        voucherKeys: string[]
+    ) => {
+        // ✅ Purchase invoice API response: { invoice: {...} }
+        if (res?.invoice) {
+            return res.invoice;
+        }
 
-        return [];
+        // ✅ Sometimes response can be: { data: { invoice: {...} } }
+        if (res?.data?.invoice) {
+            return res.data.invoice;
+        }
+
+        // ✅ Direct single voucher object
+        if (
+            res &&
+            typeof res === "object" &&
+            voucherKeys.some((key) => res?.[key] === voucherNumber)
+        ) {
+            return res;
+        }
+
+        // ✅ Sometimes response can be: { data: voucherObject }
+        if (
+            res?.data &&
+            typeof res.data === "object" &&
+            voucherKeys.some((key) => res.data?.[key] === voucherNumber)
+        ) {
+            return res.data;
+        }
+
+        // ✅ Array fallback
+        const records =
+            Array.isArray(res) ? res :
+                Array.isArray(res?.items) ? res.items :
+                    Array.isArray(res?.records) ? res.records :
+                        Array.isArray(res?.docs) ? res.docs :
+                            Array.isArray(res?.data) ? res.data :
+                                Array.isArray(res?.data?.items) ? res.data.items :
+                                    Array.isArray(res?.data?.records) ? res.data.records :
+                                        Array.isArray(res?.data?.docs) ? res.data.docs :
+                                            [];
+
+        return (
+            records.find((item: any) =>
+                voucherKeys.some((key) => item?.[key] === voucherNumber)
+            ) || records[0]
+        );
     };
 
 
@@ -719,28 +758,17 @@ const AccountLedger = () => {
             .toLowerCase();
     };
 
-    const findVoucherRecord = (
-        records: any[],
-        voucherNumber: string,
-        voucherKeys: string[]
-    ) => {
-        return (
-            records.find((item: any) =>
-                voucherKeys.some((key) => item?.[key] === voucherNumber)
-            ) || records[0]
-        );
-    };
+  
 
     const moduleViewConfig: any = {
         salesinvoice: {
             title: "View Sales Invoice",
             schemaKey: "salesInvoice",
             bodyKey: "products",
-            action: getAllSalesInvoice,
+            action: getByVoucherNumberSalesInvoice,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
+
+                voucherNumber: voucherNumber,
             }),
             voucherKeys: ["sInvVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizeInvoiceForView,
@@ -750,11 +778,10 @@ const AccountLedger = () => {
             title: "View Sales Return",
             schemaKey: "salesReturn",
             bodyKey: "products",
-            action: getAllSalesInvoiceReturn,
+            action: getByVoucherNumberSalesInvoiceReturn,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
+
+                voucherNumber: voucherNumber,
             }),
             voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizeSalesReturnForView,
@@ -764,40 +791,26 @@ const AccountLedger = () => {
             title: "View Sales Return",
             schemaKey: "salesReturn",
             bodyKey: "products",
-            action: getAllSalesInvoiceReturn,
+            action: getByVoucherNumberSalesInvoiceReturn,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
+
+                voucherNumber: voucherNumber,
             }),
             voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizeSalesReturnForView,
         },
 
-        salesreturn: {
-            title: "View Sales Return",
-            schemaKey: "salesReturn",
-            bodyKey: "products",
-            action: getAllSalesInvoiceReturn,
-            params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-            }),
-            voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
-            normalize: normalizeSalesReturnForView,
-        },
+
 
         receipt: {
             title: "View Receipt",
             schemaKey: "receipt",
             bodyKey: "recBody",
-            action: getSalesReceiptList,
+            action: getByVoucherNumberSalesReceiptList,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-                status: "",
+
+                voucherNumber: voucherNumber,
+
             }),
             voucherKeys: ["recVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizeReceiptForView,
@@ -807,12 +820,11 @@ const AccountLedger = () => {
             title: "View Payment",
             schemaKey: "payment",
             bodyKey: "payBody",
-            action: getAllPayment,
+            action: getByVoucherNumberPayment,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-                status: "",
+
+                voucherNumber: voucherNumber,
+
             }),
             voucherKeys: [
                 "payVoucherNumber",
@@ -827,12 +839,11 @@ const AccountLedger = () => {
             title: "View Purchase Invoice",
             schemaKey: "purchaseInvoice",
             bodyKey: "products",
-            action: getPurchaseInvoiceList,
+            action: getByVoucherNumberPurchaseInvoiceList,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-                status: "",
+
+                voucherNumber: voucherNumber,
+
             }),
             voucherKeys: ["pInvVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizePurchaseInvoiceForView,
@@ -842,12 +853,11 @@ const AccountLedger = () => {
             title: "View Purchase Return",
             schemaKey: "purchaseReturn",
             bodyKey: "products",
-            action: getPurchaseReturnList,
+            action: getByVoucherNumberPurchaseReturnList,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-                status: "",
+
+                voucherNumber: voucherNumber,
+
             }),
             voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizePurchaseReturnForView,
@@ -857,12 +867,11 @@ const AccountLedger = () => {
             title: "View Purchase Return",
             schemaKey: "purchaseReturn",
             bodyKey: "products",
-            action: getPurchaseReturnList,
+            action: getByVoucherNumberPurchaseReturnList,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-                status: "",
+
+                voucherNumber: voucherNumber,
+
             }),
             voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizePurchaseReturnForView,
@@ -904,10 +913,8 @@ const AccountLedger = () => {
                 config.action(config.params(voucherNumber)) as any
             ).unwrap();
 
-            const records = getRecords(res);
-
-            const record = findVoucherRecord(
-                records,
+            const record = getVoucherRecordFromResponse(
+                res,
                 voucherNumber,
                 config.voucherKeys
             );
