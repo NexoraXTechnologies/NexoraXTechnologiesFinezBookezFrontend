@@ -10,6 +10,7 @@ import { isModuleEnabled } from "./PermissionGuard";
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [openMenus, setOpenMenus] = useState({});
+	const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
 	
 	const navigate = useNavigate();
 	// const dispatchP = useDispatch();
@@ -239,11 +240,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/profile",
 					icon: <IdCard size={19} />,
 				},
-				{
+				...((localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash) ? [{
 					name: "Permission",
 					path: "/permission",
 					icon: <LockKeyhole size={19} />,
-				},
+				}] : []),
 				...(canShowUsers
 					? [
 						{
