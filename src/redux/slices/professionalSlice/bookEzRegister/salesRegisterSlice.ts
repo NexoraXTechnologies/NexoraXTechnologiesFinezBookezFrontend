@@ -1,3 +1,126 @@
+// /* ===================================================
+//    SALES REGISTER SLICE
+// =================================================== */
+
+// import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+// import professionalAxios from "../../../../services/professionalAxios";
+
+// /* ===================================================
+//    TYPES
+// =================================================== */
+
+// type RejectValue = {
+//   message: string;
+// };
+
+// type SalesRegisterPayload = {
+//   payload: any;
+// };
+
+// type SalesRegisterState = {
+//   addLoader: boolean;
+//   listingLoader: boolean;
+//   deleteLoader: boolean;
+//   salesRegisterData: any;
+//   error: string | null;
+// };
+
+// /* ===================================================
+//    CREATE / GET SALES REGISTER
+// =================================================== */
+
+// export const addSalesRegister = createAsyncThunk<
+//   any,
+//   SalesRegisterPayload,
+//   { rejectValue: RejectValue }
+// >(
+//   "salesRegister/addSalesRegister",
+//   async ({ payload }, { rejectWithValue }) => {
+//     try {
+//       const res = await professionalAxios.post(
+//         "/eTaxSolnMongoApiBackend/users/bookEZ/registers/salesRegister",
+//         { ...payload }
+//       );
+
+//       if (!res.data?.success) {
+//         return rejectWithValue({
+//           message: res?.data?.message || "Failed to create sales register",
+//         });
+//       }
+
+//       return res?.data?.data;
+//     } catch (error: any) {
+//       return rejectWithValue({
+//         message:
+//           error?.response?.data?.message ||
+//           error?.response?.data?.error ||
+//           "Failed to create sales register",
+//       });
+//     }
+//   }
+// );
+
+// /* ===================================================
+//    INITIAL STATE
+// =================================================== */
+
+// const initialState: SalesRegisterState = {
+//   addLoader: false,
+//   listingLoader: false,
+//   deleteLoader: false,
+//   salesRegisterData: null,
+//   error: null,
+// };
+
+// /* ===================================================
+//    SLICE
+// =================================================== */
+
+// const salesRegisterSlice = createSlice({
+//   name: "salesRegister",
+//   initialState,
+//   reducers: {
+//     clearSalesRegisterError: (state) => {
+//       state.error = null;
+//     },
+
+//     clearSalesRegisterData: (state) => {
+//       state.salesRegisterData = null;
+//     },
+//   },
+//   extraReducers: (builder) => {
+//     builder
+
+//       /* ADD / GET SALES REGISTER */
+//       .addCase(addSalesRegister.pending, (state) => {
+//         state.addLoader = true;
+//         state.error = null;
+//       })
+
+//       .addCase(addSalesRegister.fulfilled, (state, action) => {
+//         state.addLoader = false;
+//         state.salesRegisterData = action.payload;
+//         state.error = null;
+//       })
+
+//       .addCase(addSalesRegister.rejected, (state, action) => {
+//         state.addLoader = false;
+//         state.error =
+//           action.payload?.message || "Failed to create sales register";
+//       });
+//   },
+// });
+
+// /* ===================================================
+//    EXPORTS
+// =================================================== */
+
+// export const { clearSalesRegisterError, clearSalesRegisterData } =
+//   salesRegisterSlice.actions;
+
+// export default salesRegisterSlice.reducer;
+
+
 /* ===================================================
    SALES REGISTER SLICE
 =================================================== */
@@ -14,19 +137,28 @@ type RejectValue = {
 };
 
 type SalesRegisterPayload = {
-  payload: any;
+  fromDate: string;
+  toDate: string;
+  customerCode?: string;
+  productCode?: string;
+  offset?: number;
+  limit?: number;
+  exportType?: "pdf" | "excel" | "";
 };
 
 type SalesRegisterState = {
   addLoader: boolean;
   listingLoader: boolean;
   deleteLoader: boolean;
-  salesRegisterData: any;
+  exportLoader: boolean;
+  salesRegisterData: any[];
+  pagination: any;
+  totals: any;
   error: string | null;
 };
 
 /* ===================================================
-   CREATE / GET SALES REGISTER
+   GET SALES REGISTER
 =================================================== */
 
 export const addSalesRegister = createAsyncThunk<
@@ -35,16 +167,28 @@ export const addSalesRegister = createAsyncThunk<
   { rejectValue: RejectValue }
 >(
   "salesRegister/addSalesRegister",
-  async ({ payload }, { rejectWithValue }) => {
+  async (payload, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         "/eTaxSolnMongoApiBackend/users/bookEZ/registers/salesRegister",
-        { ...payload }
+        { ...payload },
+        payload?.exportType
+          ? {
+              responseType: "blob",
+            }
+          : undefined
       );
+
+      if (payload?.exportType) {
+        return {
+          blob: res.data,
+          exportType: payload.exportType,
+        };
+      }
 
       if (!res.data?.success) {
         return rejectWithValue({
-          message: res?.data?.message || "Failed to create sales register",
+          message: res?.data?.message || "Failed to fetch sales register",
         });
       }
 
@@ -54,7 +198,7 @@ export const addSalesRegister = createAsyncThunk<
         message:
           error?.response?.data?.message ||
           error?.response?.data?.error ||
-          "Failed to create sales register",
+          "Failed to fetch sales register",
       });
     }
   }
@@ -68,7 +212,10 @@ const initialState: SalesRegisterState = {
   addLoader: false,
   listingLoader: false,
   deleteLoader: false,
-  salesRegisterData: null,
+  exportLoader: false,
+  salesRegisterData: [],
+  pagination: {},
+  totals: {},
   error: null,
 };
 
@@ -85,28 +232,58 @@ const salesRegisterSlice = createSlice({
     },
 
     clearSalesRegisterData: (state) => {
-      state.salesRegisterData = null;
+      state.salesRegisterData = [];
+      state.pagination = {};
+      state.totals = {};
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
 
-      /* ADD / GET SALES REGISTER */
-      .addCase(addSalesRegister.pending, (state) => {
-        state.addLoader = true;
+      /* GET SALES REGISTER */
+      .addCase(addSalesRegister.pending, (state, action) => {
+        if (action.meta.arg?.exportType) {
+          state.exportLoader = true;
+        } else {
+          state.addLoader = true;
+          state.listingLoader = true;
+        }
+
         state.error = null;
       })
 
       .addCase(addSalesRegister.fulfilled, (state, action) => {
         state.addLoader = false;
-        state.salesRegisterData = action.payload;
+        state.listingLoader = false;
+        state.exportLoader = false;
+
+        if (action.payload?.blob) {
+          return;
+        }
+
+        const data = action.payload || {};
+
+        state.salesRegisterData =
+          data?.invoices ||
+          data?.records ||
+          data?.details ||
+          data?.transactions ||
+          data?.data ||
+          [];
+
+        state.pagination = data?.pagination || {};
+        state.totals = data?.totals || data?.summary || data?.footer || {};
         state.error = null;
       })
 
       .addCase(addSalesRegister.rejected, (state, action) => {
         state.addLoader = false;
+        state.listingLoader = false;
+        state.exportLoader = false;
+
         state.error =
-          action.payload?.message || "Failed to create sales register";
+          action.payload?.message || "Failed to fetch sales register";
       });
   },
 });

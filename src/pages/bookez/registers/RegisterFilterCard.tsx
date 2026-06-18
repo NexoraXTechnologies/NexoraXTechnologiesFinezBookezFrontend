@@ -1,4 +1,4 @@
-import { FileDown } from "lucide-react";
+import { FileDown, RefreshCw, RotateCcw } from "lucide-react";
 import { SelectInput } from "../../../components/inputs";
 import { PrimaryButton } from "../../../components/buttons";
 
@@ -26,9 +26,13 @@ type ReportFilterCardProps = {
     title?: string;
     fields: ReportFilterField[];
 
+    onSearch?: () => void;
+    onClear?: () => void;
     onDownloadPdf?: () => void;
     onDownloadExcel?: () => void;
 
+    showSearchButton?: boolean;
+    showClearButton?: boolean;
     showPdfButton?: boolean;
     showExcelButton?: boolean;
 
@@ -36,19 +40,25 @@ type ReportFilterCardProps = {
     downloadDisabled?: boolean;
     downloadDisabledMessage?: string;
 
+    searchButtonText?: string;
+    clearButtonText?: string;
     pdfButtonText?: string;
     excelButtonText?: string;
 
     gridCols?: "1" | "2" | "3" | "4";
 };
 
-const ReportFilterCard = ({
+const RegisterFilterCard = ({
     title = "Filters",
     fields = [],
 
+    onSearch,
+    onClear,
     onDownloadPdf,
     onDownloadExcel,
 
+    showSearchButton = true,
+    showClearButton = true,
     showPdfButton = true,
     showExcelButton = true,
 
@@ -56,6 +66,8 @@ const ReportFilterCard = ({
     downloadDisabled = false,
     downloadDisabledMessage = "Please select required fields to download report.",
 
+    searchButtonText = "Refresh",
+    clearButtonText = "Clear",
     pdfButtonText = "PDF",
     excelButtonText = "Excel",
 
@@ -139,7 +151,6 @@ const ReportFilterCard = ({
             return (
                 <div key={field.key} className={wrapperClass}>
                     <SelectInput
-                        label={field.label}
                         name={field.key}
                         value={field.value || ""}
                         mandatory={field.required}
@@ -157,73 +168,6 @@ const ReportFilterCard = ({
                             },
                             ...(field.options || []),
                         ]}
-                        styles={{
-                            control: (base: any, state: any) => ({
-                                ...base,
-                                minHeight: "32px",
-                                height: "32px",
-                                borderRadius: "0.375rem",
-                                borderColor: state.isFocused ? "#3b82f6" : "#cbd5e1",
-                                boxShadow: state.isFocused ? "0 0 0 1px #bfdbfe" : "none",
-                            }),
-
-                            valueContainer: (base: any) => ({
-                                ...base,
-                                height: "30px",
-                                minHeight: "30px",
-                                padding: "0 12px",
-                                display: "flex",
-                                alignItems: "center",
-                            }),
-
-                            placeholder: (base: any) => ({
-                                ...base,
-                                position: "absolute",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                margin: 0,
-                                color: "#64748b",
-                                fontSize: "13px",
-                                fontWeight: 400,
-                                lineHeight: "1",
-                            }),
-
-                            singleValue: (base: any) => ({
-                                ...base,
-                                position: "absolute",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                margin: 0,
-                                color: field.value ? "#0f172a" : "#64748b",
-                                fontSize: "13px",
-                                fontWeight: field.value ? 500 : 400,
-                                lineHeight: "1",
-                            }),
-
-                            input: (base: any) => ({
-                                ...base,
-                                margin: 0,
-                                padding: 0,
-                                height: "30px",
-                                display: "flex",
-                                alignItems: "center",
-                                fontSize: "13px",
-                            }),
-
-                            indicatorsContainer: (base: any) => ({
-                                ...base,
-                                height: "30px",
-                                minHeight: "30px",
-                                display: "flex",
-                                alignItems: "center",
-                            }),
-
-                            dropdownIndicator: (base: any) => ({
-                                ...base,
-                                padding: "4px",
-                                color: "#94a3b8",
-                            }),
-                        }}
                     />
                 </div>
             );
@@ -272,8 +216,8 @@ const ReportFilterCard = ({
                 <div className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0 flex-1">
                         {finalDownloadDisabled && downloadDisabledMessage ? (
-                            <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-100">
-                                <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[9px] leading-none">
+                            <div className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px]">
                                     !
                                 </span>
 
@@ -282,42 +226,60 @@ const ReportFilterCard = ({
                                 </span>
                             </div>
                         ) : (
-                            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-100">
-                                <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[9px] leading-none">
+                            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px]">
                                     ✓
                                 </span>
-                                Ready to download report
+                                Ready to generate register
                             </div>
                         )}
                     </div>
 
-                    {(showPdfButton || showExcelButton) && (
-                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                            {showPdfButton && (
-                                <PrimaryButton
-                                    callBackFn={onDownloadPdf}
-                                    disabled={finalDownloadDisabled}
-                                    text={pdfButtonText}
-                                    icon={<FileDown size={13} />}
-                                    className={primaryButtonClass}
-                                />
-                            )}
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                        {showSearchButton && (
+                            <PrimaryButton
+                                callBackFn={onSearch}
+                                disabled={finalActionDisabled}
+                                text={searchButtonText}
+                                icon={<RefreshCw size={13} />}
+                                className={primaryButtonClass}
+                            />
+                        )}
 
-                            {showExcelButton && (
-                                <PrimaryButton
-                                    callBackFn={onDownloadExcel}
-                                    disabled={finalDownloadDisabled}
-                                    text={excelButtonText}
-                                    icon={<FileDown size={13} />}
-                                    className={primaryButtonClass}
-                                />
-                            )}
-                        </div>
-                    )}
+                        {showClearButton && (
+                            <PrimaryButton
+                                callBackFn={onClear}
+                                disabled={finalActionDisabled}
+                                text={clearButtonText}
+                                icon={<RotateCcw size={13} />}
+                                className={primaryButtonClass}
+                            />
+                        )}
+
+                        {showPdfButton && (
+                            <PrimaryButton
+                                callBackFn={onDownloadPdf}
+                                disabled={finalDownloadDisabled}
+                                text={pdfButtonText}
+                                icon={<FileDown size={13} />}
+                                className={primaryButtonClass}
+                            />
+                        )}
+
+                        {showExcelButton && (
+                            <PrimaryButton
+                                callBackFn={onDownloadExcel}
+                                disabled={finalDownloadDisabled}
+                                text={excelButtonText}
+                                icon={<FileDown size={13} />}
+                                className={primaryButtonClass}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
 
-export default ReportFilterCard;
+export default RegisterFilterCard;

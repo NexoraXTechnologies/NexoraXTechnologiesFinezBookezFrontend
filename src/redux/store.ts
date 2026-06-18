@@ -133,7 +133,7 @@ export const store = configureStore({
     stockLedger: stockLedgerReducer,
 
     // bookEz register
-    salesregister: salesRegisterReducer,
+    salesRegister: salesRegisterReducer,
     salesreceipt: salesReceiptReducer,
     purchaseRegister: purchaseRegisterReducer,
     receiptRegister: receiptRegisterReducer,
