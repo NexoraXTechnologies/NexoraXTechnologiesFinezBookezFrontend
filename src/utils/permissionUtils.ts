@@ -2,6 +2,14 @@
 
 export type PermissionAction = "view" | "create" | "update" | "delete";
 
+export const getStoredPermissions = () => {
+    try {
+        return JSON.parse(localStorage.getItem("permissions") || "{}");
+    } catch {
+        return {};
+    }
+};
+
 export const checkPermissionFromData = (
     permissions: any,
     module: string,
@@ -12,8 +20,9 @@ export const checkPermissionFromData = (
     if (!moduleData?.enabled) return false;
     const modulePermissions = moduleData?.permissions;
     if (!modulePermissions) return false;
-    const keys = permissionKey?.split(".") || [];
-    console.log({ keys })
+
+    const keys = permissionKey.split(".");
+
     let current = modulePermissions;
     for (const key of keys) {
         current = current?.[key];

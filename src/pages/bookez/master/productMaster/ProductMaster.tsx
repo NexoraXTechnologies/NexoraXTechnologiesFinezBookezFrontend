@@ -1053,7 +1053,7 @@ const ProductMaster = () => {
         <div className="ml-auto flex items-center gap-2">
           <SearchInput {...{ search, setSearch }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
-          <Permission module="bookez" permissionKey="productMaster" action="update">
+          <Permission module="bookez" permissionKey="productMaster" action="create">
           {/* @ts-ignore */}
           <DataCreateButton
             {...{ callBackFn: openAddModal, text: "Add Product" }}

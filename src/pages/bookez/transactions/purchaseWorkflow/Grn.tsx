@@ -41,6 +41,7 @@ import { getPurchaseOrderList } from "../../../../redux/slices/professionalSlice
 import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
+import Permission from "../../../../components/PermissionGuard";
 
 const defaultPagination = {
     offset: 0,
@@ -1723,14 +1724,15 @@ const Grn = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    <Permission module="bookez" permissionKey="grn" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
                             text: "Add GRN",
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1741,6 +1743,7 @@ const Grn = () => {
                 emptyMessage={`No ${status} GRN found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="grn" action="update">
                         <button
                             id="grn-edit-button"
                             onClick={() => openEditModal(record)}
@@ -1748,7 +1751,8 @@ const Grn = () => {
                         >
                             <Edit size={16} />
                         </button>
-
+                        </Permission>
+                        <Permission module="bookez" permissionKey="grn" action="delete">
                         <button
                             id="grn-delete-button"
                             disabled={deleteLoading}
@@ -1771,7 +1775,8 @@ const Grn = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

@@ -32,4 +32,9 @@ const Permission = ({ module, permissionKey, action = "view", children, fallback
     return <>{children}</>;
 };
 
+const isModuleEnabled = (moduleName: string) => {
+    const permissions = getStoredPermissions();
+    return permissions?.[moduleName]?.enabled === true;
+};
+export { isModuleEnabled }
 export default Permission;

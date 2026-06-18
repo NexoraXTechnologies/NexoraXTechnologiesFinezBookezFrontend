@@ -451,7 +451,7 @@ const SalesReturn = () => {
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
                     <Permission module="bookez" permissionKey="salesReturn" action="create">
-                    {/* @ts-ignore */}
+                        {/* @ts-ignore */}
                         <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Return" }} />
                     </Permission>
                 </div>
@@ -472,24 +472,24 @@ const SalesReturn = () => {
                             <Download size={16} />
                         </button>
                         <Permission module="bookez" permissionKey="salesReturn" action="update">
-                        <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
-                            <Edit size={16} />
+                            <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                                <Edit size={16} />
                             </button>
                         </Permission>
                         <Permission module="bookez" permissionKey="salesReturn" action="delete">
-                        <button
-                            id="sales-invoice-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            <button
+                                id="sales-invoice-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    let x = rect.left - 150;
+                                    if (x < 10) x = 10;
+                                    const y = rect.top + window.scrollY - 5;
+                                    setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber });
+                                }}
+                                className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>

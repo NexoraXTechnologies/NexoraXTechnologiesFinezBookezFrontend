@@ -41,6 +41,7 @@ import {
 import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
+import Permission from "../../../../components/PermissionGuard";
 
 const defaultPagination = {
     offset: 0,
@@ -1586,14 +1587,15 @@ const PurchaseReturn = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    <Permission module="bookez" permissionKey="purchaseReturn" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
                             text: "Add Purchase Return",
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1604,6 +1606,7 @@ const PurchaseReturn = () => {
                 emptyMessage={`No ${status} purchase return found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="purchaseReturn" action="update">
                         <button
                             id="purchase-return-edit-button"
                             onClick={() => openEditModal(record)}
@@ -1611,7 +1614,8 @@ const PurchaseReturn = () => {
                         >
                             <Edit size={16} />
                         </button>
-
+                        </Permission>
+                        <Permission module="bookez" permissionKey="purchaseReturn" action="delete">
                         <button
                             id="purchase-return-delete-button"
                             disabled={deleteLoading}
@@ -1634,7 +1638,8 @@ const PurchaseReturn = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

@@ -1268,7 +1268,7 @@ const SalesReceipt = () => {
         salesReceipt.length === 0 &&
         (listingLoader || fieldsLoading);
 
-   
+
 
     useEffect(() => {
         // @ts-ignore 
@@ -1304,10 +1304,10 @@ const SalesReceipt = () => {
                         loading={refreshing}
                     />
                     <Permission module="bookez" permissionKey="receipt" action="create">
-                    {/* @ts-ignore */}
-                    <DataCreateButton
-                        callBackFn={openAddModal}
-                        text="Add Sales Receipt"
+                        {/* @ts-ignore */}
+                        <DataCreateButton
+                            callBackFn={openAddModal}
+                            text="Add Sales Receipt"
                         />
                     </Permission>
                 </div>
@@ -1328,35 +1328,35 @@ const SalesReceipt = () => {
                             <Download size={16} />
                         </button>
                         <Permission module="bookez" permissionKey="receipt" action="update">
-                        <button
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
-                            <Edit size={16} />
+                            <button
+                                onClick={() => openEditModal(record)}
+                                className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                            >
+                                <Edit size={16} />
                             </button>
                         </Permission>
                         <Permission module="bookez" permissionKey="receipt" action="delete">
-                        <button
-                            disabled={deleteLoader}
-                            onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber:
-                                        record?.recVoucherNumber ||
-                                        record?.receiptVoucherNumber ||
-                                        record?.voucherNumber,
-                                });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            <button
+                                disabled={deleteLoader}
+                                onClick={(e) => {
+                                    const rect =
+                                        e.currentTarget.getBoundingClientRect();
+                                    let x = rect.left - 150;
+                                    if (x < 10) x = 10;
+                                    const y = rect.top + window.scrollY - 5;
+                                    setConfirmTooltip({
+                                        show: true,
+                                        x,
+                                        y,
+                                        voucherNumber:
+                                            record?.recVoucherNumber ||
+                                            record?.receiptVoucherNumber ||
+                                            record?.voucherNumber,
+                                    });
+                                }}
+                                className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>

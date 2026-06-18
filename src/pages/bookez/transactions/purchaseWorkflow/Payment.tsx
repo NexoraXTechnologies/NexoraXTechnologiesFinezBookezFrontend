@@ -40,6 +40,7 @@ import {
     GetVendorWisePurchaseInvoiceList,
     updatePurchaseInvoice,
 } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+import Permission from "../../../../components/PermissionGuard";
 
 const defaultPagination = {
     offset: 0,
@@ -1589,14 +1590,15 @@ const Payment = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    <Permission module="bookez" permissionKey="payment" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
                             text: "Add Payment",
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1607,6 +1609,7 @@ const Payment = () => {
                 emptyMessage={`No ${status} payment found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
                         <button
                             id="payment-edit-button"
                             onClick={() => openEditModal(record)}
@@ -1614,19 +1617,16 @@ const Payment = () => {
                         >
                             <Edit size={16} />
                         </button>
-
+                        </Permission>
+                        <Permission module="bookez" permissionKey="purchaseInvoice" action="delete">
                         <button
                             id="payment-delete-button"
                             disabled={deleteLoading}
                             onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
+                                const rect = e.currentTarget.getBoundingClientRect();
                                 let x = rect.left - 150;
                                 if (x < 10) x = 10;
-
                                 const y = rect.top + window.scrollY - 5;
-
                                 setConfirmTooltip({
                                     show: true,
                                     x,
@@ -1637,7 +1637,8 @@ const Payment = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

@@ -13,6 +13,7 @@ import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
+import Permission from "../../../../components/PermissionGuard";
 
 
 const defaultPagination = {
@@ -1228,21 +1229,21 @@ const PurchaseOrder = () => {
                     />
 
                     <SearchInput {...{ search, setSearch }} />
-
                     <DataREfreshButton
                         {...{
                             callBackFn: handleRefresh,
                             loading: refreshing,
                         }}
                     />
-
+                    <Permission module="bookez" permissionKey="purchaseOrder" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
                             text: "Add Purchase Order",
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1253,6 +1254,7 @@ const PurchaseOrder = () => {
                 emptyMessage={`No ${status} purchase order found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="purchaseOrder" action="update">
                         <button
                             id="purchase-order-edit-button"
                             onClick={() => openEditModal(record)}
@@ -1260,7 +1262,8 @@ const PurchaseOrder = () => {
                         >
                             <Edit size={16} />
                         </button>
-
+                        </Permission>
+                        <Permission module="bookez" permissionKey="purchaseOrder" action="delete">
                         <button
                             id="purchase-order-delete-button"
                             disabled={deleteLoading}
@@ -1283,7 +1286,8 @@ const PurchaseOrder = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

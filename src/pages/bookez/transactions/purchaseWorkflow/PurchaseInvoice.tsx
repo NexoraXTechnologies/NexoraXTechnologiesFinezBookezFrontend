@@ -43,6 +43,7 @@ import {
 import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
+import Permission from "../../../../components/PermissionGuard";
 
 const defaultPagination = {
     offset: 0,
@@ -1496,14 +1497,15 @@ const PurchaseInvoice = () => {
                             loading: refreshing,
                         }}
                     />
-
+                    <Permission module="bookez" permissionKey="purchaseInvoice" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
                             callBackFn: openAddModal,
                             text: "Add Purchase Invoice",
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1514,14 +1516,16 @@ const PurchaseInvoice = () => {
                 emptyMessage={`No ${status} purchase invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
                         <button
                             id="purchase-invoice-edit-button"
                             onClick={() => openEditModal(record)}
                             className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
                         >
                             <Edit size={16} />
-                        </button>
-
+                            </button>
+                        </Permission>
+                        <Permission module="bookez" permissionKey="purchaseInvoice" action="delete">
                         <button
                             id="purchase-invoice-delete-button"
                             disabled={deleteLoading}
@@ -1544,7 +1548,8 @@ const PurchaseInvoice = () => {
                             className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />
