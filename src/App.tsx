@@ -52,7 +52,15 @@ function App() {
 
   return (
     <>
-      <ToastContainer />
+      <ToastContainer
+        position="top-center"
+        autoClose={2500}
+        hideProgressBar
+        closeButton={false}
+        pauseOnHover
+        draggable={false}
+        theme="colored"
+      />
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/professionalRegister" element={<ProfessionalRegister />} />
