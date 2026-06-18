@@ -238,6 +238,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/profile",
 					icon: <IdCard size={14} />,
 				},
+				{
+					name: "Permission",
+					path: "/permission",
+					icon: <IdCard size={14} />,
+				},
 				...(canShowUsers
 					? [
 						{

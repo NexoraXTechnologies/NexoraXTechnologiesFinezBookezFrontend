@@ -2,12 +2,13 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 
 // GET PROFESSIONAL USERS
-export const getProfessionalUsers = createAsyncThunk('professionalUser/getProfessionalUsers', async ({ page = 1, limit = 20 } : { page?: number; limit?: number }, { rejectWithValue }) => {
-  try {
+export const getProfessionalUsers = createAsyncThunk(
+  'professionalUser/getProfessionalUsers', async ({ page = 1, limit = 20, withParent = false }: { page?: number; limit?: number, withParent?: boolean }, { rejectWithValue }) => {
+    try {
     // @ts-ignore
     const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
     const parentMobile = professionalHeaders?.['x-db-name'];
-
+      console.log({ parentMobile })
     if (!parentMobile) {
       return rejectWithValue({ message: 'Parent user mobile number not found in localStorage' });
     }
@@ -19,7 +20,7 @@ export const getProfessionalUsers = createAsyncThunk('professionalUser/getProfes
         limit,
       },
     });
-
+      console.log({ res })
     if (!res.data?.success) {
       return rejectWithValue({
         message: res.data?.message || 'Failed to fetch users',
@@ -29,12 +30,12 @@ export const getProfessionalUsers = createAsyncThunk('professionalUser/getProfes
     // data
     const allData = res.data.data?.result || [];
     const childUsers = allData[0]?.ChildUsers || [];
-    const filtered = childUsers.slice(1);
+      const filtered = withParent ? childUsers : childUsers.slice(1);
 
     const pagination = res.data.data?.pagination || null;
 
     return { users: filtered, pagination };
-  } catch (err: any) {
+    } catch (err: any) {
     return rejectWithValue({
       message: err.response?.data?.message || 'Failed to fetch users',
     });

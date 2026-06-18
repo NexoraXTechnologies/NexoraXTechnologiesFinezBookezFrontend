@@ -44,7 +44,7 @@ const initialState: PermissionState = {
 
 export const getAllPermissions = createAsyncThunk<any, GetPermissionsParams, { rejectValue: RejectValue }>(
     "permissions/getAllPermissions",
-    async ({ offset = 0, limit = 100, parentMobile, childMobile, }, { rejectWithValue }) => {
+    async ({ offset = 0, limit = 100, parentMobile, childMobile, storeInLocal = true }: any, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/permissions/getAll`,
                 { params: { offset, limit, parentMobile, childMobile, }, }
@@ -54,7 +54,26 @@ export const getAllPermissions = createAsyncThunk<any, GetPermissionsParams, { r
                 return rejectWithValue({ message: res.data?.message || "Failed to fetch permissions", });
             }
 
-            return res.data?.data;
+            return { ...res.data?.data, storeInLocal: storeInLocal };
+        } catch (error: any) {
+            return rejectWithValue({ message: error?.response?.data?.message || error?.response?.data?.error || "Failed to fetch permissions", });
+        }
+    }
+);
+
+export const savePermission = createAsyncThunk<any, GetPermissionsParams, { rejectValue: RejectValue }>(
+    "permissions/getAllPermissions",
+    async ({ offset = 0, limit = 100, parentMobile, childMobile, storeInLocal = true }: any, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.post(`/eTaxSolnMongoApiBackend/users/permissions/getAll`,
+                { params: { offset, limit, parentMobile, childMobile, }, }
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({ message: res.data?.message || "Failed to fetch permissions", });
+            }
+
+            return { ...res.data?.data, storeInLocal: storeInLocal };
         } catch (error: any) {
             return rejectWithValue({ message: error?.response?.data?.message || error?.response?.data?.error || "Failed to fetch permissions", });
         }
@@ -88,12 +107,10 @@ const permissionSlice = createSlice({
 
             .addCase(getAllPermissions.fulfilled, (state, action) => {
                 state.loader = false;
-
                 state.parent = action.payload?.parent || null;
                 state.child = action.payload?.child || null;
                 state.permissions = action.payload?.permissions || {};
-
-                localStorage.setItem(
+                action?.payload?.storeInLocal && localStorage.setItem(
                     "permissions",
                     JSON.stringify(action.payload?.permissions || {})
                 );
