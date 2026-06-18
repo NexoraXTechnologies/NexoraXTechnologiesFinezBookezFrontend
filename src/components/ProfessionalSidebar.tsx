@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, BadgeIndianRupee, ShoppingCart, BarChart3, BookOpenCheck, ReceiptText } from 'lucide-react';
+import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, BadgeIndianRupee, ShoppingCart, BarChart3, BookOpenCheck, ReceiptText, RotateCcwKey, LockKeyhole } from 'lucide-react';
 import ConfirmTooltip from './common/ConfirmTooltip';
 // import { useDispatch } from "react-redux";
 import EZLogo from '../assets/Logo.EZ.png'
@@ -10,6 +10,7 @@ import { isModuleEnabled } from "./PermissionGuard";
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [openMenus, setOpenMenus] = useState({});
+	
 	const navigate = useNavigate();
 	// const dispatchP = useDispatch();
 	const [confirm, setConfirm] = useState<{ show: boolean, x: number | null, y: number | null }>({ show: false, x: null, y: null });
@@ -224,30 +225,30 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			name: "Settings",
 			icon: <Settings size={20} />,
 			children: [
-				...(canShowUsers
-					? [
-						{
-							name: "Add Team/Employee",
-							path: "/users",
-							icon: <Users size={14} />,
-						},
-					]
-					: []),
+				// ...(canShowUsers
+				// 	? [
+				// 		{
+				// 			name: "Add Team/Employee",
+				// 			path: "/users",
+				// 			icon: <Users size={14} />,
+				// 		},
+				// 	]
+				// 	: []),
 				{
 					name: "Profile",
 					path: "/profile",
-					icon: <IdCard size={14} />,
+					icon: <IdCard size={19} />,
 				},
 				{
 					name: "Permission",
 					path: "/permission",
-					icon: <IdCard size={14} />,
+					icon: <LockKeyhole size={19} />,
 				},
 				...(canShowUsers
 					? [
 						{
 							name: "Configuration",
-							icon: <Sliders size={14} />,
+							icon: <Sliders size={19} />,
 							path: "/configuration",
 						},
 					]
@@ -256,7 +257,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					? [
 						{
 							name: "Automation",
-							icon: <CloudCog size={14} />,
+							icon: <CloudCog size={19} />,
 							path: "/automation",
 						},
 					]

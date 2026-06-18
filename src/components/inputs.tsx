@@ -76,6 +76,7 @@ const SelectInput = ({
     name = "",
     placeholder = "Select",
     disabled = false,
+    defaultValue = null,
     // ✅ only new prop
     styles: customStyles = {},
 }: any) => {
@@ -189,6 +190,7 @@ const SelectInput = ({
             color: "#1f2937",
         }),
     };
+    console.log({ defaultValue })
     return (
         <div className="w-full flex flex-col gap-1">
             {!!label?.length && (
@@ -200,8 +202,9 @@ const SelectInput = ({
 
             <Select
                 name={name}
-                value={value}
-                options={options}
+                value={selectedOption}
+                defaultValue={defaultValue}
+                options={normalizedOptions}
                 placeholder={placeholder}
                 isDisabled={disabled}
                 isSearchable
@@ -213,7 +216,14 @@ const SelectInput = ({
                     ...defaultStyles,
                     ...customStyles,
                 }}
-                onChange={onChange}
+                onChange={(selected: any) => {
+                    onChange({
+                        target: {
+                            name,
+                            value: selected?.value || "",
+                        },
+                    });
+                }}
                 noOptionsMessage={() => "No options found"}
             />
 

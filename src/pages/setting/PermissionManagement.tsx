@@ -3,7 +3,8 @@ import { Save, ShieldCheck } from "lucide-react";
 import { getProfessionalUsers } from "../../redux/slices/professionalSlice/professionalUserSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { SelectInput } from "../../components/inputs";
-import { getAllPermissions } from "../../redux/slices/permissionSlice";
+import { getAllPermissions, updatePermission } from "../../redux/slices/permissionSlice";
+import { toast } from "react-toastify";
 
 type ActionKey = "view" | "create" | "update" | "delete";
 
@@ -157,12 +158,10 @@ const getChangedPermissions = (oldData: any, newData: any) => {
             Object.keys(newObj || {}).forEach((key) => {
                 const oldValue = oldObj?.[key];
                 const newValue = newObj?.[key];
-
                 const currentPath = [...path, key];
                 const isCrudObject = typeof newValue === "object" && newValue !== null && ("view" in newValue || "create" in newValue || "update" in newValue || "delete" in newValue);
                 if (isCrudObject) {
                     const changedActions: any = {};
-
                     ["view", "create", "update", "delete"].forEach((action) => {
                         if (oldValue?.[action] !== newValue?.[action]) {
                             changedActions[action] = newValue?.[action];
@@ -173,13 +172,10 @@ const getChangedPermissions = (oldData: any, newData: any) => {
                         if (!changes[moduleKey]) {
                             changes[moduleKey] = {};
                         }
-
                         if (!changes[moduleKey].permissions) {
                             changes[moduleKey].permissions = {};
                         }
-
                         let current = changes[moduleKey].permissions;
-
                         currentPath.forEach((pathKey, index) => {
                             if (index === currentPath.length - 1) {
                                 current[pathKey] = changedActions;
@@ -194,22 +190,18 @@ const getChangedPermissions = (oldData: any, newData: any) => {
                 }
             });
         };
-
         comparePermissionObject(oldPermissions, newPermissions);
     });
-
     return changes;
 };
 
 const getValueByPath = (obj: any, path: string, action: ActionKey) => {
     const keys = path.split(".");
     let current = obj;
-
     for (const key of keys) {
         current = current?.[key];
         if (!current) return false;
     }
-
     return current?.[action] === true;
 };
 
@@ -221,16 +213,10 @@ const setValueByPath = (
 ) => {
     const keys = path.split(".");
     let current = obj;
-
     keys.forEach((key, index) => {
-        if (!current[key]) {
-            current[key] =
-                index === keys.length - 1 ? { ...defaultPermissionAction } : {};
-        }
-
+        if (!current[key]) current[key] = index === keys.length - 1 ? { ...defaultPermissionAction } : {};
         current = current[key];
     });
-
     current[action] = value;
 };
 
@@ -256,9 +242,9 @@ const PermissionManagement = () => {
     const dispatch = useDispatch();
     const { users } = useSelector((s: any) => s.professionalUser || {});
     const [userOption, setUserOption] = useState([]);
-    const [selectUser, setSelectUser] = useState();
+    const [selectUser, setSelectUser]: any = useState();
     const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
-    const { permissions } = useSelector((s: any) => s.permissions || {});
+    const { permissions, loader } = useSelector((s: any) => s.permissions || {});
     const [permissionData, setPermissionData] = useState<any>(
         createDefaultPermissionData()
     );
@@ -357,28 +343,30 @@ const PermissionManagement = () => {
     };
 
     const handleSave = () => {
-        const changedPermissions = getChangedPermissions(
-            permissions,
-            permissionData
-        );
+        try {
+            const changedPermissions = getChangedPermissions(
+                permissions,
+                permissionData
+            );
 
-        if (Object.keys(changedPermissions).length === 0) {
-            console.log("No changes found");
-            return;
+            if (Object.keys(changedPermissions).length === 0) {
+                toast.warn("No change found");
+                return;
+            }
+            const payload: any = {
+                parentMobile: selectUser?.parentUserMobileNumber,
+                childMobile: selectUser?.userMobileNumberHash,
+                permissions: changedPermissions,
+            };
+            dispatch(updatePermission({ payload }) as any);
+            toast.success("Permission Updated")
+            if (selectUser?.parentUserMobileNumber === selectUser?.userMobileNumberHash) {
+                localStorage.setItem("permissions", JSON.stringify(permissionData));
+            }
+        } catch (error) {
+            console.error(error)
+            toast.error("Getting error when submit")
         }
-        console.log({ changedPermissions })
-        const payload = {
-            permissions: changedPermissions,
-        };
-
-        console.log("SAVE ONLY CHANGED PAYLOAD:", payload);
-
-        // dispatch(updatePermissions(payload) as any);
-
-        // localStorage.setItem("permissions", JSON.stringify(permissionData));
-
-        // after successful API update, update original state
-        // setOriginalPermissionData(permissionData);
     };
 
     useEffect(() => {
@@ -398,12 +386,13 @@ const PermissionManagement = () => {
     useEffect(() => {
         // @ts-ignore
         dispatch(getAllPermissions({ parentMobile: selectUser?.parentUserMobileNumber || localUser?.parentUserMobileNumber, childMobile: selectUser?.userMobileNumberHash || localUser?.userMobileNumberHash, storeInLocal: false }))
-    }, [selectUser])
+    }, [selectUser]);
 
     useEffect(() => {
         if (permissions && Object.keys(permissions)?.length > 0) setPermissionData(permissions);
     }, [permissions]);
 
+    console.log({ selectUser })
     return (
         <div className="w-full min-h-screen bg-slate-50 p-4">
             <div className="mx-auto max-w-7xl space-y-4">
@@ -430,10 +419,11 @@ const PermissionManagement = () => {
                         <button
                             type="button"
                             onClick={handleSave}
+                            disabled={loader}
                             className="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
                         >
                             <Save size={16} />
-                            Save Permissions
+                            {loader ? "Loading..." : "Save Permissions"} 
                         </button>
                     </div>
                 </div>
@@ -442,7 +432,7 @@ const PermissionManagement = () => {
                 <div className="rounded-md border flex justify-between border-slate-200 bg-white p-3 shadow-sm">
                     <div className="w-100 flex items-center">
                         <label className="text-nowrap me-2 text-sm font-medium text-gray-700" htmlFor="">Select User</label>
-                        <SelectInput  {...{ label: "", value: selectUser, onChange: (e: any) => setSelectUser(e), options: userOption, placeholder: "Select User" }} />
+                        <SelectInput  {...{ name: "Hello", label: "", value: selectUser?.value, onChange: (e: any) => setSelectUser(e?.target), options: userOption, placeholder: "Select User" }} />
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {moduleTabs.map((tab) => {
@@ -528,8 +518,7 @@ const PermissionManagement = () => {
                             {activeSections.map((section: any) => (
                                 <div
                                     key={section.title}
-                                    className="overflow-hidden rounded-md border border-slate-200"
-                                >
+                                    className="overflow-hidden rounded-md border border-slate-200">
                                     <div className="bg-slate-50 px-4 py-3">
                                         <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">
                                             {section.title}
@@ -559,11 +548,7 @@ const PermissionManagement = () => {
 
                                             <tbody>
                                                 {section.items.map((permission: any) => {
-                                                    const allChecked = isFullRowChecked(
-                                                        activeModule,
-                                                        permission.key
-                                                    );
-
+                                                    const allChecked = isFullRowChecked(activeModule, permission.key);
                                                     return (
                                                         <tr
                                                             key={permission.key}
