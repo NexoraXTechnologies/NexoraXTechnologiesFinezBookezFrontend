@@ -9,6 +9,7 @@ type GetAllSalesInvoiceParams = {
   limit?: number;
   offset?: number;
   search?: string;
+  voucherNumber?: string;
   status?: "open" | "close";
 };
 
@@ -103,6 +104,47 @@ export const getAllSalesInvoice = createAsyncThunk<
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/getAll",
         { params }
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch sales invoices",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to fetch sales invoices",
+      });
+    }
+  }
+);
+/* ===================================================
+   getByVoucherNumber ALL SALES INVOICE
+=================================================== */
+
+export const getByVoucherNumberSalesInvoice = createAsyncThunk<
+  any,
+  GetAllSalesInvoiceParams | undefined,
+  { rejectValue: RejectValue }
+>(
+  "salesInvoice/getAllSalesInvoice",
+  async (
+    {voucherNumber }: any,
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/getByVoucherNumber/${voucherNumber}`,
       );
 
       if (!res.data?.success) {

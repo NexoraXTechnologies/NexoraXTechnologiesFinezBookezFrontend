@@ -13,7 +13,11 @@ type PurchaseInvoiceParams = {
 };
 type PurchaseVendorInvoiceParams = {
   vendorCode?: string;
-  
+
+};
+type PurchaseVaucherNumberInvoiceParams = {
+  voucherNumber?: string;
+
 };
 
 type PurchaseInvoicePayload = {
@@ -184,6 +188,47 @@ export const getPurchaseInvoiceList = createAsyncThunk<
    GET Vendor Wise Purchase Invoice
 =================================================== */
 
+export const getByVoucherNumberPurchaseInvoiceList = createAsyncThunk<
+  any,
+  PurchaseVaucherNumberInvoiceParams | undefined,
+  { rejectValue: RejectValue }
+>(
+  "purchaseInvoice/getByVoucherNumberPurchaseInvoiceList",
+  async (
+    { voucherNumber } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+
+
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseInvoice/getByVoucherNumber/${voucherNumber}`,
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch purchase invoices",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message || "Failed to fetch purchase invoices",
+      });
+    }
+  }
+);
+/* ===================================================
+   GET Vendor Wise Purchase Invoice
+=================================================== */
+
 export const GetVendorWisePurchaseInvoiceList = createAsyncThunk<
   any,
   PurchaseVendorInvoiceParams | undefined,
@@ -196,7 +241,7 @@ export const GetVendorWisePurchaseInvoiceList = createAsyncThunk<
   ) => {
     try {
       const params: any = {
-       vendorCode
+        vendorCode
       };
 
       const res = await professionalAxios.get(
@@ -312,6 +357,23 @@ const purchaseInvoiceSlice = createSlice({
         state.purchaseInvoiceList = action.payload?.records ?? [];
       })
       .addCase(GetVendorWisePurchaseInvoiceList.rejected, (state, action) => {
+        state.listingLoader = false;
+        state.error =
+          action.payload?.message || "Failed to fetch purchase invoices";
+        state.purchaseInvoiceList = [];
+      })
+      /* ---------- PURCHASE INVOICE LISTING voucher number  wise ---------- */
+      .addCase(getByVoucherNumberPurchaseInvoiceList.pending, (state) => {
+        state.listingLoader = true;
+        state.error = null;
+      })
+      .addCase(getByVoucherNumberPurchaseInvoiceList.fulfilled, (state, action) => {
+        state.listingLoader = false;
+
+        state.pagination = action.payload?.pagination ?? state.pagination;
+        state.purchaseInvoiceList = action.payload?.records ?? [];
+      })
+      .addCase(getByVoucherNumberPurchaseInvoiceList.rejected, (state, action) => {
         state.listingLoader = false;
         state.error =
           action.payload?.message || "Failed to fetch purchase invoices";

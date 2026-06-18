@@ -10,6 +10,7 @@ type PaymentParams = {
   limit?: number;
   status?: string;
   search?: string;
+  voucherNumber?: string;
 };
 
 type PaymentPayload = {
@@ -172,6 +173,47 @@ export const getAllPayment = createAsyncThunk<
     }
   }
 );
+/* ===================================================
+   GET PAYMENT LIST
+=================================================== */
+
+export const getByVoucherNumberPayment = createAsyncThunk<
+  any,
+  PaymentParams | undefined,
+  { rejectValue: RejectValue }
+>(
+  "payment/getByVoucherNumberPayment",
+  async (
+    { voucherNumber } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+
+
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/payment/getByVoucherNumber/${voucherNumber}`,
+
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch payments",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      return rejectWithValue({
+        message: err?.response?.data?.message || "Failed to fetch payments",
+      });
+    }
+  }
+);
 
 /* ===================================================
    SLICE
@@ -242,6 +284,22 @@ const paymentSlice = createSlice({
         state.paymentList = action.payload?.records ?? [];
       })
       .addCase(getAllPayment.rejected, (state, action) => {
+        state.listingLoader = false;
+        state.error = action.payload?.message || "Failed to fetch payments";
+        state.paymentList = [];
+      })
+      /* ---------- PAYMENT getByVoucherNumberPayment LISTING ---------- */
+      .addCase(getByVoucherNumberPayment.pending, (state) => {
+        state.listingLoader = true;
+        state.error = null;
+      })
+      .addCase(getByVoucherNumberPayment.fulfilled, (state, action) => {
+        state.listingLoader = false;
+
+        state.pagination = action.payload?.pagination ?? state.pagination;
+        state.paymentList = action.payload?.records ?? [];
+      })
+      .addCase(getByVoucherNumberPayment.rejected, (state, action) => {
         state.listingLoader = false;
         state.error = action.payload?.message || "Failed to fetch payments";
         state.paymentList = [];
