@@ -157,7 +157,7 @@ const AccountLedger = () => {
         }));
     }, [accounts]);
 
-    
+
 
 
     const getVoucherRecordFromResponse = (
@@ -758,7 +758,7 @@ const AccountLedger = () => {
             .toLowerCase();
     };
 
-  
+
 
     const moduleViewConfig: any = {
         salesinvoice: {
@@ -1167,20 +1167,17 @@ const AccountLedger = () => {
                     grid w-full grid-cols-1 gap-4 xl:grid-cols-2
                     [&>*]:rounded-xl
                     [&>*]:!p-4
-                    [&_*]:!text-sm
                     [&_h3]:!text-base
                     [&_h2]:!text-base
                     [&_p]:!text-sm
                     [&_label]:!text-xs
-                    [&_button]:!h-10
-                    [&_button]:!text-sm
                     [&_input]:!h-10
                     [&_input]:!text-sm
                     [&_select]:!h-10
                     [&_select]:!text-sm
                     [&_.text-xl]:!text-lg
                     [&_.text-lg]:!text-base
-                    [&_.text-sm]:!text-xs
+                    
                 "
             >
                 <ReportFilterCard

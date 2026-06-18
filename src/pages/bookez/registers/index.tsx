@@ -7,12 +7,13 @@ import {
 } from "lucide-react";
 
 import TransactionDashboard from "../transactions/components/TransactionDashboard";
+import SalesRegister from "./SalesRegister";
 
 const cards: any[] = [
   {
     title: "Sales Register",
     description: "View sales invoices, customer billing, taxable values, and total sales records.",
-    component: "",
+    component: SalesRegister,
     icon: <ShoppingCart size={22} />,
     permissionKey: "registers.salesRegister"
   },
