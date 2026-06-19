@@ -201,43 +201,43 @@ const compactContainerAnim: any = {
 	},
 };
 
-const TabButton = ({
-	active,
-	label,
-	icon,
-	onClick,
-}: {
-	active: boolean;
-	label: string;
-	icon: React.ReactNode;
-	onClick: () => void;
-}) => {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className={`cursor-pointer relative flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition-all duration-300 ${active
-				? "text-white"
-				: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-				}`}
-		>
-			{active && (
-				<motion.span
-					layoutId="dashboard-active-tab"
-					className="absolute inset-0 rounded-md bg-slate-950 shadow-md"
-					transition={{
-						type: "spring",
-						stiffness: 420,
-						damping: 32,
-					}}
-				/>
-			)}
+// const TabButton = ({
+// 	active,
+// 	label,
+// 	icon,
+// 	onClick,
+// }: {
+// 	active: boolean;
+// 	label: string;
+// 	icon: React.ReactNode;
+// 	onClick: () => void;
+// }) => {
+// 	return (
+// 		<button
+// 			type="button"
+// 			onClick={onClick}
+// 			className={`cursor-pointer relative flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition-all duration-300 ${active
+// 				? "text-white"
+// 				: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+// 				}`}
+// 		>
+// 			{active && (
+// 				<motion.span
+// 					layoutId="dashboard-active-tab"
+// 					className="absolute inset-0 rounded-md bg-slate-950 shadow-md"
+// 					transition={{
+// 						type: "spring",
+// 						stiffness: 420,
+// 						damping: 32,
+// 					}}
+// 				/>
+// 			)}
 
-			<span className="relative z-10">{icon}</span>
-			<span className="relative z-10">{label}</span>
-		</button>
-	);
-};
+// 			<span className="relative z-10">{icon}</span>
+// 			<span className="relative z-10">{label}</span>
+// 		</button>
+// 	);
+// };
 
 const EmptyData = ({ text = "No data available" }: { text?: string }) => {
 	return (

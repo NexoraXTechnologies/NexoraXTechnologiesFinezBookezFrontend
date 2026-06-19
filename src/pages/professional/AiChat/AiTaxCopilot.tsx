@@ -124,8 +124,7 @@ const AiTaxCopilot = ({ onClose }: any) => {
       const taxData = taxSummary?.summary ? { summary: taxSummary.summary } : {};
 
       // @ts-ignore
-      const res = await dispatch(
-        aiTaxChat({
+      const res = await dispatch(aiTaxChat({
           question,
           taxData,
         })
@@ -232,8 +231,7 @@ const AiTaxCopilot = ({ onClose }: any) => {
 
     try {
       // @ts-ignore
-      await dispatch(
-        generateTaxSummary({
+      await dispatch(generateTaxSummary({
           payload,
           useLLM: true,
         })

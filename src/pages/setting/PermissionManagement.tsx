@@ -393,10 +393,9 @@ const PermissionManagement = () => {
         if (permissions && Object.keys(permissions)?.length > 0) setPermissionData(permissions);
     }, [permissions]);
 
-    console.log({ selectUser })
     return (
         <div className="w-full min-h-screen bg-slate-50 p-4">
-            <div className="mx-auto max-w-7xl space-y-4">
+            <div className="mx-auto space-y-4">
                 {/* Header */}
                 <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
