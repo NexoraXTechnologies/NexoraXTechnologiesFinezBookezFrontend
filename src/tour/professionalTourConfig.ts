@@ -1,6 +1,6 @@
 // src/tour/professionalTourConfig.js
 
-export const professionalTourConfig = {
+export const professionalTourConfig: any = {
   "/professional": [
     {
       selector: "#professional-sidebar",

@@ -1,13 +1,7 @@
 
-type BadgeVariant = "success" | "primary" | "danger";
-interface BadgeColor {
-    text: string;
-    bg: string;
-    border: string;
-}
 
 const Badge = ({ count = 0, text = "", varient = "success" }) => {
-    const badgeColl: Record<BadgeVariant, BadgeColor> = {
+    const badgeColl: any = {
         success: { text: "text-green-700", bg: "bg-green-50", border: "border-green-200" },
         primary: { text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
         danger: { text: "text-red-700", bg: "bg-red-50", border: "border-red-200" }

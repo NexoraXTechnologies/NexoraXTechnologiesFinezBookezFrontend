@@ -11,12 +11,10 @@ import {
 } from "lucide-react";
 import { FaRegFilePowerpoint } from "react-icons/fa";
 
-import TransactionDashboard, {
-  type DashboardCard,
-} from "../transactions/components/TransactionDashboard";
+import TransactionDashboard from "../transactions/components/TransactionDashboard";
 
 import AccountMaster from "./AccountMaster";
-import ProductMaster from "./ProductMaster";
+import ProductMaster from "./productMaster/ProductMaster";
 import UnitMaster from "./UnitMaster";
 import ReportMapping from "./ReportMapping";
 import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
@@ -40,29 +38,32 @@ const MasterDashboard = () => {
     );
   }, [dispatch]);
 
-  const masterCards: DashboardCard[] = useMemo(() => {
-    const defaultCards: DashboardCard[] = [
+  const masterCards: any[] = useMemo(() => {
+    const defaultCards: any[] = [
       {
         title: "Account",
         description: "Manage customers, vendors, cash, bank and ledgers.",
         icon: <Wallet size={22} />,
         component: AccountMaster,
+        permissionKey: "accountMaster"
       },
       {
         title: "Product",
         description: "Manage products, services, pricing and inventory details.",
         icon: <PackageSearch size={22} />,
         component: ProductMaster,
+        permissionKey: "productMaster"
       },
       {
         title: "Unit",
         description: "Manage unit measurements for products and transactions.",
         icon: <Ruler size={22} />,
         component: UnitMaster,
+        permissionKey: "unitMaster"
       },
     ];
 
-    const apiCards: DashboardCard[] = customMasterModules.map((item: any) => {
+    const apiCards: any[] = customMasterModules.map((item: any) => {
       const moduleName = item?.moduleName || "Custom Master";
       const moduleCode = item?.moduleCode || item?._id || "";
 
@@ -75,16 +76,17 @@ const MasterDashboard = () => {
         description:
           item?.description || `Manage ${moduleName} custom master data.`,
         icon: <Boxes size={22} />,
-        component: CustomMasterScreen,
+        component: CustomMasterScreen
       };
     });
 
-    const reportCard: DashboardCard[] = [
+    const reportCard: any = [
       {
         title: "Reports Mapping",
         description: "Configure templates and mapped report formats.",
         icon: <FaRegFilePowerpoint size={22} />,
         component: ReportMapping,
+        permissionKey:"reportMappingMaster"
       },
     ];
 

@@ -6,7 +6,7 @@ import professionalAxios from "../../../services/professionalAxios";
 // =======================================================
 export const sendProfessionalOtp = createAsyncThunk(
   "professionalAuth/sendProfessionalOtp",
-  async (mobile, { rejectWithValue }) => {
+  async (mobile: string, { rejectWithValue }) => {
     try {
       if (!mobile || mobile.length !== 10) {
         return rejectWithValue({ message: "Invalid mobile number" });
@@ -29,7 +29,7 @@ export const sendProfessionalOtp = createAsyncThunk(
         requestID: res.data.RequestID,
         otp: res.data.otp,
       };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to send OTP",
       });
@@ -42,7 +42,7 @@ export const sendProfessionalOtp = createAsyncThunk(
 // =======================================================
 export const verifyProfessionalOtp = createAsyncThunk(
   "professionalAuth/verifyProfessionalOtp",
-  async ({ mobile, requestID, otp }, { rejectWithValue }) => {
+  async ({ mobile, requestID, otp }: { mobile: string; requestID: string; otp: string }, { rejectWithValue }) => {
     try {
       if (!otp || otp.length !== 4) {
         return rejectWithValue({ message: "Invalid OTP" });
@@ -72,15 +72,16 @@ export const verifyProfessionalOtp = createAsyncThunk(
 
         const exists = checkUserRes.data.success === true;
         const userData = exists ? checkUserRes.data.data.ChildUsers : null;
-
+        console.log("Done in thunk")
         return { existingUser: exists, userData };
-      } catch (err) {
+      } catch (err: any) {
         if (err.response?.status === 404) {
+          console.log({ err })
           return { existingUser: false, userData: null };
         }
         throw err;
       }
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message:
           err.response?.data?.message ||
@@ -107,7 +108,7 @@ export const registerProfessional = createAsyncThunk(
       );
 
       return response.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Registration failed",
       });
@@ -120,7 +121,7 @@ export const registerProfessional = createAsyncThunk(
 // =======================================================
 export const checkProfessionalParentUser = createAsyncThunk(
   "professionalAuth/checkProfessionalParentUser",
-  async (mobile, { rejectWithValue }) => {
+  async (mobile: string, { rejectWithValue }) => {
     try {
       if (!mobile || mobile.length !== 10) {
         return rejectWithValue({ message: "Invalid mobile number" });
@@ -135,7 +136,7 @@ export const checkProfessionalParentUser = createAsyncThunk(
       const user = exists ? res.data.data : null;
 
       return { exists, user };
-    } catch (err) {
+    } catch (err: any) {
       if (err.response?.status === 404) {
         return rejectWithValue({ message: "Parent user not found" });
       }
@@ -152,7 +153,7 @@ export const checkProfessionalParentUser = createAsyncThunk(
 // =======================================================
 export const registerChildProfessional = createAsyncThunk(
   "professionalAuth/registerChildProfessional",
-  async ({ parentMobile, childData }, { rejectWithValue }) => {
+  async ({ parentMobile, childData }: { parentMobile: string; childData: any }, { rejectWithValue }) => {
     try {
       const response = await professionalAxios.post(
         `/eTaxSolnMongoApiBackend/users/${parentMobile}/child`,
@@ -160,7 +161,7 @@ export const registerChildProfessional = createAsyncThunk(
         { headers: { "Content-Type": "application/json" } }
       );
       return response.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Child registration failed",
       });
@@ -218,13 +219,13 @@ const professionalAuthSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(sendProfessionalOtp.fulfilled, (state, action) => {
+      .addCase(sendProfessionalOtp.fulfilled, (state, action: any) => {
         state.loading = false;
         state.professionalMobile = action.payload.mobile;
         state.professionalRequestID = action.payload.requestID;
         state.generatedOtp = action.payload.otp;
       })
-      .addCase(sendProfessionalOtp.rejected, (state, action) => {
+      .addCase(sendProfessionalOtp.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       })
@@ -240,7 +241,7 @@ const professionalAuthSlice = createSlice({
         state.isProfessionalExistingUser = action.payload.existingUser;
         state.professionalUserData = action.payload.userData;
       })
-      .addCase(verifyProfessionalOtp.rejected, (state, action) => {
+      .addCase(verifyProfessionalOtp.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       })
@@ -255,7 +256,7 @@ const professionalAuthSlice = createSlice({
         const authTokenDigest = action.payload?.data?.authToken;
 
         // --- From what you originally sent to the thunk (payload in onSubmit) ---
-        const sentParentData = action.meta.arg; // this is `payload` from onSubmit
+        const sentParentData: any = action.meta.arg; // this is `payload` from onSubmit
 
         if (userMobileNumberHash && authTokenDigest) {
           // ✅ Save headers for API calls
@@ -289,7 +290,7 @@ const professionalAuthSlice = createSlice({
           );
         }
       })
-      .addCase(registerProfessional.rejected, (state, action) => {
+      .addCase(registerProfessional.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       })
@@ -301,12 +302,12 @@ const professionalAuthSlice = createSlice({
         state.parentUserExists = null;
         state.parentUserData = null;
       })
-      .addCase(checkProfessionalParentUser.fulfilled, (state, action) => {
+      .addCase(checkProfessionalParentUser.fulfilled, (state, action: any) => {
         state.loading = false;
         state.parentUserExists = action.payload.exists;
         state.parentUserData = action.payload.user;
       })
-      .addCase(checkProfessionalParentUser.rejected, (state, action) => {
+      .addCase(checkProfessionalParentUser.rejected, (state: any, action: any) => {
         state.loading = false;
         state.parentUserExists = false;
         state.error = action.payload?.message;
@@ -360,7 +361,7 @@ const professionalAuthSlice = createSlice({
           );
         }
       })
-      .addCase(registerChildProfessional.rejected, (state, action) => {
+      .addCase(registerChildProfessional.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });

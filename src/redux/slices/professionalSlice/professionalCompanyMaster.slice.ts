@@ -19,7 +19,7 @@ export const createCompany = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to create company",
       });
@@ -32,7 +32,7 @@ export const createCompany = createAsyncThunk(
 =================================================== */
 export const getCompany = createAsyncThunk(
   "professionalCompanyMaster/getCompany",
-  async (_, { rejectWithValue }) => {
+  async (_: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/companyMaster/getCompany"
@@ -44,7 +44,7 @@ export const getCompany = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to fetch company",
       });
@@ -70,7 +70,7 @@ export const replaceCompany = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to replace company",
       });
@@ -96,7 +96,7 @@ export const verifyIFSC = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "IFSC verification failed",
       });
@@ -141,7 +141,7 @@ const professionalCompanyMasterSlice = createSlice({
         state.loading = false;
         state.company = action.payload ?? null;
       })
-      .addCase(getCompany.rejected, (state, action) => {
+      .addCase(getCompany.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.company = null; // clear redux when company not found
@@ -156,7 +156,7 @@ const professionalCompanyMasterSlice = createSlice({
         state.createLoading = false;
         state.company = action.payload ?? null;
       })
-      .addCase(createCompany.rejected, (state, action) => {
+      .addCase(createCompany.rejected, (state, action: any) => {
         state.createLoading = false;
         state.error = action.payload?.message;
       });
@@ -170,7 +170,7 @@ const professionalCompanyMasterSlice = createSlice({
         state.updateLoading = false;
         state.company = action.payload ?? null;
       })
-      .addCase(replaceCompany.rejected, (state, action) => {
+      .addCase(replaceCompany.rejected, (state, action: any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });
@@ -180,11 +180,11 @@ const professionalCompanyMasterSlice = createSlice({
       .addCase(verifyIFSC.pending, (state) => {
         state.verifyLoading = true;
       })
-      .addCase(verifyIFSC.fulfilled, (state, action) => {
+      .addCase(verifyIFSC.fulfilled, (state: any, action: any) => {
         state.verifyLoading = false;
         state.ifscDetails = action.payload ?? null;
       })
-      .addCase(verifyIFSC.rejected, (state, action) => {
+      .addCase(verifyIFSC.rejected, (state, action: any) => {
         state.verifyLoading = false;
         state.error = action.payload?.message;
       });

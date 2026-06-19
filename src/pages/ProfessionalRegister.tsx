@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
-
 
 import {
   registerProfessional,
   checkProfessionalParentUser,
   registerChildProfessional,
 } from "../redux/slices/professionalSlice/professionalAuthSlice";
-import ProfessionalImg from "../assets/images/bgremoved.png";
 import { verifyPan, resetVerifyPan } from '../redux/slices/professionalSlice/panVerify/panVerify';
+import { saveSeeder, seedDefaultAccounts, seedDefaultUnits } from "../redux/slices/professionalSlice/seeder";
 
 const ProfessionalRegister = () => {
-  const { parentUserExists, parentUserData, loading } = useSelector(
-    (state) => state.professionalAuth
+  const { parentUserData, loading } = useSelector(
+    (state: any) => state.professionalAuth
   );
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -24,12 +23,12 @@ const ProfessionalRegister = () => {
   const [role, setRole] = useState("Child");
   const [parentNumber, setParentNumber] = useState("");
   const [otpVerified, setOtpVerified] = useState(false);
-  const [isParentMatched, setIsParentMatched] = useState(null);
+  const [isParentMatched, setIsParentMatched] = useState(false);
   const [panVerified, setPanVerified] = useState(false);
   const [panVerifyFailed, setPanVerifyFailed] = useState(false);
-  const [panValue, setPanValue] = useState('');
+  // const [panValue, setPanValue] = useState('');
 
-  const { loading: panLoading, data: panData, error: panError } = useSelector((state) => state?.verifyPan);
+  const { loading: panLoading } = useSelector((state: any) => state?.verifyPan);
 
   const {
     register,
@@ -40,10 +39,10 @@ const ProfessionalRegister = () => {
   } = useForm();
 
   // Always uppercase PAN
-  const handlePanChange = (e) => {
+  const handlePanChange = (e: any) => {
     const upper = e.target.value.toUpperCase();
     setValue('userPAN', upper, { shouldValidate: true });
-    setPanValue(upper);
+    // setPanValue(upper);
     setPanVerified(false);
     setPanVerifyFailed(false);
     dispatch(resetVerifyPan());
@@ -54,8 +53,8 @@ const ProfessionalRegister = () => {
       toast.error("Enter valid 10-digit Parent Number");
       return;
     }
-
-    const res = await dispatch(checkProfessionalParentUser(parentNumber));
+    // @ts-ignore
+    const res: any = await dispatch(checkProfessionalParentUser(parentNumber));
 
     const child = res?.payload?.user?.ChildUsers;
 
@@ -74,7 +73,49 @@ const ProfessionalRegister = () => {
     }
   };
 
-  const onSubmit = async (data) => {
+  const seedDefaultBookezData = async () => {
+
+    const defaultConfigPayload = {
+      configurationName: 'Default System Config',
+      systemConfiguration: {
+        salesQuotation: {
+          enableLocation: false,
+        },
+      },
+      inventoryConfiguration: {
+        maintainInventory: false,
+        inventoryTagLevel: 'WAREHOUSE_LOCATION_BATCH_BIN',
+        inventoryPickMethod: 'FIFO',
+        negativeStockPolicy: 'ALLOW',
+      },
+      financeConfiguration: {
+        isActive: true,
+      },
+      anyOtherField: 'Custom Value',
+    };
+
+    const [unitsRes, accountsRes]: any = await Promise.all([
+      // @ts-ignore 
+      dispatch(seedDefaultUnits()),
+      // @ts-ignore 
+      dispatch(seedDefaultAccounts()),
+      // @ts-ignore 
+      dispatch(saveSeeder(JSON.stringify(defaultConfigPayload))),
+    ]);
+
+    if (!unitsRes.ok) {
+      const errText = await unitsRes.text();
+      throw new Error(errText || 'Failed to seed default units.');
+    }
+
+    if (!accountsRes.ok) {
+      const errText = await accountsRes.text();
+      throw new Error(errText || 'Failed to seed default accounts.');
+    }
+    return true;
+  };
+
+  const onSubmit = async (data: any) => {
     try {
       data.userPAN = data.userPAN.toUpperCase();
       data.userMobileNumberHash = data.userMobileNumberHash.toString();
@@ -83,8 +124,10 @@ const ProfessionalRegister = () => {
 
       if (role === "Parent") {
         // --- Parent Registration ---
+        // @ts-ignore
         const res = await dispatch(registerProfessional(payload)).unwrap();
-
+        console.log({ res })
+        seedDefaultBookezData()
         toast.success(res.message || "Parent Registered Successfully!");
         navigate("/professional");
       } else {
@@ -93,21 +136,21 @@ const ProfessionalRegister = () => {
           ...payload,
           parentUserMobileNumber: parentNumber,
         };
-
-        const res = await dispatch(
-          registerChildProfessional({
+        // @ts-ignore
+        const res: any = await dispatch(registerChildProfessional({
             parentMobile: parentNumber,
             childData,
           })
         ).unwrap();
-
+        seedDefaultBookezData()
         toast.success(res.message || "Child User Added Successfully!");
         navigate("/professional");
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.message || "Registration failed");
     }
   };
+
   const handleVerifyPan = async () => {
     const pan = watch('userPAN')?.toUpperCase()?.trim();
 
@@ -122,12 +165,13 @@ const ProfessionalRegister = () => {
     }
 
     try {
+      // @ts-ignore
       const res = await dispatch(verifyPan({ pan })).unwrap();
 
       setPanVerified(true);
       setPanVerifyFailed(false);
       toast.success(res?.message || 'PAN verified successfully');
-    } catch (err) {
+    } catch (err: any) {
       setPanVerified(false);
       setPanVerifyFailed(true);
       toast.error(err || 'PAN verification failed');
@@ -163,6 +207,7 @@ const ProfessionalRegister = () => {
                 },
               })}
             />
+            {/* @ts-ignore */}
             {errors.userFirstName && <p className="text-red-500 text-xs">{errors.userFirstName.message}</p>}
           </div>
 
@@ -180,6 +225,7 @@ const ProfessionalRegister = () => {
                 },
               })}
             />
+            {/* @ts-ignore */}
             {errors.userMiddleName && <p className="text-red-500 text-xs">{errors.userMiddleName.message}</p>}
           </div>
 
@@ -198,6 +244,7 @@ const ProfessionalRegister = () => {
                 },
               })}
             />
+            {/* @ts-ignore */}
             {errors.userLastName && <p className="text-red-500 text-xs">{errors.userLastName.message}</p>}
           </div>
 
@@ -227,7 +274,7 @@ const ProfessionalRegister = () => {
                 },
               })}
             />
-
+            {/* @ts-ignore */}
             {errors.userDOB && <p className="text-red-500 text-xs">{errors.userDOB.message}</p>}
           </div>
 
@@ -244,6 +291,7 @@ const ProfessionalRegister = () => {
               <option>Female</option>
               <option>Other</option>
             </select>
+            {/* @ts-ignore */}
             {errors.userGender && <p className="text-red-500 text-xs">{errors.userGender.message}</p>}
           </div>
 
@@ -258,6 +306,7 @@ const ProfessionalRegister = () => {
                 required: 'Email is required',
               })}
             />
+            {/* @ts-ignore */}
             {errors.userEmail && <p className="text-red-500 text-xs">{errors.userEmail.message}</p>}
           </div>
           {/* remove pan and aadhaar */}
@@ -280,6 +329,7 @@ const ProfessionalRegister = () => {
                 onChange={handlePanChange}
               />
 
+              {/* @ts-ignore */}  
               <div className="absolute inset-y-0 right-2 flex items-center">
                 {panVerified ? (
                   <span className="text-green-600 font-bold text-lg">✓</span>
@@ -294,7 +344,7 @@ const ProfessionalRegister = () => {
                 )}
               </div>
             </div>
-
+{/* @ts-ignore */}
             {errors.userPAN && <p className="text-red-500 text-xs">{errors.userPAN.message}</p>}
           </div>
 
@@ -314,6 +364,7 @@ const ProfessionalRegister = () => {
                 validate: (v) => /^\d+$/.test(v) || 'Only digits allowed',
               })}
             />
+            {/* @ts-ignore */}
             {errors.userMobileNumberHash && <p className="text-red-500 text-xs">{errors.userMobileNumberHash.message}</p>}
           </div>
 
@@ -346,6 +397,7 @@ const ProfessionalRegister = () => {
                 <option value="Company">Company</option>
                 <option value="CA/CMA/Tax Consultant">CA/CMA/Tax Consultant</option>
               </select>
+              {/* @ts-ignore */}
               {errors.userType && <p className="text-red-500 text-xs">{errors.userType.message}</p>}
             </div>
 

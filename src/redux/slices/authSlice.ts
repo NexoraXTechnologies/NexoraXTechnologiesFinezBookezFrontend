@@ -18,7 +18,7 @@ export const googleLoginUser = createAsyncThunk(
         }
       );
       return res.data; // expected: { success, authToken, userProfile }
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -45,7 +45,7 @@ export const loginUser = createAsyncThunk(
         }
       );
       return res.data;
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -73,7 +73,7 @@ export const registerUser = createAsyncThunk(
         }
       );
       return res.data;
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -88,7 +88,7 @@ export const registerUser = createAsyncThunk(
 // ===========================================
 export const requestForgotOtp = createAsyncThunk(
   "auth/requestForgotOtp",
-  async (email, { rejectWithValue }) => {
+  async (email: string, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
         "/eTaxSolnMongoApiBackend/nexoraUser/auth/forgotPassword/requestOtp",
@@ -98,7 +98,7 @@ export const requestForgotOtp = createAsyncThunk(
         }
       );
       return res.data; // { success, message }
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -113,7 +113,7 @@ export const requestForgotOtp = createAsyncThunk(
 // ===========================================
 export const verifyForgotOtp = createAsyncThunk(
   "auth/verifyForgotOtp",
-  async ({ email, otp }, { rejectWithValue }) => {
+  async ({ email, otp }: { email: string; otp: string }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
         "/eTaxSolnMongoApiBackend/nexoraUser/auth/forgotPassword/verifyOtp",
@@ -123,7 +123,7 @@ export const verifyForgotOtp = createAsyncThunk(
         }
       );
       return res.data; // { success, message }
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -138,7 +138,7 @@ export const verifyForgotOtp = createAsyncThunk(
 // ===========================================
 export const updatePassword = createAsyncThunk(
   "auth/updatePassword",
-  async ({ email, newPassword, confirmPassword,resetToken }, { rejectWithValue }) => {
+  async ({ email, newPassword, confirmPassword,resetToken }: { email: string; newPassword: string; confirmPassword: string; resetToken: string }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
         "/eTaxSolnMongoApiBackend/nexoraUser/auth/forgotPassword/updatePassword",
@@ -151,7 +151,7 @@ export const updatePassword = createAsyncThunk(
         }
       );
       return res.data; // { success, message }
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -169,6 +169,7 @@ export const updatePassword = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState: {
+    // @ts-ignore
     user: JSON.parse(localStorage.getItem("user")) || null,
     token: localStorage.getItem("token") || null,
     loading: false,
@@ -201,17 +202,17 @@ const authSlice = createSlice({
         if (token) localStorage.setItem("token", token);
         if (user) localStorage.setItem("user", JSON.stringify(user));
       })
-      .addCase(loginUser.rejected, (state, action) => {
+      .addCase(loginUser.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || "Login failed.";
       })
 
       // REGISTER
-      .addCase(registerUser.pending, (state) => {
+      .addCase(registerUser.pending, (state:any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(registerUser.fulfilled, (state:any, action:any) => {
         state.loading = false;
         const token = action.payload.authToken || null;
         const user = action.payload.userProfile || null;
@@ -222,15 +223,15 @@ const authSlice = createSlice({
         if (token) localStorage.setItem("token", token);
         if (user) localStorage.setItem("user", JSON.stringify(user));
       })
-      .addCase(registerUser.rejected, (state, action) => {
+      .addCase(registerUser.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || "Signup failed.";
       })// GOOGLE LOGIN
-      .addCase(googleLoginUser.pending, (state) => {
+      .addCase(googleLoginUser.pending, (state:any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(googleLoginUser.fulfilled, (state, action) => {
+      .addCase(googleLoginUser.fulfilled, (state:any, action:any) => {
         state.loading = false;
         const token = action.payload.authToken || null;
         const user = action.payload.userProfile || null;
@@ -239,42 +240,42 @@ const authSlice = createSlice({
         if (token) localStorage.setItem("token", token);
         if (user) localStorage.setItem("user", JSON.stringify(user));
       })
-      .addCase(googleLoginUser.rejected, (state, action) => {
+      .addCase(googleLoginUser.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || "Google login failed.";
       })
-      .addCase(requestForgotOtp.pending, (state) => {
+      .addCase(requestForgotOtp.pending, (state:any) => {
       state.loading = true;
       state.error = null;
       })
-      .addCase(requestForgotOtp.fulfilled, (state) => {
+      .addCase(requestForgotOtp.fulfilled, (state:any) => {
         state.loading = false;
       })
-      .addCase(requestForgotOtp.rejected, (state, action) => {
+      .addCase(requestForgotOtp.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || "Failed to send OTP.";
       })
 
-      .addCase(verifyForgotOtp.pending, (state) => {
+      .addCase(verifyForgotOtp.pending, (state:any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(verifyForgotOtp.fulfilled, (state) => {
+      .addCase(verifyForgotOtp.fulfilled, (state:any) => {
         state.loading = false;
       })
-      .addCase(verifyForgotOtp.rejected, (state, action) => {
+      .addCase(verifyForgotOtp.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || "OTP verification failed.";
       })
 
-      .addCase(updatePassword.pending, (state) => {
+      .addCase(updatePassword.pending, (state:any) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updatePassword.fulfilled, (state) => {
+      .addCase(updatePassword.fulfilled, (state:any) => {
         state.loading = false;
       })
-      .addCase(updatePassword.rejected, (state, action) => {
+      .addCase(updatePassword.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || "Password update failed.";
       });

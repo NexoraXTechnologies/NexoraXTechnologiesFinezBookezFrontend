@@ -6,7 +6,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 // =======================================================
 export const aiTaxChat = createAsyncThunk(
   "aiTaxCopilot/aiTaxChat",
-  async (payload, { rejectWithValue }) => {
+  async (payload: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         `/eTaxSolnMongoApiBackend/ai/tax/chat`,
@@ -20,7 +20,7 @@ export const aiTaxChat = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err.response?.data?.message || "AI Tax chat failed",
       });
@@ -33,7 +33,7 @@ export const aiTaxChat = createAsyncThunk(
 // =======================================================
 export const downloadTaxPdf = createAsyncThunk(
   "aiTaxCopilot/downloadTaxPdf",
-  async (pdfKey, { rejectWithValue }) => {
+  async (pdfKey: string, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/ai/tax/pdf/${pdfKey}`,
@@ -53,7 +53,7 @@ export const downloadTaxPdf = createAsyncThunk(
       URL.revokeObjectURL(url);
 
       return true; // ✅ serializable payload
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue("Failed to download tax PDF");
     }
   }
@@ -63,7 +63,7 @@ export const downloadTaxPdf = createAsyncThunk(
 // =======================================================
 export const generateTaxSummary = createAsyncThunk(
   "aiTaxCopilot/generateTaxSummary",
-  async ({ payload, useLLM = true }, { rejectWithValue }) => {
+  async ({ payload, useLLM = true }: { payload: any; useLLM?: boolean }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         `/eTaxSolnMongoApiBackend/ai/tax/summary/post?useLLM=${useLLM}`,
@@ -77,7 +77,7 @@ export const generateTaxSummary = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err.response?.data?.message || "Failed to generate tax summary",
@@ -91,7 +91,7 @@ export const generateTaxSummary = createAsyncThunk(
 // =======================================================
 export const getTaxSummary = createAsyncThunk(
   "aiTaxCopilot/getTaxSummary",
-  async ({ pan, ay }, { rejectWithValue }) => {
+  async ({ pan, ay }: { pan: string; ay: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/ai/tax/summary/get?pan=${pan}&ay=${ay}`
@@ -104,7 +104,7 @@ export const getTaxSummary = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to fetch tax summary",
       });
@@ -117,7 +117,7 @@ export const getTaxSummary = createAsyncThunk(
 // =======================================================
 export const saveITR1NewRegime = createAsyncThunk(
   "aiTaxCopilot/saveITR1NewRegime",
-  async (payload, { rejectWithValue }) => {
+  async (payload: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         `/eTaxSolnMongoApiBackend/users/ai/fileITR1/save`,
@@ -135,7 +135,7 @@ export const saveITR1NewRegime = createAsyncThunk(
         message: res.data.message,
         data: res.data.data,
       };
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to save ITR-1",
       });
@@ -171,75 +171,75 @@ const aiTaxCopilotSlice = createSlice({
   extraReducers: (builder) => {
     // AI CHAT
     builder
-      .addCase(aiTaxChat.pending, (state) => {
+      .addCase(aiTaxChat.pending, (state:any) => {
         state.loading = true;
         state.chatSuccess = false;
       })
-      .addCase(aiTaxChat.fulfilled, (state, action) => {
+      .addCase(aiTaxChat.fulfilled, (state:any, action:any) => {
         state.loading = false;
         state.chatSuccess = true;
         state.chatResponse = action.payload;
       })
-      .addCase(aiTaxChat.rejected, (state, action) => {
+      .addCase(aiTaxChat.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
 
     // GENERATE SUMMARY
     builder
-      .addCase(generateTaxSummary.pending, (state) => {
+      .addCase(generateTaxSummary.pending, (state:any) => {
         state.loading = true;
         state.summaryGenerated = false;
       })
-      .addCase(generateTaxSummary.fulfilled, (state, action) => {
+      .addCase(generateTaxSummary.fulfilled, (state:any, action:any) => {
         state.loading = false;
         state.summaryGenerated = true;
         state.taxSummary = action.payload;
       })
-      .addCase(generateTaxSummary.rejected, (state, action) => {
+      .addCase(generateTaxSummary.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
 
     // GET SUMMARY
     builder
-      .addCase(getTaxSummary.pending, (state) => {
+      .addCase(getTaxSummary.pending, (state:any) => {
         state.loading = true;
       })
-      .addCase(getTaxSummary.fulfilled, (state, action) => {
+      .addCase(getTaxSummary.fulfilled, (state:any, action:any) => {
         state.loading = false;
         state.taxSummary = action.payload;
       })
-      .addCase(getTaxSummary.rejected, (state, action) => {
+      .addCase(getTaxSummary.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
 
     // PDF DOWNLOAD
     builder
-      .addCase(downloadTaxPdf.pending, (state) => {
+      .addCase(downloadTaxPdf.pending, (state: any) => {
         state.loading = true;
         state.pdfDownloaded = false;
       })
-      .addCase(downloadTaxPdf.fulfilled, (state) => {
+      .addCase(downloadTaxPdf.fulfilled, (state: any) => {
         state.loading = false;
         state.pdfDownloaded = true;
       })
-      .addCase(downloadTaxPdf.rejected, (state, action) => {
+      .addCase(downloadTaxPdf.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload;
       });
     // SAVE ITR-1
     builder
-      .addCase(saveITR1NewRegime.pending, (state) => {
+      .addCase(saveITR1NewRegime.pending, (state: any) => {
         state.loading = true;
         state.itr1Saved = false;
       })
-      .addCase(saveITR1NewRegime.fulfilled, (state, action) => {
+      .addCase(saveITR1NewRegime.fulfilled, (state: any) => {
         state.loading = false;
         state.itr1Saved = true;
       })
-      .addCase(saveITR1NewRegime.rejected, (state, action) => {
+      .addCase(saveITR1NewRegime.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });

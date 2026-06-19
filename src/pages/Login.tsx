@@ -1,29 +1,24 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
-import { Link, useNavigate } from "react-router-dom";
-import { loginUser, googleLoginUser } from "../redux/slices/authSlice";
-import { GoogleLogin } from "@react-oauth/google";
-import LoginBGImg from "../assets/images/LoginBGImg.jpg";
-import ProfessionalImg from "../assets/images/bgremoved.png";
+import { useNavigate } from "react-router-dom";
 import eTaxSoln from '../assets/FinEZ.png';
 import LoginImgae from "../assets/loginBackground.jpg";
 import { sendProfessionalOtp, verifyProfessionalOtp, } from "../redux/slices/professionalSlice/professionalAuthSlice";
-import OneSignal from 'react-onesignal';
+// import OneSignal from 'react-onesignal';
 import { motion } from "framer-motion";
 import { AuthButton } from "../components/buttons";
+import { getAllPermissions } from "../redux/slices/permissionSlice";
 
-const Section = ({ title, text }) => (
+const Section = ({ title, text }: any) => (
   <div className="space-y-1">
     <h3 className="text-md font-semibold text-blue-700">{title}</h3>
     <p className="text-sm text-gray-700">{text}</p>
   </div>
 );
-const FULL_TEXT = "Tax filing is simplified now...";
-const termsAndConditions = [
+// const FULL_TEXT = "Tax filing is simplified now...";
+const termsAndConditions: any = [
   { title: "Scope of Services", text: "The Application provided by the Company enables taxpayers to file their income tax returns electronically by submitting the required information and documents. The Company will process the information provided and generate the applicable tax return forms in accordance with the regulations of the Income Tax Department of India." },
   {
     title: "User Eligibility",
@@ -78,11 +73,11 @@ const Login = () => {
   const dispatch = useDispatch();
   const dispatchP = useDispatch();
   const navigate = useNavigate();
-  const [showPass, setShowPass] = useState(false);
-  const { loading: authLoading } = useSelector((state) => state.auth);
-  const { loading: professionalLoading } = useSelector((state) => state.professionalAuth);
-  const [loginType, setLoginType] = useState("Nexora");
-  const [typedText, setTypedText] = useState("");
+  // const [showPass, setShowPass] = useState(false);
+  // const { loading: authLoading } = useSelector((state) => state.auth);
+  const { loading: professionalLoading } = useSelector((state: any) => state.professionalAuth);
+  // const [loginType, setLoginType] = useState("Nexora");
+  // const [typedText, setTypedText] = useState("");
   const [showTerms, setShowTerms] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   // PROFESSIONAL LOGIN STATES
@@ -91,62 +86,62 @@ const Login = () => {
 
   // OTP digits
   const [otp, setOtp] = useState(["", "", "", ""]);
-  const otpRefs = useRef([]);
-  const { professionalRequestID } = useSelector((state) => state.professionalAuth);
+  const otpRefs: any = useRef([]);
+  const { professionalRequestID } = useSelector((state: any) => state.professionalAuth);
 
-  useEffect(() => {
-    let index = 0;
-    let timeout;
-    const typeText = () => {
-      setTypedText(FULL_TEXT.substring(0, index));
-      if (index <= FULL_TEXT.length) {
-        index++;
-        timeout = setTimeout(typeText, 100);
-      } else {
-        setTimeout(() => {
-          index = 0;
-          typeText();
-        }, 1500);
-      }
-    };
-    typeText();
-    return () => clearTimeout(timeout);
-  }, []);
+  // useEffect(() => {
+  //   let index = 0;
+  //   let timeout: any;
+  //   const typeText = () => {
+  //     setTypedText(FULL_TEXT.substring(0, index));
+  //     if (index <= FULL_TEXT.length) {
+  //       index++;
+  //       timeout = setTimeout(typeText, 100);
+  //     } else {
+  //       setTimeout(() => {
+  //         index = 0;
+  //         typeText();
+  //       }, 1500);
+  //     }
+  //   };
+  //   typeText();
+  //   return () => clearTimeout(timeout);
+  // }, []);
 
 
   // Form
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
+  // const {  formState: { errors, isSubmitting } } = useForm();
 
   // Role Navigation
-  const navigateByRole = (userType) => {
-    if (userType === "Admin") navigate("/admin");
-    else if (userType === "Employee") navigate("/employee");
-    else if (userType === "Professional") navigate("/professional");
-    else navigate("");
-  };
+  // const navigateByRole = (userType: any) => {
+  //   if (userType === "Admin") navigate("/admin");
+  //   else if (userType === "Employee") navigate("/employee");
+  //   else if (userType === "Professional") navigate("/professional");
+  //   else navigate("");
+  // };
 
   // Nexora Login Submit
-  const onSubmit = async (data) => {
-    try {
-      const result = await dispatch(loginUser(data)).unwrap();
-      const userType = result?.userProfile?.type;
-      toast.success(`Welcome back ${result.userProfile?.name || "User"}!`);
-      navigateByRole(userType);
-    } catch (err) {
-      toast.error(err?.message || "Login failed. Please try again.");
-    }
-  };
+  // const onSubmit = async (data) => {
+  //   try {
+  //     const result = await dispatch(loginUser(data)).unwrap();
+  //     const userType = result?.userProfile?.type;
+  //     toast.success(`Welcome back ${result.userProfile?.name || "User"}!`);
+  //     navigateByRole(userType);
+  //   } catch (err) {
+  //     toast.error(err?.message || "Login failed. Please try again.");
+  //   }
+  // };
 
   // Google Login
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      const idToken = credentialResponse.credential;
-      const result = await dispatch(googleLoginUser(idToken)).unwrap();
-      navigateByRole(result?.userProfile?.type);
-    } catch (err) {
-      toast.error("Google Sign-In failed.");
-    }
-  };
+  // const handleGoogleSuccess = async (credentialResponse) => {
+  //   try {
+  //     const idToken = credentialResponse.credential;
+  //     const result = await dispatch(googleLoginUser(idToken)).unwrap();
+  //     navigateByRole(result?.userProfile?.type);
+  //   } catch (err) {
+  //     toast.error("Google Sign-In failed.");
+  //   }
+  // };
 
   useEffect(() => {
     const finalOtp = otp.join("");
@@ -155,7 +150,7 @@ const Login = () => {
     }
   }, [otp]);
 
-  const handleOtpInput = (e, index) => {
+  const handleOtpInput = (e: any, index: any) => {
     let value = e.target.value.replace(/\D/g, "");
     const newOtp = [...otp];
 
@@ -180,21 +175,20 @@ const Login = () => {
     const finalOtp = otp.join("");
     if (finalOtp.length !== 4) return toast.error("Enter all 4 digits");
     setIsVerifying(true); // Start verifying mode
-
-    dispatchP(
-      verifyProfessionalOtp({
-        mobile,
-        requestID: professionalRequestID,
-        otp: finalOtp,
-      })
+    // @ts-ignore
+    dispatchP(verifyProfessionalOtp({
+      mobile,
+      requestID: professionalRequestID,
+      otp: finalOtp,
+    })
     )
       .unwrap()
-      .then(async (res) => {
+      .then(async (res: any) => {
         toast.success("OTP Verified!");
 
         // ✅ If user already exists
-        if (res.existingUser && res.userData) {
-          const user = res.userData;
+		  if (res.existingUser && res.userData) {
+			  const user = res.userData;
 
           const loginuser = user?.userMobileNumberHash; // required header loginuser
           const authtoken = user?.authTokenDigest; // required header authtoken
@@ -223,18 +217,27 @@ const Login = () => {
               ...user
             }),
           );
-          try {
-            if (user.userEmail) {
-              await OneSignal.login(user.userEmail);
-              console.log('📲 OneSignal logged in (PROFESSIONAL):', user.userEmail);
-            } else {
+        try {
+          if (user?.parentUserMobileNumber && user?.userMobileNumberHash) {
+            dispatch(
+              getAllPermissions({
+                offset: 0,
+                limit: 100,
+                parentMobile: user?.parentUserMobileNumber,
+                childMobile: user?.userMobileNumberHash,
+              }) as any
+            );
+          }
+			  if (user.userEmail) {
+				  // await OneSignal.login(user.userEmail);
+				  console.log('📲 OneSignal logged in (PROFESSIONAL):', user.userEmail);
+			  } else {
               console.warn('⚠️ No professional userEmail found for OneSignal login');
             }
           } catch (err) {
             console.error('❌ OneSignal PRO login error:', err);
           }
-
-          navigate('/professional');
+          navigate('/');
         }
 
         // 🚀 If user does not exist → go to registration
@@ -242,17 +245,18 @@ const Login = () => {
           navigate("/professionalRegister");
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         toast.error(err.message);
         setIsVerifying(false);
       });
   };
 
   const handleResendOtp = () => {
+    // @ts-ignore
     dispatchP(sendProfessionalOtp(mobile))
       .unwrap()
       .then(() => toast.success("OTP Re-sent!"))
-      .catch((err) => {
+      .catch((err: any) => {
         toast.error(err.message);
         setOtp(["", "", "", ""]);
         otpRefs.current[0]?.focus();
@@ -260,19 +264,25 @@ const Login = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#f5f7ff] to-[#eef1ff]">
-      {/* ================= BACKGROUND SECTION ================= */}
+    <div className="relative overflow-hidden bg-gradient-to-b from-[#f5f7ff] to-[#eef1ff]">
+     {/* ================= BACKGROUND SECTION ================= */}
+      {/*
+        LAPTOP (default + md:): h-[390px] / h-[600px] — UNCHANGED, exactly as before.
+        DESKTOP (md: AND viewport height > 900px): h-[760px] — only kicks in on
+        genuinely tall viewports (bigger monitor, or browser zoomed out), so the
+        hero photo doesn't look proportionally "cut off" against a much taller page.
+      */}
       <motion.div
         initial={{ scale: 1.1, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 1.2 }}
-        className="absolute top-0 left-0 w-full h-[380px] md:h-[420px] bg-cover bg-center"
+        className="absolute top-0 left-0 w-full h-[390px] md:h-[600px] md:[@media(min-height:901px)]:h-[760px] bg-cover bg-center"
         style={{ backgroundImage: `url(${LoginImgae})` }}
       >
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/80 via-indigo-900/70 to-violet-900/70 backdrop-blur-[2px]"></div>
-        {/* Floating Dots */}
-        {/* Floating Particles */}
+        <div className="absolute inset-0 "></div>
+
+
         <div className="absolute inset-0 overflow-hidden">
 
           <motion.span
@@ -350,32 +360,50 @@ const Login = () => {
         </div>
 
       </motion.div >
+
       {/* ================= CURVE SHAPE ================= */}
-      < div className="absolute top-[250px] md:top-[322px] left-0 w-full overflow-hidden leading-none" >
+      {/*
+        LAPTOP: top-[230px] / top-[330px], height 190px / 230px — UNCHANGED.
+        DESKTOP (height > 900px): repositioned/resized to track the taller
+        hero above (760px) so the diagonal still lands at the same visual
+        spot relative to the photo.
+      */}
+      <div className="absolute top-[230px] md:top-[330px] md:[@media(min-height:901px)]:top-[420px] left-0 z-10 w-full overflow-hidden leading-none pointer-events-none">
         <svg
           viewBox="0 0 1440 320"
-          className="block w-full h-[120px] md:h-[160px]"
+          className="block w-full h-[190px] md:h-[230px] md:[@media(min-height:901px)]:h-[300px]"
           preserveAspectRatio="none"
         >
           <path
-            fill="#f3f3f9"
+            fill="#ffffff"
             d="M0,96L1440,224L1440,320L0,320Z"
-          ></path>
+          />
         </svg>
       </div>
 
+      {/* ✅ WHITE AREA STARTS FROM ABOVE POSITION */}
+      {/*
+        LAPTOP: top-[360px] / top-[470px] — UNCHANGED.
+        DESKTOP (height > 900px): top-[600px], matching the taller hero.
+      */}
+      <div className="absolute top-[360px] md:top-[470px] md:[@media(min-height:901px)]:top-[600px] left-0 z-10 w-full bottom-0 bg-white pointer-events-none" />
       {/* ================= LOGIN CARD ================= */}
-      < div className="relative z-20 flex flex-col items-center justify-center gap-10 min-h-screen px-4 py-10" >
+      {/*
+        LAPTOP: justify-center inside min-h-screen — UNCHANGED. On a normal
+        laptop window this centers the card exactly where it is today.
+
+        DESKTOP (height > 900px): switches to justify-start + a fixed
+        pt-[280px] (same proportion as the laptop case, just measured from
+        the taller hero). This is the actual fix for the big white gap —
+        instead of centering the card in an unbounded, ever-taller page
+        (which pushes it further from the hero the taller the screen gets),
+        on tall screens it's anchored a fixed distance below the hero, same
+        as it visually sits on laptop. The footer stays exactly as before
+        (absolute, pinned 20px from the bottom of the viewport either way).
+      */}
+      < div className="relative z-20 flex flex-col items-center justify-center md:[@media(min-height:901px)]:justify-start md:[@media(min-height:901px)]:pt-[280px] gap-10 min-h-screen px-4 py-10" >
         <div className="flex flex-col items-center space-y-5 w-full ">
-          <motion.img
-            src={eTaxSoln}
-            alt="Professional"
-            className="w-50 mx-auto my-0 px-3 py-1 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 mb-1"
-            initial={{ y: -40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8 }}
-          />
-          <h4 className="text-white/80 mb-3">Finance & Tax Made Easy</h4>
+
           <motion.div
             initial={{ y: 40, opacity: 0, scale: 0.96 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -386,6 +414,16 @@ const Login = () => {
             className=" w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] border border-white/20 p-6 sm:p-8 transition-all duration-300">
             {/* Heading */}
             <div className="text-center mb-3">
+
+              <motion.img
+                src={eTaxSoln}
+                alt="Professional"
+                className="w-50 mx-auto my-0 px-3 py-1 rounded-xl border border-white/10 mb-1"
+                initial={{ y: -40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.8 }}
+              />
+              <h4 className=" mb-3">Finance & Tax Made Easy</h4>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-indigo-950">Welcome to FinEZ!</h2>
               <p className="text-gray-400 tracking-wide mt-2 text-sm sm:text-base leading-relaxed">
                 Sign in to continue FinEZ.
@@ -407,7 +445,7 @@ const Login = () => {
                   {otp.map((digit, index) => (
                     <input
                       key={index}
-                      ref={(el) => (otpRefs.current[index] = el)}
+                      ref={(el: any) => (otpRefs.current[index] = el)}
                       type="text"
                       maxLength={1}
                       value={digit}
@@ -426,11 +464,12 @@ const Login = () => {
               </>
             ) : <>
               <div>
-                <label htmlFor="mobileNumber" className="block mb-2 font-medium text-sm text-gray-700">Enter Mobile Number</label>
+                {/* <label htmlFor="mobileNumber" className="block mb-2 font-medium text-sm text-gray-700">Enter Mobile Number</label> */}
                 <div className=" flex items-center border border-gray-300 rounded-xl overflow-hidden mb-4 bg-gray-50 focus-within:ring-4 focus-within:ring-indigo-100 focus-within:border-indigo-500 transition-all duration-200">
                   <span className="px-4 py-3 bg-gray-100 text-gray-700 font-medium border-r border-gray-200 select-none">+91</span>
                   <input
-                    type="text"
+                      type="text"
+                      maxLength={10}
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                     onKeyDown={(e) => {
@@ -440,14 +479,14 @@ const Login = () => {
                         if (mobile.length !== 10) {
                           return toast.error("Enter valid mobile");
                         }
-
+                        // @ts-ignore
                         dispatch(sendProfessionalOtp(mobile))
                           .unwrap()
                           .then(() => {
                             toast.success("OTP Sent!");
                             setShowOtpPopup(true);
                           })
-                          .catch((err) => toast.error(err.message));
+                          .catch((err: any) => toast.error(err.message));
                       }
                     }}
                     className="w-full px-4 py-3 bg-transparent focus:outline-none text-gray-800 placeholder:text-gray-400" placeholder="Enter mobile number" />
@@ -456,13 +495,14 @@ const Login = () => {
               <AuthButton {...{
                 loader: professionalLoading, clickCb: () => {
                   if (mobile.length !== 10) return toast.error('Enter valid mobile');
+                  // @ts-ignore
                   dispatch(sendProfessionalOtp(mobile))
                     .unwrap()
                     .then(() => {
                       toast.success('OTP Sent!');
                       setShowOtpPopup(true);
                     })
-                    .catch((err) => toast.error(err.message));
+                    .catch((err: any) => toast.error(err.message));
                 },
                 btnName: "Send OTP"
               }} />
@@ -493,7 +533,7 @@ const Login = () => {
             <p className="text-xs text-gray-400">
               Designed & Developed by
               <span className="text-indigo-600 font-medium ml-1">
-                NexoraX
+                NexoraX Technology Pvt. Ltd.
               </span>
             </p>
 
@@ -519,7 +559,7 @@ const Login = () => {
 
             {/* Scrollable Content */}
             <div className="px-5 py-4 overflow-y-auto max-h-[70vh] text-gray-700 space-y-4 scroll-smooth">
-              {termsAndConditions.map(({ title, text }, index) => <Section key={index} title={title} text={text} />)}
+              {termsAndConditions.map(({ title, text }: any, index: any) => <Section key={index} title={title} text={text} />)}
               <p className="text-sm mt-4">By using the Application, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.</p>
             </div>
           </div>

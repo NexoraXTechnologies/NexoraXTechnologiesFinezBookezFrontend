@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 
@@ -45,7 +45,7 @@ function nextLocalMidnightMs() {
   return d.getTime();
 }
 
-function formatDurationCountdown(totalSeconds) {
+function formatDurationCountdown(totalSeconds: number) {
   const sec = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -58,10 +58,11 @@ function formatDurationCountdown(totalSeconds) {
 async function readLimiterState() {
   const today = new Date().toISOString().slice(0, 10);
   const storedDay = localStorage.getItem(RATE_KEY_DAY);
+  // @ts-ignore
   let count = parseInt(localStorage.getItem(RATE_KEY_COUNT), 10) || 0;
 
   if (storedDay !== today) count = 0;
-
+  // @ts-ignore
   const lastSessionEndMs = parseInt(localStorage.getItem(RATE_KEY_LAST_SESSION_END_MS), 10) || 0;
 
   return { count, today, lastSessionEndMs };
@@ -80,7 +81,7 @@ async function recordSessionEnd() {
   localStorage.setItem(RATE_KEY_LAST_SESSION_END_MS, String(Date.now()));
 }
 
-function evaluateLimiter(s) {
+function evaluateLimiter(s: any) {
   const now = Date.now();
 
   if (s.count >= MAX_ATTEMPTS_PER_DAY) {
@@ -113,7 +114,7 @@ function evaluateLimiter(s) {
   return { ok: true, message: '', kind: 'ok' };
 }
 
-function checkPasswordRules(pwd) {
+function checkPasswordRules(pwd: any) {
   const lenOk = pwd.length >= 8 && pwd.length <= 15;
 
   return {
@@ -126,7 +127,7 @@ function checkPasswordRules(pwd) {
   };
 }
 
-function getPasswordStrength(pwd, r) {
+function getPasswordStrength(pwd: any, r: any) {
   if (!pwd?.length) return { level: 'none', label: '' };
 
   let score = 0;
@@ -143,12 +144,12 @@ function getPasswordStrength(pwd, r) {
   return { level: 'strong', label: 'Strong' };
 }
 
-function extractMessage(obj) {
+function extractMessage(obj: any) {
   if (!obj || typeof obj !== 'object') return String(obj ?? '');
   return String(obj.message ?? obj.Message ?? obj.msg ?? obj.data?.message ?? obj.body ?? '');
 }
 
-function pickResetPwdOtpField(data, key) {
+function pickResetPwdOtpField(data: any, key: string) {
   if (!data || typeof data !== 'object') return undefined;
   if (data[key] !== undefined) return data[key];
 
@@ -159,7 +160,7 @@ function pickResetPwdOtpField(data, key) {
   return undefined;
 }
 
-function extractResetPwdOtpErrorText(data) {
+function extractResetPwdOtpErrorText(data: any) {
   if (!data || typeof data !== 'object') return '';
   if (typeof data.error === 'string' && data.error.trim()) return data.error.trim();
 
@@ -180,7 +181,7 @@ function extractResetPwdOtpErrorText(data) {
   return m && String(m).trim() ? String(m).trim() : '';
 }
 
-function isResetPwdOtpSuccessResponse(data) {
+function isResetPwdOtpSuccessResponse(data: any) {
   if (data == null || typeof data !== 'object') return false;
 
   const success = pickResetPwdOtpField(data, 'success');
@@ -236,14 +237,14 @@ function isResetPwdOtpSuccessResponse(data) {
   return false;
 }
 
-function textSuggestsAadhaarOtpStep(s) {
+function textSuggestsAadhaarOtpStep(s: any) {
   const t = String(s ?? '').toLowerCase();
   if (!t) return false;
   if (t.includes('aadhaar') && t.includes('otp')) return true;
   return false;
 }
 
-function statusIndicatesAadhaarOtpRequested(data) {
+function statusIndicatesAadhaarOtpRequested(data: any) {
   const stage = data?.currentStage;
   const stageMsg = String(stage?.message ?? '').toLowerCase();
 
@@ -264,7 +265,7 @@ function statusIndicatesAadhaarOtpRequested(data) {
 
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'SUCCEEDED', 'ERROR', 'CANCELLED']);
 
-function isTerminalAutomationStatus(data) {
+function isTerminalAutomationStatus(data: any) {
   const st = String(data?.status ?? '')
     .toUpperCase()
     .trim();
@@ -276,7 +277,7 @@ function isTerminalAutomationStatus(data) {
   return false;
 }
 
-function isTerminalAutomationStatusAfterOtp(data) {
+function isTerminalAutomationStatusAfterOtp(data: any) {
   const st = String(data?.status ?? '')
     .toUpperCase()
     .trim();
@@ -284,13 +285,13 @@ function isTerminalAutomationStatusAfterOtp(data) {
   return isTerminalAutomationStatus(data);
 }
 
-function automationPasswordUpdatedMessageSeen(data) {
+function automationPasswordUpdatedMessageSeen(data: any) {
   const blob = JSON.stringify(data ?? '').toLowerCase();
   const normalized = blob.replace(/[^a-z0-9]+/g, ' ');
   return normalized.includes('password updated successfully');
 }
 
-function isAutomationTerminalFailure(data) {
+function isAutomationTerminalFailure(data: any) {
   if (!data || typeof data !== 'object') return false;
 
   const st = String(data.status ?? '')
@@ -302,7 +303,7 @@ function isAutomationTerminalFailure(data) {
   return false;
 }
 
-function getAutomationDisplayLines(data) {
+function getAutomationDisplayLines(data: any) {
   if (!data || typeof data !== 'object') {
     return { primary: '', secondary: '', progress: 0 };
   }
@@ -317,7 +318,7 @@ function getAutomationDisplayLines(data) {
   return { primary, secondary, progress };
 }
 
-function formatAutomationStatusForUser(data) {
+function formatAutomationStatusForUser(data: any) {
   if (!data || typeof data !== 'object') {
     return String(data ?? 'Unknown response');
   }
@@ -346,11 +347,11 @@ function formatAutomationStatusForUser(data) {
 
   return lines.length ? lines.join('\n') : JSON.stringify(data);
 }
-function getProfessionalHeader(key) {
+function getProfessionalHeader(key: any) {
   const data = JSON.parse(localStorage.getItem('professionalHeaders') || '{}');
   return data?.[key] ?? '';
 }
-function isLikelyWrongOtpError(message) {
+function isLikelyWrongOtpError(message: any) {
   const m = String(message || '')
     .toLowerCase()
     .trim();
@@ -387,10 +388,10 @@ function isLikelyWrongOtpError(message) {
 const ResetItrPasswordWeb = () => {
   const dispatch = useDispatch();
 
-  const taxpayersState = useSelector((s) => s.taxpayer || {});
+  const taxpayersState = useSelector((s: any) => s.taxpayer || {});
   const taxpayers = taxpayersState?.taxpayers || taxpayersState?.items || [];
 
-  const resetState = useSelector((state) => state?.resetItrPassword || {});
+  // const resetState = useSelector((state) => state?.resetItrPassword || {});
 
   const [selectedPAN, setSelectedPAN] = useState('');
   const [selectedName, setSelectedName] = useState('');
@@ -402,7 +403,7 @@ const ResetItrPasswordWeb = () => {
 
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LEN).fill(''));
   const otpDigitsRef = useRef(otpDigits);
-  const otpRefs = useRef([]);
+  const otpRefs: any = useRef([]);
 
   const [otpSent, setOtpSent] = useState(false);
   const [otpSendCount, setOtpSendCount] = useState(0);
@@ -413,14 +414,14 @@ const ResetItrPasswordWeb = () => {
   const [busyVerify, setBusyVerify] = useState(false);
   const [busyPostOtpStatus, setBusyPostOtpStatus] = useState(false);
 
-  const [statusSnapshot, setStatusSnapshot] = useState(null);
+  const [statusSnapshot, setStatusSnapshot]: any = useState(null);
   const [automationRunId, setAutomationRunId] = useState(null);
-  const [automationCheckStatus, setAutomationCheckStatus] = useState(null);
+  // const [automationCheckStatus, setAutomationCheckStatus] = useState(null);
   const [verifyFlowSuccess, setVerifyFlowSuccess] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [limiterGate, setLimiterGate] = useState({
+  const [limiterGate, setLimiterGate]: any = useState({
     ok: true,
     message: '',
     kind: 'ok',
@@ -433,6 +434,7 @@ const ResetItrPasswordWeb = () => {
   }, [otpDigits]);
 
   useEffect(() => {
+    // @ts-ignore
     dispatch(getAllTaxPayers({ search: '', limit: 500, page: 1 }));
   }, [dispatch]);
 
@@ -472,6 +474,7 @@ const ResetItrPasswordWeb = () => {
       if (cancelled) return;
 
       try {
+        // @ts-ignore
         const data = await dispatch(fetchResetPasswordStatusById(automationRunId)).unwrap();
         if (cancelled) return;
 
@@ -502,7 +505,7 @@ const ResetItrPasswordWeb = () => {
   const strength = useMemo(() => getPasswordStrength(newPassword, rules), [newPassword, rules]);
   const matchOk = newPassword.length > 0 && confirmPassword.length > 0 && newPassword === confirmPassword;
 
-  const getSelectedTaxpayer = useCallback((pan) => taxpayers?.find((t) => t.pan === pan), [taxpayers]);
+  const getSelectedTaxpayer = useCallback((pan: any) => taxpayers?.find((t: any) => t.pan === pan), [taxpayers]);
 
   const resetOtpOnly = useCallback(() => {
     pollTokenRef.current += 1;
@@ -512,12 +515,12 @@ const ResetItrPasswordWeb = () => {
     setOtpWrongAttempts(0);
     setStatusSnapshot(null);
     setAutomationRunId(null);
-    setAutomationCheckStatus(null);
+    // setAutomationCheckStatus(null);
     setVerifyFlowSuccess(false);
   }, []);
 
   const handleSelectPAN = useCallback(
-    (pan) => {
+    (pan: any) => {
       setSelectedPAN(pan);
 
       const found = getSelectedTaxpayer(pan);
@@ -538,7 +541,7 @@ const ResetItrPasswordWeb = () => {
     [getSelectedTaxpayer, resetOtpOnly],
   );
 
-  const onOtpDigitChange = useCallback((index, text) => {
+  const onOtpDigitChange = useCallback((index: any, text: any) => {
     const cleaned = String(text).replace(/\D/g, '');
 
     if (cleaned.length > 1) {
@@ -569,7 +572,7 @@ const ResetItrPasswordWeb = () => {
     }
   }, []);
 
-  const onOtpKeyDown = useCallback((index, e) => {
+  const onOtpKeyDown = useCallback((index: any, e: any) => {
     if (e.key !== 'Backspace') return;
 
     setOtpDigits((prev) => {
@@ -591,15 +594,17 @@ const ResetItrPasswordWeb = () => {
   }, []);
 
   const pollAutomationUntilOtpOrEnd = useCallback(
-    async (runId, checkStatus) => {
+    async (runId: any,) => {
       const token = ++pollTokenRef.current;
       setAutomationRunId(runId);
-      setAutomationCheckStatus(typeof checkStatus === 'string' ? checkStatus : null);
+      // @ts-ignore
+      // setAutomationCheckStatus(typeof checkStatus === 'string' ? checkStatus : null);
 
       for (let round = 0; round < POLL_MAX_ROUNDS; round++) {
         if (pollTokenRef.current !== token) return;
 
         try {
+          // @ts-ignore
           const data = await dispatch(fetchResetPasswordStatusById(runId)).unwrap();
 
           if (pollTokenRef.current !== token) return;
@@ -627,7 +632,7 @@ const ResetItrPasswordWeb = () => {
             await refreshLimiter();
             return;
           }
-        } catch (e) {
+        } catch (e: any) {
           toast.error(e?.message || 'Failed to fetch automation status');
           await recordSessionEnd();
           await refreshLimiter();
@@ -666,8 +671,8 @@ const ResetItrPasswordWeb = () => {
     setBusySend(true);
 
     try {
-      await dispatch(
-        resetItrPassword({
+      // @ts-ignore
+      await dispatch(resetItrPassword({
           pan: selectedPAN,
           pwd: newPassword,
         }),
@@ -685,9 +690,8 @@ const ResetItrPasswordWeb = () => {
       const db = String(getProfessionalHeader('x-db-name') || '').trim();
       const login_user = String(getProfessionalHeader('loginuser') || '').trim();
       const auth_token = String(getProfessionalHeader('authtoken') || '').trim();
-
-      const autoRes = await dispatch(
-        startResetPasswordAutomation({
+      // @ts-ignore
+      const autoRes: any = await dispatch(startResetPasswordAutomation({
           pan: selectedPAN,
           password: '',
           assessment_year: '',
@@ -704,8 +708,8 @@ const ResetItrPasswordWeb = () => {
         throw new Error(extractMessage(autoRes) || 'Automation did not return run id');
       }
 
-      await pollAutomationUntilOtpOrEnd(runId, autoRes?.check_status);
-    } catch (e) {
+      await pollAutomationUntilOtpOrEnd(runId);
+    } catch (e:any) {
       toast.error(e?.message || 'Failed to send OTP');
     } finally {
       setBusyAutomation(false);
@@ -764,8 +768,8 @@ const ResetItrPasswordWeb = () => {
     setBusyVerify(true);
 
     try {
-      const res = await dispatch(
-        verifyResetItrPasswordOtp({
+      // @ts-ignore
+      const res = await dispatch(verifyResetItrPasswordOtp({
           pan: panStr,
           otp: otpString,
         }),
@@ -789,7 +793,7 @@ const ResetItrPasswordWeb = () => {
 
           for (let round = 0; round < POLL_MAX_ROUNDS; round++) {
             if (pollTokenRef.current !== token) return;
-
+            // @ts-ignore
             const data = await dispatch(fetchResetPasswordStatusById(automationRunId)).unwrap();
 
             lastPollData = data;
@@ -835,7 +839,7 @@ const ResetItrPasswordWeb = () => {
       } else {
         toast.error('Automation run not found');
       }
-    } catch (e) {
+    } catch (e: any) {
       const msg = String(e?.message || e);
 
       if (isLikelyWrongOtpError(msg)) {
@@ -847,6 +851,7 @@ const ResetItrPasswordWeb = () => {
 
           if (automationRunId) {
             try {
+              // @ts-ignore
               await dispatch(deleteResetPasswordJobById(automationRunId)).unwrap();
             } catch (_) {}
           }
@@ -882,6 +887,7 @@ const ResetItrPasswordWeb = () => {
 
     if (automationRunId) {
       try {
+        // @ts-ignore
         await dispatch(deleteResetPasswordJobById(automationRunId)).unwrap();
       } catch (_) {}
     }
@@ -902,8 +908,8 @@ const ResetItrPasswordWeb = () => {
     setBusySend(true);
 
     try {
-      await dispatch(
-        resetItrPassword({
+      // @ts-ignore
+      await dispatch(resetItrPassword({
           pan: selectedPAN,
           pwd: newPassword,
         }),
@@ -919,9 +925,8 @@ const ResetItrPasswordWeb = () => {
       const db = localStorage.getItem('dbName')?.trim() || '';
       const login_user = localStorage.getItem('loginuser')?.trim() || '';
       const auth_token = localStorage.getItem('authTokenDigest')?.trim() || localStorage.getItem('authToken')?.trim() || '';
-
-      const autoRes = await dispatch(
-        startResetPasswordAutomation({
+      // @ts-ignore
+      const autoRes: any = await dispatch(startResetPasswordAutomation({
           pan: selectedPAN,
           password: '',
           assessment_year: '',
@@ -938,8 +943,8 @@ const ResetItrPasswordWeb = () => {
         throw new Error(extractMessage(autoRes) || 'Automation did not return run id');
       }
 
-      await pollAutomationUntilOtpOrEnd(runId, autoRes?.check_status);
-    } catch (e) {
+      await pollAutomationUntilOtpOrEnd(runId);
+    } catch (e: any) {
       toast.error(e?.message || 'Failed to resend OTP');
     } finally {
       setBusyAutomation(false);
@@ -963,7 +968,7 @@ const ResetItrPasswordWeb = () => {
           <select value={selectedPAN} onChange={(e) => handleSelectPAN(e.target.value)} className="border px-3 py-2 rounded-lg w-full">
             <option value="">Select PAN</option>
 
-            {taxpayers.map((t) => {
+            {taxpayers.map((t: any) => {
               const p = t.payload?.PersonalDetails;
               const name = [p?.firstName, p?.middleName, p?.lastName].filter(Boolean).join(' ');
 

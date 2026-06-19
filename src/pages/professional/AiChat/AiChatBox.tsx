@@ -1,86 +1,76 @@
-import React from "react";
+import { Sparkles, BotMessageSquare } from "lucide-react";
+import { motion } from "framer-motion";
 
-const AiChatBox = ({ onClick }) => {
+const AiChatBox = ({ onClick }: any) => {
   return (
-    <>
-      <div
-        onClick={onClick}
-        className="inline-flex perspective-[800px] cursor-pointer"
+    <motion.button
+      type="button"
+      onClick={onClick}
+      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -2, scale: 1.02 }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      className="
+        group relative inline-flex items-center gap-3 overflow-hidden
+        rounded-2xl border border-blue-200/70
+        bg-white px-4 py-3
+        text-sm font-black text-slate-900
+        shadow-[0_14px_35px_rgba(37,99,235,0.18)]
+        transition-all duration-300
+        hover:border-blue-300
+        hover:shadow-[0_18px_45px_rgba(37,99,235,0.26)]
+      "
+    >
+      {/* soft gradient background */}
+      <span
+        className="
+          absolute inset-0 bg-gradient-to-r
+          from-blue-50 via-indigo-50 to-cyan-50
+          opacity-100 transition-opacity duration-300
+          group-hover:opacity-100
+        "
+      />
+
+      {/* moving shine */}
+      <span
+        className="
+          pointer-events-none absolute inset-y-0 -left-12 w-10
+          rotate-12 bg-white/80 blur-md
+          transition-all duration-700
+          group-hover:left-[120%]
+        "
+      />
+
+      {/* icon */}
+      <span
+        className="
+          relative z-10 flex h-9 w-9 shrink-0 items-center justify-center
+          rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600
+          text-white shadow-md shadow-blue-200
+        "
       >
-        <div className="relative rounded-full overflow-hidden group px-8 py-3">
-          {/* === EDGE-TRAVELING BORDER === */}
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            viewBox="0 0 300 60"
-            preserveAspectRatio="none"
-          >
-            {/* base border */}
-            <rect
-              x="2"
-              y="2"
-              width="296"
-              height="56"
-              rx="28"
-              ry="28"
-              fill="none"
-              stroke="rgba(0,0,0,0.15)"
-              strokeWidth="7"
-            />
+        <BotMessageSquare size={18} />
+      </span>
 
-            {/* moving long light with small gap */}
-            <rect
-              x="2"
-              y="2"
-              width="296"
-              height="56"
-              rx="28"
-              ry="28"
-              fill="none"
-              stroke="url(#aiGradient)"
-              strokeWidth="7"
-              strokeLinecap="round"
-              strokeDasharray="600 400"
-            >
-              <animate
-                attributeName="stroke-dashoffset"
-                from="0"
-                to="-880"
-                dur="3s"
-                repeatCount="indefinite"
-              />
-            </rect>
+      {/* text */}
+      <span className="relative z-10 flex flex-col items-start leading-none">
+        <span className="flex items-center gap-1.5 text-sm font-black text-slate-950">
+          Ask AI
+          <Sparkles size={13} className="text-blue-600" />
+        </span>
 
-            {/* gradient */}
-            <defs>
-              <linearGradient
-                id="aiGradient"
-                gradientUnits="userSpaceOnUse"
-                x1="0"
-                y1="0"
-                x2="300"
-                y2="0"
-              >
-                <stop offset="0%" stopColor="#4285F4" />
-                <stop offset="30%" stopColor="#34A853" />
-                <stop offset="60%" stopColor="#FBBC05" />
-                <stop offset="100%" stopColor="#EA4335" />
-              </linearGradient>
-            </defs>
-          </svg>
+        <span className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+          Tax Copilot
+        </span>
+      </span>
 
-          {/* === HOVER GLOW (same style) === */}
-          <div className="absolute -inset-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-            <div className="absolute inset-0 rounded-full blur-md bg-gradient-to-tr from-blue-500 via-green-400 to-yellow-400 animate-pulse" />
-            <div className="absolute inset-0 rounded-full blur-xl bg-gradient-to-tr from-blue-500 via-green-400 to-yellow-400 animate-pulse [animation-delay:.6s]" />
-          </div>
-
-          {/* === BUTTON CONTENT === */}
-          <span className="relative font-semibold tracking-wide whitespace-nowrap">
-            Ai.Tax Copilot
-          </span>
-        </div>
-      </div>
-    </>
+      {/* right pulse dot */}
+      <span className="relative z-10 flex h-2.5 w-2.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+      </span>
+    </motion.button>
   );
 };
 

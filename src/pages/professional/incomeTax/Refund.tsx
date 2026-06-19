@@ -1,15 +1,10 @@
-import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   Eye,
   EyeOff,
   Calendar,
   FileText,
-  ReceiptIndianRupee,
-  FileSearch,
-  Banknote,
-  Landmark,
   Hash,
-  TrendingUp,
   ChevronDown,
   CheckCircle2,
   Clock,
@@ -18,11 +13,8 @@ import {
   RefreshCw,
   ShieldCheck,
   BadgeCheck,
-  Sparkles,
   User2,
   ClipboardList,
-  IndianRupee,
-  Wallet,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
@@ -38,37 +30,37 @@ import { runnerService } from '../../../services/runnerService';
 import { getProfessionalHeader, makeJobId } from './AISTISForm26PayloadBuilder';
 
 /* ---------------- YOUR THEME CONSTANTS (kept as-is) ---------------- */
-const COLORS = {
-  salary: 'bg-[#ecf7f3] border-[#4c9d82]', // green soft
-  business: 'bg-[#edf4fe] border-[#3066b6]', // blue soft
-  otherSource: 'bg-[#fef3e1] border-[#c97b56]', // orange soft
-  taxesPaid: 'bg-[#f7f1fb] border-[#6b489f]', // purple soft
-  capitalGain: 'bg-[#ebe4fa] border-[#75649d]',
-  sft: 'bg-[#f4e8dd] border-[#98643c]',
-};
+// const COLORS: any = {
+//   salary: 'bg-[#ecf7f3] border-[#4c9d82]', // green soft
+//   business: 'bg-[#edf4fe] border-[#3066b6]', // blue soft
+//   otherSource: 'bg-[#fef3e1] border-[#c97b56]', // orange soft
+//   taxesPaid: 'bg-[#f7f1fb] border-[#6b489f]', // purple soft
+//   capitalGain: 'bg-[#ebe4fa] border-[#75649d]',
+//   sft: 'bg-[#f4e8dd] border-[#98643c]',
+// };
 
 /* -----------------------------------
    CARD ICONS
 ----------------------------------- */
-const ICONS = {
-  salary: <Wallet className="w-5 h-5 text-[#4c9d82]" />,
-  business: <ReceiptIndianRupee className="w-5 h-5 text-[#3066b6]" />,
-  otherSource: <FileSearch className="w-5 h-5 text-[#c97b56]" />,
-  taxesPaid: <Landmark className="w-5 h-5 text-[#6b489f]" />,
-  capitalGain: <TrendingUp className="w-5 h-5 text-[#75649d]" />,
-  sft: <Banknote className="w-5 h-5 text-[#98643c]" />,
-};
+// const ICONS = {
+//   salary: <Wallet className="w-5 h-5 text-[#4c9d82]" />,
+//   business: <ReceiptIndianRupee className="w-5 h-5 text-[#3066b6]" />,
+//   otherSource: <FileSearch className="w-5 h-5 text-[#c97b56]" />,
+//   taxesPaid: <Landmark className="w-5 h-5 text-[#6b489f]" />,
+//   capitalGain: <TrendingUp className="w-5 h-5 text-[#75649d]" />,
+//   sft: <Banknote className="w-5 h-5 text-[#98643c]" />,
+// };
 /* ------------------------------------------------------------------ */
 
 /* ---------------- helpers ---------------- */
-const fmtDateTime = (iso) => {
+const fmtDateTime = (iso: any) => {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return String(iso);
   return d.toLocaleString();
 };
 
-const normalizeTimeline = (timeline) => {
+const normalizeTimeline = (timeline: any) => {
   if (!timeline) return [];
   if (Array.isArray(timeline)) return timeline.filter(Boolean);
   if (typeof timeline === 'object') return [timeline];
@@ -86,7 +78,7 @@ const statusTone = (s = '') => {
   return 'slate';
 };
 
-const toneClasses = {
+const toneClasses: any = {
   green: 'bg-green-50 text-green-700 border-green-200',
   red: 'bg-red-50 text-red-700 border-red-200',
   amber: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -103,7 +95,7 @@ const toneCardTint = {
   slate: 'from-slate-50/70 to-white',
 };
 
-const toneIcon = {
+const toneIcon: any = {
   green: CheckCircle2,
   red: XCircle,
   amber: AlertCircle,
@@ -111,26 +103,26 @@ const toneIcon = {
   slate: Clock,
 };
 
-const isNotFound = (err) => {
+const isNotFound = (err: any) => {
   const status = err?.status || err?.response?.status;
   const msg = String(err?.message || err?.response?.data?.message || '').toLowerCase();
   return status === 404 || msg.includes('not found') || msg.includes('no file') || msg.includes('no data');
 };
 
-const makeFiledReturnFileName = (p) => `${String(p || '').toUpperCase()}_FiledReturns.json`;
+const makeFiledReturnFileName = (p: any) => `${String(p || '').toUpperCase()}_FiledReturns.json`;
 
 const isAutomationEnabledLocal = () => localStorage.getItem('nx_enable_automation') === 'true';
 
 /* ---------------- small UI bits ---------------- */
-const InfoPill = ({ icon: Icon, label, value }) => (
-  <div className="px-3 py-2 rounded-xl bg-white border text-gray-700 inline-flex items-center gap-2 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
-    {!!Icon && <Icon size={16} className="text-gray-500" />}
-    <span className="text-gray-500">{label}:</span>
-    <span className="font-semibold">{value ?? '—'}</span>
-  </div>
-);
+// const InfoPill = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (
+//   <div className="px-3 py-2 rounded-xl bg-white border text-gray-700 inline-flex items-center gap-2 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+//     {!!Icon && <Icon size={16} className="text-gray-500" />}
+//     <span className="text-gray-500">{label}:</span>
+//     <span className="font-semibold">{value ?? '—'}</span>
+//   </div>
+// );
 
-const SectionBadge = ({ tone, text }) => {
+const SectionBadge = ({ tone, text }: { tone: string; text: string }) => {
   const Icon = toneIcon[tone] || Clock;
   return (
     <span className={`text-xs border rounded-full px-2.5 py-1 inline-flex items-center gap-1.5 ${toneClasses[tone]}`}>
@@ -150,7 +142,7 @@ const SkeletonCard = () => (
   </div>
 );
 
-const TimelineItem = ({ item, idx, isLast }) => {
+const TimelineItem = ({ item, idx, isLast }: { item: any; idx: number; isLast: boolean }) => {
   const tone = statusTone(item?.status);
   const Icon = toneIcon[tone] || Clock;
 
@@ -176,7 +168,7 @@ const TimelineItem = ({ item, idx, isLast }) => {
   );
 };
 
-const ReturnCard = ({ r, index, open, onToggle }) => {
+const ReturnCard = ({ r, index, open, onToggle }: { r: any; index: number; open: boolean; onToggle: () => void }) => {
   const timeline = useMemo(() => normalizeTimeline(r?.timeline), [r?.timeline]);
   const headStatus = timeline?.[0]?.status || 'Status unavailable';
   const headTone = statusTone(headStatus);
@@ -282,7 +274,7 @@ const Refund = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [refundData, setRefundData] = useState(null);
+  const [refundData, setRefundData]: any = useState(null);
   const [openKeys, setOpenKeys] = useState(() => new Set());
 
   useEffect(() => {
@@ -292,7 +284,7 @@ const Refund = () => {
     };
   }, []);
 
-  const toggleOpen = (key) => {
+  const toggleOpen = (key: any) => {
     setOpenKeys((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -321,13 +313,14 @@ const Refund = () => {
   }, [pan, password, panError, passwordError, loading]);
 
   const fetchRefund = useCallback(
-    async (fileName) => {
+    async (fileName: any) => {
+    // @ts-ignore
       const filedRes = await dispatch(getFiledReturnData(fileName)).unwrap();
       return filedRes;
     },
     [dispatch],
   );
-  const buildFiledReturnsJobQueuePayload = ({ panValue, itlPassword, machineInfo }) => {
+  const buildFiledReturnsJobQueuePayload = ({ panValue, itlPassword, machineInfo }: { panValue: string; itlPassword: string; machineInfo: any }) => {
     const Authtoken = getProfessionalHeader('authtoken');
     const LoginUser = getProfessionalHeader('loginuser');
     const parent = getProfessionalHeader('x-db-name');
@@ -415,7 +408,7 @@ const Refund = () => {
         itlPassword: cleanPwd,
         machineInfo,
       });
-
+      // @ts-ignore
       const runRes = await dispatch(runAutomationAis(payload)).unwrap();
 
       const commonId = runRes?.data?.commonId;
@@ -434,13 +427,13 @@ const Refund = () => {
 
       toast.success('Filed Return data synced successfully');
 
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Sync failed');
     } finally {
       if (aliveRef.current) setLoading(false);
     }
   };
-  const pollJob = async (commonId) => {
+  const pollJob = async (commonId: any) => {
     const MAX_TRIES = 60;
     const INTERVAL = 5000;
 
@@ -450,10 +443,8 @@ const Refund = () => {
       tries++;
 
       try {
-        const res = await dispatch(
-          getJobQueueAutomationByCommonId({ commonId })
-        ).unwrap();
-
+        // @ts-ignore
+        const res = await dispatch(getJobQueueAutomationByCommonId({ commonId })).unwrap();
         const job = res?.data;
 
         if (!job) throw new Error('Invalid job response');
@@ -468,7 +459,7 @@ const Refund = () => {
         }
 
         await new Promise((r) => setTimeout(r, INTERVAL));
-      } catch (err) {
+      } catch (err: any) {
         toast.error(err?.message || 'Job status check failed');
         return;
       }
@@ -505,7 +496,7 @@ const Refund = () => {
         const firstKey = existing?.filedReturns?.[0]?.acknowledgementNo || '0';
         setOpenKeys(new Set([firstKey]));
         return;
-      } catch (err) {
+      } catch (err: any) {
         if (!isNotFound(err)) {
           toast.error(err?.message || 'Filed Return check failed');
           return;
@@ -543,6 +534,7 @@ const Refund = () => {
         itlPassword: cleanPwd,
         machineInfo,
       });
+      // @ts-ignore
       const runRes = await dispatch(runAutomationAis(payload)).unwrap();
       const commonId = runRes?.data?.commonId;
       if (!commonId) throw new Error('Job ID not received');
@@ -557,7 +549,7 @@ const Refund = () => {
 
       const firstKey = finalJson?.filedReturns?.[0]?.acknowledgementNo || '0';
       setOpenKeys(new Set([firstKey]));
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Something went wrong');
     } finally {
       if (aliveRef.current) setLoading(false);
@@ -569,7 +561,7 @@ const Refund = () => {
     return Array.isArray(arr) ? arr : [];
   }, [refundData]);
 
-  const InfoPill = ({ icon: Icon, label, value }) => (
+  const InfoPill = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (
     <div className="flex items-center gap-1 px-2 py-1 border border-gray-200 rounded-md bg-white text-gray-700">
       <Icon size={12} className="text-gray-500" />
       <span className="text-gray-500">{label}:</span>
@@ -655,6 +647,7 @@ const Refund = () => {
                     <InfoPill icon={BadgeCheck} label="PAN" value={refundData?.pan || '—'} />
                     <InfoPill icon={Calendar} label="AY" value={refundData?.assessmentYearRequested || '—'} />
                     <InfoPill icon={Clock} label="Generated" value={fmtDateTime(refundData?.generatedOn)} />
+                    {/* @ts-ignore */}
                     <InfoPill icon={FileText} label="Returns" value={filedReturns.length} />
                   </div>
                 </div>

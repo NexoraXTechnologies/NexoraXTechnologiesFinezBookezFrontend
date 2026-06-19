@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Filter, Download, Share2, ChevronDown, Mail, Loader2 } from 'lucide-react';
+import  { useEffect, useMemo, useRef, useState } from 'react';
+import { Filter, Download, ChevronDown, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 
@@ -10,17 +10,16 @@ import {
   downloadGmailAttachment,
   checkGmailConnection,
   connectToGoogleGmail,
-  clearDownloadedFile,
   clearExtractedAttachments,
 } from '../../../redux/slices/professionalSlice/downloaditrviagmail/downloadItrWithEmailExtractorSlice';
 
 // =======================================================
 // helpers
 // =======================================================
-const safeStr = (v) => String(v ?? '').trim();
-const normalize = (v) => safeStr(v).toLowerCase();
+const safeStr = (v: any) => String(v ?? '').trim();
+const normalize = (v: any) => safeStr(v).toLowerCase();
 
-const formatFileSize = (bytes) => {
+const formatFileSize = (bytes: any) => {
   const num = Number(bytes || 0);
   if (!num) return '—';
   if (num < 1024) return `${num} B`;
@@ -28,7 +27,7 @@ const formatFileSize = (bytes) => {
   return `${(num / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const getDocType = (it) => {
+const getDocType = (it: any) => {
   const direct = normalize(it?.docType || it?.type || it?.fileType);
   if (direct) return direct;
 
@@ -43,7 +42,7 @@ const getDocType = (it) => {
   return '';
 };
 
-const dedupeAttachments = (arr) => {
+const dedupeAttachments = (arr: any[]) => {
   const map = new Map();
   (Array.isArray(arr) ? arr : []).forEach((it) => {
     const key = `${safeStr(it?.attachmentId)}__${safeStr(it?.fileName || it?.filename)}`;
@@ -52,22 +51,22 @@ const dedupeAttachments = (arr) => {
   return Array.from(map.values());
 };
 
-const downloadBlobFile = (blob, fileName = 'attachment.pdf') => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-};
+// const downloadBlobFile = (blob: Blob, fileName = 'attachment.pdf') => {
+//   const url = window.URL.createObjectURL(blob);
+//   const a = document.createElement('a');
+//   a.href = url;
+//   a.download = fileName;
+//   document.body.appendChild(a);
+//   a.click();
+//   a.remove();
+//   window.URL.revokeObjectURL(url);
+// };
 
-const getTaxpayerEmail = (t) => {
+const getTaxpayerEmail = (t: any) => {
   return t?.emailId || t?.email || t?.taxpayerEmail || t?.payload?.PersonalDetails?.emailId || t?.payload?.PersonalDetails?.email || '';
 };
 
-const getTaxpayerName = (t) => {
+const getTaxpayerName = (t: any) => {
   const p = t?.payload?.PersonalDetails || t;
   return [p?.firstName, p?.middleName, p?.lastName].filter(Boolean).join(' ').trim();
 };
@@ -81,7 +80,7 @@ const filterOptions = [
   { label: 'Intimation', value: 'intimation' },
 ];
 
-const FilterDropdown = ({ value, onChange }) => {
+const FilterDropdown = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
   const [open, setOpen] = useState(false);
   const selected = filterOptions.find((x) => x.value === value);
 
@@ -122,18 +121,18 @@ const FilterDropdown = ({ value, onChange }) => {
 const DownloadITRsWeb = () => {
   const dispatch = useDispatch();
 
-  const { taxpayers = [] } = useSelector((s) => s.taxpayer);
-  const { attachments = [], loading, extractedData } = useSelector((s) => s.downloadItrWithEmailExtractor);
+  const { taxpayers = [] } = useSelector((s: any) => s.taxpayer);
+  const { attachments = [], loading, extractedData } = useSelector((s: any) => s.downloadItrWithEmailExtractor);
 
   const [selectedPAN, setSelectedPAN] = useState('');
-  const [selectedName, setSelectedName] = useState('');
+  // const [selectedName, setSelectedName] = useState('');
   const [selectedTaxpayerEmail, setSelectedTaxpayerEmail] = useState('');
 
   const [search, setSearch] = useState('');
   const [docType, setDocType] = useState('');
 
   const [downloadingId, setDownloadingId] = useState('');
-  const [sharingId, setSharingId] = useState('');
+  // const [sharingId, setSharingId] = useState('');
   const [connectingGoogle, setConnectingGoogle] = useState(false);
 
   const skipNextTypeEffectRef = useRef(false);
@@ -146,6 +145,7 @@ const DownloadITRsWeb = () => {
   // Load taxpayers for PAN dropdown
   // ==================================================
   useEffect(() => {
+    {/* @ts-ignore */ }
     dispatch(getAllTaxPayers({ search: '', limit: 500, page: 1 }));
   }, [dispatch]);
 
@@ -167,8 +167,8 @@ const DownloadITRsWeb = () => {
     }
 
     try {
-      await dispatch(
-        extractGmailAttachments({
+      {/* @ts-ignore */ }
+      await dispatch(extractGmailAttachments({
           type: type || '',
           payload: {
             taxpayerEmail: cleanEmail,
@@ -183,7 +183,7 @@ const DownloadITRsWeb = () => {
       if (showSuccessToast) {
         toast.success('Attachments fetched successfully');
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to fetch attachments');
     }
   };
@@ -195,7 +195,7 @@ const DownloadITRsWeb = () => {
   // 3. reset filters
   // 4. fetch all attachments immediately
   // ==================================================
-  const handleSelectPAN = async (pan) => {
+  const handleSelectPAN = async (pan: any) => {
     setSelectedPAN(pan);
     setSearch('');
     setPage(1);
@@ -205,20 +205,21 @@ const DownloadITRsWeb = () => {
     setDocType('');
 
     if (!pan) {
-      setSelectedName('');
+      // setSelectedName('');
       setSelectedTaxpayerEmail('');
       dispatch(clearExtractedAttachments());
       return;
     }
 
     try {
+      {/* @ts-ignore */ }
       const taxpayer = await dispatch(getTaxPayerDetails(pan)).unwrap();
 
-      const fullName = getTaxpayerName(taxpayer) || taxpayer?.fullName || taxpayer?.name || '';
+      // const fullName = getTaxpayerName(taxpayer) || taxpayer?.fullName || taxpayer?.name || '';
 
       const taxpayerEmail = getTaxpayerEmail(taxpayer);
 
-      setSelectedName(fullName);
+      // setSelectedName(fullName);
       setSelectedTaxpayerEmail(taxpayerEmail);
 
       if (!safeStr(taxpayerEmail)) {
@@ -233,8 +234,8 @@ const DownloadITRsWeb = () => {
         type: '',
         showSuccessToast: false,
       });
-    } catch (err) {
-      setSelectedName('');
+    } catch (err: any) {
+    // setSelectedName('');
       setSelectedTaxpayerEmail('');
       dispatch(clearExtractedAttachments());
       toast.error(err?.message || 'Failed to fetch taxpayer details');
@@ -257,9 +258,8 @@ const DownloadITRsWeb = () => {
 
     try {
       setConnectingGoogle(true);
-
-      const checkRes = await dispatch(
-        checkGmailConnection({
+      {/* @ts-ignore */ }
+      const checkRes = await dispatch(checkGmailConnection({
           taxpayerEmail: selectedTaxpayerEmail,
           taxpayerPAN: selectedPAN,
         }),
@@ -274,9 +274,8 @@ const DownloadITRsWeb = () => {
         });
         return;
       }
-
-      const connectRes = await dispatch(
-        connectToGoogleGmail({
+      {/* @ts-ignore */ }
+      const connectRes = await dispatch(connectToGoogleGmail({
           taxpayerEmail: selectedTaxpayerEmail,
           taxpayerPAN: selectedPAN,
         }),
@@ -288,7 +287,7 @@ const DownloadITRsWeb = () => {
       } else {
         toast.error('Google consent URL not found');
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to connect Gmail');
     } finally {
       setConnectingGoogle(false);
@@ -342,7 +341,7 @@ const DownloadITRsWeb = () => {
   // ==================================================
   // Download
   // ==================================================
-  const handleDownload = async (item) => {
+  const handleDownload = async (item: any) => {
     const attachmentId = safeStr(item?.attachmentId || item?._id || item?.id);
 
     if (!attachmentId) {
@@ -352,8 +351,9 @@ const DownloadITRsWeb = () => {
 
     try {
       setDownloadingId(attachmentId);
+      {/* @ts-ignore */ }
       await dispatch(downloadGmailAttachment(attachmentId)).unwrap();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err?.message || 'Failed to download PDF');
     } finally {
       setDownloadingId('');
@@ -363,38 +363,38 @@ const DownloadITRsWeb = () => {
   // ==================================================
   // Share
   // ==================================================
-  const handleShare = async (item) => {
-    const attachmentId = safeStr(item?.attachmentId || item?._id || item?.id);
+  // const handleShare = async (item: any) => {
+  //   const attachmentId = safeStr(item?.attachmentId || item?._id || item?.id);
 
-    if (!attachmentId) {
-      toast.error('Attachment ID not found');
-      return;
-    }
+  //   if (!attachmentId) {
+  //     toast.error('Attachment ID not found');
+  //     return;
+  //   }
 
-    try {
-      setSharingId(attachmentId);
+  //   try {
+  //     // setSharingId(attachmentId);
+  //     {/* @ts-ignore */ }
+  //     const res = await dispatch(downloadGmailAttachment(attachmentId)).unwrap();
 
-      const res = await dispatch(downloadGmailAttachment(attachmentId)).unwrap();
+  //     const file = new File([res.blob], res.fileName || item?.fileName || item?.filename || 'attachment.pdf', { type: res.blob?.type || 'application/pdf' });
 
-      const file = new File([res.blob], res.fileName || item?.fileName || item?.filename || 'attachment.pdf', { type: res.blob?.type || 'application/pdf' });
+  //     if (navigator.share && navigator.canShare?.({ files: [file] })) {
+  //       await navigator.share({
+  //         title: file.name,
+  //         files: [file],
+  //       });
+  //     } else {
+  //       downloadBlobFile(res.blob, file.name);
+  //       toast.info('Share not supported in this browser. File downloaded instead.');
+  //     }
 
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          title: file.name,
-          files: [file],
-        });
-      } else {
-        downloadBlobFile(res.blob, file.name);
-        toast.info('Share not supported in this browser. File downloaded instead.');
-      }
-
-      dispatch(clearDownloadedFile());
-    } catch (err) {
-      toast.error(err?.message || 'Failed to share attachment');
-    } finally {
-      setSharingId('');
-    }
-  };
+  //     dispatch(clearDownloadedFile());
+  //   } catch (err: any) {
+  //     toast.error(err?.message || 'Failed to share attachment');
+  //   } finally {
+  //     // setSharingId('');
+  //   }
+  // };
 
   return (
     <div id="download-itr-page-container" className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-full min-h-0">
@@ -408,7 +408,7 @@ const DownloadITRsWeb = () => {
 
           <select id="download-itr-pan-select" value={selectedPAN} onChange={(e) => handleSelectPAN(e.target.value)} className="border px-3 py-2 h-9 rounded-md min-w-[220px] text-sm shrink-0">
             <option value="">Select PAN</option>
-            {taxpayers.map((t) => {
+            {taxpayers.map((t: any) => {
               const name = getTaxpayerName(t);
               return (
                 <option key={t.pan} value={t.pan}>

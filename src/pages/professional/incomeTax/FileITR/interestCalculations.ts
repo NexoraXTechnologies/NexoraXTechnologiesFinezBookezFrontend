@@ -2,19 +2,19 @@
 /* eslint-disable no-restricted-globals */
 
 // ---------- Helpers ----------
-export const toNum = (v) => (v ? parseFloat(String(v).replace(/,/g, '')) || 0 : 0);
+export const toNum = (v: string | number | null | undefined) => (v ? parseFloat(String(v).replace(/,/g, '')) || 0 : 0);
 
-export const toDateOnly = (d) => {
+export const toDateOnly = (d: string | Date) => {
   const date = new Date(d);
   if (Number.isNaN(date.getTime())) return null;
   date.setHours(0, 0, 0, 0);
   return date;
 };
 
-export const roundTo100 = (val) => Math.floor(toNum(val) / 100) * 100;
+export const roundTo100 = (val: string | number) => Math.floor(toNum(val) / 100) * 100;
 
 // RN: onePercent = floor(principal/100)
-export const onePercentFloor = (v) => Math.floor(toNum(v) / 100);
+export const onePercentFloor = (v: string | number) => Math.floor(toNum(v) / 100);
 
 // RN: if current month is Jan-Mar, start from previous year's April
 export const generateMonthsFromApril = (todayInput = new Date()) => {
@@ -32,7 +32,7 @@ export const generateMonthsFromApril = (todayInput = new Date()) => {
   return months;
 };
 
-export const formatMonthLabel = (d) => d.toLocaleString('default', { month: 'long', year: 'numeric' });
+export const formatMonthLabel = (d: Date) => d.toLocaleString('default', { month: 'long', year: 'numeric' });
 
 // ---------- RN PORT: 234A/234B interest table ----------
 /**
@@ -46,7 +46,7 @@ export const formatMonthLabel = (d) => d.toLocaleString('default', { month: 'lon
  * - int234AF = floor(principal234AF/100) only from Sep onwards (monthIndex>=8)
  * - remainingBalance increases by monthly interests (234B+234AF)
  */
-export const calculateInterestTableRN = ({ calculateAccToAge, openingPrincipal234B, openingPrincipal234AF, openingRemainingBalance = 0, deposits = [], today = new Date() }) => {
+export const calculateInterestTableRN = ({ calculateAccToAge, openingPrincipal234B, openingPrincipal234AF, openingRemainingBalance = 0, deposits = [], today = new Date() }: { calculateAccToAge: number; openingPrincipal234B: string | number; openingPrincipal234AF: string | number; openingRemainingBalance?: string | number; deposits?: any; today?: Date }) => {
   let principal234B = toNum(openingPrincipal234B);
   let principal234AF = toNum(openingPrincipal234AF);
   let remainingBalance = toNum(openingRemainingBalance);
@@ -59,7 +59,7 @@ export const calculateInterestTableRN = ({ calculateAccToAge, openingPrincipal23
     const monthIndex = monthDate.getMonth(); // Jan=0
 
     // Total deposits made in THIS month (apply NEXT month)
-    const depositThisMonth = (deposits || []).reduce((sum, d) => {
+    const depositThisMonth = (deposits || []).reduce((sum: any, d: any) => {
       const depDate = new Date(d.date);
       if (depDate.getFullYear() === monthDate.getFullYear() && depDate.getMonth() === monthDate.getMonth()) {
         return sum + toNum(d.amount);
@@ -116,20 +116,20 @@ export const calculateInterestTableRN = ({ calculateAccToAge, openingPrincipal23
  */
 export const normalizeDepositsRN = (taxesPaid = []) => {
   return (taxesPaid || [])
-    .filter((item) => {
+    .filter((item: { depositDate: string; taxPaid: string }) => {
       const d = new Date(item.depositDate);
       if (Number.isNaN(d.getTime())) return false;
       if (d.getMonth() === 2 && d.getDate() === 31) return false; // exclude Mar 31
       return d.getMonth() >= 3; // April onwards only
     })
-    .map((item) => ({
+    .map((item: { depositDate: string; taxPaid: string }) => ({
       date: item.depositDate,
       amount: toNum(item.taxPaid),
     }));
 };
 
 // ---------- RN PORT: 234C table ----------
-const calcInterest234C_RN = (shortfall, months) => Math.floor(toNum(shortfall) * 0.01 * toNum(months));
+const calcInterest234C_RN = (shortfall: string | number, months: string | number) => Math.floor(toNum(shortfall) * 0.01 * toNum(months));
 
 /**
  * Matches RN Interest234CTable.
@@ -144,8 +144,13 @@ export const calculate234CTableRN = ({
   isCalculate, // {first, second, third, fourth}
   totalTax, // {first, second, third, fourth}  (already net of tds in RN caller)
   dataOfAdvanceTax, // {b1,b2,b3,b4}
+}: {
+  calculateAccToAge: number;
+  isCalculate: { first?: boolean; second?: boolean; third?: boolean; fourth?: boolean };
+  totalTax: { first?: number; second?: number; third?: number; fourth?: number };
+  dataOfAdvanceTax: { b1?: number; b2?: number; b3?: number; b4?: number };
 }) => {
-  const payments = {
+  const payments: { [key: string]: number } = {
     june: toNum(dataOfAdvanceTax?.b1 || 0),
     september: toNum(dataOfAdvanceTax?.b2 || 0),
     december: toNum(dataOfAdvanceTax?.b3 || 0),
@@ -186,7 +191,7 @@ export const calculate234CTableRN = ({
   return { rows, totalInterest };
 };
 
-export function getMonthValue(dueDateStr) {
+export function getMonthValue(dueDateStr: string | null): number {
   if (!dueDateStr) return 11;
 
   const today = new Date();

@@ -4,9 +4,9 @@ import professionalAxios from "../../../../services/professionalAxios";
 /* ===================================================
     GET ALL TAXPAYERS
 =================================================== */
-export const getAllTaxPayers = createAsyncThunk('taxpayer/getAllTaxPayers', async ({ search = '', page = 1, limit = 10 } = {}, { rejectWithValue }) => {
+export const getAllTaxPayers = createAsyncThunk('taxpayer/getAllTaxPayers', async ({ search = '', page = 1, limit = 10, offset = 0 } :{ search?: string; page?: number; limit?: number; offset?: number }, { rejectWithValue }) => {
   try {
-    const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/taxpayers/getAllTaxPayers`, { params: { search, page, limit } });
+    const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/taxpayers/getAllTaxPayers`, { params: { search, page, limit, offset } });
 
     if (!res.data?.success) {
       return rejectWithValue({
@@ -31,7 +31,7 @@ export const getAllTaxPayers = createAsyncThunk('taxpayer/getAllTaxPayers', asyn
       },
       filters: data.filters ?? {},
     };
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || 'Failed to fetch taxpayers',
     });
@@ -42,7 +42,7 @@ export const getAllTaxPayers = createAsyncThunk('taxpayer/getAllTaxPayers', asyn
 =================================================== */
 export const getTaxPayerDetails = createAsyncThunk(
   "taxpayer/getTaxPayerDetails",
-  async (pan, { rejectWithValue }) => {
+  async (pan: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/users/taxpayers/getById/${pan}`
@@ -54,7 +54,7 @@ export const getTaxPayerDetails = createAsyncThunk(
         });
 
       return res.data?.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to fetch taxpayer details",
@@ -68,7 +68,7 @@ export const getTaxPayerDetails = createAsyncThunk(
 =================================================== */
 export const verifyIFSC = createAsyncThunk(
   "taxpayer/verifyIFSC",
-  async (ifscCode, { rejectWithValue }) => {
+  async (ifscCode: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         `/eTaxSolnMongoApiBackend/taxpayers/verifyIFSC`,
@@ -81,7 +81,7 @@ export const verifyIFSC = createAsyncThunk(
         });
 
       return res.data?.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to verify IFSC",
       });
@@ -107,7 +107,7 @@ export const addTaxpayer = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to add taxpayer",
       });
@@ -120,7 +120,7 @@ export const addTaxpayer = createAsyncThunk(
 =================================================== */
 export const updateTaxpayer = createAsyncThunk(
   "taxpayer/updateTaxpayer",
-  async ({ pan, data }, { rejectWithValue }) => {
+  async ({ pan, data }: { pan: any; data: any }, { rejectWithValue }) => {
     try {
 
       const res = await professionalAxios.put(
@@ -134,7 +134,7 @@ export const updateTaxpayer = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to update taxpayer",
       });
@@ -147,7 +147,7 @@ export const updateTaxpayer = createAsyncThunk(
 =================================================== */
 export const getInactiveTaxPayers = createAsyncThunk(
   "taxpayer/getInactiveTaxPayers",
-  async ({ search = "", page = 1, limit = 10 }  = {}, { rejectWithValue }) => {
+  async ({ search = "", page = 1, limit = 10 }  :{ search?: string; page?: number; limit?: number }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/users/taxpayers/getInactiveTaxPayers`,
@@ -167,7 +167,7 @@ export const getInactiveTaxPayers = createAsyncThunk(
       }
 
       return res.data?.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to fetch inactive taxpayers",
@@ -181,7 +181,7 @@ export const getInactiveTaxPayers = createAsyncThunk(
 =================================================== */
 export const updateTaxpayerStatus = createAsyncThunk(
   "taxpayer/updateTaxpayerStatus",
-  async ({ pan, status }, { rejectWithValue }) => {
+  async ({ pan, status }: { pan: string; status: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.patch(
         `/eTaxSolnMongoApiBackend/users/taxpayers/updateStatus/${pan}`,
@@ -195,7 +195,7 @@ export const updateTaxpayerStatus = createAsyncThunk(
       }
 
       return res.data?.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err?.response?.data?.message || "Failed to update taxpayer status",
@@ -252,7 +252,7 @@ const addTaxpayerSlice = createSlice({
         state.taxpayers = action.payload?.items ?? [];
         state.pagination = action.payload?.pagination ?? state.pagination;
       })
-      .addCase(getAllTaxPayers.rejected, (state, action) => {
+      .addCase(getAllTaxPayers.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.taxpayers = [];
@@ -267,7 +267,7 @@ const addTaxpayerSlice = createSlice({
         state.loading = false;
         state.selectedTaxpayer = action.payload ?? null;
       })
-      .addCase(getTaxPayerDetails.rejected, (state, action) => {
+      .addCase(getTaxPayerDetails.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -281,7 +281,7 @@ const addTaxpayerSlice = createSlice({
         state.verifyLoading = false;
         state.ifscDetails = action.payload;
       })
-      .addCase(verifyIFSC.rejected, (state, action) => {
+      .addCase(verifyIFSC.rejected, (state, action:any) => {
         state.verifyLoading = false;
         state.error = action.payload?.message;
       });
@@ -291,14 +291,15 @@ const addTaxpayerSlice = createSlice({
       .addCase(addTaxpayer.pending, (state) => {
         state.addLoading = true;
       })
-      .addCase(addTaxpayer.fulfilled, (state, action) => {
+      .addCase(addTaxpayer.fulfilled, (state, action:any) => {
         state.addLoading = false;
         if (action.payload) {
+          // @ts-ignore
           state.taxpayers.unshift(action.payload);
           state.pagination.totalDocs += 1;
         }
       })
-      .addCase(addTaxpayer.rejected, (state, action) => {
+      .addCase(addTaxpayer.rejected, (state, action:any) => {
         state.addLoading = false;
         state.error = action.payload?.message;
       });
@@ -308,16 +309,16 @@ const addTaxpayerSlice = createSlice({
       .addCase(updateTaxpayer.pending, (state) => {
         state.updateLoading = true;
       })
-      .addCase(updateTaxpayer.fulfilled, (state, action) => {
+      .addCase(updateTaxpayer.fulfilled, (state:any, action) => {
         state.updateLoading = false;
         const updated = action.payload;
         if (!updated?.pan) return;
 
-        state.taxpayers = state.taxpayers.map((t) =>
+        state.taxpayers = state.taxpayers.map((t: any) =>
           t.pan === updated.pan ? updated : t
         );
       })
-      .addCase(updateTaxpayer.rejected, (state, action) => {
+      .addCase(updateTaxpayer.rejected, (state, action:any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });
@@ -330,7 +331,7 @@ const addTaxpayerSlice = createSlice({
         state.loading = false;
 
         // Add status manually because API does not send it
-        const items = (action.payload?.items ?? []).map((item) => ({
+        const items = (action.payload?.items ?? []).map((item:any) => ({
           ...item,
           status: "inactive",
         }));
@@ -338,7 +339,7 @@ const addTaxpayerSlice = createSlice({
         state.taxpayers = items;
         state.pagination = action.payload?.pagination ?? state.pagination;
       })
-      .addCase(getInactiveTaxPayers.rejected, (state, action) => {
+      .addCase(getInactiveTaxPayers.rejected, (state:any, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.taxpayers = [];
@@ -348,18 +349,18 @@ const addTaxpayerSlice = createSlice({
       .addCase(updateTaxpayerStatus.pending, (state) => {
         state.updateLoading = true;
       })
-      .addCase(updateTaxpayerStatus.fulfilled, (state, action) => {
+      .addCase(updateTaxpayerStatus.fulfilled, (state:any, action) => {
         state.updateLoading = false;
 
         const updated = action.payload;
         if (!updated?.pan) return;
 
         // update list
-        state.taxpayers = state.taxpayers.map((t) =>
+        state.taxpayers = state.taxpayers.map((t: any) =>
           t.pan === updated.pan ? updated : t
         );
       })
-      .addCase(updateTaxpayerStatus.rejected, (state, action) => {
+      .addCase(updateTaxpayerStatus.rejected, (state, action:any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });

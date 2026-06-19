@@ -1,605 +1,4 @@
-
-
-
-
-
-
-
-
-// import React, { useEffect, useState } from "react";
-// import { Trash2, Edit } from "lucide-react";
-// import { useDispatch, useSelector } from "react-redux";
-// import { toast } from "react-toastify";
-
-// import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
-// import SearchInput from "../../../components/searchInput";
-// import { DataCreateButton, DataREfreshButton } from "../../../components/buttons";
-// import DataTable from "../../../components/DataTable";
-// import Pagination from "../../../components/pagination";
-// import Badge from "../../../components/badge";
-// import { SelectInput, TextInput } from "../../../components/inputs";
-// import Modal from "../../../components/modal";
-// import { getAllReportMapping } from "../../../redux/slices/professionalSlice/reportMappingSlice";
-
-// const ReportMapping = () => {
-// 	const dispatch = useDispatch();
-
-// 	const {
-// 		report,
-// 		pagination,
-// 		loading,
-// 	} = useSelector((s: any) => s.reportMapping);
-
-// 	const [localOffset, setLocalOffset] = useState(0);
-// 	const [localLimit, setLocalLimit] = useState(10);
-
-// 	const [search, setSearch] = useState("");
-// 	const [debouncedSearch, setDebouncedSearch] = useState("");
-
-// 	const [refreshing, setRefreshing] = useState(false);
-// 	const [showModal, setShowModal] = useState(false);
-// 	const [showFieldModal, setShowFieldModal] = useState(false);
-
-// 	const [editingReport, setEditingReport] = useState<any>(null);
-// 	const [errors, setErrors] = useState<any>({});
-
-// 	const [moduleType, setModuleType] = useState("");
-
-// 	const [reportForm, setReportForm] = useState<any>({
-// 		templateName: "",
-// 		moduleType: "",
-// 		file: null,
-// 		templateMappings: {},
-// 	});
-
-// 	const [fieldForm, setFieldForm] = useState<any>({
-// 		tab: "SO",
-// 		key: "",
-// 		type: "dropdown",
-// 		value: "",
-// 		customValue: "",
-// 	});
-
-// 	const [confirmTooltip, setConfirmTooltip] = useState({
-// 		show: false,
-// 		x: null,
-// 		y: null,
-// 		templateFileId: null,
-// 	});
-
-// 	const columns = [
-// 		{ key: "templateName", title: "Template Name" },
-// 		{ key: "moduleType", title: "Module Type" },
-// 		{ key: "createdOn", title: "Created On" },
-// 	];
-
-// 	const moduleOptions = [
-// 		{ label: "Sales Invoice", value: "salesInvoice" },
-// 		{ label: "Sales Order", value: "salesOrder" },
-// 		{ label: "Sales Quotation", value: "salesQuotation" },
-// 		{ label: "Purchase Invoice", value: "purchaseInvoice" },
-// 		{ label: "Purchase Order", value: "purchaseOrder" },
-// 		{ label: "GRN", value: "grn" },
-// 		{ label: "Receipt", value: "receipt" },
-// 		{ label: "Payment", value: "payment" },
-// 	];
-
-// 	const fetchReportMapping = () => {
-// 		dispatch(
-// 			getAllReportMapping({
-// 				offset: localOffset,
-// 				limit: localLimit,
-// 				search: debouncedSearch,
-// 				moduleType,
-// 			}) as any
-// 		);
-// 	};
-
-// 	useEffect(() => {
-// 		fetchReportMapping();
-// 	}, [localOffset, localLimit, debouncedSearch, moduleType]);
-
-// 	useEffect(() => {
-// 		const t = setTimeout(() => {
-// 			setDebouncedSearch(search.trim());
-// 			setLocalOffset(0);
-// 		}, 400);
-
-// 		return () => clearTimeout(t);
-// 	}, [search]);
-
-// 	const handleRefresh = async () => {
-// 		setRefreshing(true);
-// 		await fetchReportMapping();
-// 		toast.success("Report mapping list refreshed");
-// 		setRefreshing(false);
-// 	};
-
-// 	const openAddModal = () => {
-// 		setEditingReport(null);
-// 		setErrors({});
-
-// 		setReportForm({
-// 			templateName: "",
-// 			moduleType: "",
-// 			file: null,
-// 			templateMappings: {},
-// 		});
-
-// 		setShowModal(true);
-// 	};
-
-// 	const openEditModal = (p: any) => {
-// 		setEditingReport(p);
-// 		setErrors({});
-
-// 		setReportForm({
-// 			templateName: p?.templateName || "",
-// 			moduleType: p?.moduleType || "",
-// 			file: null,
-// 			templateMappings: p?.templateMappings || {},
-// 		});
-
-// 		setShowModal(true);
-// 	};
-
-// 	const handleSaveReportMapping = () => {
-// 		const e: any = {};
-
-// 		if (!reportForm.templateName?.trim()) {
-// 			e.templateName = "Report title is required";
-// 		}
-
-// 		if (!reportForm.moduleType) {
-// 			e.moduleType = "Module type is required";
-// 		}
-
-// 		if (!reportForm.file && !editingReport) {
-// 			e.file = "Document is required";
-// 		}
-
-// 		setErrors(e);
-
-// 		if (Object.keys(e).length > 0) return;
-
-// 		console.log("Final Report Form:", reportForm);
-
-// 		// API call will come here
-// 	};
-
-// 	const handleSaveField = () => {
-// 		const finalValue =
-// 			fieldForm.type === "custom" ? fieldForm.customValue : fieldForm.value;
-
-// 		if (!fieldForm.key?.trim() || !finalValue?.trim()) {
-// 			toast.error("Please enter key and value");
-// 			return;
-// 		}
-
-// 		setReportForm((prev: any) => ({
-// 			...prev,
-// 			templateMappings: {
-// 				...prev.templateMappings,
-// 				[fieldForm.key.trim()]: finalValue.trim(),
-// 			},
-// 		}));
-
-// 		setFieldForm({
-// 			tab: "SO",
-// 			key: "",
-// 			type: "dropdown",
-// 			value: "",
-// 			customValue: "",
-// 		});
-
-// 		setShowFieldModal(false);
-// 	};
-
-// 	const removeMappingField = (key: string) => {
-// 		setReportForm((prev: any) => {
-// 			const next = { ...prev.templateMappings };
-// 			delete next[key];
-
-// 			return {
-// 				...prev,
-// 				templateMappings: next,
-// 			};
-// 		});
-// 	};
-
-// 	return (
-// 		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
-// 			{/* ================= HEADER ================= */}
-// 			<div id="unit-header" className="flex items-center mb-3">
-// 				<div id="unit-summary" className="flex items-start gap-3">
-// 					<Badge
-// 						{...{
-// 							count: pagination.totalDocs ?? 0,
-// 							text: "Total Reports:",
-// 							varient: "primary",
-// 						}}
-// 					/>
-// 				</div>
-
-// 				<div className="ml-auto flex items-center gap-2">
-// 					<div className="flex-1 min-w-[220px] h-9 rounded-md">
-// 						<SelectInput
-// 							label=""
-// 							value={moduleType}
-// 							onChange={(e: any) => {
-// 								setModuleType(e.target.value);
-// 								setLocalOffset(0);
-// 							}}
-// 							className="cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md"
-// 							options={[
-// 								{ label: "All Modules", value: "" },
-// 								...moduleOptions,
-// 							]}
-// 						/>
-// 					</div>
-
-// 					<SearchInput {...{ search, setSearch }} />
-// 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
-// 					<DataCreateButton
-// 						{...{
-// 							callBackFn: openAddModal,
-// 							text: "Add Report",
-// 						}}
-// 					/>
-// 				</div>
-// 			</div>
-
-// 			{/* ================= TABLE ================= */}
-// 			<DataTable
-// 				columns={columns}
-// 				data={report}
-// 				loading={loading}
-// 				emptyMessage="No reports found"
-// 				actions={(report: any) => (
-// 					<div className="flex items-center gap-2">
-// 						<button
-// 							id="unit-edit-button"
-// 							onClick={() => openEditModal(report)}
-// 							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
-// 						>
-// 							<Edit size={16} />
-// 						</button>
-
-// 						<button
-// 							id="unit-delete-button"
-// 							onClick={(e) => {
-// 								const rect = e.currentTarget.getBoundingClientRect();
-// 								let x = rect.left - 150;
-// 								if (x < 10) x = 10;
-// 								const y = rect.top + window.scrollY - 5;
-
-// 								setConfirmTooltip({
-// 									show: true,
-// 									x,
-// 									y,
-// 									templateFileId: report.id,
-// 								});
-// 							}}
-// 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
-// 						>
-// 							<Trash2 size={16} />
-// 						</button>
-// 					</div>
-// 				)}
-// 			/>
-
-// 			{/* ================= PAGINATION ================= */}
-// 			{pagination.totalDocs > 0 && (
-// 				<Pagination
-// 					{...{
-// 						localLimit,
-// 						selectCb: (e: any) => {
-// 							setLocalLimit(Number(e.target.value));
-// 							setLocalOffset(0);
-// 						},
-// 						preDisabled: !pagination.hasPrevPage,
-// 						nextDisabled: !pagination.hasNextPage,
-// 						setLocalOffset,
-// 						pagination,
-// 					}}
-// 				/>
-// 			)}
-
-// 			{/* ================= DELETE TOOLTIP ================= */}
-// 			{confirmTooltip.show && (
-// 				<ConfirmTooltip
-// 					x={confirmTooltip.x}
-// 					y={confirmTooltip.y}
-// 					message="Are you sure you want to delete this report?"
-// 					confirmText="Delete"
-// 					cancelText="Cancel"
-// 					onCancel={() =>
-// 						setConfirmTooltip({
-// 							show: false,
-// 							x: null,
-// 							y: null,
-// 							templateFileId: null,
-// 						})
-// 					}
-// 				/>
-// 			)}
-
-// 			{/* ================= REPORT MAPPING MODAL ================= */}
-// 			<Modal
-// 				{...{
-// 					show: showModal,
-// 					setShow: setShowModal,
-// 					handleSubmit: handleSaveReportMapping,
-// 					state: editingReport,
-// 					title: "Report Mapping",
-// 					body: (
-// 						<>
-// 							<TextInput
-// 								label="Report Title"
-// 								mandatory={true}
-// 								value={reportForm.templateName}
-// 								onChange={(e: any) =>
-// 									setReportForm({
-// 										...reportForm,
-// 										templateName: e.target.value,
-// 									})
-// 								}
-// 								placeholder="Enter report title"
-// 								error={errors.templateName}
-// 							/>
-
-// 							<SelectInput
-// 								label="Select Dropdown"
-// 								mandatory={true}
-// 								value={reportForm.moduleType}
-// 								onChange={(e: any) =>
-// 									setReportForm({
-// 										...reportForm,
-// 										moduleType: e.target.value,
-// 									})
-// 								}
-// 								options={[
-// 									{ label: "Select Dropdown", value: "" },
-// 									{ label: "Sales Invoice", value: "salesInvoice" },
-// 									{ label: "Sales Order", value: "salesOrder" },
-// 									{ label: "Sales Quotation", value: "salesQuotation" },
-// 									{ label: "Purchase Invoice", value: "purchaseInvoice" },
-// 									{ label: "Purchase Order", value: "purchaseOrder" },
-// 									{ label: "GRN", value: "grn" },
-// 									{ label: "Receipt", value: "receipt" },
-// 									{ label: "Payment", value: "payment" },
-// 								]}
-// 								error={errors.moduleType}
-// 							/>
-
-// 							<div>
-// 								<label className="mb-1 block text-sm font-medium text-gray-700">
-// 									Attach Document<span className="text-red-500">*</span>
-// 								</label>
-
-// 								<label className="flex h-9 w-full cursor-pointer items-center rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm transition-all hover:border-indigo-400">
-// 									<input
-// 										type="file"
-// 										accept=".doc,.docx"
-// 										className="hidden"
-// 										onChange={(e: any) =>
-// 											setReportForm({
-// 												...reportForm,
-// 												file: e.target.files?.[0] || null,
-// 											})
-// 										}
-// 									/>
-
-// 									<span className="truncate">
-// 										{reportForm.file?.name || "Select Word File (.doc, .docx)"}
-// 									</span>
-// 								</label>
-
-// 								{errors.file && (
-// 									<p className="mt-1 text-xs text-red-500">{errors.file}</p>
-// 								)}
-// 							</div>
-
-// 							<div className="flex items-end justify-end">
-// 								<button
-// 									type="button"
-// 									onClick={() => {
-// 										setFieldForm({
-// 											tab: "SO",
-// 											key: "",
-// 											type: "dropdown",
-// 											value: "",
-// 											customValue: "",
-// 										});
-
-// 										setShowFieldModal(true);
-// 									}}
-// 									className="h-9 rounded-md bg-indigo-600 px-6 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700"
-// 								>
-// 									+ Add
-// 								</button>
-// 							</div>
-
-// 							<div className="col-span-2 rounded-md border border-gray-200 bg-gray-50 p-4">
-// 								<h3 className="mb-3 text-base font-semibold text-gray-900">
-// 									Added Fields ({Object.keys(reportForm.templateMappings).length})
-// 								</h3>
-
-// 								{Object.keys(reportForm.templateMappings).length === 0 ? (
-// 									<p className="text-sm text-gray-500">No fields added yet.</p>
-// 								) : (
-// 									<div className="grid grid-cols-2 gap-3">
-// 										{Object.entries(reportForm.templateMappings).map(
-// 											([key, value]: any) => (
-// 												<div
-// 													key={key}
-// 													className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2"
-// 												>
-// 													<div className="min-w-0">
-// 														<p className="truncate text-sm font-semibold text-gray-900">
-// 															{key}
-// 														</p>
-// 														<p className="truncate text-xs text-gray-500">
-// 															{value}
-// 														</p>
-// 													</div>
-
-// 													<button
-// 														type="button"
-// 														onClick={() => removeMappingField(key)}
-// 														className="ml-3 shrink-0 text-xs font-semibold text-red-600 hover:text-red-700"
-// 													>
-// 														Remove
-// 													</button>
-// 												</div>
-// 											)
-// 										)}
-// 									</div>
-// 								)}
-// 							</div>
-// 						</>
-// 					),
-// 				}}
-// 			/>
-// 			{/* ================= ADD KEY VALUE MODAL ================= */}
-// 			<Modal
-// 				{...{
-// 					show: showFieldModal,
-// 					setShow: setShowFieldModal,
-// 					handleSubmit: handleSaveField,
-// 					state: null,
-// 					title: "Key-Value Fields",
-// 					body: (
-// 						<>
-// 							<div className="col-span-2 grid grid-cols-3 rounded-md bg-gray-100 p-1">
-// 								{["SO", "Company", "Account"].map((tab) => (
-// 									<button
-// 										key={tab}
-// 										type="button"
-// 										onClick={() =>
-// 											setFieldForm({
-// 												...fieldForm,
-// 												tab,
-// 												value: "",
-// 											})
-// 										}
-// 										className={`rounded-md py-2 text-sm font-semibold transition-all ${fieldForm.tab === tab
-// 												? "bg-indigo-600 text-white shadow-sm"
-// 												: "text-gray-600 hover:bg-white"
-// 											}`}
-// 									>
-// 										{tab}
-// 									</button>
-// 								))}
-// 							</div>
-
-// 							<TextInput
-// 								label="Key"
-// 								value={fieldForm.key}
-// 								onChange={(e: any) =>
-// 									setFieldForm({
-// 										...fieldForm,
-// 										key: e.target.value,
-// 									})
-// 								}
-// 								placeholder="Key (e.g. customerName)"
-// 							/>
-
-// 							<div>
-// 								<label className="mb-1 block text-sm font-medium text-gray-700">
-// 									Type
-// 								</label>
-
-// 								<div className="flex h-9 items-center gap-8 rounded-md border border-gray-300 bg-white px-3">
-// 									<label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-800">
-// 										<input
-// 											type="radio"
-// 											checked={fieldForm.type === "dropdown"}
-// 											onChange={() =>
-// 												setFieldForm({
-// 													...fieldForm,
-// 													type: "dropdown",
-// 													customValue: "",
-// 												})
-// 											}
-// 										/>
-// 										Dropdown
-// 									</label>
-
-// 									<label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-800">
-// 										<input
-// 											type="radio"
-// 											checked={fieldForm.type === "custom"}
-// 											onChange={() =>
-// 												setFieldForm({
-// 													...fieldForm,
-// 													type: "custom",
-// 													value: "",
-// 												})
-// 											}
-// 										/>
-// 										Custom
-// 									</label>
-// 								</div>
-// 							</div>
-
-// 							<div className="col-span-2">
-// 								{fieldForm.type === "dropdown" ? (
-// 									<SelectInput
-// 										label="Select Dropdown"
-// 										value={fieldForm.value}
-// 										onChange={(e: any) =>
-// 											setFieldForm({
-// 												...fieldForm,
-// 												value: e.target.value,
-// 											})
-// 										}
-// 										options={[
-// 											{ label: "Select Dropdown", value: "" },
-// 											{
-// 												label: `${fieldForm.tab} Field 1`,
-// 												value: `${fieldForm.tab}.field1`,
-// 											},
-// 											{
-// 												label: `${fieldForm.tab} Field 2`,
-// 												value: `${fieldForm.tab}.field2`,
-// 											},
-// 											{
-// 												label: `${fieldForm.tab} Field 3`,
-// 												value: `${fieldForm.tab}.field3`,
-// 											},
-// 										]}
-// 									/>
-// 								) : (
-// 									<TextInput
-// 										label="Custom"
-// 										value={fieldForm.customValue}
-// 										onChange={(e: any) =>
-// 											setFieldForm({
-// 												...fieldForm,
-// 												customValue: e.target.value,
-// 											})
-// 										}
-// 										placeholder="Enter custom value"
-// 									/>
-// 								)}
-// 							</div>
-// 						</>
-// 					),
-// 				}}
-// 			/>
-// 		</div>
-// 	);
-// };
-
-// export default ReportMapping;
-
-
-
-
-
-
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trash2, Edit } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -612,70 +11,30 @@ import Pagination from "../../../components/pagination";
 import Badge from "../../../components/badge";
 import { SelectInput, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
-import { createReportMapping, deleteReportMapping, getAllReportMapping, updateReportMapping } from "../../../redux/slices/professionalSlice/reportMappingSlice";
+import { createReportMapping, deleteReportMapping, getAllReportMapping, updateReportMapping, getAllModules, getAllModulesWiseKey } from "../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getTemplateKeyLabel } from "../../../utils/templateKeyLabel";
+import Permission from "../../../components/PermissionGuard";
 
 const ReportMapping = () => {
 	const dispatch = useDispatch();
-
-	/* =====================================================
-		REDUX STATE
-		- report: list data
-		- pagination: server pagination data
-		- loading: table loader
-	===================================================== */
-	const { report, pagination, loading } = useSelector(
-		(s: any) => s.reportMapping
-	);
-
+	const { report, pagination, loading, modules, modulesLoading, moduleWiseKeys, moduleWiseKeysLoading, } = useSelector((s: any) => s.reportMapping);
 	/* =====================================================
 		LIST FILTER / PAGINATION STATES
 	===================================================== */
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
-
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
-
 	const [moduleType, setModuleType] = useState("");
-
-	/* =====================================================
-		UI STATES
-	===================================================== */
-	const [refreshing, setRefreshing] = useState(false);
-
-	// Main report mapping modal
+	// const [refreshing, setRefreshing] = useState(false);
 	const [showModal, setShowModal] = useState(false);
-
-	// Add key-value modal
 	const [showFieldModal, setShowFieldModal] = useState(false);
-
-	// Used when editing row from table
 	const [editingReport, setEditingReport] = useState<any>(null);
-
-	// Used to show field validation errors
 	const [errors, setErrors] = useState<any>({});
-
-	// When true, Added Fields cards become editable
 	const [isEditingFields, setIsEditingFields] = useState(false);
 
 	/* =====================================================
 		MAIN REPORT FORM STATE
-
-		templateMappings:
-		- final API object
-		- example: { cName: "companyMaster.companyName" }
-
-		mappingFields:
-		- UI array for showing/editing added fields
-		- example:
-		  [
-			{
-			  key: "cName",
-			  type: "dropdown",
-			  value: "companyMaster.companyName",
-			  customValue: ""
-			}
-		  ]
 	===================================================== */
 	const [reportForm, setReportForm] = useState<any>({
 		templateName: "",
@@ -691,7 +50,7 @@ const ReportMapping = () => {
 		ADD FIELD MODAL FORM STATE
 	===================================================== */
 	const [fieldForm, setFieldForm] = useState<any>({
-		tab: "SO",
+		tab: "Module",
 		key: "",
 		type: "dropdown",
 		value: "",
@@ -714,7 +73,7 @@ const ReportMapping = () => {
 	const columns = [
 		{ key: "templateName", title: "Template Name" },
 		{ key: "moduleType", title: "Module Type" },
-		{ key: "createdOn", title: "Created On" },
+		{ key: "createdOn", title: "Created On", type: "date" },
 	];
 
 	/* =====================================================
@@ -723,89 +82,66 @@ const ReportMapping = () => {
 		1. List filter dropdown
 		2. Report mapping form dropdown
 	===================================================== */
-	const moduleOptions = [
-		{ label: "Sales Invoice", value: "salesInvoice" },
-		{ label: "Sales Order", value: "salesOrder" },
-		{ label: "Sales Quotation", value: "salesQuotation" },
-		{ label: "Purchase Invoice", value: "purchaseInvoice" },
-		{ label: "Purchase Order", value: "purchaseOrder" },
-		{ label: "GRN", value: "grn" },
-		{ label: "Receipt", value: "receipt" },
-		{ label: "Payment", value: "payment" },
-	];
+	useEffect(() => {
+		{/* @ts-ignore */ }
+		dispatch(getAllModules() as any);
+	}, [dispatch]);
+
+
+	const moduleOptions =
+		modules?.map((item: string) => ({
+			label: item,
+			value: item,
+		})) || [];
+
+
+
 
 	/* =====================================================
 		DROPDOWN OPTIONS FOR KEY-VALUE FIELD MODAL
 
 		You can replace these dummy fields with API data later.
 	===================================================== */
-	const mappingValueOptions: any = {
-		SO: [
-			{
-				label: "SO Voucher Number",
-				value: "module.sOrderVoucherNumber",
-			},
-			{
-				label: "SO Voucher Date",
-				value: "module.sOrderVoucherDate",
-			},
-			{
-				label: "SO Customer Name",
-				value: "module.sOrderCustomerName",
-			},
-			{
-				label: "SO Body",
-				value: "sOrderBody",
-			},
-			{
-				label: "SO Footer",
-				value: "sOrderFooter",
-			},
-		],
+	const makeOptionsFromKeys = (keys: any[] = []) => {
+		if (!Array.isArray(keys)) return [];
 
-		Company: [
-			{
-				label: "Company Name",
-				value: "companyMaster.companyName",
-			},
-			{
-				label: "Company Email",
-				value: "companyMaster.companyEmail",
-			},
-			{
-				label: "Company Mobile",
-				value: "companyMaster.companyMobile",
-			},
-			{
-				label: "GST Number",
-				value: "companyMaster.gstNumber",
-			},
-			{
-				label: "Company State",
-				value: "companyMaster.state",
-			},
-		],
+		return keys.map((item: any) => {
+			if (typeof item === "string") {
+				return {
+					label: getTemplateKeyLabel(item),
+					value: item,
+				};
+			}
 
-		Account: [
-			{
-				label: "Account Name",
-				value: "accountMaster.accountName",
-			},
-			{
-				label: "Account Address",
-				value: "accountMaster.accountAddress",
-			},
-			{
-				label: "Account GST Number",
-				value: "accountMaster.gstNumber",
-			},
-			{
-				label: "Account PAN Number",
-				value: "accountMaster.panNumber",
-			},
-		],
+			const value = item?.value || item?.key || item?.name || item?.label || "";
+
+			return {
+				label: item?.label || getTemplateKeyLabel(value),
+				value,
+			};
+		});
 	};
 
+	const moduleKeyOptions = makeOptionsFromKeys(
+		moduleWiseKeys?.namespacedModuleKeys || []
+	);
+
+	const companyKeyOptions = makeOptionsFromKeys(
+		moduleWiseKeys?.namespacedCompanyMaster || []
+	);
+
+	const accountKeyOptions = makeOptionsFromKeys(
+		moduleWiseKeys?.namespacedAccountMaster || []
+	);
+
+	const selectedTabOptions =
+		fieldForm.tab === "Module"
+			? moduleKeyOptions
+			: fieldForm.tab === "Company"
+				? companyKeyOptions
+				: fieldForm.tab === "Account"
+					? accountKeyOptions
+					: [];
 	/* =====================================================
 		GET ALL REPORT MAPPING LIST
 
@@ -846,10 +182,10 @@ const ReportMapping = () => {
 		REFRESH LIST
 	===================================================== */
 	const handleRefresh = async () => {
-		setRefreshing(true);
+		// setRefreshing(true);
 		await fetchReportMapping();
 		toast.success("Report mapping list refreshed");
-		setRefreshing(false);
+		// setRefreshing(false);
 	};
 
 	/* =====================================================
@@ -905,10 +241,23 @@ const ReportMapping = () => {
 		Converts templateMappings object to mappingFields array
 		so that user can edit/delete fields in UI.
 	===================================================== */
+
 	const openEditModal = (p: any) => {
 		setEditingReport(p);
 		setErrors({});
 		setIsEditingFields(false);
+
+		const selectedModuleType = p?.moduleType || "";
+
+		if (selectedModuleType) {
+			dispatch(
+				getAllModulesWiseKey({
+					moduleType: selectedModuleType,
+					offset: 0,
+					limit: 100,
+				}) as any
+			);
+		}
 
 		const mappingFields = Object.entries(p?.templateMappings || {}).map(
 			([key, value]: any) => ({
@@ -921,7 +270,7 @@ const ReportMapping = () => {
 
 		setReportForm({
 			templateName: p?.templateName || "",
-			moduleType: p?.moduleType || "",
+			moduleType: selectedModuleType,
 			file: null,
 			templateMappings: p?.templateMappings || {},
 			mappingFields,
@@ -930,10 +279,28 @@ const ReportMapping = () => {
 		setShowModal(true);
 	};
 
+
+	const getOptionsByValue = (value: string) => {
+		if (!value) return selectedTabOptions;
+
+		if (value.startsWith("companyMaster.")) {
+			return companyKeyOptions;
+		}
+
+		if (value.startsWith("accountMaster.")) {
+			return accountKeyOptions;
+		}
+
+		if (value.startsWith("module.")) {
+			return moduleKeyOptions;
+		}
+
+		return selectedTabOptions;
+	};
+
 	/* =====================================================
 		VALIDATE AND SAVE REPORT MAPPING
 
-		Currently console only.
 		Add create/update API call here.
 	===================================================== */
 	/* =====================================================
@@ -982,22 +349,15 @@ const ReportMapping = () => {
 				JSON.stringify(reportForm.templateMappings)
 			);
 
-			/*
-				IMPORTANT:
-				Backend expects key name: file
-				Postman also uses key: file
-			*/
+
 			if (reportForm.file instanceof File) {
 				formData.append("file", reportForm.file, reportForm.file.name);
 			}
 
-			/*
-				Debug FormData correctly.
-				Do not console.log(formData) directly.
-			*/
-			for (const pair of formData.entries()) {
-				console.log(pair[0], pair[1]);
-			}
+
+			// for (const pair of formData.entries()) {
+			// 	console.log(pair[0], pair[1]);
+			// }
 
 			if (editingReport) {
 				await dispatch(
@@ -1057,9 +417,8 @@ const ReportMapping = () => {
 		const updatedFields = [...reportForm.mappingFields, newField];
 
 		syncTemplateMappings(updatedFields);
-
 		setFieldForm({
-			tab: "SO",
+			tab: "Module", // first tab selected
 			key: "",
 			type: "dropdown",
 			value: "",
@@ -1111,8 +470,8 @@ const ReportMapping = () => {
 ===================================================== */
 	const handleDeleteConfirm = async () => {
 		try {
-			await dispatch(
-				deleteReportMapping(confirmTooltip.templateFileId) as any
+			// @ts-ignore
+			await dispatch(deleteReportMapping(confirmTooltip.templateFileId) as any
 			).unwrap();
 
 			toast.success("Report deleted");
@@ -1128,9 +487,56 @@ const ReportMapping = () => {
 			});
 		}
 	};
+	/* =====================================================
+		GET SHORT MODULE LABEL FOR FIRST TAB
+	
+		salesOrder      -> SO
+		purchaseInvoice -> PI
+		grn             -> GRN
+	===================================================== */
+	const getModuleShortLabel = (moduleTypeValue: string) => {
+		if (!moduleTypeValue) return "Module";
 
+		const words = String(moduleTypeValue)
+			.replace(/([A-Z])/g, " $1")
+			.trim()
+			.split(/\s+/);
+
+		if (words.length === 1) {
+			return words[0].toUpperCase();
+		}
+
+		return words
+			.map((word) => word.charAt(0).toUpperCase())
+			.join("");
+	};
+
+	const dynamicModuleTabLabel = getModuleShortLabel(reportForm.moduleType);
+
+	/*
+		label = what user sees
+		value = what we store in fieldForm.tab
+	*/
+	const fieldTabs = [
+		{ label: dynamicModuleTabLabel, value: "Module" },
+		{ label: "Company", value: "Company" },
+		{ label: "Account", value: "Account" },
+	];
+
+
+	const activeFieldTab = fieldForm.tab || "Module";
+
+	useEffect(() => {
+		if (showFieldModal) {
+			setFieldForm((prev: any) => ({
+				...prev,
+				tab: "Module",
+				value: "",
+			}));
+		}
+	}, [showFieldModal]);
 	return (
-		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
+		<div className="w-full bg-white border border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-[100%]">
 			{/* ================= HEADER ================= */}
 			<div id="unit-header" className="flex items-center mb-3">
 				<div id="unit-summary" className="flex items-start gap-3">
@@ -1146,6 +552,7 @@ const ReportMapping = () => {
 				<div className="ml-auto flex items-center gap-2">
 					{/* Module Type Filter */}
 					<div className="flex-1 min-w-[220px] h-9 rounded-md">
+
 						<SelectInput
 							label=""
 							value={moduleType}
@@ -1155,7 +562,10 @@ const ReportMapping = () => {
 							}}
 							className="cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md"
 							options={[
-								{ label: "All Modules", value: "" },
+								{
+									label: modulesLoading ? "Loading Modules..." : "All Modules",
+									value: "",
+								},
 								...moduleOptions,
 							]}
 						/>
@@ -1166,14 +576,16 @@ const ReportMapping = () => {
 
 					{/* Refresh */}
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
-
+					<Permission module="bookez" permissionKey="reportMappingMaster" action="create">
 					{/* Add Report */}
+					{/* @ts-ignore */}
 					<DataCreateButton
 						{...{
 							callBackFn: openAddModal,
 							text: "Add Report",
 						}}
-					/>
+						/>
+					</Permission>
 				</div>
 			</div>
 
@@ -1186,36 +598,31 @@ const ReportMapping = () => {
 				actions={(report: any) => (
 					<div className="flex items-center gap-2">
 						{/* Edit Report */}
+						<Permission module="bookez" permissionKey="reportMappingMaster" action="update">
 						<button
 							id="unit-edit-button"
 							onClick={() => openEditModal(report)}
-							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
+							className="p-2 rounded-md text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
 						>
 							<Edit size={16} />
 						</button>
-
+						</Permission>
 						{/* Delete Report */}
+						<Permission module="bookez" permissionKey="reportMappingMaster" action="delete">
 						<button
 							id="unit-delete-button"
-							onClick={(e) => {
-								const rect = e.currentTarget.getBoundingClientRect();
-
-								let x = rect.left - 150;
+							onClick={(e: any) => {
+								const rect: any = e.currentTarget.getBoundingClientRect();
+								let x: any = rect.left - 150;
 								if (x < 10) x = 10;
-
-								const y = rect.top + window.scrollY - 5;
-
-								setConfirmTooltip({
-									show: true,
-									x,
-									y,
-									templateFileId: report.templateFileId,
-								});
+								const y: any = rect.top + window.scrollY - 5;
+								setConfirmTooltip({ show: true, x, y, templateFileId: report.templateFileId, });
 							}}
-							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+							className="p-2 rounded-md text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
 						>
 							<Trash2 size={16} />
-						</button>
+							</button>
+						</Permission>
 					</div>
 				)}
 			/>
@@ -1258,13 +665,14 @@ const ReportMapping = () => {
 			)}
 
 			{/* ================= REPORT MAPPING MODAL ================= */}
+			{/* @ts-ignore */}
 			<Modal
 				{...{
 					show: showModal,
 					setShow: setShowModal,
 					handleSubmit: handleSaveReportMapping,
 					state: editingReport,
-					title: "Report Mapping",
+					title: "Add New Report Mapping",
 					body: (
 						<>
 							{/* Report Title */}
@@ -1281,18 +689,37 @@ const ReportMapping = () => {
 								placeholder="Enter report title"
 								error={errors.templateName}
 							/>
-
 							{/* Module Type */}
 							<SelectInput
 								label="Select Dropdown"
 								mandatory={true}
 								value={reportForm.moduleType}
-								onChange={(e: any) =>
-									setReportForm({
-										...reportForm,
-										moduleType: e.target.value,
-									})
-								}
+								onChange={(e: any) => {
+									const selectedModuleType = e.target.value;
+
+									setReportForm((prev: any) => ({
+										...prev,
+										moduleType: selectedModuleType,
+										templateMappings: {},
+										mappingFields: [],
+									}));
+
+									setFieldForm((prev: any) => ({
+										...prev,
+										tab: "Module",
+										value: "",
+									}));
+
+									if (selectedModuleType) {
+										dispatch(
+											getAllModulesWiseKey({
+												moduleType: selectedModuleType,
+												offset: 0,
+												limit: 100,
+											}) as any
+										);
+									}
+								}}
 								options={[
 									{ label: "Select Dropdown", value: "" },
 									...moduleOptions,
@@ -1334,7 +761,6 @@ const ReportMapping = () => {
 											"Select Word File (.doc, .docx)"}
 									</span>
 								</label>
-
 								{errors.file && (
 									<p className="mt-1 text-xs text-red-500">
 										{errors.file}
@@ -1348,7 +774,7 @@ const ReportMapping = () => {
 									type="button"
 									onClick={() => {
 										setFieldForm({
-											tab: "SO",
+											tab: "Module", // first tab selected
 											key: "",
 											type: "dropdown",
 											value: "",
@@ -1398,7 +824,6 @@ const ReportMapping = () => {
 										- edit key
 										- change type dropdown/custom
 										- edit value
-										- delete field
 									===================================================== */
 									<div className="space-y-4">
 										{reportForm.mappingFields.map(
@@ -1472,25 +897,19 @@ const ReportMapping = () => {
 														{/* Value Edit */}
 														<div className="md:col-span-2">
 															{item.type === "dropdown" ? (
+
 																<SelectInput
 																	label="Value"
 																	value={item.value}
 																	onChange={(e: any) =>
-																		updateMappingField(
-																			index,
-																			"value",
-																			e.target.value
-																		)
+																		updateMappingField(index, "value", e.target.value)
 																	}
 																	options={[
 																		{
-																			label:
-																				"Select Dropdown",
+																			label: moduleWiseKeysLoading ? "Loading Keys..." : "Select Dropdown",
 																			value: "",
 																		},
-																		...mappingValueOptions[
-																		fieldForm.tab
-																		],
+																		...getOptionsByValue(item.value),
 																	]}
 																/>
 															) : (
@@ -1566,8 +985,12 @@ const ReportMapping = () => {
 															<span className="font-semibold text-gray-500">
 																Value
 															</span>
-															<span className="truncate font-semibold text-gray-900">
+															{/* <span className="truncate font-semibold text-gray-900">
 																{finalValue}
+															</span> */}
+
+															<span className="truncate font-semibold text-gray-900">
+																{item.type === "custom" ? finalValue : getTemplateKeyLabel(finalValue)}
 															</span>
 														</div>
 													</div>
@@ -1583,36 +1006,41 @@ const ReportMapping = () => {
 			/>
 
 			{/* ================= ADD KEY VALUE MODAL ================= */}
+			{/* @ts-ignore */}
 			<Modal
 				{...{
 					show: showFieldModal,
 					setShow: setShowFieldModal,
 					handleSubmit,
 					state: null,
-					title: "Key-Value Fields",
+					title: "Add New Key-Value Fields",
 					body: (
 						<>
 							{/* Tabs */}
 							<div className="col-span-2 grid grid-cols-3 rounded-md bg-gray-100 p-1">
-								{["SO", "Company", "Account"].map((tab) => (
-									<button
-										key={tab}
-										type="button"
-										onClick={() =>
-											setFieldForm({
-												...fieldForm,
-												tab,
-												value: "",
-											})
-										}
-										className={`rounded-md py-2 text-sm font-semibold transition-all ${fieldForm.tab === tab
-											? "bg-indigo-600 text-white shadow-sm"
-											: "text-gray-600 hover:bg-white"
-											}`}
-									>
-										{tab}
-									</button>
-								))}
+								{fieldTabs.map((tab) => {
+									const isSelected = activeFieldTab === tab.value;
+
+									return (
+										<button
+											key={tab.value}
+											type="button"
+											onClick={() =>
+												setFieldForm((prev: any) => ({
+													...prev,
+													tab: tab.value,
+													value: "",
+												}))
+											}
+											className={`rounded-md py-2 text-sm font-semibold transition-all ${isSelected
+												? "bg-indigo-600 text-white shadow-sm"
+												: "text-gray-600 hover:bg-white"
+												}`}
+										>
+											{tab.label}
+										</button>
+									);
+								})}
 							</div>
 
 							{/* Key Input */}
@@ -1680,8 +1108,11 @@ const ReportMapping = () => {
 											})
 										}
 										options={[
-											{ label: "Select Dropdown", value: "" },
-											...mappingValueOptions[fieldForm.tab],
+											{
+												label: moduleWiseKeysLoading ? "Loading Keys..." : "Select Dropdown",
+												value: "",
+											},
+											...selectedTabOptions,
 										]}
 									/>
 								) : (

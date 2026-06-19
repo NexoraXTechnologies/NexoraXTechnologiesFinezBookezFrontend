@@ -9,7 +9,7 @@ import { formatIndianNumber, formatIndianNumberSmart, indianInputToRaw } from '.
 /* =====================================================================================
   SMALL HELPERS (non-RN-interest)
 ===================================================================================== */
-const calcAge = (dobStr, refDateStr) => {
+const calcAge = (dobStr: string, refDateStr: string) => {
   const dob = toDateOnly(dobStr);
   const ref = toDateOnly(refDateStr);
   if (!dob || !ref) return 0;
@@ -19,12 +19,12 @@ const calcAge = (dobStr, refDateStr) => {
   return Math.max(0, age);
 };
 
-const roundToNearest10 = (x) => Math.round(toNum(x) / 10) * 10;
+const roundToNearest10 = (x: any) => Math.round(toNum(x) / 10) * 10;
 
-const sortSlabs = (arr = []) => [...arr].sort((a, b) => toNum(a.from) - toNum(b.from));
-const calculateTaxFromSlabs = (income, slabs = []) => {
+const sortSlabs = (arr = []) => [...arr].sort((a: any, b: any) => toNum(a.from) - toNum(b.from));
+const calculateTaxFromSlabs = (income: any, slabs = []) => {
   const inc = Math.max(0, toNum(income));
-  const slabsSorted = sortSlabs(slabs);
+  const slabsSorted: any[] = sortSlabs(slabs);
   let tax = 0;
 
   for (const slab of slabsSorted) {
@@ -56,7 +56,7 @@ const DEFAULT_SLABS = {
   ],
 };
 
-const getRegime = (sections, value) => {
+const getRegime = (sections: any, value: any) => {
   const r = value?.regime || sections?.meta?.regime || sections?.payload?.meta?.regime || sections?.step1?.taxRegime || sections?.taxRegime;
 
   if (!r) return 'NEW';
@@ -65,7 +65,7 @@ const getRegime = (sections, value) => {
   return 'NEW';
 };
 
-const rebate87A = ({ regime, salaryTotal, rawTax }) => {
+const rebate87A = ({ regime, salaryTotal, rawTax }: { regime: string; salaryTotal: any; rawTax: any }) => {
   const salary = toNum(salaryTotal);
   const raw = toNum(rawTax);
 
@@ -77,7 +77,7 @@ const rebate87A = ({ regime, salaryTotal, rawTax }) => {
 };
 
 // Port your RN rebate87AB as-is
-const rebate87AB_RNPort = ({ regime, taxableIncomePayable, rawTax }) => {
+const rebate87AB_RNPort = ({ regime, taxableIncomePayable, rawTax }: { regime: string; taxableIncomePayable: any; rawTax: any }) => {
   if (regime !== 'NEW') return 0;
   const a = toNum(taxableIncomePayable) - 700000;
   if (a < 0) return 0;
@@ -89,23 +89,23 @@ const rebate87AB_RNPort = ({ regime, taxableIncomePayable, rawTax }) => {
 /* =====================================================================================
   EXTRACTORS
 ===================================================================================== */
-function extractNetSalary(sections) {
+function extractNetSalary(sections: any) {
   return toNum(sections?.incomeFromSalary?.netSalary ?? sections?.step2?.netSalary);
 }
-function extractHousePropertyIncome(sections) {
+function extractHousePropertyIncome(sections: any) {
   return toNum(sections?.houseProperty?.totalIncomeFromHouseProperty ?? sections?.step3?.incomeChargable);
 }
-function extractOtherIncome(sections) {
+function extractOtherIncome(sections: any) {
   return toNum(sections?.incomeOtherSources?.netOtherIncome ?? sections?.incomeOtherSources?.totalIncomeOtherSources ?? sections?.step4?.totalIncomeOtherSources);
 }
-function extractTotalDividend(sections) {
+function extractTotalDividend(sections: any) {
   return toNum(sections?.incomeOtherSources?.dividend?.totalDividend ?? sections?.step4?.totalDividend);
 }
-function extractTotalDeductions(sections) {
+function extractTotalDeductions(sections: any) {
   return toNum(sections?.totalDeductions?.totalDeduction ?? sections?.step5?.TotalChapVIADeductions);
 }
 
-function calculateSlabIncome_RNStyle(sections, dividendOverride) {
+function calculateSlabIncome_RNStyle(sections: any, dividendOverride: any) {
   const salary = extractNetSalary(sections);
   const hp = extractHousePropertyIncome(sections);
   const other = extractOtherIncome(sections);
@@ -119,7 +119,7 @@ function calculateSlabIncome_RNStyle(sections, dividendOverride) {
   return salary + hp + divOverride + other - totalDividend - deductions;
 }
 
-function calculateTotalTaxableIncome_RNStyle(sections) {
+function calculateTotalTaxableIncome_RNStyle(sections: any) {
   const salary = extractNetSalary(sections);
   const hp = extractHousePropertyIncome(sections);
   const other = extractOtherIncome(sections);
@@ -127,17 +127,17 @@ function calculateTotalTaxableIncome_RNStyle(sections) {
   return salary + hp + other - deductions;
 }
 
-function extractSalaryTotalFor87A_RNStyle(sections) {
+function extractSalaryTotalFor87A_RNStyle(sections: any) {
   return extractNetSalary(sections) + extractHousePropertyIncome(sections) + extractOtherIncome(sections);
 }
 
-function extractTdsTcs(sections) {
+function extractTdsTcs(sections: any) {
   const list = sections?.taxesPaid?.tdsData || sections?.step7?.taxesPaid?.tdsData || [];
   if (!Array.isArray(list)) return 0;
   return list.reduce((sum, row) => sum + toNum(row.amount), 0);
 }
 
-function extractAdvanceTaxes(sections) {
+function extractAdvanceTaxes(sections: any) {
   const listA = sections?.taxesPaid?.advanceTaxes;
   if (Array.isArray(listA)) return listA;
 
@@ -148,7 +148,7 @@ function extractAdvanceTaxes(sections) {
   return [];
 }
 
-function extractAssessmentYear(sections) {
+function extractAssessmentYear(sections: any) {
   return (
     sections?.incomeOtherSources?.assessmentYear ||
     sections?.assessmentYear ||
@@ -161,7 +161,7 @@ function extractAssessmentYear(sections) {
 /* =====================================================================================
   UI
 ===================================================================================== */
-const BigRupeeInput = ({ label, value, disabled = true, onChange }) => (
+const BigRupeeInput = ({ label, value, disabled = true, onChange }: { label: string; value: any; disabled?: boolean; onChange?: (value: string) => void }) => (
   <div>
     <label className="text-xs text-gray-600 mb-1 block">{label}</label>
     <div className="relative">
@@ -177,7 +177,7 @@ const BigRupeeInput = ({ label, value, disabled = true, onChange }) => (
     </div>
   </div>
 );
-const InterestField = ({ label, value, onOpen }) => (
+const InterestField = ({ label, value, onOpen }: { label: string; value: any; onOpen: () => void }) => (
   <div className="flex items-end gap-2">
     <div className="flex-1">
       <BigRupeeInput label={label} value={value} />
@@ -188,7 +188,7 @@ const InterestField = ({ label, value, onOpen }) => (
   </div>
 );
 
-const CenterTableModal = ({ title, open, onClose, children }) => {
+const CenterTableModal = ({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 px-3">
@@ -210,7 +210,7 @@ const CenterTableModal = ({ title, open, onClose, children }) => {
   );
 };
 
-const WebInterestTable = ({ headers = [], rows = [], totalRow }) => (
+const WebInterestTable = ({ headers = [], rows = [], totalRow }: { headers?: string[]; rows?: any[][]; totalRow?: number }) => (
   <div className="mt-3 border rounded-md bg-white">
     <div className="overflow-x-auto">
       <table className="min-w-[950px] w-full text-sm border-collapse">
@@ -252,10 +252,10 @@ const WebInterestTable = ({ headers = [], rows = [], totalRow }) => (
 /* =====================================================================================
   MAIN COMPONENT
 ===================================================================================== */
-export default function Computations({ value, onClose, onSave, completeDetail, assessmentYear: ayProp, meta }) {
+export default function Computations({ value, onClose, onSave, completeDetail, assessmentYear: ayProp, meta }: { value: any; onClose: () => void; onSave: () => void; completeDetail: any; assessmentYear: string; meta: any }) {
   const dispatch = useDispatch();
-  const taxSlabs = useSelector((s) => s?.alldropdown?.taxSlabs);
-  const assessmentYearsRaw = useSelector((s) => s?.alldropdown?.assessmentYears);
+  const taxSlabs = useSelector((s: any) => s?.alldropdown?.taxSlabs);
+  const assessmentYearsRaw = useSelector((s: any) => s?.alldropdown?.assessmentYears);
 
   const sections = completeDetail || {};
   const assessmentYear = useMemo(() => ayProp || extractAssessmentYear(sections), [ayProp, sections]);
@@ -269,17 +269,19 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
 
   useEffect(() => {
     if (assessmentYearList?.length) return;
+    {/* @ts-ignore */ }
     dispatch(fetchAssessmentYearDropdown({ search: '', offset: 0, limit: 50 }));
   }, [dispatch, assessmentYearList?.length]);
 
   const ayRow = useMemo(() => {
-    return assessmentYearList.find((x) => x.assessmentYear === assessmentYear) || null;
+    return assessmentYearList.find((x: any) => x.assessmentYear === assessmentYear) || null;
   }, [assessmentYearList, assessmentYear]);
 
   useEffect(() => {
     if (!assessmentYear) return;
     const alreadyLoaded = taxSlabs?.assessmentYear === assessmentYear && (taxSlabs?.newSlabs?.length || taxSlabs?.oldSlabs?.length);
     if (alreadyLoaded) return;
+    {/* @ts-ignore */ }
     dispatch(fetchTaxSlabsByAssessmentYear({ assessmentYear }));
   }, [dispatch, assessmentYear, taxSlabs?.assessmentYear, taxSlabs?.newSlabs?.length, taxSlabs?.oldSlabs?.length]);
 
@@ -351,7 +353,7 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
 
   // -------- RN-style block sums for 234C (same as StepEight.calculateBlocks) --------
   const calculateBlocksRN = useCallback(
-    (rangeOf234C) => {
+    (rangeOf234C: any) => {
       const adv = extractAdvanceTaxes(sections) || [];
       const d1 = toDateOnly(rangeOf234C?.first);
       const d2 = toDateOnly(rangeOf234C?.second);
@@ -379,7 +381,7 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
   );
 
   const recompute = useCallback(
-    (reliefOverride) => {
+    (reliefOverride: string | null) => {
       const regime = getRegime(sections, value);
       const slabs = regime === 'OLD' ? resolvedSlabs.OLD : resolvedSlabs.NEW;
 
@@ -387,6 +389,7 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
       const totalIncomeTaxable = calculateTotalTaxableIncome_RNStyle(sections);
 
       // RN slab income base
+      {/* @ts-ignore */ }
       const slabIncome = calculateSlabIncome_RNStyle(sections);
 
       const rawTax = calculateTaxFromSlabs(slabIncome, slabs);
@@ -432,12 +435,12 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
       const age = calcAge(dob, ayRow?.lastDate234B);
 
       // ---- 234C ---- (match RN StepEight + Interest234CTable)
-      const q1 = dividendQuarters.q1;
-      const q2 = dividendQuarters.q2;
-      const q3 = dividendQuarters.q3;
-      const q4 = dividendQuarters.q4;
-      const q5 = dividendQuarters.q5;
-      const totalDividend = dividendQuarters.total;
+      const q1: any = dividendQuarters.q1;
+      const q2: any = dividendQuarters.q2;
+      const q3: any = dividendQuarters.q3;
+      const q4: any = dividendQuarters.q4;
+      const q5: any = dividendQuarters.q5;
+      const totalDividend: any = dividendQuarters.total;
 
       const incomeNoDividendBase = extractNetSalary(sections) + extractHousePropertyIncome(sections) + extractOtherIncome(sections) - extractTotalDeductions(sections) - totalDividend;
 
@@ -455,7 +458,7 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
       const blocks = calculateBlocksRN(ayRow?.rangeOf234C);
 
       // totalTaxAndCess First..Fourth (dividend override) like RN StepEight
-      const computeTotalTaxAndCessWithDividendOverride = (divOverride) => {
+      const computeTotalTaxAndCessWithDividendOverride = (divOverride: string | null) => {
         const slabIncomeX = calculateSlabIncome_RNStyle(sections, divOverride);
         const rawTaxX = calculateTaxFromSlabs(slabIncomeX, slabs);
 
@@ -504,9 +507,10 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
       const openingBalance234B = netAfterTds <= 10000 || netAfterTds * 0.9 <= totalAdvancePaidTillLastDate234B ? 0 : netAfterTds - totalAdvancePaidTillLastDate234B;
 
       // ---- RN-ported 234A/234B monthly table calculation ----
+      // @ts-ignore
       const depositsForInterest = normalizeDepositsRN(advanceTaxes);
 
-      const rowsRN = calculateInterestTableRN({
+      const rowsRN: any[] = calculateInterestTableRN({
         calculateAccToAge: age,
         openingPrincipal234B: openingBalance234B,
         openingPrincipal234AF: openingBalance234AF,
@@ -595,10 +599,11 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
   useEffect(() => {
     if (!completeDetail) return;
     if (!assessmentYear) return;
+    {/* @ts-ignore */ }
     recompute();
   }, [completeDetail, assessmentYear, ayRow, recompute]);
 
-  const handleChange = (field, val) => {
+  const handleChange = (field: string, val: string) => {
     if (field === 'relief89') {
       recompute(val);
       return;
@@ -607,7 +612,7 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
   };
 
   const view = useMemo(() => form, [form]);
-  const [openPopup, setOpenPopup] = useState(null); // "234A" | "234B" | "234C" | null
+  const [openPopup, setOpenPopup]: any = useState(null); // "234A" | "234B" | "234C" | null
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 px-3">
@@ -655,8 +660,8 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
 
           <button
             className="px-5 py-2 bg-blue-600 text-white rounded-md"
-            onClick={() => {
-              const payload = {
+            onClick={() => { 
+              const payload: any = {
                 totalIncomeTaxPayable: String(form.totalIncomeTaxPayable ?? '0'),
                 taxPayable: String(form.taxPayable ?? '0'),
                 rebate87A: String(form.rebate87A ?? '0'),
@@ -680,6 +685,7 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
                 table234B: Array.isArray(form.table234B) ? form.table234B : [],
                 table234C: Array.isArray(form.table234C) ? form.table234C : [],
               };
+              // @ts-ignore
               onSave?.(payload);
             }}>
             Save
@@ -690,24 +696,16 @@ export default function Computations({ value, onClose, onSave, completeDetail, a
           {openPopup === '234C' && (
             <WebInterestTable
               headers={['S.No', 'Installment', 'Total Tax', '%', 'Required', 'Paid Till', 'Shortfall (₹100)', 'Months', 'Interest']}
-              rows={(view.table234C || []).map((r) => [r.sno, r.period, r.totalTaxDue, r.percent, r.required, r.paidTillDate, r.shortfall, r.months, r.interest])}
-              totalRow={(view.table234C || []).reduce((s, r) => s + toNum(r.interest), 0)}
+              rows={(view.table234C || []).map((r: any) => [r.sno, r.period, r.totalTaxDue, r.percent, r.required, r.paidTillDate, r.shortfall, r.months, r.interest])}
+              totalRow={(view.table234C || []).reduce((s: any, r: any) => s + toNum(r.interest), 0)}
             />
           )}
 
           {openPopup === '234A' && (
             <WebInterestTable
               headers={['Month', 'Principal', 'Interest', 'Deposit', 'Int Adjusted', 'Int Remain', 'Principal Adjusted']}
-              rows={(view.table234A || []).map((r) => [r.month, r.principal, r.interest, r.deposit, r.interestAdjusted, r.interestRemaining, r.principalAdjusted])}
-              totalRow={(view.table234A || []).reduce((s, r) => s + toNum(r.interest), 0)}
-            />
-          )}
-
-          {openPopup === '234B' && (
-            <WebInterestTable
-              headers={['Month', 'Principal', 'Interest', 'Deposit', 'Int Adjusted', 'Int Remain', 'Principal Adjusted']}
-              rows={(view.table234B || []).map((r) => [r.month, r.principal, r.interest, r.deposit, r.interestAdjusted, r.interestRemaining, r.principalAdjusted])}
-              totalRow={(view.table234B || []).reduce((s, r) => s + toNum(r.interest), 0)}
+              rows={(view.table234A || []).map((r: any) => [r.month, r.principal, r.interest, r.deposit, r.interestAdjusted, r.interestRemaining, r.principalAdjusted])}
+              totalRow={(view.table234A || []).reduce((s: any, r: any) => s + toNum(r.interest), 0)}
             />
           )}
         </CenterTableModal>

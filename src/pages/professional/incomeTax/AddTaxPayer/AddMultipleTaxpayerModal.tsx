@@ -52,12 +52,12 @@ const REQUIRED_HEADERS = [
   "bank2_isDefaultACC",
 ];
 
-const AddMultipleTaxpayerModal = ({ onClose }) => {
+const AddMultipleTaxpayerModal = ({ onClose }: { onClose: () => void }) => {
   const dispatch = useDispatch();
-  const [fileData, setFileData] = useState([]);
+  const [fileData, setFileData]: any = useState([]);
   const [loading, setLoading] = useState(false);
   const [tableHeaders, setTableHeaders] = useState([]);
-  const cleanHeader = (header) => {
+  const cleanHeader = (header: any) => {
     return header.replace("*", "").trim();
   };
 
@@ -72,8 +72,8 @@ const AddMultipleTaxpayerModal = ({ onClose }) => {
     toast.success("Template downloading…");
   };
 
-  const handleUploadExcel = (e) => {
-    const file = e.target.files[0];
+  const handleUploadExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.name.match(/\.(xlsx|xls)$/)) {
@@ -82,21 +82,21 @@ const AddMultipleTaxpayerModal = ({ onClose }) => {
     }
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = (evt: any) => {
       const workbook = XLSX.read(evt.target.result, { type: "binary" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       // Read sheet with header: 1 to get raw rows
-      const raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const raw: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      const excelHeaders = raw[0].map((h) => cleanHeader(h));
+      const excelHeaders = raw[0].map((h: any) => cleanHeader(h));
 
       // Final headers = Excel headers OR optionally REQUIRED_HEADERS
       // const finalHeaders = excelHeaders;
 
       // Convert rows to objects, preserving all headers even if empty
-      const data = raw.slice(1).map((row) => {
-        const obj = {};
-        excelHeaders.forEach((h, i) => {
+      const data = raw.slice(1).map((row: any) => {
+        const obj: any = {};
+        excelHeaders.forEach((h: any, i: number) => {
           obj[h] = row[i] !== undefined ? row[i] : "";
         });
         return obj;
@@ -108,7 +108,7 @@ const AddMultipleTaxpayerModal = ({ onClose }) => {
       }
 
       const headers = Object.keys(data[0]);
-      const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
+      const missing = REQUIRED_HEADERS.filter((h: any) => !headers.includes(h));
 
       if (missing.length > 0) {
         toast.warn("Some optional headers are missing: " + missing.join(", "));
@@ -191,9 +191,10 @@ const AddMultipleTaxpayerModal = ({ onClose }) => {
         },
       };
       try {
+        // @ts-ignore
         await dispatch(addTaxpayer(payload)).unwrap();
         success++;
-      } catch (err) {
+      } catch (err: any) {
         failed++;
 
         // 🔥 Show backend error message
@@ -269,7 +270,7 @@ const AddMultipleTaxpayerModal = ({ onClose }) => {
 
                   {/* Rows */}
                   <tbody>
-                    {fileData.map((row, idx) => (
+                    {fileData.map((row: any, idx: any) => (
                       <tr
                         key={idx}
                         className={idx % 2 === 0 ? "bg-white" : "bg-blue-50"}

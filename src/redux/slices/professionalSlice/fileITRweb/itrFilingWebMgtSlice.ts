@@ -6,7 +6,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 // =======================================================
 export const getAllItrFilingWeb = createAsyncThunk(
   "itrFilingWebMgt/getAllItrFilingWeb",
-  async ({ page = 1, limit = 10, pan = "", objectKey = "" }, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, pan = "", objectKey = "" }: { page?: number; limit?: number; pan?: string; objectKey?: string }, { rejectWithValue }) => {
     try {
       const query = new URLSearchParams();
       const offset = (page - 1) * limit;
@@ -41,7 +41,7 @@ export const getAllItrFilingWeb = createAsyncThunk(
         },
         message: res.data?.message ?? null,
       };
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || err.message || "Something went wrong",
       });
@@ -68,7 +68,7 @@ export const saveItrFilingWeb = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err.response?.data?.message || "Failed to save ITR filing web record",
@@ -82,7 +82,7 @@ export const saveItrFilingWeb = createAsyncThunk(
 // =======================================================
 export const updateItrFilingWeb = createAsyncThunk(
   "itrFilingWebMgt/updateItrFilingWeb",
-  async ({ id, payload }, { rejectWithValue }) => {
+  async ({ id, payload }: { id: string; payload: any }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/users/fileITR_1/web/update/${id}`,
@@ -97,7 +97,7 @@ export const updateItrFilingWeb = createAsyncThunk(
       }
 
       return { id, data: res.data.data };
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err.response?.data?.message ||
@@ -112,7 +112,7 @@ export const updateItrFilingWeb = createAsyncThunk(
 // =======================================================
 export const getItrFilingWebById = createAsyncThunk(
   "itrFilingWebMgt/getItrFilingWebById",
-  async ({ pan, assessmentYear }, { rejectWithValue }) => {
+  async ({ pan, assessmentYear }: { pan: string; assessmentYear: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/users/fileITR_1/web/get/${pan}/${assessmentYear}`
@@ -125,7 +125,7 @@ export const getItrFilingWebById = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err.response?.data?.message ||
@@ -154,7 +154,7 @@ export const deleteItrFilingWeb = createAsyncThunk(
       }
 
       return id;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message:
           err.response?.data?.message ||
@@ -203,13 +203,13 @@ const itrFilingWebMgtSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(getAllItrFilingWeb.fulfilled, (state, action) => {
+      .addCase(getAllItrFilingWeb.fulfilled, (state, action:any) => {
         state.loading = false;
         state.records = action.payload.records;
         state.pagination = action.payload.pagination;
         state.summary = action.payload.summary;
       })
-      .addCase(getAllItrFilingWeb.rejected, (state, action) => {
+      .addCase(getAllItrFilingWeb.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -231,7 +231,7 @@ const itrFilingWebMgtSlice = createSlice({
         // optional: prepend to list
         // state.records = [action.payload, ...state.records];
       })
-      .addCase(saveItrFilingWeb.rejected, (state, action) => {
+      .addCase(saveItrFilingWeb.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -243,7 +243,7 @@ const itrFilingWebMgtSlice = createSlice({
         state.updateSuccess = false;
         state.error = null;
       })
-      .addCase(updateItrFilingWeb.fulfilled, (state, action) => {
+      .addCase(updateItrFilingWeb.fulfilled, (state:any, action) => {
         state.loading = false;
         state.updateSuccess = true;
 
@@ -254,23 +254,23 @@ const itrFilingWebMgtSlice = createSlice({
         const id = action.payload?.id;
         const updated = action.payload?.data;
         if (id && updated) {
-          const idx = state.records.findIndex((r) => (r._id || r.id) === id);
+          const idx = state.records.findIndex((r: any) => (r._id || r.id) === id);
           if (idx !== -1) state.records[idx] = updated;
         }
       })
-      .addCase(updateItrFilingWeb.rejected, (state, action) => {
+      .addCase(updateItrFilingWeb.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
 
     // DELETE
-    builder.addCase(deleteItrFilingWeb.fulfilled, (state, action) => {
+    builder.addCase(deleteItrFilingWeb.fulfilled, (state: any, action: any) => {
       state.loading = false;
       state.deleteSuccess = true;
 
       // optional: remove from list
       state.records = state.records.filter(
-        (r) => (r._id || r.id) !== action.payload
+        (r: any) => (r._id || r.id) !== action.payload
       );
       if ((state.selected?._id || state.selected?.id) === action.payload) {
         state.selected = null;

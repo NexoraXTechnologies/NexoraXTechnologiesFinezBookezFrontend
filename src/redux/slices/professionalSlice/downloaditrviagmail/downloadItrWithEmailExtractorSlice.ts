@@ -6,7 +6,7 @@ import professionalAxios from '../../../../services/professionalAxios';
 // POST
 // /eTaxSolnMongoApiBackend/users/gmailExtract/extractAttachments?subject=&messageBody=&financialYear=&type=
 // =======================================================
-export const extractGmailAttachments = createAsyncThunk('downloadItrWithEmailExtractor/extractGmailAttachments', async ({ subject = '', messageBody = '', financialYear = '', type = '', payload }, { rejectWithValue }) => {
+export const extractGmailAttachments = createAsyncThunk('downloadItrWithEmailExtractor/extractGmailAttachments', async ({ subject = '', messageBody = '', financialYear = '', type = '', payload }: { subject?: string; messageBody?: string; financialYear?: string; type?: string; payload: any }, { rejectWithValue }) => {
   try {
     const query = new URLSearchParams();
 
@@ -30,7 +30,7 @@ export const extractGmailAttachments = createAsyncThunk('downloadItrWithEmailExt
       pagination: res.data?.data?.pagination ?? {},
       message: res.data?.message ?? 'Attachments extracted successfully',
     };
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || err.message || 'Failed to extract attachments',
     });
@@ -75,7 +75,7 @@ export const downloadGmailAttachment = createAsyncThunk('downloadItrWithEmailExt
       success: true,
       fileName,
     };
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || err?.message || 'Failed to download attachment',
     });
@@ -101,7 +101,7 @@ export const checkGmailConnection = createAsyncThunk('downloadItrWithEmailExtrac
       connected: res.data?.data?.connected ?? false,
       message: res.data?.message ?? null,
     };
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || err.message || 'Failed to check Gmail connection',
     });
@@ -128,7 +128,7 @@ export const connectToGoogleGmail = createAsyncThunk('downloadItrWithEmailExtrac
       url: res.data?.data?.url ?? '',
       message: res.data?.message ?? null,
     };
-  } catch (err) {
+  } catch (err:any) {
     return rejectWithValue({
       message: err?.response?.data?.message || err.message || 'Failed to connect Gmail',
     });
@@ -207,14 +207,14 @@ const downloadItrWithEmailExtractorSlice = createSlice({
         state.error = null;
         state.extractSuccess = false;
       })
-      .addCase(extractGmailAttachments.fulfilled, (state, action) => {
+      .addCase(extractGmailAttachments.fulfilled, (state:any, action) => {
         state.loading = false;
         state.extractSuccess = true;
         state.attachments = action.payload.results || [];
         state.extractedData = action.payload;
         state.pagination = action.payload.pagination || state.pagination;
       })
-      .addCase(extractGmailAttachments.rejected, (state, action) => {
+      .addCase(extractGmailAttachments.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to extract attachments';
       });
@@ -226,12 +226,12 @@ const downloadItrWithEmailExtractorSlice = createSlice({
         state.error = null;
         state.downloadSuccess = false;
       })
-      .addCase(downloadGmailAttachment.fulfilled, (state, action) => {
+      .addCase(downloadGmailAttachment.fulfilled, (state, action:any) => {
         state.loading = false;
         state.downloadSuccess = true;
         state.downloadedFile = action.payload;
       })
-      .addCase(downloadGmailAttachment.rejected, (state, action) => {
+      .addCase(downloadGmailAttachment.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to download attachment';
       });
@@ -248,7 +248,7 @@ const downloadItrWithEmailExtractorSlice = createSlice({
         state.connectionCheckSuccess = true;
         state.gmailConnection.connected = action.payload.connected;
       })
-      .addCase(checkGmailConnection.rejected, (state, action) => {
+      .addCase(checkGmailConnection.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to check Gmail connection';
       });
@@ -266,7 +266,7 @@ const downloadItrWithEmailExtractorSlice = createSlice({
         state.gmailConnection.connected = action.payload.connected;
         state.gmailConnection.url = action.payload.url;
       })
-      .addCase(connectToGoogleGmail.rejected, (state, action) => {
+      .addCase(connectToGoogleGmail.rejected, (state, action:any) => {
         state.loading = false;
         state.error = action.payload?.message || 'Failed to connect Gmail';
       });

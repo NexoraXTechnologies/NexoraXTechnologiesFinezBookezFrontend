@@ -1,10 +1,9 @@
-import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, token, loading } = useSelector((state) => state.auth);
-  const location = useLocation();
+const ProtectedRoute = ({ children, allowedRoles }: any) => {
+  const { user, token, loading } = useSelector((state: any) => state.auth);
+// const location = useLocation();
 
   // PROFESSIONAL LOGIN CHECK
   const professionalHeaders = localStorage.getItem("professionalHeaders");

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshCcw, Edit, Eye, Plus, ArrowRightCircle } from "lucide-react";
-import { useDispatch, useSelector, useStore } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
@@ -19,11 +19,11 @@ const AddTaxPayer = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { taxpayers, pagination, loading } = useSelector((s) => s.taxpayer);
+  const { taxpayers, pagination, loading } = useSelector((s: any) => s.taxpayer);
 
   // pagination controls
-  const [localLimit, setLocalLimit] = useState(10);
-  const [localOffset, setLocalOffset] = useState(0);
+  // const [localLimit, setLocalLimit] = useState(10);
+  // const [localOffset, setLocalOffset] = useState(0);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -35,7 +35,7 @@ const AddTaxPayer = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
     const [prefillForAdd, setPrefillForAdd] = useState(null);
-    const [prefillPassword, setPrefillPassword] = useState('');
+  // const [prefillPassword, setPrefillPassword] = useState('');
 
   // modal for add taxpayer
   const [showAddModal, setShowAddModal] = useState(false);
@@ -54,16 +54,16 @@ const AddTaxPayer = () => {
 
   useEffect(() => {
     if (showInactive) {
-      dispatch(
-        getInactiveTaxPayers({
+      // @ts-ignore 
+      dispatch(getInactiveTaxPayers({
           search: debouncedSearch,
           page,
           limit,
         })
       );
     } else {
-      dispatch(
-        getAllTaxPayers({
+      // @ts-ignore 
+      dispatch(getAllTaxPayers({
           search: debouncedSearch,
           page,
           limit,
@@ -77,16 +77,16 @@ const AddTaxPayer = () => {
   ========================================== */
   const handleRefresh = async () => {
     if (showInactive) {
-      await dispatch(
-        getInactiveTaxPayers({
+      // @ts-ignore
+      await dispatch(getInactiveTaxPayers({
           search: debouncedSearch,
           page,
           limit,
         })
       );
     } else {
-      await dispatch(
-        getAllTaxPayers({
+      // @ts-ignore
+      await dispatch(getAllTaxPayers({
           search: debouncedSearch,
           page,
           limit,
@@ -99,7 +99,8 @@ const AddTaxPayer = () => {
   /* =========================================
       ACTION: VIEW TAXPAYER
   ========================================== */
-  const handleView = (pan) => {
+  const handleView = (pan: string) => {
+  // @ts-ignore
     dispatch(getTaxPayerDetails(pan))
       .unwrap()
       .then(() => {
@@ -111,9 +112,9 @@ const AddTaxPayer = () => {
   /* =========================================
       ACTION: EDIT TAXPAYER
   ========================================== */
-  const handleEdit = (taxpayer) => {
+  const handleEdit = (taxpayer: any) => {
     toast.info("Loading taxpayer...");
-
+    // @ts-ignore
     dispatch(getTaxPayerDetails(taxpayer.pan))
       .unwrap()
       .then(() => {
@@ -122,13 +123,13 @@ const AddTaxPayer = () => {
       .catch(() => toast.error("Failed to load taxpayer details"));
   };
 
-  const handleToggleStatus = async (taxpayer) => {
+  const handleToggleStatus = async (taxpayer: any) => {
     const currentStatus = taxpayer.status || "active";
     const newStatus = currentStatus === "active" ? "inactive" : "active";
 
     try {
-      await dispatch(
-        updateTaxpayerStatus({
+      // @ts-ignore
+      await dispatch(updateTaxpayerStatus({
           pan: taxpayer.pan,
           status: newStatus,
         })
@@ -142,23 +143,23 @@ const AddTaxPayer = () => {
 
       // 🔥 Refresh correct list (active OR inactive)
       if (showInactive) {
-        dispatch(
-          getInactiveTaxPayers({
+        // @ts-ignore
+        dispatch(getInactiveTaxPayers({
             search: debouncedSearch,
             page,
             limit,
           })
         );
       } else {
-        dispatch(
-          getAllTaxPayers({
+        // @ts-ignore
+        dispatch(getAllTaxPayers({
             search: debouncedSearch,
             page,
             limit,
           })
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error?.message || "Failed to update Tax Payer status");
     }
   };
@@ -232,7 +233,7 @@ const AddTaxPayer = () => {
                   </td>
                 </tr>
               ) : taxpayers?.length ? (
-                taxpayers?.map((t) => (
+                  taxpayers?.map((t: any) => (
                   <tr key={t._id} className="border-b hover:bg-gray-50">
                     <td className="px-3 py-2">{t.pan}</td>
                     <td className="px-3 py-2">{t.mobileNumber}</td>
@@ -405,14 +406,16 @@ const AddTaxPayer = () => {
           initialForm={prefillForAdd}
         />
       )}
+      {/* @ts-ignore */}
       {showEditModal && <AddNewTaxpayerModal mode="edit" onClose={() => setShowEditModal(false)} />}
       {showExistingModal && (
         <AddExistingTaxpayerModal
           onClose={() => setShowExistingModal(false)}
-          onSave={({ password, prefillRes }) => {
+          // @ts-ignore
+          onSave={({ password, prefillRes }: { password: string; prefillRes: any }) => {
             setShowExistingModal(false);
 
-            const mapped = mapPrefillToTaxpayerForm(prefillRes, password);
+            const mapped: any = mapPrefillToTaxpayerForm(prefillRes, password);
 
             setPrefillForAdd(mapped);
 

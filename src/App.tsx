@@ -13,7 +13,7 @@ import ProtectedUsersRoute from "./pages/professional/ProtectedUsersRoute";
 import Users from "./pages/professional/Users";
 import CompanyMaster from "./pages/professional/CompanyMaster";
 import AccountMaster from "./pages/bookez/master/AccountMaster";
-import ProductMaster from "./pages/bookez/master/ProductMaster";
+import ProductMaster from "./pages/bookez/master/productMaster/ProductMaster";
 import Configuration from './pages/professional/Configuration/Configuration';
 
 //income tax
@@ -36,28 +36,38 @@ import ProfessionalRegister from "./pages/ProfessionalRegister";
 import Subscription from './pages/subscription';
 import UnitMaster from './pages/bookez/master/UnitMaster';
 import ReportMapping from './pages/bookez/master/ReportMapping';
-import BookEZDashboard from './pages/bookez/master';
 import MasterDashboard from './pages/bookez/master';
-import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks/OpeningBalancesDashboard';
-import ProductionDashboard from './pages/bookez/transactions/production/ProductionDashboard';
-import SaleWorkflowDashboard from './pages/bookez/transactions/saleWorkflow/SaleWorkflowDashboard';
-import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkflow/PurchaseWorkflowDashboard';
+import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks/indec';
+import ProductionDashboard from './pages/bookez/transactions/production';
+import SaleWorkflowDashboard from './pages/bookez/transactions/saleWorkflow';
+import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkflow';
 
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ReportsDashboard from './pages/bookez/reports';
+import RegistersDashboard from './pages/bookez/registers';
+import PermissionManagement from './pages/setting/PermissionManagement';
 
 function App() {
 
   return (
     <>
-      <ToastContainer />
+      <ToastContainer
+        position="top-center"
+        autoClose={2500}
+        hideProgressBar
+        closeButton={false}
+        pauseOnHover
+        draggable={false}
+        theme="colored"
+      />
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/professionalRegister" element={<ProfessionalRegister />} />
       {/* professional route */}
       <Route
-        path="/professional"
+          path="/"
         element={
           <ProtectedRoute allowedRoles={['Professional']}>
             <TourProvider>
@@ -67,6 +77,7 @@ function App() {
         }>
         <Route index element={<ProfessionalDashboard />} />
         <Route path="profile" element={<ProfessionalProfile />} />
+        <Route path="permission" element={<PermissionManagement />} />
         <Route path="documentmngt" element={<DocumentMangement />} />
         <Route path="taskmngt" element={<TaskManagement />} />
         <Route path="incometx" element={<ProfessionlIncomeTaxLaw />} />
@@ -80,7 +91,7 @@ function App() {
           }
         />
 
-        <Route path="/professional/master" element={<MasterDashboard />} />
+          <Route path="/bookEz/master" element={<MasterDashboard />} />
         <Route path="master/company" element={<CompanyMaster />} />
         <Route path="master/account" element={<AccountMaster />} />
         <Route path="master/product" element={<ProductMaster />} />
@@ -89,23 +100,32 @@ function App() {
 
 
         <Route
-          path="/professional/transaction/opening-balances"
+            path="/bookEz/transaction/opening-balances"
           element={<OpeningBalancesDashboard />}
         />
 
         <Route
-          path="/professional/transaction/production"
+            path="/bookEz/transaction/production"
           element={<ProductionDashboard />}
         />
 
         <Route
-          path="/professional/transaction/sale-workflow"
+            path="/bookEz/transaction/sale-workflow"
           element={<SaleWorkflowDashboard />}
         />
 
         <Route
-          path="/professional/transaction/purchase-workflow"
+            path="/bookEz/transaction/purchase-workflow"
           element={<PurchaseWorkflowDashboard />}
+        />
+
+        <Route
+            path="/bookEz/reports"
+          element={<ReportsDashboard/>}
+        />
+        <Route
+            path="/bookEz/registers"
+          element={<RegistersDashboard/>}
         />
 
         {/* configuration */}

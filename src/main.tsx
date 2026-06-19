@@ -11,9 +11,10 @@ import { BrowserRouter } from "react-router-dom";
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const OneSignalWrapper = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state: any) => state.auth);
 
   useEffect(() => {
+    // @ts-ignore
     const professionalUser = JSON.parse(localStorage.getItem("professionalUser"));
     const loginId = professionalUser?.userEmail || user?.email || null;
     console.log("🟦 OneSignalWrapper → loginId:", loginId);
@@ -22,7 +23,7 @@ const OneSignalWrapper = () => {
 
   return <App />;
 };
-
+// @ts-ignore
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <GoogleOAuthProvider clientId={clientId}>

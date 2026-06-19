@@ -7,7 +7,7 @@ import professionalAxios from "../../../services/professionalAxios";
 export const getCustomMasterListing = createAsyncThunk(
   "customMasterModule/listing",
   async (
-    { moduleCode, offset = 0, limit = 10, search = "" } = {},
+    { moduleCode, offset = 0, limit = 10, search = "" } : { moduleCode: string; offset?: number; limit?: number; search?: string },
     { rejectWithValue }
   ) => {
     try {
@@ -43,7 +43,7 @@ export const getCustomMasterListing = createAsyncThunk(
 export const getCustomMasterSchema = createAsyncThunk(
   "customMasterModule/getCustomMasterSchema",
   async (
-    { moduleCode } = {},
+    { moduleCode } : { moduleCode: string },
     { rejectWithValue }
   ) => {
     try {
@@ -80,7 +80,7 @@ export const getCustomMasterSchema = createAsyncThunk(
 export const getCustomMasterModules = createAsyncThunk(
   "customMasterModule/getCustomMasterModules",
   async (
-    { offset = 0, limit = 10, search = "" } = {},
+    { offset = 0, limit = 10, search = "" } : { offset?: number; limit?: number; search?: string },
     { rejectWithValue }
   ) => {
     try {
@@ -111,7 +111,7 @@ export const getCustomMasterModules = createAsyncThunk(
 
 export const updateCustomData = createAsyncThunk(
   "customMasterModule/updateCustomData",
-  async ({ data, voucherNumber } = {}, { rejectWithValue }) => {
+  async ({ data, voucherNumber } : { data: any; voucherNumber: string }, { rejectWithValue }) => {
     try {
 
       const res = await professionalAxios.put(
@@ -141,7 +141,7 @@ export const updateCustomData = createAsyncThunk(
 
 export const saveCustomData = createAsyncThunk(
   "customMasterModule/saveCustomData",
-  async ({ data, moduleCode } = {}, { rejectWithValue }) => {
+  async ({ data, moduleCode } : { data: any; moduleCode: string }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.post(
         `/eTaxSolnMongoApiBackend/users/customMaster/data/save`,
@@ -168,7 +168,7 @@ export const saveCustomData = createAsyncThunk(
 
 export const deleteSingle = createAsyncThunk(
   "customMasterModule/deleteSingle",
-  async ({ voucherNumber } = {}, { rejectWithValue }) => {
+  async ({ voucherNumber } : { voucherNumber: string }, { rejectWithValue }) => {
     try {
 
       const res = await professionalAxios.delete(
@@ -195,7 +195,7 @@ export const deleteSingle = createAsyncThunk(
 
 export const searchData = createAsyncThunk(
   "customMasterModule/search",
-  async ({ voucherNumber } = {}, { rejectWithValue }) => {
+  async ({ voucherNumber } :{voucherNumber: string}, { rejectWithValue }) => {
     try {
 
       const res = await professionalAxios.get(
@@ -299,7 +299,7 @@ const customMasterModules = createSlice({
         state.submitLoader = true;
         state.error = null;
       })
-      .addCase(updateCustomData.fulfilled, (state, action) => {
+      .addCase(updateCustomData.fulfilled, (state:any) => {
         state.submitLoader = false;
       })
       .addCase(updateCustomData.rejected, (state, action: any) => {
@@ -311,7 +311,7 @@ const customMasterModules = createSlice({
         state.deleteLoader = true;
         state.error = null;
       })
-      .addCase(deleteSingle.fulfilled, (state, action) => {
+      .addCase(deleteSingle.fulfilled, (state) => {
         state.deleteLoader = false;
       })
       .addCase(deleteSingle.rejected, (state, action: any) => {
@@ -324,7 +324,7 @@ const customMasterModules = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(searchData.fulfilled, (state, action) => {
+      .addCase(searchData.fulfilled, (state:any) => {
         state.loading = false;
       })
       .addCase(searchData.rejected, (state, action: any) => {

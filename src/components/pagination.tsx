@@ -56,15 +56,7 @@ const Pagination = ({
             </div>
 
             {/* Pagination buttons */}
-            <div
-                className="
-          flex items-center gap-2
-          w-full sm:w-auto
-          overflow-x-auto
-          pb-1 sm:pb-0
-          justify-start sm:justify-end
-        "
-            >
+            <div className=" flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 justify-start sm:justify-end">
                 <PaginationButton
                     disabled={preDisabled}
                     icon={<ChevronFirst size={18} />}
@@ -74,28 +66,17 @@ const Pagination = ({
                 <PaginationButton
                     disabled={preDisabled}
                     icon={<ChevronLeft size={18} />}
-                    onClick={() => setLocalOffset((prev: number) => Math.max(1, prev - 1))}
+                    onClick={() => setLocalOffset((pre: number) => pre - 1)}
                 />
 
-                <div
-                    className="
-            min-w-[110px] px-4 h-10
-            flex items-center justify-center
-            rounded-md bg-gray-50
-            border border-gray-200
-            text-sm font-medium text-gray-700
-            whitespace-nowrap
-          "
-                >
+                <div className="min-w-[110px] px-4 h-10 flex items-center justify-center rounded-md bg-gray-50 border border-gray-200 text-sm font-medium text-gray-700 whitespace-nowrap">
                     Page {currentPage} of {totalPages}
                 </div>
 
                 <PaginationButton
                     disabled={nextDisabled}
                     icon={<ChevronRight size={18} />}
-                    onClick={() =>
-                        setLocalOffset((prev: number) => Math.min(totalPages, prev + 1))
-                    }
+                    onClick={() => setLocalOffset((pre: number) => pre + localLimit)}
                 />
 
                 <PaginationButton

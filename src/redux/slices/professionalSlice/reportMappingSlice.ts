@@ -3,36 +3,63 @@ import professionalAxios from "../../../services/professionalAxios";
 
 
 /* ===================================================
-    GET Modules LIST
+    GET Modules wise Key LIST
 =================================================== */
-export const getAllModules = createAsyncThunk(
-    "reportMapping/getAllModules",
-    async ({ offset = 0, limit = 10, search = "", moduleType = "" } = {}, { rejectWithValue }) => {
+export const getAllModulesWiseKey = createAsyncThunk(
+    "reportMapping/getAllModulesWiseKey",
+    async (
+        { moduleType, offset = 0, limit = 10 }: any = {},
+        { rejectWithValue }
+    ) => {
         try {
             const params = { offset, limit };
-            if (search.trim()) params.search = search.trim();
 
-            if (moduleType) {
-                params.moduleType = moduleType;
+            if (!moduleType) {
+                return rejectWithValue({
+                    message: "Module type is required",
+                });
             }
 
-
             const res = await professionalAxios.get(
-                "/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/modules/getAll",
+                `/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/templateKeys/${moduleType}`,
                 { params }
             );
 
-
-
-            if (!res.data?.success)
+            if (!res.data?.success) {
                 return rejectWithValue({
-                    message: res.data?.message || "Failed to fetch units",
+                    message: res.data?.message || "Failed to fetch module wise keys",
                 });
+            }
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
-                message: err?.response?.data?.message || "Failed to fetch units",
+                message:
+                    err?.response?.data?.message || "Failed to fetch module wise keys",
+            });
+        }
+    }
+);
+
+export const reportGeneratePdf = createAsyncThunk(
+    "reportMapping/reportGeneratePdf",
+    async (
+        { moduleType, templateFileId, CustomerCode, voucherNumber }: any = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/generatePdf/${moduleType}/${voucherNumber}/${templateFileId}/${CustomerCode}`,
+                {
+                    responseType: "blob", // ✅ important for PDF
+                }
+            );
+
+            return res.data; // ✅ this is PDF blob
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message || "Failed to generate PDF",
             });
         }
     }
@@ -44,6 +71,56 @@ export const getAllModules = createAsyncThunk(
 
 
 
+/* ===================================================
+    GET Modules LIST
+=================================================== */
+
+export const getAllModules = createAsyncThunk<
+    any[],
+    { offset?: number; limit?: number } | undefined,
+    { rejectValue: { message: string } }
+>(
+    "reportMapping/getAllModules",
+    async ({ offset = 0, limit = 10 } = {}, { rejectWithValue }) => {
+        try {
+            const params = { offset, limit };
+
+            const res = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/modules/getAll",
+                { params }
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message: res.data?.message || "Failed to fetch modules",
+                });
+            }
+
+            const data = res.data?.data;
+
+            // ✅ handle all possible API response structures
+            const modules =
+                data?.records ||
+                data?.modules ||
+                data?.moduleTypes ||
+                data ||
+                [];
+
+            return Array.isArray(modules) ? modules : [];
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Failed to fetch modules",
+            });
+        }
+    }
+);
+
+
+
+
 
 
 /* ===================================================
@@ -51,16 +128,16 @@ export const getAllModules = createAsyncThunk(
 =================================================== */
 export const getAllReportMapping = createAsyncThunk(
     "reportMapping/getAllReportMapping",
-    async ({ offset = 0, limit = 10, search = "", moduleType = "" } = {}, { rejectWithValue }) => {
+    async ({ offset = 0, limit = 10, search = "", moduleType = "" }: { offset?: number; limit?: number; search?: string; moduleType?: string }, { rejectWithValue }) => {
         try {
-            const params = { offset, limit };
+            const params: { offset?: number; limit?: number; search?: string; moduleType?: string } = { offset, limit };
             if (search.trim()) params.search = search.trim();
 
             if (moduleType) {
                 params.moduleType = moduleType;
             }
 
-
+            
             const res = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/getAll",
                 { params }
@@ -74,7 +151,7 @@ export const getAllReportMapping = createAsyncThunk(
                 });
 
             return res.data?.data;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch units",
             });
@@ -124,7 +201,7 @@ export const createReportMapping = createAsyncThunk(
 =================================================== */
 export const getReportMappingByTemplateFileId = createAsyncThunk(
     "reportMapping/getReportMappingByTemplateFileId",
-    async (templateFileId, { rejectWithValue }) => {
+    async (templateFileId: string, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.get(
                 `/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/getByTemplateFileId/${templateFileId}`
@@ -136,7 +213,7 @@ export const getReportMappingByTemplateFileId = createAsyncThunk(
                 });
 
             return res.data?.data?.reportMapping ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch report mapping",
             });
@@ -149,7 +226,7 @@ export const getReportMappingByTemplateFileId = createAsyncThunk(
 =================================================== */
 export const updateReportMapping = createAsyncThunk(
     "reportMapping/updateReportMapping",
-    async ({ templateFileId, data }, { rejectWithValue }) => {
+    async ({ templateFileId, data }: { templateFileId: string; data: any }, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.put(
                 `/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/getByTemplateFileId/${templateFileId}`,
@@ -162,7 +239,7 @@ export const updateReportMapping = createAsyncThunk(
                 });
 
             return res.data?.data ?? null;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to update report mapping",
             });
@@ -187,7 +264,7 @@ export const deleteReportMapping = createAsyncThunk(
                 });
 
             return templateFileId;
-        } catch (err) {
+        } catch (err: any) {
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to delete report mapping",
             });
@@ -215,6 +292,11 @@ const reportMappingSlice = createSlice({
             moduleType: ""
         },
 
+        modules: [],
+        modulesLoading: false,
+
+        moduleWiseKeys: null,
+        moduleWiseKeysLoading: false,
 
         selectedReport: null,
 
@@ -236,25 +318,39 @@ const reportMappingSlice = createSlice({
     },
 
     extraReducers: (builder) => {
-        /* ---------- GET MODULES ---------- */
+
+
+        /* ---------- GET MODULE WISE KEYS ---------- */
         builder
-            .addCase(getAllModules.pending, (state) => {
-                state.loading = true;
+            .addCase(getAllModulesWiseKey.pending, (state) => {
+                state.moduleWiseKeysLoading = true;
                 state.error = null;
             })
-            .addCase(getAllModules.fulfilled, (state, action) => {
-                state.loading = false;
+            .addCase(getAllModulesWiseKey.fulfilled, (state, action) => {
+                state.moduleWiseKeysLoading = false;
 
-                const data = action.payload; // <-- { pagination, items }
-
-                state.report = data?.modules ?? [];
-                state.pagination = data?.pagination ?? state.pagination;
+                state.moduleWiseKeys = action.payload ?? null;
             })
-            .addCase(getAllModules.rejected, (state, action) => {
-                state.loading = false;
+            .addCase(getAllModulesWiseKey.rejected, (state, action: any) => {
+                state.moduleWiseKeysLoading = false;
                 state.error = action.payload?.message;
-                state.report = [];
+                state.moduleWiseKeys = null;
             });
+
+        /* ---------- GET ALL MODULES ---------- */
+        builder
+            .addCase(getAllModules.pending, (state) => {
+                state.modulesLoading = true;
+            })
+            .addCase(getAllModules.fulfilled, (state: any, action) => {
+                state.modulesLoading = false;
+                state.modules = Array.isArray(action.payload) ? action.payload : [];
+            })
+            .addCase(getAllModules.rejected, (state, action: any) => {
+                state.modulesLoading = false;
+                state.modules = [];
+                state.error = action.payload?.message || "Failed to fetch modules";
+            })
         /* ---------- GET ALL ---------- */
         builder
             .addCase(getAllReportMapping.pending, (state) => {
@@ -269,7 +365,7 @@ const reportMappingSlice = createSlice({
                 state.report = data?.docs ?? [];
                 state.pagination = data?.pagination ?? state.pagination;
             })
-            .addCase(getAllReportMapping.rejected, (state, action) => {
+            .addCase(getAllReportMapping.rejected, (state, action: any) => {
                 state.loading = false;
                 state.error = action.payload?.message;
                 state.report = [];
@@ -279,11 +375,11 @@ const reportMappingSlice = createSlice({
             .addCase(getReportMappingByTemplateFileId.pending, (state) => {
                 state.loading = true;
             })
-            .addCase(getReportMappingByTemplateFileId.fulfilled, (state, action) => {
+            .addCase(getReportMappingByTemplateFileId.fulfilled, (state, action: any) => {
                 state.loading = false;
                 state.selectedReport = action.payload ?? null;
             })
-            .addCase(getReportMappingByTemplateFileId.rejected, (state, action) => {
+            .addCase(getReportMappingByTemplateFileId.rejected, (state, action: any) => {
                 state.loading = false;
                 state.error = action.payload?.message;
             });
@@ -293,10 +389,10 @@ const reportMappingSlice = createSlice({
 
         /* ---------- CREATE REPORT MAPPING ---------- */
         builder
-            .addCase(createReportMapping.pending, (state) => {
+            .addCase(createReportMapping.pending, (state: any) => {
                 state.createLoading = true;
             })
-            .addCase(createReportMapping.fulfilled, (state, action) => {
+            .addCase(createReportMapping.fulfilled, (state: any, action: any) => {
                 state.createLoading = false;
 
                 if (action.payload) {
@@ -304,7 +400,7 @@ const reportMappingSlice = createSlice({
                     state.pagination.totalDocs += 1;
                 }
             })
-            .addCase(createReportMapping.rejected, (state, action) => {
+            .addCase(createReportMapping.rejected, (state: any, action: any) => {
                 state.createLoading = false;
                 state.error = action.payload?.message;
             });
@@ -312,40 +408,40 @@ const reportMappingSlice = createSlice({
 
         /* ---------- UPDATE REPORT MAPPING ---------- */
         builder
-            .addCase(updateReportMapping.pending, (state) => {
+            .addCase(updateReportMapping.pending, (state: any) => {
                 state.updateLoading = true;
             })
-            .addCase(updateReportMapping.fulfilled, (state, action) => {
+            .addCase(updateReportMapping.fulfilled, (state: any, action: any) => {
                 state.updateLoading = false;
 
                 const updated = action.payload;
                 if (!updated?.templateFileId) return;
 
-                state.report = state.report.map((report) =>
+                state.report = state.report.map((report: any) =>
                     report.templateFileId === updated.templateFileId ? updated : report
                 );
             })
-            .addCase(updateReportMapping.rejected, (state, action) => {
+            .addCase(updateReportMapping.rejected, (state: any, action: any) => {
                 state.updateLoading = false;
                 state.error = action.payload?.message;
             });
 
         /* ---------- DELETE REPORT MAPPING ---------- */
         builder
-            .addCase(deleteReportMapping.pending, (state) => {
+            .addCase(deleteReportMapping.pending, (state: any) => {
                 state.deleteLoading = true;
             })
-            .addCase(deleteReportMapping.fulfilled, (state, action) => {
+            .addCase(deleteReportMapping.fulfilled, (state: any, action: any) => {
                 state.deleteLoading = false;
 
                 const removedId = action.payload;
                 state.report = state.report.filter(
-                    (report) => report.templateFileId !== removedId
+                    (report: any) => report.templateFileId !== removedId
                 );
 
                 state.pagination.totalDocs = Math.max(0, state.pagination.totalDocs - 1);
             })
-            .addCase(deleteReportMapping.rejected, (state, action) => {
+            .addCase(deleteReportMapping.rejected, (state: any, action: any) => {
                 state.deleteLoading = false;
                 state.error = action.payload?.message;
             });

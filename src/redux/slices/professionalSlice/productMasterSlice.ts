@@ -14,7 +14,7 @@ export const getAllProductMasterSchema = createAsyncThunk(
       isSearchable = "",
       isRequired = "",
       isFilterable = "",
-    } = {},
+    }: { offset?: number; limit?: number; isSearchable?: string; isRequired?: string; isFilterable?: string },
     { rejectWithValue }
   ) => {
     try {
@@ -52,6 +52,31 @@ export const getAllProductMasterSchema = createAsyncThunk(
 /* ===================================================
     CREATE PRODUCT
 =================================================== */
+// export const createProduct = createAsyncThunk(
+//   "productMaster/createProduct",
+//   async (payload, { rejectWithValue }) => {
+//     try {
+//       const res = await professionalAxios.post(
+//         "/eTaxSolnMongoApiBackend/productMaster/createProduct",
+//         payload
+//       );
+
+//       if (!res.data?.success)
+//         return rejectWithValue({
+//           message: res.data?.message || "Failed to create product",
+//         });
+
+//       return res.data?.data ?? null;
+//     } catch (err) {
+//       return rejectWithValue({
+//         message: err?.response?.data?.error || "Failed to create product",
+//       });
+//     }
+//   }
+// );
+
+
+
 export const createProduct = createAsyncThunk(
   "productMaster/createProduct",
   async (payload, { rejectWithValue }) => {
@@ -60,56 +85,101 @@ export const createProduct = createAsyncThunk(
         "/eTaxSolnMongoApiBackend/productMaster/createProduct",
         payload
       );
-
-      if (!res.data?.success)
-        return rejectWithValue({
-          message: res.data?.message || "Failed to create product",
-        });
+      if (!res.data?.success) {
+        return rejectWithValue(res.data);
+      }
 
       return res.data?.data ?? null;
-    } catch (err) {
-      return rejectWithValue({
-        message: err?.response?.data?.error || "Failed to create product",
-      });
+    } catch (err: any) {
+      return rejectWithValue(
+        err?.response?.data || {
+          success: false,
+          message: "Failed to create product",
+          error: {},
+        }
+      );
     }
   }
 );
-
 /* ===================================================
     GET ALL PRODUCTS
 =================================================== */
+// export const getAllProducts = createAsyncThunk(
+//   "productMaster/getAllProducts",
+//   async ({ offset = 0, limit = 10, search = "",productType:"" } = {}, { rejectWithValue }) => {
+//     try {
+//       const params = { offset, limit };
+//       if (search.trim()) params.search = search.trim();
+
+//       const res = await professionalAxios.get(
+//         "/eTaxSolnMongoApiBackend/productMaster/getAllProduct",
+//         { params }
+//       );
+
+//       if (!res.data?.success)
+//         return rejectWithValue({
+//           message: res.data?.message || "Failed to fetch products",
+//         });
+
+//       return res.data?.data;
+//     } catch (err) {
+//       return rejectWithValue({
+//         message: err?.response?.data?.message || "Failed to fetch products",
+//       });
+//     }
+//   }
+// );
+
+
+
 export const getAllProducts = createAsyncThunk(
   "productMaster/getAllProducts",
-  async ({ offset = 0, limit = 10, search = "" } = {}, { rejectWithValue }) => {
+  async (
+    {
+      offset = 0,
+      limit = 10,
+      search = "",
+      productType = "",
+    }: any = {},
+    { rejectWithValue }
+  ) => {
     try {
-      const params = { offset, limit };
-      if (search.trim()) params.search = search.trim();
+      const params: any = { offset, limit };
+
+      if (search?.trim()) {
+        params.search = search.trim();
+      }
+
+      if (productType) {
+        params.productType = productType;
+      }
 
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/productMaster/getAllProduct",
         { params }
       );
 
-      if (!res.data?.success)
+      if (!res.data?.success) {
         return rejectWithValue({
           message: res.data?.message || "Failed to fetch products",
         });
+      }
 
       return res.data?.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
-        message: err?.response?.data?.message || "Failed to fetch products",
+        message:
+          err?.response?.data?.message || "Failed to fetch products",
       });
     }
   }
 );
-
 /* ===================================================
     GET PRODUCT BY CODE
 =================================================== */
 export const getProductByCode = createAsyncThunk(
   "productMaster/getProductByCode",
-  async (productCode, { rejectWithValue }) => {
+  async (productCode: string, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/productMaster/getProduct/${productCode}`
@@ -121,7 +191,7 @@ export const getProductByCode = createAsyncThunk(
         });
 
       return res.data?.data?.product ?? null;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to fetch product",
       });
@@ -134,7 +204,7 @@ export const getProductByCode = createAsyncThunk(
 =================================================== */
 export const updateProduct = createAsyncThunk(
   "productMaster/updateProduct",
-  async ({ productCode, data }, { rejectWithValue }) => {
+  async ({ productCode, data }: { productCode: string; data: any }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/productMaster/updateProduct/${productCode}`,
@@ -147,7 +217,7 @@ export const updateProduct = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to update product",
       });
@@ -172,7 +242,7 @@ export const deleteProduct = createAsyncThunk(
         });
 
       return productCode;
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to delete product",
       });
@@ -234,7 +304,7 @@ const productMasterSlice = createSlice({
         state.products = data?.items ?? [];
         state.pagination = data?.pagination ?? state.pagination;
       })
-      .addCase(getAllProducts.rejected, (state, action) => {
+      .addCase(getAllProducts.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.products = [];
@@ -249,7 +319,7 @@ const productMasterSlice = createSlice({
         state.loading = false;
         state.selectedProduct = action.payload ?? null;
       })
-      .addCase(getProductByCode.rejected, (state, action) => {
+      .addCase(getProductByCode.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -278,15 +348,16 @@ const productMasterSlice = createSlice({
       .addCase(createProduct.pending, (state) => {
         state.createLoading = true;
       })
-      .addCase(createProduct.fulfilled, (state, action) => {
+      .addCase(createProduct.fulfilled, (state, action: any) => {
         state.createLoading = false;
 
         if (action.payload) {
+          // @ts-ignore
           state.products.unshift(action.payload);
           state.pagination.totalDocs += 1;
         }
       })
-      .addCase(createProduct.rejected, (state, action) => {
+      .addCase(createProduct.rejected, (state, action: any) => {
         state.createLoading = false;
         state.error = action.payload?.message;
       });
@@ -296,17 +367,17 @@ const productMasterSlice = createSlice({
       .addCase(updateProduct.pending, (state) => {
         state.updateLoading = true;
       })
-      .addCase(updateProduct.fulfilled, (state, action) => {
+      .addCase(updateProduct.fulfilled, (state: any, action) => {
         state.updateLoading = false;
 
         const updated = action.payload;
         if (!updated?.productCode) return;
 
-        state.products = state.products.map((prod) =>
+        state.products = state.products.map((prod: any) =>
           prod.productCode === updated.productCode ? updated : prod
         );
       })
-      .addCase(updateProduct.rejected, (state, action) => {
+      .addCase(updateProduct.rejected, (state, action: any) => {
         state.updateLoading = false;
         state.error = action.payload?.message;
       });
@@ -321,12 +392,12 @@ const productMasterSlice = createSlice({
 
         const removedCode = action.payload;
         state.products = state.products.filter(
-          (prod) => prod.productCode !== removedCode
+          (prod: any) => prod.productCode !== removedCode
         );
 
         state.pagination.totalDocs = Math.max(0, state.pagination.totalDocs - 1);
       })
-      .addCase(deleteProduct.rejected, (state, action) => {
+      .addCase(deleteProduct.rejected, (state, action:any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message;
       });

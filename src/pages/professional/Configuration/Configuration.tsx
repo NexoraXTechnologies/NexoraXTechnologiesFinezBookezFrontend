@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Sliders, Terminal, Settings2 } from 'lucide-react';
 import AutomationSetupModal from '../Automation/AutomationSetupModal';
 
 
 /* ================== SMALL TOGGLE ================== */
-const ToggleSwitch = ({ checked, onChange }) => (
+const ToggleSwitch = ({ checked, onChange }: any) => (
   <button type="button" onClick={() => onChange(!checked)} className={`relative inline-flex h-4 w-8 items-center rounded-full transition ${checked ? 'bg-blue-600' : 'bg-gray-300'}`} aria-pressed={checked}>
     <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition ${checked ? 'translate-x-4' : 'translate-x-1'}`} />
   </button>
@@ -12,7 +12,7 @@ const ToggleSwitch = ({ checked, onChange }) => (
 
 const Configuration = () => {
   const [automationModalOpen, setAutomationModalOpen] = useState(false);
-  const [setupCompleted, setSetupCompleted] = useState(false);
+  // const [setupCompleted, setSetupCompleted] = useState(false);
 
 
   const [enableAutomation, setEnableAutomation] = useState(() => {
@@ -23,10 +23,10 @@ const Configuration = () => {
   const statusText = useMemo(() => (enableAutomation ? 'Enabled' : 'Disabled'), [enableAutomation]);
 
   // ✅ if modal closes without success -> rollback toggle
-  const rollbackDisable = () => {
-    setEnableAutomation(false);
-    localStorage.setItem('nx_enable_automation', 'false');
-  };
+  // const rollbackDisable = () => {
+  //   setEnableAutomation(false);
+  //   localStorage.setItem('nx_enable_automation', 'false');
+  // };
 
   return (
     <div className="p-6">
@@ -70,14 +70,14 @@ const Configuration = () => {
               <div className="ml-3 flex-shrink-0 mt-[2px]">
                 <ToggleSwitch
                   checked={enableAutomation}
-                  onChange={(next) => {
+                  onChange={(next: any) => {
                     // ✅ Toggle OFF directly
                     if (!next) {
                       setEnableAutomation(false);
                       localStorage.setItem('nx_enable_automation', 'false');
                       return;
                     }
-                    setSetupCompleted(false);
+                    // setSetupCompleted(false);
                     // ✅ Toggle ON should open modal first (do not persist true yet)
                     setAutomationModalOpen(true);
                   }}
@@ -116,7 +116,7 @@ const Configuration = () => {
       {/* ✅ Modal (API will trigger inside modal on open) */}
       <AutomationSetupModal
         open={automationModalOpen}
-        onClose={(reason) => {
+        onClose={(reason: any) => {
           setAutomationModalOpen(false);
 
           // ✅ rollback only if user cancelled / error
@@ -125,10 +125,10 @@ const Configuration = () => {
             localStorage.setItem('nx_enable_automation', 'false');
           }
 
-          setSetupCompleted(false);
+          // setSetupCompleted(false);
         }}
         onSuccess={() => {
-          setSetupCompleted(true);
+          // setSetupCompleted(true);
           setEnableAutomation(true);
           localStorage.setItem('nx_enable_automation', 'true');
           setAutomationModalOpen(false);

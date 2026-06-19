@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import professionalAxios from '../../../../services/professionalAxios';
 
 // CREATE ORDER (RAZORPAY)
-export const createOrderRazorPay = createAsyncThunk('payment/createOrderRazorPay', async ({ planPublicId, pan, mobile, email, firstName, middleName, lastName }, { rejectWithValue }) => {
+export const createOrderRazorPay = createAsyncThunk('payment/createOrderRazorPay', async ({ planPublicId, pan, mobile, email, firstName, middleName, lastName }: { planPublicId: string; pan: string; mobile: string; email: string; firstName: string; middleName: string; lastName: string }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.post(`/eTaxSolnMongoApiBackend/users/plansAndSubScriptions/razorpay/createOrderRazorPay`, {
       planPublicId,
@@ -22,7 +22,7 @@ export const createOrderRazorPay = createAsyncThunk('payment/createOrderRazorPay
 
     // expected: { key, orderId, amount, currency, planPublicId, ... }
     return res.data?.data;
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || err.message || 'Order creation failed',
     });
@@ -30,7 +30,7 @@ export const createOrderRazorPay = createAsyncThunk('payment/createOrderRazorPay
 });
 
 // VERIFY PAYMENT (RAZORPAY)
-export const verifyRazorPayPayment = createAsyncThunk('payment/verifyRazorPayPayment', async ({ orderId, paymentId, signature, planPublicId }, { rejectWithValue }) => {
+export const verifyRazorPayPayment = createAsyncThunk('payment/verifyRazorPayPayment', async ({ orderId, paymentId, signature, planPublicId }: { orderId: string; paymentId: string; signature: string; planPublicId: string }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.post(`/eTaxSolnMongoApiBackend/users/plansAndSubScriptions/razorpay/verifyPayment`, {
       orderId,
@@ -46,7 +46,7 @@ export const verifyRazorPayPayment = createAsyncThunk('payment/verifyRazorPayPay
     }
 
     return res.data?.data; // can be receipt/txn info
-  } catch (err) {
+  } catch (err: any) {
     return rejectWithValue({
       message: err?.response?.data?.message || err.message || 'Payment verification failed',
     });
@@ -90,7 +90,7 @@ const paymentSlice = createSlice({
         state.order = action.payload;
         state.createOrderSuccess = true;
       })
-      .addCase(createOrderRazorPay.rejected, (state, action) => {
+      .addCase(createOrderRazorPay.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.createOrderSuccess = false;
@@ -108,7 +108,7 @@ const paymentSlice = createSlice({
         state.verified = action.payload;
         state.verifySuccess = true;
       })
-      .addCase(verifyRazorPayPayment.rejected, (state, action) => {
+      .addCase(verifyRazorPayPayment.rejected, (state: any, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
         state.verifySuccess = false;

@@ -7,13 +7,13 @@ import professionalAxios from "../../../services/professionalAxios";
 export const getAllDocuments = createAsyncThunk(
   "professionalDocumentMgt/getAllDocuments",
   async (
-    { page = 1, limit = 10, search = "", searchType = "name", tag = "", uploadDate = "" },
+    { page = 1, limit = 10, search = "", searchType = "name", tag = "", uploadDate = "" }: { page?: number; limit?: any; search?: string; searchType?: string; tag?: string; uploadDate?: string },
     { rejectWithValue }
   ) => {
     try {
       const query = new URLSearchParams();
 
-      const offset = (page - 1) * limit;
+      const offset: any = (page - 1) * limit;
 
       query.append("offset", offset);
       query.append("limit", limit);
@@ -49,7 +49,7 @@ export const getAllDocuments = createAsyncThunk(
         },
         summary: res.data.data.summary,
       };
-    } catch (err) {
+    } catch (err:any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to fetch documents",
       });
@@ -62,7 +62,7 @@ export const getAllDocuments = createAsyncThunk(
 // =======================================================
 export const uploadDocument = createAsyncThunk(
   "professionalDocumentMgt/uploadDocument",
-  async (formData, { rejectWithValue }) => {
+  async (formData: any, { rejectWithValue }) => {
     try {
       
       const res = await professionalAxios.post(
@@ -77,7 +77,7 @@ export const uploadDocument = createAsyncThunk(
       }
 
       return res.data.data;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to upload document",
       });
@@ -90,7 +90,7 @@ export const uploadDocument = createAsyncThunk(
 // =======================================================
 export const downloadDocument = createAsyncThunk(
   "professionalDocumentMgt/downloadDocument",
-  async (name, { rejectWithValue }) => {
+  async (name: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/documents/download?name=${name}`,
@@ -106,7 +106,7 @@ export const downloadDocument = createAsyncThunk(
       link.remove();
 
       return { name };
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to download document",
       });
@@ -132,7 +132,7 @@ export const deleteDocument = createAsyncThunk(
       }
 
       return docId;
-    } catch (err) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err.response?.data?.message || "Failed to delete document",
       });
@@ -180,7 +180,7 @@ const professionalDocumentMgtSlice = createSlice({
         state.pagination = action.payload.pagination;
         state.summary = action.payload.summary;
       })
-      .addCase(getAllDocuments.rejected, (state, action) => {
+      .addCase(getAllDocuments.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -195,7 +195,7 @@ const professionalDocumentMgtSlice = createSlice({
         state.loading = false;
         state.uploadSuccess = true;
       })
-      .addCase(uploadDocument.rejected, (state, action) => {
+      .addCase(uploadDocument.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });
@@ -210,7 +210,7 @@ const professionalDocumentMgtSlice = createSlice({
         state.loading = false;
         state.deleteSuccess = true;
       })
-      .addCase(deleteDocument.rejected, (state, action) => {
+      .addCase(deleteDocument.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload?.message;
       });

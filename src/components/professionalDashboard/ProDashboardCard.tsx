@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 
-const ProDashboardCard = ({ title, value, stats, color = 'bg-white', delay = 0, icon, footerText }: any) => (
+const ProDashboardCard = ({ title, value, stats, icon }: any) => (
   <>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       whileHover={{
@@ -24,7 +24,7 @@ const ProDashboardCard = ({ title, value, stats, color = 'bg-white', delay = 0, 
           </div>
         </div>
         <div className="mt-3 text-xs flex flex-wrap gap-3 text-gray-600">
-          {Object.entries(stats).map(([key, val]) => (
+          {Object.entries(stats).map(([key, val]: any) => (
             <span key={key} className="capitalize">
               {key}: <span className="font-semibold text-gray-900">{val}</span>
             </span>
