@@ -8,6 +8,7 @@ import {
 
 import TransactionDashboard from "../transactions/components/TransactionDashboard";
 import SalesRegister from "./SalesRegister";
+import PurchaseRegister from "./PurchaseRegister";
 
 const cards: any[] = [
   {
@@ -20,7 +21,7 @@ const cards: any[] = [
   {
     title: "Purchase Register",
     description: "View purchase invoices, vendor billing, taxable values, and total purchase records.",
-    component: "",
+    component:PurchaseRegister,
     icon: <ReceiptText size={22} />,
     permissionKey: "registers.purchaseRegister"
   },

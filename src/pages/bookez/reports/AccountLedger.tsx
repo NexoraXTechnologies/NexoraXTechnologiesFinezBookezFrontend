@@ -15,7 +15,7 @@ import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice
 import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { getByVoucherNumberSalesInvoiceReturn } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 
-import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
+import { getFirstDateOfCurrentMonth, loadAllTemplateOptions, todayYMD } from "../../../utils/helperFunctions";
 import { getByVoucherNumberSalesReceiptList } from "../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
 import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import { getByVoucherNumberPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
@@ -117,7 +117,6 @@ const AccountLedger = () => {
     const {
         accountLedger = [],
         listingLoader = false,
-        exportLoader = false,
         pagination = {},
         totals = {},
     } = useSelector((s: any) => s.accountLedger);
@@ -130,12 +129,12 @@ const AccountLedger = () => {
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
+    const [fromDate, setFromDate] = useState<string>(getFirstDateOfCurrentMonth());
+    const [toDate, setToDate] = useState<string>(todayYMD());
+    const [account, setAccount] = useState<string>("");
 
-    const todayDate = new Date().toISOString().split("T")[0];
-
-    const [fromDate, setFromDate] = useState(todayDate);
-    const [toDate, setToDate] = useState(todayDate);
-    const [account, setAccount] = useState("");
+    const [pdfLoading, setPdfLoading] = useState(false);
+    const [excelLoading, setExcelLoading] = useState(false);
 
     const [viewModal, setViewModal] = useState(false);
     const [viewLoading, setViewLoading] = useState(false);
@@ -993,9 +992,11 @@ const AccountLedger = () => {
     };
 
     const handleDownloadPdf = async () => {
-        if (!account) return;
+        if (!account || pdfLoading) return;
 
         try {
+            setPdfLoading(true);
+
             const res = await dispatch(
                 getAccountLedger({
                     fromDate,
@@ -1015,13 +1016,17 @@ const AccountLedger = () => {
             }
         } catch (error) {
             console.log("PDF download failed", error);
+        } finally {
+            setPdfLoading(false);
         }
     };
 
     const handleDownloadExcel = async () => {
-        if (!account) return;
+        if (!account || excelLoading) return;
 
         try {
+            setExcelLoading(true);
+
             const res = await dispatch(
                 getAccountLedger({
                     fromDate,
@@ -1041,6 +1046,8 @@ const AccountLedger = () => {
             }
         } catch (error) {
             console.log("Excel download failed", error);
+        } finally {
+            setExcelLoading(false);
         }
     };
 
@@ -1192,7 +1199,7 @@ const AccountLedger = () => {
                                 setFromDate(value);
                                 setLocalOffset(0);
                             },
-                            required: true,
+                            required: false,
                         },
                         {
                             key: "toDate",
@@ -1203,7 +1210,7 @@ const AccountLedger = () => {
                                 setToDate(value);
                                 setLocalOffset(0);
                             },
-                            required: true,
+                            required: false,
                         },
                         {
                             key: "account",
@@ -1216,14 +1223,17 @@ const AccountLedger = () => {
                                 setAccount(value);
                                 setLocalOffset(0);
                             },
-                            required: true,
+                            required: false,
                             colSpan: "full",
                         },
                     ]}
                     gridCols="2"
                     onDownloadPdf={handleDownloadPdf}
                     onDownloadExcel={handleDownloadExcel}
-                    downloadDisabled={!account || exportLoader}
+                    pdfDisabled={!account || pdfLoading}
+                    excelDisabled={!account || excelLoading}
+                    pdfLoading={pdfLoading}
+                    excelLoading={excelLoading}
                     downloadDisabledMessage="Please select customer/vendor to download report."
                 />
 

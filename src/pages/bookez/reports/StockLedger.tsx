@@ -16,7 +16,7 @@ import {
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
 import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { getByVoucherNumberSalesInvoiceReturn } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
-import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
+import { getFirstDateOfCurrentMonth, loadAllTemplateOptions, todayYMD } from "../../../utils/helperFunctions";
 import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import { getByVoucherNumberPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 import { getByVoucharNumberGrnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
@@ -144,9 +144,7 @@ const mainColumns = [
     },
 ];
 
-const todayYMD = () => {
-    return new Date().toISOString().split("T")[0];
-};
+
 
 const getLedgerDetails = (data: any) => {
     if (Array.isArray(data)) return data;
@@ -166,7 +164,6 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
     const {
         stockLedgerData = null,
         listingLoader = false,
-        exportLoader = false,
     } = useSelector((s: any) => s.stockLedger);
 
     const {
@@ -174,9 +171,12 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
         loading: productLoading = false,
     } = useSelector((s: any) => s.productMaster);
 
-    const [fromDate, setFromDate] = useState(todayYMD());
-    const [toDate, setToDate] = useState(todayYMD());
-    const [productCode, setProductCode] = useState("");
+    const [fromDate, setFromDate] = useState<string>(getFirstDateOfCurrentMonth());
+    const [toDate, setToDate] = useState<string>(todayYMD());
+    const [productCode, setProductCode] = useState<string>("");
+
+    const [pdfLoading, setPdfLoading] = useState(false);
+    const [excelLoading, setExcelLoading] = useState(false);
     const [viewModal, setViewModal] = useState(false);
     const [viewLoading, setViewLoading] = useState(false);
     const [viewTitle, setViewTitle] = useState("");
@@ -965,7 +965,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
     }, [products]);
 
     const resetStockLedger = () => {
-        setFromDate(todayYMD());
+        setFromDate(getFirstDateOfCurrentMonth());
         setToDate(todayYMD());
         setProductCode("");
         dispatch(clearStockLedgerData());
@@ -1028,9 +1028,11 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
     };
 
     const handleDownloadPdf = async () => {
-        if (!productCode) return;
+        if (!productCode || pdfLoading) return;
 
         try {
+            setPdfLoading(true);
+
             const res = await dispatch(
                 createStockLedger({
                     productCode,
@@ -1048,13 +1050,17 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
             }
         } catch (error) {
             console.log("Stock ledger PDF download failed", error);
+        } finally {
+            setPdfLoading(false);
         }
     };
 
     const handleDownloadExcel = async () => {
-        if (!productCode) return;
+        if (!productCode || excelLoading) return;
 
         try {
+            setExcelLoading(true);
+
             const res = await dispatch(
                 createStockLedger({
                     productCode,
@@ -1072,9 +1078,10 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
             }
         } catch (error) {
             console.log("Stock ledger Excel download failed", error);
+        } finally {
+            setExcelLoading(false);
         }
     };
-
     const selectedProductName =
         productOptions.find((item: any) => item.value === productCode)?.label ||
         "-";
@@ -1141,7 +1148,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
     return (
         <div className="flex h-full w-full flex-col gap-4 bg-slate-50 p-4">
             <div
-                 className="
+                className="
                     grid w-full grid-cols-1 gap-4 xl:grid-cols-2
                     [&>*]:rounded-xl
                     [&>*]:!p-4
@@ -1201,7 +1208,10 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                     gridCols="2"
                     onDownloadPdf={handleDownloadPdf}
                     onDownloadExcel={handleDownloadExcel}
-                    downloadDisabled={!productCode || exportLoader}
+                    pdfDisabled={!productCode || pdfLoading}
+                    excelDisabled={!productCode || excelLoading}
+                    pdfLoading={pdfLoading}
+                    excelLoading={excelLoading}
                     downloadDisabledMessage="Please select product to download stock ledger."
                 />
 

@@ -37,7 +37,16 @@ type ReportFilterCardProps = {
     showExcelButton?: boolean;
 
     actionDisabled?: boolean;
+
+    // old common prop - kept for compatibility
     downloadDisabled?: boolean;
+
+    // new separate props
+    pdfDisabled?: boolean;
+    excelDisabled?: boolean;
+    pdfLoading?: boolean;
+    excelLoading?: boolean;
+
     downloadDisabledMessage?: string;
 
     searchButtonText?: string;
@@ -64,6 +73,12 @@ const RegisterFilterCard = ({
 
     actionDisabled,
     downloadDisabled = false,
+
+    pdfDisabled,
+    excelDisabled,
+    pdfLoading = false,
+    excelLoading = false,
+
     downloadDisabledMessage = "Please select required fields to download report.",
 
     searchButtonText = "Refresh",
@@ -73,14 +88,20 @@ const RegisterFilterCard = ({
 
     gridCols = "2",
 }: ReportFilterCardProps) => {
-    const isSelectFieldSelected = fields.some(
-        (field) =>
-            field.type === "select" &&
-            String(field.value || "").trim()
+    const isAnyFieldSelected = fields.some((field) =>
+        String(field.value || "").trim()
     );
 
-    const finalActionDisabled = actionDisabled ?? !isSelectFieldSelected;
-    const finalDownloadDisabled = downloadDisabled || finalActionDisabled;
+    const finalActionDisabled = actionDisabled ?? !isAnyFieldSelected;
+
+    const finalPdfDisabled =
+        pdfDisabled ?? (downloadDisabled || finalActionDisabled);
+
+    const finalExcelDisabled =
+        excelDisabled ?? (downloadDisabled || finalActionDisabled);
+
+    const showDisabledMessage =
+        finalPdfDisabled || finalExcelDisabled || finalActionDisabled;
 
     const gridClass =
         gridCols === "1"
@@ -137,7 +158,7 @@ const RegisterFilterCard = ({
                     <div className="flex h-8 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
                         <input
                             type="date"
-                            value={field.value}
+                            value={field.value || ""}
                             disabled={field.disabled}
                             onChange={(e) => field.onChange(e.target.value)}
                             className="w-full bg-transparent text-xs font-semibold text-slate-800 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
@@ -186,7 +207,7 @@ const RegisterFilterCard = ({
                     <div className="flex h-8 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
                         <input
                             type="text"
-                            value={field.value}
+                            value={field.value || ""}
                             disabled={field.disabled}
                             placeholder={field.placeholder}
                             onChange={(e) => field.onChange(e.target.value)}
@@ -215,7 +236,7 @@ const RegisterFilterCard = ({
 
                 <div className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0 flex-1">
-                        {finalDownloadDisabled && downloadDisabledMessage ? (
+                        {showDisabledMessage && downloadDisabledMessage ? (
                             <div className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
                                 <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px]">
                                     !
@@ -259,8 +280,8 @@ const RegisterFilterCard = ({
                         {showPdfButton && (
                             <PrimaryButton
                                 callBackFn={onDownloadPdf}
-                                disabled={finalDownloadDisabled}
-                                text={pdfButtonText}
+                                disabled={finalPdfDisabled}
+                                text={pdfLoading ? "Loading..." : pdfButtonText}
                                 icon={<FileDown size={13} />}
                                 className={primaryButtonClass}
                             />
@@ -269,8 +290,8 @@ const RegisterFilterCard = ({
                         {showExcelButton && (
                             <PrimaryButton
                                 callBackFn={onDownloadExcel}
-                                disabled={finalDownloadDisabled}
-                                text={excelButtonText}
+                                disabled={finalExcelDisabled}
+                                text={excelLoading ? "Loading..." : excelButtonText}
                                 icon={<FileDown size={13} />}
                                 className={primaryButtonClass}
                             />

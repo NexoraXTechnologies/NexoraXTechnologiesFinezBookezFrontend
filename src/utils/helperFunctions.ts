@@ -2,6 +2,13 @@ import professionalAxios from "../services/professionalAxios";
 
 export const todayYMD = () => new Date().toISOString().split("T")[0];
 
+export const getFirstDateOfCurrentMonth = () => {
+    const date = new Date();
+    date.setDate(1);
+
+    return date.toISOString().split("T")[0];
+};
+
 export const num = (value: any) => {
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
@@ -45,9 +52,9 @@ const getRecords = (res: any) => {
 const loadFieldOptions = async (fields: any[], param: Record<string, any> = {}) => {
     const updatedFields = await Promise.all(
         (fields || []).map(async (field) => {
-            console.log({field})
+            console.log({ field })
             if (!!field?.options?.length) {
-                console.log({ options:field?.options })
+                console.log({ options: field?.options })
                 const options = Array.isArray(field?.options) ? field?.options.map((item: any) => ({ label: item || "", value: item || "", raw: item })) : [];
                 return { ...field, options };
             }
@@ -72,4 +79,5 @@ export const loadAllTemplateOptions = async (templateData: any, param: any = {})
 };
 
 export const fmtMoney = (value: any) => num(value).toFixed(2);
+
 
