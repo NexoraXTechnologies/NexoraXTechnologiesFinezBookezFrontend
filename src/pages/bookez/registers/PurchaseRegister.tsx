@@ -9,14 +9,13 @@ import Pagination from "../../../components/pagination";
 import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
 
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
-import { getAllProducts } from "../../../redux/slices/professionalSlice/productMasterSlice";
 
 import {
-    addSalesRegister,
-} from "../../../redux/slices/professionalSlice/bookEzRegister/salesRegisterSlice";
+    addPurchaseRegister,
+} from "../../../redux/slices/professionalSlice/bookEzRegister/purchaseRegisterSlice";
 
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
-import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 
 import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 
@@ -26,19 +25,22 @@ import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 
 const mainColumns = [
     {
-        key: "sInvVoucherNumber",
+        key: "pInvVoucherNumber",
         title: "Voucher Number",
         render: (row: any) => (
             <span className="font-medium text-slate-800">
-                {row?.sInvVoucherNumber || "-"}
+                {row?.pInvVoucherNumber || row?.voucherNumber || "-"}
             </span>
         ),
     },
     {
-        key: "sInvVoucherDate",
+        key: "pInvVoucherDate",
         title: "Voucher Date",
         render: (row: any) => {
-            const rawDate = row?.sInvVoucherDate;
+            const rawDate =
+                row?.pInvVoucherDate ||
+                row?.voucherDate ||
+                row?.date;
 
             const date = rawDate
                 ? new Date(rawDate).toLocaleDateString("en-IN")
@@ -52,42 +54,56 @@ const mainColumns = [
         },
     },
     {
-        key: "sInvCustomerName",
-        title: "Customer",
+        key: "pInvVendorName",
+        title: "Vendor",
         render: (row: any) => (
             <div className="flex flex-col">
                 <span className="font-semibold text-slate-800">
-                    {row?.sInvCustomerName || "-"}
+                    {row?.pInvVendorName || row?.vendorName || "-"}
                 </span>
                 <span className="text-xs text-slate-500">
-                    {row?.sInvCustomerCode || "-"}
+                    {row?.pInvVendorCode || row?.vendorCode || "-"}
                 </span>
             </div>
         ),
     },
     {
-        key: "sOrderNumber",
-        title: "Order",
-        render: (row: any) => (
-            <span className="font-medium text-slate-800">
-                {row?.sOrderNumber || "-"}
-            </span>
-        ),
+        key: "grnVoucherNumber",
+        title: "GRN",
+        render: (row: any) => {
+            const grnNumber =
+                row?.grnVoucherNumber ||
+                row?.grnNumber ||
+                row?.pInvBody?.[0]?.grnVoucherNumber ||
+                row?.products?.[0]?.grnVoucherNumber ||
+                "-";
+
+            return (
+                <span className="font-medium text-slate-800">
+                    {grnNumber}
+                </span>
+            );
+        },
     },
     {
         key: "netAmount",
         title: "Net Amount",
         render: (row: any) => (
             <span className="font-bold text-slate-900">
-                ₹{Number(row?.sInvFooter?.netAmount || 0).toFixed(2)}
+                ₹{Number(
+                    row?.pInvFooter?.netAmount ||
+                    row?.pInvFooter?.totalNetAmount ||
+                    row?.netAmount ||
+                    0
+                ).toFixed(2)}
             </span>
         ),
     },
     {
-        key: "sInvStatus",
+        key: "pInvStatus",
         title: "Status",
         render: (row: any) => {
-            const status = row?.sInvStatus || "-";
+            const status = row?.pInvStatus || row?.status || "-";
             const isOpen = String(status).toLowerCase() === "open";
 
             return (
@@ -115,13 +131,13 @@ const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
     if (res?.invoice) return res.invoice;
     if (res?.data?.invoice) return res.data.invoice;
 
-    if (res?.salesInvoice) return res.salesInvoice;
-    if (res?.data?.salesInvoice) return res.data.salesInvoice;
+    if (res?.purchaseInvoice) return res.purchaseInvoice;
+    if (res?.data?.purchaseInvoice) return res.data.purchaseInvoice;
 
     if (
         res &&
         typeof res === "object" &&
-        res?.sInvVoucherNumber === voucherNumber
+        res?.pInvVoucherNumber === voucherNumber
     ) {
         return res;
     }
@@ -129,7 +145,7 @@ const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
     if (
         res?.data &&
         typeof res.data === "object" &&
-        res.data?.sInvVoucherNumber === voucherNumber
+        res.data?.pInvVoucherNumber === voucherNumber
     ) {
         return res.data;
     }
@@ -151,88 +167,98 @@ const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
 
     return (
         records.find(
-            (item: any) => item?.sInvVoucherNumber === voucherNumber
+            (item: any) =>
+                item?.pInvVoucherNumber === voucherNumber ||
+                item?.voucherNumber === voucherNumber
         ) ||
         records[0] ||
         null
     );
 };
 
-const normalizeInvoiceForView = (record: any) => {
-    const footer = record?.sInvFooter || {};
+const normalizePurchaseInvoiceForView = (record: any) => {
+    const footer = record?.pInvFooter || {};
 
-    const products = (record?.sInvBody || []).map((item: any) => ({
-        ...item,
+    const products = (record?.pInvBody || record?.products || []).map(
+        (item: any) => ({
+            ...item,
 
-        productCode: item?.productCode || "",
-        productName: item?.productName || "",
-        productId: item?.productId || "",
+            productCode: item?.productCode || "",
+            productName: item?.productName || "",
+            productId: item?.productId || "",
 
-        productDescription:
-            item?.productDescription || item?.description || "",
-        description:
-            item?.description || item?.productDescription || "",
-        productHSNCode: item?.productHSNCode || "",
+            productDescription:
+                item?.productDescription || item?.description || "",
+            description:
+                item?.description || item?.productDescription || "",
+            productHSNCode: item?.productHSNCode || "",
 
-        quantity: item?.quantity || "",
-        uom: item?.uom || item?.unit || "",
-        unit: item?.unit || item?.uom || "",
-        unitName: item?.unitName || "",
+            quantity: item?.quantity || "",
+            uom: item?.uom || item?.unit || "",
+            unit: item?.unit || item?.uom || "",
+            unitName: item?.unitName || "",
 
-        rate: item?.rate || "",
+            rate: item?.rate || "",
 
-        gross: item?.gross || item?.grossAmount || "",
-        grossAmount: item?.grossAmount || item?.gross || "",
+            gross: item?.gross || item?.grossAmount || "",
+            grossAmount: item?.grossAmount || item?.gross || "",
 
-        discount: item?.discount || item?.discountPercentage || "",
-        discountPercentage:
-            item?.discountPercentage || item?.discount || "",
-        discountAmount: item?.discountAmount || "0.00",
+            discount: item?.discount || item?.discountPercentage || "",
+            discountPercentage:
+                item?.discountPercentage || item?.discount || "",
+            discountAmount: item?.discountAmount || "0.00",
 
-        taxableAmount: item?.taxableAmount || "0.00",
+            taxableAmount: item?.taxableAmount || "0.00",
 
-        cgst: item?.cgst || item?.cgstPercentage || "",
-        cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-        cgstAmount: item?.cgstAmount || "0.00",
+            cgst: item?.cgst || item?.cgstPercentage || "",
+            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
+            cgstAmount: item?.cgstAmount || "0.00",
 
-        sgst: item?.sgst || item?.sgstPercentage || "",
-        sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-        sgstAmount: item?.sgstAmount || "0.00",
+            sgst: item?.sgst || item?.sgstPercentage || "",
+            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
+            sgstAmount: item?.sgstAmount || "0.00",
 
-        igst: item?.igst || item?.igstPercentage || "",
-        igstPercentage: item?.igstPercentage || item?.igst || "",
-        igstAmount: item?.igstAmount || "0.00",
+            igst: item?.igst || item?.igstPercentage || "",
+            igstPercentage: item?.igstPercentage || item?.igst || "",
+            igstAmount: item?.igstAmount || "0.00",
 
-        taxAmount: item?.taxAmount || "0.00",
-        otherAmount: item?.otherAmount || "0.00",
+            taxAmount: item?.taxAmount || "0.00",
+            otherAmount: item?.otherAmount || "0.00",
 
-        netAmount: item?.netAmount || item?.netTotal || "",
-        netTotal: item?.netTotal || item?.netAmount || "",
-    }));
+            netAmount: item?.netAmount || item?.netTotal || "",
+            netTotal: item?.netTotal || item?.netAmount || "",
+        })
+    );
 
     return {
         ...record,
 
-        sInvVoucherNumber:
-            record?.sInvVoucherNumber || record?.voucherNumber || "",
+        pInvVoucherNumber:
+            record?.pInvVoucherNumber || record?.voucherNumber || "",
 
-        sInvVoucherDate:
-            record?.sInvVoucherDate || record?.voucherDate || "",
+        pInvVoucherDate:
+            record?.pInvVoucherDate || record?.voucherDate || "",
 
-        sInvCustomerCode:
-            record?.sInvCustomerCode || record?.customerCode || "",
+        pInvVendorCode:
+            record?.pInvVendorCode ||
+            record?.vendorCode ||
+            record?.accountCode ||
+            "",
 
-        sInvCustomerName:
-            record?.sInvCustomerName || record?.customerName || "",
+        pInvVendorName:
+            record?.pInvVendorName ||
+            record?.vendorName ||
+            record?.accountName ||
+            "",
 
-        sInvStatus:
-            record?.sInvStatus || record?.sInvDocStatus || "open",
+        pInvStatus:
+            record?.pInvStatus || record?.status || "open",
 
-        sInvRemark:
-            record?.sInvRemark || record?.remark || "",
+        pInvRemark:
+            record?.pInvRemark || record?.remark || "",
 
         products,
-        sInvBody: products,
+        pInvBody: products,
 
         grossAmount:
             footer?.grossAmount || footer?.totalGrossAmount || "0.00",
@@ -276,24 +302,22 @@ const normalizeInvoiceForView = (record: any) => {
    COMPONENT
 =================================================== */
 
-const SalesRegister = () => {
+const PurchaseRegister = () => {
     const dispatch = useDispatch<any>();
 
     /* ===================================================
        FILTER STATES
-
-       Default values are blank.
-       So initial API call will show all records.
+       Blank dates = no default filter.
     =================================================== */
 
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
-    const [customer, setCustomer] = useState<string>("");
-    const [product, setProduct] = useState<string>("");
+    const [vendor, setVendor] = useState<string>("");
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
     const [refreshKey, setRefreshKey] = useState(0);
+
     const [pdfLoading, setPdfLoading] = useState(false);
     const [excelLoading, setExcelLoading] = useState(false);
 
@@ -320,15 +344,11 @@ const SalesRegister = () => {
         (state: any) => state.accountMaster
     );
 
-    const { products = [] } = useSelector(
-        (state: any) => state.productMaster
-    );
-
     const {
-        salesRegisterData = [],
+        purchaseRegisterData = [],
         addLoader = false,
         pagination = {},
-    } = useSelector((state: any) => state.salesRegister);
+    } = useSelector((state: any) => state.purchaseRegister);
 
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
@@ -339,14 +359,14 @@ const SalesRegister = () => {
     =================================================== */
 
     const hasAnyFilter = useMemo(() => {
-        return Boolean(fromDate || toDate || customer || product);
-    }, [fromDate, toDate, customer, product]);
+        return Boolean(fromDate || toDate || vendor);
+    }, [fromDate, toDate, vendor]);
 
     /* ===================================================
        OPTIONS
     =================================================== */
 
-    const customerOptions = useMemo(() => {
+    const vendorOptions = useMemo(() => {
         return (accounts || [])
             .map((item: any) => ({
                 label: item?.accountName || "",
@@ -355,22 +375,15 @@ const SalesRegister = () => {
             .filter((item: any) => item.label && item.value);
     }, [accounts]);
 
-    const productOptions = useMemo(() => {
-        return (products || [])
-            .map((item: any) => ({
-                label: item?.productName || "",
-                value: item?.productCode || "",
-            }))
-            .filter((item: any) => item.label && item.value);
-    }, [products]);
-
     /* ===================================================
        TABLE DATA
     =================================================== */
 
     const tableData = useMemo(() => {
-        return Array.isArray(salesRegisterData) ? salesRegisterData : [];
-    }, [salesRegisterData]);
+        return Array.isArray(purchaseRegisterData)
+            ? purchaseRegisterData
+            : [];
+    }, [purchaseRegisterData]);
 
     const currentPagination = useMemo(() => {
         return pagination || {};
@@ -386,14 +399,13 @@ const SalesRegister = () => {
             toDate,
             offset: localOffset,
             limit: localLimit,
-            customerCode: customer,
-            productCode: product,
+            vendorCode: vendor,
             exportType,
         };
     };
 
     /* ===================================================
-       LOAD MASTER DATA
+       LOAD VENDOR MASTER
     =================================================== */
 
     useEffect(() => {
@@ -402,39 +414,23 @@ const SalesRegister = () => {
                 offset: 0,
                 limit: 500,
                 search: "",
-                accountType: "customer",
-            })
-        );
-    }, [dispatch]);
-
-    useEffect(() => {
-        dispatch(
-            getAllProducts({
-                limit: 200,
-                offset: 0,
-                search: "",
+                accountType: "vendor",
             })
         );
     }, [dispatch]);
 
     /* ===================================================
-       LOAD SALES REGISTER DATA
-
-       This API will call:
-       1. On first page load - all list
-       2. On filter change - filtered list
-       3. On pagination change
-       4. On manual refresh button click
+       LOAD PURCHASE REGISTER DATA
+       Auto refresh on filter / pagination / refresh click.
     =================================================== */
 
     useEffect(() => {
-        dispatch(addSalesRegister(getPayload()));
+        dispatch(addPurchaseRegister(getPayload()));
     }, [
         dispatch,
         fromDate,
         toDate,
-        customer,
-        product,
+        vendor,
         localOffset,
         localLimit,
         refreshKey,
@@ -462,7 +458,7 @@ const SalesRegister = () => {
 
                 setViewTemplateFields(updatedData);
             } catch (error) {
-                console.log("Failed to prepare sales invoice view fields", error);
+                console.log("Failed to prepare purchase invoice view fields", error);
             }
         };
 
@@ -525,18 +521,17 @@ const SalesRegister = () => {
     const handleClear = () => {
         setFromDate("");
         setToDate("");
-        setCustomer("");
-        setProduct("");
+        setVendor("");
         setLocalOffset(0);
         setRefreshKey((prev) => prev + 1);
     };
 
     const handleViewVoucher = async (row: any) => {
         const voucherNumber =
-            row?.sInvVoucherNumber || row?.voucherNumber || "";
+            row?.pInvVoucherNumber || row?.voucherNumber || "";
 
         if (!voucherNumber) {
-            console.log("Sales invoice voucher number missing:", row);
+            console.log("Purchase invoice voucher number missing:", row);
             return;
         }
 
@@ -546,10 +541,10 @@ const SalesRegister = () => {
             setViewErrors({});
             setViewForm({});
 
-            await dispatch(getAllTransactionSchema("salesInvoice") as any);
+            await dispatch(getAllTransactionSchema("purchaseInvoice") as any);
 
             const res = await dispatch(
-                getByVoucherNumberSalesInvoice({
+                getByVoucherNumberPurchaseInvoiceList({
                     voucherNumber,
                 }) as any
             ).unwrap();
@@ -557,14 +552,14 @@ const SalesRegister = () => {
             const record = getVoucherRecordFromResponse(res, voucherNumber);
 
             if (!record) {
-                console.log("Sales invoice not found:", voucherNumber, res);
+                console.log("Purchase invoice not found:", voucherNumber, res);
                 setViewForm({});
                 return;
             }
 
-            setViewForm(normalizeInvoiceForView(record));
+            setViewForm(normalizePurchaseInvoiceForView(record));
         } catch (error) {
-            console.log("Sales register view invoice failed", error);
+            console.log("Purchase register view invoice failed", error);
             setViewForm({});
         } finally {
             setViewLoading(false);
@@ -592,18 +587,19 @@ const SalesRegister = () => {
             setPdfLoading(true);
 
             const res = await dispatch(
-                addSalesRegister(getPayload("pdf"))
+                addPurchaseRegister(getPayload("pdf"))
             ).unwrap();
 
             if (res?.blob) {
-                downloadBlobFile(res.blob, "sales-register.pdf");
+                downloadBlobFile(res.blob, "purchase-register.pdf");
             }
         } catch (error) {
-            console.log("Sales register PDF download failed", error);
+            console.log("Purchase register PDF download failed", error);
         } finally {
             setPdfLoading(false);
         }
     };
+
     const handleDownloadExcel = async () => {
         if (!hasAnyFilter || excelLoading) return;
 
@@ -611,18 +607,19 @@ const SalesRegister = () => {
             setExcelLoading(true);
 
             const res = await dispatch(
-                addSalesRegister(getPayload("excel"))
+                addPurchaseRegister(getPayload("excel"))
             ).unwrap();
 
             if (res?.blob) {
-                downloadBlobFile(res.blob, "sales-register.xlsx");
+                downloadBlobFile(res.blob, "purchase-register.xlsx");
             }
         } catch (error) {
-            console.log("Sales register Excel download failed", error);
+            console.log("Purchase register Excel download failed", error);
         } finally {
             setExcelLoading(false);
         }
     };
+
     /* ===================================================
        RENDER
     =================================================== */
@@ -630,7 +627,7 @@ const SalesRegister = () => {
     return (
         <div className="flex h-full w-full flex-col gap-4 bg-slate-50 p-4">
             <RegisterFilterCard
-                title="Sales Register Filters"
+                title="Purchase Register Filters"
                 fields={[
                     {
                         key: "fromDate",
@@ -655,31 +652,19 @@ const SalesRegister = () => {
                         required: false,
                     },
                     {
-                        key: "customer",
+                        key: "vendor",
                         type: "select",
-                        label: "Customer",
-                        placeholder: "Customer",
-                        value: customer,
-                        options: customerOptions,
+                        label: "Vendor",
+                        placeholder: "Vendor",
+                        value: vendor,
+                        options: vendorOptions,
                         onChange: (value) => {
-                            setCustomer(value);
-                            setLocalOffset(0);
-                        },
-                    },
-                    {
-                        key: "product",
-                        type: "select",
-                        label: "Product",
-                        placeholder: "Product",
-                        value: product,
-                        options: productOptions,
-                        onChange: (value) => {
-                            setProduct(value);
+                            setVendor(value);
                             setLocalOffset(0);
                         },
                     },
                 ]}
-                gridCols="4"
+                gridCols="3"
                 onSearch={handleRefresh}
                 onClear={handleClear}
                 onDownloadPdf={handleDownloadPdf}
@@ -699,7 +684,7 @@ const SalesRegister = () => {
                 columns={mainColumns}
                 data={tableData}
                 loading={addLoader}
-                emptyMessage="No sales register data found"
+                emptyMessage="No purchase register data found"
                 showFieldSelector={false}
                 actions={(row: any) => (
                     <button
@@ -724,8 +709,8 @@ const SalesRegister = () => {
                 show={viewModal}
                 setShow={setViewModal}
                 edit={true}
-                title="View Sales Invoice"
-                subtitle="View sales invoice details"
+                title="View Purchase Invoice"
+                subtitle="View purchase invoice details"
                 loading={viewLoading}
                 contentLoading={viewLoading}
                 onClose={() => {
@@ -764,4 +749,4 @@ const SalesRegister = () => {
     );
 };
 
-export default SalesRegister;
+export default PurchaseRegister;

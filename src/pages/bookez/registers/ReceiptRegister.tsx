@@ -9,14 +9,13 @@ import Pagination from "../../../components/pagination";
 import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
 
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
-import { getAllProducts } from "../../../redux/slices/professionalSlice/productMasterSlice";
 
 import {
-    addSalesRegister,
-} from "../../../redux/slices/professionalSlice/bookEzRegister/salesRegisterSlice";
+    addReceiptRegister,
+} from "../../../redux/slices/professionalSlice/bookEzRegister/receiptRegisterSlice";
 
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
-import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { getByVoucherNumberSalesReceiptList } from "../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
 
 import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 
@@ -26,19 +25,22 @@ import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 
 const mainColumns = [
     {
-        key: "sInvVoucherNumber",
+        key: "recVoucherNumber",
         title: "Voucher Number",
         render: (row: any) => (
             <span className="font-medium text-slate-800">
-                {row?.sInvVoucherNumber || "-"}
+                {row?.recVoucherNumber || row?.voucherNumber || "-"}
             </span>
         ),
     },
     {
-        key: "sInvVoucherDate",
+        key: "recVoucherDate",
         title: "Voucher Date",
         render: (row: any) => {
-            const rawDate = row?.sInvVoucherDate;
+            const rawDate =
+                row?.recVoucherDate ||
+                row?.voucherDate ||
+                row?.date;
 
             const date = rawDate
                 ? new Date(rawDate).toLocaleDateString("en-IN")
@@ -52,59 +54,56 @@ const mainColumns = [
         },
     },
     {
-        key: "sInvCustomerName",
-        title: "Customer",
+        key: "recAccountName",
+        title: "Account",
         render: (row: any) => (
             <div className="flex flex-col">
                 <span className="font-semibold text-slate-800">
-                    {row?.sInvCustomerName || "-"}
+                    {row?.recAccountName || row?.accountName || "-"}
                 </span>
                 <span className="text-xs text-slate-500">
-                    {row?.sInvCustomerCode || "-"}
+                    {row?.recAccountCode || row?.accountCode || "-"}
                 </span>
             </div>
         ),
     },
     {
-        key: "sOrderNumber",
-        title: "Order",
-        render: (row: any) => (
-            <span className="font-medium text-slate-800">
-                {row?.sOrderNumber || "-"}
-            </span>
-        ),
-    },
-    {
-        key: "netAmount",
-        title: "Net Amount",
+        key: "adjusted",
+        title: "Adjusted Amount",
         render: (row: any) => (
             <span className="font-bold text-slate-900">
-                ₹{Number(row?.sInvFooter?.netAmount || 0).toFixed(2)}
+                ₹{Number(
+                    row?.recFooter?.netAmount ||
+                    row?.netAmount ||
+                    row?.amount ||
+                    0
+                ).toFixed(2)}
             </span>
         ),
     },
-    {
-        key: "sInvStatus",
-        title: "Status",
-        render: (row: any) => {
-            const status = row?.sInvStatus || "-";
-            const isOpen = String(status).toLowerCase() === "open";
+    // {
+    //     key: "recStatus",
+    //     title: "Status",
+    //     render: (row: any) => {
+    //         const status = row?.recStatus || row?.status || "-";
+    //         const isOpen = String(status).toLowerCase() === "open";
 
-            return (
-                <span
-                    className={`
-                        rounded-full px-3 py-1 text-xs font-bold uppercase
-                        ${isOpen
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-slate-100 text-slate-600"
-                        }
-                    `}
-                >
-                    {status}
-                </span>
-            );
-        },
-    },
+    //         return (
+    //             <span
+    //                 className={`
+    //                     rounded-full px-3 py-1 text-xs font-bold uppercase
+    //                     ${
+    //                         isOpen
+    //                             ? "bg-emerald-50 text-emerald-700"
+    //                             : "bg-slate-100 text-slate-600"
+    //                     }
+    //                 `}
+    //             >
+    //                 {status}
+    //             </span>
+    //         );
+    //     },
+    // },
 ];
 
 /* ===================================================
@@ -112,16 +111,16 @@ const mainColumns = [
 =================================================== */
 
 const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
-    if (res?.invoice) return res.invoice;
-    if (res?.data?.invoice) return res.data.invoice;
+    if (res?.receipt) return res.receipt;
+    if (res?.data?.receipt) return res.data.receipt;
 
-    if (res?.salesInvoice) return res.salesInvoice;
-    if (res?.data?.salesInvoice) return res.data.salesInvoice;
+    if (res?.record) return res.record;
+    if (res?.data?.record) return res.data.record;
 
     if (
         res &&
         typeof res === "object" &&
-        res?.sInvVoucherNumber === voucherNumber
+        res?.recVoucherNumber === voucherNumber
     ) {
         return res;
     }
@@ -129,7 +128,7 @@ const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
     if (
         res?.data &&
         typeof res.data === "object" &&
-        res.data?.sInvVoucherNumber === voucherNumber
+        res.data?.recVoucherNumber === voucherNumber
     ) {
         return res.data;
     }
@@ -139,136 +138,78 @@ const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
             ? res
             : Array.isArray(res?.records)
                 ? res.records
-                : Array.isArray(res?.invoices)
-                    ? res.invoices
+                : Array.isArray(res?.receipts)
+                    ? res.receipts
                     : Array.isArray(res?.data)
                         ? res.data
                         : Array.isArray(res?.data?.records)
                             ? res.data.records
-                            : Array.isArray(res?.data?.invoices)
-                                ? res.data.invoices
+                            : Array.isArray(res?.data?.receipts)
+                                ? res.data.receipts
                                 : [];
 
     return (
         records.find(
-            (item: any) => item?.sInvVoucherNumber === voucherNumber
+            (item: any) =>
+                item?.recVoucherNumber === voucherNumber ||
+                item?.voucherNumber === voucherNumber
         ) ||
         records[0] ||
         null
     );
 };
 
-const normalizeInvoiceForView = (record: any) => {
-    const footer = record?.sInvFooter || {};
+const normalizeReceiptForView = (record: any) => {
+    const footer = record?.recFooter || {};
 
-    const products = (record?.sInvBody || []).map((item: any) => ({
-        ...item,
-
-        productCode: item?.productCode || "",
-        productName: item?.productName || "",
-        productId: item?.productId || "",
-
-        productDescription:
-            item?.productDescription || item?.description || "",
-        description:
-            item?.description || item?.productDescription || "",
-        productHSNCode: item?.productHSNCode || "",
-
-        quantity: item?.quantity || "",
-        uom: item?.uom || item?.unit || "",
-        unit: item?.unit || item?.uom || "",
-        unitName: item?.unitName || "",
-
-        rate: item?.rate || "",
-
-        gross: item?.gross || item?.grossAmount || "",
-        grossAmount: item?.grossAmount || item?.gross || "",
-
-        discount: item?.discount || item?.discountPercentage || "",
-        discountPercentage:
-            item?.discountPercentage || item?.discount || "",
-        discountAmount: item?.discountAmount || "0.00",
-
-        taxableAmount: item?.taxableAmount || "0.00",
-
-        cgst: item?.cgst || item?.cgstPercentage || "",
-        cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-        cgstAmount: item?.cgstAmount || "0.00",
-
-        sgst: item?.sgst || item?.sgstPercentage || "",
-        sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-        sgstAmount: item?.sgstAmount || "0.00",
-
-        igst: item?.igst || item?.igstPercentage || "",
-        igstPercentage: item?.igstPercentage || item?.igst || "",
-        igstAmount: item?.igstAmount || "0.00",
-
-        taxAmount: item?.taxAmount || "0.00",
-        otherAmount: item?.otherAmount || "0.00",
-
-        netAmount: item?.netAmount || item?.netTotal || "",
-        netTotal: item?.netTotal || item?.netAmount || "",
+    const recBody = (record?.recBody || []).map((item: any) => ({
+        accountCode: item?.accountCode || "",
+        accountName: item?.accountName || "",
+        amount: item?.amount || "0",
+        netAmount: item?.netAmount || item?.amount || "0",
     }));
 
     return {
         ...record,
 
-        sInvVoucherNumber:
-            record?.sInvVoucherNumber || record?.voucherNumber || "",
+        recVoucherNumber:
+            record?.recVoucherNumber || record?.voucherNumber || "",
 
-        sInvVoucherDate:
-            record?.sInvVoucherDate || record?.voucherDate || "",
+        recVoucherDate:
+            record?.recVoucherDate || record?.voucherDate || "",
 
-        sInvCustomerCode:
-            record?.sInvCustomerCode || record?.customerCode || "",
+        recAccountCode:
+            record?.recAccountCode || record?.accountCode || "",
 
-        sInvCustomerName:
-            record?.sInvCustomerName || record?.customerName || "",
+        recAccountName:
+            record?.recAccountName || record?.accountName || "",
 
-        sInvStatus:
-            record?.sInvStatus || record?.sInvDocStatus || "open",
+        recStatus:
+            record?.recStatus || record?.status || "open",
 
-        sInvRemark:
-            record?.sInvRemark || record?.remark || "",
+        recRemark:
+            record?.recRemark || record?.remark || "",
 
-        products,
-        sInvBody: products,
+        recBody,
 
-        grossAmount:
-            footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-
-        discountAmount:
-            footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-
-        cgstAmount:
-            footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-
-        sgstAmount:
-            footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-
-        igstAmount:
-            footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-
-        taxAmount:
-            footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-
-        otherAmount:
-            footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+        grossAmount: "0.00",
+        discountAmount: "0.00",
+        cgstAmount: "0.00",
+        sgstAmount: "0.00",
+        igstAmount: "0.00",
+        taxAmount: "0.00",
+        otherAmount: "0.00",
 
         netAmount:
-            footer?.netAmount || footer?.totalNetAmount || "0.00",
+            footer?.netAmount || record?.netAmount || "0.00",
 
         adjustedAmount:
-            footer?.adjustedAmount || "0.00",
+            footer?.adjustedAmount || record?.adjustedAmount || "0.00",
 
         balanceAmount:
-            footer?.balanceAmount ||
-            footer?.netAmount ||
-            footer?.totalNetAmount ||
-            "0.00",
+            footer?.balanceAmount || record?.balanceAmount || "0.00",
 
-        totalQuantity:
-            footer?.totalQuantity || "0",
+        totalQuantity: "0",
     };
 };
 
@@ -276,24 +217,22 @@ const normalizeInvoiceForView = (record: any) => {
    COMPONENT
 =================================================== */
 
-const SalesRegister = () => {
+const ReceiptRegister = () => {
     const dispatch = useDispatch<any>();
 
     /* ===================================================
        FILTER STATES
-
-       Default values are blank.
-       So initial API call will show all records.
+       Blank dates = no default filter.
     =================================================== */
 
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
-    const [customer, setCustomer] = useState<string>("");
-    const [product, setProduct] = useState<string>("");
+    const [account, setAccount] = useState<string>("");
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
     const [refreshKey, setRefreshKey] = useState(0);
+
     const [pdfLoading, setPdfLoading] = useState(false);
     const [excelLoading, setExcelLoading] = useState(false);
 
@@ -320,15 +259,11 @@ const SalesRegister = () => {
         (state: any) => state.accountMaster
     );
 
-    const { products = [] } = useSelector(
-        (state: any) => state.productMaster
-    );
-
     const {
-        salesRegisterData = [],
+        receiptRegisterData = [],
         addLoader = false,
         pagination = {},
-    } = useSelector((state: any) => state.salesRegister);
+    } = useSelector((state: any) => state.receiptRegister);
 
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
@@ -339,14 +274,14 @@ const SalesRegister = () => {
     =================================================== */
 
     const hasAnyFilter = useMemo(() => {
-        return Boolean(fromDate || toDate || customer || product);
-    }, [fromDate, toDate, customer, product]);
+        return Boolean(fromDate || toDate || account);
+    }, [fromDate, toDate, account]);
 
     /* ===================================================
        OPTIONS
     =================================================== */
 
-    const customerOptions = useMemo(() => {
+    const accountOptions = useMemo(() => {
         return (accounts || [])
             .map((item: any) => ({
                 label: item?.accountName || "",
@@ -355,22 +290,15 @@ const SalesRegister = () => {
             .filter((item: any) => item.label && item.value);
     }, [accounts]);
 
-    const productOptions = useMemo(() => {
-        return (products || [])
-            .map((item: any) => ({
-                label: item?.productName || "",
-                value: item?.productCode || "",
-            }))
-            .filter((item: any) => item.label && item.value);
-    }, [products]);
-
     /* ===================================================
        TABLE DATA
     =================================================== */
 
     const tableData = useMemo(() => {
-        return Array.isArray(salesRegisterData) ? salesRegisterData : [];
-    }, [salesRegisterData]);
+        return Array.isArray(receiptRegisterData)
+            ? receiptRegisterData
+            : [];
+    }, [receiptRegisterData]);
 
     const currentPagination = useMemo(() => {
         return pagination || {};
@@ -386,14 +314,13 @@ const SalesRegister = () => {
             toDate,
             offset: localOffset,
             limit: localLimit,
-            customerCode: customer,
-            productCode: product,
+            accountCode: account,
             exportType,
         };
     };
 
     /* ===================================================
-       LOAD MASTER DATA
+       LOAD ACCOUNT MASTER
     =================================================== */
 
     useEffect(() => {
@@ -402,39 +329,23 @@ const SalesRegister = () => {
                 offset: 0,
                 limit: 500,
                 search: "",
-                accountType: "customer",
-            })
-        );
-    }, [dispatch]);
-
-    useEffect(() => {
-        dispatch(
-            getAllProducts({
-                limit: 200,
-                offset: 0,
-                search: "",
+                
             })
         );
     }, [dispatch]);
 
     /* ===================================================
-       LOAD SALES REGISTER DATA
-
-       This API will call:
-       1. On first page load - all list
-       2. On filter change - filtered list
-       3. On pagination change
-       4. On manual refresh button click
+       LOAD RECEIPT REGISTER DATA
+       Auto refresh on filter / pagination / refresh click.
     =================================================== */
 
     useEffect(() => {
-        dispatch(addSalesRegister(getPayload()));
+        dispatch(addReceiptRegister(getPayload()));
     }, [
         dispatch,
         fromDate,
         toDate,
-        customer,
-        product,
+        account,
         localOffset,
         localLimit,
         refreshKey,
@@ -462,7 +373,7 @@ const SalesRegister = () => {
 
                 setViewTemplateFields(updatedData);
             } catch (error) {
-                console.log("Failed to prepare sales invoice view fields", error);
+                console.log("Failed to prepare receipt view fields", error);
             }
         };
 
@@ -495,7 +406,7 @@ const SalesRegister = () => {
             .map((field: any) => {
                 const rawValue =
                     viewFooterTotals?.[
-                    field.key as keyof typeof viewFooterTotals
+                        field.key as keyof typeof viewFooterTotals
                     ] ?? "0.00";
 
                 return {
@@ -507,8 +418,22 @@ const SalesRegister = () => {
     }, [viewTemplateFields?.footer, viewFooterTotals]);
 
     const viewInputData = useMemo(() => {
+        const hiddenBodyKeys = [
+            "references",
+            "reference",
+            "remarks",
+            "remark",
+            "recRemark",
+        ];
+
+        const filteredBody = (viewTemplateFields?.body || []).filter(
+            (field: any) =>
+                !hiddenBodyKeys.includes(String(field?.key || "").toLowerCase())
+        );
+
         return {
             ...viewTemplateFields,
+            body: filteredBody,
             footer: viewFooterArray,
         };
     }, [viewTemplateFields, viewFooterArray]);
@@ -525,18 +450,17 @@ const SalesRegister = () => {
     const handleClear = () => {
         setFromDate("");
         setToDate("");
-        setCustomer("");
-        setProduct("");
+        setAccount("");
         setLocalOffset(0);
         setRefreshKey((prev) => prev + 1);
     };
 
     const handleViewVoucher = async (row: any) => {
         const voucherNumber =
-            row?.sInvVoucherNumber || row?.voucherNumber || "";
+            row?.recVoucherNumber || row?.voucherNumber || "";
 
         if (!voucherNumber) {
-            console.log("Sales invoice voucher number missing:", row);
+            console.log("Receipt voucher number missing:", row);
             return;
         }
 
@@ -546,10 +470,10 @@ const SalesRegister = () => {
             setViewErrors({});
             setViewForm({});
 
-            await dispatch(getAllTransactionSchema("salesInvoice") as any);
+            await dispatch(getAllTransactionSchema("receipt") as any);
 
             const res = await dispatch(
-                getByVoucherNumberSalesInvoice({
+                getByVoucherNumberSalesReceiptList({
                     voucherNumber,
                 }) as any
             ).unwrap();
@@ -557,14 +481,14 @@ const SalesRegister = () => {
             const record = getVoucherRecordFromResponse(res, voucherNumber);
 
             if (!record) {
-                console.log("Sales invoice not found:", voucherNumber, res);
+                console.log("Receipt not found:", voucherNumber, res);
                 setViewForm({});
                 return;
             }
 
-            setViewForm(normalizeInvoiceForView(record));
+            setViewForm(normalizeReceiptForView(record));
         } catch (error) {
-            console.log("Sales register view invoice failed", error);
+            console.log("Receipt register view failed", error);
             setViewForm({});
         } finally {
             setViewLoading(false);
@@ -592,18 +516,19 @@ const SalesRegister = () => {
             setPdfLoading(true);
 
             const res = await dispatch(
-                addSalesRegister(getPayload("pdf"))
+                addReceiptRegister(getPayload("pdf"))
             ).unwrap();
 
             if (res?.blob) {
-                downloadBlobFile(res.blob, "sales-register.pdf");
+                downloadBlobFile(res.blob, "receipt-register.pdf");
             }
         } catch (error) {
-            console.log("Sales register PDF download failed", error);
+            console.log("Receipt register PDF download failed", error);
         } finally {
             setPdfLoading(false);
         }
     };
+
     const handleDownloadExcel = async () => {
         if (!hasAnyFilter || excelLoading) return;
 
@@ -611,18 +536,19 @@ const SalesRegister = () => {
             setExcelLoading(true);
 
             const res = await dispatch(
-                addSalesRegister(getPayload("excel"))
+                addReceiptRegister(getPayload("excel"))
             ).unwrap();
 
             if (res?.blob) {
-                downloadBlobFile(res.blob, "sales-register.xlsx");
+                downloadBlobFile(res.blob, "receipt-register.xlsx");
             }
         } catch (error) {
-            console.log("Sales register Excel download failed", error);
+            console.log("Receipt register Excel download failed", error);
         } finally {
             setExcelLoading(false);
         }
     };
+
     /* ===================================================
        RENDER
     =================================================== */
@@ -630,7 +556,7 @@ const SalesRegister = () => {
     return (
         <div className="flex h-full w-full flex-col gap-4 bg-slate-50 p-4">
             <RegisterFilterCard
-                title="Sales Register Filters"
+                title="Receipt Register Filters"
                 fields={[
                     {
                         key: "fromDate",
@@ -655,31 +581,19 @@ const SalesRegister = () => {
                         required: false,
                     },
                     {
-                        key: "customer",
+                        key: "account",
                         type: "select",
-                        label: "Customer",
-                        placeholder: "Customer",
-                        value: customer,
-                        options: customerOptions,
+                        label: "Account",
+                        placeholder: "Account",
+                        value: account,
+                        options: accountOptions,
                         onChange: (value) => {
-                            setCustomer(value);
-                            setLocalOffset(0);
-                        },
-                    },
-                    {
-                        key: "product",
-                        type: "select",
-                        label: "Product",
-                        placeholder: "Product",
-                        value: product,
-                        options: productOptions,
-                        onChange: (value) => {
-                            setProduct(value);
+                            setAccount(value);
                             setLocalOffset(0);
                         },
                     },
                 ]}
-                gridCols="4"
+                gridCols="3"
                 onSearch={handleRefresh}
                 onClear={handleClear}
                 onDownloadPdf={handleDownloadPdf}
@@ -699,7 +613,7 @@ const SalesRegister = () => {
                 columns={mainColumns}
                 data={tableData}
                 loading={addLoader}
-                emptyMessage="No sales register data found"
+                emptyMessage="No receipt register data found"
                 showFieldSelector={false}
                 actions={(row: any) => (
                     <button
@@ -724,8 +638,8 @@ const SalesRegister = () => {
                 show={viewModal}
                 setShow={setViewModal}
                 edit={true}
-                title="View Sales Invoice"
-                subtitle="View sales invoice details"
+                title="View Receipt"
+                subtitle="View receipt details"
                 loading={viewLoading}
                 contentLoading={viewLoading}
                 onClose={() => {
@@ -733,15 +647,15 @@ const SalesRegister = () => {
                     setViewForm({});
                     setViewErrors({});
                 }}
-                onSubmit={() => { }}
+                onSubmit={() => {}}
                 form={viewForm}
                 errors={viewErrors}
-                handleAddRow={() => { }}
-                handleDeleteRow={() => { }}
-                handleRowChange={() => { }}
+                handleAddRow={() => {}}
+                handleDeleteRow={() => {}}
+                handleRowChange={() => {}}
                 inputData={viewInputData}
-                bodyKey="products"
-                handleChange={() => { }}
+                bodyKey="recBody"
+                handleChange={() => {}}
                 footerTotals={viewFooterTotals}
             />
 
@@ -764,4 +678,4 @@ const SalesRegister = () => {
     );
 };
 
-export default SalesRegister;
+export default ReceiptRegister;
