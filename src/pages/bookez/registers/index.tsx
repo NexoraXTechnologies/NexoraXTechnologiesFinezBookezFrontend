@@ -9,6 +9,8 @@ import {
 import TransactionDashboard from "../transactions/components/TransactionDashboard";
 import SalesRegister from "./SalesRegister";
 import PurchaseRegister from "./PurchaseRegister";
+import ReceiptRegister from "./ReceiptRegister";
+import PaymentRegister from "./PaymentRegister";
 
 const cards: any[] = [
   {
@@ -21,21 +23,21 @@ const cards: any[] = [
   {
     title: "Purchase Register",
     description: "View purchase invoices, vendor billing, taxable values, and total purchase records.",
-    component:PurchaseRegister,
+    component: PurchaseRegister,
     icon: <ReceiptText size={22} />,
     permissionKey: "registers.purchaseRegister"
   },
   {
     title: "Receipt Register",
     description: "View customer receipts, received amounts, adjusted values, and balance records.",
-    component: "",
+    component: ReceiptRegister,
     icon: <WalletCards size={22} />,
     permissionKey: "registers.receiptRegister"
   },
   {
     title: "Payment Register",
     description: "View vendor payments, paid amounts, adjusted values, and payable balance records.",
-    component: "",
+    component: PaymentRegister,
     icon: <CreditCard size={22} />,
     permissionKey: "registers.paymentRegister"
   },

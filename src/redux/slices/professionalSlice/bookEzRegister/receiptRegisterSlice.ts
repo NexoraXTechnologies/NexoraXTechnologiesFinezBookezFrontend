@@ -1,99 +1,168 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import professionalAxios from "../../../../services/professionalAxios";
 
+/* ===================================================
+   TYPES
+=================================================== */
 
-type ReceiptRegisterPayload={
-    payload:any;
-}
+type RejectValue = {
+    message: string;
+};
 
-type Rejectvalue={
-    message:string;
-}
+type ReceiptRegisterState = {
+    addLoader: boolean;
+    listingLoader: boolean;
+    deleteLoader: boolean;
+    exportLoader: boolean;
+    receiptRegisterData: any[];
+    pagination: any;
+    error: string | null;
+};
 
-type ReceiptRegisterState={
-    addLoader:boolean;
-    listingLoader:boolean;
-    deleteLoader:boolean;
-    receiptRegisterData:any;
-    error:string | null;
-}
-export const addReceiptRegister=createAsyncThunk<
-any,
-ReceiptRegisterPayload,
-{rejectValue:Rejectvalue}
+/* ===================================================
+   ADD / GET RECEIPT REGISTER
+=================================================== */
+
+export const addReceiptRegister = createAsyncThunk<
+    any,
+    any,
+    { rejectValue: RejectValue }
 >(
-    "receiptRegister/addReceiptRegister",async({payload},{rejectWithValue})=>{
+    "receiptRegister/addReceiptRegister",
+    async (payload, { rejectWithValue }) => {
         try {
-            const res =await professionalAxios.post("/eTaxSolnMongoApiBackend/users/bookEZ/registers/receiptRegister",{...payload})
-            if(!res?.data?.success){
-                return rejectWithValue({
-                    message:res?.data?.message || "Failed to create receipt register"
-                })
+            const res = await professionalAxios.post(
+                "/eTaxSolnMongoApiBackend/users/bookEZ/registers/receiptRegister",
+                {
+                    ...payload,
+                },
+                payload?.exportType
+                    ? {
+                          responseType: "blob",
+                      }
+                    : undefined
+            );
+
+            /* ===================================================
+               PDF / EXCEL EXPORT RESPONSE
+            =================================================== */
+
+            if (payload?.exportType) {
+                return {
+                    blob: res.data,
+                    exportType: payload.exportType,
+                };
             }
-            return res?.data?.data;
-        } catch (error:any) {
+
+            /* ===================================================
+               NORMAL LIST RESPONSE
+            =================================================== */
+
+            if (!res?.data?.success) {
+                return rejectWithValue({
+                    message:
+                        res?.data?.message ||
+                        "Failed to fetch receipt register",
+                });
+            }
+
+            return {
+                records: res?.data?.data?.receipts || [],
+                pagination: res?.data?.data?.pagination || {},
+            };
+        } catch (error: any) {
             return rejectWithValue({
-                message:error?.response?.data?.message || error?.response?.data?.error || "Failed to create receipt register"
-            })
+                message:
+                    error?.response?.data?.message ||
+                    error?.response?.data?.error ||
+                    error?.message ||
+                    "Failed to fetch receipt register",
+            });
         }
     }
 );
-
 
 /* ===================================================
    INITIAL STATE
 =================================================== */
 
-const initialState : ReceiptRegisterState={
-    addLoader:false,
-    listingLoader:false,
-    deleteLoader:false,
-    receiptRegisterData:null,
-    error:null,
-}
+const initialState: ReceiptRegisterState = {
+    addLoader: false,
+    listingLoader: false,
+    deleteLoader: false,
+    exportLoader: false,
+    receiptRegisterData: [],
+    pagination: {},
+    error: null,
+};
 
+/* ===================================================
+   SLICE
+=================================================== */
 
-const receiptRegisterSlice=createSlice({
-    name:"receiptRegister",
+const receiptRegisterSlice = createSlice({
+    name: "receiptRegister",
     initialState,
-    reducers:{
-        clearReceiptRegisterError:(state)=>{
-            state.error=null
+    reducers: {
+        clearReceiptRegisterError: (state) => {
+            state.error = null;
         },
 
-        clearReceiptRegisterData:(state)=>{
-            state.receiptRegisterData=null;
-        }
+        clearReceiptRegisterData: (state) => {
+            state.receiptRegisterData = [];
+            state.pagination = {};
+        },
     },
 
-    extraReducers:(builder)=>{
-        builder 
+    extraReducers: (builder) => {
+        builder
+            .addCase(addReceiptRegister.pending, (state, action) => {
+                const isExport = Boolean(action.meta.arg?.exportType);
 
-         /* ADD / GET SALES REGISTER */
+                if (isExport) {
+                    state.exportLoader = true;
+                } else {
+                    state.addLoader = true;
+                }
 
-         .addCase(addReceiptRegister.pending , (state)=>{
-            state.addLoader=true;
-            state.error=null;
-         })
+                state.error = null;
+            })
 
-         .addCase(addReceiptRegister.fulfilled,(state,action)=>{
-            state.addLoader=false;
-            state.receiptRegisterData=action.payload;
-            state.error=null;
-         })
+            .addCase(addReceiptRegister.fulfilled, (state, action) => {
+                const isExport = Boolean(action.meta.arg?.exportType);
 
-         .addCase(addReceiptRegister.rejected,(state,action)=>{
-            state.addLoader=false;
-            state.error=action.payload?.message || "Failed to create receipt register";
+                if (isExport) {
+                    state.exportLoader = false;
+                    return;
+                }
 
-         })
+                state.addLoader = false;
+                state.receiptRegisterData =
+                    action.payload?.records || [];
+                state.pagination =
+                    action.payload?.pagination || {};
+                state.error = null;
+            })
 
+            .addCase(addReceiptRegister.rejected, (state, action) => {
+                const isExport = Boolean(action.meta.arg?.exportType);
 
+                if (isExport) {
+                    state.exportLoader = false;
+                } else {
+                    state.addLoader = false;
+                }
 
-    }
-})
+                state.error =
+                    action.payload?.message ||
+                    "Failed to fetch receipt register";
+            });
+    },
+});
 
-
-export const {clearReceiptRegisterError , clearReceiptRegisterData} =receiptRegisterSlice.actions;
+export const {
+    clearReceiptRegisterError,
+    clearReceiptRegisterData,
+} = receiptRegisterSlice.actions;
 
 export default receiptRegisterSlice.reducer;
