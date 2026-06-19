@@ -1,13 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import professionalAxios from "../../services/professionalAxios";
 
-type PermissionAction = {
-    view: boolean;
-    create: boolean;
-    update: boolean;
-    delete: boolean;
-};  
-
 type PermissionModule = {
     enabled: boolean;
     permissions: Record<string, any>;
@@ -133,6 +126,7 @@ const permissionSlice = createSlice({
 
             .addCase(updatePermission.rejected, (state, action) => {
                 state.loader = false;
+                // @ts-ignore
                 state.error = action.payload?.message || "Failed to fetch permissions";
             });
     },

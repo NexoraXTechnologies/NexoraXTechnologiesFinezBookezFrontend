@@ -184,37 +184,37 @@ export const buildPdfHtml = ({
             `
             : "";
 
-    const totalFooterDisplayRows = `
-        ${footer.totalQuantity != null
-            ? `
-                    <tr>
-                        <td class="sumLabel">Total Quantity</td>
-                        <td class="sumAmt">${formatIndianNumber(footer.totalQuantity)}</td>
-                    </tr>
-                `
-            : ""
-        }
+    // const totalFooterDisplayRows = `
+    //     ${footer.totalQuantity != null
+    //         ? `
+    //                 <tr>
+    //                     <td class="sumLabel">Total Quantity</td>
+    //                     <td class="sumAmt">${formatIndianNumber(footer.totalQuantity)}</td>
+    //                 </tr>
+    //             `
+    //         : ""
+    //     }
 
-        ${footer.totalGrossAmount != null
-            ? `
-                    <tr>
-                        <td class="sumLabel">Total Gross Amount</td>
-                        <td class="sumAmt">₹ ${formatIndianNumber(footer.totalGrossAmount)}</td>
-                    </tr>
-                `
-            : ""
-        }
+    //     ${footer.totalGrossAmount != null
+    //         ? `
+    //                 <tr>
+    //                     <td class="sumLabel">Total Gross Amount</td>
+    //                     <td class="sumAmt">₹ ${formatIndianNumber(footer.totalGrossAmount)}</td>
+    //                 </tr>
+    //             `
+    //         : ""
+    //     }
 
-        ${footer.totalNetAmount != null
-            ? `
-                    <tr>
-                        <td class="sumLabel">Total Net Amount</td>
-                        <td class="sumAmt">₹ ${formatIndianNumber(footer.totalNetAmount)}</td>
-                    </tr>
-                `
-            : ""
-        }
-    `;
+    //     ${footer.totalNetAmount != null
+    //         ? `
+    //                 <tr>
+    //                     <td class="sumLabel">Total Net Amount</td>
+    //                     <td class="sumAmt">₹ ${formatIndianNumber(footer.totalNetAmount)}</td>
+    //                 </tr>
+    //             `
+    //         : ""
+    //     }
+    // `;
 
     const extraFooterRows = Object.entries(footer || {})
         .filter(([key, value]: any) => {

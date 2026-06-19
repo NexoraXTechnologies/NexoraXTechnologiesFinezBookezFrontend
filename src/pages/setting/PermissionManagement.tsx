@@ -358,6 +358,7 @@ const PermissionManagement = () => {
                 childMobile: selectUser?.userMobileNumberHash,
                 permissions: changedPermissions,
             };
+            // @ts-ignore
             dispatch(updatePermission({ payload }) as any);
             toast.success("Permission Updated")
             if (selectUser?.parentUserMobileNumber === selectUser?.userMobileNumberHash) {

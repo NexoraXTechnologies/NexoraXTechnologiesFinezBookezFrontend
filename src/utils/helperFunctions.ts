@@ -71,5 +71,15 @@ export const loadAllTemplateOptions = async (templateData: any, param: any = {})
     return { ...templateData, header: updatedHeader, body: updatedBody, footer: updatedFooter };
 };
 
+
+export const formatMoney = (value: any) => {
+    const num = Number(value || 0);
+
+    const formatted = new Intl.NumberFormat("en-IN", {
+        maximumFractionDigits: 2,
+    }).format(Math.abs(num));
+
+    return num < 0 ? `-₹${formatted}` : `₹${formatted}`;
+};
 export const fmtMoney = (value: any) => num(value).toFixed(2);
 

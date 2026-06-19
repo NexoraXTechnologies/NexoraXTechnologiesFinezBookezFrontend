@@ -3,7 +3,7 @@ import { Edit, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 
-import { DataCreateButton, PrimaryButton } from "../../../../components/buttons";
+import { DataCreateButton} from "../../../../components/buttons";
 import SearchInput from "../../../../components/searchInput";
 import DataTable from "../../../../components/DataTable";
 import Toggle from "../../../../components/toggle";

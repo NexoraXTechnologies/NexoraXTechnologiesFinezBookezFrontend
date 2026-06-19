@@ -3,21 +3,31 @@ import { useDispatch, useSelector } from "react-redux";
 import { BeatLoader } from "react-spinners";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { FileText, Download } from "lucide-react";
+import {
+  Bot,
+  ChevronDown,
+  Download,
+  FileText,
+  MessageCircle,
+  Send,
+  Sparkles,
+  UserPlus,
+  X,
+} from "lucide-react";
+
 import {
   aiTaxChat,
   downloadTaxPdf,
   generateTaxSummary,
   getTaxSummary,
-  saveITR1NewRegime
+  saveITR1NewRegime,
 } from "../../../redux/slices/professionalSlice/ai/aiTaxCopilotSlice";
+
 import { getAllTaxPayers } from "../../../redux/slices/professionalSlice/incomeTaxSlice/AddTaxpayerSlice";
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 import { fetchTISByDocId } from "../../../redux/slices/professionalSlice/incomeTaxSlice/tisSlice";
 import DOMPurify from "dompurify";
-// -------------------------------------
-// Helpers
-// -------------------------------------
+
 const QUICK_QUESTIONS: any = [
   "What is Tax?",
   "What is Tax Computation?",
@@ -28,21 +38,40 @@ const QUICK_QUESTIONS: any = [
 
 const ASSESSMENT_YEARS: any = ["2024-2025", "2025-2026", "2026-2027"];
 
-// -------------------------------------
-// Component
-// -------------------------------------
 const AiTaxCopilot = ({ onClose }: any) => {
   const dispatch = useDispatch();
-  const chatEndRef = useRef(null);
   const navigate = useNavigate();
-  const modalRef = useRef(null);
 
-  const [confirmTooltip, setConfirmTooltip] = useState({
+  const chatEndRef = useRef(null);
+  const modalRef = useRef(null);
+  const hasAskedDefaultQuestionRef = useRef(false);
+
+  const DEFAULT_FIRST_QUESTION =
+    "Generate a detailed Old vs New tax computation with full breakup, interest, rebate, cess, regime recommendation, and export the result as a PDF.";
+
+  const { taxpayers } = useSelector((s: any) => s.taxpayer);
+  const { taxSummary } = useSelector((s: any) => s.aiTaxCopilot);
+
+  const [messages, setMessages] = useState<any>([]);
+  const [input, setInput] = useState("");
+  const [selectedPAN, setSelectedPAN] = useState("");
+  const [assessmentYear, setAssessmentYear] = useState("");
+  const [isBotTyping, setIsBotTyping] = useState(false);
+  const [aisDataState]: any = useState(null);
+
+  const [confirmTooltip, setConfirmTooltip] = useState<any>({
     x: null,
     y: null,
     message: "",
     onConfirm: null,
   });
+
+  const professionalUser = JSON.parse(
+    localStorage.getItem("professionalUser") || "{}"
+  );
+
+  const firstName = professionalUser?.name?.split(" ")[0] || "there";
+
   const openConfirmTooltip = ({ x, y, message, onConfirm }: any) => {
     setConfirmTooltip({
       x,
@@ -51,48 +80,17 @@ const AiTaxCopilot = ({ onClose }: any) => {
       onConfirm,
     });
   };
-  const DEFAULT_FIRST_QUESTION =
-    "Generate a detailed Old vs New tax computation with full breakup, interest, rebate, cess, regime recommendation, and export the result as a PDF.";
-  const { taxpayers } = useSelector((s: any) => s.taxpayer);
-  const { taxSummary } = useSelector((s: any) => s.aiTaxCopilot);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [selectedPAN, setSelectedPAN] = useState("");
-  const [assessmentYear, setAssessmentYear] = useState("");
-  const [isBotTyping, setIsBotTyping] = useState(false);
-  // const [confirmNav, setConfirmNav] = useState({
-  //   open: false,
-  //   message: "",
-  //   path: "",
-  // });
-  const [aisDataState]: any = useState(null);
 
-  // -------------------------------------
-  // User name (first name only)
-  // -------------------------------------
-  const professionalUser = JSON.parse(
-    localStorage.getItem("professionalUser") || "{}"
-  );
-  const firstName = professionalUser?.name?.split(" ")[0] || "there";
-
-  // -------------------------------------
-  // Load PAN list
-  // -------------------------------------
   useEffect(() => {
     // @ts-ignore
     dispatch(getAllTaxPayers({ search: "", limit: 500, page: 1 }));
   }, [dispatch]);
 
-  // -------------------------------------
-  // Generate summary when PAN + AY selected
-  // -------------------------------------
   useEffect(() => {
     if (!selectedPAN || !assessmentYear) return;
     fetchDataWeb();
   }, [selectedPAN, assessmentYear]);
-  // -------------------------------------
-  // Scroll to bottom
-  // -------------------------------------
+
   useEffect(() => {
     // @ts-ignore
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,26 +107,25 @@ const AiTaxCopilot = ({ onClose }: any) => {
       sendMessage(DEFAULT_FIRST_QUESTION);
     }
   }, [taxSummary, selectedPAN, assessmentYear]);
+
   useEffect(() => {
     hasAskedDefaultQuestionRef.current = false;
     setMessages([]);
   }, [selectedPAN, assessmentYear]);
-  // -------------------------------------
-  // Send message
-  // -------------------------------------
+
   const sendMessage = async (question: any) => {
     if (!question.trim()) return;
-    // @ts-ignore
+
     setMessages((prev: any) => [...prev, { sender: "user", text: question }]);
     setInput("");
     setIsBotTyping(true);
 
     try {
-      const taxData = taxSummary?.summary
-        ? { summary: taxSummary.summary }
-        : {};
+      const taxData = taxSummary?.summary ? { summary: taxSummary.summary } : {};
+
       // @ts-ignore
-      const res = await dispatch(aiTaxChat({
+      const res = await dispatch(
+        aiTaxChat({
           question,
           taxData,
         })
@@ -138,14 +135,17 @@ const AiTaxCopilot = ({ onClose }: any) => {
 
       const payload: any = res?.payload;
       const botAnswer = payload?.answer;
-      const botHtml = payload?.html; // ✅ GET HTML
+      const botHtml = payload?.html;
       const pdfMeta = payload?.pdf;
 
       if (botAnswer || botHtml) {
-        // @ts-ignore
-        setMessages((prev: any) => [...prev, {
-          sender: "bot", text: botAnswer || "", meta: {
-            html: botHtml || null, // ✅ STORE HTML
+        setMessages((prev: any) => [
+          ...prev,
+          {
+            sender: "bot",
+            text: botAnswer || "",
+            meta: {
+              html: botHtml || null,
               pdf: pdfMeta || null,
             },
             timestamp: Date.now(),
@@ -157,11 +157,22 @@ const AiTaxCopilot = ({ onClose }: any) => {
       toast.error("AI response failed");
     }
   };
+
   const isPdfExpired = (msg: any) =>
     Date.now() > msg.timestamp + msg.meta.pdf.expiresInMinutes * 60 * 1000;
-  // -------------------------------------
-  // UI
-  // -------------------------------------
+
+  const getModalCenterPosition = () => {
+    if (!modalRef.current) return { x: 0, y: 0 };
+
+    // @ts-ignore
+    const rect = modalRef.current.getBoundingClientRect();
+
+    return {
+      x: rect.left + rect.width / 2 - 80,
+      y: rect.top + rect.height / 2 - 40,
+    };
+  };
+
   const handleNoTaxpayerClick = (e: any) => {
     const rect = e.currentTarget.getBoundingClientRect();
 
@@ -174,6 +185,7 @@ const AiTaxCopilot = ({ onClose }: any) => {
       },
     });
   };
+
   const showDocMissingConfirm = (message: any, path: any) => {
     toast.error(message);
 
@@ -188,89 +200,52 @@ const AiTaxCopilot = ({ onClose }: any) => {
       });
     }, 300);
   };
+
   const fetchDataWeb = async () => {
     if (!selectedPAN || !assessmentYear) return;
 
     const docId = `${selectedPAN}${assessmentYear}`;
-
     let tisData;
-
-    // try {
-    //   aisData = await dispatch(fetchAISByDocId(docId)).unwrap();
-    //   setAisDataState(aisData);
-    // } catch {
-    //   showDocMissingConfirm('AIS document not found.', '/professional/incometax/ais');
-    //   return;
-    // }
 
     try {
       // @ts-ignore
       tisData = await dispatch(fetchTISByDocId(docId)).unwrap();
     } catch {
-      showDocMissingConfirm('TIS document not found.', '/professional/incometax/tis');
+      showDocMissingConfirm(
+        "TIS document not found.",
+        "/professional/incometax/tis"
+      );
       return;
     }
 
-    // try {
-    //   form26asData = await dispatch(fetchForm26ASByDocId(docId)).unwrap();
-    // } catch {
-    //   showDocMissingConfirm(
-    //     "Form 26AS document not found.",
-    //     "/professional/incometax/form26as"
-    //   );
-    //   return;
-    // }
-
-    // -----------------------------
-    // Extract PAN & AY from AIS
-    // -----------------------------
-
     const pan = tisData?.Data?.tisJSON?.data?.taxpayerInfo?.pan;
-    // console.log('pan', pan);
     const ay = tisData?.Data?.tisJSON?.data?.taxpayerInfo?.assessmentYear;
-    // console.log('ay', ay);
 
     if (!pan || !ay) {
-      toast.error('PAN or Assessment Year not found in AIS');
+      toast.error("PAN or Assessment Year not found in TIS");
       return;
     }
 
     const payload = {
-      // ais: aisData,
       tis: tisData,
-      // form26as: form26asData,
     };
 
     try {
-      // -----------------------------
-      // 1️⃣ POST: Generate summary
-      // -----------------------------
       // @ts-ignore
-      await dispatch(generateTaxSummary({
+      await dispatch(
+        generateTaxSummary({
           payload,
           useLLM: true,
-        }),
+        })
       ).unwrap();
 
-      // -----------------------------
-      // 2️⃣ GET: Fetch generated summary
-      // -----------------------------
       // @ts-ignore
       await dispatch(getTaxSummary({ pan, ay })).unwrap();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to generate or fetch tax summary');
+      toast.error(err?.message || "Failed to generate or fetch tax summary");
     }
-  };;
-  const getModalCenterPosition = () => {
-    if (!modalRef.current) return { x: 0, y: 0 };
-    // @ts-ignore
-    const rect = modalRef.current.getBoundingClientRect();
-
-    return {
-      x: rect.left + rect.width / 2 - 80, // tooltip width offset
-      y: rect.top + rect.height / 2 - 40,
-    };
   };
+
   const handleDownloadPdf = async (pdfKey: any) => {
     try {
       // @ts-ignore
@@ -292,31 +267,26 @@ const AiTaxCopilot = ({ onClose }: any) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    // 1️⃣ Move headings out of <ul> (invalid HTML fix)
     doc.querySelectorAll("ul h1, ul h2, ul h3, ul h4, ul h5").forEach((h) => {
       const ul = h.closest("ul");
       ul?.parentNode?.insertBefore(h, ul);
     });
 
-    // 2️⃣ Ensure <ul> has bullet styling
     doc.querySelectorAll("ul").forEach((ul) => {
       ul.style.listStyleType = "disc";
       ul.style.paddingLeft = "1.25rem";
       ul.style.marginTop = "0.5rem";
     });
 
-    // 3️⃣ Ensure <li> spacing
     doc.querySelectorAll("li").forEach((li) => {
       li.style.marginBottom = "0.25rem";
     });
 
-    // 4️⃣ Normalize lone dash bullets (text like "- something")
     doc.body.innerHTML = doc.body.innerHTML.replace(
       /(?:^|\n)-\s+(.*)/g,
       "<li>$1</li>"
     );
 
-    // 5️⃣ Wrap orphan <li> inside <ul>
     doc.querySelectorAll(":scope > li").forEach((li) => {
       const ul = document.createElement("ul");
       li.replaceWith(ul);
@@ -325,20 +295,22 @@ const AiTaxCopilot = ({ onClose }: any) => {
 
     return doc.body.innerHTML;
   };
+
   const renderBotHtml = (html: any) => {
     return (
       <div
-        className="mt-2 text-sm text-gray-900"
+        className="prose prose-sm max-w-none text-slate-800 prose-headings:text-slate-900 prose-li:marker:text-blue-500"
         dangerouslySetInnerHTML={{
           __html: DOMPurify.sanitize(normalizeHtmlForChat(html)),
         }}
       />
     );
   };
-  const hasAskedDefaultQuestionRef = useRef(false);
+
   const isTaxSummaryHtml = (html: any) => {
     return typeof html === "string" && html.includes("Tax Computation");
   };
+
   const resetCopilotState = () => {
     hasAskedDefaultQuestionRef.current = false;
     setMessages([]);
@@ -347,6 +319,7 @@ const AiTaxCopilot = ({ onClose }: any) => {
     setAssessmentYear("");
     setIsBotTyping(false);
   };
+
   const extractCompactRowsFromTaxHtml = (html: any) => {
     if (!html) return [];
 
@@ -367,9 +340,8 @@ const AiTaxCopilot = ({ onClose }: any) => {
     ];
 
     doc.querySelectorAll("li").forEach((li) => {
-      const text = li.textContent.trim();
+      const text = li.textContent?.trim() || "";
 
-      // Track section (non key-value headings)
       if (!text.includes(":") && !text.startsWith("+")) {
         context = text;
         return;
@@ -383,8 +355,7 @@ const AiTaxCopilot = ({ onClose }: any) => {
       const [rawLabel, ...rest] = clean.split(":");
       const value = rest.join(":").trim();
 
-      // Ignore non-value rows
-      if (!value || value.length === 0) return;
+      if (!value) return;
 
       rows.push({
         label: rawLabel.trim(),
@@ -395,31 +366,22 @@ const AiTaxCopilot = ({ onClose }: any) => {
 
     return rows;
   };
+
   const CompactTaxChatTable = ({ html }: any) => {
     const rows = extractCompactRowsFromTaxHtml(html);
     if (!rows.length) return null;
 
     return (
-      <div className="border rounded bg-white max-h-[220px] overflow-y-auto">
-        <table className="w-full text-[10px] leading-tight border-collapse">
+      <div className="max-h-[240px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full border-collapse text-[11px] leading-tight">
           <tbody>
             {rows.map((r: any, i: any) => (
-              <tr key={i}>
-                {/* LABEL */}
-                <td className="border px-[4px] py-[2px] text-gray-600 whitespace-nowrap text-left">
+              <tr key={i} className="odd:bg-slate-50/70">
+                <td className="border-b border-slate-100 px-2 py-1.5 text-left font-bold text-slate-500">
                   {r.label}
                 </td>
 
-                {/* VALUE */}
-                <td
-                  className="
-                  border px-[4px] py-[2px]
-                  text-gray-900 font-medium text-left
-                  break-words whitespace-normal
-                  max-w-[260px]
-                  leading-[1.25]
-                "
-                >
+                <td className="max-w-[260px] break-words border-b border-slate-100 px-2 py-1.5 text-left font-semibold text-slate-900">
                   {r.value}
                 </td>
               </tr>
@@ -431,242 +393,265 @@ const AiTaxCopilot = ({ onClose }: any) => {
   };
 
   const handleFileItr1WithNewRegime = async () => {
-  try {
-    // -----------------------------
-    // PAN & AY (from AIS)
-    // -----------------------------
-    const pan =
-  aisDataState?.Data?.aisJSON?.data?.taxpayerInfo?.pan;
+    try {
+      const pan = aisDataState?.Data?.aisJSON?.data?.taxpayerInfo?.pan;
+      const ay =
+        aisDataState?.Data?.aisJSON?.data?.taxpayerInfo?.assessmentYear;
 
-const ay =
-  aisDataState?.Data?.aisJSON?.data?.taxpayerInfo?.assessmentYear;
+      if (!pan || !ay) {
+        toast.error("PAN or Assessment Year missing");
+        return;
+      }
 
-    if (!pan || !ay) {
-      toast.error("PAN or Assessment Year missing");
-      return;
-    }
-    // -----------------------------
-    // Tax Summary (mandatory)
-    // -----------------------------
-    if (!taxSummary?.summary) {
-      toast.error("Tax summary not available");
-      return;
-    }
+      if (!taxSummary?.summary) {
+        toast.error("Tax summary not available");
+        return;
+      }
 
-    // -----------------------------
-    // Payload as required by API
-    // -----------------------------
-    const payload = {
-      taxData: {
-        summary: {
-          ...taxSummary.summary, 
-            
-        }},
-        regime: "N",            
+      const payload = {
+        taxData: {
+          summary: {
+            ...taxSummary.summary,
+          },
+        },
+        regime: "N",
         assessmentYear: ay,
-    };
+      };
 
-    // -----------------------------
-    // Dispatch save API
-    // -----------------------------
-    // @ts-ignore
-    const res = await dispatch(saveITR1NewRegime(payload)).unwrap();
-    toast.success(res.message); 
-  } catch (err: any) {
-    toast.error(err?.message || "Failed to file ITR-1");
-  }
-};
+      // @ts-ignore
+      const res = await dispatch(saveITR1NewRegime(payload)).unwrap();
+      toast.success(res.message);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to file ITR-1");
+    }
+  };
+
+  const canSend = input.trim().length > 0;
 
   return (
     <div
       ref={modalRef}
-      className="flex flex-col h-full bg-white rounded-2xl shadow-xl border overflow-hidden"
+      className="flex h-full flex-col overflow-hidden bg-slate-50"
     >
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-        <div className="px-5 py-4 flex items-center justify-between">
-          {/* Left: Title */}
-          <div>
-            <div className="font-semibold text-lg">AI Tax Copilot</div>
-            <div className="text-xs opacity-80">
-              Your personal tax assistant
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#155dfc] via-[#3157f6] to-[#6d28d9] px-5 py-5 text-white">
+        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-20 left-8 h-40 w-40 rounded-full bg-cyan-300/20 blur-2xl" />
+
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 shadow-inner backdrop-blur">
+              <Sparkles size={22} />
+            </div>
+
+            <div>
+              <div className="text-xl font-black tracking-tight">
+                AI Tax Copilot
+              </div>
+              <div className="mt-1 text-sm font-semibold text-white/75">
+                Your personal tax assistant
+              </div>
             </div>
           </div>
 
-          {/* Right: Close Button */}
           {onClose && (
             <button
               onClick={() => {
                 resetCopilotState();
                 onClose();
               }}
-              className="text-white/80 hover:text-white text-2xl leading-none"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
               aria-label="Close"
             >
-              ✕
+              <X size={22} />
             </button>
           )}
         </div>
       </div>
 
       {/* Controls */}
-      <div className="p-4 border-b grid grid-cols-2 gap-3">
-        {/* PAN Selection */}
-        {Array.isArray(taxpayers) && taxpayers.length > 0 ? (
-          <select
-            value={selectedPAN}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value.length === 10) {
-                setSelectedPAN(value);
-              }
-            }}
-            className="border rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Select PAN</option>
-            {taxpayers.map((t) => (
-              <option key={t.pan} value={t.pan}>
-                {t.pan}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div
-            onClick={handleNoTaxpayerClick}
-            className="border border-dashed border-red-300 bg-red-50
-               text-red-600 rounded-lg px-3 py-2 text-sm
-               cursor-pointer text-center hover:bg-red-100 transition"
-          >
-            No Tax Payer Found Click To Add
-          </div>
-        )}
+      <div className="border-b border-slate-200 bg-white p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {Array.isArray(taxpayers) && taxpayers.length > 0 ? (
+            <div className="relative">
+              <select
+                value={selectedPAN}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length === 10 || value === "") {
+                    setSelectedPAN(value);
+                  }
+                }}
+                className="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 pr-9 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="">Select PAN</option>
+                {taxpayers.map((t: any) => (
+                  <option key={t.pan} value={t.pan}>
+                    {t.pan}
+                  </option>
+                ))}
+              </select>
 
-        <select
-          value={assessmentYear}
-          onChange={(e) => setAssessmentYear(e.target.value)}
-          className="border rounded-lg px-3 py-2 text-sm"
-        >
-          <option value="">Assessment Year</option>
-          {ASSESSMENT_YEARS.map((ay: any) => (
-            <option key={ay} value={ay}>
-              {ay}
-            </option>
-          ))}
-        </select>
+              <ChevronDown
+                size={17}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
+          ) : (
+              <button
+                type="button"
+                onClick={handleNoTaxpayerClick}
+                className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-black text-rose-600 transition hover:border-rose-300 hover:bg-rose-100"
+              >
+              <UserPlus size={16} />
+              Add Tax Payer
+            </button>
+          )}
+
+          <div className="relative">
+            <select
+              value={assessmentYear}
+              onChange={(e) => setAssessmentYear(e.target.value)}
+              className="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 pr-9 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+            >
+              <option value="">Assessment Year</option>
+              {ASSESSMENT_YEARS.map((ay: any) => (
+                <option key={ay} value={ay}>
+                  {ay}
+                </option>
+              ))}
+            </select>
+
+            <ChevronDown
+              size={17}
+              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Chat Body */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4">
-        {/* Greeting (only when no chat) */}
+      <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-5">
         {messages.length === 0 && (
-          <div className="text-center text-gray-500 text-sm mt-10">
-            <div className="text-lg font-semibold text-gray-700">
+          <div className="mx-auto mt-8 flex max-w-[380px] flex-col items-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-600 shadow-sm">
+              <Bot size={30} />
+            </div>
+
+            <div className="text-xl font-black text-slate-900">
               Hi {firstName},
             </div>
-            <div>what’s on your mind today?</div>
+
+            <div className="mt-1 text-sm font-semibold text-slate-500">
+              What would you like to understand today?
+            </div>
           </div>
         )}
 
-        {/* Quick Questions */}
-        <div className="flex flex-wrap gap-2 justify-center mt-4">
-          {QUICK_QUESTIONS.map((q: any) => (
-            <button
-              key={q}
-              onClick={() => sendMessage(q)}
-              className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs hover:bg-blue-200"
+        {messages.length === 0 && (
+          <div className="mx-auto mt-6 flex max-w-[390px] flex-wrap justify-center gap-2.5">
+            {QUICK_QUESTIONS.map((q: any) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => sendMessage(q)}
+                className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {messages.map((m: any, i: any) => (
+            <div
+              key={i}
+              className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"
+                }`}
             >
-              {q}
-            </button>
-          ))}
-        </div>
+              <div
+                className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm shadow-sm ${m.sender === "user"
+                  ? "rounded-br-md bg-blue-600 text-white"
+                  : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
+                  }`}
+              >
+                {m.sender === "user" ? (
+                  <div className="font-semibold">{m.text}</div>
+                ) : m.meta?.html && isTaxSummaryHtml(m.meta.html) ? (
+                  <CompactTaxChatTable html={m.meta.html} />
+                ) : m.meta?.html ? (
+                  renderBotHtml(m.meta.html)
+                ) : (
+                  <div className="font-semibold">{m.text}</div>
+                )}
 
-        {/* Messages */}
-        {messages.map((m: any, i: any) => (
-          <div
-            key={i}
-            className={`max-w-[90%] px-4 py-2 rounded-xl text-sm ${
-              m.sender === "user"
-                ? "ml-auto bg-blue-600 text-white"
-                : "mr-auto bg-white border"
-            }`}
-          >
-            {m.sender === "user" ? (
-              <div>{m.text}</div>
-            ) : m.meta?.html && isTaxSummaryHtml(m.meta.html) ? (
-              <CompactTaxChatTable html={m.meta.html} />
-            ) : m.meta?.html ? (
-              renderBotHtml(m.meta.html)
-            ) : (
-              <div>{m.text}</div>
-            )}
+                {m.meta?.pdf?.fileId && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      disabled={isPdfExpired(m)}
+                      onClick={() => handleDownloadPdf(m.meta.pdf.fileId)}
+                      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black transition ${isPdfExpired(m)
+                        ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400"
+                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        }`}
+                    >
+                      <Download size={14} />
+                      {isPdfExpired(m) ? "PDF Expired" : "Download PDF"}
+                    </button>
 
-            {m.meta?.pdf?.fileId && (
-              <div className="mt-3 space-y-2">
-                {/* Primary PDF Download */}
-                <button
-                  disabled={isPdfExpired(m)}
-                  onClick={() => handleDownloadPdf(m.meta.pdf.fileId)}
-                  className={`
-                  flex items-center gap-2 px-3 py-1.5 rounded-md text-xs
-                  border transition
-                  ${
-                    isPdfExpired(m)
-                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                      : "text-blue-700 border-blue-300 hover:bg-blue-50"
-                  }
-                `}
-                >
-                  <Download size={14} />
-                  {isPdfExpired(m) ? "PDF Expired" : "Download Tax Summary PDF"}
-                </button>
-
-                {/* ITR-1 (New Regime) */}
-                <button
-                  type="button"
-                  onClick={handleFileItr1WithNewRegime}
-                  className="
-                    flex items-center gap-2 px-3 py-1.5 rounded-md text-xs
-                    border border-green-300 text-green-700
-                    hover:bg-green-50 transition
-                  "
-                >
-                  <FileText size={14} />
-                  File ITR-1 With New Regime
-                </button>
+                    <button
+                      type="button"
+                      onClick={handleFileItr1WithNewRegime}
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-100"
+                    >
+                      <FileText size={14} />
+                      File ITR-1 New Regime
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          ))}
 
-        {/* Bot Loader */}
-        {isBotTyping && (
-          <div className="mr-auto bg-white border px-4 py-3 rounded-xl">
-            <BeatLoader size={8} color="#2563eb" />
-          </div>
-        )}
+          {isBotTyping && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <BeatLoader size={8} color="#2563eb" />
+              </div>
+            </div>
+          )}
 
-        <div ref={chatEndRef} />
+          <div ref={chatEndRef} />
+        </div>
       </div>
 
       {/* Input */}
-      <div className="border-t p-3 bg-white">
-        <div className="flex gap-2">
+      <div className="border-t border-slate-200 bg-white p-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm transition focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
+          <MessageCircle size={19} className="shrink-0 text-slate-400" />
+
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-            placeholder="Ask anything about tax…"
-            className="flex-1 rounded-full border bg-gray-100 px-4 py-2 text-sm focus:outline-none"
+            placeholder="Ask anything about tax..."
+            className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
           />
+
           <button
-            disabled={!input.trim()}
+            disabled={!canSend}
             onClick={() => sendMessage(input)}
-            className="w-10 h-10 rounded-full bg-blue-600 text-white grid place-items-center disabled:bg-gray-300"
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${canSend
+              ? "bg-blue-600 text-white shadow-md shadow-blue-200 hover:bg-blue-700"
+              : "bg-slate-200 text-slate-400"
+              }`}
           >
-            ↑
+            <Send size={17} />
           </button>
         </div>
       </div>
+
       {confirmTooltip.message && (
         <ConfirmTooltip
           x={confirmTooltip.x}
@@ -675,8 +660,8 @@ const ay =
           confirmText="Yes"
           cancelText="Cancel"
           onConfirm={() => {
-            // @ts-ignore
             confirmTooltip.onConfirm?.();
+
             setConfirmTooltip({
               x: null,
               y: null,

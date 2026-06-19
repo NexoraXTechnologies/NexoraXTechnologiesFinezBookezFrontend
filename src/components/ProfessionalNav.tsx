@@ -4,6 +4,7 @@ import { ChevronDown, LogOut, Bell, X, Trash2, Menu } from "lucide-react";
 // import * as OneSignal from "react-onesignal";
 import { useSelector } from 'react-redux';
 import { LogoutModal } from "./modal";
+import ThemeToggle from "./themeToggle";
 
 const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
   const navigate = useNavigate();
@@ -150,6 +151,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-6">
+        {/* <ThemeToggle /> */}
         {/* 🔔 Notification Bell */}
         <div className="relative" ref={notificationRef}>
           <button
