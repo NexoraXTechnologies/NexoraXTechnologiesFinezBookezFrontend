@@ -266,11 +266,17 @@ const Login = () => {
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-[#f5f7ff] to-[#eef1ff]">
      {/* ================= BACKGROUND SECTION ================= */}
+      {/*
+        LAPTOP (default + md:): h-[390px] / h-[600px] — UNCHANGED, exactly as before.
+        DESKTOP (md: AND viewport height > 900px): h-[760px] — only kicks in on
+        genuinely tall viewports (bigger monitor, or browser zoomed out), so the
+        hero photo doesn't look proportionally "cut off" against a much taller page.
+      */}
       <motion.div
         initial={{ scale: 1.1, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 1.2 }}
-        className="absolute top-0 left-0 w-full h-[390px] md:h-[600px] bg-cover bg-center"
+        className="absolute top-0 left-0 w-full h-[390px] md:h-[600px] md:[@media(min-height:901px)]:h-[760px] bg-cover bg-center"
         style={{ backgroundImage: `url(${LoginImgae})` }}
       >
         {/* Overlay */}
@@ -356,10 +362,16 @@ const Login = () => {
       </motion.div >
 
       {/* ================= CURVE SHAPE ================= */}
-      <div className="absolute top-[230px] md:top-[330px] left-0 z-10 w-full overflow-hidden leading-none pointer-events-none">
+      {/*
+        LAPTOP: top-[230px] / top-[330px], height 190px / 230px — UNCHANGED.
+        DESKTOP (height > 900px): repositioned/resized to track the taller
+        hero above (760px) so the diagonal still lands at the same visual
+        spot relative to the photo.
+      */}
+      <div className="absolute top-[230px] md:top-[330px] md:[@media(min-height:901px)]:top-[420px] left-0 z-10 w-full overflow-hidden leading-none pointer-events-none">
         <svg
           viewBox="0 0 1440 320"
-          className="block w-full h-[190px] md:h-[230px]"
+          className="block w-full h-[190px] md:h-[230px] md:[@media(min-height:901px)]:h-[300px]"
           preserveAspectRatio="none"
         >
           <path
@@ -370,9 +382,26 @@ const Login = () => {
       </div>
 
       {/* ✅ WHITE AREA STARTS FROM ABOVE POSITION */}
-      <div className="absolute top-[360px] md:top-[470px] left-0 z-10 w-full bottom-0 bg-white pointer-events-none" />
+      {/*
+        LAPTOP: top-[360px] / top-[470px] — UNCHANGED.
+        DESKTOP (height > 900px): top-[600px], matching the taller hero.
+      */}
+      <div className="absolute top-[360px] md:top-[470px] md:[@media(min-height:901px)]:top-[600px] left-0 z-10 w-full bottom-0 bg-white pointer-events-none" />
       {/* ================= LOGIN CARD ================= */}
-      < div className="relative z-20 flex flex-col items-center justify-center gap-10 min-h-screen px-4 py-10" >
+      {/*
+        LAPTOP: justify-center inside min-h-screen — UNCHANGED. On a normal
+        laptop window this centers the card exactly where it is today.
+
+        DESKTOP (height > 900px): switches to justify-start + a fixed
+        pt-[280px] (same proportion as the laptop case, just measured from
+        the taller hero). This is the actual fix for the big white gap —
+        instead of centering the card in an unbounded, ever-taller page
+        (which pushes it further from the hero the taller the screen gets),
+        on tall screens it's anchored a fixed distance below the hero, same
+        as it visually sits on laptop. The footer stays exactly as before
+        (absolute, pinned 20px from the bottom of the viewport either way).
+      */}
+      < div className="relative z-20 flex flex-col items-center justify-center md:[@media(min-height:901px)]:justify-start md:[@media(min-height:901px)]:pt-[280px] gap-10 min-h-screen px-4 py-10" >
         <div className="flex flex-col items-center space-y-5 w-full ">
 
           <motion.div
