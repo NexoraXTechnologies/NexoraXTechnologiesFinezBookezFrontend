@@ -183,6 +183,7 @@ export const updateSalesOrder = createAsyncThunk<
         `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesOrder/update/${voucherNumber}`,
         data
       );
+      console.log("salesorder update payload",data)
 
       if (!res.data?.success) {
         return rejectWithValue({

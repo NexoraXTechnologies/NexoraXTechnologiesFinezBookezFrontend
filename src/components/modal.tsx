@@ -444,10 +444,10 @@ const ListingModel = ({
 
             const blobData = await dispatch(
                 reportGeneratePdf({
-                    moduleType: rowData?.moduleType,
+                    moduleType: downlaodPDF?.moduleType,
                     templateFileId: selectedTemplate?.templateFileId,
-                    CustomerCode: rowData?.CustomerCode,
-                    voucherNumber: rowData?.voucherNumber,
+                    CustomerCode: downlaodPDF?.CustomerCode,
+                    voucherNumber: downlaodPDF?.voucherNumber,
                 })
             ).unwrap();
 

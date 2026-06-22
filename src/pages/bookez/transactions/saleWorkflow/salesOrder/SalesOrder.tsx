@@ -79,7 +79,7 @@ const SalesOrder = () => {
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
-
+    console.log({ salesQuotations })
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
         const selectedOption = getOptionByValue(field, selectedValue);
@@ -386,8 +386,8 @@ const SalesOrder = () => {
             sOrderCustomerCode: form.sOrderCustomerCode,
             sOrderCustomerName: form.sOrderCustomerName,
             sOrderSalesAccount: form.sOrderSalesAccount || "SA021",
-            sOrderStatus: form.sOrderStatus || form.sOrderDocStatus || "open",
-            sOrderDocStatus: form.sOrderDocStatus || form.sOrderStatus || "open",
+            sOrderStatus: "open",
+            sOrderDocStatus: "open",
             sOrderRemark: form.sOrderRemark || form.sOrderRemarks || "",
             sOrderRemarks: form.sOrderRemarks || form.sOrderRemark || "",
             isAutoPost: form.isAutoPost || false,
@@ -401,7 +401,7 @@ const SalesOrder = () => {
             } else {
                 await dispatch(createSalesOrder(payload) as any).unwrap();
                 if (form?.sOrderQuotationVoucherNumber) {
-                    const poStatus:any = await syncPurchaseOrderStatusAfterGrn(form?.sOrderQuotationVoucherNumber);
+                    const poStatus: any = await syncPurchaseOrderStatusAfterGrn(form?.sOrderQuotationVoucherNumber);
                     if (poStatus === "close") toast.success("Sales order created successfully and Sales Quotation closed");
                     else toast.success("Sales order created successfully");
                 } else {
@@ -417,16 +417,56 @@ const SalesOrder = () => {
         }
     };
 
+    // const handleDeleteConfirm = async () => {
+    //     try {
+    //         if (!confirmTooltip.voucherNumber) return;
+    //         await dispatch(deleteSalesOrder(confirmTooltip.voucherNumber) as any).unwrap();
+    //         toast.success("Sales order deleted successfully");
+    //         fetchSalesOrders();
+    //     } catch (err: any) {
+    //         toast.error(err?.message || "Failed to delete sales order");
+    //     } finally {
+    //         setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
+    //     }
+    // };
+
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-            await dispatch(deleteSalesOrder(confirmTooltip.voucherNumber) as any).unwrap();
+
+            const salesOrderVoucherNumber = confirmTooltip.voucherNumber;
+            const salesQuotationVoucherNumber = (confirmTooltip as any)?.quotationVoucherNumber;
+
+            await dispatch(deleteSalesOrder(salesOrderVoucherNumber) as any).unwrap();
+
+            if (salesQuotationVoucherNumber) {
+                await dispatch(
+                    updateSalesQuotation({
+                        sQuoteVoucherNumber: salesQuotationVoucherNumber,
+                        payload: {
+                            sQuoteDocStatus: "open",
+                        },
+                    }) as any
+                ).unwrap();
+            }
+
             toast.success("Sales order deleted successfully");
+
+            if (salesQuotationVoucherNumber) {
+                toast.success("Sales quotation status updated to open");
+            }
+
             fetchSalesOrders();
+            fetchSalesQuotations();
         } catch (err: any) {
             toast.error(err?.message || "Failed to delete sales order");
         } finally {
-            setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
+            setConfirmTooltip({
+                show: false,
+                x: null,
+                y: null,
+                voucherNumber: null,
+            });
         }
     };
 
@@ -477,6 +517,47 @@ const SalesOrder = () => {
         // @ts-ignore 
         dispatch(getAllReportMapping({ moduleType: "salesOrder" }))
     }, [])
+
+
+
+    const isClosedSalesOrder = (record: any) => {
+        const orderStatus = String(
+            record?.sOrderDocStatus || record?.sOrderStatus || ""
+        ).toLowerCase();
+
+        return orderStatus === "close" || orderStatus === "closed";
+    };
+
+    const handleEditSalesOrder = (record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't edit closed order");
+            return;
+        }
+
+        openEditModal(record);
+    };
+
+    const handleDeleteSalesOrderClick = (e: any, record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't delete closed order");
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.sOrderVoucherNumber,
+            quotationVoucherNumber: record?.sOrderQuotationVoucherNumber,
+        } as any);
+    };
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-order-header" className="mb-3 flex items-center">
@@ -488,7 +569,7 @@ const SalesOrder = () => {
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
                     <Permission module="bookez" permissionKey="salesOrder" action="create">
-                    {/* @ts-ignore */}
+                        {/* @ts-ignore */}
                         <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Order" }} />
                     </Permission>
                 </div>
@@ -502,32 +583,57 @@ const SalesOrder = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <button id="sales-quotation-edit-button" onClick={() => {
-                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesOrder", record, CustomerCode: record?.sOrderCustomerCode, voucherNumber: record?.sOrderVoucherNumber }));
                         }
 
                         } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
                             <Download size={16} />
                         </button>
                         <Permission module="bookez" permissionKey="salesOrder" action="update">
-                        <button id="sales-order-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
-                            <Edit size={16} />
+                            {/* <button id="sales-order-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                                <Edit size={16} />
+                            </button> */}
+
+                            <button
+                                id="sales-order-edit-button"
+                                onClick={() => handleEditSalesOrder(record)}
+                                className={`rounded-md p-2 transition-all duration-200 ${isClosedSalesOrder(record)
+                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100"
+                                    : "cursor-pointer text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
+                                    }`}
+                            >
+                                <Edit size={16} />
                             </button>
                         </Permission>
                         <Permission module="bookez" permissionKey="salesOrder" action="delete">
-                        <button
-                            id="sales-order-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sOrderVoucherNumber });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            {/* <button
+                                id="sales-order-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    let x = rect.left - 150;
+                                    if (x < 10) x = 10;
+                                    const y = rect.top + window.scrollY - 5;
+                                    setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sOrderVoucherNumber });
+                                }}
+                                className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
+                            </button> */}
+
+
+                            <button
+                                id="sales-order-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => handleDeleteSalesOrderClick(e, record)}
+                                className={`rounded-md p-2 transition-all duration-200 disabled:opacity-50 ${isClosedSalesOrder(record)
+                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100"
+                                    : "cursor-pointer text-red-600 hover:bg-red-100 hover:text-red-700"
+                                    }`}
+                            >
+                                <Trash2 size={16} />
                             </button>
+
                         </Permission>
                     </div>
                 )}
@@ -614,11 +720,11 @@ const SalesOrder = () => {
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {salesQuatationLoader ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">Loading purchase orders...</div>
-                            ) : salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open")?.length === 0 ? (
+                            ) : salesQuotations?.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">No purchase order found</div>
                             ) : (
                                 <div className="space-y-3">
-                                    {salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open")?.map((e: any, index: number) => {
+                                    {salesQuotations?.map((e: any, index: number) => {
                                         const poNumber = e?.sQuoteVoucherNumber || "-";
                                         const isSelected = selectedPurchaseOrder?.sQuoteVoucherNumber == e?.sQuoteVoucherNumber;
                                         return (
@@ -645,7 +751,7 @@ const SalesOrder = () => {
                 }
             />
             {/* @ts-ignore  */}
-            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-order", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF"}} />
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-order", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF" }} />
         </div>
     );
 };

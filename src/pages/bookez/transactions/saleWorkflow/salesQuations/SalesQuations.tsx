@@ -39,9 +39,9 @@ const SalesQuotations = () => {
     const [errors, setErrors] = useState<any>({});
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-    const [confirmTooltip, setConfirmTooltip]:any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
+    const [confirmTooltip, setConfirmTooltip]: any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
-  
+
     const { report } = useSelector((s: any) => s.reportMapping);
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
 
@@ -364,7 +364,7 @@ const SalesQuotations = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-            await dispatch(deleteSalesQuotation({ sQuoteVoucherNumber: confirmTooltip.voucherNumber }) as any).unwrap();
+            await dispatch(deleteSalesQuotation(confirmTooltip.voucherNumber) as any).unwrap();
             toast.success("Sales quotation deleted");
             fetchSalesQuotations();
         } catch (err: any) {
@@ -424,6 +424,45 @@ const SalesQuotations = () => {
         dispatch(getAllReportMapping({ moduleType: "salesQuotation" }))
     }, [])
 
+
+    const isClosedSalesQuations = (record: any) => {
+        const quationsStatus = String(
+            record?.sQuoteDocStatus || ""
+        ).toLowerCase();
+
+        return quationsStatus === "close" || quationsStatus === "closed";
+    };
+
+    const handleEditSalesQuations = (record: any) => {
+        if (isClosedSalesQuations(record)) {
+            toast.error("You can't edit closed Quatations");
+            return;
+        }
+
+        openEditModal(record);
+    };
+
+    const handleDeleteSalesQuationsClick = (e: any, record: any) => {
+        if (isClosedSalesQuations(record)) {
+            toast.error("You can't delete closed Quatations");
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.sQuoteVoucherNumber,
+        });
+    };
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">
@@ -435,7 +474,7 @@ const SalesQuotations = () => {
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
                     <Permission module="bookez" permissionKey="salesQuotation" action="create">
-                    {/* @ts-ignore */}
+                        {/* @ts-ignore */}
                         <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Quotation" }} />
                     </Permission>
                 </div>
@@ -457,24 +496,26 @@ const SalesQuotations = () => {
                             <Download size={16} />
                         </button>
                         <Permission module="bookez" permissionKey="salesQuotation" action="update">
-                        <button id="sales-quotation-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
-                            <Edit size={16} />
+                            <button id="sales-quotation-edit-button"
+                                onClick={() => handleEditSalesQuations(record)}
+                                className={`rounded-md p-2 transition-all duration-200 ${isClosedSalesQuations(record)
+                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100"
+                                    : "cursor-pointer text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
+                                    }`}
+                            >                            <Edit size={16} />
                             </button>
                         </Permission>
                         <Permission module="bookez" permissionKey="salesQuotation" action="delete">
-                        <button
-                            id="sales-quotation-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({ show: true, x, y });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            <button
+                                id="sales-quotation-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => handleDeleteSalesQuationsClick(e, record)}
+                                className={`rounded-md p-2 transition-all duration-200 disabled:opacity-50 ${isClosedSalesQuations(record)
+                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100"
+                                    : "cursor-pointer text-red-600 hover:bg-red-100 hover:text-red-700"
+                                    }`}
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>

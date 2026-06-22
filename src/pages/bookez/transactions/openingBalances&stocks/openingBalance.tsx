@@ -42,6 +42,7 @@ const mainColumns = [
         key: "openingBalDate",
         title: "Date",
         render: (row: any) => row?.openingBalDate || row?.createdOn || "-",
+        type: "date",
     },
     {
         key: "totalDebit",
