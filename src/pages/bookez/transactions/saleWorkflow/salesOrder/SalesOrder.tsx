@@ -588,7 +588,7 @@ const SalesOrder = () => {
                             setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesOrder", record, CustomerCode: record?.sOrderCustomerCode, voucherNumber: record?.sOrderVoucherNumber }));
                         }
 
-                        }  className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary">
+                        } className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary">
                             <Download size={16} />
                         </button>
 
@@ -600,10 +600,7 @@ const SalesOrder = () => {
                             <button
                                 id="sales-order-edit-button"
                                 onClick={() => handleEditSalesOrder(record)}
-                                className={`rounded-md p-2 text-primary hover:bg-primary/10 hover:text-primary transition-all duration-200 ${isClosedSalesOrder(record)
-                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100 "
-                                    : "cursor-pointer text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
-                                    }`}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 ${isClosedSalesOrder(record)  }`}
                             >
                                 <Edit size={16} />
                             </button>
@@ -630,10 +627,7 @@ const SalesOrder = () => {
                                 id="sales-order-delete-button"
                                 disabled={deleteLoading}
                                 onClick={(e) => handleDeleteSalesOrderClick(e, record)}
-                                className={`rounded-md p-2 transition-all duration-200 disabled:opacity-50 ${isClosedSalesOrder(record)
-                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100"
-                                    : "cursor-pointer text-danger hover:text-danger hover:text-danger"
-                                    }`}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:text-danger hover:text-danger ${isClosedSalesOrder(record)                              }`}
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -739,8 +733,8 @@ const SalesOrder = () => {
                                                 type="button"
                                                 onClick={() => handlePurchaseOrderSelect(e)}
                                                 className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
-                                                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                                                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                    ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                    : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
                                                     }`}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
