@@ -21,8 +21,63 @@ import { getAllReportMapping } from "../../../../../redux/slices/professionalSli
 import Permission from "../../../../../components/PermissionGuard";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
-const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
-const getDefaultForm = () => ({ sInvVoucherNumber: "AUTO", sInvVoucherDate: todayYMD(), sInvCustomerCode: "", sInvCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvDocStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
+
+const emptyProductRow = {
+    id: Date.now(),
+    productCode: "",
+    productName: "",
+    productId: "",
+    productDescription: "",
+    description: "",
+    productHSNCode: "",
+    remarks: "",
+    quantity: "",
+    uom: "",
+    unit: "",
+    unitName: "",
+    rate: "",
+    gross: 0,
+    grossAmount: 0,
+    discount: "",
+    discountPercentage: "",
+    discountAmount: 0,
+    taxableAmount: 0,
+    cgst: "",
+    cgstPercentage: "",
+    cgstAmount: 0,
+    sgst: "",
+    sgstPercentage: "",
+    sgstAmount: 0,
+    igst: "",
+    igstPercentage: "",
+    igstAmount: 0,
+    taxAmount: 0,
+    otherAmount: "",
+    netAmount: 0,
+    netTotal: 0,
+};
+
+const getDefaultForm = () => ({
+    sInvVoucherNumber: "AUTO",
+    sInvVoucherDate: todayYMD(),
+    sInvCustomerCode: "",
+    sInvCustomerName: "",
+    sInvSalesAccount: "SA021",
+    sInvStatus: "open",
+    sInvDocStatus: "open",
+    sInvRemark: "",
+    sInvRemarks: "",
+    isAutoPost: false,
+    products: [{ ...emptyProductRow, id: Date.now() }],
+    grossAmount: "0.00",
+    discountAmount: "0.00",
+    cgstAmount: "0.00",
+    sgstAmount: "0.00",
+    igstAmount: "0.00",
+    taxAmount: "0.00",
+    otherAmount: "0.00",
+    netAmount: "0.00",
+});
 
 const getRecords = (res: any) => {
     return Array.isArray(res?.items) ? res.items : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
@@ -56,6 +111,7 @@ const SalesInVoice = () => {
     const salesInvoiceState = useSelector((state: any) => state.salesInvoice);
     const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
     const { salesInvoices = [], pagination = defaultPagination, loading = false, createLoading = false, updateLoading = false, deleteLoading = false } = salesInvoiceState || {};
+
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
     const [search, setSearch] = useState("");
@@ -162,18 +218,26 @@ const SalesInVoice = () => {
             title: "Customer",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">{row?.sInvCustomerName || "-"}</div>
-                    <div className="text-xs text-slate-500">{row?.sInvCustomerCode || "-"}</div>
+                    <div className="font-medium text-card-foreground">{row?.sInvCustomerName || "-"}</div>
+                    <div className="text-xs text-muted-foreground">{row?.sInvCustomerCode || "-"}</div>
                 </div>
             ),
         },
         { key: "sInvBody", title: "Items", render: (row: any) => row?.sInvBody?.length || 0 },
-        { key: "sInvFooter", title: "Net Amount", render: (row: any) => <span className="font-semibold text-indigo-700">{money(row?.sInvFooter?.netAmount || 0)}</span> },
+        {
+            key: "sInvFooter",
+            title: "Net Amount",
+            render: (row: any) => (
+                <span className="font-semibold text-primary">
+                    {money(row?.sInvFooter?.netAmount || 0)}
+                </span>
+            ),
+        },
         {
             key: "sInvDocStatus",
             title: "Doc Status",
             render: (row: any) => (
-                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvDocStatus || row?.sInvStatus) === "open" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvDocStatus || row?.sInvStatus) === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>
                     {row?.sInvDocStatus || row?.sInvStatus || "-"}
                 </span>
             ),
@@ -243,7 +307,7 @@ const SalesInVoice = () => {
         const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
         if (duplicate) {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
-            return
+            return;
         }
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
@@ -461,21 +525,23 @@ const SalesInVoice = () => {
     }, [transactionsSchema]);
 
     useEffect(() => {
-        dispatch(getAllReportMapping({ moduleType: "salesInvoice" }))
-    }, [])
+        dispatch(getAllReportMapping({ moduleType: "salesInvoice" }));
+    }, []);
 
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
                 <div id="sales-invoice-summary" className="flex items-start gap-3">
                     <Badge {...{ count: pagination?.totalDocs ?? salesInvoices?.length ?? 0, text: "Total Sales Invoices:", varient: "primary" }} />
                 </div>
+
                 <div className="ml-auto flex items-center gap-2">
                     <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
+
                     <Permission module="bookez" permissionKey="salesInvoice" action="create">
-                    {/* @ts-ignore */}
+                        {/* @ts-ignore */}
                         <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Invoice" }} />
                     </Permission>
                 </div>
@@ -488,32 +554,40 @@ const SalesInVoice = () => {
                 emptyMessage={`No ${status} sales invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button id="sales-quotation-edit-button" onClick={() => {
-                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
-                        }
-
-                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
                             <Download size={16} />
                         </button>
+
                         <Permission module="bookez" permissionKey="salesInvoice" action="update">
-                        <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
-                            <Edit size={16} />
+                            <button
+                                id="sales-invoice-edit-button"
+                                onClick={() => openEditModal(record)}
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            >
+                                <Edit size={16} />
                             </button>
                         </Permission>
+
                         <Permission module="bookez" permissionKey="salesInvoice" action="delete">
-                        <button
-                            id="sales-invoice-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvVoucherNumber });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            <button
+                                id="sales-invoice-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    let x = rect.left - 150;
+                                    if (x < 10) x = 10;
+                                    const y = rect.top + window.scrollY - 5;
+                                    setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvVoucherNumber });
+                                }}
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>
@@ -585,24 +659,29 @@ const SalesInVoice = () => {
                 gridCols={1}
                 maxWidth="2xl"
                 modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
+                headerClassName="bg-card"
+                footerClassName="bg-card"
+                bodyClassName="!block !p-0 bg-card text-card-foreground"
                 body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
+                    <div className="flex h-[520px] flex-col bg-card text-card-foreground">
+                        <div className="border-b border-border p-5">
                             <input
                                 value={purchaseOrderSearch}
                                 onChange={(e) => setPurchaseOrderSearch(e.target.value)}
                                 placeholder="Search Purchase Order code..."
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
+
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {orderLoader ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">Loading purchase orders...</div>
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
+                                    Loading purchase orders...
+                                </div>
                             ) : salesOrders?.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">No purchase order found</div>
+                                    <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
+                                        No purchase order found
+                                    </div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesOrders?.map((e: any, index: number) => {
@@ -613,14 +692,27 @@ const SalesInVoice = () => {
                                                 key={poNumber || index}
                                                 type="button"
                                                 onClick={() => handlePurchaseOrderSelect(e)}
-                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100" : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"}`}
+                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
+                                                    ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                    : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-base font-bold text-gray-900">{e?.sOrderVoucherNumber || "NA"} - {e?.sOrderCustomerName || "NA"}</p>
-                                                        <p className="mt-1 text-xs font-medium text-gray-500">Items: {e?.sOrderBody?.length || 0}</p>
+                                                        <p className="text-base font-bold text-card-foreground">
+                                                            {e?.sOrderVoucherNumber || "NA"} - {e?.sOrderCustomerName || "NA"}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-muted-foreground">
+                                                            Items: {e?.sOrderBody?.length || 0}
+                                                        </p>
                                                     </div>
-                                                    {isSelected && <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">Selected</span>}
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                                                            Selected
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </button>
                                         );
@@ -631,6 +723,7 @@ const SalesInVoice = () => {
                     </div>
                 }
             />
+
             {/* @ts-ignore  */}
             <ListingModel {...{ show: downlaodPDF?.show, setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), downlaodPDF, entryType: "sales-invoice", rowData: downlaodPDF?.record, report, title: "Download Sales Invoice PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
         </div>

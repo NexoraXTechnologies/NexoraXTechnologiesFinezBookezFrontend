@@ -5,17 +5,11 @@ import Pagination from "../../../components/pagination";
 import { getAccountReceivable } from "../../../redux/slices/professionalSlice/ledgerReports/accountsReceivableSlice";
 import ReportsOverviewCards from "./ReportsOverviewCards";
 
-
-
-
-
-
 const mainColumns = [
     {
         key: "sInvCustomerName",
         title: "Customer Name",
     },
-
     {
         key: "sInvCustomerCode",
         title: "Customer Code",
@@ -27,38 +21,34 @@ const mainColumns = [
             <>₹{Number(row?.totalBalanceAmount || 0).toFixed(2)}</>
         ),
     },
-
 ];
 
 const AccountsReceivable = () => {
     const dispatch = useDispatch<any>();
-    const { accountReceivable, listingLoader, pagination, summary = {},
-        count = 0, } = useSelector((s: any) => s.accountReceivable);
+
+    const {
+        accountReceivable,
+        listingLoader,
+        pagination,
+        summary = {},
+        count = 0,
+    } = useSelector((s: any) => s.accountReceivable);
 
     // const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
 
-  
-
-
     useEffect(() => {
-        dispatch(getAccountReceivable())
-    }, [dispatch])
-
-
-
-
-
+        dispatch(getAccountReceivable());
+    }, [dispatch]);
 
     return (
         <>
-            <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
-
-
+            <div className="flex h-full w-full flex-col border border-border bg-card text-card-foreground p-4 shadow-sm">
                 <ReportsOverviewCards
                     totalAmount={summary?.totalReceivableAmount}
                     customerCount={count}
                 />
+
                 <DataTable
                     columns={mainColumns}
                     data={accountReceivable}
@@ -83,10 +73,6 @@ const AccountsReceivable = () => {
                     />
                 )}
             </div>
-
-
-
-
         </>
     );
 };

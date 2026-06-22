@@ -48,9 +48,11 @@ import "react-toastify/dist/ReactToastify.css";
 import ReportsDashboard from './pages/bookez/reports';
 import RegistersDashboard from './pages/bookez/registers';
 import PermissionManagement from './pages/setting/PermissionManagement';
+import { useAppearance } from './hooks/useAppearance';
+import Appearance from './pages/bookez/settings/Appearance';
 
 function App() {
-
+  useAppearance();
   return (
     <>
       <ToastContainer
@@ -78,6 +80,7 @@ function App() {
         <Route index element={<ProfessionalDashboard />} />
         <Route path="profile" element={<ProfessionalProfile />} />
         <Route path="permission" element={<PermissionManagement />} />
+          <Route path="appearance" element={<Appearance />} />
         <Route path="documentmngt" element={<DocumentMangement />} />
         <Route path="taskmngt" element={<TaskManagement />} />
         <Route path="incometx" element={<ProfessionlIncomeTaxLaw />} />

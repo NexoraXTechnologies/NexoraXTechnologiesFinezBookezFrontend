@@ -624,10 +624,10 @@ const PurchaseInvoice = () => {
             title: "Vendor",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">
+                    <div className="font-medium text-card-foreground">
                         {row?.pInvVendorName || "-"}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                         {row?.pInvVendorCode || "-"}
                     </div>
                 </div>
@@ -638,8 +638,8 @@ const PurchaseInvoice = () => {
         //     title: "GRN No",
         //     render: (row: any) => row?.grnVoucherNumber || "-",
         // },
-       
-         {
+
+        {
             key: "pInvBody",
             title: "Items",
             render: (row: any) => row?.pInvBody?.length || 0,
@@ -648,7 +648,7 @@ const PurchaseInvoice = () => {
             key: "pInvFooter",
             title: "Net Amount",
             render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
+                <span className="font-semibold text-primary">
                     {money(row?.pInvFooter?.netAmount || 0)}
                 </span>
             ),
@@ -657,7 +657,7 @@ const PurchaseInvoice = () => {
             key: "pInvStatus",
             title: "Status",
             render: (row: any) => (
-                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
                     {row?.pInvStatus || "-"}
                 </span>
             ),
@@ -711,8 +711,8 @@ const PurchaseInvoice = () => {
 
         const quantity =
             item?.acceptedQuantity !== undefined &&
-            item?.acceptedQuantity !== null &&
-            item?.acceptedQuantity !== ""
+                item?.acceptedQuantity !== null &&
+                item?.acceptedQuantity !== ""
                 ? item.acceptedQuantity
                 : item?.quantity || "";
 
@@ -1462,7 +1462,7 @@ const PurchaseInvoice = () => {
         !grnLoaded;
 
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div
                 id="purchase-invoice-header"
                 className="mb-3 flex items-center"
@@ -1497,13 +1497,14 @@ const PurchaseInvoice = () => {
                             loading: refreshing,
                         }}
                     />
+
                     <Permission module="bookez" permissionKey="purchaseInvoice" action="create">
-                    {/* @ts-ignore */}
-                    <DataCreateButton
-                        {...{
-                            callBackFn: openAddModal,
-                            text: "Add Purchase Invoice",
-                        }}
+                        {/* @ts-ignore */}
+                        <DataCreateButton
+                            {...{
+                                callBackFn: openAddModal,
+                                text: "Add Purchase Invoice",
+                            }}
                         />
                     </Permission>
                 </div>
@@ -1517,37 +1518,38 @@ const PurchaseInvoice = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
-                        <button
-                            id="purchase-invoice-edit-button"
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
-                            <Edit size={16} />
+                            <button
+                                id="purchase-invoice-edit-button"
+                                onClick={() => openEditModal(record)}
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            >
+                                <Edit size={16} />
                             </button>
                         </Permission>
+
                         <Permission module="bookez" permissionKey="purchaseInvoice" action="delete">
-                        <button
-                            id="purchase-invoice-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
+                            <button
+                                id="purchase-invoice-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => {
+                                    const rect =
+                                        e.currentTarget.getBoundingClientRect();
 
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
+                                    let x = rect.left - 150;
+                                    if (x < 10) x = 10;
 
-                                const y = rect.top + window.scrollY - 5;
+                                    const y = rect.top + window.scrollY - 5;
 
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber: record?.pInvVoucherNumber,
-                                });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                                    setConfirmTooltip({
+                                        show: true,
+                                        x,
+                                        y,
+                                        voucherNumber: record?.pInvVoucherNumber,
+                                    });
+                                }}
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>
@@ -1600,12 +1602,12 @@ const PurchaseInvoice = () => {
                 gridCols={1}
                 maxWidth="2xl"
                 modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
+                headerClassName="bg-card"
+                footerClassName="bg-card"
+                bodyClassName="!block !p-0 bg-card text-card-foreground"
                 body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
+                    <div className="flex h-[520px] flex-col bg-card text-card-foreground">
+                        <div className="border-b border-border p-5">
                             <input
                                 value={grnSearch}
                                 onChange={(e) =>
@@ -1613,11 +1615,11 @@ const PurchaseInvoice = () => {
                                 }
                                 placeholder="Search GRN code..."
                                 className="
-                                    w-full rounded-xl border border-gray-200 bg-gray-50
-                                    px-4 py-3 text-sm font-medium text-gray-700
+                                    w-full rounded-xl border border-border bg-input
+                                    px-4 py-3 text-sm font-medium text-foreground
                                     outline-none transition
-                                    placeholder:text-gray-400
-                                    focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
+                                    placeholder:text-muted-foreground
+                                    focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20
                                 "
                             />
                         </div>
@@ -1626,7 +1628,7 @@ const PurchaseInvoice = () => {
                             {showGrnSkeleton ? (
                                 <ModalListSkeleton rows={3} />
                             ) : grns.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
                                     No GRN found
                                 </div>
                             ) : (
@@ -1657,24 +1659,24 @@ const PurchaseInvoice = () => {
                                                 className={`
                                                     w-full rounded-xl border px-4 py-4 text-left transition
                                                     ${isSelected
-                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
                                                     }
                                                 `}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-base font-bold text-gray-900">
+                                                        <p className="text-base font-bold text-card-foreground">
                                                             {grnNumber} - {vendorName}
                                                         </p>
 
-                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                        <p className="mt-1 text-xs font-medium text-muted-foreground">
                                                             Items: {grnBody?.length || 0}
                                                         </p>
                                                     </div>
 
                                                     {isSelected && (
-                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                        <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
                                                             Selected
                                                         </span>
                                                     )}
@@ -1703,7 +1705,7 @@ const PurchaseInvoice = () => {
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
-                        
+
                         form,
                         errors,
                         handleAddRow,

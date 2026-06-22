@@ -22,26 +22,24 @@ type ModalProps = {
     title?: string | any;
     loader?: boolean;
 
-    // Optional dynamic props
     gridCols?: 1 | 2 | 3 | 4 | 12;
     maxWidth?:
-        | "sm"
-        | "md"
-        | "lg"
-        | "xl"
-        | "2xl"
-        | "3xl"
-        | "4xl"
-        | "5xl"
-        | "6xl"
-        | "7xl"
-        | "full";
+    | "sm"
+    | "md"
+    | "lg"
+    | "xl"
+    | "2xl"
+    | "3xl"
+    | "4xl"
+    | "5xl"
+    | "6xl"
+    | "7xl"
+    | "full";
 
     bodyClassName?: string;
     headerClassName?: string;
     footerClassName?: string;
 
-    // New optional props, safe for existing usage
     modalClassName?: string;
     overlayClassName?: string;
     hideFooter?: boolean;
@@ -66,8 +64,6 @@ const maxWidthClass: Record<string, string> = {
     "5xl": "max-w-5xl",
     "6xl": "max-w-6xl",
     "7xl": "max-w-7xl",
-
-    // Only used when you pass maxWidth="full"
     full: "w-[98vw] max-w-[98vw]",
 };
 
@@ -81,14 +77,12 @@ const Modal = ({
     title,
     loader = false,
 
-    // Default old values, so other components stay same
     gridCols = 2,
     maxWidth = "3xl",
     bodyClassName = "",
     headerClassName = "",
     footerClassName = "",
 
-    // New optional values
     modalClassName = "",
     overlayClassName = "",
     hideFooter = false,
@@ -114,21 +108,21 @@ const Modal = ({
                         }}
                         className={`
                             relative flex w-full max-h-[90vh] flex-col overflow-hidden
-                            rounded-md border border-gray-100 bg-white shadow-2xl
+                            rounded-md border border-border bg-card text-card-foreground shadow-2xl
                             ${maxWidthClass[maxWidth] || maxWidthClass["3xl"]}
                             ${modalClassName}
                         `}
                     >
                         {/* Header */}
                         <div
-                            className={`flex shrink-0 items-center justify-between border-b border-gray-300 bg-gray-50 px-6 py-3 ${headerClassName}`}
+                            className={`flex shrink-0 items-center justify-between border-b border-border bg-secondary px-6 py-3 ${headerClassName}`}
                         >
                             <div>
-                                <h2 className="mb-0 text-xl font-semibold text-gray-800">
+                                <h2 className="mb-0 text-xl font-semibold text-secondary-foreground">
                                     {state ? `Edit ${title}` : `${title}`}
                                 </h2>
 
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-muted-foreground">
                                     Fill in the {title.toLowerCase()} details below
                                 </p>
                             </div>
@@ -137,12 +131,12 @@ const Modal = ({
                                 type="button"
                                 onClick={() => {
                                     handleClose();
-                                    // @ts-ignore 
+                                    // @ts-ignore
                                     setShow(false);
                                 }}
-                                className="cursor-pointer rounded-full p-2 transition hover:bg-gray-200"
+                                className="cursor-pointer rounded-full p-2 transition hover:bg-muted"
                             >
-                                <X size={18} className="text-gray-600" />
+                                <X size={18} className="text-muted-foreground" />
                             </button>
                         </div>
 
@@ -150,7 +144,7 @@ const Modal = ({
                         <div
                             className={`
                                 grid min-h-0 min-w-0 flex-1 gap-4 overflow-y-auto overflow-x-hidden
-                                p-6 text-sm
+                                p-6 text-sm bg-card text-card-foreground
                                 ${gridColsClass[gridCols] || gridColsClass[2]}
                                 ${bodyClassName}
                             `}
@@ -161,12 +155,12 @@ const Modal = ({
                         {/* Footer */}
                         {!hideFooter && (
                             <div
-                                className={`flex shrink-0 justify-end gap-3 border-t border-gray-300 bg-gray-50 px-6 py-4 ${footerClassName}`}
+                                className={`flex shrink-0 justify-end gap-3 border-t border-border bg-secondary px-6 py-4 ${footerClassName}`}
                             >
                                 <SecondaryButton
                                     callBackFn={() => {
                                         handleClose();
-                                        // @ts-ignore 
+                                        // @ts-ignore
                                         setShow(false);
                                     }}
                                     text="Cancel"
@@ -179,8 +173,8 @@ const Modal = ({
                                         loader
                                             ? "Loading.."
                                             : state
-                                            ? "Update"
-                                            : "Save"
+                                                ? "Update"
+                                                : "Save"
                                     }
                                 />
                             </div>
@@ -219,20 +213,20 @@ const LogoutModal = ({
                             stiffness: 260,
                             damping: 20,
                         }}
-                        className="relative w-full max-w-md overflow-hidden rounded-md border border-gray-100 bg-white shadow-2xl"
+                        className="relative w-full max-w-md overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-2xl"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between border-b border-gray-300 bg-gray-50 px-6 py-4">
+                        <div className="flex items-center justify-between border-b border-border bg-secondary px-6 py-4">
                             <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                                    <LogOut size={20} className="text-red-600" />
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-danger/10">
+                                    <LogOut size={20} className="text-danger" />
                                 </div>
 
                                 <div>
-                                    <h2 className="text-lg font-semibold text-gray-800">
+                                    <h2 className="text-lg font-semibold text-secondary-foreground">
                                         Logout
                                     </h2>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-muted-foreground">
                                         Confirm logout action
                                     </p>
                                 </div>
@@ -241,15 +235,15 @@ const LogoutModal = ({
                             <button
                                 type="button"
                                 onClick={() => setShow(false)}
-                                className="rounded-full p-2 transition hover:bg-gray-200"
+                                className="rounded-full p-2 transition hover:bg-muted"
                             >
-                                <X size={18} className="text-gray-600" />
+                                <X size={18} className="text-muted-foreground" />
                             </button>
                         </div>
 
                         {/* Body */}
-                        <div className="px-6 py-5">
-                            <p className="text-sm text-gray-600">
+                        <div className="px-6 py-5 bg-card">
+                            <p className="text-sm text-muted-foreground">
                                 Are you sure you want to logout from your account?
                                 You will need to sign in again to access the
                                 dashboard.
@@ -257,10 +251,10 @@ const LogoutModal = ({
                         </div>
 
                         {/* Footer */}
-                        <div className="flex justify-end gap-3 border-t border-gray-300 bg-gray-50 px-6 py-4">
+                        <div className="flex justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
                             <button
                                 onClick={() => setShow(false)}
-                                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                                className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition hover:bg-muted"
                             >
                                 Cancel
                             </button>
@@ -268,7 +262,7 @@ const LogoutModal = ({
                             <button
                                 disabled={loading}
                                 onClick={handleSubmit}
-                                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-md bg-danger px-4 py-2 text-sm font-medium text-danger-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {loading ? "Logging out..." : "Logout"}
                             </button>
@@ -277,8 +271,8 @@ const LogoutModal = ({
                 </motion.div>
             )}
         </AnimatePresence>
-    )
-} 
+    );
+};
 
 // warning modal
 
@@ -305,12 +299,12 @@ const WarningModel = ({
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-md rounded-md bg-white p-6 text-center shadow-2xl">
-                <h2 className="text-2xl font-bold text-slate-900">
+            <div className="w-full max-w-md rounded-md border border-border bg-card p-6 text-center text-card-foreground shadow-2xl">
+                <h2 className="text-2xl font-bold text-card-foreground">
                     {title}
                 </h2>
 
-                <p className="mt-4 text-base leading-7 text-slate-600">
+                <p className="mt-4 text-base leading-7 text-muted-foreground">
                     {message}
                 </p>
 
@@ -318,7 +312,7 @@ const WarningModel = ({
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="rounded-md border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-600 hover:bg-slate-50"
+                        className="rounded-md border border-border bg-card px-5 py-3 font-semibold text-card-foreground hover:bg-muted"
                     >
                         {cancelText}
                     </button>
@@ -326,7 +320,7 @@ const WarningModel = ({
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className="rounded-md bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+                        className="rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground hover:opacity-90"
                     >
                         {confirmText}
                     </button>
@@ -343,7 +337,7 @@ const ListingModel = ({
     report,
     rowData,
     downlaodPDF,
-    entryType = "sales-invoice"
+    entryType = "sales-invoice",
 }: any) => {
     const dispatch = useDispatch<any>();
 
@@ -354,6 +348,7 @@ const ListingModel = ({
     const { selectedAccount } = useSelector(
         (s: any) => s.accountMaster
     );
+
     const isReportDownload = Boolean(report?.length);
 
     useEffect(() => {
@@ -400,7 +395,6 @@ const ListingModel = ({
             let upiUrl = "";
             let upiQrUri = "";
 
-            // ✅ QR generate only for sales invoice
             if (entryType === "sales-invoice" && companyUpiId) {
                 upiUrl = buildUpiLink({
                     upiId: companyUpiId,
@@ -491,27 +485,31 @@ const ListingModel = ({
                     }}
                     className={`
                         relative flex w-full max-h-[90vh] flex-col overflow-hidden
-                        rounded-md border border-gray-100 bg-white shadow-2xl
+                        rounded-md border border-border bg-card text-card-foreground shadow-2xl
                         ${maxWidthClass["lg"]}
                     `}
                 >
-                    <div className="flex shrink-0 items-center justify-between border-b border-gray-300 bg-gray-50 px-6 py-3">
+                    <div className="flex shrink-0 items-center justify-between border-b border-border bg-secondary px-6 py-3">
                         <div>
-                            <h2 className="mb-0 text-xl font-semibold text-gray-800">
+                            <h2 className="mb-0 text-xl font-semibold text-secondary-foreground">
                                 {title}
                             </h2>
                         </div>
 
                         <button
                             type="button"
-                            onClick={() => { setShow(); setGstType(""); setSelectedTemplate(null) }}
-                            className="cursor-pointer rounded-full p-2 transition hover:bg-gray-200"
+                            onClick={() => {
+                                setShow();
+                                setGstType("");
+                                setSelectedTemplate(null);
+                            }}
+                            className="cursor-pointer rounded-full p-2 transition hover:bg-muted"
                         >
-                            <X size={18} className="text-gray-600" />
+                            <X size={18} className="text-muted-foreground" />
                         </button>
                     </div>
 
-                    <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-y-auto overflow-x-hidden p-6 text-sm">
+                    <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-y-auto overflow-x-hidden bg-card p-6 text-sm text-card-foreground">
                         {isReportDownload ? (
                             <ul className="space-y-3">
                                 {report?.map((e: any, index: number) => (
@@ -521,8 +519,8 @@ const ListingModel = ({
                                         className={`
                                             rounded-lg p-4 shadow-sm cursor-pointer transition-all duration-200
                                             ${e?.id === selectedTemplate?.id
-                                                ? "border-2 border-blue-500 bg-blue-50 text-blue-700 shadow-md"
-                                                : "border border-gray-200 bg-white hover:bg-gray-50 hover:shadow-md"
+                                                ? "border-2 border-primary bg-primary/10 text-primary shadow-md"
+                                                : "border border-border bg-card text-card-foreground hover:bg-muted hover:shadow-md"
                                             }
                                         `}
                                     >
@@ -539,25 +537,30 @@ const ListingModel = ({
                                         className={`
                                             rounded-lg border px-4 py-2 cursor-pointer transition-all
                                             ${gstType === option
-                                                ? "border-blue-500 bg-blue-500 text-white"
-                                                : "border-gray-300 bg-white text-gray-700 hover:border-blue-400"
+                                                ? "border-primary bg-primary text-primary-foreground"
+                                                : "border-border bg-card text-card-foreground hover:border-primary hover:bg-muted"
                                             }
                                         `}
                                     >
                                         {option}
                                     </div>
                                 ))}
-                                </div>
+                            </div>
                         )}
                     </div>
 
-                    <div className="flex shrink-0 justify-end gap-3 border-t border-gray-300 bg-gray-50 px-6 py-4">
+                    <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
                         <PrimaryButton
                             callBackFn={handleConfirm}
                             text="Confirm"
                         />
+
                         <SecondaryButton
-                            callBackFn={() => { setShow(); setGstType(""); setSelectedTemplate(null) }}
+                            callBackFn={() => {
+                                setShow();
+                                setGstType("");
+                                setSelectedTemplate(null);
+                            }}
                             text="Cancel"
                         />
                     </div>

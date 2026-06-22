@@ -132,12 +132,10 @@ const RegisterFilterCard = ({
     const primaryButtonClass = `
         !h-8 !min-w-[76px] !px-3 !text-xs
         disabled:!cursor-not-allowed
-        disabled:!from-indigo-200
-        disabled:!to-violet-100
-        disabled:!text-indigo-400
+        disabled:!bg-muted
+        disabled:!text-muted-foreground
         disabled:!shadow-none
-        disabled:hover:!from-indigo-200
-        disabled:hover:!to-violet-100
+        disabled:hover:!bg-muted
         disabled:hover:!shadow-none
         disabled:active:!scale-100
     `;
@@ -148,20 +146,20 @@ const RegisterFilterCard = ({
         if (field.type === "date") {
             return (
                 <div key={field.key} className={wrapperClass}>
-                    <label className="absolute -top-2.5 left-3 z-10 bg-white px-1 text-xs font-medium text-slate-500">
+                    <label className="absolute -top-2.5 left-3 z-10 bg-card px-1 text-xs font-medium text-muted-foreground">
                         {field.label}
                         {field.required && (
-                            <span className="ml-1 text-red-500">*</span>
+                            <span className="ml-1 text-danger">*</span>
                         )}
                     </label>
 
-                    <div className="flex h-8 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
+                    <div className="flex h-8 items-center rounded-md border border-border bg-input px-3">
                         <input
                             type="date"
                             value={field.value || ""}
                             disabled={field.disabled}
                             onChange={(e) => field.onChange(e.target.value)}
-                            className="w-full bg-transparent text-xs font-semibold text-slate-800 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+                            className="w-full bg-transparent text-xs font-semibold text-foreground outline-none disabled:cursor-not-allowed disabled:text-muted-foreground"
                         />
                     </div>
                 </div>
@@ -197,21 +195,21 @@ const RegisterFilterCard = ({
         if (field.type === "text") {
             return (
                 <div key={field.key} className={wrapperClass}>
-                    <label className="absolute -top-2.5 left-3 z-10 bg-white px-1 text-xs font-medium text-slate-500">
+                    <label className="absolute -top-2.5 left-3 z-10 bg-card px-1 text-xs font-medium text-muted-foreground">
                         {field.label}
                         {field.required && (
-                            <span className="ml-1 text-red-500">*</span>
+                            <span className="ml-1 text-danger">*</span>
                         )}
                     </label>
 
-                    <div className="flex h-8 items-center rounded-md border border-slate-200 bg-slate-50 px-3">
+                    <div className="flex h-8 items-center rounded-md border border-border bg-input px-3">
                         <input
                             type="text"
                             value={field.value || ""}
                             disabled={field.disabled}
                             placeholder={field.placeholder}
                             onChange={(e) => field.onChange(e.target.value)}
-                            className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+                            className="w-full bg-transparent text-xs font-semibold text-foreground placeholder:text-muted-foreground outline-none disabled:cursor-not-allowed disabled:text-muted-foreground"
                         />
                     </div>
                 </div>
@@ -222,10 +220,10 @@ const RegisterFilterCard = ({
     };
 
     return (
-        <div className="w-full rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="w-full rounded-xl border border-border bg-card p-3 text-card-foreground shadow-sm">
             <div className="flex flex-col gap-3">
                 {title && (
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-bold text-card-foreground">
                         {title}
                     </h3>
                 )}
@@ -234,11 +232,11 @@ const RegisterFilterCard = ({
                     {fields.map(renderField)}
                 </div>
 
-                <div className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted px-3 py-2 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0 flex-1">
                         {showDisabledMessage && downloadDisabledMessage ? (
-                            <div className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
-                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px]">
+                            <div className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-danger/10 px-3 py-1 text-[11px] font-semibold text-danger ring-1 ring-danger/20">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-danger/10 text-[10px]">
                                     !
                                 </span>
 
@@ -247,8 +245,8 @@ const RegisterFilterCard = ({
                                 </span>
                             </div>
                         ) : (
-                            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px]">
+                            <div className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-[11px] font-semibold text-success ring-1 ring-success/20">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success/10 text-[10px]">
                                     ✓
                                 </span>
                                 Ready to generate register

@@ -92,7 +92,6 @@ const getDefaultForm = () => ({
     balanceAmount: "0.00",
 });
 
-
 /* ===================================================
    PAYMENT
 =================================================== */
@@ -169,7 +168,6 @@ const Payment = () => {
         voucherNumber: null,
     });
 
-
     const getRecords = (res: any) => {
         return Array.isArray(res?.items)
             ? res.items
@@ -189,6 +187,7 @@ const Payment = () => {
                                         ? res
                                         : [];
     };
+
     /* ===================================================
        FIELD HELPERS
     =================================================== */
@@ -583,10 +582,10 @@ const Payment = () => {
             title: "Cash/Account Name",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">
+                    <div className="font-medium text-card-foreground">
                         {row?.payAccountName || "-"}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                         {row?.payAccountCode || "-"}
                     </div>
                 </div>
@@ -597,7 +596,7 @@ const Payment = () => {
             key: "payBody",
             title: "Amount",
             render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
+                <span className="font-semibold text-primary">
                     {money(row?.payFooter?.netAmount || 0)}
                 </span>
             ),
@@ -606,7 +605,7 @@ const Payment = () => {
             key: "payStatus",
             title: "Status",
             render: (row: any) => (
-                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
                     {row?.payStatus || "-"}
                 </span>
             ),
@@ -1107,8 +1106,6 @@ const Payment = () => {
             }
         });
 
-
-
         const filledRows = getFilledRows();
 
         if (filledRows.length === 0) {
@@ -1146,7 +1143,6 @@ const Payment = () => {
                 }
             });
 
-
             const rowAmount = num(row?.netAmount || row?.amount || 0);
 
             const hasReferences =
@@ -1157,8 +1153,6 @@ const Payment = () => {
                     return sum + num(ref?.adjustedAmount);
                 }, 0)
                 : 0;
-
-
 
             // ✅ Reference is mandatory for every filled payment row
             if (!hasReferences || referenceAdjusted <= 0) {
@@ -1555,7 +1549,7 @@ const Payment = () => {
     }
 
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div
                 id="payment-header"
                 className="mb-3 flex items-center"
@@ -1590,13 +1584,14 @@ const Payment = () => {
                             loading: refreshing,
                         }}
                     />
+
                     <Permission module="bookez" permissionKey="payment" action="create">
-                    {/* @ts-ignore */}
-                    <DataCreateButton
-                        {...{
-                            callBackFn: openAddModal,
-                            text: "Add Payment",
-                        }}
+                        {/* @ts-ignore */}
+                        <DataCreateButton
+                            {...{
+                                callBackFn: openAddModal,
+                                text: "Add Payment",
+                            }}
                         />
                     </Permission>
                 </div>
@@ -1610,33 +1605,34 @@ const Payment = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
-                        <button
-                            id="payment-edit-button"
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
-                            <Edit size={16} />
-                        </button>
+                            <button
+                                id="payment-edit-button"
+                                onClick={() => openEditModal(record)}
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            >
+                                <Edit size={16} />
+                            </button>
                         </Permission>
+
                         <Permission module="bookez" permissionKey="purchaseInvoice" action="delete">
-                        <button
-                            id="payment-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber: record?.payVoucherNumber,
-                                });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            <button
+                                id="payment-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    let x = rect.left - 150;
+                                    if (x < 10) x = 10;
+                                    const y = rect.top + window.scrollY - 5;
+                                    setConfirmTooltip({
+                                        show: true,
+                                        x,
+                                        y,
+                                        voucherNumber: record?.payVoucherNumber,
+                                    });
+                                }}
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>
