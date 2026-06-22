@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 const ThemeToggle = () => {
     const [theme, setTheme] = useState<string>(() => {
-        return localStorage.getItem("theme") || "light";
+        return localStorage.getItem("themeMode") || "light";
     });
 
     useEffect(() => {
@@ -14,7 +14,7 @@ const ThemeToggle = () => {
             root.classList.remove("dark");
         }
 
-        localStorage.setItem("theme", theme);
+        localStorage.setItem("themeMode", theme);
     }, [theme]);
 
     const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));

@@ -7,11 +7,11 @@ import {
   updateProfessionalUser,
 } from "../../redux/slices/professionalSlice/professionalUserSlice";
 
-import { verifyPanWithHeader, resetVerifyPan } from '../../redux/slices/professionalSlice/panVerify/panVerify';
+import { verifyPanWithHeader, resetVerifyPan } from "../../redux/slices/professionalSlice/panVerify/panVerify";
 import { toast } from "react-toastify";
 import { Trash2, Edit } from "lucide-react";
 import ConfirmTooltip from "../../components/common/ConfirmTooltip";
-import { formatToDDMMYYYY } from '../../components/common/DateFormator';
+import { formatToDDMMYYYY } from "../../components/common/DateFormator";
 import SearchInput from "../../components/searchInput";
 import { DataCreateButton, DataREfreshButton } from "../../components/buttons";
 import DataTable from "../../components/DataTable";
@@ -37,8 +37,6 @@ const Users = () => {
     y: null,
     mobile: null,
   });
-  // console.log(updateProfessionalUser);
-  // console.log(updateProfessionalUser.typePrefix);
 
   const [formData, setFormData]: [any, (formData: any) => void] = useState({
     userFirstName: "",
@@ -58,16 +56,16 @@ const Users = () => {
   // Fetch users
   useEffect(() => {
     // @ts-ignore
-   dispatch(getProfessionalUsers({ page: localPage, limit: localLimit }));
- }, [dispatch, localPage, localLimit]);
+    dispatch(getProfessionalUsers({ page: localPage, limit: localLimit }));
+  }, [dispatch, localPage, localLimit]);
 
- const handleRefresh = async () => {
-   //  setRefreshing(true);
-   // @ts-ignore
-   await dispatch(getProfessionalUsers({ page: localPage, limit: localLimit }));
-   toast.success('List refreshed');
-   //  setRefreshing(false);
- };
+  const handleRefresh = async () => {
+    //  setRefreshing(true);
+    // @ts-ignore
+    await dispatch(getProfessionalUsers({ page: localPage, limit: localLimit }));
+    toast.success("List refreshed");
+    //  setRefreshing(false);
+  };
 
   // Filtering
   const filteredUsers = users.filter((u: any) => {
@@ -116,12 +114,12 @@ const Users = () => {
         break;
 
       case "userPAN":
-  if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
-    error = "Enter valid PAN";
-  } else if (!panVerified) {
-    error = "Please verify PAN";
-  }
-  break;
+        if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value)) {
+          error = "Enter valid PAN";
+        } else if (!panVerified) {
+          error = "Please verify PAN";
+        }
+        break;
 
       //   case "userAadhar":
       //     if (!/^\d{12}$/.test(value)) error = "Aadhar must be 12 digits";
@@ -165,9 +163,9 @@ const Users = () => {
       newErrors.userMobileNumberHash = "Mobile must be 10 digits";
 
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.userPAN)) {
-      newErrors.userPAN = 'Enter valid PAN';
+      newErrors.userPAN = "Enter valid PAN";
     } else if (!panVerified) {
-      newErrors.userPAN = 'Please verify PAN';
+      newErrors.userPAN = "Please verify PAN";
     }
 
     // if (!/^\d{12}$/.test(formData.userAadhar))
@@ -188,10 +186,10 @@ const Users = () => {
 
     // if (name === 'userMobileNumberHash' || name === 'userAadhar') newValue = value.replace(/\D/g, '');
 
-    if (name === 'userPAN') {
+    if (name === "userPAN") {
       newValue = value
         .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '')
+        .replace(/[^A-Z0-9]/g, "")
         .slice(0, 10);
       setPanVerified(false);
       setPanVerifyFailed(false);
@@ -228,8 +226,8 @@ const Users = () => {
         // @ts-ignore
         await dispatch(addProfessionalUser({
           ...formData,
-            userPAN: formData.userPAN.toUpperCase(),
-          })
+          userPAN: formData.userPAN.toUpperCase(),
+        })
         ).unwrap();
       }
       toast.success("Employee/Team added successfully");
@@ -255,26 +253,24 @@ const Users = () => {
       setConfirmTooltip({ show: false, x: null, y: null, mobile: null });
     }
   };
+
   const totalCount = pagination?.totalDocs ?? 0;
   const totalPages = pagination?.totalPages ?? 1;
   const page = pagination?.currentPage ?? localPage;
   // const limit = pagination?.limit ?? localLimit;
 
-  // const startIndex = totalCount === 0 ? 0 : (page - 1) * limit + 1;
-  // const endIndex = Math.min(page * limit, totalCount);
-
   const resetUserForm = () => {
     setFormData({
-      userFirstName: '',
-      userMiddleName: '',
-      userLastName: '',
-      userGender: '',
-      userDOB: '',
-      userEmail: '',
-      userMobileNumberHash: '',
-      userPAN: '',
+      userFirstName: "",
+      userMiddleName: "",
+      userLastName: "",
+      userGender: "",
+      userDOB: "",
+      userEmail: "",
+      userMobileNumberHash: "",
+      userPAN: "",
       //   userAadhar: '',
-      userType: '',
+      userType: "",
     });
     setErrors({});
     setPanVerified(false);
@@ -283,10 +279,10 @@ const Users = () => {
   };
 
   const handleVerifyPan = async () => {
-    const pan = (formData.userPAN || '').trim().toUpperCase();
+    const pan = (formData.userPAN || "").trim().toUpperCase();
 
     if (!pan) {
-      toast.error('PAN is required');
+      toast.error("PAN is required");
       return;
     }
 
@@ -295,9 +291,9 @@ const Users = () => {
       setPanVerifyFailed(true);
       setErrors((prev: any) => ({
         ...prev,
-        userPAN: 'Enter valid PAN',
+        userPAN: "Enter valid PAN",
       }));
-      toast.error('Enter valid PAN');
+      toast.error("Enter valid PAN");
       return;
     }
 
@@ -309,25 +305,25 @@ const Users = () => {
       setPanVerifyFailed(false);
       setErrors((prev: any) => ({
         ...prev,
-        userPAN: '',
+        userPAN: "",
       }));
 
-      toast.success(res?.message || 'PAN verified successfully');
+      toast.success(res?.message || "PAN verified successfully");
     } catch (err: any) {
       setPanVerified(false);
       setPanVerifyFailed(true);
       setErrors((prev: any) => ({
         ...prev,
-        userPAN: 'PAN verification failed',
+        userPAN: "PAN verification failed",
       }));
 
-      toast.error(err || 'PAN verification failed');
+      toast.error(err || "PAN verification failed");
     }
   };
 
   const openEditModal = (acc: any) => {
     // @ts-ignore
-    console.log({ acc })
+    console.log({ acc });
     setEditingAccount(acc);
     setFormData({
       userFirstName: acc.userFirstName,
@@ -345,32 +341,32 @@ const Users = () => {
 
   const columns = [
     {
-      key: 'name', title: 'Name',
-      render: (row:any) => (
+      key: "name", title: "Name",
+      render: (row: any) => (
         <>
-          {`${row.userFirstName} ${row.userMiddleName ?? ''} ${row.userLastName}`}
+          {`${row.userFirstName} ${row.userMiddleName ?? ""} ${row.userLastName}`}
         </>
       ),
     },
-    { key: 'userEmail', title: 'Email', },
-    { key: 'userMobileNumberHash', title: 'Mobile', },
+    { key: "userEmail", title: "Email" },
+    { key: "userMobileNumberHash", title: "Mobile" },
     // { key: 'userAadhar', title: 'Aadhaar', },
     {
-      key: 'accountEmail', title: 'DOB', 
+      key: "accountEmail", title: "DOB",
       render: (row: any) => (
         <>
           {formatToDDMMYYYY(row.userDOB)}
         </>
       ),
     },
-    { key: 'userType', title: 'Type', },
-    { key: 'userGender', title: 'Gender', },
+    { key: "userType", title: "Type" },
+    { key: "userGender", title: "Gender" },
   ];
 
   return (
-    <div className="bg-white border-gray-200 rounded-md shadow-sm p-4 flex flex-col h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col bg-card p-4 text-card-foreground shadow-sm">
       {/* Header */}
-      <div className="flex flex-wrap justify-end items-center gap-2 mb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SearchInput {...{ search: searchTerm, setSearch: setSearchTerm }} />
           <DataREfreshButton {...{ callBackFn: handleRefresh }} />
@@ -389,7 +385,7 @@ const Users = () => {
             <button
               id="account-edit-button"
               onClick={() => openEditModal(each)}
-              className="text-blue-600 hover:text-blue-800"
+              className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
             >
               <Edit size={16} />
             </button>
@@ -403,12 +399,14 @@ const Users = () => {
                   mobile: each.userMobileNumberHash,
                 });
               }}
-              className="text-red-600 hover:text-red-800">
+              className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger"
+            >
               <Trash2 size={16} />
             </button>
           </div>
         )}
       />
+
       {/*  @ts-ignore */}
       <Modal {...{
         show: showModal, setShow: () => {
@@ -436,26 +434,44 @@ const Users = () => {
 
           {/* PAN */}
           <div>
-            <label className="text-sm font-medium text-gray-700">PAN</label>
+            <label className="text-sm font-medium text-card-foreground">PAN</label>
             <div className="relative">
-              <input name="userPAN" maxLength={10} value={formData.userPAN} onChange={handleChange} placeholder="Enter PAN (ABCDE1234F)" className="w-full h-11 rounded-md border border-gray-300 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-200" />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+              <input
+                name="userPAN"
+                maxLength={10}
+                value={formData.userPAN}
+                onChange={handleChange}
+                placeholder="Enter PAN (ABCDE1234F)"
+                className="h-11 w-full rounded-md border border-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none transition duration-200 hover:border-primary/60 focus:border-primary focus:ring-1 focus:ring-primary/20"
+              />
+              <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center">
                 {panVerified ? (
-                  <span className="text-green-600 text-lg font-bold">✔</span>
+                  <span className="text-lg font-bold text-success">✔</span>
                 ) : panVerifyFailed ? (
-                  <button type="button" onClick={handleVerifyPan} className="text-red-500 text-lg font-bold px-1" title="PAN verification failed. Retry">
+                  <button
+                    type="button"
+                    onClick={handleVerifyPan}
+                    className="px-1 text-lg font-bold text-danger"
+                    title="PAN verification failed. Retry"
+                  >
                     ✖
                   </button>
                 ) : (
-                  <button type="button" onClick={handleVerifyPan} disabled={panLoading} className="bg-blue-600 text-white text-xs px-2 py-1 rounded-md disabled:opacity-60">
-                    {panLoading ? 'Verifying...' : 'Verify'}
+                  <button
+                    type="button"
+                    onClick={handleVerifyPan}
+                    disabled={panLoading}
+                    className="rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground disabled:opacity-60"
+                  >
+                    {panLoading ? "Verifying..." : "Verify"}
                   </button>
                 )}
               </div>
             </div>
 
-            {errors.userPAN && <p className="text-red-500 text-xs">{errors.userPAN}</p>}
+            {errors.userPAN && <p className="text-xs text-danger">{errors.userPAN}</p>}
           </div>
+
           {/* USER TYPE */}
           <SelectInput {...{
             label: "User Type", mandatory: true, value: formData.userType, name: "userType",

@@ -27,20 +27,20 @@ const ReportsOverviewCards = ({
             {cards.map((card) => (
                 <div
                     key={card.title}
-                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className="rounded-xl border border-border bg-card p-4 shadow-sm"
                 >
                     <div className="flex items-center justify-between gap-4">
                         <div>
-                            <p className="text-sm font-medium text-slate-500">
+                            <p className="text-sm font-medium text-muted-foreground">
                                 {card.title}
                             </p>
 
-                            <h3 className="mt-1 text-xl font-bold text-slate-900">
+                            <h3 className="mt-1 text-xl font-bold text-card-foreground">
                                 {card.value}
                             </h3>
                         </div>
 
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
                             {card.icon}
                         </div>
                     </div>

@@ -11,13 +11,12 @@ import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
 import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 import Pagination from "../../../components/pagination";
 
-
 const mainColumns = [
     {
         key: "payVoucherNumber",
         title: "Voucher Number",
         render: (row: any) => (
-            <span>
+            <span className="font-medium text-card-foreground">
                 {row?.payVoucherNumber || row?.paymentVoucherNumber || "-"}
             </span>
         ),
@@ -35,7 +34,11 @@ const mainColumns = [
                 ? new Date(rawDate).toLocaleDateString("en-IN")
                 : "-";
 
-            return <span>{date}</span>;
+            return (
+                <span className="font-medium text-card-foreground">
+                    {date}
+                </span>
+            );
         },
     },
     {
@@ -43,8 +46,12 @@ const mainColumns = [
         title: "Account",
         render: (row: any) => (
             <div>
-                <div>{row?.payAccountName || row?.accountName || "-"}</div>
-                <div>{row?.payAccountCode || row?.accountCode || "-"}</div>
+                <div className="font-semibold text-card-foreground">
+                    {row?.payAccountName || row?.accountName || "-"}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                    {row?.payAccountCode || row?.accountCode || "-"}
+                </div>
             </div>
         ),
     },
@@ -52,7 +59,7 @@ const mainColumns = [
         key: "adjustedAmount",
         title: "Adjusted Amount",
         render: (row: any) => (
-            <span>
+            <span className="font-bold text-foreground">
                 ₹{Number(row?.payFooter?.adjustedAmount || row?.adjustedAmount || 0).toFixed(2)}
             </span>
         ),
@@ -61,7 +68,7 @@ const mainColumns = [
         key: "balanceAmount",
         title: "Balance Amount",
         render: (row: any) => (
-            <span>
+            <span className="font-bold text-foreground">
                 ₹{Number(row?.payFooter?.balanceAmount || row?.balanceAmount || 0).toFixed(2)}
             </span>
         ),
@@ -125,7 +132,6 @@ const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
     );
 };
 
-
 const normalizePaymentForView = (record: any) => {
     const footer = record?.payFooter || {};
 
@@ -186,9 +192,7 @@ const normalizePaymentForView = (record: any) => {
     };
 };
 
-
 const PaymentRegister = () => {
-
     const dispatch = useDispatch<any>();
 
     const [fromDate, setFromDate] = useState<string>("");
@@ -202,12 +206,13 @@ const PaymentRegister = () => {
     const [pdfLoading, setPdfLoading] = useState(false);
     const [excelLoading, setExcelLoading] = useState(false);
 
-    const { accounts = [] } = useSelector((state: any) => state.accountMaster)
+    const { accounts = [] } = useSelector((state: any) => state.accountMaster);
     const {
         paymentRegisterData = [],
         addLoader = false,
         pagination = {},
     } = useSelector((state: any) => state.paymentRegister);
+
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
     );
@@ -225,26 +230,25 @@ const PaymentRegister = () => {
     const hasAnyFilter = useMemo(() => {
         return Boolean(fromDate || toDate || account);
     }, [fromDate, toDate, account]);
+
     const currentPagination = useMemo(() => {
         return pagination || {};
     }, [pagination]);
-
 
     const accountOptions = useMemo(() => {
         return (accounts || []).map((item: any) => ({
             label: item.accountName || "",
             value: item.accountCode || ""
         })).filter((item: any) => item.label && item.value);
-    }, [accounts])
+    }, [accounts]);
 
     useEffect(() => {
         dispatch(getAllAccounts({
             offset: 0,
             limit: 500,
             search: ""
-        }))
-    }, [dispatch])
-
+        }));
+    }, [dispatch]);
 
     useEffect(() => {
         const prepareViewFields = async () => {
@@ -414,8 +418,6 @@ const PaymentRegister = () => {
         }
     };
 
-
-
     const downloadBlobFile = (blob: Blob, fileName: string) => {
         const url = window.URL.createObjectURL(blob);
 
@@ -470,10 +472,8 @@ const PaymentRegister = () => {
         }
     };
 
-
-
     return (
-        <div className="flex h-full w-full flex-col gap-4 bg-slate-50 p-4">
+        <div className="flex h-full w-full flex-col gap-4 bg-background p-4 text-foreground">
             <RegisterFilterCard
                 title="Payment Register Filters"
                 fields={[
@@ -528,7 +528,6 @@ const PaymentRegister = () => {
                 }
             />
 
-
             <DataTable
                 columns={mainColumns}
                 data={tableData}
@@ -544,14 +543,15 @@ const PaymentRegister = () => {
                         }}
                         className="
                             inline-flex cursor-pointer items-center gap-1 rounded-lg
-                            bg-indigo-50 px-3 py-1.5 text-xs font-bold
-                            text-indigo-700 transition hover:bg-indigo-100
+                            bg-primary/10 px-3 py-1.5 text-xs font-bold
+                            text-primary transition hover:bg-primary/20
                         "
                     >
                         <Eye size={15} />
                     </button>
                 )}
             />
+
             {currentPagination?.totalDocs > 0 && (
                 <div className="mt-2">
                     <Pagination
@@ -593,11 +593,8 @@ const PaymentRegister = () => {
                 handleChange={() => { }}
                 footerTotals={viewFooterTotals}
             />
-
-
         </div>
-    )
-}
-
+    );
+};
 
 export default PaymentRegister;

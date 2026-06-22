@@ -5,7 +5,6 @@ import {
   getCompany,
   replaceCompany,
   verifyIFSC,
-
 } from "../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 import { toast } from "react-toastify";
@@ -119,10 +118,10 @@ const CompanyMaster = () => {
   const fetchCompanies = () => {
     // @ts-ignore
     dispatch(getCompany({
-        offset: localOffset,
-        limit: localLimit,
-        search: debouncedSearch,
-      }) as any
+      offset: localOffset,
+      limit: localLimit,
+      search: debouncedSearch,
+    }) as any
     );
   };
 
@@ -341,14 +340,6 @@ const CompanyMaster = () => {
       e.companyAddress = "Company address is required";
     }
 
-    // if (!form.logoUri) {
-    //   e.logoUri = "Company logo is required";
-    // }
-
-    // if (!form.signatureUri) {
-    //   e.signatureUri = "Signature is required";
-    // }
-
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -431,11 +422,12 @@ const CompanyMaster = () => {
           editingCompany.companyPublicId ||
           editingCompany.code ||
           editingCompany._id;
+
         // @ts-ignore
         await dispatch(replaceCompany({
-            companyCode,
-            data: payload,
-          }) as any
+          companyCode,
+          data: payload,
+        }) as any
         ).unwrap();
 
         toast.success("Company updated successfully");
@@ -459,12 +451,13 @@ const CompanyMaster = () => {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
+
       // @ts-ignore
       await dispatch(getCompany({
-          offset: 0,
-          limit: localLimit,
-          search: debouncedSearch,
-        }) as any
+        offset: 0,
+        limit: localLimit,
+        search: debouncedSearch,
+      }) as any
       ).unwrap();
 
       setLocalOffset(0);
@@ -482,6 +475,7 @@ const CompanyMaster = () => {
         toast.error("Company code not found");
         return;
       }
+
       // @ts-ignore
       await dispatch(deleteCompany(confirmTooltip.companyCode) as any).unwrap();
 
@@ -508,7 +502,7 @@ const CompanyMaster = () => {
       key: "companyName",
       title: "Company Name",
       render: (row: any) => (
-        <span className="font-semibold text-gray-900">
+        <span className="font-semibold text-card-foreground">
           {row.companyName || "-"}
         </span>
       ),
@@ -560,7 +554,7 @@ const CompanyMaster = () => {
   ];
 
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
+    <div className="w-full bg-card border border-border text-card-foreground shadow-sm p-4 flex flex-col h-[100%]">
       {/* ================= HEADER ================= */}
       <div id="company-header" className="flex flex-wrap items-center gap-2 mb-3">
         <div id="company-summary" className="flex items-start gap-3">
@@ -581,6 +575,7 @@ const CompanyMaster = () => {
               loading: refreshing,
             }}
           />
+
           {/* @ts-ignore */}
           <DataCreateButton
             {...{
@@ -610,7 +605,7 @@ const CompanyMaster = () => {
               <button
                 id="company-edit-button"
                 onClick={() => openEditModal(companyRow)}
-                className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
+                className="p-2 rounded-lg text-primary hover:bg-muted hover:text-primary transition-all duration-200 cursor-pointer"
               >
                 <Edit size={16} />
               </button>
@@ -633,7 +628,7 @@ const CompanyMaster = () => {
                     companyCode,
                   });
                 }}
-                className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+                className="p-2 rounded-lg text-danger hover:bg-muted hover:text-danger transition-all duration-200 cursor-pointer"
               >
                 <Trash2 size={16} />
               </button>
@@ -690,7 +685,7 @@ const CompanyMaster = () => {
           title: "Add New Company",
           gridCols: 3,
           maxWidth: "4xl",
-          bodyClassName: "p-5 gap-3",
+          bodyClassName: "p-5 gap-3 bg-card text-card-foreground",
           loading: createLoading || updateLoading,
           body: (
             <>
@@ -780,7 +775,7 @@ const CompanyMaster = () => {
 
                 <div className="absolute right-2 top-[28px]">
                   {isIfscVerified ? (
-                    <div className="h-[24px] w-[38px] text-green-600 rounded-md flex items-center justify-center">
+                    <div className="h-[24px] w-[38px] text-success rounded-md flex items-center justify-center">
                       <CheckCircle2 size={21} />
                     </div>
                   ) : (
@@ -788,7 +783,7 @@ const CompanyMaster = () => {
                       type="button"
                       onClick={handleIFSCVerify}
                       disabled={verifyLoading}
-                      className="h-[24px] px-3 text-xs border rounded-md bg-white hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+                      className="h-[24px] px-3 text-xs border border-border rounded-md bg-card text-card-foreground hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                     >
                       {verifyLoading ? (
                         <RefreshCcw size={14} className="animate-spin" />
@@ -915,13 +910,12 @@ const CompanyMaster = () => {
               <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {/* Company Logo */}
                 <div className="flex flex-col gap-1 w-full min-w-0">
-                  <label className="text-sm font-medium">
+                  <label className="text-sm font-medium text-card-foreground">
                     Company Logo
-                    {/* <span className="text-red-500">*</span> */}
                   </label>
 
                   <div
-                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-blue-400 transition relative h-[100px] sm:h-[110px] w-full min-w-0 ${errors.logoUri ? "border-red-500" : "border-gray-300"
+                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-primary transition relative h-[100px] sm:h-[110px] w-full min-w-0 bg-card ${errors.logoUri ? "border-danger" : "border-border"
                       }`}
                     onClick={() =>
                       document.getElementById("companyLogoInput")?.click()
@@ -937,7 +931,7 @@ const CompanyMaster = () => {
 
                         <button
                           type="button"
-                          className="absolute top-1.5 right-2 text-red-600 text-xs sm:text-sm font-medium hover:underline bg-white/80 px-1 rounded"
+                          className="absolute top-1.5 right-2 text-danger text-xs sm:text-sm font-medium hover:underline bg-card px-1 rounded"
                           onClick={(e) => {
                             e.stopPropagation();
                             updateField("logoUri", null);
@@ -947,14 +941,14 @@ const CompanyMaster = () => {
                         </button>
                       </>
                     ) : (
-                      <p className="text-gray-500 text-xs sm:text-sm text-center">
+                      <p className="text-muted-foreground text-xs sm:text-sm text-center">
                         Click to upload company logo
                       </p>
                     )}
                   </div>
 
                   {errors.logoUri && (
-                    <p className="text-xs text-red-500">{errors.logoUri}</p>
+                    <p className="text-xs text-danger">{errors.logoUri}</p>
                   )}
 
                   <input
@@ -980,13 +974,12 @@ const CompanyMaster = () => {
 
                 {/* Signature */}
                 <div className="flex flex-col gap-1 w-full min-w-0">
-                  <label className="text-sm font-medium">
+                  <label className="text-sm font-medium text-card-foreground">
                     Signature
-                    {/* <span className="text-red-500">*</span> */}
                   </label>
 
                   <div
-                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-blue-400 transition relative h-[100px] sm:h-[110px] w-full min-w-0 ${errors.signatureUri ? "border-red-500" : "border-gray-300"
+                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-primary transition relative h-[100px] sm:h-[110px] w-full min-w-0 bg-card ${errors.signatureUri ? "border-danger" : "border-border"
                       }`}
                     onClick={() =>
                       document.getElementById("signatureInput")?.click()
@@ -1002,7 +995,7 @@ const CompanyMaster = () => {
 
                         <button
                           type="button"
-                          className="absolute top-1.5 right-2 text-red-600 text-xs sm:text-sm font-medium hover:underline bg-white/80 px-1 rounded"
+                          className="absolute top-1.5 right-2 text-danger text-xs sm:text-sm font-medium hover:underline bg-card px-1 rounded"
                           onClick={(e) => {
                             e.stopPropagation();
                             updateField("signatureUri", null);
@@ -1012,14 +1005,14 @@ const CompanyMaster = () => {
                         </button>
                       </>
                     ) : (
-                      <p className="text-gray-500 text-xs sm:text-sm text-center">
+                      <p className="text-muted-foreground text-xs sm:text-sm text-center">
                         Click to upload signature
                       </p>
                     )}
                   </div>
 
                   {errors.signatureUri && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-danger">
                       {errors.signatureUri}
                     </p>
                   )}

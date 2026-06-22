@@ -1094,25 +1094,17 @@ const SalesInVoice = () => {
             title: "Customer",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">
-                        {row?.sInvCustomerName || "-"}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                        {row?.sInvCustomerCode || "-"}
-                    </div>
+                    <div className="font-medium text-card-foreground">{row?.sInvCustomerName || "-"}</div>
+                    <div className="text-xs text-muted-foreground">{row?.sInvCustomerCode || "-"}</div>
                 </div>
             ),
         },
-        {
-            key: "sInvBody",
-            title: "Items",
-            render: (row: any) => row?.sInvBody?.length || 0,
-        },
+        { key: "sInvBody", title: "Items", render: (row: any) => row?.sInvBody?.length || 0 },
         {
             key: "sInvFooter",
             title: "Net Amount",
             render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
+                <span className="font-semibold text-primary">
                     {money(row?.sInvFooter?.netAmount || 0)}
                 </span>
             ),
@@ -1121,13 +1113,7 @@ const SalesInVoice = () => {
             key: "sInvDocStatus",
             title: "Doc Status",
             render: (row: any) => (
-                <span
-                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
-                        (row?.sInvDocStatus || row?.sInvStatus) === "open"
-                            ? "border-green-200 bg-green-50 text-green-700"
-                            : "border-red-200 bg-red-50 text-red-700"
-                    }`}
-                >
+                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvDocStatus || row?.sInvStatus) === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>
                     {row?.sInvDocStatus || row?.sInvStatus || "-"}
                 </span>
             ),
@@ -1791,7 +1777,7 @@ const SalesInVoice = () => {
     }, []);
 
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
                 <div id="sales-invoice-summary" className="flex items-start gap-3">
                     <Badge
@@ -1852,7 +1838,7 @@ const SalesInVoice = () => {
                                     voucherNumber: record?.sQuoteVoucherNumber,
                                 }));
                             }}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                           className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
                             <Download size={16} />
                         </button>
@@ -1861,7 +1847,7 @@ const SalesInVoice = () => {
                             <button
                                 id="sales-invoice-edit-button"
                                 onClick={() => openEditModal(record)}
-                                className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                             >
                                 <Edit size={16} />
                             </button>
@@ -1895,7 +1881,7 @@ const SalesInVoice = () => {
                                         salesOrderVoucherNumber,
                                     });
                                 }}
-                                className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -1977,29 +1963,29 @@ const SalesInVoice = () => {
                 gridCols={1}
                 maxWidth="2xl"
                 modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
+                headerClassName="bg-card"
+                footerClassName="bg-card"
+                bodyClassName="!block !p-0 bg-card text-card-foreground"
                 body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
+                    <div className="flex h-[520px] flex-col bg-card text-card-foreground">
+                        <div className="border-b border-border p-5">
                             <input
                                 value={purchaseOrderSearch}
                                 onChange={(e) => setPurchaseOrderSearch(e.target.value)}
                                 placeholder="Search Purchase Order code..."
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
 
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {orderLoader ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
                                     Loading purchase orders...
                                 </div>
                             ) : salesOrders?.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
-                                    No purchase order found
-                                </div>
+                                    <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
+                                        No purchase order found
+                                    </div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesOrders?.map((e: any, index: number) => {
@@ -2014,25 +2000,24 @@ const SalesInVoice = () => {
                                                 key={poNumber || index}
                                                 type="button"
                                                 onClick={() => handlePurchaseOrderSelect(e)}
-                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${
-                                                    isSelected
-                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
-                                                }`}
+                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
+                                                    ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                    : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-base font-bold text-gray-900">
-                                                            {e?.sOrderVoucherNumber || "NA"} -{" "}
-                                                            {e?.sOrderCustomerName || "NA"}
+                                                        <p className="text-base font-bold text-card-foreground">
+                                                            {e?.sOrderVoucherNumber || "NA"} - {e?.sOrderCustomerName || "NA"}
                                                         </p>
-                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+
+                                                        <p className="mt-1 text-xs font-medium text-muted-foreground">
                                                             Items: {e?.sOrderBody?.length || 0}
                                                         </p>
                                                     </div>
 
                                                     {isSelected && (
-                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                        <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
                                                             Selected
                                                         </span>
                                                     )}
@@ -2047,21 +2032,8 @@ const SalesInVoice = () => {
                 }
             />
 
-            {/* @ts-ignore */}
-            <ListingModel
-                {...{
-                    show: downlaodPDF?.show,
-                    setShow: () =>
-                        setDownlaodPDF(() => ({ show: !downlaodPDF?.show })),
-                    downlaodPDF,
-                    entryType: "sales-invoice",
-                    rowData: downlaodPDF?.record,
-                    report,
-                    title: "Download Sales Invoice PDF",
-                    cancelText: "Cancel",
-                    confirmText: "Confirm",
-                }}
-            />
+            {/* @ts-ignore  */}
+            <ListingModel {...{ show: downlaodPDF?.show, setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), downlaodPDF, entryType: "sales-invoice", rowData: downlaodPDF?.record, report, title: "Download Sales Invoice PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
         </div>
     );
 };

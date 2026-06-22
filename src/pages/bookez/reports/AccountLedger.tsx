@@ -15,13 +15,15 @@ import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice
 import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { getByVoucherNumberSalesInvoiceReturn } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 
-import { getFirstDateOfCurrentMonth, loadAllTemplateOptions, todayYMD } from "../../../utils/helperFunctions";
+import {
+    getFirstDateOfCurrentMonth,
+    loadAllTemplateOptions,
+    todayYMD,
+} from "../../../utils/helperFunctions";
 import { getByVoucherNumberSalesReceiptList } from "../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
 import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import { getByVoucherNumberPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 import { getByVoucherNumberPayment } from "../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
-
-
 
 const mainColumns = [
     {
@@ -32,7 +34,7 @@ const mainColumns = [
         key: "module",
         title: "Module",
         render: (row: any) => (
-            <span className="font-semibold text-slate-900">
+            <span className="font-semibold text-card-foreground">
                 {row?.module || "-"}
             </span>
         ),
@@ -46,7 +48,7 @@ const mainColumns = [
                 : "-";
 
             return (
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-muted-foreground">
                     {date}
                 </span>
             );
@@ -56,7 +58,7 @@ const mainColumns = [
         key: "debit",
         title: "Debit",
         render: (row: any) => (
-            <span className="font-semibold text-slate-900">
+            <span className="font-semibold text-card-foreground">
                 ₹{Number(row?.debit || 0).toFixed(2)}
             </span>
         ),
@@ -65,7 +67,7 @@ const mainColumns = [
         key: "credit",
         title: "Credit",
         render: (row: any) => (
-            <span className="font-semibold text-slate-900">
+            <span className="font-semibold text-card-foreground">
                 ₹{Number(row?.credit || 0).toFixed(2)}
             </span>
         ),
@@ -74,7 +76,7 @@ const mainColumns = [
         key: "netAmount",
         title: "Net Amount",
         render: (row: any) => (
-            <span className="font-semibold text-slate-900">
+            <span className="font-semibold text-card-foreground">
                 ₹{Number(row?.netAmount || 0).toFixed(2)}
             </span>
         ),
@@ -88,7 +90,7 @@ const mainColumns = [
 
             if (debit > 0) {
                 return (
-                    <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
+                    <span className="rounded-full bg-danger/10 px-3 py-1 text-xs font-bold text-danger">
                         Debit
                     </span>
                 );
@@ -96,14 +98,14 @@ const mainColumns = [
 
             if (credit > 0) {
                 return (
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                    <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
                         Credit
                     </span>
                 );
             }
 
             return (
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
                     -
                 </span>
             );
@@ -129,7 +131,9 @@ const AccountLedger = () => {
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-    const [fromDate, setFromDate] = useState<string>(getFirstDateOfCurrentMonth());
+    const [fromDate, setFromDate] = useState<string>(
+        getFirstDateOfCurrentMonth()
+    );
     const [toDate, setToDate] = useState<string>(todayYMD());
     const [account, setAccount] = useState<string>("");
 
@@ -156,25 +160,19 @@ const AccountLedger = () => {
         }));
     }, [accounts]);
 
-
-
-
     const getVoucherRecordFromResponse = (
         res: any,
         voucherNumber: string,
         voucherKeys: string[]
     ) => {
-        // ✅ Purchase invoice API response: { invoice: {...} }
         if (res?.invoice) {
             return res.invoice;
         }
 
-        // ✅ Sometimes response can be: { data: { invoice: {...} } }
         if (res?.data?.invoice) {
             return res.data.invoice;
         }
 
-        // ✅ Direct single voucher object
         if (
             res &&
             typeof res === "object" &&
@@ -183,7 +181,6 @@ const AccountLedger = () => {
             return res;
         }
 
-        // ✅ Sometimes response can be: { data: voucherObject }
         if (
             res?.data &&
             typeof res.data === "object" &&
@@ -192,17 +189,24 @@ const AccountLedger = () => {
             return res.data;
         }
 
-        // ✅ Array fallback
         const records =
-            Array.isArray(res) ? res :
-                Array.isArray(res?.items) ? res.items :
-                    Array.isArray(res?.records) ? res.records :
-                        Array.isArray(res?.docs) ? res.docs :
-                            Array.isArray(res?.data) ? res.data :
-                                Array.isArray(res?.data?.items) ? res.data.items :
-                                    Array.isArray(res?.data?.records) ? res.data.records :
-                                        Array.isArray(res?.data?.docs) ? res.data.docs :
-                                            [];
+            Array.isArray(res)
+                ? res
+                : Array.isArray(res?.items)
+                    ? res.items
+                    : Array.isArray(res?.records)
+                        ? res.records
+                        : Array.isArray(res?.docs)
+                            ? res.docs
+                            : Array.isArray(res?.data)
+                                ? res.data
+                                : Array.isArray(res?.data?.items)
+                                    ? res.data.items
+                                    : Array.isArray(res?.data?.records)
+                                        ? res.data.records
+                                        : Array.isArray(res?.data?.docs)
+                                            ? res.data.docs
+                                            : [];
 
         return (
             records.find((item: any) =>
@@ -211,35 +215,26 @@ const AccountLedger = () => {
         );
     };
 
-
-
     const getVoucherNumber = (row: any) => {
         return (
             row?.voucherNumber ||
             row?.voucherNo ||
-
             row?.sInvVoucherNumber ||
             row?.sInvReturnVoucherNumber ||
-
             row?.recVoucherNumber ||
             row?.receiptVoucherNumber ||
             row?.salesReceiptVoucherNumber ||
             row?.sReceiptVoucherNumber ||
-
             row?.payVoucherNumber ||
             row?.paymentVoucherNumber ||
-
             row?.pInvVoucherNumber ||
-
             row?.pRetVoucherNumber ||
             row?.pReturnVoucherNumber ||
             row?.purReturnVoucherNumber ||
             row?.purchaseReturnVoucherNumber ||
-
             ""
         );
     };
-
 
     const normalizeInvoiceForView = (record: any) => {
         const footer = record?.sInvFooter || {};
@@ -249,10 +244,8 @@ const AccountLedger = () => {
 
             productCode: item?.productCode || "",
             productName: item?.productName || "",
-            productDescription:
-                item?.productDescription || item?.description || "",
-            description:
-                item?.description || item?.productDescription || "",
+            productDescription: item?.productDescription || item?.description || "",
+            description: item?.description || item?.productDescription || "",
             productHSNCode: item?.productHSNCode || "",
 
             quantity: item?.quantity || "",
@@ -282,37 +275,24 @@ const AccountLedger = () => {
         return {
             ...record,
 
-            sInvVoucherNumber:
-                record?.sInvVoucherNumber || record?.voucherNumber || "",
-            sInvVoucherDate:
-                record?.sInvVoucherDate || record?.voucherDate || "",
-            sInvCustomerName:
-                record?.sInvCustomerName || record?.customerName || "",
-            sInvCustomerCode:
-                record?.sInvCustomerCode || record?.customerCode || "",
-            sInvRemark:
-                record?.sInvRemark || record?.sInvRemarks || record?.remark || "",
-            sInvStatus:
-                record?.sInvStatus || record?.sInvDocStatus || "open",
-            sInvSalesAccount:
-                record?.sInvSalesAccount || "",
+            sInvVoucherNumber: record?.sInvVoucherNumber || record?.voucherNumber || "",
+            sInvVoucherDate: record?.sInvVoucherDate || record?.voucherDate || "",
+            sInvCustomerName: record?.sInvCustomerName || record?.customerName || "",
+            sInvCustomerCode: record?.sInvCustomerCode || record?.customerCode || "",
+            sInvRemark: record?.sInvRemark || record?.sInvRemarks || record?.remark || "",
+            sInvStatus: record?.sInvStatus || record?.sInvDocStatus || "open",
+            sInvSalesAccount: record?.sInvSalesAccount || "",
 
             products,
 
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount:
                 footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
-            adjustedAmount:
-                footer?.adjustedAmount || "0.00",
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
+            adjustedAmount: footer?.adjustedAmount || "0.00",
             balanceAmount:
                 footer?.balanceAmount ||
                 footer?.netAmount ||
@@ -329,10 +309,8 @@ const AccountLedger = () => {
 
             productCode: item?.productCode || "",
             productName: item?.productName || "",
-            productDescription:
-                item?.productDescription || item?.description || "",
-            description:
-                item?.description || item?.productDescription || "",
+            productDescription: item?.productDescription || item?.description || "",
+            description: item?.description || item?.productDescription || "",
             productHSNCode: item?.productHSNCode || "",
 
             quantity: item?.quantity || "",
@@ -366,8 +344,7 @@ const AccountLedger = () => {
                 record?.sInvReturnVoucherNumber || record?.voucherNumber || "",
             sInvReturnVoucherDate:
                 record?.sInvReturnVoucherDate || record?.voucherDate || "",
-            sInvVoucherNumber:
-                record?.sInvVoucherNumber || "",
+            sInvVoucherNumber: record?.sInvVoucherNumber || "",
             sInvReturnCustomerName:
                 record?.sInvReturnCustomerName || record?.customerName || "",
             sInvReturnCustomerCode:
@@ -380,25 +357,18 @@ const AccountLedger = () => {
                 record?.sInvRemark ||
                 record?.remark ||
                 "",
-            sInvReturnStatus:
-                record?.sInvReturnStatus || record?.sInvStatus || "open",
+            sInvReturnStatus: record?.sInvReturnStatus || record?.sInvStatus || "open",
 
             products,
 
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount:
                 footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
-            adjustedAmount:
-                footer?.adjustedAmount || "0.00",
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
+            adjustedAmount: footer?.adjustedAmount || "0.00",
             balanceAmount:
                 footer?.balanceAmount ||
                 footer?.netAmount ||
@@ -415,43 +385,24 @@ const AccountLedger = () => {
             accountName: item?.accountName || "",
             amount: item?.amount || "0",
             netAmount: item?.netAmount || item?.amount || "0",
-
         }));
 
         return {
             ...record,
 
-            // ✅ Header fields
-            recVoucherNumber:
-                record?.recVoucherNumber || record?.voucherNumber || "",
+            recVoucherNumber: record?.recVoucherNumber || record?.voucherNumber || "",
+            recVoucherDate: record?.recVoucherDate || record?.voucherDate || "",
+            recAccountCode: record?.recAccountCode || "",
+            recAccountName: record?.recAccountName || "",
+            recStatus: record?.recStatus || "open",
+            recRemark: record?.recRemark || "",
 
-            recVoucherDate:
-                record?.recVoucherDate || record?.voucherDate || "",
-
-            recAccountCode:
-                record?.recAccountCode || "",
-
-            recAccountName:
-                record?.recAccountName || "",
-
-            recStatus:
-                record?.recStatus || "open",
-
-            recRemark:
-                record?.recRemark || "",
-
-            // ✅ Body key
             recBody,
 
-            // ✅ Footer fields
-            netAmount:
-                footer?.netAmount || record?.netAmount || "0.00",
-
+            netAmount: footer?.netAmount || record?.netAmount || "0.00",
             adjustedAmount:
                 footer?.adjustedAmount || record?.adjustedAmount || "0.00",
-
-            balanceAmount:
-                footer?.balanceAmount || record?.balanceAmount || "0.00",
+            balanceAmount: footer?.balanceAmount || record?.balanceAmount || "0.00",
 
             grossAmount: "0.00",
             discountAmount: "0.00",
@@ -503,16 +454,9 @@ const AccountLedger = () => {
                 record?.accountName ||
                 "",
 
-            payStatus:
-                record?.payStatus ||
-                record?.paymentStatus ||
-                "open",
+            payStatus: record?.payStatus || record?.paymentStatus || "open",
 
-            payRemark:
-                record?.payRemark ||
-                record?.paymentRemark ||
-                record?.remark ||
-                "",
+            payRemark: record?.payRemark || record?.paymentRemark || record?.remark || "",
 
             payBody,
 
@@ -522,20 +466,10 @@ const AccountLedger = () => {
             sgstAmount: "0.00",
             igstAmount: "0.00",
 
-            netAmount:
-                footer?.netAmount ||
-                record?.netAmount ||
-                "0.00",
-
+            netAmount: footer?.netAmount || record?.netAmount || "0.00",
             adjustedAmount:
-                footer?.adjustedAmount ||
-                record?.adjustedAmount ||
-                "0.00",
-
-            balanceAmount:
-                footer?.balanceAmount ||
-                record?.balanceAmount ||
-                "0.00",
+                footer?.adjustedAmount || record?.adjustedAmount || "0.00",
+            balanceAmount: footer?.balanceAmount || record?.balanceAmount || "0.00",
         };
     };
 
@@ -547,10 +481,8 @@ const AccountLedger = () => {
 
             productCode: item?.productCode || "",
             productName: item?.productName || "",
-            productDescription:
-                item?.productDescription || item?.description || "",
-            description:
-                item?.description || item?.productDescription || "",
+            productDescription: item?.productDescription || item?.description || "",
+            description: item?.description || item?.productDescription || "",
             productHSNCode: item?.productHSNCode || "",
 
             quantity: item?.quantity || "",
@@ -580,11 +512,8 @@ const AccountLedger = () => {
         return {
             ...record,
 
-            pInvVoucherNumber:
-                record?.pInvVoucherNumber || record?.voucherNumber || "",
-
-            pInvVoucherDate:
-                record?.pInvVoucherDate || record?.voucherDate || "",
+            pInvVoucherNumber: record?.pInvVoucherNumber || record?.voucherNumber || "",
+            pInvVoucherDate: record?.pInvVoucherDate || record?.voucherDate || "",
 
             pInvVendorCode:
                 record?.pInvVendorCode ||
@@ -598,28 +527,19 @@ const AccountLedger = () => {
                 record?.accountName ||
                 "",
 
-            pInvStatus:
-                record?.pInvStatus || "open",
-
-            pInvRemark:
-                record?.pInvRemark || record?.remark || "",
+            pInvStatus: record?.pInvStatus || "open",
+            pInvRemark: record?.pInvRemark || record?.remark || "",
 
             products,
 
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount:
                 footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
-            adjustedAmount:
-                footer?.adjustedAmount || "0.00",
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
+            adjustedAmount: footer?.adjustedAmount || "0.00",
             balanceAmount:
                 footer?.balanceAmount ||
                 footer?.netAmount ||
@@ -638,10 +558,8 @@ const AccountLedger = () => {
             productName: item?.productName || "",
             productId: item?.productId || "",
 
-            productDescription:
-                item?.productDescription || item?.description || "",
-            description:
-                item?.description || item?.productDescription || "",
+            productDescription: item?.productDescription || item?.description || "",
+            description: item?.description || item?.productDescription || "",
             productHSNCode: item?.productHSNCode || "",
 
             quantity: item?.quantity || "",
@@ -677,18 +595,11 @@ const AccountLedger = () => {
         return {
             ...record,
 
-            // ✅ Important: use pRet keys because schema/API has pRet keys
-            pRetVoucherNumber:
-                record?.pRetVoucherNumber || record?.voucherNumber || "",
+            pRetVoucherNumber: record?.pRetVoucherNumber || record?.voucherNumber || "",
+            pRetVoucherDate: record?.pRetVoucherDate || record?.voucherDate || "",
 
-            pRetVoucherDate:
-                record?.pRetVoucherDate || record?.voucherDate || "",
-
-            grnVoucherNumber:
-                record?.grnVoucherNumber || "",
-
-            pOrdVoucherNumber:
-                record?.pOrdVoucherNumber || "",
+            grnVoucherNumber: record?.grnVoucherNumber || "",
+            pOrdVoucherNumber: record?.pOrdVoucherNumber || "",
 
             pRetVendorCode:
                 record?.pRetVendorCode || record?.vendorCode || record?.accountCode || "",
@@ -696,56 +607,31 @@ const AccountLedger = () => {
             pRetVendorName:
                 record?.pRetVendorName || record?.vendorName || record?.accountName || "",
 
-            pRetPurAccount:
-                record?.pRetPurAccount || "",
+            pRetPurAccount: record?.pRetPurAccount || "",
+            pRetStatus: record?.pRetStatus || "open",
+            pRetRemark: record?.pRetRemark || record?.remark || "",
 
-            pRetStatus:
-                record?.pRetStatus || "open",
-
-            pRetRemark:
-                record?.pRetRemark || record?.remark || "",
-
-            // ✅ Body key data
             products,
 
-            // ✅ Also keep original key, in case schema bodyKey is pRetBody
             pRetBody: products,
 
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount:
                 footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-
-            otherAmount:
-                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
-
-            adjustedAmount:
-                footer?.adjustedAmount || "0.00",
-
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
+            adjustedAmount: footer?.adjustedAmount || "0.00",
             balanceAmount:
                 footer?.balanceAmount ||
                 footer?.netAmount ||
                 footer?.totalNetAmount ||
                 "0.00",
 
-            totalQuantity:
-                footer?.totalQuantity || "0",
+            totalQuantity: footer?.totalQuantity || "0",
         };
     };
 
@@ -757,8 +643,6 @@ const AccountLedger = () => {
             .toLowerCase();
     };
 
-
-
     const moduleViewConfig: any = {
         salesinvoice: {
             title: "View Sales Invoice",
@@ -766,7 +650,6 @@ const AccountLedger = () => {
             bodyKey: "products",
             action: getByVoucherNumberSalesInvoice,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
             }),
             voucherKeys: ["sInvVoucherNumber", "voucherNumber", "voucherNo"],
@@ -779,7 +662,6 @@ const AccountLedger = () => {
             bodyKey: "products",
             action: getByVoucherNumberSalesInvoiceReturn,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
             }),
             voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
@@ -792,14 +674,11 @@ const AccountLedger = () => {
             bodyKey: "products",
             action: getByVoucherNumberSalesInvoiceReturn,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
             }),
             voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizeSalesReturnForView,
         },
-
-
 
         receipt: {
             title: "View Receipt",
@@ -807,9 +686,7 @@ const AccountLedger = () => {
             bodyKey: "recBody",
             action: getByVoucherNumberSalesReceiptList,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
-
             }),
             voucherKeys: ["recVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizeReceiptForView,
@@ -821,9 +698,7 @@ const AccountLedger = () => {
             bodyKey: "payBody",
             action: getByVoucherNumberPayment,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
-
             }),
             voucherKeys: [
                 "payVoucherNumber",
@@ -840,9 +715,7 @@ const AccountLedger = () => {
             bodyKey: "products",
             action: getByVoucherNumberPurchaseInvoiceList,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
-
             }),
             voucherKeys: ["pInvVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizePurchaseInvoiceForView,
@@ -854,9 +727,7 @@ const AccountLedger = () => {
             bodyKey: "products",
             action: getByVoucherNumberPurchaseReturnList,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
-
             }),
             voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizePurchaseReturnForView,
@@ -868,9 +739,7 @@ const AccountLedger = () => {
             bodyKey: "products",
             action: getByVoucherNumberPurchaseReturnList,
             params: (voucherNumber: string) => ({
-
                 voucherNumber: voucherNumber,
-
             }),
             voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizePurchaseReturnForView,
@@ -1009,10 +878,7 @@ const AccountLedger = () => {
             ).unwrap();
 
             if (res?.blob) {
-                downloadBlobFile(
-                    res.blob,
-                    `account-ledger-${account}.pdf`
-                );
+                downloadBlobFile(res.blob, `account-ledger-${account}.pdf`);
             }
         } catch (error) {
             console.log("PDF download failed", error);
@@ -1039,10 +905,7 @@ const AccountLedger = () => {
             ).unwrap();
 
             if (res?.blob) {
-                downloadBlobFile(
-                    res.blob,
-                    `account-ledger-${account}.xlsx`
-                );
+                downloadBlobFile(res.blob, `account-ledger-${account}.xlsx`);
             }
         } catch (error) {
             console.log("Excel download failed", error);
@@ -1062,22 +925,18 @@ const AccountLedger = () => {
         return fallback;
     };
 
-    const formatAmount = (
-        amount: any,
-        type: "Dr" | "Cr" = "Dr"
-    ) => {
+    const formatAmount = (amount: any, type: "Dr" | "Cr" = "Dr") => {
         return `₹${Math.abs(Number(amount || 0)).toFixed(2)} ${type}`;
     };
 
     const selectedAccountName =
         accountOptions.find((item: any) => item.value === account)?.label || "-";
 
-    const remainingBalanceType: "Dr" | "Cr" =
-        totals?.remainingBalanceType
-            ? normalizeType(totals?.remainingBalanceType, "Dr")
-            : Number(totals?.remainingBalance || 0) >= 0
-                ? "Dr"
-                : "Cr";
+    const remainingBalanceType: "Dr" | "Cr" = totals?.remainingBalanceType
+        ? normalizeType(totals?.remainingBalanceType, "Dr")
+        : Number(totals?.remainingBalance || 0) >= 0
+            ? "Dr"
+            : "Cr";
 
     const summaryItems = [
         {
@@ -1089,24 +948,15 @@ const AccountLedger = () => {
         },
         {
             label: "Sales Invoice Total",
-            value: formatAmount(
-                totals?.salesInvoiceNetTotal,
-                "Dr"
-            ),
+            value: formatAmount(totals?.salesInvoiceNetTotal, "Dr"),
         },
         {
             label: "Sales Return Total",
-            value: formatAmount(
-                totals?.salesReturnNetTotal,
-                "Cr"
-            ),
+            value: formatAmount(totals?.salesReturnNetTotal, "Cr"),
         },
         {
             label: "Receipt Total",
-            value: formatAmount(
-                totals?.receiptNetTotal,
-                "Cr"
-            ),
+            value: formatAmount(totals?.receiptNetTotal, "Cr"),
         },
     ];
 
@@ -1145,8 +995,6 @@ const AccountLedger = () => {
             });
     }, [viewTemplateFields?.footer, viewFooterTotals]);
 
-
-
     const viewInputData = useMemo(() => {
         const hiddenBodyKeys = [
             "references",
@@ -1167,25 +1015,25 @@ const AccountLedger = () => {
             footer: viewFooterArray,
         };
     }, [viewTemplateFields, viewFooterArray]);
+
     return (
-        <div className="flex h-full w-full flex-col gap-4 bg-slate-50 p-4">
+        <div className="flex h-full w-full flex-col gap-4 bg-background p-4 text-foreground">
             <div
                 className="
-                    grid w-full grid-cols-1 gap-4 xl:grid-cols-2
-                    [&>*]:rounded-xl
-                    [&>*]:!p-4
-                    [&_h3]:!text-base
-                    [&_h2]:!text-base
-                    [&_p]:!text-sm
-                    [&_label]:!text-xs
-                    [&_input]:!h-10
-                    [&_input]:!text-sm
-                    [&_select]:!h-10
-                    [&_select]:!text-sm
-                    [&_.text-xl]:!text-lg
-                    [&_.text-lg]:!text-base
-                    
-                "
+          grid w-full grid-cols-1 gap-4 xl:grid-cols-2
+          [&>*]:rounded-xl
+          [&>*]:!p-4
+          [&_h3]:!text-base
+          [&_h2]:!text-base
+          [&_p]:!text-sm
+          [&_label]:!text-xs
+          [&_input]:!h-10
+          [&_input]:!text-sm
+          [&_select]:!h-10
+          [&_select]:!text-sm
+          [&_.text-xl]:!text-lg
+          [&_.text-lg]:!text-base
+        "
             >
                 <ReportFilterCard
                     title="Account Ledger Filters"
@@ -1239,7 +1087,6 @@ const AccountLedger = () => {
 
                 <AccountSummaryCard
                     title="Account"
-
                     accountName={selectedAccountName}
                     summaryItems={summaryItems}
                     finalLabel="Remaining Balance"
@@ -1261,11 +1108,11 @@ const AccountLedger = () => {
                             handleViewVoucher(row);
                         }}
                         className="
-                             inline-flex items-center gap-1 rounded-lg
-                bg-indigo-50 px-3 py-1.5 text-xs font-bold
-                text-indigo-700 transition hover:bg-indigo-100
-                cursor-pointer
-                        "
+              inline-flex items-center gap-1 rounded-lg
+              bg-primary/10 px-3 py-1.5 text-xs font-bold
+              text-primary transition hover:bg-primary/20
+              cursor-pointer
+            "
                         title="View Details"
                     >
                         <Eye size={15} />

@@ -1190,9 +1190,10 @@ const ProfessionalDashboard = () => {
 				  <TaxEzDashboardView analytics={analytics} />
 			  )}
 
-			  {activeTab === "bookez" && canShowBookEz && (
+			  {/* {activeTab === "bookez" && canShowBookEz && (
 				  <BookEzDashboardView analytics={bookEzAnalytics} />
-			  )}
+			  )} */}
+			  <BookEzDashboardView analytics={bookEzAnalytics} />
 		  </AnimatePresence>
 
 		  {activeTab === "taxez" && canShowTaxEz && (

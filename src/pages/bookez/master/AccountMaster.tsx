@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Edit, } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
@@ -17,32 +17,38 @@ import SearchInput from "../../../components/searchInput";
 import { SelectInput, TextArea, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
 import Badge from "../../../components/badge";
-import { getCitiesByState, getStates } from "../../../redux/slices/professionalSlice/stateCitySlice";
+import {
+	getCitiesByState,
+	getStates,
+} from "../../../redux/slices/professionalSlice/stateCitySlice";
 import Permission from "../../../components/PermissionGuard";
 
 const columns = [
-	{ key: 'accountCode', title: 'Account Code', },
-	{ key: 'accountName', title: 'Name', },
+	{ key: "accountCode", title: "Account Code" },
+	{ key: "accountName", title: "Name" },
 	{
-		key: 'accountType', title: 'Type',
+		key: "accountType",
+		title: "Type",
 		render: (row: any) => (
-			<span className="px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs">
+			<span className="px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
 				{row.accountType}
 			</span>
 		),
 	},
-	{ key: 'accountMobile', title: 'Mobile', },
-	{ key: 'accountEmail', title: 'Email', },
+	{ key: "accountMobile", title: "Mobile" },
+	{ key: "accountEmail", title: "Email" },
 ];
+
 export const buildEmptyForm = (fields: any[] = []) => {
-		return fields.reduce((acc: any, field: any) => {
-			acc[field.key] = "";
-			return acc;
-		}, {});
-	};
+	return fields.reduce((acc: any, field: any) => {
+		acc[field.key] = "";
+		return acc;
+	}, {});
+};
 
 const AccountMaster = () => {
 	const dispatch = useDispatch();
+
 	const {
 		accounts,
 		pagination,
@@ -50,6 +56,7 @@ const AccountMaster = () => {
 		accountMasterSchemaFields = [],
 		schemaLoading,
 	} = useSelector((s: any) => s.accountMaster);
+
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
 	const [search, setSearch] = useState("");
@@ -68,6 +75,7 @@ const AccountMaster = () => {
 	});
 
 	const [form, setForm] = useState<any>({});
+
 	useEffect(() => {
 		if (accountMasterSchemaFields.length > 0) {
 			setForm((prev: any) => ({
@@ -100,10 +108,9 @@ const AccountMaster = () => {
 		return String(name);
 	};
 
-	const {
-		states = [],
-		cities = [],
-	} = useSelector((s: any) => s.stateCity || {});
+	const { states = [], cities = [] } = useSelector(
+		(s: any) => s.stateCity || {}
+	);
 
 	useEffect(() => {
 		// @ts-ignore
@@ -121,51 +128,11 @@ const AccountMaster = () => {
 		}
 	}, [dispatch, form.state]);
 
-
-
-	// const getFieldOptions = (field: any) => {
-	// 	if (field.key === "state") {
-	// 		return (
-	// 			states?.map((item: any) => {
-	// 				const stateCode =
-	// 					item.isoCode || item.stateCode || item.code || "";
-
-	// 				const stateName = getDisplayName(item.name || item.stateName);
-
-	// 				return {
-	// 					value: stateCode,
-	// 					label: stateName || stateCode,
-	// 				};
-	// 			}) || []
-	// 		);
-	// 	}
-
-	// 	if (field.key === "city") {
-	// 		return (
-	// 			cities?.map((item: any) => {
-	// 				const cityName = getDisplayName(item.name || item.cityName);
-
-	// 				return {
-	// 					value: cityName,
-	// 					label: cityName,
-	// 				};
-	// 			}) || []
-	// 		);
-	// 	}
-
-	// 	return (field.options || []).map((opt: string) => ({
-	// 		value: opt,
-	// 		label: opt,
-	// 	}));
-	// };
-
-
 	const getFieldOptions = (field: any) => {
 		if (field.key === "state") {
 			return (
 				states?.map((item: any) => {
-					const stateCode =
-						item.isoCode || item.stateCode || item.code || "";
+					const stateCode = item.isoCode || item.stateCode || item.code || "";
 
 					const stateName = getDisplayName(item.name || item.stateName);
 
@@ -193,9 +160,7 @@ const AccountMaster = () => {
 		if (field.key === "accountType") {
 			return (field.options || []).map((opt: any) => {
 				const label =
-					typeof opt === "object"
-						? opt.label || opt.name || opt.value || ""
-						: opt;
+					typeof opt === "object" ? opt.label || opt.name || opt.value || "" : opt;
 
 				const value =
 					typeof opt === "object"
@@ -226,8 +191,7 @@ const AccountMaster = () => {
 
 	const findSelectedState = () => {
 		return states?.find((item: any) => {
-			const stateCode =
-				item.isoCode || item.stateCode || item.code || "";
+			const stateCode = item.isoCode || item.stateCode || item.code || "";
 
 			return stateCode === form.state;
 		});
@@ -258,17 +222,9 @@ const AccountMaster = () => {
 		}
 	}, [cities, pendingCity]);
 
-
-
 	/* ============================================
 		  FETCH Form Fields
 	============================================= */
-
-	// const regex = {
-	// 	accountMobile: { regex: "",type:"tel" },
-	// 	accountMobile: { regex: "", },
-	// 	accountMobile: { regex: "", },
-	// }
 
 	const renderSchemaField = (field: any) => {
 		const value = form?.[field.key] ?? "";
@@ -371,7 +327,6 @@ const AccountMaster = () => {
 				<TextInput
 					key={field.key}
 					{...commonProps}
-					// type={regex?.[field.key]?.type}
 					onChange={(e: any) =>
 						setForm({
 							...form,
@@ -421,12 +376,20 @@ const AccountMaster = () => {
 			}) as any
 		);
 	}, [dispatch]);
+
 	/* ============================================
 		  FETCH ACCOUNTS
 	============================================= */
+
 	const fetchAccounts = () => {
 		// @ts-ignore
-		dispatch(getAllAccounts({ offset: localOffset, limit: localLimit, search: debouncedSearch, }));
+		dispatch(
+			getAllAccounts({
+				offset: localOffset,
+				limit: localLimit,
+				search: debouncedSearch,
+			})
+		);
 	};
 
 	useEffect(() => {
@@ -436,6 +399,7 @@ const AccountMaster = () => {
 	/* ============================================
 		  DEBOUNCE SEARCH
 	============================================= */
+
 	useEffect(() => {
 		const t = setTimeout(() => {
 			setDebouncedSearch(search.trim());
@@ -448,6 +412,7 @@ const AccountMaster = () => {
 	/* ============================================
 		  REFRESH
 	============================================= */
+
 	const handleRefresh = async () => {
 		// setRefreshing(true);
 		await fetchAccounts();
@@ -469,44 +434,6 @@ const AccountMaster = () => {
 	/* ============================================
 		  OPEN EDIT
 	============================================= */
-	// const openEditModal = (acc: any) => {
-	// 	setEditingAccount(acc);
-	// 	setErrors({});
-
-	// 	const nextForm = buildEmptyForm(accountMasterSchemaFields);
-
-	// 	accountMasterSchemaFields.forEach((field: any) => {
-	// 		if (field.key === "state") {
-	// 			nextForm.state =
-	// 				typeof acc.state === "object"
-	// 					? acc.state?.isoCode || acc.state?.stateCode || acc.state?.code || ""
-	// 					: acc.state || "";
-	// 		} else if (field.key === "city") {
-	// 			const cityName =
-	// 				typeof acc.city === "object"
-	// 					? getDisplayName(acc.city?.name || acc.city?.cityName)
-	// 					: acc.city || "";
-
-	// 			nextForm.city = "";
-	// 			setPendingCity(cityName);
-	// 		} else {
-	// 			nextForm[field.key] = acc?.[field.key] ?? "";
-	// 		}
-	// 	});
-
-	// 	setForm(nextForm);
-
-	// 	if (nextForm.state) {
-	// 		dispatch(
-	// 			getCitiesByState({
-	// 				stateCode: nextForm.state,
-	// 				searchText: "",
-	// 			}) as any
-	// 		);
-	// 	}
-
-	// 	setShowModal(true);
-	// };
 
 	const openEditModal = (acc: any) => {
 		setEditingAccount(acc);
@@ -562,6 +489,7 @@ const AccountMaster = () => {
 
 		setShowModal(true);
 	};
+
 	/* ============================================
 		  Validate form fields
 	============================================= */
@@ -605,8 +533,9 @@ const AccountMaster = () => {
 		return Object.keys(e).length === 0;
 	};
 
-	/* ============================================ SAVE / UPDATE ============================================= */
-
+	/* ============================================
+		  SAVE / UPDATE
+	============================================= */
 
 	const handleSubmit = async () => {
 		if (!validateForm()) return;
@@ -647,8 +576,7 @@ const AccountMaster = () => {
 						const oldCityName =
 							typeof editingAccount.city === "object"
 								? getDisplayName(
-									editingAccount.city?.name ||
-									editingAccount.city?.cityName
+									editingAccount.city?.name || editingAccount.city?.cityName
 								)
 								: editingAccount.city || "";
 
@@ -684,10 +612,10 @@ const AccountMaster = () => {
 		}
 	};
 
-
 	/* ============================================
 		  DELETE CONFIRM
 	============================================= */
+
 	const handleDeleteConfirm = async () => {
 		try {
 			// @ts-ignore
@@ -695,23 +623,37 @@ const AccountMaster = () => {
 			toast.success("Account deleted");
 			fetchAccounts();
 		} finally {
-			setConfirmTooltip({ show: false, x: null, y: null, accountCode: null });
+			setConfirmTooltip({
+				show: false,
+				x: null,
+				y: null,
+				accountCode: null,
+			});
 		}
 	};
 
 	return (
-		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
+		<div className="w-full bg-card border border-border text-card-foreground shadow-sm p-4 flex flex-col h-[100%]">
 			{/* ================= HEADER ================= */}
 			<div id="account-header" className="flex flex-wrap items-center gap-2 mb-3">
 				<div id="account-summary" className="flex items-start gap-3">
-					<Badge {...{ count: pagination.totalDocs ?? 0, text: "Total Accounts:" }} />
+					<Badge
+						{...{
+							count: pagination.totalDocs ?? 0,
+							text: "Total Accounts:",
+						}}
+					/>
 				</div>
 
 				<div className="ml-auto flex flex-wrap items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
 
-					<Permission module="bookez" permissionKey="accountMaster" action="create">
+					<Permission
+						module="bookez"
+						permissionKey="accountMaster"
+						action="create"
+					>
 						{/* @ts-ignore */}
 						<DataCreateButton {...{ callBackFn: openAddModal }} />
 					</Permission>
@@ -727,16 +669,26 @@ const AccountMaster = () => {
 				actions={(acc: any) => (
 					<div className="flex items-center gap-2">
 						{/* EDIT */}
-						<Permission module="bookez" permissionKey="accountMaster" action="update">
+						<Permission
+							module="bookez"
+							permissionKey="accountMaster"
+							action="update"
+						>
 							<button
 								id="account-edit-button"
 								onClick={() => openEditModal(acc)}
-								className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
+								className="p-2 rounded-lg text-primary hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer"
+							>
 								<Edit size={16} />
 							</button>
 						</Permission>
+
 						{/* DELETE */}
-						<Permission module="bookez" permissionKey="accountMaster" action="delete">
+						<Permission
+							module="bookez"
+							permissionKey="accountMaster"
+							action="delete"
+						>
 							<button
 								id="account-delete-button"
 								onClick={(e) => {
@@ -744,26 +696,38 @@ const AccountMaster = () => {
 									let x: any = rect.left - 150;
 									if (x < 10) x = 10;
 									const y: any = rect.top + window.scrollY - 5;
-									setConfirmTooltip({ show: true, x, y, accountCode: acc.accountCode, });
+
+									setConfirmTooltip({
+										show: true,
+										x,
+										y,
+										accountCode: acc.accountCode,
+									});
 								}}
-								className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+								className="p-2 rounded-lg text-danger hover:bg-danger/10 hover:text-danger transition-all duration-200 cursor-pointer"
 							>
 								<Trash2 size={16} />
-								</button>
+							</button>
 						</Permission>
 					</div>
 				)}
 			/>
 
-			{pagination.totalDocs > 0 && <Pagination  {...{
-				localLimit, selectCb: (e: any) => {
-					setLocalLimit(Number(e.target.value));
-					setLocalOffset(0);
-				},
-				preDisabled: !pagination.hasPrevPage,
-				nextDisabled: !pagination.hasNextPage,
-				setLocalOffset, pagination
-			}} />}
+			{pagination.totalDocs > 0 && (
+				<Pagination
+					{...{
+						localLimit,
+						selectCb: (e: any) => {
+							setLocalLimit(Number(e.target.value));
+							setLocalOffset(0);
+						},
+						preDisabled: !pagination.hasPrevPage,
+						nextDisabled: !pagination.hasNextPage,
+						setLocalOffset,
+						pagination,
+					}}
+				/>
+			)}
 
 			{/* ================= DELETE TOOLTIP ================= */}
 			{confirmTooltip.show && (
@@ -785,7 +749,6 @@ const AccountMaster = () => {
 				/>
 			)}
 
-
 			{/* @ts-ignore */}
 			<Modal
 				{...{
@@ -797,7 +760,7 @@ const AccountMaster = () => {
 					body: (
 						<>
 							{schemaLoading ? (
-								<div className="py-6 text-sm text-gray-500">
+								<div className="py-6 text-sm text-muted-foreground">
 									Loading account fields...
 								</div>
 							) : (

@@ -24,12 +24,12 @@ const Pagination = ({
         my-4 w-full
         flex flex-col gap-3
         sm:flex-row sm:items-center sm:justify-between
-        text-sm text-gray-700
+        text-sm text-muted-foreground
       "
         >
             {/* Rows per page */}
             <div className="flex items-center gap-3 w-full sm:w-auto">
-                <label className="text-sm font-medium text-gray-600 whitespace-nowrap">
+                <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                     Rows per page
                 </label>
 
@@ -39,12 +39,12 @@ const Pagination = ({
                     className="
             h-10 min-w-[88px]
             px-3 pr-8 rounded-md
-            border border-gray-200 bg-white
-            text-sm font-medium text-gray-700
+            border border-border bg-input
+            text-sm font-medium text-foreground
             shadow-sm outline-none
             transition-all duration-200
-            hover:border-indigo-300
-            focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500
+            hover:border-primary
+            focus:ring-4 focus:ring-primary/10 focus:border-primary
           "
                 >
                     {[10, 20, 50].map((v) => (
@@ -56,7 +56,7 @@ const Pagination = ({
             </div>
 
             {/* Pagination buttons */}
-            <div className=" flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 justify-start sm:justify-end">
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 justify-start sm:justify-end">
                 <PaginationButton
                     disabled={preDisabled}
                     icon={<ChevronFirst size={18} />}
@@ -69,7 +69,7 @@ const Pagination = ({
                     onClick={() => setLocalOffset((pre: number) => pre - 1)}
                 />
 
-                <div className="min-w-[110px] px-4 h-10 flex items-center justify-center rounded-md bg-gray-50 border border-gray-200 text-sm font-medium text-gray-700 whitespace-nowrap">
+                <div className="min-w-[110px] px-4 h-10 flex items-center justify-center rounded-md bg-secondary border border-border text-sm font-medium text-secondary-foreground whitespace-nowrap">
                     Page {currentPage} of {totalPages}
                 </div>
 

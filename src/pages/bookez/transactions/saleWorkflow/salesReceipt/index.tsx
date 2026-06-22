@@ -17,7 +17,6 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import ModulePageSkeleton from "../../../../../components/skeleton/SkeletonLoader";
 
 import {
-
     formatDateForInput,
     formatDateForList,
     loadAllTemplateOptions,
@@ -135,10 +134,18 @@ const SalesReceipt = () => {
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const { report } = useSelector((s: any) => s.reportMapping);
+
     const [showReferenceModal, setShowReferenceModal] = useState(false);
     const [selectedReferenceRowIndex, setSelectedReferenceRowIndex] =
         useState<number | null>(null);
-    const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
+
+    const [downlaodPDF, setDownlaodPDF] = useState({
+        show: false,
+        x: null,
+        y: null,
+        type: "",
+    });
+
     const [referenceRows, setReferenceRows] = useState<any[]>([]);
     const [referenceError, setReferenceError] = useState("");
     const [referenceLoading, setReferenceLoading] = useState(false);
@@ -263,7 +270,6 @@ const SalesReceipt = () => {
                 type: "number",
                 isRequired: false,
             },
-
         ];
     }, []);
 
@@ -667,6 +673,7 @@ const SalesReceipt = () => {
             setReferenceRows([]);
             return;
         }
+
         const getInvoiceNetAmount = (item: any) => {
             return num(
                 item?.netAmount ??
@@ -698,12 +705,6 @@ const SalesReceipt = () => {
             const netReturnAmount = getNetReturnAmount(item);
             const adjustedAmount = getAdjustedAmount(existingRef);
 
-            /**
-             * remaining bill = original invoice amount - return amount + existing adjusted amount
-             *
-             * existing adjusted amount is added because while editing,
-             * old adjusted amount should become available again.
-             */
             const remainingBillAmount =
                 netBillAmount - netReturnAmount + adjustedAmount;
 
@@ -716,15 +717,12 @@ const SalesReceipt = () => {
                 docDate: formatDateForInput(getReferenceDate(item)),
                 billDueDate: formatDateForInput(getReferenceDate(item)),
 
-                // Original invoice amount
                 billAmount: String(netBillAmount),
                 netBillAmount: String(netBillAmount),
                 netAmount: String(netBillAmount),
 
-                // Sales return amount
                 netReturnAmount: String(netReturnAmount),
 
-                // Remaining available amount
                 remainingBillAmount: String(remainingBillAmount),
 
                 adjustedAmount:
@@ -733,6 +731,7 @@ const SalesReceipt = () => {
                         : "",
             };
         });
+
         setReferenceRows(mappedReferences);
     };
 
@@ -792,8 +791,10 @@ const SalesReceipt = () => {
             toast.error("Receipt row not selected");
             return;
         }
+
         const maxAmount = selectedReferenceMaxAmount;
         let referencesToSave: any[] = [];
+
         const hasInvoiceList =
             Array.isArray(referenceRows) &&
             referenceRows.some((row: any) => {
@@ -1174,10 +1175,10 @@ const SalesReceipt = () => {
             title: "Cash/Bank Account",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">
+                    <div className="font-medium text-card-foreground">
                         {row?.recAccountName || "-"}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                         {row?.recAccountCode || "-"}
                     </div>
                 </div>
@@ -1192,7 +1193,7 @@ const SalesReceipt = () => {
             key: "receiptAmount",
             title: "Receipt Amount",
             render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
+                <span className="font-semibold text-primary">
                     {money(row?.recFooter?.netAmount || 0)}
                 </span>
             ),
@@ -1203,8 +1204,8 @@ const SalesReceipt = () => {
             render: (row: any) => (
                 <span
                     className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.recStatus === "open"
-                        ? "border-green-200 bg-green-50 text-green-700"
-                        : "border-red-200 bg-red-50 text-red-700"
+                        ? "border-success/20 bg-success/10 text-success"
+                        : "border-danger/20 bg-danger/10 text-danger"
                         }`}
                 >
                     {row?.recStatus || "-"}
@@ -1246,12 +1247,15 @@ const SalesReceipt = () => {
                 const updatedData = await loadAllTemplateOptions(
                     transactionsSchema,
                     {
-                        header: { accountType: "bank,cash", },
-                        body: { accountType: "customer", },
+                        header: { accountType: "bank,cash" },
+                        body: { accountType: "customer" },
                     }
                 );
 
-                const header = updatedData?.header?.filter((e: any) => e?.key !== "isPosPosting")
+                const header = updatedData?.header?.filter(
+                    (e: any) => e?.key !== "isPosPosting"
+                );
+
                 setTemplateFields({ ...updatedData, header });
             } catch (error) {
                 console.log("Failed to prepare sales receipt fields", error);
@@ -1268,18 +1272,17 @@ const SalesReceipt = () => {
         salesReceipt.length === 0 &&
         (listingLoader || fieldsLoading);
 
-
-
     useEffect(() => {
-        // @ts-ignore 
-        dispatch(getAllReportMapping({ moduleType: "receipt" }))
-    }, [])
+        // @ts-ignore
+        dispatch(getAllReportMapping({ moduleType: "receipt" }));
+    }, []);
 
     if (showInitialSkeleton) {
         return <ModulePageSkeleton rows={8} columns={5} />;
     }
+
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div className="mb-3 flex items-center">
                 <Badge
                     count={pagination?.totalDocs ?? salesReceipt?.length ?? 0}
@@ -1303,6 +1306,7 @@ const SalesReceipt = () => {
                         callBackFn={handleRefresh}
                         loading={refreshing}
                     />
+
                     <Permission module="bookez" permissionKey="receipt" action="create">
                         {/* @ts-ignore */}
                         <DataCreateButton
@@ -1320,21 +1324,32 @@ const SalesReceipt = () => {
                 emptyMessage={`No ${status} sales receipt found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button id="sales-quotation-edit-button" onClick={() => {
-                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
-                        }
-
-                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre) => ({
+                                    ...pre,
+                                    show: true,
+                                    moduleType: "salesQuotation",
+                                    record,
+                                    CustomerCode: record?.sQuoteCustomerCode,
+                                    voucherNumber: record?.sQuoteVoucherNumber,
+                                }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
                             <Download size={16} />
                         </button>
+
                         <Permission module="bookez" permissionKey="receipt" action="update">
                             <button
                                 onClick={() => openEditModal(record)}
-                                className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                             >
                                 <Edit size={16} />
                             </button>
                         </Permission>
+
                         <Permission module="bookez" permissionKey="receipt" action="delete">
                             <button
                                 disabled={deleteLoader}
@@ -1354,7 +1369,7 @@ const SalesReceipt = () => {
                                             record?.voucherNumber,
                                     });
                                 }}
-                                className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -1443,7 +1458,9 @@ const SalesReceipt = () => {
                         setShow: setShowReferenceModal,
                         edit: false,
                         title: "Reference",
-                        subtitle: selectedReferenceRow?.accountName ? `Sales invoices for ${selectedReferenceRow.accountCode}` : "",
+                        subtitle: selectedReferenceRow?.accountName
+                            ? `Sales invoices for ${selectedReferenceRow.accountCode}`
+                            : "",
                         loading: referenceLoading || referenceLoader,
                         onClose: handleCloseReferenceModal,
                         onSubmit: handleSaveReferences,
@@ -1454,7 +1471,9 @@ const SalesReceipt = () => {
                             newReference: money(newReferenceAmount),
                             referenceBody: referenceRows,
                         },
-                        errors: { referenceBody: referenceError, },
+                        errors: {
+                            referenceBody: referenceError,
+                        },
                         handleAddRow: handleAddReferenceRow,
                         handleDeleteRow: handleDeleteReferenceRow,
                         handleRowChange: handleReferenceRowChange,
@@ -1479,7 +1498,8 @@ const SalesReceipt = () => {
             )}
 
             {/* @ts-ignore  */}
-            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "receipt", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Receipt PDF" }} />
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "receipt", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })), rowData: downlaodPDF?.record, report, title: "Download Sales Receipt PDF", }}
+            />
         </div>
     );
 };
