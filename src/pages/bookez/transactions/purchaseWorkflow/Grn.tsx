@@ -360,11 +360,19 @@ const Grn = () => {
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
+    // const [confirmTooltip, setConfirmTooltip] = useState<any>({
+    //     show: false,
+    //     x: null,
+    //     y: null,
+    //     voucherNumber: null,
+    // });
+
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
         x: null,
         y: null,
         voucherNumber: null,
+        pOrdVoucherNumber: null,
     });
 
     const getHeaderFieldByKey = (key: string) => {
@@ -458,6 +466,54 @@ const Grn = () => {
         return originalQuantity > 0
             ? originalQuantity
             : acceptedQuantity + rejectedQuantity;
+    };
+
+    const hasValue = (value: any) =>
+        value !== undefined && value !== null && value !== "";
+
+    const fillProductDetailsFromSelectedOption = (
+        row: any,
+        selectedOption: any
+    ) => {
+        const product = selectedOption?.raw;
+        if (!product) return row;
+
+        const unitCode = product?.unit || row.unit || row.uom || "";
+        const csgst = hasValue(product?.csgst) ? String(product.csgst) : "";
+        const igst = hasValue(product?.igst) ? String(product.igst) : "";
+
+        return {
+            ...row,
+
+            productId: product?._id || row.productId || "",
+            productCode: product?.productCode || row.productCode || "",
+            productName: product?.productName || row.productName || "",
+
+            productDescription:
+                product?.productDescription || row.productDescription || "",
+
+            description:
+                product?.productDescription || row.description || "",
+
+            productHSNCode:
+                product?.productHSNCode || row.productHSNCode || "",
+
+            unit: unitCode,
+            uom: unitCode,
+            unitName: getUnitLabelFromSchema(unitCode),
+
+            // GRN is purchase side, so use purchasePrice
+            rate: hasValue(product?.purchasePrice)
+                ? String(product.purchasePrice)
+                : row.rate || "",
+
+            // product master key is csgst, row key is cgst
+            cgst: csgst || row.cgst || "",
+            cgstPercentage: csgst || row.cgstPercentage || "",
+
+            igst: igst || row.igst || "",
+            igstPercentage: igst || row.igstPercentage || "",
+        };
     };
 
     const calculateRow = (row: any) => {
@@ -1063,6 +1119,7 @@ const Grn = () => {
             };
 
             updatedRow = normalizeRowKeys(updatedRow);
+
             updatedRow = handleQuantityFields(
                 updatedRow,
                 key,
@@ -1080,8 +1137,19 @@ const Grn = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
 
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
+            const lowerKey = String(key).toLowerCase();
+
+            const isProductField =
+                lowerKey === "productcode" ||
+                lowerKey === "productname" ||
+                lowerKey === "productid" ||
+                lowerKey === "product";
+
+            if (isProductField && selectedOption?.raw) {
+                updatedRow = fillProductDetailsFromSelectedOption(
+                    updatedRow,
+                    selectedOption
+                );
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
@@ -1110,7 +1178,6 @@ const Grn = () => {
             [`row_${index}_sgst`]: "",
         }));
     };
-
     const getFilledRows = () => {
         const bodyKeys = (templateFields?.body || [])
             .filter((field: any) => !field.isHidden)
@@ -1385,9 +1452,45 @@ const Grn = () => {
         }
     };
 
+    // const handleDeleteConfirm = async () => {
+    //     try {
+    //         const voucherNumber = confirmTooltip?.voucherNumber;
+
+    //         if (!voucherNumber) {
+    //             toast.error("GRN voucher number not found");
+    //             return;
+    //         }
+
+    //         await dispatch(
+    //             deleteGrn({
+    //                 grnVoucherNumber: voucherNumber,
+    //             }) as any
+    //         ).unwrap();
+
+    //         toast.success("GRN deleted successfully");
+
+    //         await fetchGrns();
+    //     } catch (err: any) {
+    //         toast.error(
+    //             err?.message ||
+    //             err?.payload?.message ||
+    //             "Failed to delete GRN"
+    //         );
+    //     } finally {
+    //         setConfirmTooltip({
+    //             show: false,
+    //             x: null,
+    //             y: null,
+    //             voucherNumber: null,
+    //         });
+    //     }
+    // };
+
+
     const handleDeleteConfirm = async () => {
         try {
             const voucherNumber = confirmTooltip?.voucherNumber;
+            const pOrdVoucherNumber = confirmTooltip?.pOrdVoucherNumber;
 
             if (!voucherNumber) {
                 toast.error("GRN voucher number not found");
@@ -1400,9 +1503,19 @@ const Grn = () => {
                 }) as any
             ).unwrap();
 
+            // ✅ After deleting GRN, update related Purchase Order status
+            if (pOrdVoucherNumber) {
+                await syncPurchaseOrderStatusAfterGrn(pOrdVoucherNumber);
+            } else {
+                toast.warning(
+                    "GRN deleted, but purchase order voucher number not found"
+                );
+            }
+
             toast.success("GRN deleted successfully");
 
             await fetchGrns();
+            await fetchPurchaseOrders("");
         } catch (err: any) {
             toast.error(
                 err?.message ||
@@ -1415,10 +1528,10 @@ const Grn = () => {
                 x: null,
                 y: null,
                 voucherNumber: null,
+                pOrdVoucherNumber: null,
             });
         }
     };
-
     const columns = [
         {
             key: "grnVoucherNumber",
@@ -1540,6 +1653,45 @@ const Grn = () => {
         return <ModulePageSkeleton rows={8} columns={6} />;
     }
 
+    const isClosedGRN = (record: any) => {
+        const grnStatus = String(record?.grnStatus || "").toLowerCase();
+        return grnStatus === "close" || grnStatus === "closed";
+    }
+
+
+    const handleEditGRN = (record: any) => {
+        if (isClosedGRN(record)) {
+            toast.error("You can't edit closed GRN")
+            return;
+        }
+    }
+
+    const handleDeleteGRNClick = (e: any, record: any) => {
+        if (isClosedGRN(record)) {
+            toast.error("You can't delete closed GRN")
+            return;
+        }
+        const rect =
+            e.currentTarget.getBoundingClientRect();
+
+        let x = rect.left - 150;
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.grnVoucherNumber,
+            pOrdVoucherNumber: record?.pOrdVoucherNumber || "",
+        });
+
+
+    }
+
+
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="grn-header" className="mb-3 flex items-center">
@@ -1585,8 +1737,8 @@ const Grn = () => {
                         <Permission module="bookez" permissionKey="grn" action="update">
                             <button
                                 id="grn-edit-button"
-                                onClick={() => openEditModal(record)}
-                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                onClick={() => handleEditGRN(record)}
+                                className={`cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary ${isClosedGRN(record)}`}
                             >
                                 <Edit size={16} />
                             </button>
@@ -1596,23 +1748,8 @@ const Grn = () => {
                             <button
                                 id="grn-delete-button"
                                 disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect =
-                                        e.currentTarget.getBoundingClientRect();
-
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-
-                                    const y = rect.top + window.scrollY - 5;
-
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        voucherNumber: record?.grnVoucherNumber,
-                                    });
-                                }}
-                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                onClick={(e) => handleDeleteGRNClick(e, record)}
+                                className={`cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50 ${isClosedGRN(record)}`}
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -1649,6 +1786,7 @@ const Grn = () => {
                             x: null,
                             y: null,
                             voucherNumber: null,
+                            pOrdVoucherNumber: null,
                         })
                     }
                 />

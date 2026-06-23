@@ -224,6 +224,7 @@ const PurchaseInvoice = () => {
         x: null,
         y: null,
         voucherNumber: null,
+        grnVoucherNumber: null,
     });
 
     /* ===================================================
@@ -326,6 +327,54 @@ const PurchaseInvoice = () => {
         );
 
         return updated;
+    };
+
+    const hasValue = (value: any) =>
+        value !== undefined && value !== null && value !== "";
+
+    const fillProductDetailsFromSelectedOption = (
+        row: any,
+        selectedOption: any
+    ) => {
+        const product = selectedOption?.raw;
+        if (!product) return row;
+
+        const unitCode = product?.unit || row.unit || row.uom || "";
+        const csgst = hasValue(product?.csgst) ? String(product.csgst) : "";
+        const igst = hasValue(product?.igst) ? String(product.igst) : "";
+
+        return {
+            ...row,
+
+            productId: product?._id || row.productId || "",
+            productCode: product?.productCode || row.productCode || "",
+            productName: product?.productName || row.productName || "",
+
+            productDescription:
+                product?.productDescription || row.productDescription || "",
+
+            description:
+                product?.productDescription || row.description || "",
+
+            productHSNCode:
+                product?.productHSNCode || row.productHSNCode || "",
+
+            unit: unitCode,
+            uom: unitCode,
+            unitName: getUnitLabelFromSchema(unitCode),
+
+            // GRN is purchase side, so use purchasePrice
+            rate: hasValue(product?.purchasePrice)
+                ? String(product.purchasePrice)
+                : row.rate || "",
+
+            // product master key is csgst, row key is cgst
+            cgst: csgst || row.cgst || "",
+            cgstPercentage: csgst || row.cgstPercentage || "",
+
+            igst: igst || row.igst || "",
+            igstPercentage: igst || row.igstPercentage || "",
+        };
     };
 
     /* ===================================================
@@ -999,6 +1048,30 @@ const PurchaseInvoice = () => {
         });
     };
 
+    const handleTaxFields = (updatedRow: any, key: string, value: any) => {
+        const lowerKey = String(key).toLowerCase();
+
+        const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
+        const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
+        const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
+
+        if ((isCgst || isSgst) && num(value) > 0) {
+            updatedRow.igst = "";
+            updatedRow.igstPercentage = "";
+            updatedRow.igstAmount = 0;
+        }
+
+        if (isIgst && num(value) > 0) {
+            updatedRow.cgst = "";
+            updatedRow.sgst = "";
+            updatedRow.cgstPercentage = "";
+            updatedRow.sgstPercentage = "";
+            updatedRow.cgstAmount = 0;
+            updatedRow.sgstAmount = 0;
+        }
+
+        return updatedRow;
+    };
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
@@ -1023,33 +1096,23 @@ const PurchaseInvoice = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
 
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
+            const lowerKey = String(key).toLowerCase();
+
+            const isProductField =
+                lowerKey === "productcode" ||
+                lowerKey === "productname" ||
+                lowerKey === "productid" ||
+                lowerKey === "product";
+
+            if (isProductField && selectedOption?.raw) {
+                updatedRow = fillProductDetailsFromSelectedOption(
+                    updatedRow,
+                    selectedOption
+                );
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
-
-            const lowerKey = String(key).toLowerCase();
-
-            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
-            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
-            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
-
-            if ((isCgst || isSgst) && num(value) > 0) {
-                updatedRow.igst = "";
-                updatedRow.igstPercentage = "";
-                updatedRow.igstAmount = 0;
-            }
-
-            if (isIgst && num(value) > 0) {
-                updatedRow.cgst = "";
-                updatedRow.sgst = "";
-                updatedRow.cgstPercentage = "";
-                updatedRow.sgstPercentage = "";
-                updatedRow.cgstAmount = 0;
-                updatedRow.sgstAmount = 0;
-            }
-
+            updatedRow = handleTaxFields(updatedRow, key, value);
             updatedRow = calculateRow(updatedRow);
 
             updatedProducts[index] = updatedRow;
@@ -1059,7 +1122,6 @@ const PurchaseInvoice = () => {
                 products: updatedProducts,
             };
         });
-
         setErrors((prev: any) => ({
             ...prev,
             products: "",
@@ -1377,6 +1439,7 @@ const PurchaseInvoice = () => {
     const handleDeleteConfirm = async () => {
         try {
             const voucherNumber = confirmTooltip?.voucherNumber;
+            const grnVoucherNumber = confirmTooltip?.grnVoucherNumber;
 
             if (!voucherNumber) {
                 toast.error("Purchase invoice voucher number not found");
@@ -1388,6 +1451,12 @@ const PurchaseInvoice = () => {
                     purchaseInvoiceNumber: voucherNumber,
                 }) as any
             ).unwrap();
+
+            if (grnVoucherNumber) {
+                await syncGrnStatusAfterPurchaseInvoice(grnVoucherNumber);
+            } else {
+                toast.warning("Purchase invoice deleted , but grn voucher number not found")
+            }
 
             toast.success("Purchase invoice deleted successfully");
 
@@ -1404,6 +1473,7 @@ const PurchaseInvoice = () => {
                 x: null,
                 y: null,
                 voucherNumber: null,
+                grnVoucherNumber: null,
             });
         }
     };
@@ -1460,6 +1530,43 @@ const PurchaseInvoice = () => {
         grnModalLoading ||
         grnLoading ||
         !grnLoaded;
+
+
+    const isClosedPurchaseInvoice = (record: any) => {
+        const pInvStatus = String(record?.pInvStatus || "").toLowerCase();
+        return pInvStatus === "close" || pInvStatus === "closed"
+    }
+
+    const handleEditPurInvoice = (record: any) => {
+        if (isClosedPurchaseInvoice(record)) {
+            toast.error("you can't edit closed purchase invoice");
+            return;
+        }
+        openEditModal(record);
+    }
+
+    const handleDeletePurInvoiceClick = (e: any, record: any) => {
+        if (isClosedPurchaseInvoice(record)) {
+            toast.error("You can't delete closed Invoice")
+            return;
+        }
+        const rect =
+            e.currentTarget.getBoundingClientRect();
+
+        let x = rect.left - 150;
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.pInvVoucherNumber,
+            grnVoucherNumber: record?.grnVoucherNumber
+        });
+
+    }
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
@@ -1520,8 +1627,8 @@ const PurchaseInvoice = () => {
                         <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
                             <button
                                 id="purchase-invoice-edit-button"
-                                onClick={() => openEditModal(record)}
-                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                onClick={() => handleEditPurInvoice(record)}
+                                className={`cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary${isClosedPurchaseInvoice(record)}`}
                             >
                                 <Edit size={16} />
                             </button>
@@ -1531,23 +1638,8 @@ const PurchaseInvoice = () => {
                             <button
                                 id="purchase-invoice-delete-button"
                                 disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect =
-                                        e.currentTarget.getBoundingClientRect();
-
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-
-                                    const y = rect.top + window.scrollY - 5;
-
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        voucherNumber: record?.pInvVoucherNumber,
-                                    });
-                                }}
-                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                onClick={(e) => handleDeletePurInvoiceClick(e,record)}
+                                className={`cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50 ${isClosedPurchaseInvoice(record)}`}
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -1586,6 +1678,7 @@ const PurchaseInvoice = () => {
                             x: null,
                             y: null,
                             voucherNumber: null,
+                            grnVoucherNumber: null
                         })
                     }
                 />
