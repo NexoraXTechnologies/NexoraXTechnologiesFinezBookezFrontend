@@ -1,55 +1,15 @@
-import { ArrowUpRight, BarChart } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { formatMoney } from "../../utils/helperFunctions";
-import { motion } from "framer-motion"
-import { Area, AreaChart, Bar, RadialBar, RadialBarChart, ResponsiveContainer } from "recharts";
-
-// const CHART_COLORS = [
-//     "#f97316", // orange
-//     "#2563eb", // blue
-//     "#16a34a", // green
-//     "#dc2626", // red
-//     "#7c3aed", // purple
-//     "#0891b2", // cyan
-// ];
-
-// const SOFT_COLORS = {
-//     sales: {
-//         bg: "bg-orange-50",
-//         text: "text-orange-700",
-//         iconBg: "bg-orange-100",
-//         border: "border-orange-100",
-//         chart: "#f97316",
-//     },
-//     purchase: {
-//         bg: "bg-blue-50",
-//         text: "text-blue-700",
-//         iconBg: "bg-blue-100",
-//         border: "border-blue-100",
-//         chart: "#2563eb",
-//     },
-//     receivable: {
-//         bg: "bg-emerald-50",
-//         text: "text-emerald-700",
-//         iconBg: "bg-emerald-100",
-//         border: "border-emerald-100",
-//         chart: "#16a34a",
-//     },
-//     payable: {
-//         bg: "bg-rose-50",
-//         text: "text-rose-700",
-//         iconBg: "bg-rose-100",
-//         border: "border-rose-100",
-//         chart: "#dc2626",
-//     },
-//     neutral: {
-//         bg: "bg-slate-50",
-//         text: "text-slate-700",
-//         iconBg: "bg-slate-100",
-//         border: "border-slate-100",
-//         chart: "#64748b",
-//     },
-// };
-
+import { motion } from "framer-motion";
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    RadialBar,
+    RadialBarChart,
+    ResponsiveContainer,
+} from "recharts";
 
 // best
 const CHART_COLORS = [
@@ -63,39 +23,48 @@ const CHART_COLORS = [
 
 const SOFT_COLORS = {
     sales: {
-        bg: "bg-violet-50",
-        text: "text-violet-700",
-        iconBg: "bg-violet-100",
-        border: "border-violet-100",
+        bg: "bg-primary/10",
+        text: "text-primary",
+        iconBg: "bg-primary/15",
+        border: "border-primary/20",
         chart: "#7c3aed",
     },
     purchase: {
-        bg: "bg-indigo-50",
-        text: "text-indigo-700",
-        iconBg: "bg-indigo-100",
-        border: "border-indigo-100",
+        bg: "bg-primary/10",
+        text: "text-primary",
+        iconBg: "bg-primary/15",
+        border: "border-primary/20",
         chart: "#4f46e5",
     },
     receivable: {
-        bg: "bg-cyan-50",
-        text: "text-cyan-700",
-        iconBg: "bg-cyan-100",
-        border: "border-cyan-100",
+        bg: "bg-success/10",
+        text: "text-success",
+        iconBg: "bg-success/15",
+        border: "border-success/20",
         chart: "#06b6d4",
     },
     payable: {
-        bg: "bg-rose-50",
-        text: "text-rose-700",
-        iconBg: "bg-rose-100",
-        border: "border-rose-100",
+        bg: "bg-danger/10",
+        text: "text-danger",
+        iconBg: "bg-danger/15",
+        border: "border-danger/20",
         chart: "#e11d48",
     },
     neutral: {
-        bg: "bg-slate-50",
-        text: "text-slate-700",
-        iconBg: "bg-slate-100",
-        border: "border-slate-100",
+        bg: "bg-muted",
+        text: "text-muted-foreground",
+        iconBg: "bg-secondary",
+        border: "border-border",
         chart: "#64748b",
+    },
+};
+
+const compactCardAnim = {
+    hidden: { opacity: 0, y: 14 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.35, ease: "easeOut" },
     },
 };
 
@@ -116,12 +85,14 @@ const CompactWidgetCard = ({
 
     return (
         <motion.div
-            // @ts-ignore 
+            // @ts-ignore
             variants={compactCardAnim}
             whileHover={{ y: -2 }}
-            className={`overflow-hidden rounded-md border ${color.border} bg-white shadow-sm ${className}`}
+            className={`overflow-hidden rounded-md border ${color.border} bg-card text-card-foreground shadow-sm ${className}`}
         >
-            <div className={`flex items-center justify-between border-b border-gray-100 px-3.5 py-2.5 ${color.bg}`}>
+            <div
+                className={`flex items-center justify-between border-b border-border px-3.5 py-2.5 ${color.bg}`}
+            >
                 <h3 className={`text-sm font-black ${color.text}`}>{title}</h3>
                 {right}
             </div>
@@ -129,15 +100,6 @@ const CompactWidgetCard = ({
             <div className="p-3.5">{children}</div>
         </motion.div>
     );
-};
-
-const compactCardAnim = {
-    hidden: { opacity: 0, y: 14 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.35, ease: "easeOut" },
-    },
 };
 
 const CompactKpiCard = ({
@@ -178,35 +140,41 @@ const CompactKpiCard = ({
 
     return (
         <motion.div
-            // @ts-ignore 
+            // @ts-ignore
             variants={compactCardAnim}
             whileHover={{ y: -3, scale: 1.01 }}
-            className={`relative overflow-hidden rounded-md border ${color.border} ${color.bg} p-3.5 shadow-sm`}
+            className={`relative overflow-hidden rounded-md border ${color.border} ${color.bg} p-3.5 text-card-foreground shadow-sm`}
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className={`truncate text-xs font-black uppercase tracking-wide ${color.text}`}>
+                    <p
+                        className={`truncate text-xs font-black uppercase tracking-wide ${color.text}`}
+                    >
                         {title}
                     </p>
 
-                    <h2 className="mt-2 truncate text-xl font-black tracking-tight text-gray-950">
+                    <h2 className="mt-2 truncate text-xl font-black tracking-tight text-foreground">
                         {value}
                     </h2>
 
                     {subtitle && (
-                        <p className="mt-1 truncate text-xs font-semibold text-gray-500">
+                        <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">
                             {subtitle}
                         </p>
                     )}
                 </div>
 
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${color.iconBg} ${color.text}`}>
+                <div
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${color.iconBg} ${color.text}`}
+                >
                     <Icon size={17} />
                 </div>
             </div>
 
             <div className="mt-3 flex items-end justify-between gap-3">
-                <div className={`inline-flex items-center gap-1 rounded-md bg-white/80 px-2 py-1 text-xs font-black ${color.text}`}>
+                <div
+                    className={`inline-flex items-center gap-1 rounded-md bg-card/80 px-2 py-1 text-xs font-black ${color.text}`}
+                >
                     <ArrowUpRight size={13} />
                     Live
                 </div>
@@ -214,7 +182,7 @@ const CompactKpiCard = ({
                 <div className="h-10 w-20">
                     <ResponsiveContainer width="100%" height="100%">
                         {chartType === "bar" ? (
-                            // @ts-ignore 
+                            // @ts-ignore
                             <BarChart data={miniBarData}>
                                 <Bar
                                     dataKey="value"
@@ -256,13 +224,15 @@ const CompactTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
 
     return (
-        <div className="rounded-md border border-gray-200 bg-[#18181b] px-4 py-3 text-white shadow-xl">
+        <div className="rounded-md border border-border bg-card px-4 py-3 text-card-foreground shadow-xl">
             {label && (
-                <p className="mb-1 text-xs font-semibold text-gray-300">{label}</p>
+                <p className="mb-1 text-xs font-semibold text-muted-foreground">
+                    {label}
+                </p>
             )}
 
             {payload.map((item: any, index: number) => (
-                <p key={index} className="text-xs font-bold">
+                <p key={index} className="text-xs font-bold text-card-foreground">
                     {item.name}:{" "}
                     {typeof item.value === "number"
                         ? formatMoney(item.value)
@@ -293,27 +263,37 @@ const CompactRankItem = ({
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
-            className={`flex items-center justify-between rounded-md border ${color.border} ${color.bg} px-3 py-2.5 transition hover:bg-white`}
+            className={`flex items-center justify-between rounded-md border ${color.border} ${color.bg} px-3 py-2.5 transition hover:bg-card`}
         >
             <div className="flex min-w-0 items-center gap-3">
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${color.iconBg} text-xs font-black ${color.text}`}>
+                <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${color.iconBg} text-xs font-black ${color.text}`}
+                >
                     {index + 1}
                 </div>
 
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-gray-900">
+                    <p className="truncate text-sm font-black text-card-foreground">
                         {title || "-"}
                     </p>
-                    <p className="truncate text-xs font-semibold text-gray-500">
+                    <p className="truncate text-xs font-semibold text-muted-foreground">
                         {subtitle || "-"}
                     </p>
                 </div>
             </div>
 
-            <p className="shrink-0 pl-3 text-sm font-black text-gray-950">
+            <p className="shrink-0 pl-3 text-sm font-black text-foreground">
                 {value}
             </p>
         </motion.div>
     );
 };
-export { CHART_COLORS, SOFT_COLORS, CompactWidgetCard, CompactKpiCard, CompactTooltip, CompactRankItem }
+
+export {
+    CHART_COLORS,
+    SOFT_COLORS,
+    CompactWidgetCard,
+    CompactKpiCard,
+    CompactTooltip,
+    CompactRankItem,
+};

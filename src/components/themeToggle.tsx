@@ -1,29 +1,75 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
+const getStoredTheme = () => {
+    return localStorage.getItem("themeMode") || "light";
+};
+
+const applyThemeToRoot = (theme: string) => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+        root.classList.add("dark");
+    } else {
+        root.classList.remove("dark");
+    }
+    localStorage.setItem("themeMode", theme);
+    window.dispatchEvent(
+        new CustomEvent("themeModeChange", {
+            detail: theme,
+        })
+    );
+};
+
 const ThemeToggle = () => {
-    const [theme, setTheme] = useState<string>(() => {
-        return localStorage.getItem("themeMode") || "light";
-    });
+    const [theme, setTheme] = useState<string>(() => getStoredTheme());
 
     useEffect(() => {
-        const root = document.documentElement;
-        if (theme === "dark") {
-            root.classList.add("dark");
-        } else {
-            root.classList.remove("dark");
-        }
-
-        localStorage.setItem("themeMode", theme);
+        applyThemeToRoot(theme);
     }, [theme]);
 
-    const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    useEffect(() => {
+        const syncTheme = () => {
+            const storedTheme = getStoredTheme();
+            setTheme(storedTheme);
+        };
+        window.addEventListener("storage", syncTheme);
+        window.addEventListener("themeModeChange", syncTheme as EventListener);
+        const observer = new MutationObserver(() => {
+            const isDark = document.documentElement.classList.contains("dark");
+            const currentTheme = isDark ? "dark" : "light";
+
+            if (currentTheme !== getStoredTheme()) {
+                localStorage.setItem("themeMode", currentTheme);
+            }
+
+            setTheme(currentTheme);
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["class"],
+        });
+
+        return () => {
+            window.removeEventListener("storage", syncTheme);
+            window.removeEventListener("themeModeChange", syncTheme as EventListener);
+            observer.disconnect();
+        };
+    }, []);
+
+    const toggleTheme = () => {
+        setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    };
 
     return (
         <button
             type="button"
             onClick={toggleTheme}
-            className="flex items-center justify-center h-9 w-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-1 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="
+                flex h-9 w-9 cursor-pointer items-center justify-center rounded-full
+                border border-border bg-card text-card-foreground
+                transition hover:bg-muted hover:text-primary
+            "
         >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
