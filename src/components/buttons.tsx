@@ -89,6 +89,7 @@ const PrimaryButton = ({
     icon = null,
     disabled = false,
     className = "",
+    loader = false
 }: any) => (
     <button
         id="account-add-button"
@@ -105,7 +106,7 @@ const PrimaryButton = ({
       ${className}
     `}
     >
-        {icon ? icon : ""} {text}
+        {loader ? "Loading.." : <>{icon ? icon : ""}<span> {text}</span></>}
     </button>
 );
 
@@ -138,11 +139,12 @@ const SuccessButton = ({
     text,
     icon = null,
     disabled = false,
+    loader = false
 }: any) => (
     <button
         id="account-add-button"
         onClick={callBackFn}
-        disabled={disabled}
+        disabled={disabled || loader}
         className="
       h-9 cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md
       bg-success text-success-foreground text-sm font-medium shadow-sm
@@ -153,7 +155,7 @@ const SuccessButton = ({
       disabled:opacity-60 disabled:cursor-not-allowed
     "
     >
-        {icon ? icon : ""} <span>{text}</span>
+        {loader ? "Loading.." : <>{icon ? icon : ""}<span>{text}</span></>}
     </button>
 );
 
