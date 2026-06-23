@@ -201,47 +201,9 @@ const compactContainerAnim: any = {
 	},
 };
 
-// const TabButton = ({
-// 	active,
-// 	label,
-// 	icon,
-// 	onClick,
-// }: {
-// 	active: boolean;
-// 	label: string;
-// 	icon: React.ReactNode;
-// 	onClick: () => void;
-// }) => {
-// 	return (
-// 		<button
-// 			type="button"
-// 			onClick={onClick}
-// 			className={`cursor-pointer relative flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition-all duration-300 ${active
-// 				? "text-white"
-// 				: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-// 				}`}
-// 		>
-// 			{active && (
-// 				<motion.span
-// 					layoutId="dashboard-active-tab"
-// 					className="absolute inset-0 rounded-md bg-slate-950 shadow-md"
-// 					transition={{
-// 						type: "spring",
-// 						stiffness: 420,
-// 						damping: 32,
-// 					}}
-// 				/>
-// 			)}
-
-// 			<span className="relative z-10">{icon}</span>
-// 			<span className="relative z-10">{label}</span>
-// 		</button>
-// 	);
-// };
-
 const EmptyData = ({ text = "No data available" }: { text?: string }) => {
 	return (
-		<div className="rounded-md bg-gray-50 p-4 text-center text-xs font-bold text-gray-500">
+		<div className="rounded-md bg-muted p-4 text-center text-xs font-bold text-muted-foreground">
 			{text}
 		</div>
 	);
@@ -251,9 +213,9 @@ const ModuleAreaTooltip = ({ active, payload, label }: any) => {
 	if (!active || !payload?.length) return null;
 
 	return (
-		<div className="rounded-xl bg-[#18181b] px-4 py-3 text-white shadow-xl">
-			<p className="text-xs font-semibold text-gray-300">{label}</p>
-			<p className="mt-1 text-xl font-black">
+		<div className="rounded-xl bg-card px-4 py-3 text-card-foreground shadow-xl ring-1 ring-border">
+			<p className="text-xs font-semibold text-muted-foreground">{label}</p>
+			<p className="mt-1 text-xl font-black text-foreground">
 				{formatNumber(payload?.[0]?.value)}
 			</p>
 		</div>
@@ -270,7 +232,7 @@ const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
 					active: analytics?.incomeTax?.active ?? 0,
 					inactive: analytics?.incomeTax?.inactive ?? 0,
 				},
-				color: "bg-[#E6F4FF]",
+				color: "bg-primary/10",
 				delay: 0.05,
 				icon: "👤",
 			},
@@ -283,7 +245,7 @@ const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
 					filed: analytics?.itr?.filedSuccessfully ?? 0,
 					draft: analytics?.itr?.draft ?? 0,
 				},
-				color: "bg-[#EEF2FF]",
+				color: "bg-primary/10",
 				delay: 0.1,
 				icon: "📄",
 			},
@@ -295,7 +257,7 @@ const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
 					partial: analytics?.tasks?.partiallyCompleted ?? 0,
 					completed: analytics?.tasks?.completed ?? 0,
 				},
-				color: "bg-[#ECFDF3]",
+				color: "bg-success/10",
 				delay: 0.15,
 				icon: "✅",
 			},
@@ -306,7 +268,7 @@ const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
 					active: analytics?.documents?.active ?? 0,
 					deleted: analytics?.documents?.deleted ?? 0,
 				},
-				color: "bg-[#FFF7E6]",
+				color: "bg-muted",
 				delay: 0.2,
 				icon: "📁",
 			},
@@ -317,7 +279,7 @@ const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
 					active: analytics?.employees?.active ?? 0,
 					inactive: analytics?.employees?.inactive ?? 0,
 				},
-				color: "bg-[#FCE7F3]",
+				color: "bg-primary/10",
 				delay: 0.25,
 				icon: "👥",
 			},
@@ -330,7 +292,7 @@ const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
 					accounts: analytics?.accountMaster?.total ?? 0,
 					products: analytics?.productMaster?.total ?? 0,
 				},
-				color: "bg-[#F3F4F6]",
+				color: "bg-muted",
 				delay: 0.3,
 				icon: "📦",
 			},
@@ -375,8 +337,8 @@ const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
 		>
 			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">TaxEz Dashboard</h1>
-					<p className="mt-1 text-sm text-gray-500">
+					<h1 className="text-2xl font-bold text-foreground">TaxEz Dashboard</h1>
+					<p className="mt-1 text-sm text-muted-foreground">
 						Filing overview, compliance status, and workload summary.
 					</p>
 				</div>
@@ -616,7 +578,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					className="xl:col-span-1"
 					accent="sales"
 					right={
-						<span className="rounded-md bg-white px-2 py-1 text-xs font-black text-orange-600">
+						<span className="rounded-md bg-card px-2 py-1 text-xs font-black text-primary">
 							API Data
 						</span>
 					}
@@ -643,19 +605,19 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						</div>
 
 						<div className="-mt-20 text-center">
-							<h2 className="text-3xl font-black text-gray-950">
+							<h2 className="text-3xl font-black text-foreground">
 								{balanceScore}%
 							</h2>
-							<p className="text-xs font-semibold text-gray-500">
+							<p className="text-xs font-semibold text-muted-foreground">
 								receivable share
 							</p>
 						</div>
 
-						<div className="mt-12 border-t border-orange-100 pt-3 text-center">
-							<p className="text-sm font-black text-gray-900">
+						<div className="mt-12 border-t border-border pt-3 text-center">
+							<p className="text-sm font-black text-card-foreground">
 								Outstanding position
 							</p>
-							<p className="mt-1 text-xs leading-5 text-gray-500">
+							<p className="mt-1 text-xs leading-5 text-muted-foreground">
 								Receivable and payable based on API data.
 							</p>
 						</div>
@@ -667,7 +629,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					className="xl:col-span-3"
 					accent="purchase"
 					right={
-						<span className="rounded-md bg-white px-2 py-1 text-xs font-black text-blue-600">
+						<span className="rounded-md bg-card px-2 py-1 text-xs font-black text-primary">
 							Amount
 						</span>
 					}
@@ -683,12 +645,12 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 										dataKey="month"
 										axisLine={false}
 										tickLine={false}
-										tick={{ fontSize: 12, fill: "#6b7280" }}
+											tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
 									/>
 									<YAxis
 										axisLine={false}
 										tickLine={false}
-										tick={{ fontSize: 12, fill: "#6b7280" }}
+											tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
 										tickFormatter={(value) =>
 											Number(value) >= 100000
 												? `${Math.round(Number(value) / 100000)}L`
@@ -722,7 +684,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					className="xl:col-span-2"
 					accent="sales"
 					right={
-						<span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-600">
+						<span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
 							API Data
 						</span>
 					}
@@ -730,20 +692,20 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					{moduleAreaChartData.length === 0 ? (
 						<EmptyData text="No transaction data available" />
 					) : (
-						<div className="relative overflow-hidden rounded-2xl bg-white px-1 pb-2">
+							<div className="relative overflow-hidden rounded-2xl bg-card px-1 pb-2">
 							<div className="mb-2 flex flex-col gap-1 px-2">
-								<p className="text-xs font-bold text-gray-500">
+									<p className="text-xs font-bold text-muted-foreground">
 									Total module transactions
 								</p>
 
 								<div className="flex items-end justify-between gap-3">
-									<h2 className="text-4xl font-black tracking-tight text-gray-950">
+										<h2 className="text-4xl font-black tracking-tight text-foreground">
 										{formatNumber(totalTransactionCount)}
 									</h2>
 
 									<div className="text-right">
-										<p className="text-xs font-bold text-gray-400">Top module</p>
-										<p className="text-sm font-black text-orange-600">
+											<p className="text-xs font-bold text-muted-foreground">Top module</p>
+											<p className="text-sm font-black text-primary">
 											{highestModule.name}
 										</p>
 									</div>
@@ -765,12 +727,12 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											<linearGradient id="moduleAreaFill" x1="0" y1="0" x2="0" y2="1">
 												<stop offset="0%" stopColor="#c084fc" stopOpacity={0.28} />
 												<stop offset="55%" stopColor="#f5d0fe" stopOpacity={0.14} />
-												<stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+													<stop offset="100%" stopColor="var(--card)" stopOpacity={0} />
 											</linearGradient>
 										</defs>
 
 										<CartesianGrid
-											stroke="#f1f5f9"
+												stroke="var(--border)"
 											strokeDasharray="0"
 											vertical={false}
 										/>
@@ -782,7 +744,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											interval={0}
 											tick={{
 												fontSize: 11,
-												fill: "#6b7280",
+												fill: "var(--muted-foreground)",
 												fontWeight: 700,
 											}}
 											tickFormatter={(value) => {
@@ -801,7 +763,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 										<YAxis hide />
 										<Tooltip
 											cursor={{
-												stroke: "#e5e7eb",
+													stroke: "var(--border)",
 												strokeWidth: 1,
 											}}
 											content={<ModuleAreaTooltip />}
@@ -815,13 +777,13 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											fill="url(#moduleAreaFill)"
 											dot={{
 												r: 4,
-												fill: "#ffffff",
+												fill: "var(--card)",
 												stroke: "#c084fc",
 												strokeWidth: 3,
 											}}
 											activeDot={{
 												r: 8,
-												fill: "#ffffff",
+												fill: "var(--card)",
 												stroke: "#c084fc",
 												strokeWidth: 4,
 											}}
@@ -837,7 +799,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					title="Revenue Source Distribution"
 					accent="purchase"
 					right={
-						<span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-600">
+						<span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
 							{formatMoney(revenueTotal)}
 						</span>
 					}
@@ -875,7 +837,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											innerRadius={68}
 											outerRadius={100}
 											paddingAngle={6}
-											stroke="#ffffff"
+												stroke="var(--card)"
 											strokeWidth={5}
 										>
 											{revenueChartData.map((item, index) => (
@@ -892,15 +854,15 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 
 								{/* Center Text */}
 								<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-									<p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+										<p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
 										Total
 									</p>
 
-									<p className="mt-1 text-xl font-black text-gray-950">
+										<p className="mt-1 text-xl font-black text-foreground">
 										{formatMoney(revenueTotal)}
 									</p>
 
-									<p className="mt-1 text-[11px] font-bold text-gray-400">
+										<p className="mt-1 text-[11px] font-bold text-muted-foreground">
 										Revenue mix
 									</p>
 								</div>
@@ -911,7 +873,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								{revenueChartData.map((item) => (
 									<div
 										key={item.name}
-										className="rounded-2xl border border-gray-100 bg-gradient-to-r from-white to-gray-50 px-3 py-2.5 shadow-sm"
+										className="rounded-2xl border border-border bg-card px-3 py-2.5 shadow-sm"
 									>
 										<div className="flex items-center justify-between gap-3">
 											<div className="flex min-w-0 items-center gap-2">
@@ -921,22 +883,22 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 												/>
 
 												<div className="min-w-0">
-													<p className="truncate text-sm font-black text-gray-800">
+													<p className="truncate text-sm font-black text-card-foreground">
 														{item.name}
 													</p>
 
-													<p className="text-xs font-bold text-gray-400">
+													<p className="text-xs font-bold text-muted-foreground">
 														{item.percent}% of total
 													</p>
 												</div>
 											</div>
 
-											<p className="shrink-0 text-sm font-black text-gray-950">
+											<p className="shrink-0 text-sm font-black text-foreground">
 												{formatMoney(item.value)}
 											</p>
 										</div>
 
-										<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+										<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
 											<div
 												className="h-full rounded-full"
 												style={{
@@ -1046,7 +1008,7 @@ const ProfessionalDashboard = () => {
 	}, []);
 
 	const permissions = useMemo(() => {
-		const possiblePermissions = permissionState
+		const possiblePermissions = permissionState;
 
 		const parsedPermission = safeJsonParse(possiblePermissions);
 
@@ -1113,13 +1075,13 @@ const ProfessionalDashboard = () => {
 
 	if (loading) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-gray-50">
+			<div className="flex min-h-screen items-center justify-center bg-background">
 				<motion.div
 					initial={{ opacity: 0, scale: 0.94 }}
 					animate={{ opacity: 1, scale: 1 }}
-					className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm"
+					className="rounded-2xl border border-border bg-card px-6 py-5 text-card-foreground shadow-sm"
 				>
-					<p className="text-sm font-bold text-slate-600">
+					<p className="text-sm font-bold text-muted-foreground">
 						Loading dashboard...
 					</p>
 				</motion.div>
@@ -1128,18 +1090,18 @@ const ProfessionalDashboard = () => {
 	}
 
 	if (error) {
-		return <p className="mt-10 text-center text-red-500">{error}</p>;
+		return <p className="mt-10 text-center text-danger">{error}</p>;
 	}
 
 	if (visibleTabs.length === 0) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-				<div className="max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-					<h2 className="text-lg font-bold text-slate-900">
+			<div className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+				<div className="max-w-md rounded-2xl border border-border bg-card p-6 text-center text-card-foreground shadow-sm">
+					<h2 className="text-lg font-bold text-card-foreground">
 						No dashboard permission
 					</h2>
 
-					<p className="mt-2 text-sm font-medium text-slate-500">
+					<p className="mt-2 text-sm font-medium text-muted-foreground">
 						TaxEz and BookEz dashboard access is disabled for this user.
 					</p>
 				</div>
@@ -1147,69 +1109,39 @@ const ProfessionalDashboard = () => {
 		);
 	}
 
-  return (
-	  <motion.div
-		  initial={{ opacity: 0 }}
-		  animate={{ opacity: 1 }}
-		  transition={{ duration: 0.45 }}
-		  className="relative min-h-screen bg-gray-50 p-4 md:p-6"
-	  >
-		  {/* <div className="mb-4 flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-2 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-xl font-black text-slate-900 md:text-2xl">
-            Professional Dashboard
-          </h1>
+	return (
+		<motion.div
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ duration: 0.45 }}
+			className="relative min-h-screen bg-background p-4 text-foreground md:p-6"
+		>
+			<AnimatePresence mode="wait">
+				{activeTab === "taxez" && canShowTaxEz && (
+					<TaxEzDashboardView analytics={analytics} />
+				)}
 
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Switch between TaxEz and BookEz dashboard based on enabled
-            permissions.
-          </p>
-        </div>
-        <div>
+				{/* {activeTab === "bookez" && canShowBookEz && (
+					<BookEzDashboardView analytics={bookEzAnalytics} />
+				)} */}
 
-        </div>
+				<BookEzDashboardView analytics={bookEzAnalytics} />
+			</AnimatePresence>
 
+			{activeTab === "taxez" && canShowTaxEz && (
+				<>
+					<div className="fixed bottom-8 right-6 z-50">
+						<AiChatBox onClick={() => setOpenChat(true)} />
+					</div>
 
-        {visibleTabs.length > 1 && (
-          <div className="flex w-full gap-2 overflow-x-auto rounded-md bg-slate-50 p-1 lg:w-auto">
-            {visibleTabs.map((tab) => (
-              <TabButton
-                key={tab.key}
-                active={activeTab === tab.key}
-                label={tab.label}
-                icon={tab.icon}
-                onClick={() => setActiveTab(tab.key)}
-              />
-            ))}
-          </div>
-        )}
-      </div> */}
-
-		  <AnimatePresence mode="wait">
-			  {activeTab === "taxez" && canShowTaxEz && (
-				  <TaxEzDashboardView analytics={analytics} />
-			  )}
-
-			  {/* {activeTab === "bookez" && canShowBookEz && (
-				  <BookEzDashboardView analytics={bookEzAnalytics} />
-			  )} */}
-			  <BookEzDashboardView analytics={bookEzAnalytics} />
-		  </AnimatePresence>
-
-		  {activeTab === "taxez" && canShowTaxEz && (
-			  <>
-				  <div className="fixed bottom-8 right-6 z-50">
-					  <AiChatBox onClick={() => setOpenChat(true)} />
-				  </div>
-
-				  <AiTaxCopilotDrawer
-					  open={openChat}
-					  onClose={() => setOpenChat(false)}
-				  />
-			  </>
-		  )}
-	  </motion.div>
-  );
+					<AiTaxCopilotDrawer
+						open={openChat}
+						onClose={() => setOpenChat(false)}
+					/>
+				</>
+			)}
+		</motion.div>
+	);
 };
 
 export default ProfessionalDashboard;

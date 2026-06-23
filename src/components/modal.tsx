@@ -344,10 +344,8 @@ const ListingModel = ({
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
     const [gstType, setGstType] = useState("");
     const { company } = useSelector((s: any) => s.professionalCompanyMaster);
-
-    const { selectedAccount } = useSelector(
-        (s: any) => s.accountMaster
-    );
+    const [loader, setLoader] = useState(false)
+    const { selectedAccount } = useSelector((s: any) => s.accountMaster);
 
     const isReportDownload = Boolean(report?.length);
 
@@ -430,6 +428,7 @@ const ListingModel = ({
     };
 
     const handleServerPdfDownload = async () => {
+        setLoader(true)
         try {
             if (!selectedTemplate?.templateFileId) {
                 toast.warn("Please select template");
@@ -449,9 +448,12 @@ const ListingModel = ({
                 blobData,
                 fileName: `${rowData?.voucherNumber || "report"}.pdf`,
             });
+            setShow(false)
         } catch (error) {
-            console.log("PDF download failed:", error);
+            toast.error("PDF download failed")
+            console.error("PDF download failed:", error);
         }
+        setLoader(false)
     };
 
     const handleConfirm = async () => {
@@ -553,9 +555,11 @@ const ListingModel = ({
                         <PrimaryButton
                             callBackFn={handleConfirm}
                             text="Confirm"
+                            loader={loader}
                         />
 
                         <SecondaryButton
+                            disabled={loader}
                             callBackFn={() => {
                                 setShow();
                                 setGstType("");
