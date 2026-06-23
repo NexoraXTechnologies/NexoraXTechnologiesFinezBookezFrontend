@@ -857,9 +857,7 @@ const SalesQuotations = () => {
     }, [transactionsSchema]);
 
     useEffect(() => {
-        {
             /* @ts-ignore  */
-        }
         dispatch(getAllReportMapping({ moduleType: "salesQuotation" }));
     }, []);
 
@@ -959,9 +957,8 @@ const SalesQuotations = () => {
                         <Permission module="bookez" permissionKey="salesQuotation" action="update">
                             <button id="sales-quotation-edit-button"
                                 onClick={() => handleEditSalesQuations(record)}
-                                className={`rounded-md p-2 transition-all duration-200 ${isClosedSalesQuations(record)
-                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100"
-                                    : "cursor-pointer text-primary hover:bg-primary/10 hover:text-primary"
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary ${isClosedSalesQuations(record)
+                                 
                                     }`}
                             >                            <Edit size={16} />
                             </button>
@@ -971,10 +968,8 @@ const SalesQuotations = () => {
                                 id="sales-quotation-delete-button"
                                 disabled={deleteLoading}
                                 onClick={(e) => handleDeleteSalesQuationsClick(e, record)}
-                                className={`rounded-md p-2 transition-all duration-200 disabled:opacity-50 ${isClosedSalesQuations(record)
-                                    ? "cursor-not-allowed text-gray-400 hover:bg-gray-100"
-                                    : "cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
-                                    }`}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger ${isClosedSalesQuations(record)
+                                 }`}
                             >
                                 <Trash2 size={16} />
                             </button>
