@@ -1370,30 +1370,6 @@ const PurchaseOrder = () => {
                         </Permission>
 
                         <Permission module="bookez" permissionKey="purchaseOrder" action="delete">
-                            {/* <button
-                                id="purchase-order-delete-button"
-                                disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect =
-                                        e.currentTarget.getBoundingClientRect();
-
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-
-                                    const y = rect.top + window.scrollY - 5;
-
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        voucherNumber: record?.pOrdVoucherNumber,
-                                    });
-                                }}
-                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                            >
-                                <Trash2 size={16} />
-                            </button> */}
-
                             <button
                                 id="purchase-order-delete-button"
                                 disabled={deleteLoading}

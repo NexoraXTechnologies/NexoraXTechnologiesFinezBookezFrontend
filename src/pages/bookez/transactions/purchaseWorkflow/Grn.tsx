@@ -360,13 +360,6 @@ const Grn = () => {
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
-    // const [confirmTooltip, setConfirmTooltip] = useState<any>({
-    //     show: false,
-    //     x: null,
-    //     y: null,
-    //     voucherNumber: null,
-    // });
-
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
         x: null,
@@ -1452,41 +1445,7 @@ const Grn = () => {
         }
     };
 
-    // const handleDeleteConfirm = async () => {
-    //     try {
-    //         const voucherNumber = confirmTooltip?.voucherNumber;
-
-    //         if (!voucherNumber) {
-    //             toast.error("GRN voucher number not found");
-    //             return;
-    //         }
-
-    //         await dispatch(
-    //             deleteGrn({
-    //                 grnVoucherNumber: voucherNumber,
-    //             }) as any
-    //         ).unwrap();
-
-    //         toast.success("GRN deleted successfully");
-
-    //         await fetchGrns();
-    //     } catch (err: any) {
-    //         toast.error(
-    //             err?.message ||
-    //             err?.payload?.message ||
-    //             "Failed to delete GRN"
-    //         );
-    //     } finally {
-    //         setConfirmTooltip({
-    //             show: false,
-    //             x: null,
-    //             y: null,
-    //             voucherNumber: null,
-    //         });
-    //     }
-    // };
-
-
+   
     const handleDeleteConfirm = async () => {
         try {
             const voucherNumber = confirmTooltip?.voucherNumber;
@@ -1664,6 +1623,7 @@ const Grn = () => {
             toast.error("You can't edit closed GRN")
             return;
         }
+        openEditModal(record);
     }
 
     const handleDeleteGRNClick = (e: any, record: any) => {
