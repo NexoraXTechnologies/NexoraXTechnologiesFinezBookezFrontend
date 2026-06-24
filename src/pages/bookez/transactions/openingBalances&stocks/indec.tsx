@@ -10,7 +10,7 @@ import {
 import TransactionDashboard from "../components/TransactionDashboard";
 import OpeningBalance from "./openingBalance";
 import OpeningStock from "./openingStock";
-
+import JournalVoucher from "./JournalVoucher";
 
 const cards: any = [
   {
@@ -30,8 +30,7 @@ const cards: any = [
   {
     title: "Journal Voucher",
     description: "Create and manage journal voucher entries.",
-  //  component:JournalVoucher,
-   component:"JournalVoucher",
+   component:JournalVoucher,
     icon: <BookOpenCheck size={22} />,
     permissionKey: "journalVouchar"
   },
