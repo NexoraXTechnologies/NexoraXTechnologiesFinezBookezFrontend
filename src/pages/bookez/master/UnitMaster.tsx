@@ -22,7 +22,7 @@ import {
 import Permission from "../../../components/PermissionGuard";
 
 const UnitMaster = () => {
-	const dispatch = useDispatch();
+	const dispatch = useDispatch<any>();
 
 	const {
 		units,
@@ -122,6 +122,21 @@ const UnitMaster = () => {
 		}
 
 		return "";
+	};
+
+	const normalizeUnit = (value: any) => {
+		if (typeof value === "object" && value !== null) {
+			return (
+				value.unitCode ??
+				value.code ??
+				value.value ??
+				value.name ??
+				value.unitName ??
+				""
+			);
+		}
+
+		return value ?? "";
 	};
 
 	const getFieldOptions = (field: any) => {

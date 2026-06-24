@@ -1093,7 +1093,7 @@ const ProfessionalDashboard = () => {
 		return <p className="mt-10 text-center text-danger">{error}</p>;
 	}
 
-	if (visibleTabs.length === 0) {
+	if (visibleTabs.length === 0 && false) {
 		return (
 			<div className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
 				<div className="max-w-md rounded-2xl border border-border bg-card p-6 text-center text-card-foreground shadow-sm">

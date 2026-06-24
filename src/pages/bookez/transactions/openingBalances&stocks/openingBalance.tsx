@@ -70,7 +70,7 @@ const mainColumns = [
 ];
 
 const OpeningBalance = () => {
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<any>();
 
     const { accounts } = useSelector((s: any) => s.accountMaster);
 

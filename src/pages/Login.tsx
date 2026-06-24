@@ -79,8 +79,8 @@ const termsAndConditions: any = [
 ];
 
 const Login = () => {
-  const dispatch = useDispatch();
-  const dispatchP = useDispatch();
+  const dispatch = useDispatch<any>();
+  const dispatchP = useDispatch<any>();
   const navigate = useNavigate();
 
   // const [showPass, setShowPass] = useState(false);
