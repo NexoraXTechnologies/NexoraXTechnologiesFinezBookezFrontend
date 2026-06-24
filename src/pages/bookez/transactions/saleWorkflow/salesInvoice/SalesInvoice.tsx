@@ -1462,11 +1462,7 @@ const SalesInVoice = () => {
 
             sInvBody: products.map((item: any) => ({
                 // ✅ Store Sales Order voucher in invoice body also
-                sOrderNumber:
-                    item?.sOrderNumber ||
-                    form?.sInvSalesOrderVoucherNumber ||
-                    "",
-
+                sOrderNumber: item?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
                 productCode: item.productCode,
                 productName: item.productName,
                 productId: item.productId,
@@ -1533,7 +1529,6 @@ const SalesInVoice = () => {
                         payload,
                     }) as any
                 ).unwrap();
-
                 toast.success("Sales invoice updated successfully");
             } else {
                 await dispatch(createSalesInvoice({ payload }) as any).unwrap();
@@ -1541,10 +1536,8 @@ const SalesInVoice = () => {
                 if (form?.sInvSalesOrderVoucherNumber) {
                     await syncSalesOrderStatus(form.sInvSalesOrderVoucherNumber, "close");
                 }
-
                 toast.success("Sales invoice created successfully");
             }
-
             setShowModal(false);
             resetMainForm();
             fetchSalesInvoices();
@@ -1556,23 +1549,11 @@ const SalesInVoice = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip?.voucherNumber) return;
-
-            const salesOrderVoucherNumber = confirmTooltip?.salesOrderVoucherNumber;
-
-            await dispatch(
-                deleteSalesInvoice(confirmTooltip.voucherNumber) as any
-            ).unwrap();
-
-            if (salesOrderVoucherNumber) {
-                await syncSalesOrderStatus(salesOrderVoucherNumber, "open");
-            } else {
-                toast.warning(
-                    "Sales invoice deleted, but sales order voucher number not found"
-                );
-            }
-
+            const salesOrderVoucherNumber = confirmTooltip?.voucherNumber;
+            if (salesOrderVoucherNumber) return toast.warning("Sales invoice deleted, but sales order voucher number not found");
+            await dispatch(deleteSalesInvoice(confirmTooltip.voucherNumber) as any).unwrap();
+            await syncSalesOrderStatus(salesOrderVoucherNumber, "open");
             toast.success("Sales invoice deleted successfully");
-
             await fetchSalesInvoices();
         } catch (err: any) {
             toast.error(err?.message || "Failed to delete sales invoice");
@@ -1585,6 +1566,19 @@ const SalesInVoice = () => {
                 salesOrderVoucherNumber: null,
             });
         }
+    };
+
+    const isClosedSalesOrder = (record: any) => {
+        const orderStatus = String(record?.sInvStatus || "").toLowerCase();
+        return orderStatus === "close" || orderStatus === "closed";
+    };
+
+    const handleEditSalesOrder = (record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't edit closed order");
+            return;
+        }
+        openEditModal(record);
     };
 
     const footerValues = useMemo(
@@ -1602,11 +1596,8 @@ const SalesInVoice = () => {
     );
 
     const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => {
-                const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
-
+        return (templateFields?.footer || []).filter((field: any) => !field.isHidden).map((field: any) => {
+            const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
                 return {
                     ...field,
                     value: money(rawValue),
@@ -1620,12 +1611,8 @@ const SalesInVoice = () => {
             toast.error("Please select purchase order");
             return;
         }
-
         const poBody = selectedPurchaseOrder?.sOrderBody || [];
-
-        const products =
-            poBody?.length > 0
-                ? poBody?.map((item: any) =>
+        const products = !poBody?.length ? poBody?.map((item: any) =>
                     calculateRow(
                         normalizeRowKeys({
                             id: Date.now() + Math.random(),
@@ -1723,6 +1710,35 @@ const SalesInVoice = () => {
         setErrors({});
         setForm(getDefaultForm());
         setShowModal(true);
+    };
+
+    const handleDeleteSalesInvoiceClick = (e: any, record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't delete closed order");
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+
+        let x = rect.left - 150;
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        const salesOrderVoucherNumber =
+            record?.sInvSalesOrderVoucherNumber ||
+            record?.sOrderVoucherNumber ||
+            record?.sInvOrderVoucherNumber ||
+            record?.sInvBody?.[0]?.sOrderNumber ||
+            record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber ||
+            "";
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.sInvVoucherNumber,
+            salesOrderVoucherNumber,
+        });
     };
 
     useEffect(() => {
@@ -1832,10 +1848,10 @@ const SalesInVoice = () => {
                                 setDownlaodPDF((pre: any) => ({
                                     ...pre,
                                     show: true,
-                                    moduleType: "salesQuotation",
+                                    moduleType: "salesInvoice",
                                     record,
-                                    CustomerCode: record?.sQuoteCustomerCode,
-                                    voucherNumber: record?.sQuoteVoucherNumber,
+                                    CustomerCode: record?.sInvCustomerCode,
+                                    voucherNumber: record?.sInvVoucherNumber,
                                 }));
                             }}
                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
@@ -1846,7 +1862,7 @@ const SalesInVoice = () => {
                         <Permission module="bookez" permissionKey="salesInvoice" action="update">
                             <button
                                 id="sales-invoice-edit-button"
-                                onClick={() => openEditModal(record)}
+                                onClick={() => handleEditSalesOrder(record)}
                                 className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                             >
                                 <Edit size={16} />
@@ -1857,30 +1873,7 @@ const SalesInVoice = () => {
                             <button
                                 id="sales-invoice-delete-button"
                                 disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-
-                                    const y = rect.top + window.scrollY - 5;
-
-                                    const salesOrderVoucherNumber =
-                                        record?.sInvSalesOrderVoucherNumber ||
-                                        record?.sOrderVoucherNumber ||
-                                        record?.sInvOrderVoucherNumber ||
-                                        record?.sInvBody?.[0]?.sOrderNumber ||
-                                        record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber ||
-                                        "";
-
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        voucherNumber: record?.sInvVoucherNumber,
-                                        salesOrderVoucherNumber,
-                                    });
-                                }}
+                                onClick={(e) => handleDeleteSalesInvoiceClick(e, record)}
                                  className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                             >
                                 <Trash2 size={16} />
@@ -1972,7 +1965,7 @@ const SalesInVoice = () => {
                             <input
                                 value={purchaseOrderSearch}
                                 onChange={(e) => setPurchaseOrderSearch(e.target.value)}
-                                placeholder="Search Purchase Order code..."
+                                placeholder="Search Sales Order..."
                                 className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
@@ -1980,21 +1973,17 @@ const SalesInVoice = () => {
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {orderLoader ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
-                                    Loading purchase orders...
+                                    Loading Sales Order...
                                 </div>
-                            ) : salesOrders?.length === 0 ? (
+                            ) : !salesOrders?.length ? (
                                     <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
-                                        No purchase order found
+                                        No Sales Order found
                                     </div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesOrders?.map((e: any, index: number) => {
                                         const poNumber = e?.sOrderVoucherNumber || "-";
-
-                                        const isSelected =
-                                            selectedPurchaseOrder?.sOrderVoucherNumber ==
-                                            e?.sOrderVoucherNumber;
-
+                                        const isSelected = selectedPurchaseOrder?.sOrderVoucherNumber == e?.sOrderVoucherNumber;
                                         return (
                                             <button
                                                 key={poNumber || index}

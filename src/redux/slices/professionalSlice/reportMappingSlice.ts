@@ -137,13 +137,10 @@ export const getAllReportMapping = createAsyncThunk(
                 params.moduleType = moduleType;
             }
 
-            
             const res = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/bookez/master/reportsmapping/getAll",
                 { params }
             );
-
-
 
             if (!res.data?.success)
                 return rejectWithValue({

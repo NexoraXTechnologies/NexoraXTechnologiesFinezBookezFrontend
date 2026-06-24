@@ -16,7 +16,7 @@ import professionalAxios from "../../../../../services/professionalAxios";
 import { fmtMoney, formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import Modal, { ListingModel } from "../../../../../components/modal";
-import { getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
+import { clearSelectedSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
 
@@ -365,10 +365,10 @@ const SalesOrder = () => {
         })).map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
-    const syncPurchaseOrderStatusAfterGrn = async (e: string) => {
+    const syncQuotationStatusAfterSalesOrdr = async (e: string) => {
         if (!e) return "";
         try {
-            await dispatch(updateSalesQuotation({ payload: { sQuoteDocStatus: "close" }, sQuoteVoucherNumber: e }) as any);
+            await dispatch(updateSalesQuotation({ payload: { sQuoteDocStatus: "close", sQuoteStatus: "close" }, sQuoteVoucherNumber: e }) as any);
             await fetchSalesQuotations();
         } catch (error) {
             toast.error("sales Quotation saved but failed to update purchase order status");
@@ -401,17 +401,16 @@ const SalesOrder = () => {
             } else {
                 await dispatch(createSalesOrder(payload) as any).unwrap();
                 if (form?.sOrderQuotationVoucherNumber) {
-                    const poStatus: any = await syncPurchaseOrderStatusAfterGrn(form?.sOrderQuotationVoucherNumber);
-                    if (poStatus === "close") toast.success("Sales order created successfully and Sales Quotation closed");
-                    else toast.success("Sales order created successfully");
-                } else {
-                    toast.success("Sales order created successfully");
+                    syncQuotationStatusAfterSalesOrdr(form?.sOrderQuotationVoucherNumber);
+                    // if (poStatus === "close") toast.success("Sales order created successfully and Sales Quotation closed");
                 }
                 toast.success("Sales order created successfully");
             }
             setShowModal(false);
             resetMainForm();
             fetchSalesOrders();
+            await fetchSalesQuotations();
+            handlePurchaseOrderModalClose();
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }
@@ -433,29 +432,18 @@ const SalesOrder = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-
             const salesOrderVoucherNumber = confirmTooltip.voucherNumber;
             const salesQuotationVoucherNumber = (confirmTooltip as any)?.quotationVoucherNumber;
-
             await dispatch(deleteSalesOrder(salesOrderVoucherNumber) as any).unwrap();
-
             if (salesQuotationVoucherNumber) {
                 await dispatch(
                     updateSalesQuotation({
                         sQuoteVoucherNumber: salesQuotationVoucherNumber,
-                        payload: {
-                            sQuoteDocStatus: "open",
-                        },
+                        payload: { sQuoteDocStatus: "open", sQuoteStatus: "won" },
                     }) as any
                 ).unwrap();
             }
-
             toast.success("Sales order deleted successfully");
-
-            if (salesQuotationVoucherNumber) {
-                toast.success("Sales quotation status updated to open");
-            }
-
             fetchSalesOrders();
             fetchSalesQuotations();
         } catch (err: any) {
@@ -487,6 +475,7 @@ const SalesOrder = () => {
     const handlePurchaseOrderSelect = (purchaseOrder: any) => setSelectedPurchaseOrder(purchaseOrder);
 
     const fetchSalesQuotations = async () => {
+        await clearSelectedSalesQuotation()
         await dispatch(getSalesQuotationList({ offset: 0, limit: 100, search: purchaseOrderSearch, status: "won" }) as any);
     };
 
@@ -497,7 +486,7 @@ const SalesOrder = () => {
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
-        setShowModal(true);
+        setShowModal(false);
     };
 
     useEffect(() => {
@@ -517,8 +506,6 @@ const SalesOrder = () => {
         // @ts-ignore 
         dispatch(getAllReportMapping({ moduleType: "salesOrder" }))
     }, [])
-
-
 
     const isClosedSalesOrder = (record: any) => {
         const orderStatus = String(
@@ -711,22 +698,21 @@ const SalesOrder = () => {
                             <input
                                 value={purchaseOrderSearch}
                                 onChange={(e) => setPurchaseOrderSearch(e.target.value)}
-                                placeholder="Search Purchase Order code..."
+                                placeholder="Search Sales Quotations..."
                                 className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
 
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {salesQuatationLoader ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">Loading purchase orders...</div>
-                            ) : salesQuotations?.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">No purchase order found</div>
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">Loading Sales Quotations...</div>
+                            ) : !salesQuotations?.length ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">No Sales Quotations found</div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesQuotations?.map((e: any, index: number) => {
                                         const poNumber = e?.sQuoteVoucherNumber || "-";
                                         const isSelected = selectedPurchaseOrder?.sQuoteVoucherNumber == e?.sQuoteVoucherNumber;
-
                                         return (
                                             <button
                                                 key={poNumber || index}

@@ -622,7 +622,11 @@ const AccountMaster = () => {
 			await dispatch(deleteAccount(confirmTooltip.accountCode)).unwrap();
 			toast.success("Account deleted");
 			fetchAccounts();
-		} finally {
+		}
+		catch (err) {
+			toast?.error(err?.message)
+		}
+		finally {
 			setConfirmTooltip({
 				show: false,
 				x: null,
