@@ -40,7 +40,9 @@ import {
     GetVendorWisePurchaseInvoiceList,
     updatePurchaseInvoice,
 } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+
 import Permission from "../../../../components/PermissionGuard";
+import professionalAxios from "../../../../services/professionalAxios";
 
 const defaultPagination = {
     offset: 0,
@@ -125,7 +127,10 @@ const Payment = () => {
         paymentState?.addLoader ||
         false;
 
-    const updateLoading = paymentState?.updateLoading || false;
+    const updateLoading =
+        paymentState?.updateLoading ||
+        paymentState?.updateLoader ||
+        false;
 
     const deleteLoading =
         paymentState?.deleteLoading ||
@@ -141,7 +146,7 @@ const Payment = () => {
     const [status, setStatus] = useState("open");
 
     const [showModal, setShowModal] = useState(false);
-    const [editingRecord, setEditingRecord] = useState<any>(false);
+    const [editingRecord, setEditingRecord] = useState<any>(null);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
 
@@ -495,9 +500,8 @@ const Payment = () => {
 
             const res: any = await dispatch(
                 GetVendorWisePurchaseInvoiceList({
-                    // @ts-ignore
                     vendorCode: accountCode,
-                }) as any
+                } as any) as any
             ).unwrap();
 
             const records = getRecords(res);
@@ -547,7 +551,10 @@ const Payment = () => {
             try {
                 setFieldsLoading(true);
 
-                const updatedData = await loadAllTemplateOptions(transactionsSchema, { header: { accountType: "bank" } });
+                const updatedData = await loadAllTemplateOptions(transactionsSchema, {
+                    header: { accountType: "bank" },
+                    body: { accountType: "vendor" },
+                });
 
                 setTemplateFields(updatedData);
             } catch (error) {
@@ -591,7 +598,6 @@ const Payment = () => {
                 </div>
             ),
         },
-
         {
             key: "payBody",
             title: "Amount",
@@ -858,7 +864,6 @@ const Payment = () => {
                     getInvoiceRemainingAmount(invoice) +
                     num(existingRef?.adjustedAmount || 0);
 
-                // ✅ Show invoice if it has remaining amount
                 return remainingAmount > 0;
             }
         );
@@ -873,7 +878,7 @@ const Payment = () => {
 
             const existingRef = existingReferenceMap.get(String(purchaseInvoice));
 
-            const remainingBillAmount: any =
+            const remainingBillAmount =
                 getInvoiceRemainingAmount(invoice) +
                 num(existingRef?.adjustedAmount || 0);
 
@@ -890,8 +895,6 @@ const Payment = () => {
 
                 remainingBillAmount: String(remainingBillAmount),
 
-                // ✅ Add mode: blank
-                // ✅ Edit mode: show saved adjusted amount
                 adjustedAmount:
                     existingRef?.adjustedAmount !== undefined
                         ? String(existingRef.adjustedAmount)
@@ -910,12 +913,10 @@ const Payment = () => {
         setReferenceRows((prev: any[]) => {
             const updatedRows = [...prev];
 
-            const updatedRow = {
+            updatedRows[index] = {
                 ...updatedRows[index],
                 [key]: value,
             };
-
-            updatedRows[index] = updatedRow;
 
             return updatedRows;
         });
@@ -935,11 +936,7 @@ const Payment = () => {
 
     const handleDeleteReferenceRow = (index: number) => {
         setReferenceRows((prev: any[]) => {
-            const updatedRows = prev.filter(
-                (_: any, i: number) => i !== index
-            );
-
-            return updatedRows;
+            return prev.filter((_row: any, i: number) => i !== index);
         });
     };
 
@@ -988,50 +985,35 @@ const Payment = () => {
                 return;
             }
 
-            let extraNewReferenceAmount = 0;
-
-            referencesToSave = rowsWithAdjustedAmount.flatMap((row: any) => {
+            for (const row of rowsWithAdjustedAmount) {
                 const adjustedAmount = num(row?.adjustedAmount);
                 const remainingBillAmount = num(row?.remainingBillAmount);
 
-                const invoiceAdjustedAmount =
-                    remainingBillAmount > 0
-                        ? Math.min(adjustedAmount, remainingBillAmount)
-                        : adjustedAmount;
-
-                const extraAmount = adjustedAmount - invoiceAdjustedAmount;
-
-                if (extraAmount > 0) {
-                    extraNewReferenceAmount += extraAmount;
+                if (adjustedAmount <= 0) {
+                    toast.error("Adjusted amount should be greater than 0");
+                    return;
                 }
 
-                if (invoiceAdjustedAmount <= 0) {
-                    return [];
+                if (adjustedAmount > remainingBillAmount) {
+                    toast.error(
+                        `Adjusted amount cannot exceed remaining amount ${money(remainingBillAmount)} for ${row?.purchaseInvoice}`
+                    );
+                    return;
                 }
-
-                return [
-                    {
-                        referenceType: "PINV",
-                        purchaseInvoice: row?.purchaseInvoice || "",
-                        docDate: row?.docDate || "",
-                        billDueDate: row?.billDueDate || row?.docDate || "",
-                        billAmount: String(row?.billAmount || row?.netAmount || 0),
-                        netAmount: String(row?.netAmount || row?.billAmount || 0),
-                        remainingBillAmount: String(row?.remainingBillAmount || 0),
-                        adjustedAmount: String(invoiceAdjustedAmount),
-                    },
-                ];
-            });
-
-            if (extraNewReferenceAmount > 0) {
-                referencesToSave.push({
-                    referenceType: "NEW",
-                    newReference: "ADV",
-                    billDueDate: "",
-                    billAmount: String(extraNewReferenceAmount),
-                    adjustedAmount: String(extraNewReferenceAmount),
-                });
             }
+
+            referencesToSave = rowsWithAdjustedAmount.map((row: any) => {
+                return {
+                    referenceType: "PINV",
+                    purchaseInvoice: row?.purchaseInvoice || "",
+                    docDate: row?.docDate || "",
+                    billDueDate: row?.billDueDate || row?.docDate || "",
+                    billAmount: String(row?.billAmount || row?.netAmount || 0),
+                    netAmount: String(row?.netAmount || row?.billAmount || 0),
+                    remainingBillAmount: String(row?.remainingBillAmount || 0),
+                    adjustedAmount: String(row?.adjustedAmount || 0),
+                };
+            });
         } else {
             referencesToSave = [buildNewReferenceRow(maxAmount)];
         }
@@ -1083,11 +1065,7 @@ const Payment = () => {
             return bodyKeys.some((key: string) => {
                 const value = row?.[key];
 
-                return (
-                    value !== undefined &&
-                    value !== null &&
-                    value !== ""
-                );
+                return value !== undefined && value !== null && value !== "";
             });
         });
     };
@@ -1117,11 +1095,7 @@ const Payment = () => {
                 (field: any) => {
                     const value = row?.[field.key];
 
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
+                    return value !== undefined && value !== null && value !== "";
                 }
             );
 
@@ -1133,11 +1107,7 @@ const Payment = () => {
 
                 const value = row?.[field.key];
 
-                if (
-                    value === undefined ||
-                    value === null ||
-                    value === ""
-                ) {
+                if (value === undefined || value === null || value === "") {
                     err[`row_${index}_${field.key}`] =
                         `${field.label || field.key} is required`;
                 }
@@ -1154,21 +1124,17 @@ const Payment = () => {
                 }, 0)
                 : 0;
 
-            // ✅ Reference is mandatory for every filled payment row
             if (!hasReferences || referenceAdjusted <= 0) {
-                err[`row_${index}_references`] =
-                    "Please add reference first";
+                err[`row_${index}_references`] = "Please add reference first";
                 return;
             }
 
-            // ✅ Reference total should not exceed body amount
             if (referenceAdjusted > rowAmount) {
                 err[`row_${index}_references`] =
                     `Reference total cannot exceed ${money(rowAmount)}`;
                 return;
             }
 
-            // ✅ Reference total should be same as body amount
             if (Math.abs(referenceAdjusted - rowAmount) > 0.01) {
                 err[`row_${index}_references`] =
                     `Reference adjusted amount must be same as body amount ${money(rowAmount)}`;
@@ -1255,42 +1221,45 @@ const Payment = () => {
     /* ===================================================
        PURCHASE INVOICE SYNC
     =================================================== */
-
     const updatePurchaseInvoiceFooter = async (
         voucherNumber: string,
         adjustedDiff: number,
-        vendorCode: string
+        // @ts-ignore
+        vendorCode?: string
     ) => {
-        if (!voucherNumber || !adjustedDiff || !vendorCode) return;
+        if (!voucherNumber) return;
 
-        // Cast params to any to avoid strict typing mismatch for vendorCode
-        const res: any = await dispatch(
-            GetVendorWisePurchaseInvoiceList({
-                vendorCode,
-            } as any) as any
-        ).unwrap();
+        if (adjustedDiff === 0) return;
 
-        const records = getRecords(res);
+        const res = await professionalAxios.get(
+            `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseInvoice/getByVoucherNumber/${voucherNumber}`
+        );
 
-        const purchaseInvoice = records.find((invoice: any) => {
-            return String(getInvoiceNumber(invoice)) === String(voucherNumber);
-        });
-
-        if (!purchaseInvoice) {
-            console.warn("Purchase invoice not found:", voucherNumber);
-            return;
+        if (!res.data?.success) {
+            throw new Error(
+                res.data?.message || `Purchase invoice not found: ${voucherNumber}`
+            );
         }
 
-        const normalizedInvoice = normalizePurchaseInvoiceDoc(purchaseInvoice);
+        const normalizedInvoice = normalizePurchaseInvoiceDoc(res.data?.data);
+
+        if (!normalizedInvoice || Object.keys(normalizedInvoice).length === 0) {
+            throw new Error(`Purchase invoice not found: ${voucherNumber}`);
+        }
 
         const footer = normalizedInvoice?.pInvFooter || {};
 
-        // ✅ Important: support both footer values and direct API values
         const invoiceNetAmount = num(
             footer?.netAmount ||
             normalizedInvoice?.netAmount ||
             normalizedInvoice?.billAmount ||
             normalizedInvoice?.amount ||
+            0
+        );
+
+        const previousAdjustedAmount = num(
+            footer?.adjustedAmount ??
+            normalizedInvoice?.adjustedAmount ??
             0
         );
 
@@ -1301,28 +1270,36 @@ const Payment = () => {
             normalizedInvoice?.balanceAmount ??
             normalizedInvoice?.remainingAmount ??
             normalizedInvoice?.remainingBillAmount ??
-            0
+            invoiceNetAmount - previousAdjustedAmount
         );
 
-        const previousAdjustedAmount = num(
-            footer?.adjustedAmount ??
-            normalizedInvoice?.adjustedAmount ??
-            invoiceNetAmount - previousBalanceAmount
-        );
-
-        // ✅ Only block when payment adjustment is more than current balance
+        /*
+           ✅ When creating/updating payment:
+           adjustedDiff is positive.
+           It cannot be more than current remaining amount.
+        */
         if (adjustedDiff > 0 && adjustedDiff > previousBalanceAmount) {
             throw new Error(
-                `Adjusted amount exceeds balance for ${voucherNumber}`
+                `Adjusted amount cannot exceed remaining amount ${money(previousBalanceAmount)} for ${voucherNumber}`
             );
         }
 
-        const nextAdjustedAmount = previousAdjustedAmount + adjustedDiff;
+        /*
+           ✅ When deleting payment:
+           adjustedDiff is negative.
+           So adjusted amount decreases and balance increases.
+        */
+        let nextAdjustedAmount = previousAdjustedAmount + adjustedDiff;
+
+        if (nextAdjustedAmount < 0) {
+            nextAdjustedAmount = 0;
+        }
+
         const nextBalanceAmount = invoiceNetAmount - nextAdjustedAmount;
 
         if (nextBalanceAmount < 0) {
             throw new Error(
-                `Adjusted amount exceeds balance for ${voucherNumber}`
+                `Adjusted amount cannot exceed invoice amount for ${voucherNumber}`
             );
         }
 
@@ -1332,13 +1309,13 @@ const Payment = () => {
                 payload: {
                     pInvFooter: {
                         ...footer,
-
-                        // ✅ Keep these in footer also
                         netAmount: String(invoiceNetAmount),
                         adjustedAmount: String(nextAdjustedAmount),
                         balanceAmount: String(nextBalanceAmount),
                     },
-                    pInvStatus: nextBalanceAmount < 1 ? "close" : "open",
+
+                    // ✅ balance 0 means close, otherwise open
+                    pInvStatus: nextBalanceAmount <= 0 ? "close" : "open",
                 },
             }) as any
         ).unwrap();
@@ -1409,6 +1386,19 @@ const Payment = () => {
     const syncPurchaseInvoiceReferences = async (newRows: any[]) => {
         const oldRows = editingRecord?.payBody || [];
         const diffs = buildReferenceDiffs(oldRows, newRows);
+
+        for (const ref of diffs) {
+            await updatePurchaseInvoiceFooter(
+                ref.purchaseInvoice,
+                ref.diffAmount,
+                ref.vendorCode
+            );
+        }
+    };
+
+    const reversePaymentReferencesBeforeDelete = async (paymentRecord: any) => {
+        const oldRows = paymentRecord?.payBody || [];
+        const diffs = buildReferenceDiffs(oldRows, []);
 
         for (const ref of diffs) {
             await updatePurchaseInvoiceFooter(
@@ -1494,6 +1484,23 @@ const Payment = () => {
                 toast.error("Payment voucher number not found");
                 return;
             }
+
+            const paymentRecord = payments?.find((item: any) => {
+                const itemVoucherNumber =
+                    item?.payVoucherNumber ||
+                    item?.paymentVoucherNumber ||
+                    item?.paymentNumber ||
+                    item?.voucherNumber;
+
+                return String(itemVoucherNumber) === String(voucherNumber);
+            });
+
+            if (!paymentRecord) {
+                toast.error("Payment record not found");
+                return;
+            }
+
+            await reversePaymentReferencesBeforeDelete(paymentRecord);
 
             await dispatch(
                 deletePayment({
@@ -1604,7 +1611,7 @@ const Payment = () => {
                 emptyMessage={`No ${status} payment found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
+                        <Permission module="bookez" permissionKey="payment" action="update">
                             <button
                                 id="payment-edit-button"
                                 onClick={() => openEditModal(record)}
@@ -1614,7 +1621,7 @@ const Payment = () => {
                             </button>
                         </Permission>
 
-                        <Permission module="bookez" permissionKey="purchaseInvoice" action="delete">
+                        <Permission module="bookez" permissionKey="payment" action="delete">
                             <button
                                 id="payment-delete-button"
                                 disabled={deleteLoading}
@@ -1623,11 +1630,15 @@ const Payment = () => {
                                     let x = rect.left - 150;
                                     if (x < 10) x = 10;
                                     const y = rect.top + window.scrollY - 5;
+
                                     setConfirmTooltip({
                                         show: true,
                                         x,
                                         y,
-                                        voucherNumber: record?.payVoucherNumber,
+                                        voucherNumber:
+                                            record?.payVoucherNumber ||
+                                            record?.paymentVoucherNumber ||
+                                            record?.voucherNumber,
                                     });
                                 }}
                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"

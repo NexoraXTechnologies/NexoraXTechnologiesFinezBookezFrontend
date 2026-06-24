@@ -219,6 +219,54 @@ const PurchaseOrder = () => {
         return updated;
     };
 
+    const hasValue = (value: any) =>
+        value !== undefined && value !== null && value !== "";
+
+    const fillProductDetailsFromSelectedOption = (
+        row: any,
+        selectedOption: any
+    ) => {
+        const product = selectedOption?.raw;
+        if (!product) return row;
+
+        const unitCode = product?.unit || row.unit || row.uom || "";
+        const csgst = hasValue(product?.csgst) ? String(product.csgst) : "";
+        const igst = hasValue(product?.igst) ? String(product.igst) : "";
+
+        return {
+            ...row,
+
+            productId: product?._id || row.productId || "",
+            productCode: product?.productCode || row.productCode || "",
+            productName: product?.productName || row.productName || "",
+
+            productDescription:
+                product?.productDescription || row.productDescription || "",
+
+            description:
+                product?.productDescription || row.description || "",
+
+            productHSNCode:
+                product?.productHSNCode || row.productHSNCode || "",
+
+            unit: unitCode,
+            uom: unitCode,
+            unitName: getUnitLabelFromSchema(unitCode),
+
+            rate: hasValue(product?.purchasePrice)
+                ? String(product.purchasePrice)
+                : row.rate || "",
+
+            cgst: csgst || row.cgst || "",
+            cgstPercentage: csgst || row.cgstPercentage || "",
+
+            igst: igst || row.igst || "",
+            igstPercentage: igst || row.igstPercentage || "",
+        };
+    };
+
+
+
     const getUnitLabelFromSchema = (unitCode: string) => {
         const unitField = templateFields?.body?.find(
             (field: any) => field.key === "uom" || field.key === "unit"
@@ -620,7 +668,7 @@ const PurchaseOrder = () => {
                             taxableAmount: item?.taxableAmount || 0,
 
                             cgst:
-                                item?.cgst ||
+                                item?.csgst ||
                                 item?.cgstPercentage ||
                                 "",
 
@@ -801,6 +849,7 @@ const PurchaseOrder = () => {
                 [key]: value,
             };
 
+            // ✅ Existing dynamic mapFields support
             if (currentField?.mapFields) {
                 updatedRow = applyMappedFields(
                     currentField,
@@ -811,26 +860,41 @@ const PurchaseOrder = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
 
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
+            // ✅ When product is selected, prefill all product master details
+            const lowerKey = String(key).toLowerCase();
+
+            const isProductField =
+                lowerKey === "productcode" ||
+                lowerKey === "productname" ||
+                lowerKey === "productid" ||
+                lowerKey === "product";
+
+            if (isProductField && selectedOption?.raw) {
+                updatedRow = fillProductDetailsFromSelectedOption(
+                    updatedRow,
+                    selectedOption
+                );
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
 
-            const lowerKey = String(key).toLowerCase();
+            const isCgst =
+                lowerKey === "cgst" || lowerKey === "cgstpercentage";
 
-            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
-            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
-            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
+            const isSgst =
+                lowerKey === "sgst" || lowerKey === "sgstpercentage";
 
-            // ✅ CGST/SGST selected, so clear IGST
+            const isIgst =
+                lowerKey === "igst" || lowerKey === "igstpercentage";
+
+            // ✅ CGST/SGST selected manually, so clear IGST
             if ((isCgst || isSgst) && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstPercentage = "";
                 updatedRow.igstAmount = 0;
             }
 
-            // ✅ IGST selected, so clear CGST/SGST
+            // ✅ IGST selected manually, so clear CGST/SGST
             if (isIgst && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
@@ -1192,6 +1256,45 @@ const PurchaseOrder = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+
+    const isClosedPurchaseOrder = (record: any) => {
+        const pOrdStatus = String(
+            record?.pOrdStatus || ""
+        ).toLowerCase();
+
+        return pOrdStatus === "close" || pOrdStatus === "closed";
+    };
+
+    const handleEditPurOrder = (record: any) => {
+        if (isClosedPurchaseOrder(record)) {
+            toast.error("You can't edit closed Order");
+            return;
+        }
+
+        openEditModal(record);
+    };
+
+    const handleDeletePurOrderClick = (e: any, record: any) => {
+        if (isClosedPurchaseOrder(record)) {
+            toast.error("You can't delete closed Order");
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.pOrdVoucherNumber,
+        });
+    };
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div
@@ -1249,12 +1352,20 @@ const PurchaseOrder = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <Permission module="bookez" permissionKey="purchaseOrder" action="update">
-                            <button
+                            {/* <button
                                 id="purchase-order-edit-button"
                                 onClick={() => openEditModal(record)}
                                 className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                             >
                                 <Edit size={16} />
+                            </button> */}
+
+                            <button id="purchase-order-edit-button"
+                                onClick={() => handleEditPurOrder(record)}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary ${isClosedPurchaseOrder(record)
+
+                                    }`}
+                            >                            <Edit size={16} />
                             </button>
                         </Permission>
 
@@ -1262,23 +1373,10 @@ const PurchaseOrder = () => {
                             <button
                                 id="purchase-order-delete-button"
                                 disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect =
-                                        e.currentTarget.getBoundingClientRect();
-
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-
-                                    const y = rect.top + window.scrollY - 5;
-
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        voucherNumber: record?.pOrdVoucherNumber,
-                                    });
-                                }}
-                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                onClick={(e) => handleDeletePurOrderClick(e, record)}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger ${isClosedPurchaseOrder
+                                    (record)
+                                    }`}
                             >
                                 <Trash2 size={16} />
                             </button>

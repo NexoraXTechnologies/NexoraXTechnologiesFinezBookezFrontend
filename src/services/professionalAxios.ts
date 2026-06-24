@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 const LOCAL_URL = 'https://api.e-taxsolutions.in/SandBox';
 const PROD_URL = 'https://api.e-taxsolutions.in';
 
-const BASE_URL = import.meta.env.MODE === 'development' ? LOCAL_URL : PROD_URL;
+const BASE_URL = import.meta.env.VITE_MODE === 'development' ? LOCAL_URL : PROD_URL;
 const professionalAxios = axios.create({
   baseURL: BASE_URL,
   timeout: 0,

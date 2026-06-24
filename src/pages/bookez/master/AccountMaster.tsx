@@ -47,7 +47,7 @@ export const buildEmptyForm = (fields: any[] = []) => {
 };
 
 const AccountMaster = () => {
-	const dispatch = useDispatch();
+	const dispatch = useDispatch<any>();
 
 	const {
 		accounts,
