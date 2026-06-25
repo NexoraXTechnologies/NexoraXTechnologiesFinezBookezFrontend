@@ -13,6 +13,7 @@ import OpeningStock from "./openingStock";
 import JournalVoucher from "./JournalVoucher";
 import ContraVoucher from "./ContraVoucher";
 import CreditNote from "./CreditNote";
+import DebitNote from "./DebitNote";
 
 const cards: any = [
   {
@@ -53,7 +54,7 @@ const cards: any = [
   {
     title: "Debit Note",
     description: "Create and manage debit note entries.",
-    path: "/professional/transaction/opening-balances/debit-note",
+    component: DebitNote,
     icon: <FileMinus2 size={22} />,
     permissionKey: "debitNotes"
   },

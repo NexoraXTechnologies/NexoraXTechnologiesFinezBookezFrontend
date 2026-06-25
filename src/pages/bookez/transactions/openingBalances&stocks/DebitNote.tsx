@@ -12,15 +12,12 @@ import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
-import {
-    addCreditNote,
-    deleteCreditNote,
-    getCreditNoteList,
-    updateCreditNote,
-} from "../../../../redux/slices/professionalSlice/openingBalancesStocks/creditNoteSlice";
+
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
-import { getAllSalesInvoice } from "../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
-import { getAllSalesInvoiceReturn } from "../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
+
+import { addDebitNote, deleteDebitNote, getDebitNoteList, updateDebitNote } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/debitNoteSlice";
+import { getPurchaseInvoiceList } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+import { getPurchaseReturnList } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 
 const toNum = (value: any) => {
     const n = Number(value || 0);
@@ -75,9 +72,9 @@ const statusOptions = [
 ];
 
 const sourceTypeOptions = [
-    { label: "Manual", value: "manual" },
-    { label: "Invoice", value: "invoice" },
-    { label: "Sales Return", value: "salesReturn" },
+    { label: "Adjustment", value: "Adjustment" },
+    { label: "Purchase Invoice", value: "purchaseInvoice" },
+    { label: "Purchase Return", value: "purchaseReturn" },
 ];
 
 const getDefaultForm = () => ({
@@ -85,9 +82,9 @@ const getDefaultForm = () => ({
     voucherno: "AUTO",
     voucherDate: todayYMD(),
 
-    voucherType: "salesCreditNote",
+    voucherType: "salesDebitNote",
 
-    sourceType: "manual",
+    sourceType: "",
     referenceNumber: "",
 
     customerCode: "",
@@ -120,7 +117,7 @@ const mainColumns = [
     {
         key: "voucherNumber",
         title: "Voucher",
-        render: (row: any) => row?.voucherNumber || row?.creditNoteNumber || "-",
+        render: (row: any) => row?.voucherNumber || row?.debitNoteNumber || "-",
     },
     {
         key: "voucherDate",
@@ -130,8 +127,8 @@ const mainColumns = [
             row?.voucherDate ? String(row.voucherDate).split("T")[0] : "-",
     },
     {
-        key: "customer",
-        title: "Customer",
+        key: "vendor",
+        title: "Vendor",
         render: (row: any) => (
             <div>
                 <div className="font-medium text-card-foreground">
@@ -168,8 +165,9 @@ const mainColumns = [
     },
 ];
 
-const CreditNote = () => {
+const DebitNote = () => {
     const dispatch = useDispatch<any>();
+
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState<any>(getDefaultForm());
@@ -180,49 +178,47 @@ const CreditNote = () => {
     const [localOffset, setLocalOffset] = useState(0);
 
     const [confirmTooltip, setConfirmTooltip] = useState<any>(false);
-
-
-    const creditNoteState = useSelector(
-        (s: any) => s.creditNote || s.salesCreditNote || {}
+    const debitNoteState = useSelector(
+        (s: any) => s.debitNote || s.salesDebitNote || {}
     );
 
     const {
-        salesCreditNotes,
-        creditNotes,
+        salesDebitNotes,
+        debitNotes,
         records,
         pagination,
         listingLoader,
         addLoader,
         deleteLoader,
-    } = creditNoteState;
+    } = debitNoteState;
 
     const { accounts } = useSelector((s: any) => s.accountMaster);
     const { products } = useSelector((s: any) => s.productMaster);
-    const { salesInvoices } = useSelector((s: any) => s.salesInvoice);
-    const { salesInvoiceReturns } = useSelector((s: any) => s.salesInvoiceReturn)
+    const { purchaseInvoiceList } = useSelector((s: any) => s.purchaseInvoice);
+    const { purchaseReturnList } = useSelector((s: any) => s.purchaseReturn)
 
-    const creditNoteList = salesCreditNotes || creditNotes || records || [];
+    const debitNoteList = salesDebitNotes || debitNotes || records || [];
     const hideBodySection = Boolean(form?.adjustmentOnly);
-    const showBodySection = form?.sourceType !== "manual" && !hideBodySection;
-    const isManualMode = form?.sourceType === "manual" || hideBodySection;
+    const showBodySection = form?.sourceType !== "Adjustment" && !hideBodySection;
+    const isManualMode = form?.sourceType === "Adjustment" || hideBodySection;
 
-    const salesInvoiceOption = useMemo(() => {
+    const purchaseInvoiceOption = useMemo(() => {
         return (
-            salesInvoices?.map((item: any) => ({
-                label: item.sInvVoucherNumber,
-                value: item.sInvVoucherNumber
+            purchaseInvoiceList?.map((item: any) => ({
+                label: item.pInvVoucherNumber,
+                value: item.pInvVoucherNumber
             })) || []
         )
-    }, [salesInvoices])
+    }, [purchaseInvoiceList])
 
-    const salesInvoiceReturnOption = useMemo(() => {
+    const purchaseInvoiceReturnOption = useMemo(() => {
         return (
-            salesInvoiceReturns.map((item: any) => ({
-                label: item.sInvReturnVoucherNumber,
-                value: item.sInvReturnVoucherNumber
+            purchaseReturnList.map((item: any) => ({
+                label: item.pRetVoucherNumber,
+                value: item.pRetVoucherNumber
             }))
         )
-    }, [salesInvoiceReturns])
+    }, [purchaseReturnList])
 
     const customerOptions = useMemo(() => {
         return (
@@ -262,7 +258,7 @@ const CreditNote = () => {
             },
             {
                 key: "customerCode",
-                label: "Customer",
+                label: "Vendor",
                 type: "select",
                 required: true,
                 options: customerOptions,
@@ -291,25 +287,25 @@ const CreditNote = () => {
             },
         ];
 
-        if (form?.sourceType === "invoice") {
+        if (form?.sourceType === "purchaseInvoice") {
             header.push({
-                key: "referenceNumber",
-                label: "Reference-Invoice",
+                key: "invoiceNumber",
+                label: "Reference-Purchase Invoice",
                 type: "select",
                 required: true,
-                placeholder: "Select open sales invoice",
-                options: salesInvoiceOption
+                placeholder: "Select open purchase invoice",
+                options: purchaseInvoiceOption
             });
         }
 
-        if (form?.sourceType === "salesReturn") {
+        if (form?.sourceType === "purchaseReturn") {
             header.push({
-                key: "referenceNumber",
-                label: "Reference-Sales Return",
+                key: "purchaseReturnNumber",
+                label: "Reference-Purchase Return",
                 type: "select",
                 required: true,
-                placeholder: "Select open sales return",
-                options: salesInvoiceReturnOption
+                placeholder: "Select open purchase return",
+                options: purchaseInvoiceReturnOption
             });
         }
 
@@ -480,7 +476,7 @@ const CreditNote = () => {
 
     const refreshList = () => {
         return dispatch(
-            getCreditNoteList({
+            getDebitNoteList({
                 limit: localLimit,
                 offset: localOffset,
                 search,
@@ -490,7 +486,7 @@ const CreditNote = () => {
 
 
     useEffect(() => {
-        dispatch(getAllSalesInvoice({
+        dispatch(getPurchaseInvoiceList({
             limit: 200,
             offset: 0
         }))
@@ -498,7 +494,7 @@ const CreditNote = () => {
 
 
     useEffect(() => {
-        dispatch(getAllSalesInvoiceReturn({
+        dispatch(getPurchaseReturnList({
             limit: 200,
             offset: 0
         }))
@@ -516,7 +512,7 @@ const CreditNote = () => {
             getAllAccounts({
                 limit: 200,
                 offset: 0,
-                accountType: "customer",
+                accountType: "vendor",
             })
         );
 
@@ -616,6 +612,13 @@ const CreditNote = () => {
 
             if (key === "sourceType") {
                 updated.referenceNumber = "";
+                updated.invoiceNumber = "";
+                updated.purchaseReturnNumber = "";
+
+                if (value === "Adjustment") {
+                    updated.adjustmentOnly = true;
+                    updated.netAmount = updated.adjustmentNetAmount || updated.netAmount || "0.00";
+                }
             }
 
             // if (key === "adjustmentOnly") {
@@ -658,7 +661,7 @@ const CreditNote = () => {
             if (key === "adjustmentNetAmount") {
                 updated.netAmount = value || "0.00";
             }
-            
+
 
             return updated;
         });
@@ -798,19 +801,31 @@ const CreditNote = () => {
             err.voucherDate = "Voucher date is required";
         }
 
+        if (!form?.sourceType) {
+            err.sourceType = "Source type is required";
+        }
+
         if (!form?.customerCode) {
-            err.customerCode = "Customer is required";
+            err.customerCode = "vendor is required";
         }
 
         if (!form?.reason) {
             err.reason = "Reason is required";
         }
 
-        if (form?.sourceType !== "manual" && !form?.referenceNumber) {
-            err.referenceNumber =
-                form?.sourceType === "invoice"
-                    ? "Invoice number is required"
-                    : "Sales return number is required";
+        // if (form?.sourceType !== "manual" && !form?.referenceNumber) {
+        //     err.referenceNumber =
+        //         form?.sourceType === "invoice"
+        //             ? "Invoice number is required"
+        //             : "Sales return number is required";
+        // }
+
+        if (form?.sourceType === "purchaseInvoice" && !form?.invoiceNumber) {
+            err.invoiceNumber = "Purchase invoice number is required";
+        }
+
+        if (form?.sourceType === "purchaseReturn" && !form?.purchaseReturnNumber) {
+            err.purchaseReturnNumber = "Purchase return number is required";
         }
 
         if (form?.adjustmentOnly && toNum(form?.adjustmentNetAmount) <= 0) {
@@ -864,8 +879,10 @@ const CreditNote = () => {
         if (Object.keys(err).length > 0) {
             const firstError =
                 err.customerCode ||
+                err.sourceType ||
                 err.reason ||
-                err.referenceNumber ||
+                err.invoiceNumber ||
+                err.purchaseReturnNumber ||
                 err.adjustmentNetAmount ||
                 err.items ||
                 err.voucherDate ||
@@ -924,31 +941,39 @@ const CreditNote = () => {
                 : "AUTO",
 
             voucherDate: form.voucherDate,
-            voucherType: "salesCreditNote",
+            voucherType: "salesDebitNote",
 
-            sourceType: form.sourceType || "manual",
+            sourceType: form.sourceType || "Adjustment",
 
             reference: {
                 isLinked:
-                    form.sourceType !== "manual" &&
-                    Boolean(form.referenceNumber),
+                    form.sourceType !== "Adjustment" &&
+                    Boolean(
+                        form.sourceType === "purchaseInvoice"
+                            ? form.invoiceNumber
+                            : form.sourceType === "purchaseReturn"
+                                ? form.purchaseReturnNumber
+                                : false
+                    ),
 
-                invoice:
-                    form.sourceType === "invoice"
+                purchaseInvoice:
+                    form.sourceType === "purchaseInvoice"
                         ? {
-                            invoiceNumber: form.referenceNumber || null,
+                            invoiceNumber: form.invoiceNumber || null,
+                            invoiceId: null,
                         }
                         : {
                             invoiceNumber: null,
+                            invoiceId: null,
                         },
 
-                salesReturn:
-                    form.sourceType === "salesReturn"
+                purchaseReturn:
+                    form.sourceType === "purchaseReturn"
                         ? {
-                            salesReturnNumber: form.referenceNumber || null,
+                            purchaseReturnNumber: form.purchaseReturnNumber || null,
                         }
                         : {
-                            salesReturnNumber: null,
+                            purchaseReturnNumber: null,
                         },
             },
 
@@ -995,15 +1020,15 @@ const CreditNote = () => {
         try {
             if (edit) {
                 await dispatch(
-                    updateCreditNote({
+                    updateDebitNote({
                         payload,
-                        creditNoteNumber:
+                        debitNoteNumber:
                             form?.voucherNumber || form?.voucherno,
                     })
                 ).unwrap();
             } else {
                 await dispatch(
-                    addCreditNote({
+                    addDebitNote({
                         payload,
                     })
                 ).unwrap();
@@ -1012,7 +1037,7 @@ const CreditNote = () => {
             await refreshList();
 
             toast.success(
-                `Credit Note ${edit ? "updated" : "added"} successfully`
+                `Debit Note ${edit ? "updated" : "added"} successfully`
             );
 
             setShowModal(false);
@@ -1033,17 +1058,17 @@ const CreditNote = () => {
             const voucherNumber = confirmTooltip?.voucherNumber;
 
             if (!voucherNumber) {
-                toast.error("Credit note number not found");
+                toast.error("Debit note number not found");
                 return;
             }
 
             await dispatch(
-                deleteCreditNote({
-                    creditNoteNumber: voucherNumber,
+                deleteDebitNote({
+                    debitNoteNumber: voucherNumber,
                 })
             ).unwrap();
 
-            toast.success("Credit Note deleted successfully");
+            toast.success("Debit Note deleted successfully");
 
             await refreshList();
         } catch (error: any) {
@@ -1051,7 +1076,7 @@ const CreditNote = () => {
                 error?.response?.data?.message ||
                 error?.payload?.message ||
                 error?.message ||
-                "Failed to delete credit note";
+                "Failed to delete debit note";
 
             toast.error(backendMessage);
         } finally {
@@ -1175,16 +1200,16 @@ const CreditNote = () => {
             ...item,
 
             voucherNumber:
-                item?.voucherNumber || item?.creditNoteNumber || "AUTO",
+                item?.voucherNumber || item?.debitNoteNumber || "AUTO",
 
             voucherno:
-                item?.voucherNumber || item?.creditNoteNumber || "AUTO",
+                item?.voucherNumber || item?.debitNoteNumber || "AUTO",
 
             voucherDate: item?.voucherDate
                 ? String(item.voucherDate).split("T")[0]
                 : todayYMD(),
 
-            voucherType: item?.voucherType || "salesCreditNote",
+            voucherType: item?.voucherType || "salesDebitNote",
 
             customerCode:
                 item?.customer?.accountCode || item?.customerCode || "",
@@ -1192,11 +1217,20 @@ const CreditNote = () => {
             customerName:
                 item?.customer?.accountName || item?.customerName || "",
 
-            sourceType: item?.sourceType || "manual",
+            sourceType: item?.sourceType || "Adjustment",
+            invoiceNumber:
+                item?.reference?.purchaseInvoice?.invoiceNumber ||
+                item?.invoiceNumber ||
+                "",
+
+            purchaseReturnNumber:
+                item?.reference?.purchaseReturn?.purchaseReturnNumber ||
+                item?.purchaseReturnNumber ||
+                "",
 
             referenceNumber:
-                item?.reference?.invoice?.invoiceNumber ||
-                item?.reference?.salesReturn?.salesReturnNumber ||
+                item?.reference?.purchaseInvoice?.invoiceNumber ||
+                item?.reference?.purchaseReturn?.purchaseReturnNumber ||
                 item?.referenceNumber ||
                 "",
 
@@ -1233,17 +1267,17 @@ const CreditNote = () => {
         <>
             <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
                 <div
-                    id="credit-note-header"
+                    id="debit-note-header"
                     className="mb-3 flex flex-wrap items-center gap-2"
                 >
                     <div
-                        id="credit-note-summary"
+                        id="debit-note-summary"
                         className="flex items-start gap-3"
                     >
                         <Badge
                             {...{
                                 count: pagination?.totalDocs ?? 0,
-                                text: "Total Credit Notes:",
+                                text: "Total Debit Notes:",
                             }}
                         />
                     </div>
@@ -1255,12 +1289,12 @@ const CreditNote = () => {
 
                         <Permission
                             module="bookez"
-                            permissionKey="creditNote"
+                            permissionKey="debitNotes"
                             action="create"
                         >
                             <DataCreateButton
                                 {...{
-                                    text: "Create Credit Note",
+                                    text: "Create Debit Note",
                                     callBackFn: () => {
                                         resetForm();
                                         setShowModal(true);
@@ -1273,18 +1307,18 @@ const CreditNote = () => {
 
                 <DataTable
                     columns={mainColumns}
-                    data={creditNoteList}
+                    data={debitNoteList}
                     loading={listingLoader}
-                    emptyMessage="No credit note found"
+                    emptyMessage="No debit note found"
                     actions={(item: any) => (
                         <div className="flex items-center gap-2">
                             <Permission
                                 module="bookez"
-                                permissionKey="creditNote"
+                                permissionKey="debitNotes"
                                 action="update"
                             >
                                 <button
-                                    id="credit-note-edit-button"
+                                    id="debit-note-edit-button"
                                     onClick={() => openEdit(item)}
                                     className="cursor-pointer rounded-lg p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
                                 >
@@ -1294,7 +1328,7 @@ const CreditNote = () => {
 
                             <Permission
                                 module="bookez"
-                                permissionKey="creditNote"
+                                permissionKey="debitNotes"
                                 action="delete"
                             >
                                 <button
@@ -1316,7 +1350,7 @@ const CreditNote = () => {
                                             y,
                                             voucherNumber:
                                                 item?.voucherNumber ||
-                                                item?.creditNoteNumber,
+                                                item?.debitNoteNumber,
                                         });
                                     }}
                                     className="text-red-500 hover:text-red-700 disabled:opacity-50"
@@ -1348,7 +1382,7 @@ const CreditNote = () => {
                     <ConfirmTooltip
                         x={confirmTooltip.x}
                         y={confirmTooltip.y}
-                        message="Are you sure you want to delete this credit note?"
+                        message="Are you sure you want to delete this debit note?"
                         confirmText="Delete"
                         cancelText="Cancel"
                         onConfirm={handleDeleteConfirm}
@@ -1360,8 +1394,8 @@ const CreditNote = () => {
                     show={showModal}
                     setShow={setShowModal}
                     edit={edit}
-                    title="Credit Note"
-                    subtitle="Fill in the credit note details below"
+                    title="Debit Note"
+                    subtitle="Fill in the debit note details below"
                     loading={addLoader}
                     onClose={() => {
                         setShowModal(false);
@@ -1388,4 +1422,4 @@ const CreditNote = () => {
     );
 };
 
-export default CreditNote;
+export default DebitNote;
