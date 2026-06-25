@@ -5,7 +5,6 @@ import { DataCreateButton } from "../../../../components/buttons";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
-import Toggle from "../../../../components/toggle";
 import { useDispatch, useSelector } from "react-redux";
 import { Edit, Trash2 } from "lucide-react";
 import Pagination from "../../../../components/pagination";
@@ -76,7 +75,6 @@ const mainColumns = [
 ];
 
 const JournalVoucher = () => {
-    const [status, setStatus] = useState("");
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
 
@@ -199,7 +197,6 @@ const JournalVoucher = () => {
             getJournalVoucherList({
                 limit: localLimit,
                 offset: localOffset,
-                status,
                 search,
             })
         );
@@ -214,7 +211,7 @@ const JournalVoucher = () => {
         );
 
         refreshList();
-    }, [dispatch, localLimit, localOffset, status]);
+    }, [dispatch, localLimit, localOffset]);
 
     const calculateTotals = (entries: any[] = []) => {
         const totalDebit = entries.reduce(

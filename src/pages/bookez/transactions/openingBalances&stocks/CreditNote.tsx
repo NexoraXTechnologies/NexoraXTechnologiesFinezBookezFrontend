@@ -10,7 +10,6 @@ import { Edit, Trash2 } from "lucide-react";
 import Pagination from "../../../../components/pagination";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import professionalAxios from "../../../../services/professionalAxios";
 
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import {

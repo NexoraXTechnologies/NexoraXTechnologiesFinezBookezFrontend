@@ -41,7 +41,6 @@ import { getAllSalesInvoice, getByVoucherNumberSalesInvoice, updateSalesInvoice 
 import { ListingModel } from "../../../../../components/modal";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
-import professionalAxios from "../../../../../services/professionalAxios";
 
 const defaultPagination = {
     offset: 0,

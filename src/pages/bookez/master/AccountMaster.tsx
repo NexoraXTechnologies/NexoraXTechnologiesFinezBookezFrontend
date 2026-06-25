@@ -623,7 +623,7 @@ const AccountMaster = () => {
 			toast.success("Account deleted");
 			fetchAccounts();
 		}
-		catch (err) {
+		catch (err:any) {
 			toast?.error(err?.message)
 		}
 		finally {

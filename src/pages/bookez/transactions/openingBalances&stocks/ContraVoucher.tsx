@@ -74,7 +74,7 @@ const mainColumns = [
 ];
 
 const ContraVoucher = () => {
-    const [status, setStatus] = useState("");
+    
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
 
@@ -198,7 +198,6 @@ const ContraVoucher = () => {
             getContraVoucherList({
                 limit: localLimit,
                 offset: localOffset,
-                status,
                 search,
             })
         );
@@ -214,7 +213,7 @@ const ContraVoucher = () => {
         );
 
         refreshList();
-    }, [dispatch, localLimit, localOffset, status]);
+    }, [dispatch, localLimit, localOffset]);
 
     const calculateTotals = (entries: any[] = []) => {
         const totalDebit = entries.reduce(
