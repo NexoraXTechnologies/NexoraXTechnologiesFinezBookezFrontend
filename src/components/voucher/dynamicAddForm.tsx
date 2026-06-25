@@ -1,4 +1,4 @@
-import { SelectInput, TextArea, TextInput } from "../inputs";
+import { SelectInput, TextArea, TextInput, ToggleInput } from "../inputs";
 import EditableLineTable from "./EditableLineTable";
 import SummaryCards from "./SummaryCards";
 import VoucherFormModal from "./VoucherFormModal";
@@ -31,7 +31,8 @@ const DynamicAddForm = ({
     isView = false,
     contentLoading = false,
     contentSkeleton,
-    isSummaryFooter
+    isSummaryFooter,
+    manualselected,
 }: any) => {
     const renderInput = (e: any) => {
         if (e?.type === "date") {
@@ -62,6 +63,24 @@ const DynamicAddForm = ({
             );
         }
 
+
+        if (e?.type === "toggle") {
+            return (
+                <ToggleInput
+                    key={e.key}
+                    label={e.label}
+                    name={e.key}
+                    value={form?.[e.key]}
+                    checked={Boolean(form?.[e.key])}
+                    mandatory={e.required}
+                    disabled={e.disabled}
+                    error={errors?.[e.key]}
+                    onChange={(event: any) =>
+                        handleChange(e.key, event.target.checked)
+                    }
+                />
+            );
+        }
         if (e?.type === "select") {
             return (
                 <SelectInput
@@ -93,7 +112,7 @@ const DynamicAddForm = ({
         );
     };
 
-    return (    
+    return (
         <VoucherFormModal
             isView={isView}
             show={show}
@@ -125,48 +144,51 @@ const DynamicAddForm = ({
                             })}
                         </div>
 
-                            {inputData?.headerChild && inputData.headerChild.length > 0 && (
-                                <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-                                    <div className="mb-4 border-b border-border pb-3">
-                                        <h1 className="text-lg font-bold text-card-foreground">
-                                            {headerChildTitle}
-                                        </h1>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-3">
-                                        {inputData.headerChild.map((e: any, index: number) => {
-                                            if (e?.isHidden) return null;
-
-                                            return <div key={e?.key || index}>{renderInput(e)}</div>;
-                                        })}
-                                    </div>
+                        {inputData?.headerChild && inputData.headerChild.length > 0 && (
+                            <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm">
+                                <div className="mb-4 border-b border-border pb-3">
+                                    <h1 className="text-lg font-bold text-card-foreground">
+                                        {headerChildTitle}
+                                    </h1>
                                 </div>
-                            )}
+
+                                <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-3">
+                                    {inputData.headerChild.map((e: any, index: number) => {
+                                        if (e?.isHidden) return null;
+
+                                        return <div key={e?.key || index}>{renderInput(e)}</div>;
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
                         {errors?.[bodyKey] && (
-                                <p className="mt-4 text-sm text-danger">
+                            <p className="mt-4 text-sm text-danger">
                                 {errors?.[bodyKey]}
                             </p>
                         )}
 
-                        <div className="mt-3 w-full max-w-full">
-                            <EditableLineTable
-                                isView={isView}
-                                bodyTitle={bodyTitle || "Products"}
-                                addButtonText={addButtonText || "Add Product"}
-                                rows={form?.[bodyKey] || []}
-                                columns={inputData?.body || []}
-                                errors={errors}
-                                onAddRow={handleAddRow}
-                                onRefrenceRow={handleRefRow}
-                                onDeleteRow={handleDeleteRow}
-                                onChange={handleRowChange}
-                                emptyText="No products added"
-                                isAddButton={isAddButton}
-                                RefrenceBtnText={RefrenceBtnText}
-                                isRefrenceAction={isRefrenceAction}
-                            />
-                        </div>
+                        {!manualselected && (
+
+                            <div className="mt-3 w-full max-w-full">
+                                <EditableLineTable
+                                    isView={isView}
+                                    bodyTitle={bodyTitle || "Products"}
+                                    addButtonText={addButtonText || "Add Product"}
+                                    rows={form?.[bodyKey] || []}
+                                    columns={inputData?.body || []}
+                                    errors={errors}
+                                    onAddRow={handleAddRow}
+                                    onRefrenceRow={handleRefRow}
+                                    onDeleteRow={handleDeleteRow}
+                                    onChange={handleRowChange}
+                                    emptyText="No products added"
+                                    isAddButton={isAddButton}
+                                    RefrenceBtnText={RefrenceBtnText}
+                                    isRefrenceAction={isRefrenceAction}
+                                />
+                            </div>
+                        )}
 
                         {Object.keys(errors || {})
                             .filter((key) => key.includes("_tax"))

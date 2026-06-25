@@ -1,5 +1,84 @@
 import Select from "react-select";
 
+
+const ToggleInput = ({
+    label = "",
+    value = false,
+    checked,
+    onChange,
+    name = "",
+    mandatory = false,
+    error = "",
+    disabled = false,
+    className = "",
+}: any) => {
+    const isChecked =
+        typeof checked === "boolean"
+            ? checked
+            : value === true ||
+              value === "true" ||
+              value === 1 ||
+              value === "1";
+
+    return (
+        <div className={`w-full flex flex-col gap-1 ${className}`}>
+            {!!label?.length && (
+                <label className="text-sm font-medium text-card-foreground">
+                    {label}
+                    {mandatory && <span className="text-danger">*</span>}
+                </label>
+            )}
+
+            <button
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                    if (disabled) return;
+
+                    onChange({
+                        target: {
+                            name,
+                            value: !isChecked,
+                            checked: !isChecked,
+                        },
+                    });
+                }}
+                className={`
+                    flex h-8 w-full items-center justify-between rounded-sm
+                    border border-border bg-input px-3 text-sm
+                    text-foreground outline-none transition duration-200
+                    hover:border-primary
+                    focus:border-primary focus:ring-1 focus:ring-primary/20
+                    disabled:cursor-not-allowed disabled:opacity-70
+                    ${isChecked ? "border-primary/60 bg-primary/5" : ""}
+                `}
+            >
+                <span className="font-medium text-card-foreground">
+                    {isChecked ? "Enabled" : "Disabled"}
+                </span>
+
+                <span
+                    className={`
+                        relative inline-flex h-[18px] w-[36px] shrink-0 items-center
+                        rounded-full transition duration-200
+                        ${isChecked ? "bg-primary" : "bg-slate-300"}
+                    `}
+                >
+                    <span
+                        className={`
+                            inline-block h-[14px] w-[14px] rounded-full bg-white
+                            shadow-sm transition duration-200
+                            ${isChecked ? "translate-x-[19px]" : "translate-x-[3px]"}
+                        `}
+                    />
+                </span>
+            </button>
+
+            {!!error?.length && <p className="text-xs text-danger">{error}</p>}
+        </div>
+    );
+};
+
 const TextInput = ({
     label = "",
     value,
@@ -316,4 +395,4 @@ const SelectInput = ({
     );
 };
 
-export { TextInput, SelectInput, TextArea, SelectInputNormal };
+export { TextInput, SelectInput, TextArea, SelectInputNormal,ToggleInput };

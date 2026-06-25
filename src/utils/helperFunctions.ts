@@ -89,3 +89,45 @@ export const formatMoney = (value: any) => {
 export const fmtMoney = (value: any) => num(value).toFixed(2);
 
 
+export const formatDateWithCurrentTime = (dateValue: string) => {
+    if (!dateValue) return "";
+
+    const now = new Date();
+
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+
+    return `${dateValue}T${hours}:${minutes}:${seconds}Z`;
+};
+
+
+export const formatProductType = (value: any) => {
+    if (!value) return "-";
+
+    const text = String(value)
+        // camelCase / PascalCase handle
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        // snake_case / kebab-case handle
+        .replace(/[_-]+/g, " ")
+        .trim();
+
+    // ✅ Special known words
+    const map: Record<string, string> = {
+        rawmaterial: "Raw Material",
+        finishedgoods: "Finished Goods",
+        semifinished: "Semi Finished",
+        tradinggoods: "Trading Goods",
+    };
+
+    const normalized = text.replace(/\s+/g, "").toLowerCase();
+
+    if (map[normalized]) return map[normalized];
+
+    // ✅ Normal title case fallback
+    return text
+        .split(" ")
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(" ");
+};

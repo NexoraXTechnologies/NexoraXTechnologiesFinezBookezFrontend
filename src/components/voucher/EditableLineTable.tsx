@@ -176,7 +176,7 @@ const EditableLineTable = ({
                         </thead>
 
                         <tbody>
-                            {rows.length === 0 ? (
+                            {!rows.length ? (
                                 <tr>
                                     <td
                                         colSpan={columns.length + 2}
@@ -243,7 +243,7 @@ const EditableLineTable = ({
                                             </motion.td>
 
                                             {/* DYNAMIC BODY CELLS */}
-                                            {columns.map((col) => (
+                                            {columns?.map((col) => (
                                                 <motion.td
                                                     layout
                                                     key={col.key}

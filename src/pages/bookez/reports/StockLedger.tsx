@@ -17,6 +17,8 @@ import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice
 import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { getByVoucherNumberSalesInvoiceReturn } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 import {
+    formatDateWithCurrentTime,
+    formatProductType,
     getFirstDateOfCurrentMonth,
     loadAllTemplateOptions,
     todayYMD,
@@ -28,6 +30,7 @@ import { getByVoucharNumberGrnList } from "../../../redux/slices/professionalSli
 type StockLedgerProps = {
     show?: boolean;
 };
+
 
 const mainColumns = [
     {
@@ -778,10 +781,9 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
             bodyKey: "products",
             action: getByVoucharNumberGrnList,
             params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-                status: "",
+               
+                voucherNumber: voucherNumber,
+               
             }),
             voucherKeys: ["grnVoucherNumber", "voucherNumber", "voucherNo"],
             normalize: normalizeGrnForView,
@@ -910,11 +912,19 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
     useEffect(() => {
         if (!productCode) return;
 
+        // dispatch(
+        //     createStockLedger({
+        //         productCode,
+        //         fromDate,
+        //         toDate,
+        //     }) as any
+        // );
+
         dispatch(
             createStockLedger({
                 productCode,
-                fromDate,
-                toDate,
+                fromDate: formatDateWithCurrentTime(fromDate),
+                toDate: formatDateWithCurrentTime(toDate),
             }) as any
         );
     }, [dispatch, productCode, fromDate, toDate]);
@@ -996,7 +1006,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
         },
         {
             label: "Product Type",
-            value: stockLedgerData?.productType || "-",
+            value: formatProductType(stockLedgerData?.productType) || "-",
         },
         {
             label: "UOM",
