@@ -759,9 +759,9 @@ const SalesReceipt = () => {
             );
         };
 
-        const getAdjustedAmount = (existingRef: any) => {
-            return num(existingRef?.adjustedAmount || 0);
-        };
+        // const getAdjustedAmount = (existingRef: any) => {
+        //     return num(existingRef?.adjustedAmount || 0);
+        // };
 
         const mappedReferences = openRefs.map((item: any) => {
             const saleInvoice = getReferenceVoucherNumber(item);
