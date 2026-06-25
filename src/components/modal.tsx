@@ -353,7 +353,9 @@ const ListingModel = ({
         if (!show) return;
 
         dispatch(getCompany(""));
-        dispatch(getAccountByCode(downlaodPDF?.CustomerCode));
+        if (downlaodPDF?.CustomerCode) {   
+            dispatch(getAccountByCode(downlaodPDF?.CustomerCode));
+        }
     }, [show, downlaodPDF?.CustomerCode, dispatch]);
 
     const handleLocalPdfPrint = async () => {
@@ -428,13 +430,12 @@ const ListingModel = ({
     };
 
     const handleServerPdfDownload = async () => {
-        setLoader(true)
         try {
             if (!selectedTemplate?.templateFileId) {
                 toast.warn("Please select template");
                 return;
             }
-
+            setLoader(true)
             const blobData = await dispatch(
                 reportGeneratePdf({
                     moduleType: downlaodPDF?.moduleType,
@@ -464,7 +465,7 @@ const ListingModel = ({
 
         await handleLocalPdfPrint();
     };
-
+    console.log({ entryType })
     if (!show) return null;
 
     return (

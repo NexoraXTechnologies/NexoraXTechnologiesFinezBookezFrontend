@@ -122,7 +122,7 @@ const SalesReturn = () => {
     const netAmount = footerTotals.totalNetAmount;
 
     const fetchSalesInvoices = async () => {
-        await dispatch(getAllSalesInvoiceReturn({ offset: 0, limit: 100, search: purchaseOrderSearch }) as any);
+        await dispatch(getAllSalesInvoiceReturn({ offset: localOffset, limit: localLimit, search: purchaseOrderSearch, status }) as any);
     };
 
     const columns = [
@@ -409,6 +409,31 @@ const SalesReturn = () => {
         setShowModal(true);
     };
 
+    const isClosedSalesOrder = (record: any) => {
+        const orderStatus = String(record?.sInvReturnStatus || "").toLowerCase();
+        return orderStatus === "close" || orderStatus === "closed";
+    };
+
+    const handleEditSalesOrder = (record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't edit closed order");
+            return;
+        }
+        openEditModal(record);
+    };
+
+    const handleDeleteSalesInvoiceClick = (e: any, record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't delete closed order");
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+        if (x < 10) x = 10;
+        const y = rect.top + window.scrollY - 5;
+        setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber });
+    };
+
     const footerValues = useMemo(() => ({ grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount }), [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount]);
 
     const dynamicFooterArray = useMemo(() => {
@@ -418,15 +443,15 @@ const SalesReturn = () => {
         });
     }, [templateFields?.footer, footerValues]);
 
-    useEffect(() => { fetchSalesInvoices(); }, []);
+    useEffect(() => { fetchSalesInvoices(); }, [localOffset, localLimit, debouncedSearch, status]);
 
     useEffect(() => { dispatch(getAllTransactionSchema("salesReturn") as any); }, [dispatch]);
 
     useEffect(() => {
         (async () => {
-            await dispatch(getAllSalesInvoice({ offset: localOffset, limit: localLimit, search: debouncedSearch, status }) as any);
+            await dispatch(getAllSalesInvoice({ offset: 0, limit: 100, search: purchaseOrderSearch, status }) as any);
         })();
-    }, []);
+    }, [purchaseOrderSearch]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -455,7 +480,7 @@ const SalesReturn = () => {
     }, [transactionsSchema]);
 
     useEffect(() => {
-        dispatch(getAllReportMapping({ moduleType: "salesReturn" }));
+        dispatch(getAllReportMapping({ moduleType: "salesInvoiceReturn" }));
     }, []);
 
     return (
@@ -487,7 +512,7 @@ const SalesReturn = () => {
                         <button
                             id="sales-quotation-edit-button"
                             onClick={() => {
-                                setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                                setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesInvoiceReturn", record, CustomerCode: record?.sInvReturnCustomerCode, voucherNumber: record?.sInvReturnVoucherNumber }));
                             }}
                             className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
@@ -497,7 +522,7 @@ const SalesReturn = () => {
                         <Permission module="bookez" permissionKey="salesReturn" action="update">
                             <button
                                 id="sales-invoice-edit-button"
-                                onClick={() => openEditModal(record)}
+                                onClick={() => handleEditSalesOrder(record)}
                                 className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                             >
                                 <Edit size={16} />
@@ -508,13 +533,7 @@ const SalesReturn = () => {
                             <button
                                 id="sales-invoice-delete-button"
                                 disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-                                    const y = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber });
-                                }}
+                                onClick={(e) => handleDeleteSalesInvoiceClick(e, record)}
                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                             >
                                 <Trash2 size={16} />

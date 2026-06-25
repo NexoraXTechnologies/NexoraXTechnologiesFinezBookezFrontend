@@ -160,6 +160,7 @@ export const getByVoucherNumberSalesInvoice = createAsyncThunk<
         }
       );
     } catch (err: any) {
+      console.log(err)
       return rejectWithValue({
         message:
           err?.response?.data?.message ||

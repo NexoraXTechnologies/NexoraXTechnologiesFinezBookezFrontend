@@ -35,11 +35,13 @@ import {
     deleteSalesReceipt,
     getSalesReceiptList,
     clearSalesReceiptReferences,
+    getByVoucherNumberSalesReceiptList,
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
-import { getAllSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { getAllSalesInvoice, getByVoucherNumberSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { ListingModel } from "../../../../../components/modal";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
+import professionalAxios from "../../../../../services/professionalAxios";
 
 const defaultPagination = {
     offset: 0,
@@ -570,6 +572,7 @@ const SalesReceipt = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        console.log({ row: form })
         setForm((prev: any) => {
             const updatedRows = [...(prev.recBody || [])];
 
@@ -580,7 +583,6 @@ const SalesReceipt = () => {
                 ...currentRow,
                 [key]: value,
             };
-
             if (currentField?.mapFields) {
                 updatedRow = applyMappedFields(
                     currentField,
@@ -1062,30 +1064,46 @@ const SalesReceipt = () => {
             }));
     };
 
+    const toNumber = (value: any) => Number(value || 0);
+    const getReceiptVoucherNumberFromResponse = (receiptData: any, fallbackVoucherNumber?: string) => {
+        return (
+            receiptData?.data?.receipt?.recVoucherNumber ||
+            receiptData?.data?.recVoucherNumber ||
+            receiptData?.data?.voucherNumber ||
+            receiptData?.recVoucherNumber ||
+            fallbackVoucherNumber ||
+            ""
+        );
+    };
+
     const handleSubmit = async () => {
         if (!validateForm()) return;
-
         const rows = cleanRows();
         const totals = calculateFooter(rows);
-
         const netAmount = totals.netAmount;
         const adjustedAmount = totals.adjustedAmount;
         const balanceAmount = netAmount - adjustedAmount;
-
         const payload: any = {
+            recVoucherNumber: editingRecord ? form.recVoucherNumber : "AUTO",
             recVoucherDate: form.recVoucherDate,
-
             recAccountCode: form.recAccountCode,
             recAccountName: form.recAccountName,
-
             recStatus: form.recStatus || "open",
             recRemark: form.recRemark,
-
             paymentMode: form.paymentMode,
             bankReferenceNumber: form.bankReferenceNumber,
             receivedBy: form.receivedBy,
-
-            recBody: rows,
+            recBody: rows.map((row: any) => ({
+                ...row,
+                references: Array.isArray(row.references) ? row.references.map((ref: any) => ({
+                    ...ref,
+                    referenceType: String(ref.referenceType || "").toUpperCase(),
+                    billAmount: String(ref.billAmount ?? 0),
+                    adjustedAmount: String(ref.adjustedAmount ?? 0),
+                    returnAmount: Number(ref.returnAmount ?? 0),
+                }))
+                    : [],
+            })),
 
             recFooter: {
                 netAmount: String(netAmount),
@@ -1095,45 +1113,200 @@ const SalesReceipt = () => {
         };
 
         try {
+            //  * Old receipt adjustment reverse + new adjustment add 
             if (editingRecord) {
+                const buildReferenceDiff = (oldReceipt: any, newPayload: any) => {
+                    const oldMap: any = {};
+                    const newMap: any = {};
+                    //  * OLD receipt references
+
+                    (oldReceipt?.recBody || oldReceipt?.data?.recBody || editingRecord?.recBody || []).forEach((body: any) => {
+                        (body.references || []).forEach((ref: any) => {
+                            if (ref.saleInvoice) {
+                                const invoiceNo = ref.saleInvoice;
+                                oldMap[invoiceNo] = {
+                                    adjustedAmount: toNumber(oldMap[invoiceNo]?.adjustedAmount) + toNumber(ref.adjustedAmount),
+                                };
+                            }
+                        });
+                    });
+
+                    //  * NEW receipt references 
+                    (newPayload?.recBody || []).forEach((body: any) => {
+                        (body.references || []).forEach((ref: any) => {
+                            if (ref.saleInvoice) {
+                                const invoiceNo = ref.saleInvoice;
+                                newMap[invoiceNo] = {
+                                    adjustedAmount: toNumber(newMap[invoiceNo]?.adjustedAmount) + toNumber(ref.adjustedAmount),
+                                    returnAmount: toNumber(newMap[invoiceNo]?.returnAmount) + toNumber(ref.returnAmount),
+                                };
+                            }
+                        });
+                    });
+
+                    const allInvoices = new Set([...Object.keys(oldMap), ...Object.keys(newMap),]);
+                    return Array.from(allInvoices).map((invoiceNo: any) => ({
+                        saleInvoice: invoiceNo,
+                        oldAdjustedAmount: oldMap[invoiceNo]?.adjustedAmount ?? 0,
+                        newAdjustedAmount: newMap[invoiceNo]?.adjustedAmount ?? 0,
+                        returnAmount: newMap[invoiceNo]?.returnAmount ?? 0,
+                    }));
+                };
+
+                const diffs = buildReferenceDiff(editingRecord, payload);
+                for (const ref of diffs) {
+                    if (!ref.saleInvoice) continue;
+                    const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: ref.saleInvoice }))
+                    const salesInv = getSalesInv?.payload;
+                    if (!salesInv) {
+                        toast.error("Sales invoice not found")
+                        console.warn("Sales invoice not found:", ref.saleInvoice);
+                        continue;
+                    }
+
+                    const footer = salesInv.sInvFooter || {};
+                    const invoiceNetAmount = toNumber(footer.netAmount);
+                    const previousAdjusted = toNumber(footer.adjustedAmount);
+                    const oldAdj = toNumber(ref.oldAdjustedAmount);
+                    const newAdj = toNumber(ref.newAdjustedAmount);
+                    const returnAmount = toNumber(ref.returnAmount);
+
+                    //  * first remove old receipt amount, then add new amount 
+                    const recalculatedAdjusted = (previousAdjusted - oldAdj) + newAdj;
+                    const newBalanceAmount = invoiceNetAmount - recalculatedAdjusted;
+                    if (newBalanceAmount < 0) { throw new Error(`Adjusted amount exceeds balance for ${ref.saleInvoice}`); }
+                    let referenceCodes = Array.isArray(salesInv.sInvReferenceCodes) ? [...salesInv.sInvReferenceCodes] : [];
+
+                    if (newAdj === 0) {
+                        referenceCodes = referenceCodes.filter((code: string) => code !== form.recVoucherNumber);
+                    } else if (oldAdj === 0) {
+                        referenceCodes = Array.from(new Set([...referenceCodes, form.recVoucherNumber]));
+                    }
+
+                    const payload: any = {
+                        sInvFooter: {
+                            ...footer,
+                            adjustedAmount: String(recalculatedAdjusted),
+                            balanceAmount: String(newBalanceAmount),
+                        },
+                        sInvStatus: newBalanceAmount - returnAmount < 1 ? "close" : "open",
+                        sInvReferenceCodes: referenceCodes,
+                    };
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: ref.saleInvoice, payload }))
+                }
+
                 await dispatch(
                     updateSalesReceipt({
                         receiptVoucherNumber: form.recVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
-
                 toast.success("Sales receipt updated successfully");
             } else {
-                await dispatch(addSalesReceipt({ payload }) as any).unwrap();
+                //  * First check all invoices so exceeded amount cannot save
+                const invoiceAdjustments: any[] = [];
+                for (const bodyItem of payload.recBody) {
+                    const references = Array.isArray(bodyItem.references) ? bodyItem.references : [];
+                    for (const ref of references) {
+                        if (!ref.saleInvoice) continue;
+                        const { payload } = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: ref.saleInvoice }))
+                        const salesInv = payload;
+                        if (!salesInv) {
+                            console.warn("Sales invoice not found:", ref.saleInvoice);
+                            continue;
+                        }
+                        const footer = salesInv.sInvFooter || {};
+                        const invoiceNetAmount = toNumber(footer.netAmount);
+                        const oldAdjusted = toNumber(footer.adjustedAmount);
+                        const receiptAdjusted = toNumber(ref.adjustedAmount);
+                        const returnAmount = toNumber(ref.returnAmount);
+                        const newAdjustedAmount = oldAdjusted + receiptAdjusted;
+                        const newBalanceAmount = invoiceNetAmount - newAdjustedAmount;
+                        if (newBalanceAmount < 0) { throw new Error(`Adjusted amount exceeds balance for ${ref.saleInvoice}`); }
+                        invoiceAdjustments.push({ saleInvoice: ref.saleInvoice, salesInv, footer, newAdjustedAmount, newBalanceAmount, returnAmount, });
+                    }
+                }
+                //  * Save receipt after validation success 
+                const receiptData = await dispatch(addSalesReceipt({ payload }) as any).unwrap();
+                const savedReceiptVoucherNumber = getReceiptVoucherNumberFromResponse(receiptData);
+                //  * Update sales invoices after receipt save 
 
+                for (const item of invoiceAdjustments) {
+                    const oldReferenceCodes = Array.isArray(item.salesInv.sInvReferenceCodes) ? item.salesInv.sInvReferenceCodes : [];
+                    const newReferenceCodes = savedReceiptVoucherNumber ? Array.from(new Set([...oldReferenceCodes, savedReceiptVoucherNumber,])) : oldReferenceCodes;
+                    const payload: any = {
+                        sInvFooter: { ...item.footer, adjustedAmount: String(item.newAdjustedAmount), balanceAmount: String(item.newBalanceAmount) },
+                        sInvStatus: item.newBalanceAmount - item.returnAmount < 1 ? "close" : "open",
+                        sInvReferenceCodes: newReferenceCodes,
+                    };
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: item.saleInvoice, payload }))
+                }
                 toast.success("Sales receipt created successfully");
             }
-
             setShowModal(false);
             resetMainForm();
-
             await fetchSalesReceipts();
         } catch (error: any) {
-            toast.error(error?.message || "Failed to save sales receipt");
+            console.error("Sales receipt save error:", error);
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to save sales receipt"
+            );
         }
     };
 
     const handleDeleteConfirm = async () => {
         try {
-            if (!confirmTooltip.voucherNumber) return;
+            const receiptVoucherNumber = confirmTooltip.voucherNumber;
+            if (!receiptVoucherNumber) return;
+            //  * 1. Get full receipt data before delete 
+            const receiptData = await dispatch(getByVoucherNumberSalesReceiptList({ voucherNumber: receiptVoucherNumber, }) as any).unwrap();
+            console.log({ receiptData })
+            const recBody = Array.isArray(receiptData?.recBody) ? receiptData.recBody : [];
+            //  * 2. Reverse Sales Invoice adjustment 
+            for (const bodyItem of recBody) {
+                const references = Array.isArray(bodyItem?.references) ? bodyItem.references : [];
+                for (const ref of references) {
+                    console.log({ ref })
+                    // return
+                    const salesInvoiceNumber = ref?.saleInvoice;
+                    if (!salesInvoiceNumber) continue;
+                    const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: salesInvoiceNumber }))
+                    const salesInvoiceData = getSalesInv?.payload;
+                    if (!salesInvoiceData) {
+                        console.warn("Sales invoice not found:", salesInvoiceNumber);
+                        continue;
+                    }
+                    console.log({ salesInvoiceData })
+                    const oldFooter = salesInvoiceData?.sInvFooter || {};
+                    const oldAdjustedAmount = toNumber(oldFooter.adjustedAmount);
+                    const oldBalanceAmount = toNumber(oldFooter.balanceAmount);
+                    const receiptAdjustedAmount = toNumber(ref.adjustedAmount);
+                    const newAdjustedAmount = oldAdjustedAmount - receiptAdjustedAmount;
+                    const newBalanceAmount = oldBalanceAmount + receiptAdjustedAmount;
+                    const oldReferenceCodes = Array.isArray(salesInvoiceData?.sInvReferenceCodes) ? salesInvoiceData.sInvReferenceCodes : [];
+                    const newReferenceCodes = oldReferenceCodes.filter((id: string) => id !== receiptVoucherNumber);
+                    const payload = {
+                        sInvFooter: {
+                            ...oldFooter,
+                            adjustedAmount: String(newAdjustedAmount < 0 ? 0 : newAdjustedAmount),
+                            balanceAmount: String(newBalanceAmount),
+                        },
+                        sInvStatus: "open",
+                        sInvReferenceCodes: newReferenceCodes,
+                    };
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: salesInvoiceNumber, payload }))
+                }
+            }
 
-            await dispatch(
-                deleteSalesReceipt({
-                    receiptVoucherNumber: confirmTooltip.voucherNumber,
-                }) as any
-            ).unwrap();
-
+            //  * 3. Delete receipt 
+            await dispatch(deleteSalesReceipt({ receiptVoucherNumber, }) as any).unwrap();
             toast.success("Sales receipt deleted successfully");
-
             await fetchSalesReceipts();
         } catch (error: any) {
-            toast.error(error?.message || "Failed to delete sales receipt");
+            console.error("Sales receipt delete error:", error);
+            toast.error(error?.response?.data?.message || error?.message || "Failed to delete sales receipt");
         } finally {
             setConfirmTooltip({
                 show: false,
@@ -1280,7 +1453,7 @@ const SalesReceipt = () => {
     if (showInitialSkeleton) {
         return <ModulePageSkeleton rows={8} columns={5} />;
     }
-
+    console.log({ form })
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div className="mb-3 flex items-center">
@@ -1425,15 +1598,11 @@ const SalesReceipt = () => {
                             setShowModal(false);
                             resetMainForm();
                         },
-
                         onSubmit: handleSubmit,
-
                         RefrenceBtnText: getReferenceActionText,
                         isRefrenceAction: true,
                         handleRefRow: handleOpenReferenceModal,
-
                         addButtonText: "Add Account",
-
                         form,
                         errors,
                         handleAddRow,
