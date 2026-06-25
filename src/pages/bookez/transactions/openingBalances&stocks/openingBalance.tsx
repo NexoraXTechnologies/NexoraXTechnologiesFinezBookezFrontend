@@ -454,12 +454,14 @@ const OpeningBalance = () => {
                 label: "Total Debit",
                 value: `₹${totalDebit.toFixed(2)}`,
                 rawValue: totalDebit,
+                align: "right",
             },
             {
                 key: "totalCredit",
                 label: "Total Credit",
                 value: `₹${totalCredit.toFixed(2)}`,
                 rawValue: totalCredit,
+                align: "right",
             },
         ],
     };
@@ -650,6 +652,7 @@ const OpeningBalance = () => {
                     resetForm();
                 }}
                 onSubmit={handleSubmit}
+                addButtonText="Add Account"
                 form={form}
                 errors={errors}
                 handleAddRow={handleAddRow}

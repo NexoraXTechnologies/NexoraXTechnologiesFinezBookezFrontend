@@ -5,19 +5,14 @@ import { DataCreateButton } from "../../../../components/buttons";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
-import Toggle from "../../../../components/toggle";
 import { useDispatch, useSelector } from "react-redux";
 import { Edit, Trash2 } from "lucide-react";
 import Pagination from "../../../../components/pagination";
-import {
-    addJournalVoucher,
-    deleteJournalVoucher,
-    getJournalVoucherList,
-    updateJournalVoucher,
-} from "../../../../redux/slices/professionalSlice/openingBalancesStocks/journalVoucherSlice";
+
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
+import { addContraVoucher, deleteContraVoucher, getContraVoucherList, updateContraVoucher } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/contraVoucherSlice";
 
 const emptyEntryRow = {
     id: Date.now(),
@@ -33,13 +28,16 @@ const getDefaultForm = () => ({
     voucherNumber: "AUTO",
     voucherno: "AUTO",
     voucherDate: new Date().toISOString().split("T")[0],
-    voucherType: "journal",
+    voucherType: "contra",
     referenceNumber: "",
     remarks: "",
     remark: "",
     status: "open",
     __autoPost: false,
-    entries: [{ ...emptyEntryRow, id: Date.now() }, { ...emptyEntryRow, id: Date.now() }],
+    entries: [
+        { ...emptyEntryRow, id: Date.now() },
+        { ...emptyEntryRow, id: Date.now() + Math.random() },
+    ],
     totalDebit: "0.00",
     totalCredit: "0.00",
 });
@@ -75,7 +73,7 @@ const mainColumns = [
     },
 ];
 
-const JournalVoucher = () => {
+const ContraVoucher = () => {
     const [status, setStatus] = useState("");
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
@@ -90,12 +88,12 @@ const JournalVoucher = () => {
     const dispatch = useDispatch<any>();
 
     const {
-        journalVouchers,
+        contraVouchers,
         pagination,
         listingLoader,
         addLoader,
-        deleteLoader
-    } = useSelector((s: any) => s.journalVoucher);
+        deleteLoader,
+    } = useSelector((s: any) => s.contraVoucher);
 
     const { accounts } = useSelector((s: any) => s.accountMaster);
 
@@ -185,18 +183,19 @@ const JournalVoucher = () => {
                 disabled: true,
                 align: "right",
             },
-            // {
-            //     key: "totalCredit",
-            //     label: "Total Credit",
-            //     type: "number",
-            //     disabled: true,
-            // },
+            {
+                key: "totalCredit",
+                label: "Total Credit",
+                type: "number",
+                disabled: true,
+                 align: "right",
+            },
         ],
     };
 
     const refreshList = () => {
         return dispatch(
-            getJournalVoucherList({
+            getContraVoucherList({
                 limit: localLimit,
                 offset: localOffset,
                 status,
@@ -210,6 +209,7 @@ const JournalVoucher = () => {
             getAllAccounts({
                 limit: localLimit,
                 offset: localOffset,
+                accountType: "bank , cash"
             })
         );
 
@@ -388,7 +388,7 @@ const JournalVoucher = () => {
 
         const payload = {
             voucherDate: form.voucherDate,
-            voucherType: form.voucherType || "journal",
+            voucherType: form.voucherType || "contra",
             referenceNumber: form.referenceNumber,
             remarks: form.remark || form.remarks || "",
             entries: entries.map((row: any) => ({
@@ -403,19 +403,17 @@ const JournalVoucher = () => {
             __autoPost: false,
         };
 
-        // console.log("Journal Voucher Payload:", payload);
-
         try {
             if (edit) {
                 await dispatch(
-                    updateJournalVoucher({
+                    updateContraVoucher({
                         payload,
-                        journalVoucherNumber: form?.voucherNumber || form?.voucherno,
+                        contraVoucherNumber: form?.voucherNumber || form?.voucherno,
                     })
                 ).unwrap();
             } else {
                 await dispatch(
-                    addJournalVoucher({
+                    addContraVoucher({
                         payload,
                     })
                 ).unwrap();
@@ -424,7 +422,7 @@ const JournalVoucher = () => {
             await refreshList();
 
             toast.success(
-                `Journal Voucher ${edit ? "updated" : "added"} successfully`
+                `Contra Voucher ${edit ? "updated" : "added"} successfully`
             );
 
             setShowModal(false);
@@ -445,17 +443,17 @@ const JournalVoucher = () => {
             const voucherNumber = confirmTooltip?.voucherNumber;
 
             if (!voucherNumber) {
-                toast.error("Journal voucher number not found");
+                toast.error("Contra voucher number not found");
                 return;
             }
 
             await dispatch(
-                deleteJournalVoucher({
-                    journalVoucherNumber: voucherNumber,
+                deleteContraVoucher({
+                    contraVoucherNumber: voucherNumber,
                 })
             ).unwrap();
 
-            toast.success("Journal Voucher deleted successfully");
+            toast.success("Contra Voucher deleted successfully");
 
             await refreshList();
         } catch (error: any) {
@@ -463,7 +461,7 @@ const JournalVoucher = () => {
                 error?.response?.data?.message ||
                 error?.payload?.message ||
                 error?.message ||
-                "Failed to delete journal voucher";
+                "Failed to delete contra voucher";
 
             toast.error(backendMessage);
         } finally {
@@ -481,39 +479,40 @@ const JournalVoucher = () => {
                 rawValue,
             };
         });
-    }, [form?.totalDebit]);
+    }, [form?.totalDebit,form?.totalCredit]);
 
     return (
         <>
             <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
                 <div
-                    id="account-header"
+                    id="contra-voucher-header"
                     className="mb-3 flex flex-wrap items-center gap-2"
                 >
-                    <div id="account-summary" className="flex items-start gap-3">
+                    <div
+                        id="contra-voucher-summary"
+                        className="flex items-start gap-3"
+                    >
                         <Badge
                             {...{
                                 count: pagination?.totalDocs ?? 0,
-                                text: "Total Journal Voucher:",
+                                text: "Total Contra Voucher:",
                             }}
                         />
                     </div>
 
                     <div className="ml-auto flex flex-wrap items-center gap-2">
-
-
                         <div className="me-2">
                             <SearchInput {...{ search, setSearch }} />
                         </div>
 
                         <Permission
                             module="bookez"
-                            permissionKey="journalVouchar"
+                            permissionKey="contraVoucher"
                             action="create"
                         >
                             <DataCreateButton
                                 {...{
-                                    text: "Create Journal Voucher",
+                                    text: "Create Contra Voucher",
                                     callBackFn: () => {
                                         resetForm();
                                         setShowModal(true);
@@ -526,18 +525,18 @@ const JournalVoucher = () => {
 
                 <DataTable
                     columns={mainColumns}
-                    data={journalVouchers}
+                    data={contraVouchers}
                     loading={listingLoader}
-                    emptyMessage="No data found"
+                    emptyMessage="No contra voucher found"
                     actions={(item: any) => (
                         <div className="flex items-center gap-2">
                             <Permission
                                 module="bookez"
-                                permissionKey="journalVouchar"
+                                permissionKey="contraVoucher"
                                 action="update"
                             >
                                 <button
-                                    id="journal-voucher-edit-button"
+                                    id="contra-voucher-edit-button"
                                     onClick={() => {
                                         const body =
                                             item?.entries?.length > 0
@@ -575,7 +574,7 @@ const JournalVoucher = () => {
                                             voucherno:
                                                 item?.voucherno ||
                                                 item?.voucherNumber ||
-                                                "JNV",
+                                                "AUTO",
                                             voucherDate: item?.voucherDate
                                                 ? String(
                                                     item.voucherDate
@@ -583,6 +582,8 @@ const JournalVoucher = () => {
                                                 : new Date()
                                                     .toISOString()
                                                     .split("T")[0],
+                                            voucherType:
+                                                item?.voucherType || "contra",
                                             remark:
                                                 item?.remark ||
                                                 item?.remarks ||
@@ -603,25 +604,29 @@ const JournalVoucher = () => {
 
                             <Permission
                                 module="bookez"
-                                permissionKey="journalVouchar"
+                                permissionKey="contraVoucher"
                                 action="delete"
                             >
                                 <button
                                     type="button"
                                     disabled={deleteLoader}
                                     onClick={(e: any) => {
-                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const rect =
+                                            e.currentTarget.getBoundingClientRect();
 
                                         let x: any = rect.left - 150;
                                         if (x < 10) x = 10;
 
-                                        const y: any = rect.top + window.scrollY - 5;
+                                        const y: any =
+                                            rect.top + window.scrollY - 5;
 
                                         setConfirmTooltip({
                                             show: true,
                                             x,
                                             y,
-                                            voucherNumber: item?.voucherNumber || item?.voucherno,
+                                            voucherNumber:
+                                                item?.voucherNumber ||
+                                                item?.voucherno,
                                         });
                                     }}
                                     className="text-red-500 hover:text-red-700 disabled:opacity-50"
@@ -653,7 +658,7 @@ const JournalVoucher = () => {
                     <ConfirmTooltip
                         x={confirmTooltip.x}
                         y={confirmTooltip.y}
-                        message="Are you sure you want to delete this journal voucher?"
+                        message="Are you sure you want to delete this contra voucher?"
                         confirmText="Delete"
                         cancelText="Cancel"
                         onConfirm={handleDeleteConfirm}
@@ -665,8 +670,8 @@ const JournalVoucher = () => {
                     show={showModal}
                     setShow={setShowModal}
                     edit={edit}
-                    title="Journal voucher"
-                    subtitle="Fill in the journal voucher details below"
+                    title="Contra voucher"
+                    subtitle="Fill in the contra voucher details below"
                     loading={addLoader}
                     onClose={() => {
                         setShowModal(false);
@@ -691,4 +696,4 @@ const JournalVoucher = () => {
     );
 };
 
-export default JournalVoucher;
+export default ContraVoucher;
