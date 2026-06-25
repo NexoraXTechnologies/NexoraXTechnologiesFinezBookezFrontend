@@ -1,3 +1,5 @@
+import { formatProductType } from "../../../utils/helperFunctions";
+
 type SummaryItem = {
     label: string;
     value: string | number;
@@ -28,7 +30,7 @@ const AccountSummaryCard = ({
                 </p>
 
                 <h3 className="text-md font-bold text-card-foreground">
-                    {accountName || "-"}
+                    {formatProductType(accountName) || "-"}
                 </h3>
             </div>
 
