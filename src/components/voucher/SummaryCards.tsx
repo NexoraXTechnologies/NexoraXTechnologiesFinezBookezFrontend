@@ -5,16 +5,14 @@ type SummaryItem = {
 
 type SummaryCardsProps = {
     items?: SummaryItem[];
-    footerTotals?: SummaryItem[];
+    isSummaryFooter?: boolean;
 };
 
-const SummaryCards = ({ items = [], footerTotals }: SummaryCardsProps) => {
+const SummaryCards = ({ items = [], isSummaryFooter = true }: SummaryCardsProps) => {
     if (!items.length) return null;
 
-    console.log({ items, footerTotals });
-
     return (
-        <div className="mt-6 w-full rounded-md border border-border bg-card p-4">
+        isSummaryFooter ? <div className="mt-6 w-full rounded-md border border-border bg-card p-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {items.map((item) => (
                     <div
@@ -26,7 +24,7 @@ const SummaryCards = ({ items = [], footerTotals }: SummaryCardsProps) => {
                     </div>
                 ))}
             </div>
-        </div>
+        </div> : <></>
     );
 };
 

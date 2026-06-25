@@ -184,7 +184,7 @@ const ProductMaster = () => {
 
     payload = {
       ...payload,
-      csgst: payload.cgst ? Number(payload.cgst) : 0,
+      csgst: payload.csgst ? Number(payload.csgst) : 0,
       igst: payload.igst ? Number(payload.igst) : 0,
       purchasePrice: payload.purchasePrice ? Number(payload.purchasePrice) : 0,
       sellingPrice: payload.sellingPrice ? Number(payload.sellingPrice) : 0,
@@ -234,21 +234,11 @@ const ProductMaster = () => {
   };
 
   useEffect(() => {
-    const options = HSNCode?.map((e: any) => ({
-      label: `${e?.code} - ${e?.description}`,
-      value: e?.code,
-      ...e,
-    }));
-
+	  const options = HSNCode?.map((e: any) => ({ label: `${e?.code} - ${e?.description}`, value: e?.code, ...e, }));
     const _ = productMasterSchemaFields?.map((c: any) => {
       if (c?.key === "productHSNCode") {
-        return {
-          ...c,
-          options: options,
-          type: "select",
-        };
-      }
-
+		  return { ...c, options: options, type: "select", };
+	  }
       return c;
     });
 

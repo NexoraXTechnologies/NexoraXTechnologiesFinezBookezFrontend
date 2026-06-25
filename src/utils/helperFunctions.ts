@@ -52,9 +52,7 @@ const getRecords = (res: any) => {
 const loadFieldOptions = async (fields: any[], param: Record<string, any> = {}) => {
     const updatedFields = await Promise.all(
         (fields || []).map(async (field) => {
-            console.log({ field })
             if (!!field?.options?.length) {
-                console.log({ options: field?.options })
                 const options = Array.isArray(field?.options) ? field?.options.map((item: any) => ({ label: item || "", value: item || "", raw: item })) : [];
                 return { ...field, options };
             }

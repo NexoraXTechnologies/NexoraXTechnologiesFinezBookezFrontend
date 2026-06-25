@@ -433,10 +433,12 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 		{ name: "Purchase Return", value: purchaseReturnAmount },
 	].filter((item) => item.value > 0);
 
-	const revenueTotal = amountPieData.reduce(
-		(sum, item) => sum + Number(item.value || 0),
-		0
-	);
+	const revenueTotal = salesInvoiceAmount;
+	// const revenueTotal = amountPieData.reduce((sum, item) => sum + Number(item.value || 0), 0);
+	// const revenueTotal = amountPieData.reduce(
+	// 	(sum, item) => sum + Number(item.value || 0),
+	// 	0
+	// );
 
 	const revenueChartData = amountPieData.map((item, index) => {
 		const percent =
@@ -508,7 +510,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 	);
 
 	const outstandingTotal = receivableAmount + payableAmount;
-
 	const balanceScore = outstandingTotal > 0 ? Math.round((receivableAmount / outstandingTotal) * 100) : 0;
 
 	return (
@@ -689,7 +690,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						</span>
 					}
 				>
-					{moduleAreaChartData.length === 0 ? (
+					{!moduleAreaChartData.length ? (
 						<EmptyData text="No transaction data available" />
 					) : (
 							<div className="relative overflow-hidden rounded-2xl bg-card px-1 pb-2">
@@ -712,7 +713,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								</div>
 							</div>
 
-							<div className="h-[260px]">
+							<div className="h-[200px]">
 								<ResponsiveContainer width="100%" height="100%">
 									<AreaChart
 										data={moduleAreaChartData}

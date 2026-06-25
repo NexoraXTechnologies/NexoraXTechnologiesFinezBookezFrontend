@@ -37,11 +37,16 @@ import {
     clearSalesReceiptReferences,
     getByVoucherNumberSalesReceiptList,
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
-import { getAllSalesInvoice, getByVoucherNumberSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+
+import {
+    getAllSalesInvoice,
+    getByVoucherNumberSalesInvoice,
+    updateSalesInvoice,
+} from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+
 import { ListingModel } from "../../../../../components/modal";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
-import professionalAxios from "../../../../../services/professionalAxios";
 
 const defaultPagination = {
     offset: 0,
@@ -66,8 +71,10 @@ const emptyReceiptRow = {
 const emptyReferenceRow = {
     id: Date.now(),
     saleInvoice: "",
+    salesInvoice: "",
     docDate: "",
-    netAmount: "",
+    netBillAmount: "",
+    netReturnAmount: "",
     remainingBillAmount: "",
     adjustedAmount: "",
 };
@@ -113,6 +120,8 @@ const SalesReceipt = () => {
         referenceLoader = false,
     } = salesReceiptState;
 
+    const { report } = useSelector((s: any) => s.reportMapping);
+
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
 
@@ -135,22 +144,22 @@ const SalesReceipt = () => {
     });
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
-    const { report } = useSelector((s: any) => s.reportMapping);
 
     const [showReferenceModal, setShowReferenceModal] = useState(false);
     const [selectedReferenceRowIndex, setSelectedReferenceRowIndex] =
         useState<number | null>(null);
 
-    const [downlaodPDF, setDownlaodPDF] = useState({
+    const [referenceRows, setReferenceRows] = useState<any[]>([]);
+    const [referenceError, setReferenceError] = useState("");
+    const [referenceLoading, setReferenceLoading] = useState(false);
+    const [newReferenceAmount, setNewReferenceAmount] = useState("");
+
+    const [downlaodPDF, setDownlaodPDF] = useState<any>({
         show: false,
         x: null,
         y: null,
         type: "",
     });
-
-    const [referenceRows, setReferenceRows] = useState<any[]>([]);
-    const [referenceError, setReferenceError] = useState("");
-    const [referenceLoading, setReferenceLoading] = useState(false);
 
     const [confirmTooltip, setConfirmTooltip] =
         useState<ConfirmTooltipState>({
@@ -159,6 +168,19 @@ const SalesReceipt = () => {
             y: null,
             voucherNumber: null,
         });
+
+    const toNumber = (value: any) => Number(value || 0);
+
+    const sanitizeDecimalValue = (value: any) => {
+        const clean = String(value || "").replace(/[^0-9.]/g, "");
+
+        const parts = clean.split(".");
+        if (parts.length > 2) {
+            return `${parts[0]}.${parts.slice(1).join("")}`;
+        }
+
+        return clean;
+    };
 
     const getRecords = (res: any) => {
         return Array.isArray(res?.items)
@@ -256,8 +278,8 @@ const SalesReceipt = () => {
             },
             {
                 key: "netReturnAmount",
-                label: "Net return Amount",
-                type: "text",
+                label: "Net Return Amount",
+                type: "number",
                 disabled: true,
             },
             {
@@ -323,15 +345,11 @@ const SalesReceipt = () => {
         );
     }, [selectedReferenceRow]);
 
-    const referenceTotalAdjusted = useMemo(() => {
-        return (referenceRows || []).reduce((sum: number, row: any) => {
+    const getReferenceRowsAdjustedTotal = (rows: any[] = []) => {
+        return rows.reduce((sum: number, row: any) => {
             return sum + num(row?.adjustedAmount);
         }, 0);
-    }, [referenceRows]);
-
-    const newReferenceAmount = useMemo(() => {
-        return selectedReferenceMaxAmount - referenceTotalAdjusted;
-    }, [selectedReferenceMaxAmount, referenceTotalAdjusted]);
+    };
 
     const dynamicFooterArray = useMemo(() => {
         return (templateFields?.footer || [])
@@ -354,6 +372,7 @@ const SalesReceipt = () => {
             row.references.some((ref: any) => {
                 return (
                     ref?.saleInvoice ||
+                    ref?.salesInvoice ||
                     ref?.newReference ||
                     num(ref?.adjustedAmount) > 0
                 );
@@ -366,6 +385,7 @@ const SalesReceipt = () => {
         return (
             item?.voucherNumber ||
             item?.saleInvoice ||
+            item?.salesInvoice ||
             item?.sInvVoucherNumber ||
             item?.sInvReturnVoucherNumber ||
             item?.receiptVoucherNumber ||
@@ -393,6 +413,20 @@ const SalesReceipt = () => {
             item?.sInvReturnFooter?.balanceAmount ||
             item?.sInvReturnFooter?.netAmount ||
             0
+        );
+    };
+
+    const getReceiptVoucherNumberFromResponse = (
+        receiptData: any,
+        fallbackVoucherNumber?: string
+    ) => {
+        return (
+            receiptData?.data?.receipt?.recVoucherNumber ||
+            receiptData?.data?.recVoucherNumber ||
+            receiptData?.data?.voucherNumber ||
+            receiptData?.recVoucherNumber ||
+            fallbackVoucherNumber ||
+            ""
         );
     };
 
@@ -455,6 +489,7 @@ const SalesReceipt = () => {
         setReferenceRows([]);
         setReferenceError("");
         setSelectedReferenceRowIndex(null);
+        setNewReferenceAmount("");
         setForm(getDefaultForm());
         dispatch(clearSalesReceiptReferences());
     };
@@ -572,13 +607,10 @@ const SalesReceipt = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        console.log({ row: form })
         setForm((prev: any) => {
             const updatedRows = [...(prev.recBody || [])];
-
             const currentRow = updatedRows[index] || {};
             const currentField = getBodyFieldByKey(key);
-
             let updatedRow = {
                 ...currentRow,
                 [key]: value,
@@ -591,22 +623,28 @@ const SalesReceipt = () => {
                 );
             }
 
+            //  I am here reference getting empty array that's why value not calculating...
             if (key === "accountCode" || key === "accountName") {
                 updatedRow.references = [];
+                if (!editingRecord) {
+                    updatedRow.references = [];
+                }
             }
 
             if (key === "amount") {
                 updatedRow.netAmount = value;
-                updatedRow.references = [];
+                if (!editingRecord) {
+                    updatedRow.references = [];
+                }
             }
 
             if (key === "netAmount") {
                 updatedRow.amount = value;
-                updatedRow.references = [];
+                if (!editingRecord) {
+                    updatedRow.references = [];
+                }
             }
-
             updatedRows[index] = updatedRow;
-
             return {
                 ...prev,
                 recBody: updatedRows,
@@ -621,9 +659,23 @@ const SalesReceipt = () => {
         }));
     };
 
+    const handleNewReferenceChange = (value: any) => {
+        const clean = sanitizeDecimalValue(value);
+        const parsed = num(clean);
+
+        const adjustedSum = getReferenceRowsAdjustedTotal(referenceRows);
+        const maxAmount = selectedReferenceMaxAmount;
+        if ((adjustedSum + parsed) > maxAmount) {
+            toast.error(`Total reference amount cannot exceed body amount ${money(maxAmount)}`);
+            return;
+        }
+        setNewReferenceAmount(clean);
+    };
+
+    console.log({ form })
     const handleOpenReferenceModal = async (rowIndex: number) => {
         const selectedRow = form?.recBody?.[rowIndex];
-
+        console.log({ inside: form })
         if (!selectedRow) {
             toast.error("Receipt row not found");
             return;
@@ -643,20 +695,32 @@ const SalesReceipt = () => {
         setReferenceError("");
         setReferenceRows([]);
         setShowReferenceModal(true);
-
+        console.log({ selectedRow })
         const existingReferences = Array.isArray(selectedRow?.references)
             ? selectedRow.references
             : [];
 
-        const existingReferenceMap = new Map<string, any>(
-            existingReferences
-                .filter((ref: any) => {
+        const existingNewReference = existingReferences.find((ref: any) => {
+            return String(ref?.referenceType || "").toUpperCase() === "NEW";
+        });
+
+        setNewReferenceAmount(
+            existingNewReference
+                ? String(existingNewReference?.adjustedAmount || "")
+                : ""
+        );
+        console.log({ existingReferences })
+        const existingReferenceMap = new Map<string, any>(existingReferences.filter((ref: any) => {
                     return (
                         String(ref?.referenceType || "SINV").toUpperCase() ===
-                        "SINV" && ref?.saleInvoice
+                        "SINV" &&
+                        (ref?.saleInvoice || ref?.salesInvoice)
                     );
                 })
-                .map((ref: any) => [String(ref.saleInvoice), ref])
+            .map((ref: any) => [
+                String(ref.saleInvoice || ref.salesInvoice),
+                ref,
+            ])
         );
 
         const refs = await fetchReceiptReferences(selectedRow);
@@ -701,36 +765,30 @@ const SalesReceipt = () => {
 
         const mappedReferences = openRefs.map((item: any) => {
             const saleInvoice = getReferenceVoucherNumber(item);
+            console.log({ existingReferenceMap })
             const existingRef = existingReferenceMap.get(String(saleInvoice));
 
             const netBillAmount = getInvoiceNetAmount(item);
             const netReturnAmount = getNetReturnAmount(item);
-            const adjustedAmount = getAdjustedAmount(existingRef);
+            // const adjustedAmount = getAdjustedAmount(existingRef);
 
-            const remainingBillAmount =
-                netBillAmount - netReturnAmount + adjustedAmount;
-
+            const remainingBillAmount = getReferenceAmount(item);
+            console.log({ existingRef })
             return {
                 id: item?._id || Date.now() + Math.random(),
-
                 referenceType: "SINV",
                 saleInvoice,
-
+                salesInvoice: saleInvoice,
                 docDate: formatDateForInput(getReferenceDate(item)),
                 billDueDate: formatDateForInput(getReferenceDate(item)),
-
                 billAmount: String(netBillAmount),
                 netBillAmount: String(netBillAmount),
                 netAmount: String(netBillAmount),
-
                 netReturnAmount: String(netReturnAmount),
-
                 remainingBillAmount: String(remainingBillAmount),
-
-                adjustedAmount:
-                    existingRef?.adjustedAmount !== undefined
-                        ? String(existingRef.adjustedAmount)
-                        : "",
+                adjustedAmount: existingRef?.adjustedAmount !== undefined ? String(existingRef.adjustedAmount) : "",
+                oldAdjustmentAmount: existingRef?.adjustedAmount !== undefined ? String(existingRef.adjustedAmount) : "0",
+                isSettle: Boolean(existingRef),
             };
         });
 
@@ -742,12 +800,63 @@ const SalesReceipt = () => {
         key: string,
         value: any
     ) => {
+        if (key !== "adjustedAmount") {
+            setReferenceRows((prev: any[]) => {
+                const updatedRows = [...prev];
+
+                updatedRows[index] = {
+                    ...updatedRows[index],
+                    [key]: value,
+                };
+
+                return updatedRows;
+            });
+
+            setReferenceError("");
+            return;
+        }
+
+        const clean = sanitizeDecimalValue(value);
+        const parsed = num(clean);
+        const currentRow = referenceRows[index];
+        const remainingBillAmount = num(currentRow?.remainingBillAmount);
+        const oldAdjustmentAmount = num(currentRow?.oldAdjustmentAmount);
+        console.log({
+            isEditMode: Boolean(editingRecord),
+            remainingBillAmount,
+            oldAdjustmentAmount,
+            parsed,
+        });
+
+        const maxInvoiceAdjustableAmount = editingRecord ? remainingBillAmount + oldAdjustmentAmount : remainingBillAmount;
+        if (parsed > maxInvoiceAdjustableAmount) {
+            toast.error(`Adjusted amount cannot exceed remaining bill amount ${money(maxInvoiceAdjustableAmount)}`);
+            return;
+        }
+        const otherSum = referenceRows.reduce(
+            (sum: number, row: any, i: number) => {
+                if (i === index) return sum;
+                return sum + num(row?.adjustedAmount);
+            },
+            0
+        );
+
+        const newRefAmount = num(newReferenceAmount);
+        const maxAmount = selectedReferenceMaxAmount;
+
+        if (otherSum + parsed + newRefAmount > maxAmount) {
+            toast.error(
+                `Total reference amount cannot exceed body amount ${money(maxAmount)}`
+            );
+            return;
+        }
+
         setReferenceRows((prev: any[]) => {
             const updatedRows = [...prev];
 
             updatedRows[index] = {
                 ...updatedRows[index],
-                [key]: value,
+                adjustedAmount: clean,
             };
 
             return updatedRows;
@@ -778,15 +887,8 @@ const SalesReceipt = () => {
         setReferenceRows([]);
         setReferenceError("");
         setReferenceLoading(false);
+        setNewReferenceAmount("");
     };
-
-    const buildNewReferenceRow = (amount: number) => ({
-        referenceType: "NEW",
-        newReference: "ADV",
-        billDueDate: "",
-        billAmount: String(amount),
-        adjustedAmount: String(amount),
-    });
 
     const handleSaveReferences = () => {
         if (selectedReferenceRowIndex === null) {
@@ -795,74 +897,46 @@ const SalesReceipt = () => {
         }
 
         const maxAmount = selectedReferenceMaxAmount;
-        let referencesToSave: any[] = [];
 
-        const hasInvoiceList =
-            Array.isArray(referenceRows) &&
-            referenceRows.some((row: any) => {
-                return (
-                    String(row?.referenceType || "SINV").toUpperCase() ===
-                    "SINV" && row?.saleInvoice
-                );
-            });
+        const invoiceRefs = (referenceRows || [])
+            .filter((row: any) => num(row?.adjustedAmount) > 0)
+            .map((row: any) => ({
+                referenceType: "SINV",
 
-        if (hasInvoiceList) {
-            const rowsWithAdjustedAmount = (referenceRows || []).filter(
-                (row: any) => num(row?.adjustedAmount) > 0
-            );
+                saleInvoice: row?.saleInvoice || row?.salesInvoice || "",
+                salesInvoice: row?.salesInvoice || row?.saleInvoice || "",
 
-            if (rowsWithAdjustedAmount.length === 0) {
-                toast.error("Please enter adjusted amount in at least one invoice");
-                return;
-            }
+                docDate: row?.docDate || "",
+                billDueDate: row?.billDueDate || row?.docDate || "",
 
-            let extraNewReferenceAmount = 0;
+                billAmount: String(row?.billAmount || row?.netAmount || 0),
+                netAmount: String(row?.netAmount || row?.billAmount || 0),
 
-            referencesToSave = rowsWithAdjustedAmount.flatMap((row: any) => {
-                const adjustedAmount = num(row?.adjustedAmount);
-                const remainingBillAmount = num(row?.remainingBillAmount);
+                netBillAmount: String(row?.netBillAmount || row?.netAmount || 0),
+                netReturnAmount: String(row?.netReturnAmount || 0),
+                remainingBillAmount: String(row?.remainingBillAmount || 0),
 
-                const invoiceAdjustedAmount =
-                    remainingBillAmount > 0
-                        ? Math.min(adjustedAmount, remainingBillAmount)
-                        : adjustedAmount;
+                returnAmount: Number(row?.netReturnAmount || 0),
+                adjustedAmount: String(row?.adjustedAmount || 0),
+            }));
 
-                const extraAmount = adjustedAmount - invoiceAdjustedAmount;
+        const newRefNum = num(newReferenceAmount);
 
-                if (extraAmount > 0) {
-                    extraNewReferenceAmount += extraAmount;
-                }
+        const referencesToSave = [
+            ...invoiceRefs,
 
-                if (invoiceAdjustedAmount <= 0) {
-                    return [];
-                }
-
-                return [
+            ...(newRefNum > 0
+                ? [
                     {
-                        referenceType: "SINV",
-                        saleInvoice: row?.saleInvoice || "",
-                        docDate: row?.docDate || "",
-                        billDueDate: row?.billDueDate || row?.docDate || "",
-                        billAmount: String(row?.billAmount || row?.netAmount || 0),
-                        netAmount: String(row?.netAmount || row?.billAmount || 0),
-                        remainingBillAmount: String(row?.remainingBillAmount || 0),
-                        adjustedAmount: String(invoiceAdjustedAmount),
+                        referenceType: "NEW",
+                        newReference: "ADV",
+                        billDueDate: todayYMD(),
+                        billAmount: String(newRefNum),
+                        adjustedAmount: String(newRefNum),
                     },
-                ];
-            });
-
-            if (extraNewReferenceAmount > 0) {
-                referencesToSave.push({
-                    referenceType: "NEW",
-                    newReference: "ADV",
-                    billDueDate: "",
-                    billAmount: String(extraNewReferenceAmount),
-                    adjustedAmount: String(extraNewReferenceAmount),
-                });
-            }
-        } else {
-            referencesToSave = [buildNewReferenceRow(maxAmount)];
-        }
+                ]
+                : []),
+        ];
 
         const totalAdjusted = referencesToSave.reduce(
             (sum: number, row: any) => sum + num(row?.adjustedAmount),
@@ -1003,12 +1077,7 @@ const SalesReceipt = () => {
     const cleanRows = () => {
         return (form.recBody || [])
             .filter((row: any) => {
-                return (
-                    row?.accountCode ||
-                    row?.accountName ||
-                    row?.amount ||
-                    row?.netAmount
-                );
+                return (row?.accountCode || row?.accountName || row?.amount || row?.netAmount);
             })
             .map((row: any) => ({
                 accountCode: row?.accountCode || "",
@@ -1027,34 +1096,26 @@ const SalesReceipt = () => {
                             return {
                                 referenceType: "NEW",
                                 newReference: ref?.newReference || "ADV",
-                                billDueDate: ref?.billDueDate || "",
-                                billAmount: String(
-                                    ref?.billAmount ||
-                                    ref?.adjustedAmount ||
-                                    0
-                                ),
-                                adjustedAmount: String(
-                                    ref?.adjustedAmount ||
-                                    ref?.billAmount ||
-                                    0
+                                billDueDate: ref?.billDueDate || todayYMD(),
+                                billAmount: String(ref?.billAmount || ref?.adjustedAmount || 0),
+                                adjustedAmount: String(ref?.adjustedAmount || ref?.billAmount || 0
                                 ),
                             };
                         }
 
+                        const saleInvoice = ref?.saleInvoice || ref?.salesInvoice || "";
                         return {
                             referenceType: "SINV",
-                            saleInvoice: ref?.saleInvoice || "",
+                            saleInvoice,
+                            salesInvoice: saleInvoice,
                             docDate: ref?.docDate || ref?.billDueDate || "",
                             billDueDate: ref?.billDueDate || ref?.docDate || "",
-                            billAmount: String(
-                                ref?.billAmount || ref?.netAmount || 0
-                            ),
-                            netAmount: String(
-                                ref?.netAmount || ref?.billAmount || 0
-                            ),
-                            remainingBillAmount: String(
-                                ref?.remainingBillAmount || 0
-                            ),
+                            billAmount: String(ref?.billAmount || ref?.netAmount || 0),
+                            netAmount: String(ref?.netAmount || ref?.billAmount || 0),
+                            netBillAmount: String(ref?.netBillAmount || ref?.netAmount || 0),
+                            netReturnAmount: String(ref?.netReturnAmount || 0),
+                            remainingBillAmount: String(ref?.remainingBillAmount || 0),
+                            returnAmount: Number(ref?.returnAmount || ref?.netReturnAmount || 0),
                             adjustedAmount: String(ref?.adjustedAmount || 0),
                         };
                     })
@@ -1062,18 +1123,6 @@ const SalesReceipt = () => {
 
                 remarks: row?.remarks || null,
             }));
-    };
-
-    const toNumber = (value: any) => Number(value || 0);
-    const getReceiptVoucherNumberFromResponse = (receiptData: any, fallbackVoucherNumber?: string) => {
-        return (
-            receiptData?.data?.receipt?.recVoucherNumber ||
-            receiptData?.data?.recVoucherNumber ||
-            receiptData?.data?.voucherNumber ||
-            receiptData?.recVoucherNumber ||
-            fallbackVoucherNumber ||
-            ""
-        );
     };
 
     const handleSubmit = async () => {
@@ -1095,13 +1144,18 @@ const SalesReceipt = () => {
             receivedBy: form.receivedBy,
             recBody: rows.map((row: any) => ({
                 ...row,
-                references: Array.isArray(row.references) ? row.references.map((ref: any) => ({
-                    ...ref,
-                    referenceType: String(ref.referenceType || "").toUpperCase(),
-                    billAmount: String(ref.billAmount ?? 0),
-                    adjustedAmount: String(ref.adjustedAmount ?? 0),
-                    returnAmount: Number(ref.returnAmount ?? 0),
-                }))
+                references: Array.isArray(row.references)
+                    ? row.references.map((ref: any) => ({
+                        ...ref,
+                        referenceType: String(
+                            ref.referenceType || ""
+                        ).toUpperCase(),
+                        billAmount: String(ref.billAmount ?? 0),
+                        adjustedAmount: String(ref.adjustedAmount ?? 0),
+                        returnAmount: Number(
+                            ref.returnAmount || ref.netReturnAmount || 0
+                        ),
+                    }))
                     : [],
             })),
 
@@ -1113,32 +1167,53 @@ const SalesReceipt = () => {
         };
 
         try {
-            //  * Old receipt adjustment reverse + new adjustment add 
             if (editingRecord) {
                 const buildReferenceDiff = (oldReceipt: any, newPayload: any) => {
                     const oldMap: any = {};
                     const newMap: any = {};
-                    //  * OLD receipt references
 
-                    (oldReceipt?.recBody || oldReceipt?.data?.recBody || editingRecord?.recBody || []).forEach((body: any) => {
+                    (
+                        oldReceipt?.recBody ||
+                        oldReceipt?.data?.recBody ||
+                        editingRecord?.recBody ||
+                        []
+                    ).forEach((body: any) => {
                         (body.references || []).forEach((ref: any) => {
-                            if (ref.saleInvoice) {
-                                const invoiceNo = ref.saleInvoice;
+                            const invoiceNo =
+                                ref.saleInvoice || ref.salesInvoice;
+
+                            if (invoiceNo) {
                                 oldMap[invoiceNo] = {
-                                    adjustedAmount: toNumber(oldMap[invoiceNo]?.adjustedAmount) + toNumber(ref.adjustedAmount),
+                                    adjustedAmount:
+                                        toNumber(
+                                            oldMap[invoiceNo]?.adjustedAmount
+                                        ) + toNumber(ref.adjustedAmount),
                                 };
                             }
                         });
                     });
 
-                    //  * NEW receipt references 
                     (newPayload?.recBody || []).forEach((body: any) => {
                         (body.references || []).forEach((ref: any) => {
-                            if (ref.saleInvoice) {
-                                const invoiceNo = ref.saleInvoice;
+                            const invoiceNo =
+                                ref.saleInvoice || ref.salesInvoice;
+
+                            if (invoiceNo) {
                                 newMap[invoiceNo] = {
-                                    adjustedAmount: toNumber(newMap[invoiceNo]?.adjustedAmount) + toNumber(ref.adjustedAmount),
-                                    returnAmount: toNumber(newMap[invoiceNo]?.returnAmount) + toNumber(ref.returnAmount),
+                                    adjustedAmount:
+                                        toNumber(
+                                            newMap[invoiceNo]?.adjustedAmount
+                                        ) + toNumber(ref.adjustedAmount),
+
+                                    returnAmount:
+                                        toNumber(
+                                            newMap[invoiceNo]?.returnAmount
+                                        ) +
+                                        toNumber(
+                                            ref.returnAmount ||
+                                            ref.netReturnAmount ||
+                                            0
+                                        ),
                                 };
                             }
                         });
@@ -1155,12 +1230,20 @@ const SalesReceipt = () => {
 
                 const diffs = buildReferenceDiff(editingRecord, payload);
                 for (const ref of diffs) {
-                    if (!ref.saleInvoice) continue;
-                    const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: ref.saleInvoice }))
+                    // @ts-ignore
+                    const invoiceNo = ref.saleInvoice || ref.salesInvoice;
+                    if (!invoiceNo) continue;
+
+                    const getSalesInv = await dispatch(
+                        getByVoucherNumberSalesInvoice({
+                            voucherNumber: invoiceNo,
+                        }) as any
+                    );
+
                     const salesInv = getSalesInv?.payload;
                     if (!salesInv) {
-                        toast.error("Sales invoice not found")
-                        console.warn("Sales invoice not found:", ref.saleInvoice);
+                        toast.error("Sales invoice not found");
+                        console.warn("Sales invoice not found:", invoiceNo);
                         continue;
                     }
 
@@ -1171,19 +1254,33 @@ const SalesReceipt = () => {
                     const newAdj = toNumber(ref.newAdjustedAmount);
                     const returnAmount = toNumber(ref.returnAmount);
 
-                    //  * first remove old receipt amount, then add new amount 
-                    const recalculatedAdjusted = (previousAdjusted - oldAdj) + newAdj;
-                    const newBalanceAmount = invoiceNetAmount - recalculatedAdjusted;
-                    if (newBalanceAmount < 0) { throw new Error(`Adjusted amount exceeds balance for ${ref.saleInvoice}`); }
-                    let referenceCodes = Array.isArray(salesInv.sInvReferenceCodes) ? [...salesInv.sInvReferenceCodes] : [];
+                    const recalculatedAdjusted =
+                        previousAdjusted - oldAdj + newAdj;
+
+                    const newBalanceAmount =
+                        invoiceNetAmount - recalculatedAdjusted;
+
+                    if (newBalanceAmount < 0) {
+                        throw new Error(
+                            `Adjusted amount exceeds balance for ${invoiceNo}`
+                        );
+                    }
+
+                    let referenceCodes = Array.isArray(
+                        salesInv.sInvReferenceCodes
+                    )
+                        ? [...salesInv.sInvReferenceCodes]
+                        : [];
 
                     if (newAdj === 0) {
-                        referenceCodes = referenceCodes.filter((code: string) => code !== form.recVoucherNumber);
+                        referenceCodes = referenceCodes.filter(
+                            (code: string) => code !== form.recVoucherNumber
+                        );
                     } else if (oldAdj === 0) {
                         referenceCodes = Array.from(new Set([...referenceCodes, form.recVoucherNumber]));
                     }
 
-                    const payload: any = {
+                    const updateInvoicePayload: any = {
                         sInvFooter: {
                             ...footer,
                             adjustedAmount: String(recalculatedAdjusted),
@@ -1192,7 +1289,13 @@ const SalesReceipt = () => {
                         sInvStatus: newBalanceAmount - returnAmount < 1 ? "close" : "open",
                         sInvReferenceCodes: referenceCodes,
                     };
-                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: ref.saleInvoice, payload }))
+
+                    await dispatch(
+                        updateSalesInvoice({
+                            sInvVoucherNumber: invoiceNo,
+                            payload: updateInvoicePayload,
+                        }) as any
+                    );
                 }
 
                 await dispatch(
@@ -1203,43 +1306,102 @@ const SalesReceipt = () => {
                 ).unwrap();
                 toast.success("Sales receipt updated successfully");
             } else {
-                //  * First check all invoices so exceeded amount cannot save
                 const invoiceAdjustments: any[] = [];
                 for (const bodyItem of payload.recBody) {
-                    const references = Array.isArray(bodyItem.references) ? bodyItem.references : [];
+                    const references = Array.isArray(bodyItem.references)
+                        ? bodyItem.references
+                        : [];
+
                     for (const ref of references) {
-                        if (!ref.saleInvoice) continue;
-                        const { payload } = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: ref.saleInvoice }))
-                        const salesInv = payload;
+                        const invoiceNo = ref.saleInvoice || ref.salesInvoice;
+
+                        if (!invoiceNo) continue;
+
+                        const { payload: salesInv } = await dispatch(
+                            getByVoucherNumberSalesInvoice({
+                                voucherNumber: invoiceNo,
+                            }) as any
+                        );
+
                         if (!salesInv) {
-                            console.warn("Sales invoice not found:", ref.saleInvoice);
+                            console.warn("Sales invoice not found:", invoiceNo);
                             continue;
                         }
                         const footer = salesInv.sInvFooter || {};
                         const invoiceNetAmount = toNumber(footer.netAmount);
                         const oldAdjusted = toNumber(footer.adjustedAmount);
                         const receiptAdjusted = toNumber(ref.adjustedAmount);
-                        const returnAmount = toNumber(ref.returnAmount);
-                        const newAdjustedAmount = oldAdjusted + receiptAdjusted;
-                        const newBalanceAmount = invoiceNetAmount - newAdjustedAmount;
-                        if (newBalanceAmount < 0) { throw new Error(`Adjusted amount exceeds balance for ${ref.saleInvoice}`); }
-                        invoiceAdjustments.push({ saleInvoice: ref.saleInvoice, salesInv, footer, newAdjustedAmount, newBalanceAmount, returnAmount, });
+                        const returnAmount = toNumber(
+                            ref.returnAmount || ref.netReturnAmount || 0
+                        );
+
+                        const newAdjustedAmount =
+                            oldAdjusted + receiptAdjusted;
+
+                        const newBalanceAmount =
+                            invoiceNetAmount - newAdjustedAmount;
+
+                        if (newBalanceAmount < 0) {
+                            throw new Error(
+                                `Adjusted amount exceeds balance for ${invoiceNo}`
+                            );
+                        }
+
+                        invoiceAdjustments.push({
+                            saleInvoice: invoiceNo,
+                            salesInvoice: invoiceNo,
+                            salesInv,
+                            footer,
+                            newAdjustedAmount,
+                            newBalanceAmount,
+                            returnAmount,
+                        });
                     }
                 }
-                //  * Save receipt after validation success 
-                const receiptData = await dispatch(addSalesReceipt({ payload }) as any).unwrap();
-                const savedReceiptVoucherNumber = getReceiptVoucherNumberFromResponse(receiptData);
-                //  * Update sales invoices after receipt save 
+
+                const receiptData = await dispatch(
+                    addSalesReceipt({ payload }) as any
+                ).unwrap();
+
+                const savedReceiptVoucherNumber =
+                    getReceiptVoucherNumberFromResponse(receiptData);
 
                 for (const item of invoiceAdjustments) {
-                    const oldReferenceCodes = Array.isArray(item.salesInv.sInvReferenceCodes) ? item.salesInv.sInvReferenceCodes : [];
-                    const newReferenceCodes = savedReceiptVoucherNumber ? Array.from(new Set([...oldReferenceCodes, savedReceiptVoucherNumber,])) : oldReferenceCodes;
-                    const payload: any = {
-                        sInvFooter: { ...item.footer, adjustedAmount: String(item.newAdjustedAmount), balanceAmount: String(item.newBalanceAmount) },
-                        sInvStatus: item.newBalanceAmount - item.returnAmount < 1 ? "close" : "open",
+                    const oldReferenceCodes = Array.isArray(
+                        item.salesInv.sInvReferenceCodes
+                    )
+                        ? item.salesInv.sInvReferenceCodes
+                        : [];
+
+                    const newReferenceCodes = savedReceiptVoucherNumber
+                        ? Array.from(
+                            new Set([
+                                ...oldReferenceCodes,
+                                savedReceiptVoucherNumber,
+                            ])
+                        )
+                        : oldReferenceCodes;
+
+                    const updateInvoicePayload: any = {
+                        sInvFooter: {
+                            ...item.footer,
+                            adjustedAmount: String(item.newAdjustedAmount),
+                            balanceAmount: String(item.newBalanceAmount),
+                        },
+                        sInvStatus:
+                            item.newBalanceAmount - item.returnAmount < 1
+                                ? "close"
+                                : "open",
                         sInvReferenceCodes: newReferenceCodes,
                     };
-                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: item.saleInvoice, payload }))
+
+                    await dispatch(
+                        updateSalesInvoice({
+                            sInvVoucherNumber:
+                                item.saleInvoice || item.salesInvoice,
+                            payload: updateInvoicePayload,
+                        }) as any
+                    );
                 }
                 toast.success("Sales receipt created successfully");
             }
@@ -1260,25 +1422,21 @@ const SalesReceipt = () => {
         try {
             const receiptVoucherNumber = confirmTooltip.voucherNumber;
             if (!receiptVoucherNumber) return;
-            //  * 1. Get full receipt data before delete 
+
             const receiptData = await dispatch(getByVoucherNumberSalesReceiptList({ voucherNumber: receiptVoucherNumber, }) as any).unwrap();
-            console.log({ receiptData })
             const recBody = Array.isArray(receiptData?.recBody) ? receiptData.recBody : [];
-            //  * 2. Reverse Sales Invoice adjustment 
             for (const bodyItem of recBody) {
                 const references = Array.isArray(bodyItem?.references) ? bodyItem.references : [];
                 for (const ref of references) {
-                    console.log({ ref })
-                    // return
-                    const salesInvoiceNumber = ref?.saleInvoice;
+                    const salesInvoiceNumber = ref?.saleInvoice || ref?.salesInvoice;
                     if (!salesInvoiceNumber) continue;
-                    const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: salesInvoiceNumber }))
+                    const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: salesInvoiceNumber, }) as any);
                     const salesInvoiceData = getSalesInv?.payload;
                     if (!salesInvoiceData) {
                         console.warn("Sales invoice not found:", salesInvoiceNumber);
                         continue;
                     }
-                    console.log({ salesInvoiceData })
+
                     const oldFooter = salesInvoiceData?.sInvFooter || {};
                     const oldAdjustedAmount = toNumber(oldFooter.adjustedAmount);
                     const oldBalanceAmount = toNumber(oldFooter.balanceAmount);
@@ -1287,7 +1445,7 @@ const SalesReceipt = () => {
                     const newBalanceAmount = oldBalanceAmount + receiptAdjustedAmount;
                     const oldReferenceCodes = Array.isArray(salesInvoiceData?.sInvReferenceCodes) ? salesInvoiceData.sInvReferenceCodes : [];
                     const newReferenceCodes = oldReferenceCodes.filter((id: string) => id !== receiptVoucherNumber);
-                    const payload = {
+                    const updateInvoicePayload = {
                         sInvFooter: {
                             ...oldFooter,
                             adjustedAmount: String(newAdjustedAmount < 0 ? 0 : newAdjustedAmount),
@@ -1296,17 +1454,21 @@ const SalesReceipt = () => {
                         sInvStatus: "open",
                         sInvReferenceCodes: newReferenceCodes,
                     };
-                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: salesInvoiceNumber, payload }))
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: salesInvoiceNumber, payload: updateInvoicePayload, }) as any
+                    );
                 }
             }
 
-            //  * 3. Delete receipt 
             await dispatch(deleteSalesReceipt({ receiptVoucherNumber, }) as any).unwrap();
             toast.success("Sales receipt deleted successfully");
             await fetchSalesReceipts();
         } catch (error: any) {
             console.error("Sales receipt delete error:", error);
-            toast.error(error?.response?.data?.message || error?.message || "Failed to delete sales receipt");
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to delete sales receipt"
+            );
         } finally {
             setConfirmTooltip({
                 show: false,
@@ -1424,11 +1586,7 @@ const SalesReceipt = () => {
                         body: { accountType: "customer" },
                     }
                 );
-
-                const header = updatedData?.header?.filter(
-                    (e: any) => e?.key !== "isPosPosting"
-                );
-
+                const header = updatedData?.header?.filter((e: any) => e?.key !== "isPosPosting");
                 setTemplateFields({ ...updatedData, header });
             } catch (error) {
                 console.log("Failed to prepare sales receipt fields", error);
@@ -1440,20 +1598,13 @@ const SalesReceipt = () => {
         prepareFields();
     }, [transactionsSchema]);
 
-    const showInitialSkeleton =
-        !refreshing &&
-        salesReceipt.length === 0 &&
-        (listingLoader || fieldsLoading);
-
     useEffect(() => {
-        // @ts-ignore
-        dispatch(getAllReportMapping({ moduleType: "receipt" }));
-    }, []);
+        dispatch(getAllReportMapping({ moduleType: "receipt" }) as any);
+    }, [dispatch]);
 
-    if (showInitialSkeleton) {
-        return <ModulePageSkeleton rows={8} columns={5} />;
-    }
-    console.log({ form })
+    const showInitialSkeleton = !refreshing && salesReceipt.length === 0 && (listingLoader || fieldsLoading);
+    if (showInitialSkeleton) return <ModulePageSkeleton rows={8} columns={5} />;   
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div className="mb-3 flex items-center">
@@ -1480,8 +1631,11 @@ const SalesReceipt = () => {
                         loading={refreshing}
                     />
 
-                    <Permission module="bookez" permissionKey="receipt" action="create">
-                        {/* @ts-ignore */}
+                    <Permission
+                        module="bookez"
+                        permissionKey="receipt"
+                        action="create"
+                    >
                         <DataCreateButton
                             callBackFn={openAddModal}
                             text="Add Sales Receipt"
@@ -1498,15 +1652,15 @@ const SalesReceipt = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <button
-                            id="sales-quotation-edit-button"
+                            id="sales-receipt-download-button"
                             onClick={() => {
-                                setDownlaodPDF((pre) => ({
+                                setDownlaodPDF((pre: any) => ({
                                     ...pre,
                                     show: true,
-                                    moduleType: "salesQuotation",
+                                    moduleType: "receipt",
                                     record,
-                                    CustomerCode: record?.sQuoteCustomerCode,
-                                    voucherNumber: record?.sQuoteVoucherNumber,
+                                    CustomerCode: record?.recAccountCode,
+                                    voucherNumber: record?.recVoucherNumber,
                                 }));
                             }}
                             className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
@@ -1514,7 +1668,11 @@ const SalesReceipt = () => {
                             <Download size={16} />
                         </button>
 
-                        <Permission module="bookez" permissionKey="receipt" action="update">
+                        <Permission
+                            module="bookez"
+                            permissionKey="receipt"
+                            action="update"
+                        >
                             <button
                                 onClick={() => openEditModal(record)}
                                 className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
@@ -1523,7 +1681,11 @@ const SalesReceipt = () => {
                             </button>
                         </Permission>
 
-                        <Permission module="bookez" permissionKey="receipt" action="delete">
+                        <Permission
+                            module="bookez"
+                            permissionKey="receipt"
+                            action="delete"
+                        >
                             <button
                                 disabled={deleteLoader}
                                 onClick={(e) => {
@@ -1609,6 +1771,7 @@ const SalesReceipt = () => {
                         handleDeleteRow,
                         handleRowChange,
                         footerTotals,
+                        isSummaryFooter:false,
                         inputData: {
                             ...templateFields,
                             body: bodyFieldsWithoutReference,
@@ -1625,6 +1788,7 @@ const SalesReceipt = () => {
                     {...{
                         show: showReferenceModal,
                         setShow: setShowReferenceModal,
+                        bodyTitle:"Reference",
                         edit: false,
                         title: "Reference",
                         subtitle: selectedReferenceRow?.accountName
@@ -1637,7 +1801,7 @@ const SalesReceipt = () => {
                         isAddButton: false,
                         Addbutton: false,
                         form: {
-                            newReference: money(newReferenceAmount),
+                            newReference: newReferenceAmount,
                             referenceBody: referenceRows,
                         },
                         errors: {
@@ -1649,25 +1813,39 @@ const SalesReceipt = () => {
                         footerTotals: {},
                         inputData: {
                             header: [
-                                {
-                                    key: "newReference",
-                                    label: "New Reference",
-                                    type: "text",
-                                    disabled: true,
-                                },
+                                // {
+                                //     key: "newReference",
+                                //     label: "New Reference",
+                                //     type: "text",
+                                //     disabled: true,
+                                // },
                             ],
-
                             body: referenceTableFields,
                             footer: [],
                         },
                         bodyKey: "referenceBody",
-                        handleChange: () => { },
+                        handleChange: (key: string, value: any) => {
+                            if (key === "newReference") {
+                                handleNewReferenceChange(value);
+                            }
+                        },
                     }}
                 />
             )}
 
-            {/* @ts-ignore  */}
-            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "receipt", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })), rowData: downlaodPDF?.record, report, title: "Download Sales Receipt PDF", }}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "receipt",
+                    setShow: () =>
+                        setDownlaodPDF(() => ({
+                            show: !downlaodPDF?.show,
+                        })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Sales Receipt PDF",
+                }}
             />
         </div>
     );

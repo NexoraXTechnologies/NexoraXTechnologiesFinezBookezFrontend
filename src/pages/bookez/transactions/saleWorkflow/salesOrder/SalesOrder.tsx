@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2} from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Badge from "../../../../../components/badge";
@@ -79,14 +79,14 @@ const SalesOrder = () => {
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
-    console.log({ salesQuotations })
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
         const selectedOption = getOptionByValue(field, selectedValue);
-        const updated = { ...oldData, [field.key]: selectedValue };
-        if (field?.mapFields && selectedOption?.raw) {
+        const raw = selectedOption?.raw || {};
+        const updated = { ...oldData, [field.key]: selectedValue, };
+        if (field?.mapFields && raw) {
             Object.entries(field.mapFields).forEach(([targetKey, sourceKey]) => {
-                updated[targetKey] = selectedOption.raw?.[sourceKey as string] ?? "";
+                updated[targetKey] = raw?.[sourceKey as string] ?? raw?.[String(sourceKey).toLowerCase()] ?? raw?.[String(sourceKey).toUpperCase()] ?? "";
             });
         }
         return updated;
@@ -278,19 +278,51 @@ const SalesOrder = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
-        if (duplicate) {
-            setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
-            return
+        const duplicate = Boolean(
+            form?.products?.some((e: any, i: number) => {
+                if (i === index) return false;
+
+                return (
+                    String(e?.productCode || "") === String(value || "") ||
+                    String(e?.productId || "") === String(value || "")
+                );
+            })
+        );
+
+        if (key === "productCode" && duplicate) {
+            setErrors((prev: any) => ({
+                ...prev,
+                products: "",
+                [`row_${index}_${key}`]: "This product already added",
+                [`row_${index}_tax`]: "",
+            }));
+            return;
         }
+
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-            let updatedRow = { ...currentRow, [key]: value };
-            if (currentField?.mapFields) updatedRow = applyMappedFields(currentField, value, updatedRow);
+            let updatedRow = { ...currentRow, [key]: value, };
+            if (currentField?.mapFields) { updatedRow = applyMappedFields(currentField, value, updatedRow); }
             const selectedOption = getOptionByValue(currentField, value);
-            if (selectedOption?.raw?._id && !updatedRow.productId) updatedRow.productId = selectedOption.raw._id;
+            const raw = selectedOption?.raw || {};
+            if (raw?._id && !updatedRow.productId) { updatedRow.productId = raw._id; }
+            if (key === "productCode" || key === "productName" || key === "productId") {
+                updatedRow.cgst = raw?.csgst;
+                updatedRow.sgst = raw?.csgst;
+                updatedRow.igst = raw?.igst;
+                if (num(updatedRow.igst) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstAmount = 0;
+                }
+            }
             updatedRow = normalizeRowKeys(updatedRow);
             if ((key === "cgst" || key === "sgst") && num(value) > 0) {
                 updatedRow.igst = "";
@@ -304,11 +336,16 @@ const SalesOrder = () => {
             }
             updatedRow = calculateRow(updatedRow);
             updatedProducts[index] = updatedRow;
-            return { ...prev, products: updatedProducts };
+            return { ...prev, products: updatedProducts, };
         });
-        setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "", [`row_${index}_tax`]: "" }));
-    };
 
+        setErrors((prev: any) => ({
+            ...prev,
+            products: "",
+            [`row_${index}_${key}`]: "",
+            [`row_${index}_tax`]: "",
+        }));
+    };
     const getFilledRows = () => {
         const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
         return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
@@ -410,7 +447,7 @@ const SalesOrder = () => {
             resetMainForm();
             fetchSalesOrders();
             await fetchSalesQuotations();
-            handlePurchaseOrderModalClose();
+            handlePurchaseOrderModalClose(false);
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }
@@ -469,6 +506,7 @@ const SalesOrder = () => {
         setErrors({});
         setEditingRecord(null);
         setShowPurchaseOrderModal(false);
+        setSelectedPurchaseOrder(null)
         setShowModal(true);
     };
 
@@ -479,14 +517,14 @@ const SalesOrder = () => {
         await dispatch(getSalesQuotationList({ offset: 0, limit: 100, search: purchaseOrderSearch, status: "won" }) as any);
     };
 
-    const handlePurchaseOrderModalClose = () => {
+    const handlePurchaseOrderModalClose = (isModalFalse = true) => {
         setShowPurchaseOrderModal(false);
         setSelectedPurchaseOrder(null);
         setPurchaseOrderSearch("");
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
-        setShowModal(false);
+        setShowModal(isModalFalse);
     };
 
     useEffect(() => {
@@ -520,7 +558,6 @@ const SalesOrder = () => {
             toast.error("You can't edit closed order");
             return;
         }
-
         openEditModal(record);
     };
 
@@ -529,14 +566,10 @@ const SalesOrder = () => {
             toast.error("You can't delete closed order");
             return;
         }
-
         const rect = e.currentTarget.getBoundingClientRect();
         let x = rect.left - 150;
-
         if (x < 10) x = 10;
-
         const y = rect.top + window.scrollY - 5;
-
         setConfirmTooltip({
             show: true,
             x,
@@ -594,22 +627,6 @@ const SalesOrder = () => {
                         </Permission>
 
                         <Permission module="bookez" permissionKey="salesOrder" action="delete">
-                            {/* <button
-                                id="sales-order-delete-button"
-                                disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-                                    const y = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sOrderVoucherNumber });
-                                }}
-                                className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                            >
-                                <Trash2 size={16} />
-                            </button> */}
-
-
                             <button
                                 id="sales-order-delete-button"
                                 disabled={deleteLoading}
@@ -618,7 +635,6 @@ const SalesOrder = () => {
                             >
                                 <Trash2 size={16} />
                             </button>
-
                         </Permission>
                     </div>
                 )}

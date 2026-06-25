@@ -1292,10 +1292,7 @@ const SalesInVoice = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        const duplicate = Boolean(
-            form?.products?.filter((e: any) => e?.productCode == value)?.length
-        );
-
+        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
         if (duplicate) {
             setErrors((prev: any) => ({
                 ...prev,
@@ -1318,16 +1315,31 @@ const SalesInVoice = () => {
             }
 
             const selectedOption = getOptionByValue(currentField, value);
+            const raw = selectedOption?.raw || {};
+            if (raw?._id && !updatedRow.productId) {
+                updatedRow.productId = raw._id;
+            }
+            updatedRow = normalizeRowKeys(updatedRow);
+            if (key === "productCode" || key === "productName" || key === "productId") {
+                updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
+                updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
+                updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
 
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
+                if (num(updatedRow.igst) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+
+                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstAmount = 0;
+                }
             }
 
-            updatedRow = normalizeRowKeys(updatedRow);
-
             // ✅ Make sure Sales Order number never gets lost
-            updatedRow.sOrderNumber =
-                updatedRow.sOrderNumber || prev?.sInvSalesOrderVoucherNumber || "";
+            updatedRow.sOrderNumber = updatedRow.sOrderNumber || prev?.sInvSalesOrderVoucherNumber || "";
 
             if ((key === "cgst" || key === "sgst") && num(value) > 0) {
                 updatedRow.igst = "";
@@ -1548,9 +1560,8 @@ const SalesInVoice = () => {
 
     const handleDeleteConfirm = async () => {
         try {
-            if (!confirmTooltip?.voucherNumber) return;
+            if (!confirmTooltip?.voucherNumber) return toast.warning("Sales invoice deleted, but sales order voucher number not found");
             const salesOrderVoucherNumber = confirmTooltip?.voucherNumber;
-            if (salesOrderVoucherNumber) return toast.warning("Sales invoice deleted, but sales order voucher number not found");
             await dispatch(deleteSalesInvoice(confirmTooltip.voucherNumber) as any).unwrap();
             await syncSalesOrderStatus(salesOrderVoucherNumber, "open");
             toast.success("Sales invoice deleted successfully");
@@ -1612,7 +1623,7 @@ const SalesInVoice = () => {
             return;
         }
         const poBody = selectedPurchaseOrder?.sOrderBody || [];
-        const products = !poBody?.length ? poBody?.map((item: any) =>
+        const products = poBody?.length ? poBody?.map((item: any) =>
                     calculateRow(
                         normalizeRowKeys({
                             id: Date.now() + Math.random(),
@@ -1672,15 +1683,9 @@ const SalesInVoice = () => {
 
         setForm({
             ...getDefaultForm(),
-
             sInvVoucherNumber: "AUTO",
-
-            sInvSalesOrderVoucherNumber:
-                selectedPurchaseOrder?.sOrderVoucherNumber || "",
-
-            sInvVoucherDate: formatDateForInput(
-                selectedPurchaseOrder?.sOrderVoucherDate
-            ),
+            sInvSalesOrderVoucherNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
+            sInvVoucherDate: formatDateForInput(selectedPurchaseOrder?.sOrderVoucherDate),
             sInvCustomerCode: selectedPurchaseOrder?.sOrderCustomerCode || "",
             sInvCustomerName: selectedPurchaseOrder?.sOrderCustomerName || "",
             sInvSalesAccount: selectedPurchaseOrder?.sOrderSalesAccount || "SA021",
@@ -1690,7 +1695,7 @@ const SalesInVoice = () => {
             sInvRemarks: selectedPurchaseOrder?.sOrderRemark || "",
             isAutoPost: selectedPurchaseOrder?.isAutoPost || false,
             products,
-        });
+        }); 
 
         setErrors({});
         setEditingRecord(null);

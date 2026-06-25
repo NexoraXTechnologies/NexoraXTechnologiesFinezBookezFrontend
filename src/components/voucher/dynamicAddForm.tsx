@@ -23,7 +23,6 @@ const DynamicAddForm = ({
     bodyKey,
     addButtonText,
     handleChange,
-    footerTotals,
     headerChildTitle,
     isAddButton = true,
     isRefrenceAction = false,
@@ -32,6 +31,7 @@ const DynamicAddForm = ({
     isView = false,
     contentLoading = false,
     contentSkeleton,
+    isSummaryFooter
 }: any) => {
     const renderInput = (e: any) => {
         if (e?.type === "date") {
@@ -177,8 +177,8 @@ const DynamicAddForm = ({
                             ))}
 
                         <SummaryCards
-                            footerTotals={footerTotals}
-                            items={inputData?.footer || []}
+                                items={inputData?.footer || []}
+                                isSummaryFooter={isSummaryFooter}
                         />
                     </>
                 )}

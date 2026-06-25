@@ -65,11 +65,7 @@ const ProductMasterFormModal = ({
   ===================================================== */
   const getTextValue = (value: any) => {
     if (!value) return "";
-
-    if (typeof value === "string" || typeof value === "number") {
-      return String(value);
-    }
-
+	  if (typeof value === "string" || typeof value === "number") { return String(value); }
     if (typeof value === "object") {
       return (
         value.en ||
@@ -80,8 +76,7 @@ const ProductMasterFormModal = ({
         Object.values(value).find((v) => typeof v === "string") ||
         ""
       );
-    }
-
+	}
     return "";
   };
 
@@ -296,8 +291,7 @@ const ProductMasterFormModal = ({
      - normal text input
   ===================================================== */
   const renderSchemaField = (field: any) => {
-    const value = form?.[field.key] ?? "";
-
+	  const value = form?.[field.key] ?? "";
     const commonProps = {
       label: field.label,
       mandatory: field.isRequired,
@@ -331,7 +325,10 @@ const ProductMasterFormModal = ({
           key={field.key}
           {...commonProps}
           type="number"
-          onChange={(e: any) => {
+			  onChange={(e: any) => {
+				  if (field?.key == "csgst") updateField("igst", null);
+				  if (field?.key == "igst") updateField("csgst", null);
+				  field?.key == "csgst" && console.log({ field })
             updateField(field.key, e.target.value);
           }}
         />
@@ -368,15 +365,24 @@ const ProductMasterFormModal = ({
 
     if (field.key === "imageUrl") {
       return (
-        <TextInput
-          key={field.key}
-          {...commonProps}
-          type="text"
-          placeholder="Enter image URL"
-          onChange={(e: any) => {
-            updateField(field.key, e.target.value);
-          }}
-        />
+		  <TextInput
+			  label={field.label}
+			  mandatory={field.isRequired}
+			  placeholder={`Enter ${field.label}`}
+			  error={errors?.[field.key]}
+			  key={field.key}
+			  type="file"
+			  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+				  const file = e.target.files?.[0];
+				  if (!file) return;
+				  const reader = new FileReader();
+				  reader.onload = () => {
+					  const base64 = reader.result as string;
+					  updateField(field.key, base64);
+				  };
+				  reader.readAsDataURL(file);
+			  }}
+		  />
       );
     }
 
@@ -385,7 +391,7 @@ const ProductMasterFormModal = ({
         key={field.key}
         {...commonProps}
         type="text"
-        onChange={(e: any) => {
+			onChange={(e: any) => {
           updateField(field.key, e.target.value);
         }}
       />

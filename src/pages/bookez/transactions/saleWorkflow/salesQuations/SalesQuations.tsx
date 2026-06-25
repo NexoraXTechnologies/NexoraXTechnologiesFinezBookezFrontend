@@ -532,24 +532,30 @@ const SalesQuotations = () => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-
-            let updatedRow = {
-                ...currentRow,
-                [key]: value,
-            };
-
-            if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(currentField, value, updatedRow);
-            }
-
+            let updatedRow = { ...currentRow, [key]: value, };
+            if (currentField?.mapFields) { updatedRow = applyMappedFields(currentField, value, updatedRow); }
             const selectedOption = getOptionByValue(currentField, value);
-
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
-            }
-
+            const raw = selectedOption?.raw || {};
+            if (raw?._id && !updatedRow.productId) { updatedRow.productId = raw._id; }
             updatedRow = normalizeRowKeys(updatedRow);
+            console.log({ raw })
+            if (key === "productCode" || key === "productName" || key === "productId") {
+                updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
+                updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
+                updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
 
+                if (num(updatedRow.igst) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+
+                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstAmount = 0;
+                }
+            }
             if ((key === "cgst" || key === "sgst") && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstAmount = 0;
@@ -561,31 +567,16 @@ const SalesQuotations = () => {
                 updatedRow.cgstAmount = 0;
                 updatedRow.sgstAmount = 0;
             }
-
             updatedRow = calculateRow(updatedRow);
             updatedProducts[index] = updatedRow;
-
-            return {
-                ...prev,
-                products: updatedProducts,
-            };
+            return { ...prev, products: updatedProducts, };
         });
-
-        setErrors((prev: any) => ({
-            ...prev,
-            products: "",
-            [`row_${index}_${key}`]: "",
-            [`row_${index}_tax`]: "",
-        }));
+        setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "", [`row_${index}_tax`]: "", }));
     };
 
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
-
-        return (form.products || []).filter((row: any) =>
-            bodyKeys.some((key: string) => {
+        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
+        return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
                 const value = row?.[key];
                 return value !== undefined && value !== null && value !== "";
             })
