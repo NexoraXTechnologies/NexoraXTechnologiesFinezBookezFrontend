@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
@@ -14,6 +14,8 @@ import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Permission from "../../../../components/PermissionGuard";
+import { ListingModel } from "../../../../components/modal";
+import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -113,7 +115,7 @@ const PurchaseOrder = () => {
     const purchaseOrderState = useSelector(
         (state: any) => state.purchaseOrder
     );
-
+    const { report } = useSelector((s: any) => s.reportMapping);
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
     );
@@ -155,6 +157,7 @@ const PurchaseOrder = () => {
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -488,6 +491,11 @@ const PurchaseOrder = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
+    useEffect(() => {
+        /* @ts-ignore  */
+        dispatch(getAllReportMapping({ moduleType: "purchaseOrder" }));
+    }, []);
+
     /* ===================================================
        LOAD TRANSACTION SCHEMA WITH API OPTIONS
     =================================================== */
@@ -495,20 +503,11 @@ const PurchaseOrder = () => {
     useEffect(() => {
         const prepareFields = async () => {
             if (!transactionsSchema) return;
-
-            const hasSchema =
-                Array.isArray(transactionsSchema?.header) ||
-                Array.isArray(transactionsSchema?.body) ||
-                Array.isArray(transactionsSchema?.footer);
-
+            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
             if (!hasSchema) return;
-
             try {
                 setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
                 setTemplateFields(updatedData);
             } catch (error) {
                 console.log("Failed to prepare template fields", error);
@@ -840,7 +839,6 @@ const PurchaseOrder = () => {
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
-
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
 
@@ -849,52 +847,54 @@ const PurchaseOrder = () => {
                 [key]: value,
             };
 
-            // ✅ Existing dynamic mapFields support
             if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(
-                    currentField,
-                    value,
-                    updatedRow
-                );
+                updatedRow = applyMappedFields(currentField, value, updatedRow);
             }
 
             const selectedOption = getOptionByValue(currentField, value);
-
-            // ✅ When product is selected, prefill all product master details
+            const raw = selectedOption?.raw || {};
             const lowerKey = String(key).toLowerCase();
-
-            const isProductField =
-                lowerKey === "productcode" ||
-                lowerKey === "productname" ||
-                lowerKey === "productid" ||
-                lowerKey === "product";
-
+            const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
             if (isProductField && selectedOption?.raw) {
-                updatedRow = fillProductDetailsFromSelectedOption(
-                    updatedRow,
-                    selectedOption
-                );
+                updatedRow = fillProductDetailsFromSelectedOption(updatedRow, selectedOption);
+                updatedRow.productCode = raw?.productCode || raw?.code || updatedRow.productCode || "";
+                updatedRow.productName = raw?.productName || raw?.name || selectedOption?.label || updatedRow.productName || "";
+                updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
+                const cgstValue = raw?.cgstPercentage ?? raw?.cgst ?? raw?.csgst ?? raw?.cgstRate ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
+                const sgstValue = raw?.sgstPercentage ?? raw?.sgst ?? raw?.csgst ?? raw?.sgstRate ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
+                const igstValue = raw?.igstPercentage ?? raw?.igst ?? raw?.igstRate ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
+                updatedRow.cgst = cgstValue;
+                updatedRow.sgst = sgstValue;
+                updatedRow.igst = igstValue;
+                updatedRow.cgstPercentage = cgstValue;
+                updatedRow.sgstPercentage = sgstValue;
+                updatedRow.igstPercentage = igstValue;
+
+                if (num(igstValue) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstPercentage = "";
+                    updatedRow.sgstPercentage = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+
+                if (num(cgstValue) > 0 || num(sgstValue) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                }
             }
-
             updatedRow = normalizeRowKeys(updatedRow);
-
-            const isCgst =
-                lowerKey === "cgst" || lowerKey === "cgstpercentage";
-
-            const isSgst =
-                lowerKey === "sgst" || lowerKey === "sgstpercentage";
-
-            const isIgst =
-                lowerKey === "igst" || lowerKey === "igstpercentage";
-
-            // ✅ CGST/SGST selected manually, so clear IGST
+            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
+            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
+            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
             if ((isCgst || isSgst) && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstPercentage = "";
                 updatedRow.igstAmount = 0;
             }
 
-            // ✅ IGST selected manually, so clear CGST/SGST
             if (isIgst && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
@@ -905,7 +905,6 @@ const PurchaseOrder = () => {
             }
 
             updatedRow = calculateRow(updatedRow);
-
             updatedProducts[index] = updatedRow;
 
             return {
@@ -947,23 +946,17 @@ const PurchaseOrder = () => {
 
     const validateForm = () => {
         const err: any = {};
-
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden) return;
             if (!field.isRequired) return;
-
             const value = form?.[field.key];
-
             if (value === undefined || value === null || value === "") {
                 err[field.key] = `${field.label || field.key} is required`;
             }
         });
 
         const filledRows = getFilledRows();
-
-        if (filledRows.length === 0) {
-            err.products = "Please add at least one product";
-        }
+        if (filledRows.length === 0) { err.products = "Please add at least one product"; }
 
         (form.products || []).forEach((row: any, index: number) => {
             const hasAnyValue = (templateFields?.body || []).some(
@@ -979,38 +972,22 @@ const PurchaseOrder = () => {
             );
 
             if (!hasAnyValue) return;
-
             (templateFields?.body || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
-
                 const value = row?.[field.key];
-
-                if (
-                    value === undefined ||
-                    value === null ||
-                    value === ""
-                ) {
-                    err[`row_${index}_${field.key}`] = `${field.label || field.key
-                        } is required`;
+                if (value === undefined || value === null || value === "") {
+                    err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
                 }
             });
-
             const cgst = num(row.cgstPercentage || row.cgst);
             const sgst = num(row.sgstPercentage || row.sgst);
             const igst = num(row.igstPercentage || row.igst);
-
             if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] =
-                    "You can enter either IGST or CGST/SGST";
-
-                err[`row_${index}_igstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] =
-                    "Only one tax type allowed";
-
+                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
+                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
                 err[`row_${index}_igst`] = "Only one tax type allowed";
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
@@ -1018,29 +995,17 @@ const PurchaseOrder = () => {
         });
 
         setErrors(err);
-
-        if (err.products) {
-            toast.error(err.products);
-        }
-
+        if (err.products) { toast.error(err.products); }
         return Object.keys(err).length === 0;
     };
 
     const cleanRows = () => {
-        const bodyKeys = (templateFields?.body || []).map(
-            (field: any) => field.key
-        );
-
+        const bodyKeys = (templateFields?.body || []).map((field: any) => field.key);
         return (form.products || [])
             .filter((row: any) => {
                 return bodyKeys.some((key: string) => {
                     const value = row?.[key];
-
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
+                    return (value !== undefined && value !== null && value !== "");
                 });
             })
             .map((row: any) => calculateRow(normalizeRowKeys(row)));
@@ -1351,6 +1316,23 @@ const PurchaseOrder = () => {
                 emptyMessage={`No ${status} purchase order found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        {console.log({ record })}
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre: any) => ({
+                                    ...pre,
+                                    show: true,
+                                    moduleType: "purchaseOrder",
+                                    record,
+                                    CustomerCode: record?.pOrdVendorCode,
+                                    voucherNumber: record?.pOrdVoucherNumber,
+                                }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
+                            <Download size={16} />
+                        </button>
                         <Permission module="bookez" permissionKey="purchaseOrder" action="update">
                             {/* <button
                                 id="purchase-order-edit-button"
@@ -1452,6 +1434,24 @@ const PurchaseOrder = () => {
                     }}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "purchase-order",
+                    setShow: () =>
+                        setDownlaodPDF(() => ({
+                            show: !downlaodPDF?.show,
+                        })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Purchase Order PDF",
+                    cancelText: "Cancel",
+                    confirmText: "Confirm",
+                }}
+            />
         </div>
     );
 };
