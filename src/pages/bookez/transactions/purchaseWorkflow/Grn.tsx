@@ -571,7 +571,7 @@ const Grn = () => {
                     row.rejectedQuantity !== null &&
                     row.rejectedQuantity !== ""
                     ? row.rejectedQuantity
-                    : "0",
+                    : "",
 
             rejectedReason: row.rejectedReason || "",
 
@@ -824,7 +824,7 @@ const Grn = () => {
                         item?.rejectedQuantity !== null &&
                         item?.rejectedQuantity !== ""
                         ? item.rejectedQuantity
-                        : "0",
+                        : " ",
 
                 rejectedReason: item?.rejectedReason || "",
 
