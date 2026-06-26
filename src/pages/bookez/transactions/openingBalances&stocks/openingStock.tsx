@@ -76,6 +76,7 @@ const mainColumns = [
         render: (row: any) => (
             <span>{row?.openingStockFooter?.totalQuantity || 0}</span>
         ),
+
     },
     {
         key: "totalNetAmount",
@@ -85,6 +86,8 @@ const mainColumns = [
                 {money(row?.openingStockFooter?.totalNetAmount)}
             </span>
         ),
+        type: "amount",
+
     },
     {
         key: "openingStockStatus",
@@ -92,8 +95,8 @@ const mainColumns = [
         render: (row: any) => (
             <span
                 className={`rounded-md px-2 py-1 text-xs capitalize ${row?.openingStockStatus === "close"
-                        ? "bg-success/10 text-success"
-                        : "bg-primary/10 text-primary"
+                    ? "bg-success/10 text-success"
+                    : "bg-primary/10 text-primary"
                     }`}
             >
                 {row?.openingStockStatus || "open"}

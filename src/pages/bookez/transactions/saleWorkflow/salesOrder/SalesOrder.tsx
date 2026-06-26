@@ -206,7 +206,7 @@ const SalesOrder = () => {
             ),
         },
         { key: "sOrderBody", title: "Items", render: (row: any) => row?.sOrderBody?.length || 0 },
-        { key: "sOrderFooter", title: "Net Amount", render: (row: any) => <span className="font-semibold text-primary">{money(row?.sOrderFooter?.netAmount || 0)}</span> },
+        { key: "sOrderFooter", title: "Net Amount",type: "amount", render: (row: any) => <span className="font-semibold text-primary">{money(row?.sOrderFooter?.netAmount || 0)}</span> },
         {
             key: "sOrderDocStatus",
             title: "Doc Status",

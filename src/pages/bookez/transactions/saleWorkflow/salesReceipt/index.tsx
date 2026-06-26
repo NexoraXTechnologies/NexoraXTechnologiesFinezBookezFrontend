@@ -1532,6 +1532,7 @@ const SalesReceipt = () => {
                     {money(row?.recFooter?.netAmount || 0)}
                 </span>
             ),
+            type: "amount",
         },
         {
             key: "recStatus",

@@ -156,6 +156,7 @@ const mainColumns = [
                 ₹{Number(row?.totals?.netAmount || row?.netAmount || 0).toFixed(2)}
             </span>
         ),
+        type: "amount",
     },
     {
         key: "status",
@@ -658,7 +659,7 @@ const CreditNote = () => {
             if (key === "adjustmentNetAmount") {
                 updated.netAmount = value || "0.00";
             }
-            
+
 
             return updated;
         });
