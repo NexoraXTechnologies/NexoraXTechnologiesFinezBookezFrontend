@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -23,7 +23,7 @@ import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
-import Modal from "../../../../components/modal";
+import Modal, { ListingModel } from "../../../../components/modal";
 
 import {
     addGrn,
@@ -42,6 +42,7 @@ import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
+import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -351,6 +352,8 @@ const Grn = () => {
     const [purchaseOrderModalLoading, setPurchaseOrderModalLoading] =
         useState(false);
     const [purchaseOrderLoaded, setPurchaseOrderLoaded] = useState(false);
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
+    const { report } = useSelector((s: any) => s.reportMapping);
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -1449,7 +1452,6 @@ const Grn = () => {
         }
     };
 
-   
     const handleDeleteConfirm = async () => {
         try {
             const voucherNumber = confirmTooltip?.voucherNumber;
@@ -1546,6 +1548,11 @@ const Grn = () => {
             ),
         },
     ];
+
+    useEffect(() => {
+        /* @ts-ignore  */
+        dispatch(getAllReportMapping({ moduleType: "grn" }));
+    }, []);
 
     useEffect(() => {
         dispatch(getAllTransactionSchema("grn") as any);
@@ -1650,8 +1657,6 @@ const Grn = () => {
             voucherNumber: record?.grnVoucherNumber,
             pOrdVoucherNumber: record?.pOrdVoucherNumber || "",
         });
-
-
     }
 
     return (
@@ -1696,6 +1701,22 @@ const Grn = () => {
                 emptyMessage={`No ${status} GRN found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre: any) => ({
+                                    ...pre,
+                                    show: true,
+                                    moduleType: "grn",
+                                    record,
+                                    CustomerCode: record?.grnVendorCode,
+                                    voucherNumber: record?.grnVoucherNumber,
+                                }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
+                            <Download size={16} />
+                        </button>
                         <Permission module="bookez" permissionKey="grn" action="update">
                             <button
                                 id="grn-edit-button"
@@ -1881,6 +1902,21 @@ const Grn = () => {
                     handleChange={handleMainChange}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "grn",
+                    setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download GRN PDF",
+                    cancelText: "Cancel",
+                    confirmText: "Confirm",
+                }}
+            />
         </div>
     );
 };

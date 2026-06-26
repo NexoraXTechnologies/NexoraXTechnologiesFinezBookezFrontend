@@ -180,8 +180,6 @@ const ProductMaster = () => {
      CREATE / UPDATE PRODUCT
   ===================================================== */
   const handleProductSubmit = async (payload: any) => {
-    console.log({ payload });
-
     payload = {
       ...payload,
       csgst: payload.csgst ? Number(payload.csgst) : 0,

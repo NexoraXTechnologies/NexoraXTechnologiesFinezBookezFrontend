@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -43,6 +43,8 @@ import {
 
 import Permission from "../../../../components/PermissionGuard";
 import professionalAxios from "../../../../services/professionalAxios";
+import { ListingModel } from "../../../../components/modal";
+import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -100,78 +102,34 @@ const getDefaultForm = () => ({
 
 const Payment = () => {
     const dispatch = useDispatch();
-
     const paymentState = useSelector((state: any) => state.payment);
-
-    const { transactionsSchema } = useSelector(
-        (state: any) => state.getAllTransactionSchema
-    );
-
-    const payments =
-        paymentState?.payments ||
-        paymentState?.paymentList ||
-        paymentState?.paymentRecords ||
-        paymentState?.paymentData ||
-        paymentState?.payData ||
-        [];
-
+    const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
+    const payments = paymentState?.payments || paymentState?.paymentList || paymentState?.paymentRecords || paymentState?.paymentData || paymentState?.payData || [];
     const pagination = paymentState?.pagination || defaultPagination;
-
-    const loading =
-        paymentState?.loading ||
-        paymentState?.listingLoader ||
-        false;
-
-    const createLoading =
-        paymentState?.createLoading ||
-        paymentState?.addLoader ||
-        false;
-
-    const updateLoading =
-        paymentState?.updateLoading ||
-        paymentState?.updateLoader ||
-        false;
-
-    const deleteLoading =
-        paymentState?.deleteLoading ||
-        paymentState?.deleteLoader ||
-        false;
-
+    const loading = paymentState?.loading || paymentState?.listingLoader || false;
+    const createLoading = paymentState?.createLoading || paymentState?.addLoader || false;
+    const updateLoading = paymentState?.updateLoading || paymentState?.updateLoader || false;
+    const deleteLoading = paymentState?.deleteLoading || paymentState?.deleteLoader || false;
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
-
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(null);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
-    const [templateFields, setTemplateFields] = useState<any>({
-        header: [],
-        body: [],
-        footer: [],
-    });
-
+    const { report } = useSelector((s: any) => s.reportMapping);
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
+    const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-
     const [showReferenceModal, setShowReferenceModal] = useState(false);
-    const [selectedReferenceRowIndex, setSelectedReferenceRowIndex] =
-        useState<number | null>(null);
-
+    const [selectedReferenceRowIndex, setSelectedReferenceRowIndex] = useState<number | null>(null);
     const [referenceRows, setReferenceRows] = useState<any[]>([]);
     const [referenceError, setReferenceError] = useState("");
     const [referenceLoading, setReferenceLoading] = useState(false);
-
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({
-        show: false,
-        x: null,
-        y: null,
-        voucherNumber: null,
-    });
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, });
 
     const getRecords = (res: any) => {
         return Array.isArray(res?.items)
@@ -1546,14 +1504,14 @@ const Payment = () => {
             });
     }, [templateFields?.footer, footerTotals]);
 
-    const showInitialSkeleton =
-        !refreshing &&
-        payments.length === 0 &&
-        (loading || fieldsLoading);
+    const showInitialSkeleton = !refreshing && payments.length === 0 && (loading || fieldsLoading);
 
-    if (showInitialSkeleton) {
-        return <ModulePageSkeleton rows={8} columns={5} />;
-    }
+    useEffect(() => {
+        /* @ts-ignore  */
+        dispatch(getAllReportMapping({ moduleType: "purchasePayment" }));
+    }, []);
+
+    if (showInitialSkeleton) { return <ModulePageSkeleton rows={8} columns={5} /> }
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
@@ -1611,6 +1569,22 @@ const Payment = () => {
                 emptyMessage={`No ${status} payment found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre: any) => ({
+                                    ...pre,
+                                    show: true,
+                                    moduleType: "purchasePayment",
+                                    record,
+                                    CustomerCode: record?.payAccountCode,
+                                    voucherNumber: record?.payVoucherNumber,
+                                }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
+                            <Download size={16} />
+                        </button>
                         <Permission module="bookez" permissionKey="payment" action="update">
                             <button
                                 id="payment-edit-button"
@@ -1746,9 +1720,7 @@ const Payment = () => {
                             newReference: money(newReferenceAmount),
                             referenceBody: referenceRows,
                         },
-                        errors: {
-                            referenceBody: referenceError,
-                        },
+                        errors: { referenceBody: referenceError, },
                         handleAddRow: handleAddReferenceRow,
                         handleDeleteRow: handleDeleteReferenceRow,
                         handleRowChange: handleReferenceRowChange,
@@ -1770,6 +1742,21 @@ const Payment = () => {
                     }}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "purchasePayment",
+                    setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Payment PDF",
+                    cancelText: "Cancel",
+                    confirmText: "Confirm",
+                }}
+            />
         </div>
     );
 };
