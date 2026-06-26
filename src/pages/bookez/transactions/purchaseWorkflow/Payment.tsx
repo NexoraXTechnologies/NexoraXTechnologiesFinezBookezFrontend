@@ -1609,10 +1609,7 @@ const Payment = () => {
                                         show: true,
                                         x,
                                         y,
-                                        voucherNumber:
-                                            record?.payVoucherNumber ||
-                                            record?.paymentVoucherNumber ||
-                                            record?.voucherNumber,
+                                        voucherNumber: record?.payVoucherNumber || record?.paymentVoucherNumber || record?.voucherNumber,
                                     });
                                 }}
                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
