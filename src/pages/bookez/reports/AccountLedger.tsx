@@ -932,38 +932,127 @@ const AccountLedger = () => {
     const selectedAccountName =
         accountOptions.find((item: any) => item.value === account)?.label || "-";
 
-    const remainingBalanceType: "Dr" | "Cr" = totals?.remainingBalanceType
-        ? normalizeType(totals?.remainingBalanceType, "Dr")
-        : Number(totals?.remainingBalance || 0) >= 0
-            ? "Dr"
-            : "Cr";
+    // const remainingBalanceType: "Dr" | "Cr" = totals?.remainingBalanceType
+    //     ? normalizeType(totals?.remainingBalanceType, "Dr")
+    //     : Number(totals?.remainingBalance || 0) >= 0
+    //         ? "Dr"
+    //         : "Cr";
 
-    const summaryItems = [
-        {
-            label: "Opening Balance Net Total",
-            value: formatAmount(
-                totals?.openingBalanceNetTotal,
-                normalizeType(totals?.openingBalanceType, "Dr")
-            ),
-        },
-        {
-            label: "Sales Invoice Total",
-            value: formatAmount(totals?.salesInvoiceNetTotal, "Dr"),
-        },
-        {
-            label: "Sales Return Total",
-            value: formatAmount(totals?.salesReturnNetTotal, "Cr"),
-        },
-        {
-            label: "Receipt Total",
-            value: formatAmount(totals?.receiptNetTotal, "Cr"),
-        },
-    ];
+    // const summaryItems = [
+    //     {
+    //         label: "Opening Balance Net Total",
+    //         value: formatAmount(
+    //             totals?.openingBalanceNetTotal,
+    //             normalizeType(totals?.openingBalanceType, "Dr")
+    //         ),
+    //     },
+    //     {
+    //         label: "Sales Invoice Total",
+    //         value: formatAmount(totals?.salesInvoiceNetTotal, "Dr"),
+    //     },
+    //     {
+    //         label: "Sales Return Total",
+    //         value: formatAmount(totals?.salesReturnNetTotal, "Cr"),
+    //     },
+    //     {
+    //         label: "Receipt Total",
+    //         value: formatAmount(totals?.receiptNetTotal, "Cr"),
+    //     },
+    // ];
 
-    const remainingBalance = formatAmount(
-        totals?.remainingBalance,
-        remainingBalanceType
-    );
+    // const remainingBalance = formatAmount(
+    //     totals?.remainingBalance,
+    //     remainingBalanceType
+    // );
+
+
+    const defaultSummaryItems = [
+    {
+        key: "openingBalanceNetTotal",
+        label: "Opening Balance Net Total",
+        type: "Dr" as "Dr" | "Cr",
+    },
+    {
+        key: "salesInvoiceNetTotal",
+        label: "Sales Invoice Total",
+        type: "Dr" as "Dr" | "Cr",
+    },
+    {
+        key: "salesReturnNetTotal",
+        label: "Sales Return Total",
+        type: "Cr" as "Dr" | "Cr",
+    },
+    {
+        key: "receiptNetTotal",
+        label: "Receipt Total",
+        type: "Cr" as "Dr" | "Cr",
+    },
+];
+
+const totalLabelMap: Record<string, string> = {
+    openingBalanceNetTotal: "Opening Balance Net Total",
+
+    salesInvoiceNetTotal: "Sales Invoice Total",
+    salesReturnNetTotal: "Sales Return Total",
+    salesInvoiceReturnNetTotal: "Sales Return Total",
+    receiptNetTotal: "Receipt Total",
+
+    purchaseInvoiceNetTotal: "Purchase Invoice Total",
+    purchaseReturnNetTotal: "Purchase Return Total",
+    paymentNetTotal: "Payment Total",
+};
+
+const totalTypeMap: Record<string, "Dr" | "Cr"> = {
+    salesInvoiceNetTotal: "Dr",
+    salesReturnNetTotal: "Cr",
+    salesInvoiceReturnNetTotal: "Cr",
+    receiptNetTotal: "Cr",
+
+    purchaseInvoiceNetTotal: "Cr",
+    purchaseReturnNetTotal: "Dr",
+    paymentNetTotal: "Dr",
+};
+
+const formatTotalLabel = (key: string) => {
+    if (totalLabelMap[key]) return totalLabelMap[key];
+
+    return key
+        .replace(/NetTotal$/i, " Total")
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (char) => char.toUpperCase())
+        .trim();
+};
+
+const getTotalType = (key: string): "Dr" | "Cr" => {
+    if (key === "openingBalanceNetTotal") {
+        return normalizeType(totals?.openingBalanceType, "Dr");
+    }
+
+    return totalTypeMap[key] || "Dr";
+};
+
+const hiddenTotalKeys = [
+    "openingBalanceType",
+    "remainingBalance",
+    "remainingBalanceType",
+];
+
+const apiTotalKeys = Object.keys(totals || {}).filter(
+    (key) => !hiddenTotalKeys.includes(key)
+);
+
+const summaryItems =
+    apiTotalKeys.length === 0
+        ? defaultSummaryItems.map((item) => ({
+            label: item.label,
+            value: formatAmount(0, item.type),
+        }))
+        : apiTotalKeys.map((key) => ({
+            label: formatTotalLabel(key),
+            value: formatAmount(totals?.[key], getTotalType(key)),
+        }));
+
+const remainingBalance = `₹${Number(totals?.remainingBalance || 0).toFixed(2)}`;
 
     const viewFooterTotals = useMemo(() => {
         return {
