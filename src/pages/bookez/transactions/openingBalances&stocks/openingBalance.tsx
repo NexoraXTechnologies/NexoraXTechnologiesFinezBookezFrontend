@@ -55,6 +55,8 @@ const mainColumns = [
         render: (row: any) => (
             <>₹{Number(row?.openingBalFooter?.totalDebit || 0).toFixed(2)}</>
         ),
+        type: "amount",
+	
     },
     {
         key: "totalCredit",

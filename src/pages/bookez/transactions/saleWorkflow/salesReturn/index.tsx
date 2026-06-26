@@ -147,6 +147,7 @@ const SalesReturn = () => {
                     {money(row?.sInvReturnFooter?.netAmount || 0)}
                 </span>
             ),
+            type: "amount",
         },
         {
             key: "sInvReturnStatus",
@@ -627,9 +628,9 @@ const SalesReturn = () => {
                                     Loading purchase orders...
                                 </div>
                             ) : salesInvoices.length === 0 ? (
-                                    <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
-                                        No purchase order found
-                                    </div>
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
+                                    No purchase order found
+                                </div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesInvoices.map((e: any, index: number) => {

@@ -153,6 +153,7 @@ const mainColumns = [
                 ₹{Number(row?.totals?.netAmount || row?.netAmount || 0).toFixed(2)}
             </span>
         ),
+        type: "amount",
     },
     {
         key: "status",

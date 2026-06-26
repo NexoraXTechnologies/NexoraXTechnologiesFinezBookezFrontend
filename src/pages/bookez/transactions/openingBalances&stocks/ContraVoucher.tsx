@@ -61,11 +61,13 @@ const mainColumns = [
         key: "totalDebit",
         title: "Total Debit",
         render: (row: any) => <>₹{Number(row?.totalDebit || 0).toFixed(2)}</>,
+        type: "amount",
     },
     {
         key: "totalCredit",
         title: "Total Credit",
         render: (row: any) => <>₹{Number(row?.totalCredit || 0).toFixed(2)}</>,
+        type: "amount",
     },
     {
         key: "status",

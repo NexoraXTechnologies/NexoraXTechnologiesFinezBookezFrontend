@@ -335,6 +335,7 @@ const SalesQuotations = () => {
                     {money(row?.sQuoteFooter?.netAmount || 0)}
                 </span>
             ),
+            type: "amount",
         },
         {
             key: "sQuoteDocStatus",
