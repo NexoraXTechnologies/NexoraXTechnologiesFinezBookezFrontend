@@ -1127,34 +1127,45 @@ const Grn = () => {
                     updatedRow
                 );
             }
-
             const selectedOption = getOptionByValue(currentField, value);
-
+            const raw = selectedOption?.raw || {};
             const lowerKey = String(key).toLowerCase();
-
-            const isProductField =
-                lowerKey === "productcode" ||
-                lowerKey === "productname" ||
-                lowerKey === "productid" ||
-                lowerKey === "product";
-
+            const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
             if (isProductField && selectedOption?.raw) {
-                updatedRow = fillProductDetailsFromSelectedOption(
-                    updatedRow,
-                    selectedOption
-                );
+                updatedRow = fillProductDetailsFromSelectedOption(updatedRow, selectedOption);
+                updatedRow.productCode = raw?.productCode || raw?.code || updatedRow.productCode || "";
+                updatedRow.productName = raw?.productName || raw?.name || selectedOption?.label || updatedRow.productName || "";
+                updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
+                const cgstValue = raw?.cgstPercentage ?? raw?.cgst ?? raw?.csgst ?? raw?.cgstRate ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
+                const sgstValue = raw?.sgstPercentage ?? raw?.sgst ?? raw?.csgst ?? raw?.sgstRate ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
+                const igstValue = raw?.igstPercentage ?? raw?.igst ?? raw?.igstRate ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
+                updatedRow.cgst = cgstValue;
+                updatedRow.sgst = sgstValue;
+                updatedRow.igst = igstValue;
+                updatedRow.cgstPercentage = cgstValue;
+                updatedRow.sgstPercentage = sgstValue;
+                updatedRow.igstPercentage = igstValue;
+                if (num(igstValue) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstPercentage = "";
+                    updatedRow.sgstPercentage = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+
+                if (num(cgstValue) > 0 || num(sgstValue) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                }
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
             updatedRow = handleTaxFields(updatedRow, key, value);
             updatedRow = calculateRow(updatedRow);
-
             updatedProducts[index] = updatedRow;
-
-            return {
-                ...prev,
-                products: updatedProducts,
-            };
+            return { ...prev, products: updatedProducts, };
         });
 
         setErrors((prev: any) => ({
@@ -1172,14 +1183,10 @@ const Grn = () => {
         }));
     };
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
-
+        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
         return (form.products || []).filter((row: any) => {
             return bodyKeys.some((key: string) => {
                 const value = row?.[key];
-
                 return value !== undefined && value !== null && value !== "";
             });
         });
@@ -1187,12 +1194,9 @@ const Grn = () => {
 
     const validateForm = () => {
         const err: any = {};
-
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden || !field.isRequired) return;
-
             const value = form?.[field.key];
-
             if (value === undefined || value === null || value === "") {
                 err[field.key] = `${field.label || field.key} is required`;
             }
@@ -1649,8 +1653,6 @@ const Grn = () => {
 
 
     }
-
-
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">

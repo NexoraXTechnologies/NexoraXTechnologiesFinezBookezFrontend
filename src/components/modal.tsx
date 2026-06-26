@@ -340,18 +340,15 @@ const ListingModel = ({
     entryType = "sales-invoice",
 }: any) => {
     const dispatch = useDispatch<any>();
-
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
     const [gstType, setGstType] = useState("");
     const { company } = useSelector((s: any) => s.professionalCompanyMaster);
     const [loader, setLoader] = useState(false)
     const { selectedAccount } = useSelector((s: any) => s.accountMaster);
-
     const isReportDownload = Boolean(report?.length);
 
     useEffect(() => {
         if (!show) return;
-
         dispatch(getCompany(""));
         if (downlaodPDF?.CustomerCode) {   
             dispatch(getAccountByCode(downlaodPDF?.CustomerCode));
@@ -359,53 +356,24 @@ const ListingModel = ({
     }, [show, downlaodPDF?.CustomerCode, dispatch]);
 
     const handleLocalPdfPrint = async () => {
-        if (!gstType) {
-            return toast.warn("Select With GST Or Without GST");
-        }
-
+        if (!gstType) { return toast.warn("Select With GST Or Without GST") }
+        if (!Object.keys(company)?.length) return toast.error("Add Company Details")        
         try {
             const includeGst = gstType === "With GST";
-
             const normalized: any = normalizeDoc(rowData);
             const footer = normalized?.footer || {};
-            const invoiceNo =
-                normalized?.docNo ||
-                rowData?.voucherNumber ||
-                rowData?.sInvVoucherNumber ||
-                rowData?.sQuoteVoucherNumber ||
-                "";
-
-            const amount =
-                footer?.totalNetAmount ||
-                footer?.netAmount ||
-                footer?.balanceAmount ||
-                rowData?.sInvFooter?.totalNetAmount ||
-                rowData?.sInvFooter?.netAmount ||
-                rowData?.sQuoteFooter?.totalNetAmount ||
-                rowData?.sQuoteFooter?.netAmount ||
-                0;
-
-            const companyUpiId =
-                company?.upiId ||
-                company?.upiID ||
-                company?.companyUpiId ||
-                company?.upi ||
-                "";
-
+            const invoiceNo = normalized?.docNo || rowData?.voucherNumber || rowData?.sInvVoucherNumber || rowData?.sQuoteVoucherNumber || "";
+            const amount = footer?.totalNetAmount || footer?.netAmount || footer?.balanceAmount || rowData?.sInvFooter?.totalNetAmount || rowData?.sInvFooter?.netAmount || rowData?.sQuoteFooter?.totalNetAmount || rowData?.sQuoteFooter?.netAmount || 0;
+            const companyUpiId = company?.upiId || company?.upiID || company?.companyUpiId || company?.upi || "";
             let upiUrl = "";
             let upiQrUri = "";
-
             if (entryType === "sales-invoice" && companyUpiId) {
                 upiUrl = buildUpiLink({
                     upiId: companyUpiId,
                     amount,
                     invoiceNo,
-                    name:
-                        company?.companyName ||
-                        company?.businessName ||
-                        "",
+                    name: company?.companyName || company?.businessName || "",
                 });
-
                 upiQrUri = await generateQrDataUrl(upiUrl);
             }
 
@@ -465,7 +433,6 @@ const ListingModel = ({
 
         await handleLocalPdfPrint();
     };
-    console.log({ entryType })
     if (!show) return null;
 
     return (

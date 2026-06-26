@@ -94,7 +94,7 @@ const PrimaryButton = ({
     <button
         id="account-add-button"
         onClick={callBackFn}
-        disabled={disabled}
+        disabled={disabled || loader}
         className={`
       h-9 cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md
       bg-primary text-primary-foreground text-sm font-medium shadow-lg
