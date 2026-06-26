@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -24,7 +24,7 @@ import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
-import Modal from "../../../../components/modal";
+import Modal, { ListingModel } from "../../../../components/modal";
 
 import {
     addPurchaseReturn,
@@ -42,6 +42,7 @@ import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
+import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -217,99 +218,60 @@ const PurchaseReturn = () => {
         purchaseReturnState?.deleteLoading ||
         purchaseReturnState?.deleteLoader ||
         false;
-
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
-
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
     const [showGrnModal, setShowGrnModal] = useState(false);
     const [grnSearch, setGrnSearch] = useState("");
     const [selectedGrn, setSelectedGrn] = useState<any>(null);
-
     const [grnModalLoading, setGrnModalLoading] = useState(false);
     const [grnLoaded, setGrnLoaded] = useState(false);
-
-    const [templateFields, setTemplateFields] = useState<any>({
-        header: [],
-        body: [],
-        footer: [],
-    });
-
+    const { report } = useSelector((s: any) => s.reportMapping);
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
+    const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({
-        show: false,
-        x: null,
-        y: null,
-        voucherNumber: null,
-    });
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, });
 
     /* ===================================================
        FIELD HELPERS
     =================================================== */
 
     const getHeaderFieldByKey = (key: string) => {
-        return templateFields?.header?.find(
-            (field: any) => field.key === key
-        );
+        return templateFields?.header?.find((field: any) => field.key === key);
     };
 
     const getBodyFieldByKey = (key: string) => {
-        return templateFields?.body?.find(
-            (field: any) => field.key === key
-        );
+        return templateFields?.body?.find((field: any) => field.key === key);
     };
 
     const getOptionByValue = (field: any, selectedValue: any) => {
-        return field?.options?.find(
-            (opt: any) => String(opt.value) === String(selectedValue)
-        );
+        return field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
     };
 
-    const applyMappedFields = (
-        field: any,
-        selectedValue: any,
-        oldData: any
-    ) => {
+    const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
-
         const selectedOption = getOptionByValue(field, selectedValue);
-
-        const updated = {
-            ...oldData,
-            [field.key]: selectedValue,
-        };
-
+        const updated = { ...oldData, [field.key]: selectedValue, };
         if (field?.mapFields && selectedOption?.raw) {
             Object.entries(field.mapFields).forEach(
                 ([targetKey, sourceKey]) => {
-                    updated[targetKey] =
-                        selectedOption.raw?.[sourceKey as string] ?? "";
+                    updated[targetKey] = selectedOption.raw?.[sourceKey as string] ?? "";
                 }
             );
         }
-
         return updated;
     };
 
     const getUnitLabelFromSchema = (unitCode: string) => {
-        const unitField = templateFields?.body?.find(
-            (field: any) => field.key === "uom" || field.key === "unit"
-        );
-
-        const selectedUnit = unitField?.options?.find(
-            (item: any) => String(item.value) === String(unitCode)
-        );
-
+        const unitField = templateFields?.body?.find((field: any) => field.key === "uom" || field.key === "unit");
+        const selectedUnit = unitField?.options?.find((item: any) => String(item.value) === String(unitCode));
         return selectedUnit?.label || unitCode || "";
     };
 
@@ -1066,16 +1028,10 @@ const PurchaseReturn = () => {
 
     const handleDeleteRow = (index: number) => {
         setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter(
-                (_: any, i: number) => i !== index
-            );
-
+            const updatedProducts = (prev.products || []).filter((_: any, i: number) => i !== index);
             return {
                 ...prev,
-                products:
-                    updatedProducts.length > 0
-                        ? updatedProducts
-                        : [{ ...emptyProductRow, id: Date.now() }],
+                products: updatedProducts.length > 0 ? updatedProducts : [{ ...emptyProductRow, id: Date.now() }],
             };
         });
     };
@@ -1083,49 +1039,30 @@ const PurchaseReturn = () => {
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
-
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-
-            let updatedRow = {
-                ...currentRow,
-                [key]: value,
-            };
-
+            let updatedRow = { ...currentRow, [key]: value, };
             updatedRow = normalizeRowKeys(updatedRow);
-
             if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(
-                    currentField,
-                    value,
-                    updatedRow
-                );
+                updatedRow = applyMappedFields(currentField, value, updatedRow);
             }
-
             const selectedOption = getOptionByValue(currentField, value);
-
             if (selectedOption?.raw?._id && !updatedRow.productId) {
                 updatedRow.productId = selectedOption.raw._id;
             }
-
             updatedRow = normalizeRowKeys(updatedRow);
-
             if (key === "quantity") {
                 const maxQuantity = num(updatedRow.maxQuantity);
                 const enteredQuantity = num(value);
-
                 if (maxQuantity > 0 && enteredQuantity > maxQuantity) {
                     updatedRow.quantity = String(maxQuantity);
                     toast.error("Return quantity cannot be greater than pending rejected quantity");
                 }
             }
-
             const lowerKey = String(key).toLowerCase();
-
             const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
             const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
             const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
-
             if ((isCgst || isSgst) && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstPercentage = "";
@@ -1541,14 +1478,16 @@ const PurchaseReturn = () => {
         purchaseReturns.length === 0 &&
         (loading || fieldsLoading);
 
+    const showGrnSkeleton = grnModalLoading || grnLoading || !grnLoaded;
+
+    useEffect(() => {
+        /* @ts-ignore  */
+        dispatch(getAllReportMapping({ moduleType: "purchaseReturn" }));
+    }, []);
+
     if (showInitialSkeleton) {
         return <ModulePageSkeleton rows={8} columns={6} />;
     }
-
-    const showGrnSkeleton =
-        grnModalLoading ||
-        grnLoading ||
-        !grnLoaded;
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
@@ -1606,6 +1545,22 @@ const PurchaseReturn = () => {
                 emptyMessage={`No ${status} purchase return found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre: any) => ({
+                                    ...pre,
+                                    show: true,
+                                    moduleType: "purchaseReturn",
+                                    record,
+                                    CustomerCode: record?.pRetVendorCode,
+                                    voucherNumber: record?.pRetVoucherNumber,
+                                }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
+                            <Download size={16} />
+                        </button>
                         <Permission module="bookez" permissionKey="purchaseReturn" action="update">
                             <button
                                 id="purchase-return-edit-button"
@@ -1827,6 +1782,21 @@ const PurchaseReturn = () => {
                     }}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "purchaseReturn",
+                    setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Purchase Return PDF",
+                    cancelText: "Cancel",
+                    confirmText: "Confirm",
+                }}
+            />
         </div>
     );
 };

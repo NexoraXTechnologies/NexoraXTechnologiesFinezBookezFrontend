@@ -469,34 +469,31 @@ const CompanyMaster = () => {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    try {
-      if (!confirmTooltip.companyCode) {
-        toast.error("Company code not found");
-        return;
-      }
+  // const handleDeleteConfirm = async () => {
+  //   try {
+  //     if (!confirmTooltip.companyCode) {
+  //       toast.error("Company code not found");
+  //       return;
+  //     }
 
-      // @ts-ignore
-      await dispatch(deleteCompany(confirmTooltip.companyCode) as any).unwrap();
+  //     // @ts-ignore
+  //     await dispatch(deleteCompany(confirmTooltip.companyCode) as any).unwrap();
 
-      toast.success("Company deleted");
-      fetchCompanies();
-    } catch (err: any) {
-      toast.error(err?.message || "Delete failed");
-    } finally {
-      setConfirmTooltip({
-        show: false,
-        x: null,
-        y: null,
-        companyCode: null,
-      });
-    }
-  };
+  //     toast.success("Company deleted");
+  //     fetchCompanies();
+  //   } catch (err: any) {
+  //     toast.error(err?.message || "Delete failed");
+  //   } finally {
+  //     setConfirmTooltip({
+  //       show: false,
+  //       x: null,
+  //       y: null,
+  //       companyCode: null,
+  //     });
+  //   }
+  // };
 
-  const isIfscVerified =
-    verifiedIfscCode === form.ifscCode?.trim().toUpperCase() &&
-    !errors.ifscCode;
-
+  const isIfscVerified = verifiedIfscCode === form.ifscCode?.trim().toUpperCase() && !errors.ifscCode;
   const companyColumns = [
     {
       key: "companyName",
@@ -593,11 +590,7 @@ const CompanyMaster = () => {
         loading={loading}
         emptyMessage="No company data found"
         actions={(companyRow: any) => {
-          const companyCode =
-            companyRow.companyCode ||
-            companyRow.companyPublicId ||
-            companyRow.code ||
-            companyRow._id;
+          const companyCode = companyRow.companyCode || companyRow.companyPublicId || companyRow.code || companyRow._id;
 
           return (
             <div className="flex items-center gap-2">

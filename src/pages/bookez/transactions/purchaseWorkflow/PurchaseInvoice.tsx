@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -24,7 +24,7 @@ import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
-import Modal from "../../../../components/modal";
+import Modal, { ListingModel } from "../../../../components/modal";
 
 import {
     addPurchaseInvoice,
@@ -44,6 +44,7 @@ import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
+import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -192,49 +193,28 @@ const PurchaseInvoice = () => {
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
-
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
     const [showGrnModal, setShowGrnModal] = useState(false);
     const [grnSearch, setGrnSearch] = useState("");
     const [selectedGrn, setSelectedGrn] = useState<any>(null);
-
+    const { report } = useSelector((s: any) => s.reportMapping);
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     // ✅ Local modal loading states to stop blinking
     const [grnModalLoading, setGrnModalLoading] = useState(false);
     const [grnLoaded, setGrnLoaded] = useState(false);
-
-    const [templateFields, setTemplateFields] = useState<any>({
-        header: [],
-        body: [],
-        footer: [],
-    });
-
+    const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({
-        show: false,
-        x: null,
-        y: null,
-        voucherNumber: null,
-        grnVoucherNumber: null,
-    });
-
-    /* ===================================================
-       FIELD HELPERS
-    =================================================== */
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null, });
 
     const getHeaderFieldByKey = (key: string) => {
-        return templateFields?.header?.find(
-            (field: any) => field.key === key
-        );
+        return templateFields?.header?.find((field: any) => field.key === key);
     };
 
     const getBodyFieldByKey = (key: string) => {
@@ -636,10 +616,7 @@ const PurchaseInvoice = () => {
 
             try {
                 setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
                 setTemplateFields(updatedData);
             } catch (error) {
                 console.log("Failed to prepare template fields", error);
@@ -1483,55 +1460,19 @@ const PurchaseInvoice = () => {
     =================================================== */
 
     const footerValues = useMemo(() => {
-        return {
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        };
-    }, [
-        grossAmount,
-        discountAmount,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-        netAmount,
-    ]);
+        return { grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount };
+    }, [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount]);
 
     const dynamicFooterArray = useMemo(() => {
         return (templateFields?.footer || [])
             .filter((field: any) => !field.isHidden)
             .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
-
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
+                const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
+                return { ...field, value: money(rawValue), rawValue };
             });
     }, [templateFields?.footer, footerValues]);
-
-    const showInitialSkeleton =
-        !refreshing &&
-        purchaseInvoices.length === 0 &&
-        (loading || fieldsLoading);
-
-    if (showInitialSkeleton) {
-        return <ModulePageSkeleton rows={8} columns={7} />;
-    }
-
-    const showGrnSkeleton =
-        grnModalLoading ||
-        grnLoading ||
-        !grnLoaded;
-
-
+    const showInitialSkeleton = !refreshing && purchaseInvoices.length === 0 && (loading || fieldsLoading);
+    const showGrnSkeleton = grnModalLoading || grnLoading || !grnLoaded;
     const isClosedPurchaseInvoice = (record: any) => {
         const pInvStatus = String(record?.pInvStatus || "").toLowerCase();
         return pInvStatus === "close" || pInvStatus === "closed"
@@ -1550,14 +1491,10 @@ const PurchaseInvoice = () => {
             toast.error("You can't delete closed Invoice")
             return;
         }
-        const rect =
-            e.currentTarget.getBoundingClientRect();
-
+        const rect = e.currentTarget.getBoundingClientRect();
         let x = rect.left - 150;
         if (x < 10) x = 10;
-
         const y = rect.top + window.scrollY - 5;
-
         setConfirmTooltip({
             show: true,
             x,
@@ -1565,7 +1502,15 @@ const PurchaseInvoice = () => {
             voucherNumber: record?.pInvVoucherNumber,
             grnVoucherNumber: record?.grnVoucherNumber
         });
+    }
 
+    useEffect(() => {
+        /* @ts-ignore  */
+        dispatch(getAllReportMapping({ moduleType: "purchaseInvoice" }));
+    }, []);
+
+    if (showInitialSkeleton) {
+        return <ModulePageSkeleton rows={8} columns={7} />;
     }
 
     return (
@@ -1624,6 +1569,22 @@ const PurchaseInvoice = () => {
                 emptyMessage={`No ${status} purchase invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre: any) => ({
+                                    ...pre,
+                                    show: true,
+                                    moduleType: "purchaseInvoice",
+                                    record,
+                                    CustomerCode: record?.pInvVendorCode,
+                                    voucherNumber: record?.pInvVoucherNumber,
+                                }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
+                            <Download size={16} />
+                        </button>
                         <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
                             <button
                                 id="purchase-invoice-edit-button"
@@ -1712,8 +1673,7 @@ const PurchaseInvoice = () => {
                                     px-4 py-3 text-sm font-medium text-foreground
                                     outline-none transition
                                     placeholder:text-muted-foreground
-                                    focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20
-                                "
+                                    focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
 
@@ -1814,6 +1774,21 @@ const PurchaseInvoice = () => {
                     }}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "purchaseInvoice",
+                    setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Purchase Invoice PDF",
+                    cancelText: "Cancel",
+                    confirmText: "Confirm",
+                }}
+            />
         </div>
     );
 };

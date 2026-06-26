@@ -326,8 +326,8 @@ const ProductMasterFormModal = ({
           {...commonProps}
           type="number"
 			  onChange={(e: any) => {
-				  if (field?.key == "csgst") updateField("igst", null);
-				  if (field?.key == "igst") updateField("csgst", null);
+				  // if (field?.key == "csgst") updateField("igst", null);
+				  // if (field?.key == "igst") updateField("csgst", null);
 				  field?.key == "csgst" && console.log({ field })
             updateField(field.key, e.target.value);
           }}
@@ -412,7 +412,6 @@ const ProductMasterFormModal = ({
     if (!validateForm()) return;
 
     const payload: any = { ...form };
-
     productMasterSchemaFields.forEach((field: any) => {
       if (field.type === "number" && payload[field.key] !== "") {
         payload[field.key] = Number(payload[field.key]);

@@ -222,13 +222,9 @@ const PurchaseOrder = () => {
         return updated;
     };
 
-    const hasValue = (value: any) =>
-        value !== undefined && value !== null && value !== "";
+    const hasValue = (value: any) => value !== undefined && value !== null && value !== "";
 
-    const fillProductDetailsFromSelectedOption = (
-        row: any,
-        selectedOption: any
-    ) => {
+    const fillProductDetailsFromSelectedOption = (row: any, selectedOption: any) => {
         const product = selectedOption?.raw;
         if (!product) return row;
 
@@ -267,8 +263,6 @@ const PurchaseOrder = () => {
             igstPercentage: igst || row.igstPercentage || "",
         };
     };
-
-
 
     const getUnitLabelFromSchema = (unitCode: string) => {
         const unitField = templateFields?.body?.find(
@@ -1316,7 +1310,6 @@ const PurchaseOrder = () => {
                 emptyMessage={`No ${status} purchase order found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        {console.log({ record })}
                         <button
                             id="sales-quotation-edit-button"
                             onClick={() => {
