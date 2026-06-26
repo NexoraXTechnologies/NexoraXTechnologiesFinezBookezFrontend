@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Edit, EllipsisVertical, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Badge from "../../../../../components/badge";
@@ -893,16 +893,16 @@ const SalesQuotations = () => {
         });
     };
 
-    const handleToggleTooltip = (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (tooltip.x !== null) {
-            return setTooltip({ x: null, y: null });
-        }
-        const rect = e.currentTarget.getBoundingClientRect();
-        const TOOLTIP_WIDTH = 192;
-        setTooltip({
-            x: rect.left + window.scrollX - TOOLTIP_WIDTH - 8, y: rect.top + window.scrollY,
-        });
-    };
+    // const handleToggleTooltip = (e: React.MouseEvent<HTMLButtonElement>) => {
+    //     if (tooltip.x !== null) {
+    //         return setTooltip({ x: null, y: null });
+    //     }
+    //     const rect = e.currentTarget.getBoundingClientRect();
+    //     const TOOLTIP_WIDTH = 192;
+    //     setTooltip({
+    //         x: rect.left + window.scrollX - TOOLTIP_WIDTH - 8, y: rect.top + window.scrollY,
+    //     });
+    // };
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">

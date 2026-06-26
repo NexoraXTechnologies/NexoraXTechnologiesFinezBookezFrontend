@@ -655,7 +655,7 @@ const CompanyMaster = () => {
           message="Are you sure you want to delete this company?"
           confirmText="Delete"
           cancelText="Cancel"
-          onConfirm={handleDeleteConfirm}
+          // onConfirm={handleDeleteConfirm}
           onCancel={() =>
             setConfirmTooltip({
               show: false,
