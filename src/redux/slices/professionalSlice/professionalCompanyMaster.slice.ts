@@ -57,11 +57,11 @@ export const getCompany = createAsyncThunk(
 =================================================== */
 export const replaceCompany = createAsyncThunk(
   "professionalCompanyMaster/replaceCompany",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload }: any, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.put(
         "/eTaxSolnMongoApiBackend/companyMaster/replaceCompany",
-        payload
+        { ...payload }
       );
 
       if (!res.data?.success)

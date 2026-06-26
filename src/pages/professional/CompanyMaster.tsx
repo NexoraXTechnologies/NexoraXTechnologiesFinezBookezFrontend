@@ -417,16 +417,11 @@ const CompanyMaster = () => {
 
     try {
       if (editingCompany) {
-        const companyCode =
-          editingCompany.companyCode ||
-          editingCompany.companyPublicId ||
-          editingCompany.code ||
-          editingCompany._id;
-
+        // const companyCode = editingCompany.companyCode || editingCompany.companyPublicId || editingCompany.code || editingCompany._id;
+        // console.log({ payload, companyCode })
         // @ts-ignore
         await dispatch(replaceCompany({
-          companyCode,
-          data: payload,
+          payload,
         }) as any
         ).unwrap();
 
