@@ -43,4 +43,55 @@ const ConfirmTooltip = ({
   );
 };
 
+const ListTooltip = ({
+  x,
+  y,
+  items = [],
+  onClose,
+}: {
+  x: number | null;
+  y: number | null;
+  items: {
+    label: string;
+    icon?: React.ReactNode;
+    onClick: () => void;
+    danger?: boolean;
+  }[];
+  onClose?: () => void;
+}) => {
+  if (x === null || y === null) return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: "absolute",
+        top: y,
+        left: x,
+        zIndex: 9999,
+      }}
+      className="w-48 rounded-md border border-gray-200 bg-white shadow-lg py-1"
+    >
+      {items.map((item, index) => (
+        <button
+          key={index}
+          onClick={() => {
+            item.onClick();
+            onClose?.();
+          }}
+          className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition cursor-pointer
+            ${item.danger
+              ? "text-red-600 hover:bg-red-50"
+              : "text-gray-700 hover:bg-gray-100"
+            }`}
+        >
+          {item.icon}
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+};
+
+export { ListTooltip };
 export default ConfirmTooltip;

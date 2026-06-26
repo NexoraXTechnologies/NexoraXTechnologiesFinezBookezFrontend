@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Edit, Trash2 } from "lucide-react";
+import { Download, Edit, EllipsisVertical, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Badge from "../../../../../components/badge";
@@ -10,7 +10,7 @@ import {
 } from "../../../../../components/buttons";
 import DataTable from "../../../../../components/DataTable";
 import Pagination from "../../../../../components/pagination";
-import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
+import ConfirmTooltip, { ListTooltip } from "../../../../../components/common/ConfirmTooltip";
 import Toggle from "../../../../../components/toggle";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import {
@@ -136,6 +136,7 @@ const SalesQuotations = () => {
     });
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const [confirmTooltip, setConfirmTooltip]: any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
+    const [tooltip, setTooltip]: any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
 
     const { report } = useSelector((s: any) => s.reportMapping);
@@ -891,6 +892,17 @@ const SalesQuotations = () => {
         });
     };
 
+    const handleToggleTooltip = (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (tooltip.x !== null) {
+            return setTooltip({ x: null, y: null });
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        const TOOLTIP_WIDTH = 192;
+        setTooltip({
+            x: rect.left + window.scrollX - TOOLTIP_WIDTH - 8, y: rect.top + window.scrollY,
+        });
+    };
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">
@@ -948,10 +960,9 @@ const SalesQuotations = () => {
                         <Permission module="bookez" permissionKey="salesQuotation" action="update">
                             <button id="sales-quotation-edit-button"
                                 onClick={() => handleEditSalesQuations(record)}
-                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary ${isClosedSalesQuations(record)
-                                 
-                                    }`}
-                            >                            <Edit size={16} />
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary ${isClosedSalesQuations(record)}`}
+                            >
+                                <Edit size={16} />
                             </button>
                         </Permission>
                         <Permission module="bookez" permissionKey="salesQuotation" action="delete">
@@ -959,12 +970,19 @@ const SalesQuotations = () => {
                                 id="sales-quotation-delete-button"
                                 disabled={deleteLoading}
                                 onClick={(e) => handleDeleteSalesQuationsClick(e, record)}
-                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger ${isClosedSalesQuations(record)
-                                 }`}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger ${isClosedSalesQuations(record)}`}
                             >
                                 <Trash2 size={16} />
                             </button>
                         </Permission>
+                        {/* <button
+                            id="sales-quotation-delete-button"
+                            disabled={deleteLoading}
+                            onClick={handleToggleTooltip}
+                            className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary`}
+                        >
+                            <EllipsisVertical size={16} />
+                        </button> */}
                     </div>
                 )}
             />
@@ -1003,6 +1021,17 @@ const SalesQuotations = () => {
                     }
                 />
             )}
+
+            <ListTooltip
+                x={tooltip.x}
+                y={tooltip.y}
+                onClose={() => setTooltip({ x: null, y: null })}
+                items={[
+                    // { label: "Created & Modified", onClick: () => console.log("Edit") },
+                    { label: "Auto Posting", onClick: () => console.log("Duplicate") },
+                    // { label: "Make Duplicate", onClick: () => console.log("Share") }
+                ]}
+            />
 
             {downlaodPDF.show && (
                 <ConfirmTooltip
