@@ -27,6 +27,7 @@ import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/pro
 import { getByVoucherNumberPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 import { getByVoucharNumberGrnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
 import { getOpeningStockList } from "../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
+import { toast } from "react-toastify";
 
 type StockLedgerProps = {
     show?: boolean;
@@ -377,55 +378,36 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
 
     const [viewBodyKey, setViewBodyKey] = useState("products");
 
+ 
     const getVoucherRecordFromResponse = (
         res: any,
         voucherNumber: string,
         voucherKeys: string[]
     ) => {
-        if (res?.invoice) return res.invoice;
-        if (res?.data?.invoice) return res.data.invoice;
-        if (res?.openingStock) return res.openingStock;
-        if (res?.data?.openingStock) return res.data.openingStock;
+        const normalizedVoucher = normalizeVoucherNo(voucherNumber);
 
-        if (
-            res &&
-            typeof res === "object" &&
-            voucherKeys.some((key) => res?.[key] === voucherNumber)
-        ) {
-            return res;
-        }
+        const isSameVoucher = (item: any) => {
+            if (!item || typeof item !== "object") return false;
 
-        if (
-            res?.data &&
-            typeof res.data === "object" &&
-            voucherKeys.some((key) => res.data?.[key] === voucherNumber)
-        ) {
-            return res.data;
-        }
+            return voucherKeys.some((key) => {
+                return normalizeVoucherNo(item?.[key]) === normalizedVoucher;
+            });
+        };
 
-        if (res?.voucher) return res.voucher;
-        if (res?.data?.voucher) return res.data.voucher;
+        if (isSameVoucher(res?.invoice)) return res.invoice;
+        if (isSameVoucher(res?.data?.invoice)) return res.data.invoice;
 
-        if (res?.grn) return res.grn;
-        if (res?.data?.grn) return res.data.grn;
+        if (isSameVoucher(res?.openingStock)) return res.openingStock;
+        if (isSameVoucher(res?.data?.openingStock)) return res.data.openingStock;
 
-        // const records = Array.isArray(res)
-        //     ? res
-        //     : Array.isArray(res?.items)
-        //         ? res.items
-        //         : Array.isArray(res?.records)
-        //             ? res.records
-        //             : Array.isArray(res?.docs)
-        //                 ? res.docs
-        //                 : Array.isArray(res?.data)
-        //                     ? res.data
-        //                     : Array.isArray(res?.data?.items)
-        //                         ? res.data.items
-        //                         : Array.isArray(res?.data?.records)
-        //                             ? res.data.records
-        //                             : Array.isArray(res?.data?.docs)
-        //                                 ? res.data.docs
-        //                                 : [];
+        if (isSameVoucher(res?.voucher)) return res.voucher;
+        if (isSameVoucher(res?.data?.voucher)) return res.data.voucher;
+
+        if (isSameVoucher(res?.grn)) return res.grn;
+        if (isSameVoucher(res?.data?.grn)) return res.data.grn;
+
+        if (isSameVoucher(res)) return res;
+        if (isSameVoucher(res?.data)) return res.data;
 
         const records = Array.isArray(res)
             ? res
@@ -449,15 +431,9 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                                                 ? res.data.docs
                                                 : [];
 
-        return (
-            records.find((item: any) =>
-                voucherKeys.some((key) => item?.[key] === voucherNumber)
-            ) || records[0]
-        );
+        // ✅ Important: only return exact matched voucher
+        return records.find(isSameVoucher) || null;
     };
-
-
-
 
 
     const normalizeInvoiceForView = (record: any) => {
@@ -1112,149 +1088,158 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
         );
     };
 
-    const stockViewConfig: any = {
+  const stockViewConfig: any = {
+    OPENING_STOCK: {
+        title: "View Opening Stock",
+        notFoundMessage: "Opening stock not found",
+        manualSchema: true,
+        inputData: openingStockViewInputData,
+        bodyKey: "openingStockBody",
+        action: getOpeningStockList,
+        params: (voucherNumber: string) => ({
+            offset: 0,
+            limit: 10,
+            search: voucherNumber,
+            status: "",
+        }),
+        voucherKeys: [
+            "openingStockVoucherNumber",
+            "voucherNumber",
+            "voucherNo",
+        ],
+        normalize: normalizeOpeningStockForView,
+    },
 
-        OPENING_STOCK: {
-            title: "View Opening Stock",
-            manualSchema: true,
-            inputData: openingStockViewInputData,
-            bodyKey: "openingStockBody",
-            action: getOpeningStockList,
-            params: (voucherNumber: string) => ({
-                offset: 0,
-                limit: 10,
-                search: voucherNumber,
-                status: "",
-            }),
-            voucherKeys: [
-                "openingStockVoucherNumber",
-                "voucherNumber",
-                "voucherNo",
-            ],
-            normalize: normalizeOpeningStockForView,
-        },
+    SALES_RETURN: {
+        title: "View Sales Return",
+        notFoundMessage: "Sales return not found",
+        schemaKey: "salesReturn",
+        bodyKey: "products",
+        action: getByVoucherNumberSalesInvoiceReturn,
+        params: (voucherNumber: string) => ({
+            voucherNumber,
+        }),
+        voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
+        normalize: normalizeSalesReturnForView,
+    },
 
-        SALES_RETURN: {
-            title: "View Sales Return",
-            schemaKey: "salesReturn",
-            bodyKey: "products",
-            action: getByVoucherNumberSalesInvoiceReturn,
-            params: (voucherNumber: string) => ({
-                voucherNumber,
-            }),
-            voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
-            normalize: normalizeSalesReturnForView,
-        },
+    SALES_INVOICE: {
+        title: "View Sales Invoice",
+        notFoundMessage: "Sales invoice not found",
+        schemaKey: "salesInvoice",
+        bodyKey: "products",
+        action: getByVoucherNumberSalesInvoice,
+        params: (voucherNumber: string) => ({
+            voucherNumber,
+        }),
+        voucherKeys: ["sInvVoucherNumber", "voucherNumber", "voucherNo"],
+        normalize: normalizeInvoiceForView,
+    },
 
-        SALES_INVOICE: {
-            title: "View Sales Invoice",
-            schemaKey: "salesInvoice",
-            bodyKey: "products",
-            action: getByVoucherNumberSalesInvoice,
-            params: (voucherNumber: string) => ({
-                voucherNumber,
-            }),
-            voucherKeys: ["sInvVoucherNumber", "voucherNumber", "voucherNo"],
-            normalize: normalizeInvoiceForView,
-        },
+    PURCHASE_INVOICE: {
+        title: "View Purchase Invoice",
+        notFoundMessage: "Purchase invoice not found",
+        schemaKey: "purchaseInvoice",
+        bodyKey: "products",
+        action: getByVoucherNumberPurchaseInvoiceList,
+        params: (voucherNumber: string) => voucherNumber,
+        voucherKeys: ["pInvVoucherNumber", "voucherNumber", "voucherNo"],
+        normalize: normalizePurchaseInvoiceForView,
+    },
 
-        PURCHASE_INVOICE: {
-            title: "View Purchase Invoice",
-            schemaKey: "purchaseInvoice",
-            bodyKey: "products",
-            action: getByVoucherNumberPurchaseInvoiceList,
-            params: (voucherNumber: string) => voucherNumber,
-            voucherKeys: ["pInvVoucherNumber", "voucherNumber", "voucherNo"],
-            normalize: normalizePurchaseInvoiceForView,
-        },
+    PURCHASE_RETURN: {
+        title: "View Purchase Return",
+        notFoundMessage: "Purchase return not found",
+        schemaKey: "purchaseReturn",
+        bodyKey: "products",
+        action: getByVoucherNumberPurchaseReturnList,
+        params: (voucherNumber: string) => ({
+            voucherNumber,
+        }),
+        voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
+        normalize: normalizePurchaseReturnForView,
+    },
 
-        PURCHASE_RETURN: {
-            title: "View Purchase Return",
-            schemaKey: "purchaseReturn",
-            bodyKey: "products",
-            action: getByVoucherNumberPurchaseReturnList,
-            params: (voucherNumber: string) => ({
-                voucherNumber,
-            }),
-            voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
-            normalize: normalizePurchaseReturnForView,
-        },
+    GRN: {
+        title: "View GRN",
+        notFoundMessage: "GRN not found",
+        schemaKey: "grn",
+        bodyKey: "products",
+        action: getByVoucharNumberGrnList,
+        params: (voucherNumber: string) => ({
+            voucherNumber,
+        }),
+        voucherKeys: ["grnVoucherNumber", "voucherNumber", "voucherNo"],
+        normalize: normalizeGrnForView,
+    },
+};
 
-        GRN: {
-            title: "View GRN",
-            schemaKey: "grn",
-            bodyKey: "products",
-            action: getByVoucharNumberGrnList,
-            params: (voucherNumber: string) => ({
+  const handleViewVoucher = async (row: any) => {
+    const voucherNumber = getStockVoucherNumber(row);
+    const voucherKind = resolveStockVoucherKind(voucherNumber);
 
-                voucherNumber: voucherNumber,
+    if (!voucherNumber) {
+        toast.error("Voucher number not found");
+        return;
+    }
 
-            }),
-            voucherKeys: ["grnVoucherNumber", "voucherNumber", "voucherNo"],
-            normalize: normalizeGrnForView,
-        },
-    };
+    const config = stockViewConfig[voucherKind];
 
-    const handleViewVoucher = async (row: any) => {
-        const voucherNumber = getStockVoucherNumber(row);
-        const voucherKind = resolveStockVoucherKind(voucherNumber);
+    if (!config) {
+        toast.error("Voucher type not supported");
+        return;
+    }
 
-        if (!voucherNumber) {
-            console.log("Voucher number missing in stock ledger row:", row);
+    try {
+        setViewLoading(true);
+        setViewErrors({});
+        setViewForm({});
+        setViewTitle(config.title);
+        setViewBodyKey(config.bodyKey);
+
+        if (config.manualSchema) {
+            setViewTemplateFields(config.inputData);
+        } else {
+            await dispatch(getAllTransactionSchema(config.schemaKey) as any);
+        }
+
+        const res = await dispatch(
+            config.action(config.params(voucherNumber)) as any
+        ).unwrap();
+
+        const record = getVoucherRecordFromResponse(
+            res,
+            voucherNumber,
+            config.voucherKeys
+        );
+
+        // ✅ Do not open view modal if voucher not found
+        if (!record) {
+            toast.error(config.notFoundMessage || "Voucher not found");
+            setViewModal(false);
+            setViewForm({});
             return;
         }
 
-        const config = stockViewConfig[voucherKind];
+        // ✅ Open modal only after record exists
+        setViewForm(config.normalize(record));
+        setViewModal(true);
+    } catch (error: any) {
+        console.log("Stock ledger view voucher failed", error);
 
-        if (!config) {
-            console.log("Unsupported stock ledger voucher:", {
-                row,
-                voucherNumber,
-                voucherKind,
-            });
-            return;
-        }
+        const errorMessage =
+            error?.message ||
+            error?.payload?.message ||
+            config.notFoundMessage ||
+            "Voucher not found";
 
-        try {
-            setViewModal(true);
-            setViewLoading(true);
-            setViewErrors({});
-            setViewForm({});
-            setViewTitle(config.title);
-            setViewBodyKey(config.bodyKey);
-
-            // await dispatch(getAllTransactionSchema(config.schemaKey) as any);
-
-            if (config.manualSchema) {
-                setViewTemplateFields(config.inputData);
-            } else {
-                await dispatch(getAllTransactionSchema(config.schemaKey) as any);
-            }
-
-            const res = await dispatch(
-                config.action(config.params(voucherNumber)) as any
-            ).unwrap();
-
-            const record = getVoucherRecordFromResponse(
-                res,
-                voucherNumber,
-                config.voucherKeys
-            );
-
-            if (!record) {
-                console.log(`${config.title} not found:`, voucherNumber, res);
-                setViewForm({});
-                return;
-            }
-
-            setViewForm(config.normalize(record));
-        } catch (error) {
-            console.log("Stock ledger view voucher failed", error);
-            setViewForm({});
-        } finally {
-            setViewLoading(false);
-        }
-    };
+        toast.error(errorMessage);
+        setViewModal(false);
+        setViewForm({});
+    } finally {
+        setViewLoading(false);
+    }
+};
 
     useEffect(() => {
         const prepareViewFields = async () => {
@@ -1320,7 +1305,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
         };
     }, [dispatch]);
 
-    
+
     useEffect(() => {
         if (!productCode) return;
 
