@@ -23,12 +23,14 @@ import {
 	ReceiptText,
 	LockKeyhole,
 	Palette,
+	Wrench,
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
 import EZLogo from "../assets/Logo.EZ.png";
 import FinEzLogo from "../assets/FinEZ.png";
 import { isModuleEnabled } from "./PermissionGuard";
+
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -138,6 +140,16 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 									action: "view",
 								},
 							],
+						},
+
+						{
+							name: "Engineering Module",
+							path: "/bookEz/engineering-module",
+							icon: <Wrench size={24} />,
+							module: "bookez",
+							permissionKey: "",
+							action: "view",
+
 						},
 						{
 							name: "Reports",

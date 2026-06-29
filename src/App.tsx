@@ -50,6 +50,7 @@ import RegistersDashboard from './pages/bookez/registers';
 import PermissionManagement from './pages/setting/PermissionManagement';
 import { useAppearance } from './hooks/useAppearance';
 import Appearance from './pages/bookez/settings/Appearance';
+import EngineeringModuleDashboard from './pages/bookez/engineeringModule';
 
 function App() {
   useAppearance();
@@ -129,6 +130,11 @@ function App() {
         <Route
             path="/bookEz/registers"
           element={<RegistersDashboard/>}
+        />
+
+        <Route
+            path="/bookEz/engineering-module"
+          element={<EngineeringModuleDashboard/>}
         />
 
         {/* configuration */}
