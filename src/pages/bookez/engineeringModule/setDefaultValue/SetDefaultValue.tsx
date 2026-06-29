@@ -313,7 +313,7 @@
 //     const chassisSections = [
 //         {
 //             title: "Basic Dimensions",
-           
+
 //             fields: [
 //                 {
 //                     key: "trailerType",
@@ -351,7 +351,7 @@
 //         },
 //         {
 //             title: "Chassis Structure",
-            
+
 //             fields: [
 //                 {
 //                     key: "mainBeamType",
@@ -397,7 +397,7 @@
 //         },
 //         {
 //             title: "Suspension Setup",
-           
+
 //             fields: [
 //                 {
 //                     key: "suspensionType",
@@ -423,7 +423,7 @@
 //         },
 //         {
 //             title: "Tyre Configuration",
-            
+
 //             fields: [
 //                 {
 //                     key: "tyreSize",
@@ -443,7 +443,7 @@
 //         },
 //         {
 //             title: "King Pin & Landing Leg",
-           
+
 //             fields: [
 //                 {
 //                     key: "kingPinType",
@@ -475,7 +475,7 @@
 //         },
 //         {
 //             title: "Material Grade",
-           
+
 //             fields: [
 //                 {
 //                     key: "steelGrade",
@@ -581,7 +581,7 @@
 //         sections: [
 //             {
 //                 title: "Product Type",
-                
+
 //                 fields: [
 //                     {
 //                         key: "productType",
@@ -767,6 +767,7 @@ import {
 } from "./defaultValuesStorage";
 
 import EngineeringDefaultValueModal from "../../../../components/cardBasedForm/EngineeringDefaultValueModal";
+import Badge from "../../../../components/badge";
 
 const productOptions = [
     {
@@ -1242,27 +1243,37 @@ const SetDefaultValue = () => {
     return (
         <>
             <div className="flex h-full w-full flex-col border border-border bg-card p-4 text-card-foreground shadow-sm">
-                <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-                    <div className="me-2">
-                        <SearchInput {...{ search, setSearch }} />
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div id="default-value-summary" className="flex items-start gap-3">
+                        <Badge
+                            count={filteredRecords?.length ?? 0}
+                            text="Total Default Values:"
+                            varient="primary"
+                        />
                     </div>
 
-                    <Permission
-                        module="bookez"
-                        permissionKey="accountLedger"
-                        action="create"
-                    >
-                        <DataCreateButton
-                            {...{
-                                text: "Create Default Value",
-                                icon: <Plus size={16} />,
-                                callBackFn: () => {
-                                    resetForm();
-                                    setShowModal(true);
-                                },
-                            }}
-                        />
-                    </Permission>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                        <div className="me-2">
+                            <SearchInput {...{ search, setSearch }} />
+                        </div>
+
+                        <Permission
+                            module="bookez"
+                            permissionKey="accountLedger"
+                            action="create"
+                        >
+                            <DataCreateButton
+                                {...{
+                                    text: "Create Default Value",
+                                    icon: <Plus size={16} />,
+                                    callBackFn: () => {
+                                        resetForm();
+                                        setShowModal(true);
+                                    },
+                                }}
+                            />
+                        </Permission>
+                    </div>
                 </div>
 
                 <DataTable
@@ -1336,9 +1347,8 @@ const SetDefaultValue = () => {
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message={`Are you sure you want to delete "${
-                        confirmTooltip.productName || "this default value"
-                    }"?`}
+                    message={`Are you sure you want to delete "${confirmTooltip.productName || "this default value"
+                        }"?`}
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteDefaultValue}
