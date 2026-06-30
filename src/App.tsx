@@ -52,6 +52,7 @@ import { useAppearance } from './hooks/useAppearance';
 import Appearance from './pages/setting/Appearance';
 import POS from './pages/bookez/pos';
 import POSPaymentPage from './pages/bookez/pos/POSPaymentPage';
+import EngineeringModuleDashboard from './pages/bookez/engineeringModule';
 
 function App() {
   useAppearance();
@@ -138,6 +139,11 @@ function App() {
             path="/bookEz/pos/payment"
             element={<POSPaymentPage />}
           />
+        <Route
+            path="/bookEz/engineering-module"
+          element={<EngineeringModuleDashboard/>}
+        />
+
         {/* configuration */}
         <Route path="configuration" element={<Configuration />} />
 

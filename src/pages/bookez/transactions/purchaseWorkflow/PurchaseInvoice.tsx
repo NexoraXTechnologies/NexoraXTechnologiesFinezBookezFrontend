@@ -211,7 +211,7 @@ const PurchaseInvoice = () => {
     const [grnLoaded, setGrnLoaded] = useState(false);
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null, });
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null,record: null, });
 
     const getHeaderFieldByKey = (key: string) => {
         return templateFields?.header?.find((field: any) => field.key === key);
@@ -1413,13 +1413,61 @@ const PurchaseInvoice = () => {
         }
     };
 
+    // const handleDeleteConfirm = async () => {
+    //     try {
+    //         const voucherNumber = confirmTooltip?.voucherNumber;
+    //         const grnVoucherNumber = confirmTooltip?.grnVoucherNumber;
+
+    //         if (!voucherNumber) {
+    //             toast.error("Purchase invoice voucher number not found");
+    //             return;
+    //         }
+
+    //         await dispatch(
+    //             deletePurchaseInvoice({
+    //                 purchaseInvoiceNumber: voucherNumber,
+    //             }) as any
+    //         ).unwrap();
+
+    //         if (grnVoucherNumber) {
+    //             await syncGrnStatusAfterPurchaseInvoice(grnVoucherNumber);
+    //         } else {
+    //             toast.warning("Purchase invoice deleted , but grn voucher number not found")
+    //         }
+
+    //         toast.success("Purchase invoice deleted successfully");
+
+    //         await fetchPurchaseInvoices();
+    //     } catch (err: any) {
+    //         toast.error(
+    //             err?.message ||
+    //             err?.payload?.message ||
+    //             "Failed to delete purchase invoice"
+    //         );
+    //     } finally {
+    //         setConfirmTooltip({
+    //             show: false,
+    //             x: null,
+    //             y: null,
+    //             voucherNumber: null,
+    //             grnVoucherNumber: null,
+    //         });
+    //     }
+    // };
+
     const handleDeleteConfirm = async () => {
         try {
             const voucherNumber = confirmTooltip?.voucherNumber;
             const grnVoucherNumber = confirmTooltip?.grnVoucherNumber;
+            const record = confirmTooltip?.record;
 
             if (!voucherNumber) {
                 toast.error("Purchase invoice voucher number not found");
+                return;
+            }
+
+            if (record && isPurchaseInvoicePaymentAdjusted(record)) {
+                toast.error("This invoice has payment entry, so it cannot be deleted");
                 return;
             }
 
@@ -1432,7 +1480,7 @@ const PurchaseInvoice = () => {
             if (grnVoucherNumber) {
                 await syncGrnStatusAfterPurchaseInvoice(grnVoucherNumber);
             } else {
-                toast.warning("Purchase invoice deleted , but grn voucher number not found")
+                toast.warning("Purchase invoice deleted, but GRN voucher number not found");
             }
 
             toast.success("Purchase invoice deleted successfully");
@@ -1451,10 +1499,10 @@ const PurchaseInvoice = () => {
                 y: null,
                 voucherNumber: null,
                 grnVoucherNumber: null,
+                record: null,
             });
         }
     };
-
     /* ===================================================
        DYNAMIC FOOTER
     =================================================== */
@@ -1473,6 +1521,18 @@ const PurchaseInvoice = () => {
     }, [templateFields?.footer, footerValues]);
     const showInitialSkeleton = !refreshing && purchaseInvoices.length === 0 && (loading || fieldsLoading);
     const showGrnSkeleton = grnModalLoading || grnLoading || !grnLoaded;
+
+    const isPurchaseInvoicePaymentAdjusted = (record: any) => {
+        const footer = record?.pInvFooter || {};
+
+        const netAmount = num(footer?.netAmount || 0);
+        const balanceAmount = num(footer?.balanceAmount || 0);
+        const adjustedAmount = num(footer?.adjustedAmount || 0);
+
+        return adjustedAmount > 0 || (netAmount > 0 && balanceAmount < netAmount);
+    };
+
+
     const isClosedPurchaseInvoice = (record: any) => {
         const pInvStatus = String(record?.pInvStatus || "").toLowerCase();
         return pInvStatus === "close" || pInvStatus === "closed"
@@ -1486,23 +1546,50 @@ const PurchaseInvoice = () => {
         openEditModal(record);
     }
 
+    // const handleDeletePurInvoiceClick = (e: any, record: any) => {
+    //     if (isClosedPurchaseInvoice(record)) {
+    //         toast.error("You can't delete closed Invoice")
+    //         return;
+    //     }
+    //     const rect = e.currentTarget.getBoundingClientRect();
+    //     let x = rect.left - 150;
+    //     if (x < 10) x = 10;
+    //     const y = rect.top + window.scrollY - 5;
+    //     setConfirmTooltip({
+    //         show: true,
+    //         x,
+    //         y,
+    //         voucherNumber: record?.pInvVoucherNumber,
+    //         grnVoucherNumber: record?.grnVoucherNumber
+    //     });
+    // }
+
     const handleDeletePurInvoiceClick = (e: any, record: any) => {
         if (isClosedPurchaseInvoice(record)) {
-            toast.error("You can't delete closed Invoice")
+            toast.error("You can't delete closed invoice");
             return;
         }
+
+        if (isPurchaseInvoicePaymentAdjusted(record)) {
+            toast.error("This invoice has payment entry, so it cannot be deleted");
+            return;
+        }
+
         const rect = e.currentTarget.getBoundingClientRect();
         let x = rect.left - 150;
         if (x < 10) x = 10;
+
         const y = rect.top + window.scrollY - 5;
+
         setConfirmTooltip({
             show: true,
             x,
             y,
             voucherNumber: record?.pInvVoucherNumber,
-            grnVoucherNumber: record?.grnVoucherNumber
+            grnVoucherNumber: record?.grnVoucherNumber,
+            record,
         });
-    }
+    };
 
     useEffect(() => {
         /* @ts-ignore  */
@@ -1599,7 +1686,7 @@ const PurchaseInvoice = () => {
                             <button
                                 id="purchase-invoice-delete-button"
                                 disabled={deleteLoading}
-                                onClick={(e) => handleDeletePurInvoiceClick(e,record)}
+                                onClick={(e) => handleDeletePurInvoiceClick(e, record)}
                                 className={`cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50 ${isClosedPurchaseInvoice(record)}`}
                             >
                                 <Trash2 size={16} />
@@ -1639,7 +1726,8 @@ const PurchaseInvoice = () => {
                             x: null,
                             y: null,
                             voucherNumber: null,
-                            grnVoucherNumber: null
+                            grnVoucherNumber: null,
+                             record: null,
                         })
                     }
                 />
