@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import TransactionDashboard from "../transactions/components/TransactionDashboard";
 import SetDefaultValue from "./setDefaultValue/SetDefaultValue";
+import Bom from "./BOM/Bom";
+import CreateEditEngineeringConfig from "./EngineeringConfig/CreateEditEngineeringConfig";
 
 const cards: any[] = [
   {
@@ -20,7 +22,7 @@ const cards: any[] = [
     title: "BOM",
     description:
       "Create and manage Bill of Materials with product components, quantities, units, and material details.",
-    component: "",
+    component: Bom,
     icon: <Layers3 size={22} />,
     permissionKey: "accountLedger",
   },
@@ -28,7 +30,7 @@ const cards: any[] = [
     title: "Engineering Drawing",
     description:
       "Upload, view, and manage product engineering drawings, technical layouts, and design references.",
-    component: "",
+    component:CreateEditEngineeringConfig,
     icon: <FileImage size={22} />,
     permissionKey: "accountLedger",
   },

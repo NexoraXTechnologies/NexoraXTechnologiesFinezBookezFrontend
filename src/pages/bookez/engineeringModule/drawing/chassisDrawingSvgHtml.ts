@@ -1,0 +1,913 @@
+// import { computeChassisDrawingLayout } from "./chassisDrawingLayout";
+
+// const esc = (v: any) => String(v ?? "");
+
+// const dimLineHtml = (x1: number, x2: number, y: number, label: any) => `
+//   <line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#111"/>
+//   <polygon points="${x1},${y} ${x1 + 8},${y - 5} ${x1 + 8},${y + 5}" fill="#111"/>
+//   <polygon points="${x2},${y} ${x2 - 8},${y - 5} ${x2 - 8},${y + 5}" fill="#111"/>
+//   <text x="${(x1 + x2) / 2}" y="${y - 8}" font-size="13" font-weight="700" text-anchor="middle">${esc(label)}</text>
+// `;
+
+// export function buildChassisDrawingSvgHtml(bomData: any = {}, options: any = {}) {
+//     const L = computeChassisDrawingLayout(bomData, options);
+//     const forPdf = Boolean(options.forPdf);
+
+//     const railLines = Array.from({ length: L.sideRailCount }, (_, i) => {
+//         const y = L.frameY + L.railGap * (i + 1);
+//         const sw = i === 0 || i === L.sideRailCount - 1 ? 2 : 1.4;
+
+//         return `<line x1="${L.frameX}" y1="${y}" x2="${
+//             L.frameX + L.frameW
+//         }" y2="${y}" stroke="#111" stroke-width="${sw}"/>`;
+//     }).join("");
+
+//     const pillars = L.pillarPositionsMm
+//         .map((mm: number) => {
+//             const x = L.mmX(mm);
+
+//             return `<rect x="${x - L.pillarW / 2}" y="${
+//                 L.frameY - 3
+//             }" width="${L.pillarW}" height="${
+//                 L.frameH + 10
+//             }" fill="#fff" stroke="#111" stroke-width="2"/>`;
+//         })
+//         .join("");
+
+//     const supports = forPdf
+//         ? ""
+//         : L.supportPositionsMm
+//               .map((mm: number) => {
+//                   const x = L.mmX(mm);
+//                   const y = L.frameY + L.frameH + 3;
+
+//                   return `<path d="M ${x - 10} ${y} L ${x + 10} ${y} L ${
+//                       x + 7
+//                   } ${y + 16} L ${x + 3} ${y + 20} L ${x - 3} ${
+//                       y + 20
+//                   } L ${x - 7} ${y + 16} Z" fill="#fff" stroke="#111" stroke-width="1.4"/>`;
+//               })
+//               .join("");
+
+//     const bolts = forPdf
+//         ? ""
+//         : Array.from({ length: 16 }, (_, i) => {
+//               const cx = L.frameX + 35 + i * ((L.frameW - 70) / 15);
+//               const cy = L.frameY + L.frameH + (i % 2 === 0 ? 14 : 30);
+
+//               return `<circle cx="${cx}" cy="${cy}" r="3" fill="#fff" stroke="#111"/>`;
+//           }).join("");
+
+//     const wheels = L.axleCentersX
+//         .map(
+//             (cx: number) =>
+//                 `<line x1="${cx}" y1="${L.frameY + L.frameH + 35}" x2="${cx}" y2="${
+//                     L.wheelY + L.wheelR
+//                 }" stroke="#999"/>
+//                 <circle cx="${cx}" cy="${L.wheelY}" r="${L.wheelR}" fill="#fff" stroke="#999" stroke-width="1.7"/>`
+//         )
+//         .join("");
+
+//     const bottomDims = [
+//         dimLineHtml(
+//             L.mmX(0),
+//             L.mmX(L.frontOverhang),
+//             L.dimY,
+//             Math.round(L.frontOverhang)
+//         ),
+//         ...Array.from({ length: L.axleCount - 1 }, (_, i) => {
+//             const startMm = L.frontOverhang + i * L.axleSpacing;
+
+//             return dimLineHtml(
+//                 L.mmX(startMm),
+//                 L.mmX(startMm + L.axleSpacing),
+//                 L.dimY,
+//                 L.axleSpacing
+//             );
+//         }),
+//         dimLineHtml(
+//             L.mmX(L.frontOverhang + (L.axleCount - 1) * L.axleSpacing),
+//             L.mmX(L.totalLength),
+//             L.dimY,
+//             Math.round(
+//                 L.totalLength -
+//                     (L.frontOverhang + (L.axleCount - 1) * L.axleSpacing)
+//             )
+//         ),
+//     ].join("");
+
+//     const chassisPath = forPdf
+//         ? `M ${L.frameX + 8} ${L.frameY + L.frameH} L ${
+//               L.frameX + L.frameW * 0.18
+//           } ${L.frameY + L.frameH} L ${L.frameX + L.frameW * 0.27} ${
+//               L.frameY + L.frameH + 35
+//           } L ${L.frameX + L.frameW} ${L.frameY + L.frameH + 35} L ${
+//               L.frameX + L.frameW
+//           } ${L.frameY + L.frameH + 52} L ${
+//               L.frameX + L.frameW * 0.28
+//           } ${L.frameY + L.frameH + 52} L ${L.frameX + 15} ${
+//               L.frameY + L.frameH + 18
+//           } Z`
+//         : `M ${L.frameX + 8} ${L.frameY + L.frameH} L ${
+//               L.frameX + L.frameW * 0.18
+//           } ${L.frameY + L.frameH} L ${L.frameX + L.frameW * 0.27} ${
+//               L.frameY + L.frameH + 35
+//           } L ${L.frameX + L.frameW} ${L.frameY + L.frameH + 35} L ${
+//               L.frameX + L.frameW
+//           } ${L.frameY + L.frameH + 52} L ${
+//               L.frameX + L.frameW * 0.28
+//           } ${L.frameY + L.frameH + 52} C ${
+//               L.frameX + L.frameW * 0.23
+//           } ${L.frameY + L.frameH + 52}, ${L.frameX + L.frameW * 0.2} ${
+//               L.frameY + L.frameH + 25
+//           }, ${L.frameX + L.frameW * 0.15} ${
+//               L.frameY + L.frameH + 18
+//           } L ${L.frameX + 15} ${L.frameY + L.frameH + 18} Z`;
+
+//     const qtyX = Math.max(L.frameX + L.frameW - 260, L.frameX + 8);
+
+//     return `
+//         <svg viewBox="0 0 ${L.svgW} ${L.svgH}" width="100%" xmlns="http://www.w3.org/2000/svg">
+//             ${dimLineHtml(L.frameX, L.frameX + L.frameW, 42, L.totalLength)}
+
+//             <line x1="25" y1="${L.frameY}" x2="25" y2="${
+//                 L.frameY + L.frameH
+//             }" stroke="#111"/>
+
+//             <polygon points="25,${L.frameY} 19,${L.frameY + 10} 31,${
+//                 L.frameY + 10
+//             }" fill="#111"/>
+
+//             <polygon points="25,${L.frameY + L.frameH} 19,${
+//                 L.frameY + L.frameH - 10
+//             } 31,${L.frameY + L.frameH - 10}" fill="#111"/>
+
+//             <text x="10" y="${L.frameY + L.frameH / 2}" font-size="13" font-weight="700" transform="rotate(-90 10 ${
+//                 L.frameY + L.frameH / 2
+//             })">${L.trailerHeight}</text>
+
+//             <rect x="${L.frameX}" y="${L.frameY}" width="${L.frameW}" height="${
+//                 L.frameH
+//             }" fill="#fff" stroke="#111" stroke-width="2"/>
+
+//             ${railLines}
+
+//             <line x1="${L.frameX}" y1="${L.frameY + 10}" x2="${
+//                 L.frameX + L.frameW
+//             }" y2="${L.frameY + 10}" stroke="#111" stroke-width="2.2"/>
+
+//             <line x1="${L.frameX}" y1="${L.frameY + L.frameH - 10}" x2="${
+//                 L.frameX + L.frameW
+//             }" y2="${L.frameY + L.frameH - 10}" stroke="#111" stroke-width="2.2"/>
+
+//             ${pillars}
+//             <path d="${chassisPath}" fill="#fff" stroke="#111" stroke-width="2"/>
+//             ${supports}
+//             ${bolts}
+//             ${wheels}
+//             ${bottomDims}
+
+//             <text x="${qtyX}" y="${L.dimY + 30}" font-size="13" font-weight="700">
+//                 TOTAL ORDER QUANTITY - 1 VEHICLE
+//             </text>
+//         </svg>
+//     `;
+// }
+
+
+
+import { computeChassisDrawingLayout } from "./chassisDrawingLayout";
+
+const esc = (v: any) => String(v ?? "");
+
+const toNum = (value: any, fallback = 0) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+};
+
+const dimLineHtml = (
+    x1: number,
+    x2: number,
+    y: number,
+    label: any,
+    options: any = {}
+) => {
+    const labelY = options.labelY ?? y - 8;
+    const stroke = options.stroke || "#111";
+    const fontSize = options.fontSize || 13;
+    const weight = options.weight || 500;
+
+    return `
+        <line
+            x1="${x1}"
+            y1="${y}"
+            x2="${x2}"
+            y2="${y}"
+            stroke="${stroke}"
+            stroke-width="1"
+        />
+
+        <polygon
+            points="${x1},${y} ${x1 + 7},${y - 4} ${x1 + 7},${y + 4}"
+            fill="${stroke}"
+        />
+
+        <polygon
+            points="${x2},${y} ${x2 - 7},${y - 4} ${x2 - 7},${y + 4}"
+            fill="${stroke}"
+        />
+
+        <text
+            x="${(x1 + x2) / 2}"
+            y="${labelY}"
+            font-size="${fontSize}"
+            font-weight="${weight}"
+            text-anchor="middle"
+            fill="#111"
+        >
+            ${esc(label)}
+        </text>
+    `;
+};
+
+const verticalDimLineHtml = (
+    x: number,
+    y1: number,
+    y2: number,
+    label: any
+) => `
+    <line
+        x1="${x}"
+        y1="${y1}"
+        x2="${x}"
+        y2="${y2}"
+        stroke="#111"
+        stroke-width="1"
+    />
+
+    <polygon
+        points="${x},${y1} ${x - 5},${y1 + 8} ${x + 5},${y1 + 8}"
+        fill="#111"
+    />
+
+    <polygon
+        points="${x},${y2} ${x - 5},${y2 - 8} ${x + 5},${y2 - 8}"
+        fill="#111"
+    />
+
+    <text
+        x="${x - 13}"
+        y="${(y1 + y2) / 2}"
+        font-size="13"
+        font-weight="500"
+        text-anchor="middle"
+        fill="#111"
+        transform="rotate(-90 ${x - 13} ${(y1 + y2) / 2})"
+    >
+        ${esc(label)}
+    </text>
+`;
+
+export function buildChassisDrawingSvgHtml(
+    bomData: any = {},
+    options: any = {}
+) {
+    const L = computeChassisDrawingLayout(bomData, options);
+
+    const d = bomData?.dimensions || {};
+    const c = bomData?.calculated || {};
+
+    /*
+        Dynamic version of the commented design:
+        - same visual structure
+        - values come from current input / computed layout
+        - no fixed dependency on only 10998 / 1558 / 1540
+    */
+
+    const svgW = 1180;
+    const svgH = 560;
+
+    const frameX = 78;
+    const frameY = 70;
+    const frameH = 150;
+
+    const frontEndW = 30;
+    const rearEndW = 30;
+    const marginRight = 42;
+
+    const frameW = svgW - frameX - marginRight - 22;
+    const bodyEndX = frameX + frameW;
+
+    const totalLength = toNum(
+        L.totalLength || d.totalLength || c.totalLength,
+        10998
+    );
+
+    const trailerHeight = toNum(
+        L.trailerHeight ||
+            d.totalHeight ||
+            d.deckHeight ||
+            d.trailerHeight ||
+            c.trailerHeight,
+        1558
+    );
+
+    const sideRailCount = Math.max(
+        toNum(L.sideRailCount || d.sideRailCount || c.sideRailCount, 8),
+        4
+    );
+
+    const axleCount = Math.max(
+        toNum(L.axleCount || d.axleCount || c.axleCount, 3),
+        1
+    );
+
+    const axleSpacing = toNum(
+        L.axleSpacing || d.axleSpacing || c.axleSpacing,
+        1540
+    );
+
+    const frontOverhangInput = toNum(
+        L.frontOverhang || d.frontOverhang || c.frontOverhang,
+        totalLength * 0.55
+    );
+
+    const rearOverhangInput = toNum(
+        L.rearOverhang || d.rearOverhang || c.rearOverhang,
+        totalLength * 0.12
+    );
+
+    const mmX = (mm: number) => {
+        return frameX + (mm / totalLength) * frameW;
+    };
+
+    const topDimY = 32;
+    const railGap = frameH / (sideRailCount + 1);
+
+    const wheelR = 52;
+    const wheelY = frameY + frameH + 92;
+
+    const bottomBaseY = wheelY + wheelR + 10;
+    const bottomDimY = bottomBaseY + 46;
+    const noteY = bottomDimY + 58;
+
+    const railLines = Array.from({ length: sideRailCount }, (_, i) => {
+        const y = frameY + railGap * (i + 1);
+        const sw = i === 0 || i === sideRailCount - 1 ? 1.4 : 1;
+
+        return `
+            <line
+                x1="${frameX}"
+                y1="${y}"
+                x2="${bodyEndX}"
+                y2="${y}"
+                stroke="#111"
+                stroke-width="${sw}"
+            />
+        `;
+    }).join("");
+
+    const computedPillars = Array.isArray(L.pillarPositionsMm)
+        ? L.pillarPositionsMm
+        : [];
+
+    const pillarCount = Math.max(
+        computedPillars.length ||
+            toNum(d.crossMemberCount || d.pillarCount || c.pillarCount, 10),
+        2
+    );
+
+    const pillarPositions = Array.from({ length: pillarCount }, (_, i) => {
+        if (computedPillars[i] !== undefined) {
+            return computedPillars[i];
+        }
+
+        return (totalLength / (pillarCount - 1)) * i;
+    });
+
+    const pillarW = 18;
+
+    const pillars = pillarPositions
+        .map((mm: number) => {
+            const x = mmX(mm);
+
+            return `
+                <g>
+                    <rect
+                        x="${x - pillarW / 2}"
+                        y="${frameY}"
+                        width="${pillarW}"
+                        height="${frameH}"
+                        fill="#fff"
+                        stroke="#111"
+                        stroke-width="1.5"
+                    />
+                </g>
+            `;
+        })
+        .join("");
+
+    /*
+        Hangers below rail.
+        Position is based on gaps between pillars, so it stays dynamic.
+    */
+    const hangerPositions = pillarPositions
+        .slice(0, -1)
+        .map((mm: number, i: number) => (mm + pillarPositions[i + 1]) / 2);
+
+    const hangers = hangerPositions
+        .map((mm: number) => {
+            const x = mmX(mm);
+            const y = frameY + frameH + 4;
+
+            return `
+                <g>
+                    <path
+                        d="M ${x - 10} ${y}
+                           L ${x + 10} ${y}
+                           L ${x + 6} ${y + 20}
+                           L ${x + 2} ${y + 24}
+                           L ${x - 2} ${y + 24}
+                           L ${x - 6} ${y + 20}
+                           Z"
+                        fill="#fff"
+                        stroke="#111"
+                        stroke-width="1"
+                    />
+
+                    <line
+                        x1="${x - 6}"
+                        y1="${y + 4}"
+                        x2="${x + 4}"
+                        y2="${y + 22}"
+                        stroke="#111"
+                        stroke-width="0.8"
+                    />
+
+                    <line
+                        x1="${x + 6}"
+                        y1="${y + 4}"
+                        x2="${x - 4}"
+                        y2="${y + 22}"
+                        stroke="#111"
+                        stroke-width="0.8"
+                    />
+                </g>
+            `;
+        })
+        .join("");
+
+    /*
+        Bolts near front side, same commented-design style.
+        Dynamic end point uses 4th pillar when available.
+    */
+    const boltsEndX = mmX(pillarPositions[3] ?? totalLength * 0.46);
+    const boltsStartX = frameX + 18;
+    const boltsCount = 14;
+
+    const bolts = Array.from({ length: boltsCount }, (_, i) => {
+        const cx =
+            boltsCount <= 1
+                ? boltsStartX
+                : boltsStartX +
+                  i * ((boltsEndX - boltsStartX) / (boltsCount - 1));
+
+        const cy = frameY + frameH + (i % 2 === 0 ? 12 : 25);
+
+        return `
+            <circle
+                cx="${cx}"
+                cy="${cy}"
+                r="2.6"
+                fill="#fff"
+                stroke="#111"
+                stroke-width="1"
+            />
+        `;
+    }).join("");
+
+    /*
+        Axle positions dynamic:
+        - use calculated axle centers when available
+        - otherwise calculate using front overhang + axle spacing
+        - clamp so wheels stay inside body
+    */
+    const maxFirstAxle =
+        totalLength - (axleCount - 1) * axleSpacing - rearOverhangInput;
+
+    const firstAxleMm = Math.max(
+        totalLength * 0.25,
+        Math.min(frontOverhangInput, maxFirstAxle)
+    );
+
+    const axleCentersMm = Array.from({ length: axleCount }, (_, i) => {
+        const computedAxleX = Array.isArray(L.axleCentersX)
+            ? L.axleCentersX[i]
+            : null;
+
+        if (computedAxleX !== null && computedAxleX !== undefined && L.frameW) {
+            const ratio = (computedAxleX - L.frameX) / L.frameW;
+            const mm = ratio * totalLength;
+
+            if (Number.isFinite(mm) && mm > 0 && mm < totalLength) {
+                return mm;
+            }
+        }
+
+        return firstAxleMm + i * axleSpacing;
+    }).filter((mm) => mm >= 0 && mm <= totalLength);
+
+    const safeAxleCentersMm =
+        axleCentersMm.length > 0 ? axleCentersMm : [firstAxleMm];
+
+    const lastAxleMm = safeAxleCentersMm[safeAxleCentersMm.length - 1];
+    const lastSegment = Math.max(totalLength - lastAxleMm, 0);
+
+    const wheels = safeAxleCentersMm
+        .map((mm: number) => {
+            const cx = mmX(mm);
+
+            return `
+                <circle
+                    cx="${cx}"
+                    cy="${wheelY}"
+                    r="${wheelR}"
+                    fill="#fff"
+                    stroke="#777"
+                    stroke-width="1.4"
+                />
+            `;
+        })
+        .join("");
+
+    const bottomDimSegments = [
+        {
+            start: 0,
+            end: safeAxleCentersMm[0],
+            label: Math.round(safeAxleCentersMm[0]),
+        },
+        ...safeAxleCentersMm.slice(0, -1).map((mm: number, i: number) => {
+            const next = safeAxleCentersMm[i + 1];
+
+            return {
+                start: mm,
+                end: next,
+                label: Math.round(next - mm),
+            };
+        }),
+        {
+            start: lastAxleMm,
+            end: totalLength,
+            label: Math.round(lastSegment),
+        },
+    ].filter((item) => item.end > item.start);
+
+    const bottomDims = bottomDimSegments
+        .map((item) =>
+            dimLineHtml(mmX(item.start), mmX(item.end), bottomDimY, item.label, {
+                labelY: bottomDimY - 7,
+                fontSize: 12,
+                weight: 500,
+            })
+        )
+        .join("");
+
+    const chassisPath = `
+        M ${frameX - frontEndW + 3} ${frameY + frameH + 10}
+        C ${frameX - 10} ${frameY + frameH + 22},
+          ${frameX + 18} ${frameY + frameH + 20},
+          ${frameX + 46} ${frameY + frameH + 18}
+
+        L ${frameX + frameW * 0.18} ${frameY + frameH + 18}
+
+        C ${frameX + frameW * 0.21} ${frameY + frameH + 22},
+          ${frameX + frameW * 0.24} ${frameY + frameH + 35},
+          ${frameX + frameW * 0.28} ${frameY + frameH + 38}
+
+        L ${bodyEndX + rearEndW - 6} ${frameY + frameH + 38}
+        L ${bodyEndX + rearEndW - 6} ${frameY + frameH + 58}
+        L ${frameX + frameW * 0.28} ${frameY + frameH + 58}
+
+        C ${frameX + frameW * 0.22} ${frameY + frameH + 58},
+          ${frameX + frameW * 0.18} ${frameY + frameH + 32},
+          ${frameX + frameW * 0.11} ${frameY + frameH + 24}
+
+        L ${frameX - frontEndW + 3} ${frameY + frameH + 24}
+        Z
+    `;
+
+    const frontEnd = `
+        <g>
+            <rect
+                x="${frameX - frontEndW}"
+                y="${frameY}"
+                width="${frontEndW}"
+                height="${frameH + 45}"
+                fill="#fff"
+                stroke="#111"
+                stroke-width="1.4"
+            />
+
+            <path
+                d="M ${frameX - frontEndW} ${frameY + frameH + 2}
+                   C ${frameX - 20} ${frameY + frameH + 13},
+                     ${frameX - 8} ${frameY + frameH + 16},
+                     ${frameX + 8} ${frameY + frameH + 14}"
+                fill="none"
+                stroke="#111"
+                stroke-width="1"
+            />
+
+            <circle
+                cx="${frameX - 20}"
+                cy="${frameY + 7}"
+                r="2"
+                fill="#fff"
+                stroke="#111"
+            />
+
+            <circle
+                cx="${frameX - 20}"
+                cy="${frameY + frameH + 30}"
+                r="2"
+                fill="#fff"
+                stroke="#111"
+            />
+
+            <line
+                x1="${frameX - frontEndW}"
+                y1="${frameY + 9}"
+                x2="${frameX}"
+                y2="${frameY + 9}"
+                stroke="#111"
+                stroke-width="0.8"
+            />
+
+            <line
+                x1="${frameX - frontEndW}"
+                y1="${frameY + frameH - 8}"
+                x2="${frameX}"
+                y2="${frameY + frameH - 8}"
+                stroke="#111"
+                stroke-width="0.8"
+            />
+        </g>
+    `;
+
+    const rearEnd = `
+        <g>
+            <rect
+                x="${bodyEndX}"
+                y="${frameY}"
+                width="${rearEndW}"
+                height="${frameH + 45}"
+                fill="#fff"
+                stroke="#111"
+                stroke-width="1.4"
+            />
+
+            <path
+                d="M ${bodyEndX + rearEndW} ${frameY + frameH + 2}
+                   C ${bodyEndX + 20} ${frameY + frameH + 13},
+                     ${bodyEndX + 8} ${frameY + frameH + 16},
+                     ${bodyEndX - 8} ${frameY + frameH + 14}"
+                fill="none"
+                stroke="#111"
+                stroke-width="1"
+            />
+
+            <line
+                x1="${bodyEndX + rearEndW}"
+                y1="${frameY + frameH + 37}"
+                x2="${bodyEndX + rearEndW + 6}"
+                y2="${frameY + frameH + 37}"
+                stroke="#111"
+                stroke-width="2"
+            />
+
+            <circle
+                cx="${bodyEndX + 10}"
+                cy="${frameY + 7}"
+                r="2"
+                fill="#fff"
+                stroke="#111"
+            />
+
+            <circle
+                cx="${bodyEndX + 10}"
+                cy="${frameY + frameH + 30}"
+                r="2"
+                fill="#fff"
+                stroke="#111"
+            />
+
+            <line
+                x1="${bodyEndX}"
+                y1="${frameY + 9}"
+                x2="${bodyEndX + rearEndW}"
+                y2="${frameY + 9}"
+                stroke="#111"
+                stroke-width="0.8"
+            />
+
+            <line
+                x1="${bodyEndX}"
+                y1="${frameY + frameH - 8}"
+                x2="${bodyEndX + rearEndW}"
+                y2="${frameY + frameH - 8}"
+                stroke="#111"
+                stroke-width="0.8"
+            />
+        </g>
+    `;
+
+    const kingpinX = frameX + 18;
+    const kingpinY = frameY + frameH + 26;
+    const kingpinLabelX = kingpinX + 24;
+    const kingpinLabelY = kingpinY + 18;
+
+    const kingpinMarker = `
+        <g>
+            <line
+                x1="${kingpinX}"
+                y1="${kingpinY}"
+                x2="${kingpinLabelX}"
+                y2="${kingpinLabelY}"
+                stroke="#111"
+                stroke-width="0.8"
+            />
+
+            <text
+                x="${kingpinLabelX + 2}"
+                y="${kingpinLabelY + 4}"
+                font-size="12"
+                font-weight="500"
+                fill="#111"
+            >
+                0
+            </text>
+        </g>
+    `;
+
+    const qtyX = svgW - 330;
+
+    return `
+        <svg
+            viewBox="0 0 ${svgW} ${svgH}"
+            width="100%"
+            height="100%"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="xMidYMid meet"
+        >
+            <rect
+                x="0"
+                y="0"
+                width="${svgW}"
+                height="${svgH}"
+                fill="#fff"
+            />
+
+            ${dimLineHtml(
+                frameX - frontEndW,
+                bodyEndX + rearEndW,
+                topDimY,
+                Math.round(totalLength),
+                {
+                    labelY: topDimY - 7,
+                    fontSize: 13,
+                    weight: 500,
+                }
+            )}
+
+            ${verticalDimLineHtml(
+                frameX - frontEndW - 24,
+                frameY,
+                frameY + frameH,
+                Math.round(trailerHeight)
+            )}
+
+            <line
+                x1="${frameX - frontEndW - 24}"
+                y1="${frameY}"
+                x2="${frameX - frontEndW}"
+                y2="${frameY}"
+                stroke="#111"
+                stroke-width="1"
+            />
+
+            <line
+                x1="${frameX - frontEndW - 24}"
+                y1="${frameY + frameH}"
+                x2="${frameX - frontEndW}"
+                y2="${frameY + frameH}"
+                stroke="#111"
+                stroke-width="1"
+            />
+
+            ${frontEnd}
+            ${rearEnd}
+
+            <rect
+                x="${frameX}"
+                y="${frameY}"
+                width="${frameW}"
+                height="${frameH}"
+                fill="#fff"
+                stroke="#111"
+                stroke-width="1.5"
+            />
+
+            ${railLines}
+
+            <line
+                x1="${frameX}"
+                y1="${frameY + 10}"
+                x2="${bodyEndX}"
+                y2="${frameY + 10}"
+                stroke="#111"
+                stroke-width="1.6"
+            />
+
+            <line
+                x1="${frameX}"
+                y1="${frameY + frameH - 10}"
+                x2="${bodyEndX}"
+                y2="${frameY + frameH - 10}"
+                stroke="#111"
+                stroke-width="1.6"
+            />
+
+            ${pillars}
+
+            <path
+                d="${chassisPath}"
+                fill="#fff"
+                stroke="#111"
+                stroke-width="1.5"
+            />
+
+            ${hangers}
+            ${bolts}
+            ${kingpinMarker}
+            ${wheels}
+
+            <line
+                x1="${mmX(0)}"
+                y1="${wheelY + wheelR + 10}"
+                x2="${mmX(totalLength)}"
+                y2="${wheelY + wheelR + 10}"
+                stroke="#b7b7b7"
+                stroke-width="1"
+            />
+
+            <line
+                x1="${mmX(0)}"
+                y1="${wheelY + wheelR + 10}"
+                x2="${mmX(0)}"
+                y2="${bottomDimY}"
+                stroke="#9ca3af"
+                stroke-width="1"
+            />
+
+            <line
+                x1="${mmX(totalLength)}"
+                y1="${wheelY + wheelR + 10}"
+                x2="${mmX(totalLength)}"
+                y2="${bottomDimY}"
+                stroke="#9ca3af"
+                stroke-width="1"
+            />
+
+            ${safeAxleCentersMm
+                .map((mm) => {
+                    const x = mmX(mm);
+
+                    return `
+                        <line
+                            x1="${x}"
+                            y1="${wheelY + wheelR + 10}"
+                            x2="${x}"
+                            y2="${bottomDimY}"
+                            stroke="#9ca3af"
+                            stroke-width="1"
+                        />
+                    `;
+                })
+                .join("")}
+
+            ${bottomDims}
+
+            <text
+                x="${qtyX}"
+                y="${noteY}"
+                font-size="13"
+                font-weight="500"
+                fill="#111"
+            >
+                TOTAL ORDER QUANTITY - 1 VEHICLE
+            </text>
+
+          
+        </svg>
+    `;
+}
