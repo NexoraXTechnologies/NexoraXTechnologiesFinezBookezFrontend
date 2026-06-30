@@ -202,7 +202,7 @@ export default function DataTable<T>({
 							{visibleColumns?.map((col: any) => (
 								<th
 									key={String(col.key)}
-									className={`px-4 py-4 border-b border-border bg-muted text-left font-semibold text-muted-foreground whitespace-nowrap ${col.className || ""}`}
+									className={`px-4 py-4 border-b border-border bg-muted text-left font-semibold text-muted-foreground whitespace-nowrap ${col.className || ""} ${col?.type == "amount" && "text-right"}`}
 								>
 									{col.title}
 								</th>
@@ -241,7 +241,7 @@ export default function DataTable<T>({
 										return (
 											<td
 												key={String(col.key)}
-												className="px-4 py-3 border-b border-border font-medium text-card-foreground whitespace-nowrap"
+												className={`px-4 py-3 border-b border-border font-medium text-card-foreground whitespace-nowrap ${(col?.type == "amount") && "text-end"}`}
 											>
 												{col.type === "date"
 													? value
@@ -285,10 +285,6 @@ export default function DataTable<T>({
 	);
 }
 
-/* ===================================================
-   COLUMN WISE TABLE
-=================================================== */
-
 export type ColumnWiseField<T = any> = {
 	title: string;
 	key: keyof T | string;
@@ -305,17 +301,10 @@ type ColumnWiseTableProps<T = any> = {
 	showFieldSelector?: boolean;
 };
 
-const leftHeaderClass =
-	"sticky left-0 z-20 min-w-[180px] border-r border-b border-border bg-muted px-4 py-3 text-center font-bold text-foreground shadow-[1px_0_0_0_var(--border)]";
-
-const leftBodyClass =
-	"sticky left-0 z-20 min-w-[180px] border-r border-b border-border bg-card px-4 py-3 text-center font-semibold text-card-foreground shadow-[1px_0_0_0_var(--border)]";
-
-const valueHeaderClass =
-	"min-w-[220px] border-r border-b border-border bg-muted px-4 py-3 text-center font-bold text-foreground";
-
-const valueBodyClass =
-	"min-w-[220px] border-r border-b border-border bg-card px-4 py-3 text-center text-card-foreground";
+const leftHeaderClass = "sticky left-0 z-20 min-w-[180px] border-r border-b border-border bg-muted px-4 py-3 text-center font-bold text-foreground shadow-[1px_0_0_0_var(--border)]";
+const leftBodyClass = "sticky left-0 z-20 min-w-[180px] border-r border-b border-border bg-card px-4 py-3 text-center font-semibold text-card-foreground shadow-[1px_0_0_0_var(--border)]";
+const valueHeaderClass = "min-w-[220px] border-r border-b border-border bg-muted px-4 py-3 text-center font-bold text-foreground";
+const valueBodyClass = "min-w-[220px] border-r border-b border-border bg-card px-4 py-3 text-center text-card-foreground";
 
 const ColumnWiseTable = <T extends Record<string, any>>({
 	data = [],

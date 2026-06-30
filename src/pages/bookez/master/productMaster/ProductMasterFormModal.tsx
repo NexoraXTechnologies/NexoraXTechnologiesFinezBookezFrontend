@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../../../components/modal";
-import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
+import { ImageUploadInput, SelectInput, TextArea, TextInput } from "../../../../components/inputs";
 
 /* =====================================================
    PRODUCT MASTER FORM MODAL COMPONENT
@@ -300,25 +300,17 @@ const ProductMasterFormModal = ({
 
     if (field.key === "imageUrl") {
       return (
-        <TextInput
+        <ImageUploadInput
           key={field.key}
+          className="sm:col-span-1"
           label={field.label}
           mandatory={field.isRequired}
-          placeholder={`Enter ${field.label}`}
+          value={value}
           error={errors?.[field.key]}
-          type="file"
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-
-            reader.onload = () => {
-              const base64 = reader.result as string;
-              updateField(field.key, base64);
-            };
-
-            reader.readAsDataURL(file);
+          placeholder={`Click to upload ${field.label}`}
+          alt={field.label}
+          onChange={(base64: string | null) => {
+            updateField(field.key, base64);
           }}
         />
       );

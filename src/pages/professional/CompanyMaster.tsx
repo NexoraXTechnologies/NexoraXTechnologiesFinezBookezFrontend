@@ -9,7 +9,7 @@ import {
 
 import { toast } from "react-toastify";
 import { Edit, RefreshCcw, CheckCircle2, Trash2 } from "lucide-react";
-import { SelectInput, TextArea, TextInput } from "../../components/inputs";
+import { ImageUploadInput, SelectInput, TextArea, TextInput } from "../../components/inputs";
 import Modal from "../../components/modal";
 import {
   getCitiesByState,
@@ -896,135 +896,29 @@ const CompanyMaster = () => {
 
               {/* Logo + Signature */}
               <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {/* Company Logo */}
-                <div className="flex flex-col gap-1 w-full min-w-0">
-                  <label className="text-sm font-medium text-card-foreground">
-                    Company Logo
-                  </label>
+                <ImageUploadInput
+                  label="Company Logo"
+                  className="sm:col-span-1"
+                  value={form.logoUri}
+                  error={errors.logoUri}
+                  placeholder="Click to upload company logo"
+                  alt="Company Logo"
+                  validateImage={validateImage}
+                  fileToBase64={fileToBase64}
+                  onChange={(value) => updateField("logoUri", value)}
+                />
 
-                  <div
-                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-primary transition relative h-[100px] sm:h-[110px] w-full min-w-0 bg-card ${errors.logoUri ? "border-danger" : "border-border"
-                      }`}
-                    onClick={() =>
-                      document.getElementById("companyLogoInput")?.click()
-                    }
-                  >
-                    {form.logoUri ? (
-                      <>
-                        <img
-                          src={form.logoUri}
-                          alt="Company Logo"
-                          className="max-w-full sm:max-w-[180px] max-h-[80px] sm:max-h-[90px] object-contain rounded"
-                        />
-
-                        <button
-                          type="button"
-                          className="absolute top-1.5 right-2 text-danger text-xs sm:text-sm font-medium hover:underline bg-card px-1 rounded"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateField("logoUri", null);
-                          }}
-                        >
-                          × Remove
-                        </button>
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground text-xs sm:text-sm text-center">
-                        Click to upload company logo
-                      </p>
-                    )}
-                  </div>
-
-                  {errors.logoUri && (
-                    <p className="text-xs text-danger">{errors.logoUri}</p>
-                  )}
-
-                  <input
-                    id="companyLogoInput"
-                    type="file"
-                    accept="image/png, image/jpeg, image/jpg, image/webp"
-                    className="hidden"
-                    onChange={async (e: any) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-
-                      if (!validateImage(file)) {
-                        e.target.value = "";
-                        return;
-                      }
-
-                      const base64 = await fileToBase64(file);
-                      updateField("logoUri", base64);
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
-
-                {/* Signature */}
-                <div className="flex flex-col gap-1 w-full min-w-0">
-                  <label className="text-sm font-medium text-card-foreground">
-                    Signature
-                  </label>
-
-                  <div
-                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-primary transition relative h-[100px] sm:h-[110px] w-full min-w-0 bg-card ${errors.signatureUri ? "border-danger" : "border-border"
-                      }`}
-                    onClick={() =>
-                      document.getElementById("signatureInput")?.click()
-                    }
-                  >
-                    {form.signatureUri ? (
-                      <>
-                        <img
-                          src={form.signatureUri}
-                          alt="Signature"
-                          className="max-w-full sm:max-w-[180px] max-h-[80px] sm:max-h-[90px] object-contain rounded"
-                        />
-
-                        <button
-                          type="button"
-                          className="absolute top-1.5 right-2 text-danger text-xs sm:text-sm font-medium hover:underline bg-card px-1 rounded"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateField("signatureUri", null);
-                          }}
-                        >
-                          × Remove
-                        </button>
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground text-xs sm:text-sm text-center">
-                        Click to upload signature
-                      </p>
-                    )}
-                  </div>
-
-                  {errors.signatureUri && (
-                    <p className="text-xs text-danger">
-                      {errors.signatureUri}
-                    </p>
-                  )}
-
-                  <input
-                    id="signatureInput"
-                    type="file"
-                    accept="image/png, image/jpeg, image/jpg, image/webp"
-                    className="hidden"
-                    onChange={async (e: any) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-
-                      if (!validateImage(file)) {
-                        e.target.value = "";
-                        return;
-                      }
-
-                      const base64 = await fileToBase64(file);
-                      updateField("signatureUri", base64);
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
+                <ImageUploadInput
+                  label="Signature"
+                  className="sm:col-span-1"
+                  value={form.signatureUri}
+                  error={errors.signatureUri}
+                  placeholder="Click to upload signature"
+                  alt="Signature"
+                  validateImage={validateImage}
+                  fileToBase64={fileToBase64}
+                  onChange={(value) => updateField("signatureUri", value)}
+                />
               </div>
             </>
           ),
