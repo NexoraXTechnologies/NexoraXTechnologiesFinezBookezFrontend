@@ -56,6 +56,7 @@ import getAllTransactionSchema from "./slices/professionalSlice/transactionSchem
 
 // ledger report
 import accountReceivableReducer from "./slices/professionalSlice/ledgerReports/accountsReceivableSlice"
+import accountPayableReducer from "./slices/professionalSlice/ledgerReports/accountsPayableSlice"
 import accountLedgerReducer from "./slices/professionalSlice/ledgerReports/accountLedgerSlice";
 import stockLedgerReducer from "./slices/professionalSlice/ledgerReports/stockLedgerSlice";
 
@@ -69,6 +70,8 @@ import paymentRegisterReducer from "./slices/professionalSlice/bookEzRegister/pa
 import HSNCodeReducer from "./slices/professionalSlice/hsnCode"
 import seederConfgReducer from "./slices/professionalSlice/seeder"
 import permissionReducer from "./slices/permissionSlice";
+import postingReduce from "./slices/professionalSlice/posting";
+import posReducer from "./slices/professionalSlice/pos";
 
 export const store = configureStore({
   reducer: {
@@ -128,6 +131,7 @@ export const store = configureStore({
     getAllTransactionSchema,
 
     // ledger report 
+    accountPayable:accountPayableReducer,
     accountReceivable: accountReceivableReducer,
     accountLedger: accountLedgerReducer,
     stockLedger: stockLedgerReducer,
@@ -141,8 +145,8 @@ export const store = configureStore({
     HSNCode: HSNCodeReducer,
     seederConfg: seederConfgReducer,
     permissions: permissionReducer,
-
-
+    posting: postingReduce,
+    pos: posReducer,
   },
 });
 

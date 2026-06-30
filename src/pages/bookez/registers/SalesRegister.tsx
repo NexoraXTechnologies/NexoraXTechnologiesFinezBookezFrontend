@@ -29,7 +29,7 @@ const mainColumns = [
         key: "sInvVoucherNumber",
         title: "Voucher Number",
         render: (row: any) => (
-            <span className="font-medium text-slate-800">
+            <span className="font-medium text-card-foreground">
                 {row?.sInvVoucherNumber || "-"}
             </span>
         ),
@@ -45,7 +45,7 @@ const mainColumns = [
                 : "-";
 
             return (
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-card-foreground">
                     {date}
                 </span>
             );
@@ -56,10 +56,10 @@ const mainColumns = [
         title: "Customer",
         render: (row: any) => (
             <div className="flex flex-col">
-                <span className="font-semibold text-slate-800">
+                <span className="font-semibold text-card-foreground">
                     {row?.sInvCustomerName || "-"}
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                     {row?.sInvCustomerCode || "-"}
                 </span>
             </div>
@@ -69,8 +69,8 @@ const mainColumns = [
         key: "sOrderNumber",
         title: "Order",
         render: (row: any) => (
-            <span className="font-medium text-slate-800">
-                {row?.sOrderNumber || "-"}
+            <span className="font-medium text-card-foreground">
+                {row?.sInvBody?.[0]?.sOrderNumber || "-"}
             </span>
         ),
     },
@@ -78,7 +78,7 @@ const mainColumns = [
         key: "netAmount",
         title: "Net Amount",
         render: (row: any) => (
-            <span className="font-bold text-slate-900">
+            <span className="font-bold text-foreground">
                 ₹{Number(row?.sInvFooter?.netAmount || 0).toFixed(2)}
             </span>
         ),
@@ -95,8 +95,8 @@ const mainColumns = [
                     className={`
                         rounded-full px-3 py-1 text-xs font-bold uppercase
                         ${isOpen
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-slate-100 text-slate-600"
+                            ? "bg-success/10 text-success"
+                            : "bg-muted text-muted-foreground"
                         }
                     `}
                 >
@@ -604,6 +604,7 @@ const SalesRegister = () => {
             setPdfLoading(false);
         }
     };
+
     const handleDownloadExcel = async () => {
         if (!hasAnyFilter || excelLoading) return;
 
@@ -623,12 +624,13 @@ const SalesRegister = () => {
             setExcelLoading(false);
         }
     };
+
     /* ===================================================
        RENDER
     =================================================== */
 
     return (
-        <div className="flex h-full w-full flex-col gap-4 bg-slate-50 p-4">
+        <div className="flex h-full w-full flex-col gap-4 bg-background p-4 text-foreground">
             <RegisterFilterCard
                 title="Sales Register Filters"
                 fields={[
@@ -710,8 +712,8 @@ const SalesRegister = () => {
                         }}
                         className="
                             inline-flex cursor-pointer items-center gap-1 rounded-lg
-                            bg-indigo-50 px-3 py-1.5 text-xs font-bold
-                            text-indigo-700 transition hover:bg-indigo-100
+                            bg-primary/10 px-3 py-1.5 text-xs font-bold
+                            text-primary transition hover:bg-primary/20
                         "
                     >
                         <Eye size={15} />

@@ -226,6 +226,7 @@ const paymentSlice = createSlice({
     addLoader: false,
     listingLoader: false,
     deleteLoader: false,
+    updateLoader: false,
 
     paymentList: [] as any[],
     selectedPayment: null as any,
@@ -306,14 +307,30 @@ const paymentSlice = createSlice({
       })
 
       /* ---------- UPDATE PAYMENT ---------- */
+      // .addCase(updatePayment.pending, (state) => {
+      //   state.addLoader = true;
+      //   state.error = null;
+      // })
+      // .addCase(updatePayment.fulfilled, (state) => {
+      //   state.addLoader = false;
+      // })
+      // .addCase(updatePayment.rejected, (state, action) => {
+      //   state.addLoader = false;
+      //   state.error = action.payload?.message || "Failed to update payment";
+      // })
+
+
       .addCase(updatePayment.pending, (state) => {
+        state.updateLoader = true;
         state.addLoader = true;
         state.error = null;
       })
       .addCase(updatePayment.fulfilled, (state) => {
+        state.updateLoader = false;
         state.addLoader = false;
       })
       .addCase(updatePayment.rejected, (state, action) => {
+        state.updateLoader = false;
         state.addLoader = false;
         state.error = action.payload?.message || "Failed to update payment";
       })

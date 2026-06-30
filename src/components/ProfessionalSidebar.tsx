@@ -1,40 +1,69 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, CreditCard, BrickWallShield, WalletCards, BadgeIndianRupee, ShoppingCart, BarChart3, BookOpenCheck, ReceiptText, LockKeyhole } from 'lucide-react';
-import ConfirmTooltip from './common/ConfirmTooltip';
+import {
+	LogOut,
+	IdCard,
+	Users,
+	Settings,
+	ChevronDown,
+	ChevronRight,
+	Building2,
+	Sliders,
+	CloudCog,
+	BookText,
+	LayoutDashboard,
+	X,
+	CreditCard,
+	BrickWallShield,
+	WalletCards,
+	BadgeIndianRupee,
+	ShoppingCart,
+	BarChart3,
+	BookOpenCheck,
+	LockKeyhole,
+	Palette,
+	Wrench,
+} from "lucide-react";
+import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
-import EZLogo from '../assets/Logo.EZ.png'
-import FinEzLogo from '../assets/FinEZ.png';
+import EZLogo from "../assets/Logo.EZ.png";
+import FinEzLogo from "../assets/FinEZ.png";
 import { isModuleEnabled } from "./PermissionGuard";
+
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [openMenus, setOpenMenus] = useState({});
 	const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
-	
+
 	const navigate = useNavigate();
 	// const dispatchP = useDispatch();
-	const [confirm, setConfirm] = useState<{ show: boolean, x: number | null, y: number | null }>({ show: false, x: null, y: null });
+	const [confirm, setConfirm] = useState<{
+		show: boolean;
+		x: number | null;
+		y: number | null;
+	}>({ show: false, x: null, y: null });
+
 	/* open tooltip at click position */
 	const openConfirm = (e: React.MouseEvent<HTMLButtonElement>) => {
 		const btn = e.currentTarget.getBoundingClientRect();
-		const gap = 8; // vertical gap
-		const tooltipW = 176; // w-44
-		const tooltipH = 64; // measured or estimated
+		const gap = 8;
+		const tooltipW = 176;
+		const tooltipH = 64;
 
-		let top = btn.top - gap - tooltipH; // 8 px above button
-		let left = btn.right - tooltipW; // right edges aligned
+		let top = btn.top - gap - tooltipH;
+		let left = btn.right - tooltipW;
 
-		/* keep inside viewport */
 		const pad = 4;
 		top = Math.max(pad, Math.min(top, window.innerHeight - tooltipH - pad));
 		left = Math.max(pad, Math.min(left, window.innerWidth - tooltipW - pad));
 
 		setConfirm({ show: true, x: left, y: top });
 	};
+
 	// @ts-ignore
-	const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
-	const canShowUsers = professionalHeaders?.['x-db-name'] == professionalHeaders?.loginuser;
+	const professionalHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
+	const canShowUsers = professionalHeaders?.["x-db-name"] == professionalHeaders?.loginuser;
 
 	useEffect(() => {
 		const updateSidebarWidth = () => {
@@ -43,11 +72,18 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 				document.documentElement.style.setProperty("--professional-sidebar-width", "0px");
 				return;
 			}
-			document.documentElement.style.setProperty("--professional-sidebar-width", isExpanded ? "256px" : "80px");
+			document.documentElement.style.setProperty(
+				"--professional-sidebar-width",
+				isExpanded ? "256px" : "80px"
+			);
 		};
+
 		updateSidebarWidth();
 		window.addEventListener("resize", updateSidebarWidth);
-		return () => { window.removeEventListener("resize", updateSidebarWidth); };
+
+		return () => {
+			window.removeEventListener("resize", updateSidebarWidth);
+		};
 	}, [isExpanded]);
 
 	const menuItems = [
@@ -72,42 +108,46 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "accountMaster",
 							action: "view",
 						},
+
 						{
-							name: "Transaction",
-							icon: <ReceiptText size={20} />,
+							name: "Opening Balances / Stocks",
+							path: "/bookEz/transaction/opening-balances",
+							icon: <WalletCards size={19} />,
 							module: "bookez",
-							permissionKey: "bookez",
-							children: [
-								{
-									name: "Opening Balances / Stocks",
-									path: "/bookEz/transaction/opening-balances",
-									icon: <WalletCards size={14} />,
-									module: "bookez",
-									permissionKey: "openingBalance",
-									action: "view",
-								},
-								{
-									name: "Sale Workflow",
-									path: "/bookEz/transaction/sale-workflow",
-									icon: <BadgeIndianRupee size={14} />,
-									module: "bookez",
-									permissionKey: "salesInvoice",
-									action: "view",
-								},
-								{
-									name: "Purchase Workflow",
-									path: "/bookEz/transaction/purchase-workflow",
-									icon: <ShoppingCart size={14} />,
-									module: "bookez",
-									permissionKey: "purchaseInvoice",
-									action: "view",
-								},
-							],
+							permissionKey: "openingBalance",
+							action: "view",
+						},
+						{
+							name: "Sale Workflow",
+							path: "/bookEz/transaction/sale-workflow",
+							icon: <BadgeIndianRupee size={19} />,
+							module: "bookez",
+							permissionKey: "salesInvoice",
+							action: "view",
+						},
+						{
+							name: "Purchase Workflow",
+							path: "/bookEz/transaction/purchase-workflow",
+							icon: <ShoppingCart size={19} />,
+							module: "bookez",
+							permissionKey: "purchaseInvoice",
+							action: "view",
+						},
+
+
+						{
+							name: "Engineering Module",
+							path: "/bookEz/engineering-module",
+							icon: <Wrench size={24} />,
+							module: "bookez",
+							permissionKey: "",
+							action: "view",
+
 						},
 						{
 							name: "Reports",
 							path: "/bookEz/reports",
-							icon: <BarChart3 size={14} />,
+							icon: <BarChart3 size={20} />,
 							module: "bookez",
 							permissionKey: "accountLedger",
 							action: "view",
@@ -115,98 +155,23 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 						{
 							name: "Registers",
 							path: "/bookEz/registers",
-							icon: <BookOpenCheck size={14} />,
+							icon: <BookOpenCheck size={20} />,
+							module: "bookez",
+							permissionKey: "allRegisters",
+							action: "view",
+						},
+						{
+							name: "POS",
+							path: "/bookEz/pos",
+							icon: <ShoppingCart size={20} />,
 							module: "bookez",
 							permissionKey: "allRegisters",
 							action: "view",
 						},
 					],
-				},]
+				},
+			]
 			: []),
-
-		// {
-		//   name: 'TaxEZ',
-
-		//   icon: <IndianRupee size={20} />,
-		//   children: [
-
-		//     {
-		//       name: 'Document Management',
-		//       path: '/documentmngt',
-		//       icon: <FileCheck size={20} />,
-		//     },
-		//     {
-		//       name: 'Task Management',
-		//       path: '/taskmngt',
-		//       icon: <ListTodo size={20} />,
-		//     },
-		//     {
-		//       name: 'Income Tax Law',
-		//       path: '/incometx',
-		//       icon: <Scale size={20} />,
-		//     },
-		//     {
-		//       name: 'Income Tax',
-		//       path: '/incomFetax',
-		//       icon: <ReceiptIndianRupee size={20} />,
-		//       children: [
-		//         {
-		//           name: 'Add Tax Payer',
-		//           path: '/incometax/addtaxpayer',
-		//           icon: <UserPlus size={14} />,
-		//         },
-		//         {
-		//           name: 'File ITR',
-		//           path: '/incometax/fileitrlist',
-		//           // IMPORTANT
-		//           matchPaths: ['/incometax/fileitr', '/incometax/fileitrlist'],
-		//           icon: <FileArchive size={14} />,
-		//         },
-
-		//         {
-		//           name: 'Form 26AS',
-		//           path: '/incometax/form26as',
-		//           icon: <BookCheck size={14} />,
-		//         },
-		//         {
-		//           name: 'Annual Information Statement', // FULL TITLE
-		//           label: 'AIS', // SIDEBAR TEXT
-		//           path: '/incometax/ais',
-		//           icon: <Contact size={14} />,
-		//         },
-		//         {
-		//           name: 'Taxpayer Information Summary',
-		//           label: 'TIS',
-		//           path: '/incometax/tis',
-		//           icon: <BookUser size={14} />,
-		//         },
-
-		//         {
-		//           name: 'Check Your Refund Status',
-		//           label: 'Refund Status',
-		//           path: '/incometax/refund',
-		//           icon: <BanknoteArrowDown size={14} />,
-		//         },
-		//         {
-		//           name: 'Reset Your IncomeTax Password',
-		//           label: 'Reset Password',
-		//           path: '/incometax/resetitrpassword',
-		//           icon: <ListRestart size={14} />,
-		//         },
-		//         {
-		//           name: 'Upload Form 16',
-		//           path: '/incometax/uploadform16',
-		//           icon: <CloudUpload size={14} />,
-		//         },
-		//         {
-		//           name: 'Download ITRs',
-		//           path: '/incometax/downloaditr',
-		//           icon: <Download size={14} />,
-		//         },
-		//       ],
-		//     },
-		//   ],
-		// },
 		{
 			name: "Company Master",
 			path: "/master/company",
@@ -226,25 +191,25 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			name: "Settings",
 			icon: <Settings size={20} />,
 			children: [
-				// ...(canShowUsers
-				// 	? [
-				// 		{
-				// 			name: "Add Team/Employee",
-				// 			path: "/users",
-				// 			icon: <Users size={14} />,
-				// 		},
-				// 	]
-				// 	: []),
 				{
 					name: "Profile",
 					path: "/profile",
 					icon: <IdCard size={19} />,
 				},
-				...((localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash) ? [{
-					name: "Permission",
-					path: "/permission",
-					icon: <LockKeyhole size={19} />,
-				}] : []),
+				{
+					name: "Appearance",
+					path: "/appearance",
+					icon: <Palette size={19} />,
+				},
+				...(localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash
+					? [
+						{
+							name: "Permission",
+							path: "/permission",
+							icon: <LockKeyhole size={19} />,
+						},
+					]
+					: []),
 				...(canShowUsers
 					? [
 						{
@@ -267,16 +232,13 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		},
 	];
 
-	// Logout (Professional)
 	const handleLogout = async () => {
 		try {
 			localStorage.removeItem("professionalHeaders");
-			localStorage.removeItem('professionalUser');
-			localStorage.removeItem('permissions');
-			// 4) redirect
+			localStorage.removeItem("professionalUser");
+			localStorage.removeItem("permissions");
 			navigate("/login");
 		} catch (err: any) {
-			// Don't block logout if API fails
 			console.warn("Logout sync failed:", err?.message || err);
 		}
 	};
@@ -289,22 +251,30 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
 	const hasActiveChild = (item: any, pathname: string): boolean => {
 		if (!item.children?.length) return false;
+
 		return item.children.some((child: any) => {
 			const childActive =
 				(child.path && pathname.startsWith(child.path)) ||
 				child.matchPaths?.includes(pathname);
+
 			return childActive || hasActiveChild(child, pathname);
 		});
 	};
 
-	const SidebarItem = ({ item, level = 0, isExpanded, openMenus, setOpenMenus, }: any) => {
+	const SidebarItem = ({
+		item,
+		level = 0,
+		isExpanded,
+		openMenus,
+		setOpenMenus,
+	}: any) => {
 		const navigate = useNavigate();
 		const location = useLocation();
 		const hasChildren = item.children?.length > 0;
 		const isActive = isItemActive(item, location.pathname);
 		const isParentActive = hasActiveChild(item, location.pathname);
 		const isOpen = openMenus[item.name] || false;
-		// TOGGLE MENU
+
 		const handleClick = () => {
 			if (hasChildren) {
 				setOpenMenus((prev: any) => ({
@@ -313,7 +283,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 				}));
 			} else if (item.path) {
 				navigate(item.path);
-				// Close mobile sidebar on navigation
+
 				if (onMobileClose) onMobileClose();
 			}
 		};
@@ -324,41 +294,59 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 				<div
 					onClick={handleClick}
 					style={{ paddingLeft: `${20 + level * 14}px` }}
-					className={` flex items-center cursor-pointer py-3 px-2 mx-2 mb-1 rounded transition-all duration-200 select-none group ${isActive || isParentActive
-						? 'bg-indigo-100 text-indigo-700'
-						: 'text-[#F5F5F5] hover:bg-indigo-100 hover:text-indigo-700'
-						}`}>
+					className={`flex items-center cursor-pointer py-3 px-2 mx-2 mb-1 rounded transition-all duration-200 select-none group ${isActive || isParentActive
+						? "bg-primary/10 text-primary"
+						: "text-muted-foreground hover:bg-muted hover:text-primary"
+						}`}
+				>
 					{/* ICON */}
-					<div className="flex items-center justify-center w-5 h-5 shrink-0">{item.icon}</div>
-					{/* LABEL — always visible on mobile, hidden on desktop when collapsed */}
-					<span className={
-						"ml-3 text-sm truncate " +
-						(isExpanded ? "lg:block" : "lg:hidden") +
-						" block"}>
+					<div className="flex items-center justify-center w-5 h-5 shrink-0">
+						{item.icon}
+					</div>
+
+					{/* LABEL */}
+					<span
+						className={
+							"ml-3 text-sm truncate " +
+							(isExpanded ? "lg:block" : "lg:hidden") +
+							" block"
+						}
+					>
 						{item.label || item.name}
 					</span>
 
-					{/* CHEVRON — only when label is visible */}
+					{/* CHEVRON */}
 					{hasChildren && (
-						<div className={
-							"ml-auto " +
-							(isExpanded ? "lg:block" : "lg:hidden") +
-							" block"
-						}>
+						<div
+							className={
+								"ml-auto " +
+								(isExpanded ? "lg:block" : "lg:hidden") +
+								" block"
+							}
+						>
 							{isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 						</div>
 					)}
 				</div>
 
-				{/* CHILDREN — only when open AND label is visible */}
+				{/* CHILDREN */}
 				{hasChildren && isOpen && (
-					<div className={
-						"space-y-1 " +
-						(isExpanded ? "lg:block" : "lg:hidden") +
-						" block"
-					}>
+					<div
+						className={
+							"space-y-1 " +
+							(isExpanded ? "lg:block" : "lg:hidden") +
+							" block"
+						}
+					>
 						{item.children.map((child: any) => (
-							<SidebarItem key={child.name} item={child} level={level + 1} isExpanded={isExpanded} openMenus={openMenus} setOpenMenus={setOpenMenus} />
+							<SidebarItem
+								key={child.name}
+								item={child}
+								level={level + 1}
+								isExpanded={isExpanded}
+								openMenus={openMenus}
+								setOpenMenus={setOpenMenus}
+							/>
 						))}
 					</div>
 				)}
@@ -366,7 +354,6 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		);
 	};
 
-	// Notify parent
 	useEffect(() => {
 		if (onMenuItemsChange) onMenuItemsChange(menuItems);
 	}, []);
@@ -375,18 +362,22 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		<div
 			id="professional-sidebar"
 			className={
-				"h-screen border-r bg-[#2D1B69] border-slate-200 shadow-lg " +
+				"h-screen border-r bg-card border-border text-card-foreground shadow-lg " +
 				"transition-all duration-300 flex flex-col " +
 				"w-64 " +
 				(isExpanded ? "lg:w-64" : "lg:w-20")
 			}
 			onMouseEnter={() => setIsExpanded(true)}
-			onMouseLeave={() => setIsExpanded(false)}>
+			onMouseLeave={() => setIsExpanded(false)}
+		>
 			{/* Logo */}
 			<div className="flex items-center justify-between h-16 px-3">
-
 				<h1
-					className={`font-bold text-xl bg-white border border-white/10 flex items-center justify-center overflow-hidden ${isExpanded ? "w-full rounded-xl px-3 py-1" : "w-12 h-12 rounded-full p-2"}`}>
+					className={`font-bold text-xl bg-background border border-border flex items-center justify-center overflow-hidden ${isExpanded
+						? "w-full rounded-xl px-3 py-1"
+						: "w-12 h-12 rounded-full p-2"
+						}`}
+				>
 					<span className="lg:hidden flex items-center justify-center w-full">
 						<img
 							src={FinEzLogo}
@@ -415,7 +406,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 				{/* Close button — mobile only */}
 				<button
 					onClick={onMobileClose}
-					className="lg:hidden text-gray-300 hover:text-white p-1 rounded"
+					className="lg:hidden text-muted-foreground hover:text-foreground p-1 rounded"
 					aria-label="Close sidebar"
 				>
 					<X size={20} />
@@ -425,19 +416,31 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			{/* Menu */}
 			<div className="flex-1 mt-4 overflow-y-auto scrollbar-hide">
 				{menuItems.map((item) => (
-					<SidebarItem key={item.name} item={item} isExpanded={isExpanded} openMenus={openMenus} setOpenMenus={setOpenMenus} />
+					<SidebarItem
+						key={item.name}
+						item={item}
+						isExpanded={isExpanded}
+						openMenus={openMenus}
+						setOpenMenus={setOpenMenus}
+					/>
 				))}
 			</div>
 
-			<div className="border-t border-gray-800 py-4 px-4">
-				{/* @ts-ignore */}
-				<div onClick={openConfirm} className="flex items-center gap-3 text-gray-700 cursor-pointer hover:bg-red-50 px-2 py-2 rounded-lg transition-all">
-					<LogOut size={20} className="text-red-500" />
-					<span className={
-						"text-sm font-medium text-red-500 " +
-						(isExpanded ? "lg:block" : "lg:hidden") +
-						" block"
-					}>
+			<div className="border-t border-border py-4 px-4">
+				<div
+					/* @ts-ignore */
+					onClick={openConfirm}
+					className="flex items-center gap-3 text-muted-foreground cursor-pointer hover:bg-danger/10 px-2 py-2 rounded-lg transition-all"
+				>
+					<LogOut size={20} className="text-danger" />
+
+					<span
+						className={
+							"text-sm font-medium text-danger " +
+							(isExpanded ? "lg:block" : "lg:hidden") +
+							" block"
+						}
+					>
 						Logout
 					</span>
 				</div>

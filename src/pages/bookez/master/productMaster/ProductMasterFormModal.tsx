@@ -1,24 +1,9 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../../../components/modal";
-import { SelectInput, TextArea, TextInput } from "../../../../components/inputs";
+import { ImageUploadInput, SelectInput, TextArea, TextInput } from "../../../../components/inputs";
 
 /* =====================================================
    PRODUCT MASTER FORM MODAL COMPONENT
-
-   This component contains only Add / Update modal logic:
-   - Form state
-   - Validation
-   - Dynamic schema field rendering
-   - Select/Text/Textarea handling
-   - Payload conversion before submit
-
-   Parent component will still handle:
-   - Product list
-   - Search
-   - Refresh
-   - Pagination
-   - Delete
-   - API create/update action
 ===================================================== */
 
 type ProductMasterFormModalProps = {
@@ -40,17 +25,9 @@ const ProductMasterFormModal = ({
   units,
   onSubmit,
 }: ProductMasterFormModalProps) => {
-  /* ================= FORM STATE ================= */
   const [form, setForm] = useState<any>({});
   const [errors, setErrors] = useState<any>({});
 
-  /* =====================================================
-     BUILD EMPTY FORM FROM DYNAMIC SCHEMA FIELDS
-
-     Example:
-     fields = [{ key: "productName" }, { key: "productType" }]
-     output = { productName: "", productType: "" }
-  ===================================================== */
   const buildEmptyForm = (fields: any[] = []) => {
     return fields.reduce((acc: any, field: any) => {
       acc[field.key] = "";
@@ -58,11 +35,6 @@ const ProductMasterFormModal = ({
     }, {});
   };
 
-  /* =====================================================
-     GET DISPLAY TEXT FROM DIFFERENT VALUE TYPES
-
-     This is used for dropdown labels like unitName/name/label/en etc.
-  ===================================================== */
   const getTextValue = (value: any) => {
     if (!value) return "";
 
@@ -85,13 +57,6 @@ const ProductMasterFormModal = ({
     return "";
   };
 
-  /* =====================================================
-     NORMALIZE PRODUCT TYPE
-
-     Handles values coming from API like:
-     rawmaterial -> Raw Material
-     finishedgoods -> Finished Goods
-  ===================================================== */
   const normalizeProductType = (value = "") => {
     const map: any = {
       rawmaterial: "Raw Material",
@@ -106,14 +71,6 @@ const ProductMasterFormModal = ({
     return map[normalizedKey] || value;
   };
 
-  /* =====================================================
-     GET COMPARABLE VALUE FOR EDIT MODE
-
-     This keeps edit functionality same as your previous code:
-     - productType gets normalized
-     - unit object gets converted into unitCode/code/value/_id
-     - number fields remain number
-  ===================================================== */
   const getComparableValue = (field: any, product: any) => {
     const key = field.key;
     const value = product?.[key];
@@ -145,71 +102,70 @@ const ProductMasterFormModal = ({
     return value ?? "";
   };
 
-  /* =====================================================
-     GET OPTIONS FOR SELECT INPUT
+  const fieldOptionsMap = useMemo(() => {
+    const map: any = {};
 
-     Handles:
-     - unitMeasurement reference from unit master
-     - productType options
-     - normal static options
-  ===================================================== */
-  const getFieldOptions = (field: any) => {
-    if (field.ref === "unitMeasurement") {
-      return (
-        units?.map((item: any) => {
-          const value =
-            item?.[field.valueField] || item?.unitCode || item?.code || "";
+    productMasterSchemaFields.forEach((field: any) => {
+      if (field.type !== "select") return;
 
-          const label =
-            item?.[field.labelField] ||
-            item?.unitName ||
-            item?.name ||
-            value;
+      if (field.ref === "unitMeasurement") {
+        map[field.key] =
+          units?.map((item: any) => {
+            const value =
+              item?.[field.valueField] ||
+              item?.unitCode ||
+              item?.code ||
+              "";
 
-          return {
-            value,
-            label: getTextValue(label),
-          };
-        }) || []
-      );
-    }
+            const label =
+              item?.[field.labelField] ||
+              item?.unitName ||
+              item?.name ||
+              value;
 
-    if (field.key === "productType") {
-      return (field.options || []).map((opt: any) => {
-        const label =
-          typeof opt === "object" ? opt.label || opt.name || opt.value : opt;
+            return {
+              value,
+              label: getTextValue(label),
+            };
+          }) || [];
 
-        return {
-          value: label,
-          label,
-        };
-      });
-    }
-
-    return (field.options || []).map((opt: any) => {
-      if (typeof opt === "object") {
-        return {
-          value: opt.value || opt.code || opt.name || "",
-          label: opt.label || opt.name || opt.value || "",
-        };
+        return;
       }
 
-      return {
-        value: opt,
-        label: opt,
-      };
+      if (field.key === "productType") {
+        map[field.key] = (field.options || []).map((opt: any) => {
+          const label =
+            typeof opt === "object"
+              ? opt.label || opt.name || opt.value
+              : opt;
+
+          return {
+            value: label,
+            label,
+          };
+        });
+
+        return;
+      }
+
+      map[field.key] = (field.options || []).map((opt: any) => {
+        if (typeof opt === "object") {
+          return {
+            value: opt.value || opt.code || opt.name || "",
+            label: opt.label || opt.name || opt.value || "",
+          };
+        }
+
+        return {
+          value: opt,
+          label: opt,
+        };
+      });
     });
-  };
 
-  /* =====================================================
-     SET FORM DATA WHEN MODAL OPENS
+    return map;
+  }, [productMasterSchemaFields, units]);
 
-     Add Mode:
-     - Creates blank form
-
-     Edit Mode:
-     - Fills form with selected product data
-  ===================================================== */
   useEffect(() => {
     if (!show) return;
 
@@ -226,14 +182,6 @@ const ProductMasterFormModal = ({
     setForm(nextForm);
   }, [show, editingProduct, productMasterSchemaFields]);
 
-  /* =====================================================
-     VALIDATE FORM
-
-     Same validation from your original component:
-     - Required fields
-     - HSN/SAC code 2/4/6/8 digits
-     - Number should not be negative
-  ===================================================== */
   const validateForm = () => {
     const e: any = {};
 
@@ -267,11 +215,6 @@ const ProductMasterFormModal = ({
     return Object.keys(e).length === 0;
   };
 
-  /* =====================================================
-     COMMON FIELD UPDATE FUNCTION
-
-     Updates form and clears field error
-  ===================================================== */
   const updateField = (key: string, value: any) => {
     setForm((prev: any) => ({
       ...prev,
@@ -284,17 +227,6 @@ const ProductMasterFormModal = ({
     }));
   };
 
-  /* =====================================================
-     RENDER DYNAMIC FIELD BASED ON SCHEMA TYPE
-
-     Supports:
-     - select
-     - number
-     - textarea
-     - productHSNCode special numeric validation
-     - imageUrl special placeholder
-     - normal text input
-  ===================================================== */
   const renderSchemaField = (field: any) => {
     const value = form?.[field.key] ?? "";
 
@@ -307,20 +239,20 @@ const ProductMasterFormModal = ({
     };
 
     if (field.type === "select") {
-      const options = getFieldOptions(field);
-
       return (
         <SelectInput
           key={field.key}
+          name={field.key}
           label={field.label}
           mandatory={field.isRequired}
           value={value}
           placeholder={`Select ${field.label}`}
           error={errors?.[field.key]}
+          largeData={true}
           onChange={(e: any) => {
             updateField(field.key, e?.target?.value ?? "");
           }}
-          options={[{ value: "", label: `Select ${field.label}` }, ...options]}
+          options={fieldOptionsMap[field.key] || []}
         />
       );
     }
@@ -368,13 +300,17 @@ const ProductMasterFormModal = ({
 
     if (field.key === "imageUrl") {
       return (
-        <TextInput
+        <ImageUploadInput
           key={field.key}
-          {...commonProps}
-          type="text"
-          placeholder="Enter image URL"
-          onChange={(e: any) => {
-            updateField(field.key, e.target.value);
+          className="sm:col-span-1"
+          label={field.label}
+          mandatory={field.isRequired}
+          value={value}
+          error={errors?.[field.key]}
+          placeholder={`Click to upload ${field.label}`}
+          alt={field.label}
+          onChange={(base64: string | null) => {
+            updateField(field.key, base64);
           }}
         />
       );
@@ -392,16 +328,6 @@ const ProductMasterFormModal = ({
     );
   };
 
-  /* =====================================================
-     SUBMIT FORM
-
-     Same functionality:
-     - Validate first
-     - Convert number fields to Number
-     - Send payload to parent
-     - Parent will decide create/update API
-     - API errors are shown inside modal
-  ===================================================== */
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -432,6 +358,24 @@ const ProductMasterFormModal = ({
     }
   };
 
+  const modalBody = useMemo(() => {
+    if (schemaLoading) {
+      return (
+        <div className="py-6 text-sm text-gray-500">
+          Loading product fields...
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {productMasterSchemaFields.map((field: any) =>
+          renderSchemaField(field)
+        )}
+      </>
+    );
+  }, [schemaLoading, productMasterSchemaFields, form, errors, fieldOptionsMap]);
+
   return (
     // @ts-ignore
     <Modal
@@ -440,20 +384,8 @@ const ProductMasterFormModal = ({
         setShow,
         handleSubmit,
         state: editingProduct,
-        title: "Add New Product",
-        body: (
-          <>
-            {schemaLoading ? (
-              <div className="py-6 text-sm text-gray-500">
-                Loading product fields...
-              </div>
-            ) : (
-              productMasterSchemaFields.map((field: any) =>
-                renderSchemaField(field)
-              )
-            )}
-          </>
-        ),
+        title: editingProduct ? "Update Product" : "Add New Product",
+        body: modalBody,
       }}
     />
   );

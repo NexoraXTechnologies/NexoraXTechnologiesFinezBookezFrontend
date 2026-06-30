@@ -266,7 +266,7 @@ const ProfessionalProfile = () => {
                     </label>
                     <input
                       value={
-                        profile?.isUserActive === "1" ? "Active" : "Inactive"
+                          profile?.isUserActive === "0" ? "Inactive" : "Active" 
                       }
                       readOnly
                       className={`border p-2 rounded-md w-full bg-gray-100 ${profile?.isUserActive === "1"

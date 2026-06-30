@@ -6,7 +6,12 @@ import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import { toast } from "react-toastify";
-import { addBalance, deleteBalance, getOpeningBalList, updateBalance } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingBalance";
+import {
+    addBalance,
+    deleteBalance,
+    getOpeningBalList,
+    updateBalance,
+} from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingBalance";
 
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import SearchInput from "../../../../components/searchInput";
@@ -42,6 +47,7 @@ const mainColumns = [
         key: "openingBalDate",
         title: "Date",
         render: (row: any) => row?.openingBalDate || row?.createdOn || "-",
+        type: "date",
     },
     {
         key: "totalDebit",
@@ -49,6 +55,8 @@ const mainColumns = [
         render: (row: any) => (
             <>₹{Number(row?.openingBalFooter?.totalDebit || 0).toFixed(2)}</>
         ),
+        type: "amount",
+	
     },
     {
         key: "totalCredit",
@@ -63,14 +71,14 @@ const mainColumns = [
     },
 ];
 
-
-
-
-
 const OpeningBalance = () => {
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<any>();
+
     const { accounts } = useSelector((s: any) => s.accountMaster);
-    const { openingBal, listingLoader, pagination, addLoader } = useSelector((s: any) => s.openingBalance);
+
+    const { openingBal, listingLoader, pagination, addLoader } = useSelector(
+        (s: any) => s.openingBalance
+    );
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -299,12 +307,13 @@ const OpeningBalance = () => {
 
     const refreshList = async () => {
         // @ts-ignore
-        await dispatch(getOpeningBalList({
-            limit: localLimit,
-            offset: localOffset,
-            status,
-            search: debouncedSearch,
-        })
+        await dispatch(
+            getOpeningBalList({
+                limit: localLimit,
+                offset: localOffset,
+                status,
+                search: debouncedSearch,
+            })
         );
     };
 
@@ -324,10 +333,11 @@ const OpeningBalance = () => {
 
         if (edit) {
             // @ts-ignore
-            await dispatch(updateBalance({
-                payload,
-                openingBalVoucherNumber: form?.openingBalVoucherNumber,
-            })
+            await dispatch(
+                updateBalance({
+                    payload,
+                    openingBalVoucherNumber: form?.openingBalVoucherNumber,
+                })
             );
         } else {
             // @ts-ignore
@@ -345,7 +355,9 @@ const OpeningBalance = () => {
     const handleDeleteVoucher = async (openingBalVoucherNumber: any) => {
         // @ts-ignore
         await dispatch(deleteBalance({ openingBalVoucherNumber }));
+
         await refreshList();
+
         toast.success("Opening balance deleted successfully");
 
         setConfirmTooltip({
@@ -360,10 +372,11 @@ const OpeningBalance = () => {
         refreshList();
 
         // @ts-ignore
-        dispatch(getAllAccounts({
-            limit: 200,
-            offset: 0,
-        })
+        dispatch(
+            getAllAccounts({
+                limit: 200,
+                offset: 0,
+            })
         );
     }, [localOffset, localLimit, status, debouncedSearch]);
 
@@ -375,7 +388,6 @@ const OpeningBalance = () => {
 
         return () => clearTimeout(timer);
     }, [search]);
-
 
     const inputData = {
         header: [
@@ -444,23 +456,34 @@ const OpeningBalance = () => {
                 label: "Total Debit",
                 value: `₹${totalDebit.toFixed(2)}`,
                 rawValue: totalDebit,
+                align: "right",
             },
             {
                 key: "totalCredit",
                 label: "Total Credit",
                 value: `₹${totalCredit.toFixed(2)}`,
                 rawValue: totalCredit,
+                align: "right",
             },
         ],
     };
 
     return (
         <>
-            <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
-                <div id="account-header" className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="flex h-full w-full flex-col border border-border bg-card text-card-foreground p-4 shadow-sm">
+                <div
+                    id="account-header"
+                    className="flex flex-wrap items-center gap-2 mb-3"
+                >
                     <div id="account-summary" className="flex items-start gap-3">
-                        <Badge {...{ count: pagination.totalDocs ?? 0, text: "Total Opening Balance:" }} />
+                        <Badge
+                            {...{
+                                count: pagination.totalDocs ?? 0,
+                                text: "Total Opening Balance:",
+                            }}
+                        />
                     </div>
+
                     <div className="ml-auto flex flex-wrap items-center gap-2">
                         <Toggle
                             {...{
@@ -473,7 +496,12 @@ const OpeningBalance = () => {
                         <div className="me-2">
                             <SearchInput {...{ search, setSearch }} />
                         </div>
-                        <Permission module="bookez" permissionKey="openingBalance" action="create">
+
+                        <Permission
+                            module="bookez"
+                            permissionKey="openingBalance"
+                            action="create"
+                        >
                             <DataCreateButton
                                 {...{
                                     text: "Create Opening Balance",
@@ -486,6 +514,7 @@ const OpeningBalance = () => {
                         </Permission>
                     </div>
                 </div>
+
                 <DataTable
                     columns={mainColumns}
                     data={openingBal}
@@ -493,63 +522,82 @@ const OpeningBalance = () => {
                     emptyMessage="No data found"
                     actions={(item: any) => (
                         <div className="flex items-center gap-2">
-                            <Permission module="bookez" permissionKey="openingBalance" action="update">
-                            <button
-                                id="opening-balance-edit-button"
-                                onClick={() => {
-                                    const body =
-                                        item?.openingBalBody?.length > 0
-                                            ? item.openingBalBody.map((row: any) => ({
-                                                id: row.id || Date.now() + Math.random(),
-                                                accountCode: row.accountCode || row.account || "",
-                                                account: row.accountCode || row.account || "",
-                                                accountName: row.accountName || "",
-                                                debit: row.debit || "",
-                                                credit: row.credit || "",
-                                                reference: row.reference || "",
-                                                remarks: row.remarks || "",
-                                            }))
-                                            : [
-                                                {
-                                                    ...emptyEntryRow,
-                                                    id: Date.now(),
-                                                },
-                                            ];
-
-                                    setForm({
-                                        ...item,
-                                        voucherno: item?.voucherno || item?.openingBalVoucherNumber || "OPBAL",
-                                        openingBalDate: item?.openingBalDate || new Date().toISOString().split("T")[0],
-                                        remark: item?.remark || "",
-                                        openingBalBody: body,
-                                    });
-
-                                    setErrors({});
-                                    setEdit(true);
-                                    setShowModal(true);
-                                }}
-                                className="cursor-pointer rounded-lg p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                            <Permission
+                                module="bookez"
+                                permissionKey="openingBalance"
+                                action="update"
                             >
-                                <Edit size={16} />
-                            </button>
+                                <button
+                                    id="opening-balance-edit-button"
+                                    onClick={() => {
+                                        const body =
+                                            item?.openingBalBody?.length > 0
+                                                ? item.openingBalBody.map((row: any) => ({
+                                                    id: row.id || Date.now() + Math.random(),
+                                                    accountCode: row.accountCode || row.account || "",
+                                                    account: row.accountCode || row.account || "",
+                                                    accountName: row.accountName || "",
+                                                    debit: row.debit || "",
+                                                    credit: row.credit || "",
+                                                    reference: row.reference || "",
+                                                    remarks: row.remarks || "",
+                                                }))
+                                                : [
+                                                    {
+                                                        ...emptyEntryRow,
+                                                        id: Date.now(),
+                                                    },
+                                                ];
+
+                                        setForm({
+                                            ...item,
+                                            voucherno:
+                                                item?.voucherno ||
+                                                item?.openingBalVoucherNumber ||
+                                                "OPBAL",
+                                            openingBalDate:
+                                                item?.openingBalDate ||
+                                                new Date().toISOString().split("T")[0],
+                                            remark: item?.remark || "",
+                                            openingBalBody: body,
+                                        });
+
+                                        setErrors({});
+                                        setEdit(true);
+                                        setShowModal(true);
+                                    }}
+                                    className="cursor-pointer rounded-lg p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                >
+                                    <Edit size={16} />
+                                </button>
                             </Permission>
-                            <Permission module="bookez" permissionKey="openingBalance" action="delete">
-                            <button
-                                type="button"
-                                onClick={(e: any) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    let x: any = rect.left - 150;
-                                    if (x < 10) x = 10;
-                                    const y: any = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        openingBalVoucherNumber: item.openingBalVoucherNumber,
-                                    });
-                                }}
-                                className="text-red-500 hover:text-red-700">
-                                <Trash2 size={16} />
+
+                            <Permission
+                                module="bookez"
+                                permissionKey="openingBalance"
+                                action="delete"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={(e: any) => {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+
+                                        let x: any = rect.left - 150;
+                                        if (x < 10) x = 10;
+
+                                        const y: any = rect.top + window.scrollY - 5;
+
+                                        setConfirmTooltip({
+                                            show: true,
+                                            x,
+                                            y,
+                                            openingBalVoucherNumber:
+                                                item.openingBalVoucherNumber,
+                                        });
+                                    }}
+                                    className="cursor-pointer rounded-lg p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger"
+                                >
+                                    <Trash2 size={16} />
                                 </button>
                             </Permission>
                         </div>
@@ -606,6 +654,7 @@ const OpeningBalance = () => {
                     resetForm();
                 }}
                 onSubmit={handleSubmit}
+                addButtonText="Add Account"
                 form={form}
                 errors={errors}
                 handleAddRow={handleAddRow}
@@ -615,7 +664,6 @@ const OpeningBalance = () => {
                 bodyKey="openingBalBody"
                 handleChange={handleChange}
             />
-
         </>
     );
 };

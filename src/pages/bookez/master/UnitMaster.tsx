@@ -12,11 +12,17 @@ import Pagination from "../../../components/pagination";
 import Badge from "../../../components/badge";
 import { SelectInput, TextInput } from "../../../components/inputs";
 import Modal from "../../../components/modal";
-import { createUnit, deleteUnit, getAllUnitMasterSchema, getAllUnits, updateUnit } from "../../../redux/slices/professionalSlice/unitMasterSlice";
+import {
+	createUnit,
+	deleteUnit,
+	getAllUnitMasterSchema,
+	getAllUnits,
+	updateUnit,
+} from "../../../redux/slices/professionalSlice/unitMasterSlice";
 import Permission from "../../../components/PermissionGuard";
 
 const UnitMaster = () => {
-	const dispatch = useDispatch();
+	const dispatch = useDispatch<any>();
 
 	const {
 		units,
@@ -25,6 +31,7 @@ const UnitMaster = () => {
 		unitMasterSchemaFields = [],
 		schemaLoading,
 	} = useSelector((s: any) => s.unitMaster);
+
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
 	const [search, setSearch] = useState("");
@@ -81,7 +88,6 @@ const UnitMaster = () => {
 				e[field.key] = `${field.label} required`;
 			}
 
-
 			if (
 				field.type === "number" &&
 				value !== "" &&
@@ -118,13 +124,29 @@ const UnitMaster = () => {
 		return "";
 	};
 
+	const normalizeUnit = (value: any) => {
+		if (typeof value === "object" && value !== null) {
+			return (
+				value.unitCode ??
+				value.code ??
+				value.value ??
+				value.name ??
+				value.unitName ??
+				""
+			);
+		}
+
+		return value ?? "";
+	};
 
 	const getFieldOptions = (field: any) => {
 		if (field.ref === "unitMeasurement") {
 			return (
 				units?.map((item: any) => {
-					const value = item?.[field.valueField] || item?.unitCode || item?.code || "";
-					const label = item?.[field.labelField] || item?.unitName || item?.name || value;
+					const value =
+						item?.[field.valueField] || item?.unitCode || item?.code || "";
+					const label =
+						item?.[field.labelField] || item?.unitName || item?.name || value;
 
 					return {
 						value,
@@ -136,7 +158,8 @@ const UnitMaster = () => {
 
 		if (field.key === "productType") {
 			return (field.options || []).map((opt: any) => {
-				const label = typeof opt === "object" ? opt.label || opt.name || opt.value : opt;
+				const label =
+					typeof opt === "object" ? opt.label || opt.name || opt.value : opt;
 
 				return {
 					value: label,
@@ -224,8 +247,6 @@ const UnitMaster = () => {
 			);
 		}
 
-
-
 		return (
 			<TextInput
 				key={field.key}
@@ -246,21 +267,20 @@ const UnitMaster = () => {
 		);
 	};
 
-
-
 	const columns = [
-		{ key: 'unitId', title: 'Unit ID', },
-		{ key: 'unitCode', title: 'Unit Code', },
-		{ key: 'unitName', title: 'Name', },
-		{ key: 'unitStatus', title: 'Status', },
-
+		{ key: "unitId", title: "Unit ID" },
+		{ key: "unitCode", title: "Unit Code" },
+		{ key: "unitName", title: "Name" },
+		{ key: "unitStatus", title: "Status" },
 	];
+
 	/* ============================================
 		  FETCH UNITS
 	============================================= */
 	const fetchUnits = () => {
 		// @ts-ignore
-		dispatch(getAllUnits({
+		dispatch(
+			getAllUnits({
 				offset: localOffset,
 				limit: localLimit,
 				search: debouncedSearch,
@@ -280,6 +300,7 @@ const UnitMaster = () => {
 			setDebouncedSearch(search.trim());
 			setLocalOffset(0);
 		}, 400);
+
 		return () => clearTimeout(t);
 	}, [search]);
 
@@ -302,6 +323,7 @@ const UnitMaster = () => {
 		setForm(buildEmptyForm(unitMasterSchemaFields));
 		setShowModal(true);
 	};
+
 	/* ============================================
 		  OPEN EDIT MODAL
 	============================================= */
@@ -313,8 +335,6 @@ const UnitMaster = () => {
 
 		unitMasterSchemaFields.forEach((field: any) => {
 			const key = field.key;
-
-
 
 			if (key === "unit") {
 				if (typeof p?.unit === "object") {
@@ -336,6 +356,7 @@ const UnitMaster = () => {
 		setForm(nextForm);
 		setShowModal(true);
 	};
+
 	/* ============================================
 		  SAVE / UPDATE PRODUCT
 	============================================= */
@@ -356,8 +377,12 @@ const UnitMaster = () => {
 
 				unitMasterSchemaFields.forEach((field: any) => {
 					const key = field.key;
+
 					{/* @ts-ignore */ }
-					const oldValue = key === "unit" ? normalizeUnit(editingUnit?.[key] || "") : editingUnit?.[key];
+					const oldValue =
+						key === "unit"
+							? normalizeUnit(editingUnit?.[key] || "")
+							: editingUnit?.[key];
 
 					if (form[key] !== oldValue) {
 						updatePayload[key] = payload[key];
@@ -403,34 +428,37 @@ const UnitMaster = () => {
 		}
 	};
 
-	/* ============================================
-		  PAGINATION
-	============================================= */
-	// const startIndex = pagination.totalDocs > 0 ? pagination.offset + 1 : 0;
-	// const endIndex = pagination.totalDocs > 0 ? pagination.offset + units.length : 0;
-
 	return (
-		<div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
+		<div className="w-full bg-card border border-border text-card-foreground rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
 			{/* ================= HEADER ================= */}
-			<div id="unit-header" className="flex items-center mb-3">
-
+			<div
+				id="unit-header"
+				className="flex flex-wrap items-center gap-2 mb-3"
+			>
 				<div id="unit-summary" className="flex items-start gap-3">
-					<Badge {...{ count: pagination.totalDocs ?? 0, text: "Total Units:", varient: "primary" }} />
+					<Badge
+						{...{
+							count: pagination.totalDocs ?? 0,
+							text: "Total Units:",
+							varient: "primary",
+						}}
+					/>
 				</div>
 
-				<div className="ml-auto flex items-center gap-2">
+				<div className="ml-auto flex flex-wrap items-center gap-2">
 					<SearchInput {...{ search, setSearch }} />
 					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
+
 					<Permission module="bookez" permissionKey="unitMaster" action="create">
-					{/* @ts-ignore */}
-						<DataCreateButton {...{ callBackFn: openAddModal, text: "Add Unit" }} />
+						{/* @ts-ignore */}
+						<DataCreateButton
+							{...{ callBackFn: openAddModal, text: "Add Unit" }}
+						/>
 					</Permission>
 				</div>
 			</div>
 
 			{/* ================= TABLE ================= */}
-
-
 			<DataTable
 				columns={columns}
 				data={units}
@@ -438,27 +466,45 @@ const UnitMaster = () => {
 				emptyMessage="No units found"
 				actions={(unit: any) => (
 					<div className="flex items-center gap-2">
-						<Permission module="bookez" permissionKey="unitMaster" action="update">
-						<button
-							id="unit-edit-button"
-							onClick={() => openEditModal(unit)}
-							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer">
-							<Edit size={16} />
-						</button>
-						</Permission>
-						<Permission module="bookez" permissionKey="unitMaster" action="delete">
-						<button
-							id="unit-delete-button"
-							onClick={(e) => {
-								const rect = e.currentTarget.getBoundingClientRect();
-								let x: any = rect.left - 150;
-								if (x < 10) x = 10;
-								const y: any = rect.top + window.scrollY - 5;
-								setConfirmTooltip({ show: true, x, y, unitId: unit.unitId, });
-							}}
-							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+						<Permission
+							module="bookez"
+							permissionKey="unitMaster"
+							action="update"
 						>
-							<Trash2 size={16} />
+							<button
+								id="unit-edit-button"
+								onClick={() => openEditModal(unit)}
+								className="p-2 rounded-lg text-primary hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer"
+							>
+								<Edit size={16} />
+							</button>
+						</Permission>
+
+						<Permission
+							module="bookez"
+							permissionKey="unitMaster"
+							action="delete"
+						>
+							<button
+								id="unit-delete-button"
+								onClick={(e) => {
+									const rect = e.currentTarget.getBoundingClientRect();
+
+									let x: any = rect.left - 150;
+									if (x < 10) x = 10;
+
+									const y: any = rect.top + window.scrollY - 5;
+
+									setConfirmTooltip({
+										show: true,
+										x,
+										y,
+										unitId: unit.unitId,
+									});
+								}}
+								className="p-2 rounded-lg text-danger hover:bg-danger/10 hover:text-danger transition-all duration-200 cursor-pointer"
+							>
+								<Trash2 size={16} />
 							</button>
 						</Permission>
 					</div>
@@ -466,38 +512,41 @@ const UnitMaster = () => {
 			/>
 
 			{/* ================= PAGINATION ================= */}
-
-			{pagination.totalDocs > 0 && <Pagination  {...{
-				localLimit, selectCb: (e: any) => {
-					setLocalLimit(Number(e.target.value));
-					setLocalOffset(0);
-				},
-				preDisabled: !pagination.hasPrevPage,
-				nextDisabled: !pagination.hasNextPage,
-				setLocalOffset, pagination
-			}} />}
+			{pagination.totalDocs > 0 && (
+				<Pagination
+					{...{
+						localLimit,
+						selectCb: (e: any) => {
+							setLocalLimit(Number(e.target.value));
+							setLocalOffset(0);
+						},
+						preDisabled: !pagination.hasPrevPage,
+						nextDisabled: !pagination.hasNextPage,
+						setLocalOffset,
+						pagination,
+					}}
+				/>
+			)}
 
 			{/* ================= DELETE TOOLTIP ================= */}
-			{
-				confirmTooltip.show && (
-					<ConfirmTooltip
-						x={confirmTooltip.x}
-						y={confirmTooltip.y}
-						message="Are you sure you want to delete this unit?"
-						confirmText="Delete"
-						cancelText="Cancel"
-						onConfirm={handleDeleteConfirm}
-						onCancel={() =>
-							setConfirmTooltip({
-								show: false,
-								x: null,
-								y: null,
-								unitId: null,
-							})
-						}
-					/>
-				)
-			}
+			{confirmTooltip.show && (
+				<ConfirmTooltip
+					x={confirmTooltip.x}
+					y={confirmTooltip.y}
+					message="Are you sure you want to delete this unit?"
+					confirmText="Delete"
+					cancelText="Cancel"
+					onConfirm={handleDeleteConfirm}
+					onCancel={() =>
+						setConfirmTooltip({
+							show: false,
+							x: null,
+							y: null,
+							unitId: null,
+						})
+					}
+				/>
+			)}
 
 			{/* ================= MODAL ================= */}
 			{/* @ts-ignore */}
@@ -511,7 +560,7 @@ const UnitMaster = () => {
 					body: (
 						<>
 							{schemaLoading ? (
-								<div className="py-6 text-sm text-gray-500">
+								<div className="py-6 text-sm text-muted-foreground">
 									Loading unit fields...
 								</div>
 							) : (
@@ -523,12 +572,7 @@ const UnitMaster = () => {
 					),
 				}}
 			/>
-
-
-
-
-
-		</div >
+		</div>
 	);
 };
 

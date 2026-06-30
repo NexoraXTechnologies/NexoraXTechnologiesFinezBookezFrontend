@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
@@ -24,7 +24,7 @@ import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
-import Modal from "../../../../components/modal";
+import Modal, { ListingModel } from "../../../../components/modal";
 
 import {
     addPurchaseInvoice,
@@ -44,6 +44,7 @@ import ModulePageSkeleton, {
     ModalListSkeleton,
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
+import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -192,48 +193,28 @@ const PurchaseInvoice = () => {
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
-
     const [showModal, setShowModal] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
-
     const [showGrnModal, setShowGrnModal] = useState(false);
     const [grnSearch, setGrnSearch] = useState("");
     const [selectedGrn, setSelectedGrn] = useState<any>(null);
-
+    const { report } = useSelector((s: any) => s.reportMapping);
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     // ✅ Local modal loading states to stop blinking
     const [grnModalLoading, setGrnModalLoading] = useState(false);
     const [grnLoaded, setGrnLoaded] = useState(false);
-
-    const [templateFields, setTemplateFields] = useState<any>({
-        header: [],
-        body: [],
-        footer: [],
-    });
-
+    const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({
-        show: false,
-        x: null,
-        y: null,
-        voucherNumber: null,
-    });
-
-    /* ===================================================
-       FIELD HELPERS
-    =================================================== */
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null,record: null, });
 
     const getHeaderFieldByKey = (key: string) => {
-        return templateFields?.header?.find(
-            (field: any) => field.key === key
-        );
+        return templateFields?.header?.find((field: any) => field.key === key);
     };
 
     const getBodyFieldByKey = (key: string) => {
@@ -326,6 +307,54 @@ const PurchaseInvoice = () => {
         );
 
         return updated;
+    };
+
+    const hasValue = (value: any) =>
+        value !== undefined && value !== null && value !== "";
+
+    const fillProductDetailsFromSelectedOption = (
+        row: any,
+        selectedOption: any
+    ) => {
+        const product = selectedOption?.raw;
+        if (!product) return row;
+
+        const unitCode = product?.unit || row.unit || row.uom || "";
+        const csgst = hasValue(product?.csgst) ? String(product.csgst) : "";
+        const igst = hasValue(product?.igst) ? String(product.igst) : "";
+
+        return {
+            ...row,
+
+            productId: product?._id || row.productId || "",
+            productCode: product?.productCode || row.productCode || "",
+            productName: product?.productName || row.productName || "",
+
+            productDescription:
+                product?.productDescription || row.productDescription || "",
+
+            description:
+                product?.productDescription || row.description || "",
+
+            productHSNCode:
+                product?.productHSNCode || row.productHSNCode || "",
+
+            unit: unitCode,
+            uom: unitCode,
+            unitName: getUnitLabelFromSchema(unitCode),
+
+            // GRN is purchase side, so use purchasePrice
+            rate: hasValue(product?.purchasePrice)
+                ? String(product.purchasePrice)
+                : row.rate || "",
+
+            // product master key is csgst, row key is cgst
+            cgst: csgst || row.cgst || "",
+            cgstPercentage: csgst || row.cgstPercentage || "",
+
+            igst: igst || row.igst || "",
+            igstPercentage: igst || row.igstPercentage || "",
+        };
     };
 
     /* ===================================================
@@ -587,10 +616,7 @@ const PurchaseInvoice = () => {
 
             try {
                 setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
                 setTemplateFields(updatedData);
             } catch (error) {
                 console.log("Failed to prepare template fields", error);
@@ -624,10 +650,10 @@ const PurchaseInvoice = () => {
             title: "Vendor",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">
+                    <div className="font-medium text-card-foreground">
                         {row?.pInvVendorName || "-"}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                         {row?.pInvVendorCode || "-"}
                     </div>
                 </div>
@@ -638,8 +664,8 @@ const PurchaseInvoice = () => {
         //     title: "GRN No",
         //     render: (row: any) => row?.grnVoucherNumber || "-",
         // },
-       
-         {
+
+        {
             key: "pInvBody",
             title: "Items",
             render: (row: any) => row?.pInvBody?.length || 0,
@@ -648,7 +674,7 @@ const PurchaseInvoice = () => {
             key: "pInvFooter",
             title: "Net Amount",
             render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
+                <span className="font-semibold text-primary">
                     {money(row?.pInvFooter?.netAmount || 0)}
                 </span>
             ),
@@ -657,7 +683,7 @@ const PurchaseInvoice = () => {
             key: "pInvStatus",
             title: "Status",
             render: (row: any) => (
-                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
                     {row?.pInvStatus || "-"}
                 </span>
             ),
@@ -711,8 +737,8 @@ const PurchaseInvoice = () => {
 
         const quantity =
             item?.acceptedQuantity !== undefined &&
-            item?.acceptedQuantity !== null &&
-            item?.acceptedQuantity !== ""
+                item?.acceptedQuantity !== null &&
+                item?.acceptedQuantity !== ""
                 ? item.acceptedQuantity
                 : item?.quantity || "";
 
@@ -999,6 +1025,30 @@ const PurchaseInvoice = () => {
         });
     };
 
+    const handleTaxFields = (updatedRow: any, key: string, value: any) => {
+        const lowerKey = String(key).toLowerCase();
+
+        const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
+        const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
+        const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
+
+        if ((isCgst || isSgst) && num(value) > 0) {
+            updatedRow.igst = "";
+            updatedRow.igstPercentage = "";
+            updatedRow.igstAmount = 0;
+        }
+
+        if (isIgst && num(value) > 0) {
+            updatedRow.cgst = "";
+            updatedRow.sgst = "";
+            updatedRow.cgstPercentage = "";
+            updatedRow.sgstPercentage = "";
+            updatedRow.cgstAmount = 0;
+            updatedRow.sgstAmount = 0;
+        }
+
+        return updatedRow;
+    };
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
@@ -1023,33 +1073,23 @@ const PurchaseInvoice = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
 
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
+            const lowerKey = String(key).toLowerCase();
+
+            const isProductField =
+                lowerKey === "productcode" ||
+                lowerKey === "productname" ||
+                lowerKey === "productid" ||
+                lowerKey === "product";
+
+            if (isProductField && selectedOption?.raw) {
+                updatedRow = fillProductDetailsFromSelectedOption(
+                    updatedRow,
+                    selectedOption
+                );
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
-
-            const lowerKey = String(key).toLowerCase();
-
-            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
-            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
-            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
-
-            if ((isCgst || isSgst) && num(value) > 0) {
-                updatedRow.igst = "";
-                updatedRow.igstPercentage = "";
-                updatedRow.igstAmount = 0;
-            }
-
-            if (isIgst && num(value) > 0) {
-                updatedRow.cgst = "";
-                updatedRow.sgst = "";
-                updatedRow.cgstPercentage = "";
-                updatedRow.sgstPercentage = "";
-                updatedRow.cgstAmount = 0;
-                updatedRow.sgstAmount = 0;
-            }
-
+            updatedRow = handleTaxFields(updatedRow, key, value);
             updatedRow = calculateRow(updatedRow);
 
             updatedProducts[index] = updatedRow;
@@ -1059,7 +1099,6 @@ const PurchaseInvoice = () => {
                 products: updatedProducts,
             };
         });
-
         setErrors((prev: any) => ({
             ...prev,
             products: "",
@@ -1374,12 +1413,61 @@ const PurchaseInvoice = () => {
         }
     };
 
+    // const handleDeleteConfirm = async () => {
+    //     try {
+    //         const voucherNumber = confirmTooltip?.voucherNumber;
+    //         const grnVoucherNumber = confirmTooltip?.grnVoucherNumber;
+
+    //         if (!voucherNumber) {
+    //             toast.error("Purchase invoice voucher number not found");
+    //             return;
+    //         }
+
+    //         await dispatch(
+    //             deletePurchaseInvoice({
+    //                 purchaseInvoiceNumber: voucherNumber,
+    //             }) as any
+    //         ).unwrap();
+
+    //         if (grnVoucherNumber) {
+    //             await syncGrnStatusAfterPurchaseInvoice(grnVoucherNumber);
+    //         } else {
+    //             toast.warning("Purchase invoice deleted , but grn voucher number not found")
+    //         }
+
+    //         toast.success("Purchase invoice deleted successfully");
+
+    //         await fetchPurchaseInvoices();
+    //     } catch (err: any) {
+    //         toast.error(
+    //             err?.message ||
+    //             err?.payload?.message ||
+    //             "Failed to delete purchase invoice"
+    //         );
+    //     } finally {
+    //         setConfirmTooltip({
+    //             show: false,
+    //             x: null,
+    //             y: null,
+    //             voucherNumber: null,
+    //             grnVoucherNumber: null,
+    //         });
+    //     }
+    // };
+
     const handleDeleteConfirm = async () => {
         try {
             const voucherNumber = confirmTooltip?.voucherNumber;
+            const grnVoucherNumber = confirmTooltip?.grnVoucherNumber;
+            const record = confirmTooltip?.record;
 
             if (!voucherNumber) {
                 toast.error("Purchase invoice voucher number not found");
+                return;
+            }
+
+            if (record && isPurchaseInvoicePaymentAdjusted(record)) {
+                toast.error("This invoice has payment entry, so it cannot be deleted");
                 return;
             }
 
@@ -1388,6 +1476,12 @@ const PurchaseInvoice = () => {
                     purchaseInvoiceNumber: voucherNumber,
                 }) as any
             ).unwrap();
+
+            if (grnVoucherNumber) {
+                await syncGrnStatusAfterPurchaseInvoice(grnVoucherNumber);
+            } else {
+                toast.warning("Purchase invoice deleted, but GRN voucher number not found");
+            }
 
             toast.success("Purchase invoice deleted successfully");
 
@@ -1404,65 +1498,110 @@ const PurchaseInvoice = () => {
                 x: null,
                 y: null,
                 voucherNumber: null,
+                grnVoucherNumber: null,
+                record: null,
             });
         }
     };
-
     /* ===================================================
        DYNAMIC FOOTER
     =================================================== */
 
     const footerValues = useMemo(() => {
-        return {
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        };
-    }, [
-        grossAmount,
-        discountAmount,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-        netAmount,
-    ]);
+        return { grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount };
+    }, [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount]);
 
     const dynamicFooterArray = useMemo(() => {
         return (templateFields?.footer || [])
             .filter((field: any) => !field.isHidden)
             .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
-
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
+                const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
+                return { ...field, value: money(rawValue), rawValue };
             });
     }, [templateFields?.footer, footerValues]);
+    const showInitialSkeleton = !refreshing && purchaseInvoices.length === 0 && (loading || fieldsLoading);
+    const showGrnSkeleton = grnModalLoading || grnLoading || !grnLoaded;
 
-    const showInitialSkeleton =
-        !refreshing &&
-        purchaseInvoices.length === 0 &&
-        (loading || fieldsLoading);
+    const isPurchaseInvoicePaymentAdjusted = (record: any) => {
+        const footer = record?.pInvFooter || {};
+
+        const netAmount = num(footer?.netAmount || 0);
+        const balanceAmount = num(footer?.balanceAmount || 0);
+        const adjustedAmount = num(footer?.adjustedAmount || 0);
+
+        return adjustedAmount > 0 || (netAmount > 0 && balanceAmount < netAmount);
+    };
+
+
+    const isClosedPurchaseInvoice = (record: any) => {
+        const pInvStatus = String(record?.pInvStatus || "").toLowerCase();
+        return pInvStatus === "close" || pInvStatus === "closed"
+    }
+
+    const handleEditPurInvoice = (record: any) => {
+        if (isClosedPurchaseInvoice(record)) {
+            toast.error("you can't edit closed purchase invoice");
+            return;
+        }
+        openEditModal(record);
+    }
+
+    // const handleDeletePurInvoiceClick = (e: any, record: any) => {
+    //     if (isClosedPurchaseInvoice(record)) {
+    //         toast.error("You can't delete closed Invoice")
+    //         return;
+    //     }
+    //     const rect = e.currentTarget.getBoundingClientRect();
+    //     let x = rect.left - 150;
+    //     if (x < 10) x = 10;
+    //     const y = rect.top + window.scrollY - 5;
+    //     setConfirmTooltip({
+    //         show: true,
+    //         x,
+    //         y,
+    //         voucherNumber: record?.pInvVoucherNumber,
+    //         grnVoucherNumber: record?.grnVoucherNumber
+    //     });
+    // }
+
+    const handleDeletePurInvoiceClick = (e: any, record: any) => {
+        if (isClosedPurchaseInvoice(record)) {
+            toast.error("You can't delete closed invoice");
+            return;
+        }
+
+        if (isPurchaseInvoicePaymentAdjusted(record)) {
+            toast.error("This invoice has payment entry, so it cannot be deleted");
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.pInvVoucherNumber,
+            grnVoucherNumber: record?.grnVoucherNumber,
+            record,
+        });
+    };
+
+    useEffect(() => {
+        /* @ts-ignore  */
+        dispatch(getAllReportMapping({ moduleType: "purchaseInvoice" }));
+    }, []);
 
     if (showInitialSkeleton) {
         return <ModulePageSkeleton rows={8} columns={7} />;
     }
 
-    const showGrnSkeleton =
-        grnModalLoading ||
-        grnLoading ||
-        !grnLoaded;
-
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div
                 id="purchase-invoice-header"
                 className="mb-3 flex items-center"
@@ -1497,13 +1636,14 @@ const PurchaseInvoice = () => {
                             loading: refreshing,
                         }}
                     />
+
                     <Permission module="bookez" permissionKey="purchaseInvoice" action="create">
-                    {/* @ts-ignore */}
-                    <DataCreateButton
-                        {...{
-                            callBackFn: openAddModal,
-                            text: "Add Purchase Invoice",
-                        }}
+                        {/* @ts-ignore */}
+                        <DataCreateButton
+                            {...{
+                                callBackFn: openAddModal,
+                                text: "Add Purchase Invoice",
+                            }}
                         />
                     </Permission>
                 </div>
@@ -1516,38 +1656,40 @@ const PurchaseInvoice = () => {
                 emptyMessage={`No ${status} purchase invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
                         <button
-                            id="purchase-invoice-edit-button"
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre: any) => ({
+                                    ...pre,
+                                    show: true,
+                                    moduleType: "purchaseInvoice",
+                                    record,
+                                    CustomerCode: record?.pInvVendorCode,
+                                    voucherNumber: record?.pInvVoucherNumber,
+                                }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
-                            <Edit size={16} />
+                            <Download size={16} />
+                        </button>
+                        <Permission module="bookez" permissionKey="purchaseInvoice" action="update">
+                            <button
+                                id="purchase-invoice-edit-button"
+                                onClick={() => handleEditPurInvoice(record)}
+                                className={`cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary${isClosedPurchaseInvoice(record)}`}
+                            >
+                                <Edit size={16} />
                             </button>
                         </Permission>
+
                         <Permission module="bookez" permissionKey="purchaseInvoice" action="delete">
-                        <button
-                            id="purchase-invoice-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-
-                                const y = rect.top + window.scrollY - 5;
-
-                                setConfirmTooltip({
-                                    show: true,
-                                    x,
-                                    y,
-                                    voucherNumber: record?.pInvVoucherNumber,
-                                });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            <button
+                                id="purchase-invoice-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => handleDeletePurInvoiceClick(e, record)}
+                                className={`cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50 ${isClosedPurchaseInvoice(record)}`}
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>
@@ -1584,6 +1726,8 @@ const PurchaseInvoice = () => {
                             x: null,
                             y: null,
                             voucherNumber: null,
+                            grnVoucherNumber: null,
+                             record: null,
                         })
                     }
                 />
@@ -1600,12 +1744,12 @@ const PurchaseInvoice = () => {
                 gridCols={1}
                 maxWidth="2xl"
                 modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
+                headerClassName="bg-card"
+                footerClassName="bg-card"
+                bodyClassName="!block !p-0 bg-card text-card-foreground"
                 body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
+                    <div className="flex h-[520px] flex-col bg-card text-card-foreground">
+                        <div className="border-b border-border p-5">
                             <input
                                 value={grnSearch}
                                 onChange={(e) =>
@@ -1613,12 +1757,11 @@ const PurchaseInvoice = () => {
                                 }
                                 placeholder="Search GRN code..."
                                 className="
-                                    w-full rounded-xl border border-gray-200 bg-gray-50
-                                    px-4 py-3 text-sm font-medium text-gray-700
+                                    w-full rounded-xl border border-border bg-input
+                                    px-4 py-3 text-sm font-medium text-foreground
                                     outline-none transition
-                                    placeholder:text-gray-400
-                                    focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100
-                                "
+                                    placeholder:text-muted-foreground
+                                    focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
 
@@ -1626,7 +1769,7 @@ const PurchaseInvoice = () => {
                             {showGrnSkeleton ? (
                                 <ModalListSkeleton rows={3} />
                             ) : grns.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
                                     No GRN found
                                 </div>
                             ) : (
@@ -1657,24 +1800,24 @@ const PurchaseInvoice = () => {
                                                 className={`
                                                     w-full rounded-xl border px-4 py-4 text-left transition
                                                     ${isSelected
-                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                                                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
                                                     }
                                                 `}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-base font-bold text-gray-900">
+                                                        <p className="text-base font-bold text-card-foreground">
                                                             {grnNumber} - {vendorName}
                                                         </p>
 
-                                                        <p className="mt-1 text-xs font-medium text-gray-500">
+                                                        <p className="mt-1 text-xs font-medium text-muted-foreground">
                                                             Items: {grnBody?.length || 0}
                                                         </p>
                                                     </div>
 
                                                     {isSelected && (
-                                                        <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                                                        <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
                                                             Selected
                                                         </span>
                                                     )}
@@ -1703,7 +1846,7 @@ const PurchaseInvoice = () => {
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
-                        
+
                         form,
                         errors,
                         handleAddRow,
@@ -1719,6 +1862,21 @@ const PurchaseInvoice = () => {
                     }}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "purchaseInvoice",
+                    setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Purchase Invoice PDF",
+                    cancelText: "Cancel",
+                    confirmText: "Confirm",
+                }}
+            />
         </div>
     );
 };

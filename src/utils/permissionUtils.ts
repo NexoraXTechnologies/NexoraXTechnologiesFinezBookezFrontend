@@ -21,7 +21,7 @@ export const checkPermissionFromData = (
     const modulePermissions = moduleData?.permissions;
     if (!modulePermissions) return false;
 
-    const keys = permissionKey.split(".");
+    const keys = permissionKey?.split(".") || [];
 
     let current = modulePermissions;
     for (const key of keys) {

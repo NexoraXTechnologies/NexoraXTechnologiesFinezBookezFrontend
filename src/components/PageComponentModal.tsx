@@ -24,7 +24,7 @@ const PageComponentModal = ({
             fixed top-0 right-0 bottom-0
             left-[var(--professional-sidebar-width)]
             z-[999]
-            bg-slate-100
+            bg-background
             transition-all duration-300
           "
                     initial={{ opacity: 0 }}
@@ -32,29 +32,29 @@ const PageComponentModal = ({
                     exit={{ opacity: 0 }}
                 >
                     <motion.div
-                        className="flex h-full w-full flex-col bg-slate-50"
+                        className="flex h-full w-full flex-col bg-background text-foreground"
                         initial={{ x: "100%" }}
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ duration: 0.25, ease: "easeInOut" }}
                     >
-                        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
+                        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
                             <div className="flex min-w-0 items-center gap-3">
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="rounded-md p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                                    className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                                 >
                                     <ArrowLeft size={20} />
                                 </button>
 
                                 <div className="min-w-0">
-                                    <h2 className="truncate text-lg font-semibold text-slate-900">
+                                    <h2 className="truncate text-lg font-semibold text-card-foreground">
                                         {title}
                                     </h2>
 
                                     {description && (
-                                        <p className="truncate text-sm text-slate-500">
+                                        <p className="truncate text-sm text-muted-foreground">
                                             {description}
                                         </p>
                                     )}
@@ -64,13 +64,13 @@ const PageComponentModal = ({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="rounded-md p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                                className="rounded-md p-2 text-muted-foreground transition hover:bg-danger/10 hover:text-danger"
                             >
                                 <X size={20} />
                             </button>
                         </header>
 
-                        <main className="flex-1 overflow-auto">
+                        <main className="flex-1 overflow-auto bg-background">
                             {children}
                         </main>
                     </motion.div>

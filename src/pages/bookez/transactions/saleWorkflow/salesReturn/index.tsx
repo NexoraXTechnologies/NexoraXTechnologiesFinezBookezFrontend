@@ -23,7 +23,6 @@ import Permission from "../../../../../components/PermissionGuard";
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
 
-
 const SalesReturn = () => {
     const dispatch = useDispatch<any>();
     const { salesInvoiceReturns, pagination, loading, createLoading, updateLoading, deleteLoading } = useSelector((state: any) => state.salesInvoiceReturn);
@@ -123,7 +122,7 @@ const SalesReturn = () => {
     const netAmount = footerTotals.totalNetAmount;
 
     const fetchSalesInvoices = async () => {
-        await dispatch(getAllSalesInvoiceReturn({ offset: 0, limit: 100, search: purchaseOrderSearch }) as any);
+        await dispatch(getAllSalesInvoiceReturn({ offset: localOffset, limit: localLimit, search: purchaseOrderSearch, status }) as any);
     };
 
     const columns = [
@@ -134,18 +133,27 @@ const SalesReturn = () => {
             title: "Customer",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">{row?.sInvReturnCustomerName || "-"}</div>
-                    <div className="text-xs text-slate-500">{row?.sInvCustomerCode || "-"}</div>
+                    <div className="font-medium text-card-foreground">{row?.sInvReturnCustomerName || "-"}</div>
+                    <div className="text-xs text-muted-foreground">{row?.sInvCustomerCode || "-"}</div>
                 </div>
             ),
         },
         { key: "sInvReturnBody", title: "Items", render: (row: any) => row?.sInvReturnBody?.length || 0 },
-        { key: "sInvReturnFooter", title: "Net Amount", render: (row: any) => <span className="font-semibold text-indigo-700">{money(row?.sInvReturnFooter?.netAmount || 0)}</span> },
+        {
+            key: "sInvReturnFooter",
+            title: "Net Amount",
+            render: (row: any) => (
+                <span className="font-semibold text-primary">
+                    {money(row?.sInvReturnFooter?.netAmount || 0)}
+                </span>
+            ),
+            type: "amount",
+        },
         {
             key: "sInvReturnStatus",
             title: "Doc Status",
             render: (row: any) => (
-                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvReturnStatus || row?.sInvStatus) === "open" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sInvReturnStatus || row?.sInvStatus) === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>
                     {row?.sInvReturnStatus || row?.sInvStatus || "-"}
                 </span>
             ),
@@ -184,6 +192,7 @@ const SalesReturn = () => {
             const unitCode = item?.unit || item?.uom || "";
             return calculateRow(normalizeRowKeys({ id: item?.id || Date.now() + Math.random(), productCode: item?.productCode || "", productName: item?.productName || "", productId: item?.productId || "", productDescription: item?.productDescription || item?.description || "", description: item?.description || item?.productDescription || "", productHSNCode: item?.productHSNCode || "", remarks: item?.remarks || "", quantity: item?.quantity || "", unit: unitCode, uom: unitCode, unitName: item?.unitName || getUnitLabelFromSchema(unitCode), rate: item?.rate || "", gross: item?.gross || item?.grossAmount || 0, grossAmount: item?.grossAmount || item?.gross || 0, discount: item?.discount || item?.discountPercentage || "", discountPercentage: item?.discountPercentage || item?.discount || "", discountAmount: item?.discountAmount || 0, taxableAmount: item?.taxableAmount || 0, cgst: item?.cgst || item?.cgstPercentage || "", cgstPercentage: item?.cgstPercentage || item?.cgst || "", cgstAmount: item?.cgstAmount || 0, sgst: item?.sgst || item?.sgstPercentage || "", sgstPercentage: item?.sgstPercentage || item?.sgst || "", sgstAmount: item?.sgstAmount || 0, igst: item?.igst || item?.igstPercentage || "", igstPercentage: item?.igstPercentage || item?.igst || "", igstAmount: item?.igstAmount || 0, taxAmount: item?.taxAmount || 0, otherAmount: item?.otherAmount || 0, netAmount: item?.netAmount || item?.netTotal || 0, netTotal: item?.netTotal || item?.netAmount || 0 }));
         }) : [{ ...emptyProductRow, id: Date.now() }];
+
         setEditingRecord(true);
         setErrors({});
         setForm({ sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber, sInvVoucherNumber: record?.sInvVoucherNumber, sInvReturnCustomerCode: record?.sInvReturnCustomerCode, sInvCustomerCode: record.sInvCustomerCode, sInvReturnCustomerName: record.sInvReturnCustomerName, sInvReturnVoucherDate: record.sInvReturnVoucherDate, sInvStatus: record.sInvStatus || record.sInvReturnStatus || "open", sInvReturnRemark: record.sInvReturnRemark || record.sInvRemark || "", sInvReturnSalesAccount: record.sInvReturnSalesAccount || "SA021", sInvReturnStatus: record.sInvReturnStatus || record.sInvStatus || "open", products, grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00", discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00", cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00", sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00", igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00", taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00", otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00", netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00" });
@@ -196,17 +205,13 @@ const SalesReturn = () => {
             const summaryRes = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/analysis/byInvoiceVoucharNumber/${pOrdVoucherNumber}`);
             const summary = summaryRes?.data?.data || {};
             const pendingRaw = summary?.pendingReturnQuantity?.totalPendingQty;
-            if (pendingRaw === undefined || pendingRaw === null || pendingRaw === "") {
-                console.log("GRN analysis summary missing totalPendingGrnQuantity", summaryRes?.data);
-                return "";
-            }
-            const totalPendingGrnQuantity = num(pendingRaw);
-            const nextPoStatus = totalPendingGrnQuantity === 0 ? "close" : "open";
+            const totalPendingQuantity = num(pendingRaw);
+            const nextPoStatus = totalPendingQuantity === 0 ? "close" : "open";
             dispatch(updateSalesInvoice({ sInvVoucherNumber: pOrdVoucherNumber, payload: { sInvStatus: nextPoStatus } }));
             return nextPoStatus;
         } catch (error) {
-            console.log("Failed to sync Purchase Order status after GRN", error);
-            toast.error("GRN saved but failed to update purchase order status");
+            console.log("From Sales Return", error);
+            toast.error("Somthing went wrong");
             return "";
         }
     };
@@ -238,6 +243,7 @@ const SalesReturn = () => {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
             return;
         }
+
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
@@ -261,6 +267,7 @@ const SalesReturn = () => {
             updatedProducts[index] = updatedRow;
             return { ...prev, products: updatedProducts };
         });
+
         setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "", [`row_${index}_tax`]: "" }));
     };
 
@@ -280,20 +287,24 @@ const SalesReturn = () => {
             const value = form?.[field.key];
             if (value === undefined || value === null || value === "") err[field.key] = `${field.label || field.title || field.key} is required`;
         });
+
         const filledRows = getFilledRows();
         if (filledRows.length === 0) err.products = "Please add at least one product";
+
         (form.products || []).forEach((row: any, index: number) => {
             const hasAnyValue = (templateFields?.body || []).some((field: any) => {
                 const value = row?.[field.key];
                 return value !== undefined && value !== null && value !== "";
             });
             if (!hasAnyValue) return;
+
             (templateFields?.body || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
                 const value = row?.[field.key];
                 if (value === undefined || value === null || value === "") err[`row_${index}_${field.key}`] = `${field.label || field.title || field.key} is required`;
             });
+
             const cgst = num(row.cgstPercentage || row.cgst);
             const sgst = num(row.sgstPercentage || row.sgst);
             const igst = num(row.igstPercentage || row.igst);
@@ -307,6 +318,7 @@ const SalesReturn = () => {
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
             }
         });
+
         setErrors(err);
         if (err.products) toast.error(err.products);
         return Object.keys(err).length === 0;
@@ -335,6 +347,7 @@ const SalesReturn = () => {
             sInvReturnBody: products.map((item: any) => ({ productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, unitName: item.unitName, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) })),
             sInvReturnFooter: { grossAmount: fmtMoney(footer.totalGrossAmount), discountAmount: fmtMoney(footer.totalDiscountAmount), cgstAmount: fmtMoney(footer.totalCgstAmount), sgstAmount: fmtMoney(footer.totalSgstAmount), igstAmount: fmtMoney(footer.totalIgstAmount), taxAmount: fmtMoney(footer.totalTaxAmount), otherAmount: fmtMoney(footer.totalOtherAmount), netAmount: fmtMoney(footer.totalNetAmount), adjustedAmount: "0", balanceAmount: fmtMoney(footer.totalNetAmount), totalQuantity: footer.totalQuantity, totalGrossAmount: fmtMoney(footer.totalGrossAmount), totalDiscountAmount: fmtMoney(footer.totalDiscountAmount), totalCgstAmount: fmtMoney(footer.totalCgstAmount), totalSgstAmount: fmtMoney(footer.totalSgstAmount), totalIgstAmount: fmtMoney(footer.totalIgstAmount), totalTaxAmount: fmtMoney(footer.totalTaxAmount), totalOtherAmount: fmtMoney(footer.totalOtherAmount), totalNetAmount: fmtMoney(footer.totalNetAmount) },
         };
+
         try {
             if (editingRecord) {
                 await dispatch(updateSalesInvoiceReturn({ sInvReturnVoucherNumber: form?.sInvReturnVoucherNumber, payload }) as any).unwrap();
@@ -342,14 +355,11 @@ const SalesReturn = () => {
             } else {
                 await dispatch(createSalesInvoiceReturn({ payload }) as any).unwrap();
                 if (form?.sInvVoucherNumber) {
-                    const poStatus = await syncPurchaseOrderStatusAfterGrn(form?.sInvVoucherNumber);
+                    await syncPurchaseOrderStatusAfterGrn(form?.sInvVoucherNumber);
                     await fetchSalesInvoices();
-                    if (poStatus === "close") toast.success("GRN created successfully and Purchase Order closed");
-                    else toast.success("GRN created successfully");
-                } else {
-                    toast.success("GRN created successfully");
+                    // if (poStatus === "close") toast.success("GRN created successfully and Purchase Order closed");
                 }
-                toast.success("Sales invoice created successfully");
+                toast.success("Sales Return created successfully");
             }
             setShowModal(false);
             resetMainForm();
@@ -379,16 +389,43 @@ const SalesReturn = () => {
             toast.error("Please select purchase order");
             return;
         }
+
         const poBody = selectedPurchaseOrder?.sInvBody || [];
         const products = poBody.length > 0 ? poBody.map((item: any) => {
             const unitCode = item?.unit || item?.uom || "";
             return calculateRow(normalizeRowKeys({ id: Date.now() + Math.random(), productCode: item?.productCode || "", productName: item?.productName || "", productId: item?.productId || "", productDescription: item?.productDescription || item?.description || "", productHSNCode: item?.productHSNCode || "", remarks: item?.remarks || "", quantity: item?.quantity || "", unit: unitCode, uom: item?.uom, unitName: item?.unitName || getUnitLabelFromSchema(unitCode), rate: item?.rate || "", gross: item?.gross || item?.grossAmount || 0, grossAmount: item?.grossAmount || item?.gross || 0, discount: item?.discount || item?.discountPercentage || "", discountPercentage: item?.discountPercentage || item?.discount || "", discountAmount: item?.discountAmount || 0, taxableAmount: item?.taxableAmount || 0, cgst: item?.cgst || item?.cgstPercentage || "", cgstPercentage: item?.cgstPercentage || item?.cgst || "", cgstAmount: item?.cgstAmount || 0, sgst: item?.sgst || item?.sgstPercentage || "", sgstPercentage: item?.sgstPercentage || item?.sgst || "", sgstAmount: item?.sgstAmount || 0, igst: item?.igst || item?.igstPercentage || "", igstPercentage: item?.igstPercentage || item?.igst || "", igstAmount: item?.igstAmount || 0, taxAmount: item?.taxAmount || 0, otherAmount: item?.otherAmount || 0, netAmount: item?.netAmount || item?.netTotal || 0, netTotal: item?.netTotal || item?.netAmount || 0 }));
         }) : [{ ...emptyProductRow, id: Date.now() }];
+
         setForm({ ...getDefaultForm(), sInvReturnSalesAccount: selectedPurchaseOrder.sInvSalesAccount || "SA021", sInvReturnRemark: selectedPurchaseOrder.sInvRemark || selectedPurchaseOrder.sInvRemark || "", sInvReturnCustomerCode: selectedPurchaseOrder.sInvCustomerCode, sInvReturnCustomerName: selectedPurchaseOrder.sInvCustomerName, sInvReturnVoucherDate: selectedPurchaseOrder.sInvVoucherDate, sInvStatus: selectedPurchaseOrder.sInvStatus || selectedPurchaseOrder.sInvReturnStatus || "open", sInvReturnStatus: selectedPurchaseOrder.sInvStatus || selectedPurchaseOrder.sInvStatus || "open", sInvVoucherNumber: selectedPurchaseOrder?.sInvVoucherNumber, products });
         setErrors({});
         setEditingRecord(null);
         setShowPurchaseOrderModal(false);
         setShowModal(true);
+    };
+
+    const isClosedSalesOrder = (record: any) => {
+        const orderStatus = String(record?.sInvReturnStatus || "").toLowerCase();
+        return orderStatus === "close" || orderStatus === "closed";
+    };
+
+    const handleEditSalesOrder = (record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't edit closed order");
+            return;
+        }
+        openEditModal(record);
+    };
+
+    const handleDeleteSalesInvoiceClick = (e: any, record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't delete closed order");
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+        if (x < 10) x = 10;
+        const y = rect.top + window.scrollY - 5;
+        setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber });
     };
 
     const footerValues = useMemo(() => ({ grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount }), [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount]);
@@ -400,15 +437,15 @@ const SalesReturn = () => {
         });
     }, [templateFields?.footer, footerValues]);
 
-    useEffect(() => { fetchSalesInvoices(); }, []);
+    useEffect(() => { fetchSalesInvoices(); }, [localOffset, localLimit, debouncedSearch, status]);
 
     useEffect(() => { dispatch(getAllTransactionSchema("salesReturn") as any); }, [dispatch]);
 
     useEffect(() => {
         (async () => {
-            await dispatch(getAllSalesInvoice({ offset: localOffset, limit: localLimit, search: debouncedSearch, status }) as any);
+            await dispatch(getAllSalesInvoice({ offset: 0, limit: 100, search: purchaseOrderSearch, status }) as any);
         })();
-    }, []);
+    }, [purchaseOrderSearch]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -437,19 +474,21 @@ const SalesReturn = () => {
     }, [transactionsSchema]);
 
     useEffect(() => {
-        dispatch(getAllReportMapping({ moduleType: "salesReturn" }))
-    }, [])
+        dispatch(getAllReportMapping({ moduleType: "salesInvoiceReturn" }));
+    }, []);
 
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex items-center">
                 <div id="sales-invoice-summary" className="flex items-start gap-3">
                     <Badge {...{ count: pagination?.totalDocs ?? salesInvoiceReturns?.length ?? 0, text: "Total Sales Invoices:", varient: "primary" }} />
                 </div>
+
                 <div className="ml-auto flex items-center gap-2">
                     <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
+
                     <Permission module="bookez" permissionKey="salesReturn" action="create">
                         {/* @ts-ignore */}
                         <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Return" }} />
@@ -464,30 +503,32 @@ const SalesReturn = () => {
                 emptyMessage={`No ${status} sales invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button id="sales-quotation-edit-button" onClick={() => {
-                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
-                        }
-
-                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                        <button
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesInvoiceReturn", record, CustomerCode: record?.sInvReturnCustomerCode, voucherNumber: record?.sInvReturnVoucherNumber }));
+                            }}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        >
                             <Download size={16} />
                         </button>
+
                         <Permission module="bookez" permissionKey="salesReturn" action="update">
-                            <button id="sales-invoice-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                            <button
+                                id="sales-invoice-edit-button"
+                                onClick={() => handleEditSalesOrder(record)}
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            >
                                 <Edit size={16} />
                             </button>
                         </Permission>
+
                         <Permission module="bookez" permissionKey="salesReturn" action="delete">
                             <button
                                 id="sales-invoice-delete-button"
                                 disabled={deleteLoading}
-                                onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-                                    const y = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvReturnVoucherNumber });
-                                }}
-                                className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                                onClick={(e) => handleDeleteSalesInvoiceClick(e, record)}
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -560,24 +601,29 @@ const SalesReturn = () => {
                 gridCols={1}
                 maxWidth="2xl"
                 modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
+                headerClassName="bg-card"
+                footerClassName="bg-card"
+                bodyClassName="!block !p-0 bg-card text-card-foreground"
                 body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
+                    <div className="flex h-[520px] flex-col bg-card text-card-foreground">
+                        <div className="border-b border-border p-5">
                             <input
                                 value={purchaseOrderSearch}
                                 onChange={(e) => setPurchaseOrderSearch(e.target.value)}
                                 placeholder="Search Purchase Order code..."
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
+
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {invoiceLoader ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">Loading purchase orders...</div>
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
+                                    Loading purchase orders...
+                                </div>
                             ) : salesInvoices.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">No purchase order found</div>
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
+                                    No purchase order found
+                                </div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesInvoices.map((e: any, index: number) => {
@@ -588,14 +634,27 @@ const SalesReturn = () => {
                                                 key={poNumber || index}
                                                 type="button"
                                                 onClick={() => handlePurchaseOrderSelect(e)}
-                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100" : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"}`}
+                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
+                                                    ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                    : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-base font-bold text-gray-900">{e?.sInvVoucherNumber || "NA"} - {e?.sInvCustomerName || "NA"}</p>
-                                                        <p className="mt-1 text-xs font-medium text-gray-500">Items: {e?.sInvBody?.length || 0}</p>
+                                                        <p className="text-base font-bold text-card-foreground">
+                                                            {e?.sInvVoucherNumber || "NA"} - {e?.sInvCustomerName || "NA"}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-muted-foreground">
+                                                            Items: {e?.sInvBody?.length || 0}
+                                                        </p>
                                                     </div>
-                                                    {isSelected && <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">Selected</span>}
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                                                            Selected
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </button>
                                         );

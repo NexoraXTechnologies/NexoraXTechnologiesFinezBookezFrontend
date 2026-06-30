@@ -3,7 +3,7 @@ import { Edit, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 
-import { DataCreateButton} from "../../../../components/buttons";
+import { DataCreateButton } from "../../../../components/buttons";
 import SearchInput from "../../../../components/searchInput";
 import DataTable from "../../../../components/DataTable";
 import Toggle from "../../../../components/toggle";
@@ -12,13 +12,45 @@ import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 
-import { money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
-import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
+import {
+    money,
+    num,
+    safePercent,
+    todayYMD,
+} from "../../../../utils/helperFunctions";
+import {
+    addOpeningStock,
+    deleteOpeningStock,
+    getOpeningStockList,
+    updateOpeningStock,
+} from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Permission from "../../../../components/PermissionGuard";
 
 const emptyProductRow = {
-    id: Date.now(), productCode: "", productName: "", productId: "", description: "", remarks: "", quantity: "", unit: "", unitName: "", rate: "", grossAmount: 0, discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgstPercentage: "", cgstAmount: 0, sgstPercentage: "", sgstAmount: 0, igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netTotal: 0,
+    id: Date.now(),
+    productCode: "",
+    productName: "",
+    productId: "",
+    description: "",
+    remarks: "",
+    quantity: "",
+    unit: "",
+    unitName: "",
+    rate: "",
+    grossAmount: 0,
+    discountPercentage: "",
+    discountAmount: 0,
+    taxableAmount: 0,
+    cgstPercentage: "",
+    cgstAmount: 0,
+    sgstPercentage: "",
+    sgstAmount: 0,
+    igstPercentage: "",
+    igstAmount: 0,
+    taxAmount: 0,
+    otherAmount: "",
+    netTotal: 0,
 };
 
 const emptyForm = {
@@ -44,15 +76,18 @@ const mainColumns = [
         render: (row: any) => (
             <span>{row?.openingStockFooter?.totalQuantity || 0}</span>
         ),
+
     },
     {
         key: "totalNetAmount",
         title: "Net Amount",
         render: (row: any) => (
-            <span className="rounded-md bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
+            <span className="rounded-md bg-primary/10 px-2 py-1 text-xs text-primary">
                 {money(row?.openingStockFooter?.totalNetAmount)}
             </span>
         ),
+        type: "amount",
+
     },
     {
         key: "openingStockStatus",
@@ -60,8 +95,8 @@ const mainColumns = [
         render: (row: any) => (
             <span
                 className={`rounded-md px-2 py-1 text-xs capitalize ${row?.openingStockStatus === "close"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-blue-100 text-blue-700"
+                    ? "bg-success/10 text-success"
+                    : "bg-primary/10 text-primary"
                     }`}
             >
                 {row?.openingStockStatus || "open"}
@@ -151,7 +186,24 @@ const OpeningStock = () => {
         const taxAmount = cgstAmount + sgstAmount + igstAmount;
         const netTotal = taxableAmount + taxAmount + otherAmount;
 
-        return { ...row, quantity, rate, grossAmount, discountPercentage, discountAmount, taxableAmount, cgstPercentage, cgstAmount, sgstPercentage, sgstAmount, igstPercentage, igstAmount, otherAmount, taxAmount, netTotal, };
+        return {
+            ...row,
+            quantity,
+            rate,
+            grossAmount,
+            discountPercentage,
+            discountAmount,
+            taxableAmount,
+            cgstPercentage,
+            cgstAmount,
+            sgstPercentage,
+            sgstAmount,
+            igstPercentage,
+            igstAmount,
+            otherAmount,
+            taxAmount,
+            netTotal,
+        };
     };
 
     const footerTotals = useMemo(() => {
@@ -204,28 +256,144 @@ const OpeningStock = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const duplicate = Boolean(
+            form?.openingStockBody?.some((e: any, i: number) => {
+                if (i === index) return false;
+
+                return (
+                    String(e?.productCode || "") === String(value || "") ||
+                    String(e?.productName || "") === String(value || "") ||
+                    String(e?.productId || "") === String(value || "")
+                );
+            })
+        );
+
+        if (
+            (key === "productCode" || key === "productName" || key === "productId") &&
+            duplicate
+        ) {
+            setErrors((prev: any) => ({
+                ...prev,
+                openingStockBody: "",
+                [`row_${index}_${key}`]: "This product already added",
+                [`row_${index}_tax`]: "",
+            }));
+            return;
+        }
+
         setForm((prev: any) => {
             const updatedBody = [...(prev.openingStockBody || [])];
+            const currentRow = updatedBody[index] || {};
 
             let updatedRow = {
-                ...updatedBody[index],
+                ...currentRow,
                 [key]: value,
             };
 
-            if (key === "productCode") {
-                const selectedProduct = productOptions.find((item: any) => item.value === value);
-                const product = selectedProduct?.raw;
-                updatedRow.productCode = value;
-                updatedRow.productName = selectedProduct?.label || "";
-                updatedRow.productId = product?._id || "";
-                updatedRow.description = product?.productDescription || product?.description || "";
-                updatedRow.rate = product?.sellingPrice || product?.saleRate || product?.rate || "";
-                updatedRow.unit = product?.unit || product?.uom || product?.unitCode || "";
-                updatedRow.unitName = product?.unit || product?.uom || product?.unitName || "";
+            if (key === "productCode" || key === "productName" || key === "productId") {
+                const selectedProduct =
+                    productOptions.find((item: any) => {
+                        const raw = item?.raw || {};
+
+                        return (
+                            String(item?.value || "") === String(value || "") ||
+                            String(item?.label || "") === String(value || "") ||
+                            String(raw?._id || "") === String(value || "") ||
+                            String(raw?.productCode || "") === String(value || "") ||
+                            String(raw?.productName || "") === String(value || "")
+                        );
+                    }) || null;
+
+                const product = selectedProduct?.raw || {};
+
+                updatedRow.productCode =
+                    product?.productCode ||
+                    selectedProduct?.value ||
+                    updatedRow.productCode ||
+                    "";
+
+                updatedRow.productName =
+                    product?.productName ||
+                    selectedProduct?.label ||
+                    updatedRow.productName ||
+                    "";
+
+                updatedRow.productId =
+                    product?._id ||
+                    product?.productId ||
+                    updatedRow.productId ||
+                    "";
+
+                updatedRow.description =
+                    product?.productDescription ||
+                    product?.description ||
+                    updatedRow.description ||
+                    "";
+
+                updatedRow.rate =
+                    product?.sellingPrice ||
+                    product?.saleRate ||
+                    product?.rate ||
+                    updatedRow.rate ||
+                    "";
+
+                updatedRow.unit =
+                    product?.unit ||
+                    product?.uom ||
+                    product?.unitCode ||
+                    updatedRow.unit ||
+                    "";
+
+                updatedRow.unitName =
+                    product?.unitName ||
+                    product?.unit ||
+                    product?.uom ||
+                    updatedRow.unitName ||
+                    "";
+
+                // ✅ Same as Sales Order tax logic
+                // Your sales order uses raw?.csgst for both CGST and SGST
+                updatedRow.cgstPercentage =
+                    product?.cgstPercentage ||
+                    product?.cgst ||
+                    product?.csgst ||
+                    product?.cgstRate ||
+                    product?.tax?.cgstPercentage ||
+                    product?.tax?.cgst ||
+                    "";
+
+                updatedRow.sgstPercentage =
+                    product?.sgstPercentage ||
+                    product?.sgst ||
+                    product?.csgst ||
+                    product?.sgstRate ||
+                    product?.tax?.sgstPercentage ||
+                    product?.tax?.sgst ||
+                    "";
+
+                updatedRow.igstPercentage =
+                    product?.igstPercentage ||
+                    product?.igst ||
+                    product?.igstRate ||
+                    product?.tax?.igstPercentage ||
+                    product?.tax?.igst ||
+                    "";
+
+                if (num(updatedRow.igstPercentage) > 0) {
+                    updatedRow.cgstPercentage = "";
+                    updatedRow.sgstPercentage = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+
+                if (num(updatedRow.cgstPercentage) > 0 || num(updatedRow.sgstPercentage) > 0) {
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                }
             }
 
             if (key === "unit") {
-                const selectedUnit = unitOptions.find((item: any) => item.value === value);
+                const selectedUnit = unitOptions.find((item: any) => String(item.value) === String(value));
                 updatedRow.unit = value;
                 updatedRow.unitName = selectedUnit?.label || "";
             }
@@ -245,9 +413,14 @@ const OpeningStock = () => {
                     updatedRow.sgstAmount = 0;
                 }
             }
+
             updatedRow = calculateRow(updatedRow);
             updatedBody[index] = updatedRow;
-            return { ...prev, openingStockBody: updatedBody, };
+
+            return {
+                ...prev,
+                openingStockBody: updatedBody,
+            };
         });
 
         setErrors((prev: any) => ({
@@ -273,14 +446,34 @@ const OpeningStock = () => {
 
     const handleDeleteRow = (index: number) => {
         setForm((prev: any) => {
-            const updatedBody = prev.openingStockBody.filter((_: any, i: number) => i !== index);
-            return { ...prev, openingStockBody: updatedBody.length > 0 ? updatedBody : [{ ...emptyProductRow, id: Date.now() }], };
+            const updatedBody = prev.openingStockBody.filter(
+                (_: any, i: number) => i !== index
+            );
+
+            return {
+                ...prev,
+                openingStockBody:
+                    updatedBody.length > 0
+                        ? updatedBody
+                        : [{ ...emptyProductRow, id: Date.now() }],
+            };
         });
     };
 
     const getFilledRows = () => {
         return form.openingStockBody.filter((row: any) => {
-            return (row.productCode || row.description || row.remarks || row.quantity || row.unit || row.rate || row.discountPercentage || row.cgstPercentage || row.sgstPercentage || row.igstPercentage || row.otherAmount
+            return (
+                row.productCode ||
+                row.description ||
+                row.remarks ||
+                row.quantity ||
+                row.unit ||
+                row.rate ||
+                row.discountPercentage ||
+                row.cgstPercentage ||
+                row.sgstPercentage ||
+                row.igstPercentage ||
+                row.otherAmount
             );
         });
     };
@@ -289,19 +482,44 @@ const OpeningStock = () => {
         const err: any = {};
 
         if (!form.openingStockDate) err.openingStockDate = "Date is required";
+
         const filledRows = getFilledRows();
 
-        if (filledRows.length === 0) err.openingStockBody = "Please add at least one product";
+        if (filledRows.length === 0) {
+            err.openingStockBody = "Please add at least one product";
+        }
 
         form.openingStockBody.forEach((row: any, index: number) => {
-            const hasAnyValue = row.productCode || row.description || row.remarks || row.quantity || row.unit || row.rate || row.discountPercentage || row.cgstPercentage || row.sgstPercentage || row.igstPercentage || row.otherAmount;
+            const hasAnyValue =
+                row.productCode ||
+                row.description ||
+                row.remarks ||
+                row.quantity ||
+                row.unit ||
+                row.rate ||
+                row.discountPercentage ||
+                row.cgstPercentage ||
+                row.sgstPercentage ||
+                row.igstPercentage ||
+                row.otherAmount;
 
             if (!hasAnyValue) return;
 
-            if (!row.productCode) err[`row_${index}_productCode`] = "Product is required";
-            if (!row.quantity || num(row.quantity) <= 0) err[`row_${index}_quantity`] = "Quantity is required";
-            if (!row.unit) err[`row_${index}_unit`] = "Unit is required";
-            if (!row.rate || num(row.rate) <= 0) err[`row_${index}_rate`] = "Rate is required";
+            if (!row.productCode) {
+                err[`row_${index}_productCode`] = "Product is required";
+            }
+
+            if (!row.quantity || num(row.quantity) <= 0) {
+                err[`row_${index}_quantity`] = "Quantity is required";
+            }
+
+            if (!row.unit) {
+                err[`row_${index}_unit`] = "Unit is required";
+            }
+
+            if (!row.rate || num(row.rate) <= 0) {
+                err[`row_${index}_rate`] = "Rate is required";
+            }
 
             const cgst = num(row.cgstPercentage);
             const sgst = num(row.sgstPercentage);
@@ -320,11 +538,23 @@ const OpeningStock = () => {
     };
 
     const cleanRows = () => {
-        return form.openingStockBody.filter((row: any) => {
-            return (
-                row.productCode || row.description || row.remarks || row.quantity || row.unit || row.rate || row.discountPercentage || row.cgstPercentage || row.sgstPercentage || row.igstPercentage || row.otherAmount
-            );
-        }).map((row: any) => calculateRow(row));
+        return form.openingStockBody
+            .filter((row: any) => {
+                return (
+                    row.productCode ||
+                    row.description ||
+                    row.remarks ||
+                    row.quantity ||
+                    row.unit ||
+                    row.rate ||
+                    row.discountPercentage ||
+                    row.cgstPercentage ||
+                    row.sgstPercentage ||
+                    row.igstPercentage ||
+                    row.otherAmount
+                );
+            })
+            .map((row: any) => calculateRow(row));
     };
 
     const refreshList = async () => {
@@ -340,6 +570,7 @@ const OpeningStock = () => {
 
     const handleSubmit = async () => {
         if (!validateMainForm()) return;
+
         const openingStockBody = cleanRows();
 
         const payload = {
@@ -347,17 +578,30 @@ const OpeningStock = () => {
             remark: form.remark || "",
             openingStockStatus: form.openingStockStatus || status || "open",
             openingStockBody,
+            // openingStockBody: openingStockBody.map((row: any) => ({
+            //     ...row,
+            //     product: row?.productCode,
+            // })),
+
             openingStockFooter: footerTotals,
         };
-
+        console.log({ payload })
         try {
             if (edit) {
-                await dispatch(updateOpeningStock({ payload, openingStockVoucherNumber: form?.openingStockVoucherNumber, }) as any);
+                await dispatch(
+                    updateOpeningStock({
+                        payload,
+                        openingStockVoucherNumber: form?.openingStockVoucherNumber,
+                    }) as any
+                );
             } else {
                 await dispatch(addOpeningStock({ payload }) as any);
             }
+
             await refreshList();
+
             toast.success(`Opening stock ${edit ? "updated" : "added"} successfully`);
+
             setShowModal(false);
             resetMainForm();
         } catch (error: any) {
@@ -367,8 +611,14 @@ const OpeningStock = () => {
 
     const handleDeleteOpeningStock = async (voucherNumber: any) => {
         try {
-            await dispatch(deleteOpeningStock({ openingStockVoucherNumber: voucherNumber, }) as any);
+            await dispatch(
+                deleteOpeningStock({
+                    openingStockVoucherNumber: voucherNumber,
+                }) as any
+            );
+
             await refreshList();
+
             toast.success("Opening stock deleted successfully");
         } catch (error: any) {
             toast.error(error?.message || "Delete failed");
@@ -395,9 +645,9 @@ const OpeningStock = () => {
             setDebouncedSearch(search.trim());
             setLocalOffset(0);
         }, 400);
+
         return () => clearTimeout(timer);
     }, [search]);
-
 
     const inputData = {
         header: [
@@ -588,10 +838,10 @@ const OpeningStock = () => {
             },
         ],
     };
-
+    console.log({ form })
     return (
         <>
-            <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex h-full w-full flex-col border border-border bg-card text-card-foreground p-4 shadow-sm">
                 <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
                     <Toggle
                         {...{
@@ -605,16 +855,20 @@ const OpeningStock = () => {
                         <SearchInput {...{ search, setSearch }} />
                     </div>
 
-                    <Permission module="bookez" permissionKey="openingStock" action="create">
+                    <Permission
+                        module="bookez"
+                        permissionKey="openingStock"
+                        action="create"
+                    >
                         <DataCreateButton
-                        {...{
+                            {...{
                                 text: "Create Opening Stocks",
-                            icon: <Plus size={16} />,
-                            callBackFn: () => {
-                                resetMainForm();
-                                setShowModal(true);
-                            },
-                        }}
+                                icon: <Plus size={16} />,
+                                callBackFn: () => {
+                                    resetMainForm();
+                                    setShowModal(true);
+                                },
+                            }}
                         />
                     </Permission>
                 </div>
@@ -626,76 +880,90 @@ const OpeningStock = () => {
                     emptyMessage="No opening stocks found"
                     actions={(row: any) => (
                         <div className="flex items-center gap-2">
-                            <Permission module="bookez" permissionKey="openingStock" action="update">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const body =
-                                        row?.openingStockBody?.length > 0
-                                            ? row.openingStockBody.map((item: any) =>
-                                                calculateRow({
-                                                    ...item,
-                                                    id: item.id || Date.now() + Math.random(),
-                                                    productCode: item.productCode || "",
-                                                    productName: item.productName || "",
-                                                    productId: item.productId || "",
-                                                    description: item.description || "",
-                                                    remarks: item.remarks || "",
-                                                    quantity: item.quantity || "",
-                                                    unit: item.unit || "",
-                                                    unitName: item.unitName || "",
-                                                    rate: item.rate || "",
-                                                    discountPercentage: item.discountPercentage || "",
-                                                    cgstPercentage: item.cgstPercentage || "",
-                                                    sgstPercentage: item.sgstPercentage || "",
-                                                    igstPercentage: item.igstPercentage || "",
-                                                    otherAmount: item.otherAmount || "",
-                                                })
-                                            )
-                                            : [
-                                                {
-                                                    ...emptyProductRow,
-                                                    id: Date.now(),
-                                                },
-                                            ];
-
-                                    setForm({
-                                        ...row,
-                                        openingStockVoucherNumber: row?.openingStockVoucherNumber || "OPSTOCK",
-                                        openingStockDate: row?.openingStockDate || todayYMD(),
-                                        remark: row?.remark || "",
-                                        openingStockBody: body,
-                                    });
-
-                                    setEdit(true);
-                                    setErrors({});
-                                    setShowModal(true);
-                                }}
-                                className="cursor-pointer rounded-lg p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                            <Permission
+                                module="bookez"
+                                permissionKey="openingStock"
+                                action="update"
                             >
-                                <Edit size={16} />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const body =
+                                            row?.openingStockBody?.length > 0
+                                                ? row.openingStockBody.map((item: any) =>
+                                                    calculateRow({
+                                                        ...item,
+                                                        id: item.id || Date.now() + Math.random(),
+                                                        productCode: item.productCode || "",
+                                                        productName: item.productName || "",
+                                                        productId: item.productId || "",
+                                                        description: item.description || "",
+                                                        remarks: item.remarks || "",
+                                                        quantity: item.quantity || "",
+                                                        unit: item.unit || "",
+                                                        unitName: item.unitName || "",
+                                                        rate: item.rate || "",
+                                                        discountPercentage:
+                                                            item.discountPercentage || "",
+                                                        cgstPercentage: item.cgstPercentage || "",
+                                                        sgstPercentage: item.sgstPercentage || "",
+                                                        igstPercentage: item.igstPercentage || "",
+                                                        otherAmount: item.otherAmount || "",
+                                                    })
+                                                )
+                                                : [
+                                                    {
+                                                        ...emptyProductRow,
+                                                        id: Date.now(),
+                                                    },
+                                                ];
+
+                                        setForm({
+                                            ...row,
+                                            openingStockVoucherNumber:
+                                                row?.openingStockVoucherNumber || "OPSTOCK",
+                                            openingStockDate: row?.openingStockDate || todayYMD(),
+                                            remark: row?.remark || "",
+                                            openingStockBody: body,
+                                        });
+
+                                        setEdit(true);
+                                        setErrors({});
+                                        setShowModal(true);
+                                    }}
+                                    className="cursor-pointer rounded-lg p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                >
+                                    <Edit size={16} />
                                 </button>
                             </Permission>
-                            <Permission module="bookez" permissionKey="openingStock" action="delete">
-                            <button
-                                type="button"
-                                disabled={deleteLoader}
-                                onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    let x = rect.left - 150;
-                                    if (x < 10) x = 10;
-                                    const y = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({
-                                        show: true,
-                                        x,
-                                        y,
-                                        openingStockVoucherNumber:
-                                            row?.openingStockVoucherNumber,
-                                    });
-                                }}
-                                className="text-red-500 hover:text-red-700 disabled:opacity-60"
+
+                            <Permission
+                                module="bookez"
+                                permissionKey="openingStock"
+                                action="delete"
                             >
-                                <Trash2 size={16} />
+                                <button
+                                    type="button"
+                                    disabled={deleteLoader}
+                                    onClick={(e) => {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+
+                                        let x = rect.left - 150;
+                                        if (x < 10) x = 10;
+
+                                        const y = rect.top + window.scrollY - 5;
+
+                                        setConfirmTooltip({
+                                            show: true,
+                                            x,
+                                            y,
+                                            openingStockVoucherNumber:
+                                                row?.openingStockVoucherNumber,
+                                        });
+                                    }}
+                                    className="cursor-pointer rounded-lg p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-60"
+                                >
+                                    <Trash2 size={16} />
                                 </button>
                             </Permission>
                         </div>
@@ -742,7 +1010,6 @@ const OpeningStock = () => {
                 />
             )}
 
-
             <DynamicAddForm
                 show={showModal}
                 setShow={setShowModal}
@@ -764,8 +1031,6 @@ const OpeningStock = () => {
                 bodyKey="openingStockBody"
                 handleChange={handleChange}
             />
-
-
         </>
     );
 };

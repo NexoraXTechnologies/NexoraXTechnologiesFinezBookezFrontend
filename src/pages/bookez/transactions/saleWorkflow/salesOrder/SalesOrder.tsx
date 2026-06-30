@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2} from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Badge from "../../../../../components/badge";
@@ -16,7 +16,7 @@ import professionalAxios from "../../../../../services/professionalAxios";
 import { fmtMoney, formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import Modal, { ListingModel } from "../../../../../components/modal";
-import { getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
+import { clearSelectedSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
 
@@ -79,14 +79,14 @@ const SalesOrder = () => {
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
-
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
         const selectedOption = getOptionByValue(field, selectedValue);
-        const updated = { ...oldData, [field.key]: selectedValue };
-        if (field?.mapFields && selectedOption?.raw) {
+        const raw = selectedOption?.raw || {};
+        const updated = { ...oldData, [field.key]: selectedValue, };
+        if (field?.mapFields && raw) {
             Object.entries(field.mapFields).forEach(([targetKey, sourceKey]) => {
-                updated[targetKey] = selectedOption.raw?.[sourceKey as string] ?? "";
+                updated[targetKey] = raw?.[sourceKey as string] ?? raw?.[String(sourceKey).toLowerCase()] ?? raw?.[String(sourceKey).toUpperCase()] ?? "";
             });
         }
         return updated;
@@ -200,18 +200,18 @@ const SalesOrder = () => {
             title: "Customer",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">{row?.sOrderCustomerName || "-"}</div>
-                    <div className="text-xs text-slate-500">{row?.sOrderCustomerCode || "-"}</div>
+                    <div className="font-medium text-card-foreground">{row?.sOrderCustomerName || "-"}</div>
+                    <div className="text-xs text-muted-foreground">{row?.sOrderCustomerCode || "-"}</div>
                 </div>
             ),
         },
         { key: "sOrderBody", title: "Items", render: (row: any) => row?.sOrderBody?.length || 0 },
-        { key: "sOrderFooter", title: "Net Amount", render: (row: any) => <span className="font-semibold text-indigo-700">{money(row?.sOrderFooter?.netAmount || 0)}</span> },
+        { key: "sOrderFooter", title: "Net Amount",type: "amount", render: (row: any) => <span className="font-semibold text-primary">{money(row?.sOrderFooter?.netAmount || 0)}</span> },
         {
             key: "sOrderDocStatus",
             title: "Doc Status",
             render: (row: any) => (
-                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sOrderDocStatus || row?.sOrderStatus) === "open" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(row?.sOrderDocStatus || row?.sOrderStatus) === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>
                     {row?.sOrderDocStatus || row?.sOrderStatus || "-"}
                 </span>
             ),
@@ -278,19 +278,51 @@ const SalesOrder = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
-        if (duplicate) {
-            setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
-            return
+        const duplicate = Boolean(
+            form?.products?.some((e: any, i: number) => {
+                if (i === index) return false;
+
+                return (
+                    String(e?.productCode || "") === String(value || "") ||
+                    String(e?.productId || "") === String(value || "")
+                );
+            })
+        );
+
+        if (key === "productCode" && duplicate) {
+            setErrors((prev: any) => ({
+                ...prev,
+                products: "",
+                [`row_${index}_${key}`]: "This product already added",
+                [`row_${index}_tax`]: "",
+            }));
+            return;
         }
+
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-            let updatedRow = { ...currentRow, [key]: value };
-            if (currentField?.mapFields) updatedRow = applyMappedFields(currentField, value, updatedRow);
+            let updatedRow = { ...currentRow, [key]: value, };
+            if (currentField?.mapFields) { updatedRow = applyMappedFields(currentField, value, updatedRow); }
             const selectedOption = getOptionByValue(currentField, value);
-            if (selectedOption?.raw?._id && !updatedRow.productId) updatedRow.productId = selectedOption.raw._id;
+            const raw = selectedOption?.raw || {};
+            if (raw?._id && !updatedRow.productId) { updatedRow.productId = raw._id; }
+            if (key === "productCode" || key === "productName" || key === "productId") {
+                updatedRow.cgst = raw?.csgst;
+                updatedRow.sgst = raw?.csgst;
+                updatedRow.igst = raw?.igst;
+                if (num(updatedRow.igst) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstAmount = 0;
+                }
+            }
             updatedRow = normalizeRowKeys(updatedRow);
             if ((key === "cgst" || key === "sgst") && num(value) > 0) {
                 updatedRow.igst = "";
@@ -304,11 +336,16 @@ const SalesOrder = () => {
             }
             updatedRow = calculateRow(updatedRow);
             updatedProducts[index] = updatedRow;
-            return { ...prev, products: updatedProducts };
+            return { ...prev, products: updatedProducts, };
         });
-        setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "", [`row_${index}_tax`]: "" }));
-    };
 
+        setErrors((prev: any) => ({
+            ...prev,
+            products: "",
+            [`row_${index}_${key}`]: "",
+            [`row_${index}_tax`]: "",
+        }));
+    };
     const getFilledRows = () => {
         const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
         return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
@@ -365,10 +402,10 @@ const SalesOrder = () => {
         })).map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
-    const syncPurchaseOrderStatusAfterGrn = async (e: string) => {
+    const syncQuotationStatusAfterSalesOrdr = async (e: string) => {
         if (!e) return "";
         try {
-            await dispatch(updateSalesQuotation({ payload: { sQuoteDocStatus: "close" }, sQuoteVoucherNumber: e }) as any);
+            await dispatch(updateSalesQuotation({ payload: { sQuoteDocStatus: "close", sQuoteStatus: "close" }, sQuoteVoucherNumber: e }) as any);
             await fetchSalesQuotations();
         } catch (error) {
             toast.error("sales Quotation saved but failed to update purchase order status");
@@ -386,8 +423,8 @@ const SalesOrder = () => {
             sOrderCustomerCode: form.sOrderCustomerCode,
             sOrderCustomerName: form.sOrderCustomerName,
             sOrderSalesAccount: form.sOrderSalesAccount || "SA021",
-            sOrderStatus: form.sOrderStatus || form.sOrderDocStatus || "open",
-            sOrderDocStatus: form.sOrderDocStatus || form.sOrderStatus || "open",
+            sOrderStatus: "open",
+            sOrderDocStatus: "open",
             sOrderRemark: form.sOrderRemark || form.sOrderRemarks || "",
             sOrderRemarks: form.sOrderRemarks || form.sOrderRemark || "",
             isAutoPost: form.isAutoPost || false,
@@ -401,32 +438,60 @@ const SalesOrder = () => {
             } else {
                 await dispatch(createSalesOrder(payload) as any).unwrap();
                 if (form?.sOrderQuotationVoucherNumber) {
-                    const poStatus:any = await syncPurchaseOrderStatusAfterGrn(form?.sOrderQuotationVoucherNumber);
-                    if (poStatus === "close") toast.success("Sales order created successfully and Sales Quotation closed");
-                    else toast.success("Sales order created successfully");
-                } else {
-                    toast.success("Sales order created successfully");
+                    syncQuotationStatusAfterSalesOrdr(form?.sOrderQuotationVoucherNumber);
+                    // if (poStatus === "close") toast.success("Sales order created successfully and Sales Quotation closed");
                 }
                 toast.success("Sales order created successfully");
             }
             setShowModal(false);
             resetMainForm();
             fetchSalesOrders();
+            await fetchSalesQuotations();
+            handlePurchaseOrderModalClose(false);
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }
     };
 
+    // const handleDeleteConfirm = async () => {
+    //     try {
+    //         if (!confirmTooltip.voucherNumber) return;
+    //         await dispatch(deleteSalesOrder(confirmTooltip.voucherNumber) as any).unwrap();
+    //         toast.success("Sales order deleted successfully");
+    //         fetchSalesOrders();
+    //     } catch (err: any) {
+    //         toast.error(err?.message || "Failed to delete sales order");
+    //     } finally {
+    //         setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
+    //     }
+    // };
+
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-            await dispatch(deleteSalesOrder(confirmTooltip.voucherNumber) as any).unwrap();
+            const salesOrderVoucherNumber = confirmTooltip.voucherNumber;
+            const salesQuotationVoucherNumber = (confirmTooltip as any)?.quotationVoucherNumber;
+            await dispatch(deleteSalesOrder(salesOrderVoucherNumber) as any).unwrap();
+            if (salesQuotationVoucherNumber) {
+                await dispatch(
+                    updateSalesQuotation({
+                        sQuoteVoucherNumber: salesQuotationVoucherNumber,
+                        payload: { sQuoteDocStatus: "open", sQuoteStatus: "won" },
+                    }) as any
+                ).unwrap();
+            }
             toast.success("Sales order deleted successfully");
             fetchSalesOrders();
+            fetchSalesQuotations();
         } catch (err: any) {
             toast.error(err?.message || "Failed to delete sales order");
         } finally {
-            setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
+            setConfirmTooltip({
+                show: false,
+                x: null,
+                y: null,
+                voucherNumber: null,
+            });
         }
     };
 
@@ -441,23 +506,25 @@ const SalesOrder = () => {
         setErrors({});
         setEditingRecord(null);
         setShowPurchaseOrderModal(false);
+        setSelectedPurchaseOrder(null)
         setShowModal(true);
     };
 
     const handlePurchaseOrderSelect = (purchaseOrder: any) => setSelectedPurchaseOrder(purchaseOrder);
 
     const fetchSalesQuotations = async () => {
+        await clearSelectedSalesQuotation()
         await dispatch(getSalesQuotationList({ offset: 0, limit: 100, search: purchaseOrderSearch, status: "won" }) as any);
     };
 
-    const handlePurchaseOrderModalClose = () => {
+    const handlePurchaseOrderModalClose = (isModalFalse = true) => {
         setShowPurchaseOrderModal(false);
         setSelectedPurchaseOrder(null);
         setPurchaseOrderSearch("");
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
-        setShowModal(true);
+        setShowModal(isModalFalse);
     };
 
     useEffect(() => {
@@ -477,18 +544,54 @@ const SalesOrder = () => {
         // @ts-ignore 
         dispatch(getAllReportMapping({ moduleType: "salesOrder" }))
     }, [])
+
+    const isClosedSalesOrder = (record: any) => {
+        const orderStatus = String(
+            record?.sOrderDocStatus || record?.sOrderStatus || ""
+        ).toLowerCase();
+
+        return orderStatus === "close" || orderStatus === "closed";
+    };
+
+    const handleEditSalesOrder = (record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't edit closed order");
+            return;
+        }
+        openEditModal(record);
+    };
+
+    const handleDeleteSalesOrderClick = (e: any, record: any) => {
+        if (isClosedSalesOrder(record)) {
+            toast.error("You can't delete closed order");
+            return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+        if (x < 10) x = 10;
+        const y = rect.top + window.scrollY - 5;
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.sOrderVoucherNumber,
+            quotationVoucherNumber: record?.sOrderQuotationVoucherNumber,
+        } as any);
+    };
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-order-header" className="mb-3 flex items-center">
                 <div id="sales-order-summary" className="flex items-start gap-3">
                     <Badge {...{ count: pagination?.totalDocs ?? 0, text: "Total Sales Orders:", varient: "primary" }} />
                 </div>
+
                 <div className="ml-auto flex items-center gap-2">
                     <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
                     <SearchInput {...{ search, setSearch }} />
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
+
                     <Permission module="bookez" permissionKey="salesOrder" action="create">
-                    {/* @ts-ignore */}
+                        {/* @ts-ignore */}
                         <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Order" }} />
                     </Permission>
                 </div>
@@ -502,31 +605,35 @@ const SalesOrder = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <button id="sales-quotation-edit-button" onClick={() => {
-                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }));
+                            setDownlaodPDF((pre) => ({ ...pre, show: true, moduleType: "salesOrder", record, CustomerCode: record?.sOrderCustomerCode, voucherNumber: record?.sOrderVoucherNumber }));
                         }
 
-                        } className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                        } className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary">
                             <Download size={16} />
                         </button>
+
                         <Permission module="bookez" permissionKey="salesOrder" action="update">
-                        <button id="sales-order-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
-                            <Edit size={16} />
+                            {/* <button id="sales-order-edit-button" onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700">
+                                <Edit size={16} />
+                            </button> */}
+
+                            <button
+                                id="sales-order-edit-button"
+                                onClick={() => handleEditSalesOrder(record)}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 ${isClosedSalesOrder(record)  }`}
+                            >
+                                <Edit size={16} />
                             </button>
                         </Permission>
+
                         <Permission module="bookez" permissionKey="salesOrder" action="delete">
-                        <button
-                            id="sales-order-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sOrderVoucherNumber });
-                            }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
-                        >
-                            <Trash2 size={16} />
+                            <button
+                                id="sales-order-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => handleDeleteSalesOrderClick(e, record)}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:text-danger hover:text-danger ${isClosedSalesOrder(record)                              }`}
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>
@@ -598,27 +705,28 @@ const SalesOrder = () => {
                 gridCols={1}
                 maxWidth="2xl"
                 modalClassName="rounded-xl"
-                headerClassName="bg-white"
-                footerClassName="bg-white"
-                bodyClassName="!block !p-0"
+                headerClassName="bg-card"
+                footerClassName="bg-card"
+                bodyClassName="!block !p-0 bg-card text-card-foreground"
                 body={
-                    <div className="flex h-[520px] flex-col">
-                        <div className="border-b border-gray-200 p-5">
+                    <div className="flex h-[520px] flex-col bg-card text-card-foreground">
+                        <div className="border-b border-border p-5">
                             <input
                                 value={purchaseOrderSearch}
                                 onChange={(e) => setPurchaseOrderSearch(e.target.value)}
-                                placeholder="Search Purchase Order code..."
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                placeholder="Search Sales Quotations..."
+                                className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
+
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {salesQuatationLoader ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">Loading purchase orders...</div>
-                            ) : salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open")?.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm font-medium text-gray-500">No purchase order found</div>
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">Loading Sales Quotations...</div>
+                            ) : !salesQuotations?.length ? (
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">No Sales Quotations found</div>
                             ) : (
                                 <div className="space-y-3">
-                                    {salesQuotations?.filter((e: any) => e?.sQuoteDocStatus == "open")?.map((e: any, index: number) => {
+                                    {salesQuotations?.map((e: any, index: number) => {
                                         const poNumber = e?.sQuoteVoucherNumber || "-";
                                         const isSelected = selectedPurchaseOrder?.sQuoteVoucherNumber == e?.sQuoteVoucherNumber;
                                         return (
@@ -626,14 +734,27 @@ const SalesOrder = () => {
                                                 key={poNumber || index}
                                                 type="button"
                                                 onClick={() => handlePurchaseOrderSelect(e)}
-                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100" : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"}`}
+                                                className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
+                                                    ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                    : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-base font-bold text-gray-900">{e?.sQuoteVoucherNumber || "NA"} - {e?.sQuoteCustomerName || "NA"}</p>
-                                                        <p className="mt-1 text-xs font-medium text-gray-500">Items: {e?.sQuoteBody?.length || 0}</p>
+                                                        <p className="text-base font-bold text-card-foreground">
+                                                            {e?.sQuoteVoucherNumber || "NA"} - {e?.sQuoteCustomerName || "NA"}
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-medium text-muted-foreground">
+                                                            Items: {e?.sQuoteBody?.length || 0}
+                                                        </p>
                                                     </div>
-                                                    {isSelected && <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">Selected</span>}
+
+                                                    {isSelected && (
+                                                        <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                                                            Selected
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </button>
                                         );
@@ -644,8 +765,9 @@ const SalesOrder = () => {
                     </div>
                 }
             />
+
             {/* @ts-ignore  */}
-            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-order", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF"}} />
+            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-order", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Order PDF" }} />
         </div>
     );
 };

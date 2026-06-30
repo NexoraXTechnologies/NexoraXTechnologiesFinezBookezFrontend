@@ -6,7 +6,7 @@ export const getHSNCode = createAsyncThunk(
     async (
         {
             offset = 0,
-            limit = 10,
+            limit = null,
             search = "",
             productType = "",
         }: any = {},

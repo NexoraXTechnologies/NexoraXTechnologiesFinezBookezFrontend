@@ -74,7 +74,7 @@ export const createStockLedger = createAsyncThunk<
                 });
             }
 
-            return res?.data?.data;
+            return res?.data?.data || null;
         } catch (error: any) {
             return rejectWithValue({
                 message:
@@ -112,6 +112,9 @@ const stockLedgerSlice = createSlice({
 
         clearStockLedgerData: (state) => {
             state.stockLedgerData = null;
+            state.error = null;
+            state.listingLoader = false;
+            state.exportLoader = false;
         },
     },
     extraReducers: (builder) => {
@@ -123,6 +126,9 @@ const stockLedgerSlice = createSlice({
                     state.exportLoader = true;
                 } else {
                     state.listingLoader = true;
+
+                    // ✅ Important: clear old stock ledger table before new fetch
+                    state.stockLedgerData = null;
                 }
             })
 
@@ -134,7 +140,7 @@ const stockLedgerSlice = createSlice({
 
                 state.listingLoader = false;
                 state.exportLoader = false;
-                state.stockLedgerData = action.payload;
+                state.stockLedgerData = action.payload || null;
                 state.error = null;
             })
 
@@ -142,7 +148,6 @@ const stockLedgerSlice = createSlice({
                 state.listingLoader = false;
                 state.exportLoader = false;
                 state.stockLedgerData = null;
-
                 state.error =
                     action.payload?.message ||
                     "Failed to fetch stock ledger";

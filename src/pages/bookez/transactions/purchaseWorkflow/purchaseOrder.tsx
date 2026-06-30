@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
@@ -14,7 +14,8 @@ import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Permission from "../../../../components/PermissionGuard";
-
+import { ListingModel } from "../../../../components/modal";
+import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -86,7 +87,6 @@ const getDefaultForm = () => ({
     pOrdVendorName: "",
 
     pOrdStatus: "open",
- 
 
     pOrdRemark: "",
     pOrdStatusRemark: "",
@@ -115,7 +115,7 @@ const PurchaseOrder = () => {
     const purchaseOrderState = useSelector(
         (state: any) => state.purchaseOrder
     );
-
+    const { report } = useSelector((s: any) => s.reportMapping);
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
     );
@@ -157,6 +157,7 @@ const PurchaseOrder = () => {
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
+    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -221,6 +222,48 @@ const PurchaseOrder = () => {
         return updated;
     };
 
+    const hasValue = (value: any) => value !== undefined && value !== null && value !== "";
+
+    const fillProductDetailsFromSelectedOption = (row: any, selectedOption: any) => {
+        const product = selectedOption?.raw;
+        if (!product) return row;
+
+        const unitCode = product?.unit || row.unit || row.uom || "";
+        const csgst = hasValue(product?.csgst) ? String(product.csgst) : "";
+        const igst = hasValue(product?.igst) ? String(product.igst) : "";
+
+        return {
+            ...row,
+
+            productId: product?._id || row.productId || "",
+            productCode: product?.productCode || row.productCode || "",
+            productName: product?.productName || row.productName || "",
+
+            productDescription:
+                product?.productDescription || row.productDescription || "",
+
+            description:
+                product?.productDescription || row.description || "",
+
+            productHSNCode:
+                product?.productHSNCode || row.productHSNCode || "",
+
+            unit: unitCode,
+            uom: unitCode,
+            unitName: getUnitLabelFromSchema(unitCode),
+
+            rate: hasValue(product?.purchasePrice)
+                ? String(product.purchasePrice)
+                : row.rate || "",
+
+            cgst: csgst || row.cgst || "",
+            cgstPercentage: csgst || row.cgstPercentage || "",
+
+            igst: igst || row.igst || "",
+            igstPercentage: igst || row.igstPercentage || "",
+        };
+    };
+
     const getUnitLabelFromSchema = (unitCode: string) => {
         const unitField = templateFields?.body?.find(
             (field: any) => field.key === "uom" || field.key === "unit"
@@ -279,7 +322,6 @@ const PurchaseOrder = () => {
        CALCULATIONS
     =================================================== */
 
-   
     const calculateRow = (row: any) => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
@@ -367,9 +409,6 @@ const PurchaseOrder = () => {
         };
     };
 
-
-  
-
     const calculateFooter = (products: any[]) => {
         return (products || []).reduce(
             (acc: any, item: any) => {
@@ -446,6 +485,11 @@ const PurchaseOrder = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
+    useEffect(() => {
+        /* @ts-ignore  */
+        dispatch(getAllReportMapping({ moduleType: "purchaseOrder" }));
+    }, []);
+
     /* ===================================================
        LOAD TRANSACTION SCHEMA WITH API OPTIONS
     =================================================== */
@@ -453,20 +497,11 @@ const PurchaseOrder = () => {
     useEffect(() => {
         const prepareFields = async () => {
             if (!transactionsSchema) return;
-
-            const hasSchema =
-                Array.isArray(transactionsSchema?.header) ||
-                Array.isArray(transactionsSchema?.body) ||
-                Array.isArray(transactionsSchema?.footer);
-
+            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
             if (!hasSchema) return;
-
             try {
                 setFieldsLoading(true);
-
-                const updatedData =
-                    await loadAllTemplateOptions(transactionsSchema);
-
+                const updatedData = await loadAllTemplateOptions(transactionsSchema);
                 setTemplateFields(updatedData);
             } catch (error) {
                 console.log("Failed to prepare template fields", error);
@@ -500,36 +535,36 @@ const PurchaseOrder = () => {
             title: "Vendor",
             render: (row: any) => (
                 <div>
-                    <div className="font-medium text-slate-800">
+                    <div className="font-medium text-card-foreground">
                         {row?.pOrdVendorName || "-"}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                         {row?.pOrdVendorCode || "-"}
                     </div>
                 </div>
             ),
         },
-         {
+        {
             key: "pOrdBody",
             title: "Items",
             render: (row: any) => row?.pOrdBody?.length || 0,
         },
-       
+
         {
             key: "pOrdFooter",
             title: "Net Amount",
             render: (row: any) => (
-                <span className="font-semibold text-indigo-700">
+                <span className="font-semibold text-primary">
                     {money(row?.pOrdFooter?.netAmount || 0)}
                 </span>
             ),
         },
-       
+
         {
             key: "pOrdStatus",
             title: "Order Status",
             render: (row: any) => (
-                <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium capitalize text-blue-700">
+                <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
                     {row?.pOrdStatus || "-"}
                 </span>
             ),
@@ -626,7 +661,7 @@ const PurchaseOrder = () => {
                             taxableAmount: item?.taxableAmount || 0,
 
                             cgst:
-                                item?.cgst ||
+                                item?.csgst ||
                                 item?.cgstPercentage ||
                                 "",
 
@@ -694,7 +729,6 @@ const PurchaseOrder = () => {
 
             pOrdPurchaseAccount: record?.pOrdPurchaseAccount || "",
 
-          
             pOrdStatus: record?.pOrdStatus || "open",
 
             pOrdRemark: record?.pOrdRemark || "",
@@ -796,11 +830,9 @@ const PurchaseOrder = () => {
         });
     };
 
-
     const handleRowChange = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
-
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
 
@@ -810,35 +842,53 @@ const PurchaseOrder = () => {
             };
 
             if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(
-                    currentField,
-                    value,
-                    updatedRow
-                );
+                updatedRow = applyMappedFields(currentField, value, updatedRow);
             }
 
             const selectedOption = getOptionByValue(currentField, value);
-
-            if (selectedOption?.raw?._id && !updatedRow.productId) {
-                updatedRow.productId = selectedOption.raw._id;
-            }
-
-            updatedRow = normalizeRowKeys(updatedRow);
-
+            const raw = selectedOption?.raw || {};
             const lowerKey = String(key).toLowerCase();
+            const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
+            if (isProductField && selectedOption?.raw) {
+                updatedRow = fillProductDetailsFromSelectedOption(updatedRow, selectedOption);
+                updatedRow.productCode = raw?.productCode || raw?.code || updatedRow.productCode || "";
+                updatedRow.productName = raw?.productName || raw?.name || selectedOption?.label || updatedRow.productName || "";
+                updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
+                const cgstValue = raw?.cgstPercentage ?? raw?.cgst ?? raw?.csgst ?? raw?.cgstRate ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
+                const sgstValue = raw?.sgstPercentage ?? raw?.sgst ?? raw?.csgst ?? raw?.sgstRate ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
+                const igstValue = raw?.igstPercentage ?? raw?.igst ?? raw?.igstRate ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
+                updatedRow.cgst = cgstValue;
+                updatedRow.sgst = sgstValue;
+                updatedRow.igst = igstValue;
+                updatedRow.cgstPercentage = cgstValue;
+                updatedRow.sgstPercentage = sgstValue;
+                updatedRow.igstPercentage = igstValue;
 
+                if (num(igstValue) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstPercentage = "";
+                    updatedRow.sgstPercentage = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+
+                if (num(cgstValue) > 0 || num(sgstValue) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                }
+            }
+            updatedRow = normalizeRowKeys(updatedRow);
             const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
             const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
             const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
-
-            // ✅ CGST/SGST selected, so clear IGST
             if ((isCgst || isSgst) && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstPercentage = "";
                 updatedRow.igstAmount = 0;
             }
 
-            // ✅ IGST selected, so clear CGST/SGST
             if (isIgst && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
@@ -849,7 +899,6 @@ const PurchaseOrder = () => {
             }
 
             updatedRow = calculateRow(updatedRow);
-
             updatedProducts[index] = updatedRow;
 
             return {
@@ -871,6 +920,7 @@ const PurchaseOrder = () => {
             [`row_${index}_sgst`]: "",
         }));
     };
+
     /* ===================================================
        DYNAMIC VALIDATION
     =================================================== */
@@ -890,23 +940,17 @@ const PurchaseOrder = () => {
 
     const validateForm = () => {
         const err: any = {};
-
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden) return;
             if (!field.isRequired) return;
-
             const value = form?.[field.key];
-
             if (value === undefined || value === null || value === "") {
                 err[field.key] = `${field.label || field.key} is required`;
             }
         });
 
         const filledRows = getFilledRows();
-
-        if (filledRows.length === 0) {
-            err.products = "Please add at least one product";
-        }
+        if (filledRows.length === 0) { err.products = "Please add at least one product"; }
 
         (form.products || []).forEach((row: any, index: number) => {
             const hasAnyValue = (templateFields?.body || []).some(
@@ -922,38 +966,22 @@ const PurchaseOrder = () => {
             );
 
             if (!hasAnyValue) return;
-
             (templateFields?.body || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
-
                 const value = row?.[field.key];
-
-                if (
-                    value === undefined ||
-                    value === null ||
-                    value === ""
-                ) {
-                    err[`row_${index}_${field.key}`] = `${field.label || field.key
-                        } is required`;
+                if (value === undefined || value === null || value === "") {
+                    err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
                 }
             });
-
             const cgst = num(row.cgstPercentage || row.cgst);
             const sgst = num(row.sgstPercentage || row.sgst);
             const igst = num(row.igstPercentage || row.igst);
-
             if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] =
-                    "You can enter either IGST or CGST/SGST";
-
-                err[`row_${index}_igstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] =
-                    "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] =
-                    "Only one tax type allowed";
-
+                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
+                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
                 err[`row_${index}_igst`] = "Only one tax type allowed";
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
@@ -961,29 +989,17 @@ const PurchaseOrder = () => {
         });
 
         setErrors(err);
-
-        if (err.products) {
-            toast.error(err.products);
-        }
-
+        if (err.products) { toast.error(err.products); }
         return Object.keys(err).length === 0;
     };
 
     const cleanRows = () => {
-        const bodyKeys = (templateFields?.body || []).map(
-            (field: any) => field.key
-        );
-
+        const bodyKeys = (templateFields?.body || []).map((field: any) => field.key);
         return (form.products || [])
             .filter((row: any) => {
                 return bodyKeys.some((key: string) => {
                     const value = row?.[key];
-
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    );
+                    return (value !== undefined && value !== null && value !== "");
                 });
             })
             .map((row: any) => calculateRow(normalizeRowKeys(row)));
@@ -993,7 +1009,6 @@ const PurchaseOrder = () => {
        SUBMIT
     =================================================== */
 
-
     const getTaxValue = (primary: any, fallback: any) => {
         return primary !== undefined && primary !== null && primary !== ""
             ? primary
@@ -1001,6 +1016,7 @@ const PurchaseOrder = () => {
                 ? fallback
                 : "";
     };
+
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
@@ -1016,7 +1032,6 @@ const PurchaseOrder = () => {
             pOrdPurchaseAccount: form.pOrdPurchaseAccount,
 
             pOrdStatus: form.pOrdStatus || "open",
-         
 
             pOrdRemark: form.pOrdRemark,
 
@@ -1200,8 +1215,47 @@ const PurchaseOrder = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
+
+    const isClosedPurchaseOrder = (record: any) => {
+        const pOrdStatus = String(
+            record?.pOrdStatus || ""
+        ).toLowerCase();
+
+        return pOrdStatus === "close" || pOrdStatus === "closed";
+    };
+
+    const handleEditPurOrder = (record: any) => {
+        if (isClosedPurchaseOrder(record)) {
+            toast.error("You can't edit closed Order");
+            return;
+        }
+
+        openEditModal(record);
+    };
+
+    const handleDeletePurOrderClick = (e: any, record: any) => {
+        if (isClosedPurchaseOrder(record)) {
+            toast.error("You can't delete closed Order");
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        let x = rect.left - 150;
+
+        if (x < 10) x = 10;
+
+        const y = rect.top + window.scrollY - 5;
+
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            voucherNumber: record?.pOrdVoucherNumber,
+        });
+    };
+
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div
                 id="purchase-order-header"
                 className="mb-3 flex items-center"
@@ -1229,19 +1283,21 @@ const PurchaseOrder = () => {
                     />
 
                     <SearchInput {...{ search, setSearch }} />
+
                     <DataREfreshButton
                         {...{
                             callBackFn: handleRefresh,
                             loading: refreshing,
                         }}
                     />
+
                     <Permission module="bookez" permissionKey="purchaseOrder" action="create">
-                    {/* @ts-ignore */}
-                    <DataCreateButton
-                        {...{
-                            callBackFn: openAddModal,
-                            text: "Add Purchase Order",
-                        }}
+                        {/* @ts-ignore */}
+                        <DataCreateButton
+                            {...{
+                                callBackFn: openAddModal,
+                                text: "Add Purchase Order",
+                            }}
                         />
                     </Permission>
                 </div>
@@ -1254,38 +1310,50 @@ const PurchaseOrder = () => {
                 emptyMessage={`No ${status} purchase order found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <Permission module="bookez" permissionKey="purchaseOrder" action="update">
                         <button
-                            id="purchase-order-edit-button"
-                            onClick={() => openEditModal(record)}
-                            className="cursor-pointer rounded-md p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
-                        >
-                            <Edit size={16} />
-                        </button>
-                        </Permission>
-                        <Permission module="bookez" permissionKey="purchaseOrder" action="delete">
-                        <button
-                            id="purchase-order-delete-button"
-                            disabled={deleteLoading}
-                            onClick={(e) => {
-                                const rect =
-                                    e.currentTarget.getBoundingClientRect();
-
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-
-                                const y = rect.top + window.scrollY - 5;
-
-                                setConfirmTooltip({
+                            id="sales-quotation-edit-button"
+                            onClick={() => {
+                                setDownlaodPDF((pre: any) => ({
+                                    ...pre,
                                     show: true,
-                                    x,
-                                    y,
+                                    moduleType: "purchaseOrder",
+                                    record,
+                                    CustomerCode: record?.pOrdVendorCode,
                                     voucherNumber: record?.pOrdVoucherNumber,
-                                });
+                                }));
                             }}
-                            className="cursor-pointer rounded-md p-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
-                            <Trash2 size={16} />
+                            <Download size={16} />
+                        </button>
+                        <Permission module="bookez" permissionKey="purchaseOrder" action="update">
+                            {/* <button
+                                id="purchase-order-edit-button"
+                                onClick={() => openEditModal(record)}
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            >
+                                <Edit size={16} />
+                            </button> */}
+
+                            <button id="purchase-order-edit-button"
+                                onClick={() => handleEditPurOrder(record)}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary ${isClosedPurchaseOrder(record)
+
+                                    }`}
+                            >                            <Edit size={16} />
+                            </button>
+                        </Permission>
+
+                        <Permission module="bookez" permissionKey="purchaseOrder" action="delete">
+                            <button
+                                id="purchase-order-delete-button"
+                                disabled={deleteLoading}
+                                onClick={(e) => handleDeletePurOrderClick(e, record)}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger ${isClosedPurchaseOrder
+                                    (record)
+                                    }`}
+                            >
+                                <Trash2 size={16} />
                             </button>
                         </Permission>
                     </div>
@@ -1359,6 +1427,24 @@ const PurchaseOrder = () => {
                     }}
                 />
             )}
+
+            {/* @ts-ignore  */}
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    downlaodPDF,
+                    entryType: "purchase-order",
+                    setShow: () =>
+                        setDownlaodPDF(() => ({
+                            show: !downlaodPDF?.show,
+                        })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Purchase Order PDF",
+                    cancelText: "Cancel",
+                    confirmText: "Confirm",
+                }}
+            />
         </div>
     );
 };

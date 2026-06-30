@@ -243,7 +243,7 @@ const salesQuotationSlice = createSlice({
     },
 
     clearSelectedSalesQuotation: (state) => {
-      state.selectedSalesQuotation = null;
+      state.salesQuotations = [];
     },
 
     setSelectedSalesQuotation: (state, action) => {

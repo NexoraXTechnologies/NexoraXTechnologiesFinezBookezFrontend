@@ -5,12 +5,11 @@ import {
   getCompany,
   replaceCompany,
   verifyIFSC,
-
 } from "../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 import { toast } from "react-toastify";
 import { Edit, RefreshCcw, CheckCircle2, Trash2 } from "lucide-react";
-import { SelectInput, TextArea, TextInput } from "../../components/inputs";
+import { ImageUploadInput, SelectInput, TextArea, TextInput } from "../../components/inputs";
 import Modal from "../../components/modal";
 import {
   getCitiesByState,
@@ -119,10 +118,10 @@ const CompanyMaster = () => {
   const fetchCompanies = () => {
     // @ts-ignore
     dispatch(getCompany({
-        offset: localOffset,
-        limit: localLimit,
-        search: debouncedSearch,
-      }) as any
+      offset: localOffset,
+      limit: localLimit,
+      search: debouncedSearch,
+    }) as any
     );
   };
 
@@ -341,14 +340,6 @@ const CompanyMaster = () => {
       e.companyAddress = "Company address is required";
     }
 
-    // if (!form.logoUri) {
-    //   e.logoUri = "Company logo is required";
-    // }
-
-    // if (!form.signatureUri) {
-    //   e.signatureUri = "Signature is required";
-    // }
-
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -426,16 +417,12 @@ const CompanyMaster = () => {
 
     try {
       if (editingCompany) {
-        const companyCode =
-          editingCompany.companyCode ||
-          editingCompany.companyPublicId ||
-          editingCompany.code ||
-          editingCompany._id;
+        // const companyCode = editingCompany.companyCode || editingCompany.companyPublicId || editingCompany.code || editingCompany._id;
+        // console.log({ payload, companyCode })
         // @ts-ignore
         await dispatch(replaceCompany({
-            companyCode,
-            data: payload,
-          }) as any
+          payload,
+        }) as any
         ).unwrap();
 
         toast.success("Company updated successfully");
@@ -459,12 +446,13 @@ const CompanyMaster = () => {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
+
       // @ts-ignore
       await dispatch(getCompany({
-          offset: 0,
-          limit: localLimit,
-          search: debouncedSearch,
-        }) as any
+        offset: 0,
+        limit: localLimit,
+        search: debouncedSearch,
+      }) as any
       ).unwrap();
 
       setLocalOffset(0);
@@ -476,39 +464,37 @@ const CompanyMaster = () => {
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    try {
-      if (!confirmTooltip.companyCode) {
-        toast.error("Company code not found");
-        return;
-      }
-      // @ts-ignore
-      await dispatch(deleteCompany(confirmTooltip.companyCode) as any).unwrap();
+  // const handleDeleteConfirm = async () => {
+  //   try {
+  //     if (!confirmTooltip.companyCode) {
+  //       toast.error("Company code not found");
+  //       return;
+  //     }
 
-      toast.success("Company deleted");
-      fetchCompanies();
-    } catch (err: any) {
-      toast.error(err?.message || "Delete failed");
-    } finally {
-      setConfirmTooltip({
-        show: false,
-        x: null,
-        y: null,
-        companyCode: null,
-      });
-    }
-  };
+  //     // @ts-ignore
+  //     await dispatch(deleteCompany(confirmTooltip.companyCode) as any).unwrap();
 
-  const isIfscVerified =
-    verifiedIfscCode === form.ifscCode?.trim().toUpperCase() &&
-    !errors.ifscCode;
+  //     toast.success("Company deleted");
+  //     fetchCompanies();
+  //   } catch (err: any) {
+  //     toast.error(err?.message || "Delete failed");
+  //   } finally {
+  //     setConfirmTooltip({
+  //       show: false,
+  //       x: null,
+  //       y: null,
+  //       companyCode: null,
+  //     });
+  //   }
+  // };
 
+  const isIfscVerified = verifiedIfscCode === form.ifscCode?.trim().toUpperCase() && !errors.ifscCode;
   const companyColumns = [
     {
       key: "companyName",
       title: "Company Name",
       render: (row: any) => (
-        <span className="font-semibold text-gray-900">
+        <span className="font-semibold text-card-foreground">
           {row.companyName || "-"}
         </span>
       ),
@@ -560,7 +546,7 @@ const CompanyMaster = () => {
   ];
 
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
+    <div className="w-full bg-card border border-border text-card-foreground shadow-sm p-4 flex flex-col h-[100%]">
       {/* ================= HEADER ================= */}
       <div id="company-header" className="flex flex-wrap items-center gap-2 mb-3">
         <div id="company-summary" className="flex items-start gap-3">
@@ -581,6 +567,7 @@ const CompanyMaster = () => {
               loading: refreshing,
             }}
           />
+
           {/* @ts-ignore */}
           <DataCreateButton
             {...{
@@ -598,11 +585,7 @@ const CompanyMaster = () => {
         loading={loading}
         emptyMessage="No company data found"
         actions={(companyRow: any) => {
-          const companyCode =
-            companyRow.companyCode ||
-            companyRow.companyPublicId ||
-            companyRow.code ||
-            companyRow._id;
+          const companyCode = companyRow.companyCode || companyRow.companyPublicId || companyRow.code || companyRow._id;
 
           return (
             <div className="flex items-center gap-2">
@@ -610,7 +593,7 @@ const CompanyMaster = () => {
               <button
                 id="company-edit-button"
                 onClick={() => openEditModal(companyRow)}
-                className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
+                className="p-2 rounded-lg text-primary hover:bg-muted hover:text-primary transition-all duration-200 cursor-pointer"
               >
                 <Edit size={16} />
               </button>
@@ -633,7 +616,7 @@ const CompanyMaster = () => {
                     companyCode,
                   });
                 }}
-                className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+                className="p-2 rounded-lg text-danger hover:bg-muted hover:text-danger transition-all duration-200 cursor-pointer"
               >
                 <Trash2 size={16} />
               </button>
@@ -667,7 +650,7 @@ const CompanyMaster = () => {
           message="Are you sure you want to delete this company?"
           confirmText="Delete"
           cancelText="Cancel"
-          onConfirm={handleDeleteConfirm}
+          // onConfirm={handleDeleteConfirm}
           onCancel={() =>
             setConfirmTooltip({
               show: false,
@@ -690,7 +673,7 @@ const CompanyMaster = () => {
           title: "Add New Company",
           gridCols: 3,
           maxWidth: "4xl",
-          bodyClassName: "p-5 gap-3",
+          bodyClassName: "p-5 gap-3 bg-card text-card-foreground",
           loading: createLoading || updateLoading,
           body: (
             <>
@@ -780,7 +763,7 @@ const CompanyMaster = () => {
 
                 <div className="absolute right-2 top-[28px]">
                   {isIfscVerified ? (
-                    <div className="h-[24px] w-[38px] text-green-600 rounded-md flex items-center justify-center">
+                    <div className="h-[24px] w-[38px] text-success rounded-md flex items-center justify-center">
                       <CheckCircle2 size={21} />
                     </div>
                   ) : (
@@ -788,7 +771,7 @@ const CompanyMaster = () => {
                       type="button"
                       onClick={handleIFSCVerify}
                       disabled={verifyLoading}
-                      className="h-[24px] px-3 text-xs border rounded-md bg-white hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+                      className="h-[24px] px-3 text-xs border border-border rounded-md bg-card text-card-foreground hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                     >
                       {verifyLoading ? (
                         <RefreshCcw size={14} className="animate-spin" />
@@ -913,137 +896,31 @@ const CompanyMaster = () => {
 
               {/* Logo + Signature */}
               <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {/* Company Logo */}
-                <div className="flex flex-col gap-1 w-full min-w-0">
-                  <label className="text-sm font-medium">
-                    Company Logo
-                    {/* <span className="text-red-500">*</span> */}
-                  </label>
+                <ImageUploadInput
+                  label="Company Logo"
+                  className="sm:col-span-1"
+                  value={form.logoUri}
+                  error={errors.logoUri}
+                  placeholder="Click to upload company logo"
+                  alt="Company Logo"
+                  // @ts-ignore
+                  validateImage={validateImage}
+                  fileToBase64={fileToBase64}
+                  onChange={(value) => updateField("logoUri", value)}
+                />
 
-                  <div
-                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-blue-400 transition relative h-[100px] sm:h-[110px] w-full min-w-0 ${errors.logoUri ? "border-red-500" : "border-gray-300"
-                      }`}
-                    onClick={() =>
-                      document.getElementById("companyLogoInput")?.click()
-                    }
-                  >
-                    {form.logoUri ? (
-                      <>
-                        <img
-                          src={form.logoUri}
-                          alt="Company Logo"
-                          className="max-w-full sm:max-w-[180px] max-h-[80px] sm:max-h-[90px] object-contain rounded"
-                        />
-
-                        <button
-                          type="button"
-                          className="absolute top-1.5 right-2 text-red-600 text-xs sm:text-sm font-medium hover:underline bg-white/80 px-1 rounded"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateField("logoUri", null);
-                          }}
-                        >
-                          × Remove
-                        </button>
-                      </>
-                    ) : (
-                      <p className="text-gray-500 text-xs sm:text-sm text-center">
-                        Click to upload company logo
-                      </p>
-                    )}
-                  </div>
-
-                  {errors.logoUri && (
-                    <p className="text-xs text-red-500">{errors.logoUri}</p>
-                  )}
-
-                  <input
-                    id="companyLogoInput"
-                    type="file"
-                    accept="image/png, image/jpeg, image/jpg, image/webp"
-                    className="hidden"
-                    onChange={async (e: any) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-
-                      if (!validateImage(file)) {
-                        e.target.value = "";
-                        return;
-                      }
-
-                      const base64 = await fileToBase64(file);
-                      updateField("logoUri", base64);
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
-
-                {/* Signature */}
-                <div className="flex flex-col gap-1 w-full min-w-0">
-                  <label className="text-sm font-medium">
-                    Signature
-                    {/* <span className="text-red-500">*</span> */}
-                  </label>
-
-                  <div
-                    className={`border-2 border-dashed rounded-md p-3 flex items-center justify-center cursor-pointer hover:border-blue-400 transition relative h-[100px] sm:h-[110px] w-full min-w-0 ${errors.signatureUri ? "border-red-500" : "border-gray-300"
-                      }`}
-                    onClick={() =>
-                      document.getElementById("signatureInput")?.click()
-                    }
-                  >
-                    {form.signatureUri ? (
-                      <>
-                        <img
-                          src={form.signatureUri}
-                          alt="Signature"
-                          className="max-w-full sm:max-w-[180px] max-h-[80px] sm:max-h-[90px] object-contain rounded"
-                        />
-
-                        <button
-                          type="button"
-                          className="absolute top-1.5 right-2 text-red-600 text-xs sm:text-sm font-medium hover:underline bg-white/80 px-1 rounded"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateField("signatureUri", null);
-                          }}
-                        >
-                          × Remove
-                        </button>
-                      </>
-                    ) : (
-                      <p className="text-gray-500 text-xs sm:text-sm text-center">
-                        Click to upload signature
-                      </p>
-                    )}
-                  </div>
-
-                  {errors.signatureUri && (
-                    <p className="text-xs text-red-500">
-                      {errors.signatureUri}
-                    </p>
-                  )}
-
-                  <input
-                    id="signatureInput"
-                    type="file"
-                    accept="image/png, image/jpeg, image/jpg, image/webp"
-                    className="hidden"
-                    onChange={async (e: any) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-
-                      if (!validateImage(file)) {
-                        e.target.value = "";
-                        return;
-                      }
-
-                      const base64 = await fileToBase64(file);
-                      updateField("signatureUri", base64);
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
+                <ImageUploadInput
+                  label="Signature"
+                  className="sm:col-span-1"
+                  value={form.signatureUri}
+                  error={errors.signatureUri}
+                  placeholder="Click to upload signature"
+                  alt="Signature"
+                  // @ts-ignore
+                  validateImage={validateImage}
+                  fileToBase64={fileToBase64}
+                  onChange={(value) => updateField("signatureUri", value)}
+                />
               </div>
             </>
           ),

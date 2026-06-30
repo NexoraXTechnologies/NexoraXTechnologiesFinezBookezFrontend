@@ -14,6 +14,12 @@
   }
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
 .compact-toast {
   min-height: auto !important;
   width: fit-content !important;
@@ -94,4 +100,617 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* ===================================================
+   LIGHT THEME VARIABLES
+=================================================== */
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --border: #e2e8f0;
+  --input: #ffffff;
+
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   DEFAULT DARK THEME
+=================================================== */
+
+.dark {
+  --background: #0f1011;
+  --foreground: #f5f5f5;
+
+  --card: #191b1b;
+  --card-foreground: #f5f5f5;
+
+  --secondary: #202323;
+  --secondary-foreground: #f5f5f5;
+
+  --muted: #262929;
+  --muted-foreground: #9ca3a3;
+
+  --border: rgba(255, 255, 255, 0.09);
+  --input: #111313;
+
+  --primary: #22c55e;
+  --primary-foreground: #ffffff;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   DARK THEME COLOR OPTIONS
+=================================================== */
+
+.dark[data-theme="orange"] {
+  --primary: #f97316;
+}
+
+.dark[data-theme="blue"] {
+  --background: #020617;
+  --card: #0f172a;
+  --muted: #1e293b;
+  --border: rgba(148, 163, 184, 0.2);
+  --input: #020617;
+  --primary: #3b82f6;
+}
+
+.dark[data-theme="purple"] {
+  --background: #10091b;
+  --card: #1a102b;
+  --muted: #281942;
+  --border: rgba(196, 181, 253, 0.18);
+  --input: #12091f;
+  --primary: #a855f7;
+}
+
+.dark[data-theme="green"] {
+  --background: #07130d;
+  --card: #0d1f16;
+  --muted: #123221;
+  --border: rgba(134, 239, 172, 0.18);
+  --input: #07130d;
+  --primary: #22c55e;
+}
+
+.dark[data-theme="black"] {
+  --background: #000000;
+  --card: #090909;
+  --muted: #171717;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: #050505;
+  --primary: #f97316;
+}
+
+.dark[data-theme="plantify"] {
+  --background: #0d0f0f;
+  --foreground: #f3f4f6;
+
+  --card: #181a1a;
+  --card-foreground: #f3f4f6;
+
+  --secondary: #202323;
+  --secondary-foreground: #f3f4f6;
+
+  --muted: #272a2a;
+  --muted-foreground: #a1a1aa;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --input: #111313;
+
+  --primary: #16a34a;
+  --primary-foreground: #ffffff;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE NAVY
+=================================================== */
+
+.dark[data-theme="matte-navy"] {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+
+  --card: #182235;
+  --card-foreground: #f8fafc;
+
+  --secondary: #22304a;
+  --secondary-foreground: #f8fafc;
+
+  --muted: #2f3d5c;
+  --muted-foreground: #cbd5e1;
+
+  --border: rgba(203, 213, 225, 0.14);
+  --input: #111c2e;
+
+  --primary: #38bdf8;
+  --primary-foreground: #ffffff;
+
+  --danger: #fb7185;
+  --danger-foreground: #ffffff;
+
+  --success: #34d399;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE GRAPHITE
+=================================================== */
+
+.dark[data-theme="matte-graphite"] {
+  --background: #121212;
+  --foreground: #f5f5f5;
+
+  --card: #1c1c1c;
+  --card-foreground: #f5f5f5;
+
+  --secondary: #262626;
+  --secondary-foreground: #f5f5f5;
+
+  --muted: #303030;
+  --muted-foreground: #a3a3a3;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: #171717;
+
+  --primary: #9ca3af;
+  --primary-foreground: #111827;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE EMERALD
+=================================================== */
+
+.dark[data-theme="matte-emerald"] {
+  --background: #07130f;
+  --foreground: #ecfdf5;
+
+  --card: #0d1f19;
+  --card-foreground: #ecfdf5;
+
+  --secondary: #143329;
+  --secondary-foreground: #ecfdf5;
+
+  --muted: #1c493b;
+  --muted-foreground: #a7f3d0;
+
+  --border: rgba(167, 243, 208, 0.14);
+  --input: #091a15;
+
+  --primary: #10b981;
+  --primary-foreground: #ffffff;
+
+  --danger: #f87171;
+  --danger-foreground: #ffffff;
+
+  --success: #34d399;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE TEAL
+=================================================== */
+
+.dark[data-theme="matte-teal"] {
+  --background: #071316;
+  --foreground: #f0fdfa;
+
+  --card: #0e2227;
+  --card-foreground: #f0fdfa;
+
+  --secondary: #14343b;
+  --secondary-foreground: #f0fdfa;
+
+  --muted: #1f4b55;
+  --muted-foreground: #99f6e4;
+
+  --border: rgba(153, 246, 228, 0.14);
+  --input: #091b1f;
+
+  --primary: #14b8a6;
+  --primary-foreground: #ffffff;
+
+  --danger: #fb7185;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE INDIGO
+=================================================== */
+
+.dark[data-theme="matte-indigo"] {
+  --background: #111126;
+  --foreground: #eef2ff;
+
+  --card: #1b1b36;
+  --card-foreground: #eef2ff;
+
+  --secondary: #26264d;
+  --secondary-foreground: #eef2ff;
+
+  --muted: #333366;
+  --muted-foreground: #c7d2fe;
+
+  --border: rgba(199, 210, 254, 0.14);
+  --input: #15152d;
+
+  --primary: #818cf8;
+  --primary-foreground: #ffffff;
+
+  --danger: #f87171;
+  --danger-foreground: #ffffff;
+
+  --success: #34d399;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE ROSE
+=================================================== */
+
+.dark[data-theme="matte-rose"] {
+  --background: #1a0d12;
+  --foreground: #fff1f2;
+
+  --card: #26131b;
+  --card-foreground: #fff1f2;
+
+  --secondary: #371c27;
+  --secondary-foreground: #fff1f2;
+
+  --muted: #4a2735;
+  --muted-foreground: #fecdd3;
+
+  --border: rgba(254, 205, 211, 0.14);
+  --input: #1f1017;
+
+  --primary: #fb7185;
+  --primary-foreground: #ffffff;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #34d399;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE COFFEE
+=================================================== */
+
+.dark[data-theme="matte-coffee"] {
+  --background: #17100b;
+  --foreground: #fff7ed;
+
+  --card: #24180f;
+  --card-foreground: #fff7ed;
+
+  --secondary: #352315;
+  --secondary-foreground: #fff7ed;
+
+  --muted: #4a321f;
+  --muted-foreground: #fed7aa;
+
+  --border: rgba(254, 215, 170, 0.14);
+  --input: #1c130c;
+
+  --primary: #d97706;
+  --primary-foreground: #ffffff;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE SLATE
+=================================================== */
+
+.dark[data-theme="matte-slate"] {
+  --background: #0f1419;
+  --foreground: #f8fafc;
+
+  --card: #18202a;
+  --card-foreground: #f8fafc;
+
+  --secondary: #202b38;
+  --secondary-foreground: #f8fafc;
+
+  --muted: #2d3a4a;
+  --muted-foreground: #cbd5e1;
+
+  --border: rgba(203, 213, 225, 0.14);
+  --input: #121a23;
+
+  --primary: #64748b;
+  --primary-foreground: #ffffff;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MATTE CALENDAR BLUE
+   Screenshot style: dark blue-grey dashboard
+=================================================== */
+
+.dark[data-theme="matte-calendar-blue"] {
+  --background: #111923;
+  --foreground: #f8fafc;
+
+  --card: #1f2a37;
+  --card-foreground: #f8fafc;
+
+  --secondary: #273545;
+  --secondary-foreground: #f8fafc;
+
+  --muted: #344457;
+  --muted-foreground: #b6c2cf;
+
+  --border: rgba(203, 213, 225, 0.14);
+  --input: #182231;
+
+  --primary: #38a8f8;
+  --primary-foreground: #ffffff;
+
+  --danger: #fb7185;
+  --danger-foreground: #ffffff;
+
+  --success: #34d399;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   CRYPTO RED
+   Screenshot style: black UI with red action color
+=================================================== */
+
+.dark[data-theme="crypto-red"] {
+  --background: #080808;
+  --foreground: #f8fafc;
+
+  --card: #101010;
+  --card-foreground: #f8fafc;
+
+  --secondary: #1a1a1a;
+  --secondary-foreground: #f8fafc;
+
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: #0d0d0d;
+
+  --primary: #dc2626;
+  --primary-foreground: #ffffff;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   MONO GRAPHITE
+   Screenshot style: black + grey minimal dashboard
+=================================================== */
+
+.dark[data-theme="mono-graphite"] {
+  --background: #050505;
+  --foreground: #f5f5f5;
+
+  --card: #0b0b0b;
+  --card-foreground: #f5f5f5;
+
+  --secondary: #171717;
+  --secondary-foreground: #f5f5f5;
+
+  --muted: #2a2a2a;
+  --muted-foreground: #a3a3a3;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: #111111;
+
+  --primary: #d4d4d4;
+  --primary-foreground: #050505;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   SOFT BLACK BLUE
+   Cleaner version for admin dashboards
+=================================================== */
+
+.dark[data-theme="soft-black-blue"] {
+  --background: #0b0f14;
+  --foreground: #f8fafc;
+
+  --card: #111827;
+  --card-foreground: #f8fafc;
+
+  --secondary: #1f2937;
+  --secondary-foreground: #f8fafc;
+
+  --muted: #273244;
+  --muted-foreground: #cbd5e1;
+
+  --border: rgba(203, 213, 225, 0.14);
+  --input: #0f172a;
+
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   SOFT BLACK WHITE
+   Minimal pure black/white theme
+=================================================== */
+
+.dark[data-theme="soft-black-white"] {
+  --background: #070707;
+  --foreground: #fafafa;
+
+  --card: #111111;
+  --card-foreground: #fafafa;
+
+  --secondary: #1f1f1f;
+  --secondary-foreground: #fafafa;
+
+  --muted: #2e2e2e;
+  --muted-foreground: #b5b5b5;
+
+  --border: rgba(255, 255, 255, 0.12);
+  --input: #0d0d0d;
+
+  --primary: #ffffff;
+  --primary-foreground: #050505;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+}
+
+/* ===================================================
+   RETRO TERMINAL
+   Vintage dark theme with amber/green accent
+=================================================== */
+
+/* ===================================================
+   RETRO MONO
+   Black and white vintage dashboard theme
+=================================================== */
+
+.dark[data-theme="retro-mono"] {
+  --background: #080808;
+  --foreground: #f4f1ea;
+
+  --card: #111111;
+  --card-foreground: #f4f1ea;
+
+  --secondary: #1b1b1b;
+  --secondary-foreground: #f4f1ea;
+
+  --muted: #262626;
+  --muted-foreground: #b8b5ae;
+
+  --border: rgba(244, 241, 234, 0.14);
+  --input: #0d0d0d;
+
+  --primary: #f4f1ea;
+  --primary-foreground: #080808;
+
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+
+  --success: #d4d4d4;
+  --success-foreground: #080808;
+}
+
+
+/* ===================================================
+   TAILWIND V4 TOKEN MAPPING
+=================================================== */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+}
+
+
+/* ===================================================
+   SCROLLBAR
+=================================================== */
+
+.custom-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 999px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 999px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }

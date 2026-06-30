@@ -25,10 +25,10 @@ const getPlanIcon = (name = "") => {
 
 const getLabelClass = (name = "") => {
     const type = getPlanType(name);
-    if (type === "gold") return "bg-yellow-400 text-yellow-950";
-    if (type === "silver") return "bg-blue-100 text-blue-800";
-    if (type === "itr") return "bg-emerald-100 text-emerald-800";
-    return "bg-gray-100 text-gray-700";
+    if (type === "gold") return "bg-primary text-primary-foreground";
+    if (type === "silver") return "bg-primary/10 text-primary";
+    if (type === "itr") return "bg-success/10 text-success";
+    return "bg-muted text-muted-foreground";
 };
 
 const getPlanType = (name = "") => {
@@ -57,14 +57,14 @@ const Subscription = () => {
         // @ts-ignore
         dispatch(myPlan());
         // @ts-ignore
-        dispatch(getAllPlans({ offset: 0, limit: 100, search: "", }))
+        dispatch(getAllPlans({ offset: 0, limit: 100, search: "" }));
     };
 
     // const filteredPlans = useMemo(() => {
     //     const filter = plans?.filter((e: any) => e?.name == selectedCategory);
     //     return !!filter?.length ? filter : plans;
     // }, [plans, search, selectedCategory]);
-    
+
     const filteredPlans = useMemo(() => {
         return plans?.filter((plan: any) => {
             const name = plan?.name?.toLowerCase() || "";
@@ -81,16 +81,16 @@ const Subscription = () => {
     }, []);
 
     return (
-        <div className=" bg-white p-4 md:p-8 h-[100%] pb-10">
+        <div className="h-[100%] bg-background p-4 pb-10 text-foreground md:p-8">
             <div className="mx-auto max-w-7xl">
                 {/* <div className="grid grid-cols-1 gap-8 lg:grid-cols-[270px_1fr]"> */}
-                    {/* Sidebar */}
-                    {/* <aside>
-                        <h2 className="mb-3 text-xl font-bold text-gray-700">
+                {/* Sidebar */}
+                {/* <aside>
+                        <h2 className="mb-3 text-xl font-bold text-card-foreground">
                             Plan category
                         </h2>
 
-                        <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+                        <div className="overflow-hidden rounded-md border border-border bg-card">
                             {[{ name: "All Plans" }, ...plans]?.map((category) => {
                                 const isActive = selectedCategory === category?.name;
                                 return (
@@ -98,7 +98,8 @@ const Subscription = () => {
                                         key={category?.name}
                                         type="button"
                                         onClick={() => setSelectedCategory(category?.name)}
-                                        className={`w-full border-b border-gray-200 px-5 py-3 text-left text-base font-semibold transition last:border-b-0 ${isActive ? "bg-indigo-50 text-gray-950" : "bg-white text-gray-600 hover:bg-gray-50"}`}                                    >
+                                        className={`w-full border-b border-border px-5 py-3 text-left text-base font-semibold transition last:border-b-0 ${isActive ? "bg-primary/10 text-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}
+                                    >
                                         {category?.name}
                                     </button>
                                 );
@@ -106,47 +107,46 @@ const Subscription = () => {
                         </div>
                     </aside> */}
 
-                    {/* Content */}
-                    <main>
-                        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                            <h1 className="text-3xl font-extrabold text-gray-950">
-                                Subscription Plans
-                            </h1>
+                {/* Content */}
+                <main>
+                    <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <h1 className="text-3xl font-extrabold text-foreground">
+                            Subscription Plans
+                        </h1>
 
-                            <div className="flex w-full items-center gap-3 rounded-md bg-gray-100 px-5 py-3 md:w-[270px]">
-                                <Search className="h-6 w-6 text-gray-900" />
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search plans"
-                                    className="w-full bg-transparent text-sm font-medium text-gray-700 outline-none placeholder:text-gray-400"
-                                />
-                            </div>
+                        <div className="flex w-full items-center gap-3 rounded-md bg-muted px-5 py-3 md:w-[270px]">
+                            <Search className="h-6 w-6 text-foreground" />
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search plans"
+                                className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                            />
                         </div>
+                    </div>
 
-                        {filteredPlans.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                                {filteredPlans.map((plan: any, idx:any) => (
-                                    <PlanCard
-                                        key={idx}
-                                        plan={plan}
-                                        onClick={() => setSelectedPlan(plan)}
-                                        currentPlan={currentPlan}
-
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
-                                <p className="text-lg font-bold text-gray-700">
-                                    No plans found
-                                </p>
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Try changing category or search keyword.
-                                </p>
-                            </div>
-                        )}
-                    </main>
+                    {filteredPlans.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                            {filteredPlans.map((plan: any, idx: any) => (
+                                <PlanCard
+                                    key={idx}
+                                    plan={plan}
+                                    onClick={() => setSelectedPlan(plan)}
+                                    currentPlan={currentPlan}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-md border border-dashed border-border bg-card p-10 text-center">
+                            <p className="text-lg font-bold text-card-foreground">
+                                No plans found
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Try changing category or search keyword.
+                            </p>
+                        </div>
+                    )}
+                </main>
                 {/* </div> */}
             </div>
 
@@ -160,8 +160,8 @@ const Subscription = () => {
                 />
             )}
         </div>
-    )
-}
+    );
+};
 
 const PlanCard = ({ plan, onClick, currentPlan }: { plan: any; onClick: () => void; currentPlan: any }) => {
     const Icon = getPlanIcon(plan.name);
@@ -172,17 +172,18 @@ const PlanCard = ({ plan, onClick, currentPlan }: { plan: any; onClick: () => vo
     return (
         <div
             onClick={onClick}
-            className="relative w-full rounded-md bg-[#e9edf9] p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+            className="relative w-full rounded-md border border-border bg-card p-5 text-left text-card-foreground shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
         >
             {/* Label */}
-            {activePlan && <div className="absolute -top-3 left-4">
-                <span
-                    className={`rounded px-3 py-1 text-xs font-extrabold uppercase tracking-wide bg-green-200`}
-                >
-                    Active Plan
-                </span>
-            </div>}
-            <div className={`absolute -top-3  ${activePlan ? "left-35" : "left-4"}`}>
+            {activePlan && (
+                <div className="absolute -top-3 left-4">
+                    <span className="rounded bg-success/20 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-success">
+                        Active Plan
+                    </span>
+                </div>
+            )}
+
+            <div className={`absolute -top-3 ${activePlan ? "left-35" : "left-4"}`}>
                 <span
                     className={`rounded px-3 py-1 text-xs font-extrabold uppercase tracking-wide ${labelClass}`}
                 >
@@ -191,24 +192,24 @@ const PlanCard = ({ plan, onClick, currentPlan }: { plan: any; onClick: () => vo
             </div>
 
             {/* Arrow */}
-            <ChevronRight className="absolute right-5 top-5 h-6 w-6 text-blue-700" />
+            <ChevronRight className="absolute right-5 top-5 h-6 w-6 text-primary" />
 
             {/* Price */}
             <div className="mt-3">
                 <div className="flex items-end gap-2">
-                    <h2 className="text-4xl font-extrabold text-gray-950">
+                    <h2 className="text-4xl font-extrabold text-foreground">
                         ₹{plan.finalPrice}
                     </h2>
 
                     {hasDiscount && (
-                        <span className="mb-1 text-lg font-bold text-gray-500 line-through">
+                        <span className="mb-1 text-lg font-bold text-muted-foreground line-through">
                             ₹{plan.price}
                         </span>
                     )}
                 </div>
 
                 {hasDiscount && (
-                    <p className="mt-1 inline-flex rounded-md bg-rose-100 px-2 py-1 text-xs font-extrabold text-rose-700">
+                    <p className="mt-1 inline-flex rounded-md bg-danger/10 px-2 py-1 text-xs font-extrabold text-danger">
                         {plan.discountPercentage}% OFF
                     </p>
                 )}
@@ -217,20 +218,20 @@ const PlanCard = ({ plan, onClick, currentPlan }: { plan: any; onClick: () => vo
             {/* Required details only */}
             <div className="mt-6 grid grid-cols-[90px_1fr_auto] items-center gap-4">
                 <div>
-                    <p className="text-sm font-bold text-gray-500">Validity</p>
-                    <p className="mt-1 text-sm font-extrabold text-gray-950">
+                    <p className="text-sm font-bold text-muted-foreground">Validity</p>
+                    <p className="mt-1 text-sm font-extrabold text-foreground">
                         {formatDuration(plan.durationMonths)}
                     </p>
                 </div>
 
                 <div>
-                    <p className="text-sm font-bold text-gray-500">Plan</p>
-                    <p className="mt-1 line-clamp-1 text-sm font-extrabold text-gray-950">
+                    <p className="text-sm font-bold text-muted-foreground">Plan</p>
+                    <p className="mt-1 line-clamp-1 text-sm font-extrabold text-foreground">
                         {plan.name}
                     </p>
                 </div>
 
-                <span className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500 text-white">
+                <span className="flex h-9 w-9 items-center justify-center rounded-md bg-success text-success-foreground">
                     <Icon className="h-4 w-4" />
                 </span>
             </div>
@@ -244,34 +245,34 @@ const PlanCard = ({ plan, onClick, currentPlan }: { plan: any; onClick: () => vo
 const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { plan: any; onClose: () => void; coupon: string; setCoupon: (coupon: string) => void; currentPlan: any }) => {
     const Icon = getPlanIcon(plan.name);
     const labelClass = getLabelClass(plan.name);
-    const dispatch = useDispatch()
+    const dispatch = useDispatch();
     const { couponData, couponLoading } = useSelector((e: any) => e.plans);
-    console.log({ couponData })
+    console.log({ couponData });
     const [autoPay, setAutoPay] = useState(false);
     // @ts-ignore
-    const professionalUser = JSON.parse(localStorage.getItem("professionalUser"))
+    const professionalUser = JSON.parse(localStorage.getItem("professionalUser"));
     const hasDiscount = Number(plan.discountPercentage) > 0 && Number(plan.finalPrice) < Number(plan.price);
     const activePlan = currentPlan?.current?.planPublicId == plan?.planPublicId;
 
     const applyCouponFun = async () => {
         if (!coupon?.length) return toast.warning("Enter Coupon Code");
-        if (activePlan) return toast.error("This plan is already active!")
+        if (activePlan) return toast.error("This plan is already active!");
         if (currentPlan?.current?.price > plan?.price) return toast.error("You can not Downgrade plan!");
         // @ts-ignore
-       const res = await dispatch(applyCoupon({ planPublicId: plan?.planPublicId, couponCode: coupon }))
+        const res = await dispatch(applyCoupon({ planPublicId: plan?.planPublicId, couponCode: coupon }));
         // @ts-ignore
         if (couponData?.isFree || res?.payload?.isFree) {
-            toast.success("Subscription activated successfully")
+            toast.success("Subscription activated successfully");
             onClose();
             return;
         }
-    }
+    };
 
     const handleModalClose = () => {
         setCoupon("");
         dispatch(clearPlansState());
         onClose();
-    }
+    };
 
     const loadRazorpayScript = (): Promise<boolean> => {
         return new Promise((resolve) => {
@@ -302,32 +303,33 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { p
 
     const handleSubscriptionPayment = async () => {
         try {
-            if (activePlan) return toast.error("This plan is already active!")
-            if (currentPlan?.current?.price > plan?.price) return toast.error("You can not Downgrade plan!")
+            if (activePlan) return toast.error("This plan is already active!");
+            if (currentPlan?.current?.price > plan?.price) return toast.error("You can not Downgrade plan!");
             const isLoaded = await loadRazorpayScript();
             // @ts-ignore
             if (!isLoaded || !window.Razorpay) {
-                toast.error("Razorpay SDK failed to load")
+                toast.error("Razorpay SDK failed to load");
                 return;
             }
             // @ts-ignore
             const orderRes = await dispatch(createOrder({
-                planPublicId: couponData?.planPublicId || plan?.planPublicId, pan: professionalUser?.userPAN,
-                    mobile: professionalUser?.userMobileNumberHash,
-                    email: professionalUser?.userEmail,
-                    firstName: professionalUser?.userFirstName,
-                    middleName: professionalUser?.userMiddleName,
-                    autoRenewEnabled: autoPay, // CHECKBOX FOR THIS
-                    couponCode: couponData?.couponCode || "",
-                    lastName: professionalUser?.userLastName,
-                })
-            ).unwrap();
+                planPublicId: couponData?.planPublicId || plan?.planPublicId,
+                pan: professionalUser?.userPAN,
+                mobile: professionalUser?.userMobileNumberHash,
+                email: professionalUser?.userEmail,
+                firstName: professionalUser?.userFirstName,
+                middleName: professionalUser?.userMiddleName,
+                autoRenewEnabled: autoPay, // CHECKBOX FOR THIS
+                couponCode: couponData?.couponCode || "",
+                lastName: professionalUser?.userLastName,
+            })).unwrap();
 
             const orderData = orderRes;
+
             // Free subscription
             if (orderData?.isFree) {
-                console.log("Subscription")
-                toast.success("Subscription activated successfully")
+                console.log("Subscription");
+                toast.success("Subscription activated successfully");
                 return;
             }
 
@@ -336,9 +338,10 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { p
              * Razorpay order id must start with order_
              */
             if (!String(orderData?.orderId || "").startsWith("order_")) {
-                toast.success("Invalid Razorpay order id received from server")
+                toast.success("Invalid Razorpay order id received from server");
                 return;
             }
+
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: orderData?.amount,
@@ -362,13 +365,13 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { p
                 handler: async function (response: any) {
                     try {
                         // @ts-ignore
-                        await dispatch(verifyPayment({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature, })).unwrap();
+                        await dispatch(verifyPayment({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature })).unwrap();
                         // @ts-ignore
                         await dispatch(subscribePlan({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id })).unwrap();
                         handleModalClose();
                         // @ts-ignore
                         dispatch(myPlan());
-                        toast.success("Subscription activated")
+                        toast.success("Subscription activated");
                     } catch (error: any) {
                         console.log("Payment verification error", error);
                     }
@@ -378,11 +381,14 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { p
                     ondismiss: function () { console.log("Payment popup closed"); },
                 },
             };
+
             // @ts-ignore
             const razorpay = new window.Razorpay(options);
+
             razorpay.on("payment.failed", function (response: any) {
                 toast.error("Payment Failed", response.error);
             });
+
             razorpay.open();
         } catch (error: any) {
             console.log("Payment error", error);
@@ -391,13 +397,14 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { p
 
     const handleCoupon = (e: any) => {
         dispatch(clearCouponState());
-        setCoupon(e?.target?.value)
-    }
+        setCoupon(e?.target?.value);
+    };
 
     return (
         <AnimatePresence>
-            <motion.div className="fixed inset-0 z-50 flex items-center justify-center  bg-black/50 backdrop-blur-sm p-4">
-                <motion.div className="w-full max-w-lg rounded-md bg-white p-6 shadow-2xl "
+            <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                <motion.div
+                    className="w-full max-w-lg rounded-md border border-border bg-card p-6 text-card-foreground shadow-2xl"
                     initial={{ opacity: 0, scale: 0.9, y: 40 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -407,100 +414,115 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { p
                         damping: 20,
                     }}
                 >
-                {/* Header */}
+                    {/* Header */}
                     <div className="mb-2 flex items-start justify-between gap-3">
-                    <div>
+                        <div>
                             <span className={`inline-flex rounded-md px-3 py-1 text-xs font-bold uppercase tracking-wide ${labelClass}`}>
                                 {plan?.name}
-                        </span>
-                            <h2 className="mt-3 text-2xl font-bold text-gray-950">
-                            {plan.name}
-                        </h2>
+                            </span>
 
-                        <p className="mt-1 text-sm font-medium text-gray-500">
-                            {plan.description}
-                        </p>
-                    </div>
+                            <h2 className="mt-3 text-2xl font-bold text-foreground">
+                                {plan.name}
+                            </h2>
 
-                    <button
-                        type="button"
+                            <p className="mt-1 text-sm font-medium text-muted-foreground">
+                                {plan.description}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
                             onClick={handleModalClose}
-                            className="p-2 rounded-full hover:bg-gray-200 transition cursor-pointer">
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
+                            className="cursor-pointer rounded-full p-2 transition hover:bg-muted"
+                        >
+                            <X className="h-5 w-5 text-foreground" />
+                        </button>
+                    </div>
 
-                {/* Price Box */}
-                    <div className="rounded-md bg-[#e9edf9] p-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                                <p className="text-sm font-semibold text-gray-500">Final Price</p>
-                            <div className="mt-1 flex items-end gap-2">
-                                    <h3 className="text-3xl font-extrabold text-gray-950">
-                                    ₹{plan.finalPrice}
+                    {/* Price Box */}
+                    <div className="rounded-md border border-border bg-muted p-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <p className="text-sm font-semibold text-muted-foreground">Final Price</p>
+
+                                <div className="mt-1 flex items-end gap-2">
+                                    <h3 className="text-3xl font-extrabold text-foreground">
+                                        ₹{plan.finalPrice}
                                     </h3>
-                                {hasDiscount && (
-                                    <span className="mb-1 text-lg font-bold text-gray-500 line-through">
-                                        ₹{plan.price}
-                                    </span>
-                                )}
+
+                                    {hasDiscount && (
+                                        <span className="mb-1 text-lg font-bold text-muted-foreground line-through">
+                                            ₹{plan.price}
+                                        </span>
+                                    )}
                                 </div>
-                            {hasDiscount && (
-                                    <p className="mt-2 inline-flex rounded-md bg-rose-100 px-2 text-xs font-extrabold text-rose-700">
-                                    {plan.discountPercentage}% OFF
-                                </p>
-                            )}
+
+                                {hasDiscount && (
+                                    <p className="mt-2 inline-flex rounded-md bg-danger/10 px-2 text-xs font-extrabold text-danger">
+                                        {plan.discountPercentage}% OFF
+                                    </p>
+                                )}
                             </div>
-                        <span className="flex h-12 w-12 items-center justify-center rounded-md bg-emerald-500 text-white">
-                            <Icon className="h-6 w-6" />
-                        </span>
+
+                            <span className="flex h-12 w-12 items-center justify-center rounded-md bg-success text-success-foreground">
+                                <Icon className="h-6 w-6" />
+                            </span>
                         </div>
+
                         <div className="mt-3 grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="text-sm font-bold text-gray-500">Validity</p>
-                                <p className="mt-1 font-bold text-gray-950">
-                                {formatDuration(plan.durationMonths)}
-                            </p>
+                            <div>
+                                <p className="text-sm font-bold text-muted-foreground">Validity</p>
+                                <p className="mt-1 font-bold text-foreground">
+                                    {formatDuration(plan.durationMonths)}
+                                </p>
                             </div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-500">Status</p>
-                                <p className="mt-1 font-bold capitalize text-emerald-700">
-                                {plan.status}
-                            </p>
+
+                            <div>
+                                <p className="text-sm font-bold text-muted-foreground">Status</p>
+                                <p className="mt-1 font-bold capitalize text-success">
+                                    {plan.status}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                    <div className="w-full max-w-md mt-3 flex flex-col gap-3 sm:flex-row">
+
+                    <div className="mt-3 flex w-full max-w-md flex-col gap-3 sm:flex-row">
                         <TextInput {...{ value: coupon, onChange: handleCoupon, placeholder: "Enter coupon code", className: "h-9" }} />
                         <SecondaryButton {...{
-                            callBackFn: applyCouponFun, disabled: couponData?.couponCode, text: couponData?.couponCode ? "Applied" : couponLoading ? "Appling.." : "Apply",
+                            callBackFn: applyCouponFun,
+                            disabled: couponData?.couponCode,
+                            text: couponData?.couponCode ? "Applied" : couponLoading ? "Appling.." : "Apply",
                         }} />
                     </div>
+
                     {/* Benefits */}
                     {!plan.benefits[0]?.includes("NA") &&
                         <div className="mt-4">
-                            <h3 className="text-base font-bold text-gray-950">Plan Benefits</h3>
+                            <h3 className="text-base font-bold text-foreground">Plan Benefits</h3>
 
                             <div className="mt-2 space-y-3">
                                 {plan.benefits?.map((benefit: any, index: any) => (
-                            <div key={index} className="flex items-start gap-x-3 pb-0 mb-2">
-                                <CheckCircle2 className=" h-5 w-5 shrink-0 text-emerald-600" />
-                                <p className="text-sm font-semibold text-gray-700 mb-0">
-                                    {benefit}
-                                </p>
-                            </div>
-                        ))}
+                                    <div key={index} className="mb-2 flex items-start gap-x-3 pb-0">
+                                        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
+                                        <p className="mb-0 text-sm font-semibold text-card-foreground">
+                                            {benefit}
+                                        </p>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     }
+
                     <div className="mt-4">
                         <label
                             htmlFor="autopay"
-                            className="flex cursor-pointer items-center justify-between rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-blue-400 hover:shadow-md">
+                            className="flex cursor-pointer items-center justify-between rounded-md border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:border-primary hover:shadow-md"
+                        >
                             <div>
-                                <p className="text-sm font-semibold text-gray-800">Enable Auto Payment</p>
-                                <p className="mt-1 text-xs text-gray-500">Bills will be paid automatically on the due date.</p>
+                                <p className="text-sm font-semibold text-card-foreground">Enable Auto Payment</p>
+                                <p className="mt-1 text-xs text-muted-foreground">Bills will be paid automatically on the due date.</p>
                             </div>
+
                             <div className="relative">
                                 <input
                                     type="checkbox"
@@ -511,13 +533,14 @@ const PlanDetailsModal = ({ plan, onClose, coupon, setCoupon, currentPlan }: { p
                                 />
 
                                 {/* Toggle Background */}
-                                <div className="h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-blue-600"></div>
+                                <div className="h-6 w-11 rounded-full bg-muted-foreground/40 transition peer-checked:bg-primary"></div>
 
                                 {/* Toggle Circle */}
-                                <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-all peer-checked:translate-x-5"></div>
+                                <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-card transition-all peer-checked:translate-x-5"></div>
                             </div>
                         </label>
                     </div>
+
                     <PrimaryButton {...{ callBackFn: handleSubscriptionPayment, text: (currentPlan?.current?.status == "active") ? "Change Plan" : "Subscribe", className: "w-full mt-3" }} />
                 </motion.div>
             </motion.div>
