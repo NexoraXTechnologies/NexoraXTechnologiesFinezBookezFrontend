@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
 import Select, { components } from "react-select";
-import { FixedSizeList as List } from "react-window";
 
 const ToggleInput = ({
     label = "",
