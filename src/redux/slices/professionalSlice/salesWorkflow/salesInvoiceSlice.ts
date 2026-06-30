@@ -132,11 +132,7 @@ export const getAllSalesInvoice = createAsyncThunk<
    getByVoucherNumber ALL SALES INVOICE
 =================================================== */
 
-export const getByVoucherNumberSalesInvoice = createAsyncThunk<
-  any,
-  GetAllSalesInvoiceParams | undefined,
-  { rejectValue: RejectValue }
->(
+export const getByVoucherNumberSalesInvoice = createAsyncThunk<any, GetAllSalesInvoiceParams | undefined, { rejectValue: RejectValue }>(
   "salesInvoice/getAllSalesInvoice",
   async (
     {voucherNumber }: any,

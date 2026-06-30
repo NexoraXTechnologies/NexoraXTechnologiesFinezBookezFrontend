@@ -446,7 +446,17 @@ const SalesInVoice = () => {
             key: "sInvVoucherDate",
             title: "Date",
             render: (row: any) =>
-                row?.sInvVoucherDate ? formatDateForList(row.sInvVoucherDate) : "-",
+                <>
+                    {row?.sInvVoucherDate ? formatDateForList(row.sInvVoucherDate) : "-"}
+                    <span className="text-sm block">
+                        {row?.createdOn && new Date(row?.createdOn).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: true,
+                        })}
+                    </span>
+                </>
         },
         {
             key: "sInvCustomerName",

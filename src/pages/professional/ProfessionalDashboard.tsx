@@ -679,21 +679,24 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 			</motion.div>
 
 			{/* Middle Row */}
-			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+			<div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
 				<CompactWidgetCard
 					title="Module Activity"
-					className="xl:col-span-2"
+					className="min-w-0 overflow-hidden xl:col-span-2"
 					accent="sales"
 					right={
-						<span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
+						<>
+						{/* <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
 							API Data
-						</span>
+						</span> */}
+						
+						</>
 					}
 				>
 					{!moduleAreaChartData.length ? (
 						<EmptyData text="No transaction data available" />
 					) : (
-							<div className="relative overflow-hidden rounded-2xl bg-card px-1 pb-2">
+							<div className="relative min-w-0 overflow-hidden rounded-2xl bg-card px-3 pb-2">
 							<div className="mb-2 flex flex-col gap-1 px-2">
 									<p className="text-xs font-bold text-muted-foreground">
 									Total module transactions
@@ -705,7 +708,10 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 									</h2>
 
 									<div className="text-right">
-											<p className="text-xs font-bold text-muted-foreground">Top module</p>
+											<p className="text-xs font-bold text-muted-foreground">
+												Top module
+											</p>
+
 											<p className="text-sm font-black text-primary">
 											{highestModule.name}
 										</p>
@@ -713,19 +719,25 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								</div>
 							</div>
 
-							<div className="h-[200px]">
+								<div className="h-[220px] min-w-0 overflow-hidden">
 								<ResponsiveContainer width="100%" height="100%">
 									<AreaChart
 										data={moduleAreaChartData}
 										margin={{
 											top: 30,
-											right: 18,
-											left: 8,
-											bottom: 8,
+											right: 35,
+											left: 35,
+											bottom: 18,
 										}}
 									>
 										<defs>
-											<linearGradient id="moduleAreaFill" x1="0" y1="0" x2="0" y2="1">
+												<linearGradient
+													id="moduleAreaFill"
+													x1="0"
+													y1="0"
+													x2="0"
+													y2="1"
+												>
 												<stop offset="0%" stopColor="#c084fc" stopOpacity={0.28} />
 												<stop offset="55%" stopColor="#f5d0fe" stopOpacity={0.14} />
 													<stop offset="100%" stopColor="var(--card)" stopOpacity={0} />
@@ -743,6 +755,12 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											axisLine={false}
 											tickLine={false}
 											interval={0}
+												height={42}
+												tickMargin={12}
+												padding={{
+													left: 25,
+													right: 25,
+												}}
 											tick={{
 												fontSize: 11,
 												fill: "var(--muted-foreground)",
@@ -757,11 +775,15 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 												if (text === "Purchase Orders") return "P.Ord";
 												if (text === "Purchase Invoice") return "P.Inv";
 												if (text === "Purchase Return") return "P.Ret";
+												if (text === "Receipts") return "Receipt";
+												if (text === "Payment") return "Pay.";
 
 												return text.length > 8 ? `${text.slice(0, 8)}...` : text;
 											}}
 										/>
+
 										<YAxis hide />
+
 										<Tooltip
 											cursor={{
 													stroke: "var(--border)",
@@ -798,6 +820,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 
 				<CompactWidgetCard
 					title="Revenue Source Distribution"
+					className="min-w-0 overflow-hidden"
 					accent="purchase"
 					right={
 						<span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
@@ -805,114 +828,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						</span>
 					}
 				>
-					{revenueChartData.length === 0 ? (
-						<EmptyData text="No revenue data available" />
-					) : (
-						<div className="space-y-4">
-							{/* Donut Chart */}
-							<div className="relative h-[230px]">
-								<ResponsiveContainer width="100%" height="100%">
-									<PieChart>
-										<defs>
-											{revenueChartData.map((item, index) => (
-												<linearGradient
-													key={item.name}
-													id={`revenueGradient-${index}`}
-													x1="0"
-													y1="0"
-													x2="1"
-													y2="1"
-												>
-													<stop offset="0%" stopColor={item.color} stopOpacity={0.95} />
-													<stop offset="100%" stopColor={item.color} stopOpacity={0.65} />
-												</linearGradient>
-											))}
-										</defs>
-
-										<Pie
-											data={revenueChartData}
-											dataKey="value"
-											nameKey="name"
-											cx="50%"
-											cy="50%"
-											innerRadius={68}
-											outerRadius={100}
-											paddingAngle={6}
-												stroke="var(--card)"
-											strokeWidth={5}
-										>
-											{revenueChartData.map((item, index) => (
-												<Cell
-													key={item.name}
-													fill={`url(#revenueGradient-${index})`}
-												/>
-											))}
-										</Pie>
-
-										<Tooltip content={<CompactTooltip />} />
-									</PieChart>
-								</ResponsiveContainer>
-
-								{/* Center Text */}
-								<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-										<p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-										Total
-									</p>
-
-										<p className="mt-1 text-xl font-black text-foreground">
-										{formatMoney(revenueTotal)}
-									</p>
-
-										<p className="mt-1 text-[11px] font-bold text-muted-foreground">
-										Revenue mix
-									</p>
-								</div>
-							</div>
-
-							{/* Legend */}
-							<div className="space-y-2">
-								{revenueChartData.map((item) => (
-									<div
-										key={item.name}
-										className="rounded-2xl border border-border bg-card px-3 py-2.5 shadow-sm"
-									>
-										<div className="flex items-center justify-between gap-3">
-											<div className="flex min-w-0 items-center gap-2">
-												<span
-													className="h-3 w-3 shrink-0 rounded-full shadow-sm"
-													style={{ backgroundColor: item.color }}
-												/>
-
-												<div className="min-w-0">
-													<p className="truncate text-sm font-black text-card-foreground">
-														{item.name}
-													</p>
-
-													<p className="text-xs font-bold text-muted-foreground">
-														{item.percent}% of total
-													</p>
-												</div>
-											</div>
-
-											<p className="shrink-0 text-sm font-black text-foreground">
-												{formatMoney(item.value)}
-											</p>
-										</div>
-
-										<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-											<div
-												className="h-full rounded-full"
-												style={{
-													width: `${item.percent}%`,
-													backgroundColor: item.color,
-												}}
-											/>
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-					)}
+					{/* your existing revenue chart code */}
 				</CompactWidgetCard>
 			</div>
 

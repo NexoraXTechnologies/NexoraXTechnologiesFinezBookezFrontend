@@ -35,12 +35,10 @@ const ProductMaster = () => {
     productMasterSchemaFields = [],
     schemaLoading,
   } = useSelector((s: any) => s.productMaster);
-
-  console.log({ productMasterSchemaFields });
-
+console.log({productMasterSchemaFields})
   const { units = [] } = useSelector((s: any) => s.unitMaster || {});
   const { HSNCode } = useSelector((s: any) => s.HSNCode || {});
-
+  console.log({ HSNCode })
   /* ================= LOCAL STATES ================= */
   const [localOffset, setLocalOffset] = useState(0);
   const [localLimit, setLocalLimit] = useState(10);

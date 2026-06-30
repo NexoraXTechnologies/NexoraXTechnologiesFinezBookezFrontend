@@ -118,7 +118,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 								{
 									name: "Opening Balances / Stocks",
 									path: "/bookEz/transaction/opening-balances",
-									icon: <WalletCards size={14} />,
+									icon: <WalletCards size={19} />,
 									module: "bookez",
 									permissionKey: "openingBalance",
 									action: "view",
@@ -126,7 +126,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 								{
 									name: "Sale Workflow",
 									path: "/bookEz/transaction/sale-workflow",
-									icon: <BadgeIndianRupee size={14} />,
+									icon: <BadgeIndianRupee size={19} />,
 									module: "bookez",
 									permissionKey: "salesInvoice",
 									action: "view",
@@ -134,7 +134,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 								{
 									name: "Purchase Workflow",
 									path: "/bookEz/transaction/purchase-workflow",
-									icon: <ShoppingCart size={14} />,
+									icon: <ShoppingCart size={19} />,
 									module: "bookez",
 									permissionKey: "purchaseInvoice",
 									action: "view",
@@ -154,7 +154,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 						{
 							name: "Reports",
 							path: "/bookEz/reports",
-							icon: <BarChart3 size={14} />,
+							icon: <BarChart3 size={20} />,
 							module: "bookez",
 							permissionKey: "accountLedger",
 							action: "view",
@@ -162,7 +162,15 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 						{
 							name: "Registers",
 							path: "/bookEz/registers",
-							icon: <BookOpenCheck size={14} />,
+							icon: <BookOpenCheck size={20} />,
+							module: "bookez",
+							permissionKey: "allRegisters",
+							action: "view",
+						},
+						{
+							name: "POS",
+							path: "/bookEz/pos",
+							icon: <ShoppingCart size={20} />,
 							module: "bookez",
 							permissionKey: "allRegisters",
 							action: "view",
