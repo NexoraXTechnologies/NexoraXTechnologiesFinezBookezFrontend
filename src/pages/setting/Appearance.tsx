@@ -1,5 +1,5 @@
 import { Check, MonitorCog, Moon, Palette, Sun } from "lucide-react";
-import { useAppearance, type ThemeMode, type ThemeName } from "../../../hooks/useAppearance";
+import { useAppearance, type ThemeMode, type ThemeName } from "../../hooks/useAppearance"; 
 
 const palettes: {
     name: ThemeName;

@@ -479,8 +479,8 @@ const Users = () => {
             options: [
               { value: "", label: "Select user type" },
               { value: "Tax Payer/Employee", label: "Tax Payer/Employee" },
-              { value: "Company", label: "Company" },
-              { value: "CA/CMA/Tax Consultant", label: "CA/CMA/Tax Consultant" }
+              // { value: "Company", label: "Company" },
+              // { value: "CA/CMA/Tax Consultant", label: "CA/CMA/Tax Consultant" }
             ]
           }} />
         </>

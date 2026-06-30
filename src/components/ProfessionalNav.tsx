@@ -47,9 +47,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
 
   const allMenuItems = flattenMenu(menuItems);
 
-  const activeMenu =
-    allMenuItems
-      .filter((item: any) => {
+  const activeMenu = allMenuItems.filter((item: any) => {
         if (!item.path && !item.matchPaths) return false;
 
         if (item.matchPaths?.length) {

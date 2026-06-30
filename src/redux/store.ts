@@ -70,6 +70,7 @@ import HSNCodeReducer from "./slices/professionalSlice/hsnCode"
 import seederConfgReducer from "./slices/professionalSlice/seeder"
 import permissionReducer from "./slices/permissionSlice";
 import postingReduce from "./slices/professionalSlice/posting";
+import posReducer from "./slices/professionalSlice/pos";
 
 export const store = configureStore({
   reducer: {
@@ -142,7 +143,8 @@ export const store = configureStore({
     HSNCode: HSNCodeReducer,
     seederConfg: seederConfgReducer,
     permissions: permissionReducer,
-    posting: postingReduce
+    posting: postingReduce,
+    pos: posReducer,
   },
 });
 

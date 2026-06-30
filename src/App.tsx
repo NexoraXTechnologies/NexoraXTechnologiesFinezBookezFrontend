@@ -49,7 +49,9 @@ import ReportsDashboard from './pages/bookez/reports';
 import RegistersDashboard from './pages/bookez/registers';
 import PermissionManagement from './pages/setting/PermissionManagement';
 import { useAppearance } from './hooks/useAppearance';
-import Appearance from './pages/bookez/settings/Appearance';
+import Appearance from './pages/setting/Appearance';
+import POS from './pages/bookez/pos';
+import POSPaymentPage from './pages/bookez/pos/POSPaymentPage';
 
 function App() {
   useAppearance();
@@ -130,7 +132,12 @@ function App() {
             path="/bookEz/registers"
           element={<RegistersDashboard/>}
         />
+          <Route path="/bookEz/pos" element={<POS />} />
 
+          <Route
+            path="/bookEz/pos/payment"
+            element={<POSPaymentPage />}
+          />
         {/* configuration */}
         <Route path="configuration" element={<Configuration />} />
 
