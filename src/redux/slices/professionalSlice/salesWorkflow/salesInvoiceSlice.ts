@@ -10,6 +10,7 @@ type GetAllSalesInvoiceParams = {
   offset?: number;
   search?: string;
   voucherNumber?: string;
+  customerCode?: string;
   status?: "open" | "close";
 };
 
@@ -28,12 +29,23 @@ type SalesInvoiceState = {
   deleteLoading: boolean;
   detailsLoading: boolean;
   error: string | null;
+
+
+  // add this
+  byCustomerCodeSalesInvoice: any[];
+  byCustomerCodeLoader: boolean;
+  byCustomerCodeCount: number;
+
 };
 
 const initialState: SalesInvoiceState = {
   salesInvoices: [],
   selectedSalesInvoice: null,
   pagination: null,
+
+  byCustomerCodeSalesInvoice: [],
+  byCustomerCodeLoader: false,
+  byCustomerCodeCount: 0,
 
   loading: false,
   createLoading: false,
@@ -52,7 +64,7 @@ export const createSalesInvoice = createAsyncThunk<
   any,
   any,
   { rejectValue: RejectValue }
-  >("salesInvoice/createSalesInvoice", async ({ payload }, { rejectWithValue }) => {
+>("salesInvoice/createSalesInvoice", async ({ payload }, { rejectWithValue }) => {
   try {
     const res = await professionalAxios.post(
       "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/save",
@@ -128,6 +140,7 @@ export const getAllSalesInvoice = createAsyncThunk<
     }
   }
 );
+
 /* ===================================================
    getByVoucherNumber ALL SALES INVOICE
 =================================================== */
@@ -135,12 +148,50 @@ export const getAllSalesInvoice = createAsyncThunk<
 export const getByVoucherNumberSalesInvoice = createAsyncThunk<any, GetAllSalesInvoiceParams | undefined, { rejectValue: RejectValue }>(
   "salesInvoice/getAllSalesInvoice",
   async (
-    {voucherNumber }: any,
+    { voucherNumber }: any,
     { rejectWithValue }
   ) => {
     try {
       const res = await professionalAxios.get(
         `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/getByVoucherNumber/${voucherNumber}`,
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch sales invoices",
+        });
+      }
+
+      return (
+        res.data?.data ?? {
+          records: [],
+          pagination: null,
+        }
+      );
+    } catch (err: any) {
+      console.log(err)
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to fetch sales invoices",
+      });
+    }
+  }
+);
+/* ===================================================
+   getByCustomerCode ALL SALES INVOICE
+=================================================== */
+
+export const getByCustomerCodeSalesInvoice = createAsyncThunk<any, GetAllSalesInvoiceParams | undefined, { rejectValue: RejectValue }>(
+  "salesInvoice/getByCustomerCodeSalesInvoice",
+  async (
+    { customerCode }: any,
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/byCustomerCode?customerCode=${customerCode}`,
       );
 
       if (!res.data?.success) {
@@ -181,7 +232,7 @@ export const updateSalesInvoice = createAsyncThunk<
     try {
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/update/${sInvVoucherNumber}`,
-        {...payload}
+        { ...payload }
       );
 
       if (!res.data?.success) {
@@ -305,7 +356,33 @@ const salesInvoiceSlice = createSlice({
         state.pagination = null;
       })
 
-      
+      /* ================= GET BY CUSTOMER CODE ================= */
+      .addCase(getByCustomerCodeSalesInvoice.pending, (state) => {
+        state.byCustomerCodeLoader = true;
+        state.byCustomerCodeSalesInvoice = [];
+        state.byCustomerCodeCount = 0;
+        state.error = null;
+      })
+
+      .addCase(getByCustomerCodeSalesInvoice.fulfilled, (state, action) => {
+        state.byCustomerCodeLoader = false;
+
+        state.byCustomerCodeSalesInvoice = Array.isArray(action.payload?.data)
+          ? action.payload.data
+          : [];
+
+        state.byCustomerCodeCount =
+          action.payload?.count || state.byCustomerCodeSalesInvoice.length;
+      })
+
+      .addCase(getByCustomerCodeSalesInvoice.rejected, (state, action) => {
+        state.byCustomerCodeLoader = false;
+        state.byCustomerCodeSalesInvoice = [];
+        state.byCustomerCodeCount = 0;
+
+        state.error =
+          action.payload?.message || "Failed to fetch sales invoices by customer";
+      })
 
       /* ================= UPDATE ================= */
       .addCase(updateSalesInvoice.pending, (state) => {

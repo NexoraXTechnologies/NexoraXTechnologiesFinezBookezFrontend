@@ -3,8 +3,8 @@ import { Eye } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 
 import DataTable from "../../../components/DataTable";
-import ReportFilterCard from "./ReportFilterCard";
-import AccountSummaryCard from "./AccountSummaryCard";
+import ReportFilterCard from "./components/ReportFilterCard";
+import AccountSummaryCard from "./components/AccountSummaryCard";
 import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
 
 import { getAllProducts } from "../../../redux/slices/professionalSlice/productMasterSlice";
