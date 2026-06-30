@@ -205,17 +205,13 @@ const SalesReturn = () => {
             const summaryRes = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/analysis/byInvoiceVoucharNumber/${pOrdVoucherNumber}`);
             const summary = summaryRes?.data?.data || {};
             const pendingRaw = summary?.pendingReturnQuantity?.totalPendingQty;
-            if (pendingRaw === undefined || pendingRaw === null || pendingRaw === "") {
-                console.log("GRN analysis summary missing totalPendingGrnQuantity", summaryRes?.data);
-                return "";
-            }
-            const totalPendingGrnQuantity = num(pendingRaw);
-            const nextPoStatus = totalPendingGrnQuantity === 0 ? "close" : "open";
+            const totalPendingQuantity = num(pendingRaw);
+            const nextPoStatus = totalPendingQuantity === 0 ? "close" : "open";
             dispatch(updateSalesInvoice({ sInvVoucherNumber: pOrdVoucherNumber, payload: { sInvStatus: nextPoStatus } }));
             return nextPoStatus;
         } catch (error) {
-            console.log("Failed to sync Purchase Order status after GRN", error);
-            toast.error("GRN saved but failed to update purchase order status");
+            console.log("From Sales Return", error);
+            toast.error("Somthing went wrong");
             return "";
         }
     };
@@ -359,14 +355,11 @@ const SalesReturn = () => {
             } else {
                 await dispatch(createSalesInvoiceReturn({ payload }) as any).unwrap();
                 if (form?.sInvVoucherNumber) {
-                    const poStatus = await syncPurchaseOrderStatusAfterGrn(form?.sInvVoucherNumber);
+                    await syncPurchaseOrderStatusAfterGrn(form?.sInvVoucherNumber);
                     await fetchSalesInvoices();
-                    if (poStatus === "close") toast.success("GRN created successfully and Purchase Order closed");
-                    else toast.success("GRN created successfully");
-                } else {
-                    toast.success("GRN created successfully");
+                    // if (poStatus === "close") toast.success("GRN created successfully and Purchase Order closed");
                 }
-                toast.success("Sales invoice created successfully");
+                toast.success("Sales Return created successfully");
             }
             setShowModal(false);
             resetMainForm();

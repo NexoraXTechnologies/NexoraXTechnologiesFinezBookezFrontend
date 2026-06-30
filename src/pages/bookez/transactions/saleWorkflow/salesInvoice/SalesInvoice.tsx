@@ -414,25 +414,11 @@ const SalesInVoice = () => {
         );
     };
 
-    const syncSalesOrderStatus = async (
-        voucherNumber: string,
-        nextStatus: "open" | "close"
-    ) => {
+    const syncSalesOrderStatus = async (voucherNumber: string, nextStatus: "open" | "close") => {
         if (!voucherNumber) return false;
-
         try {
-            await dispatch(
-                updateSalesOrder({
-                    voucherNumber,
-                    data: {
-                        sOrderStatus: nextStatus,
-                        sOrderDocStatus: nextStatus,
-                    },
-                }) as any
-            ).unwrap();
-
+            await dispatch(updateSalesOrder({ voucherNumber, data: { sOrderStatus: nextStatus, sOrderDocStatus: nextStatus, }, }) as any).unwrap();
             await fetchSalesOrders();
-
             return true;
         } catch (error) {
             toast.error("Sales invoice updated but failed to update sales order status");
@@ -914,7 +900,6 @@ const SalesInVoice = () => {
                 toast.success("Sales invoice updated successfully");
             } else {
                 await dispatch(createSalesInvoice({ payload }) as any).unwrap();
-
                 if (form?.sInvSalesOrderVoucherNumber) {
                     await syncSalesOrderStatus(form.sInvSalesOrderVoucherNumber, "close");
                 }
@@ -931,7 +916,7 @@ const SalesInVoice = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip?.voucherNumber) return toast.warning("Sales invoice deleted, but sales order voucher number not found");
-            const salesOrderVoucherNumber = confirmTooltip?.voucherNumber;
+            const salesOrderVoucherNumber = confirmTooltip?.salesOrderVoucherNumber;
             await dispatch(deleteSalesInvoice(confirmTooltip.voucherNumber) as any).unwrap();
             await syncSalesOrderStatus(salesOrderVoucherNumber, "open");
             toast.success("Sales invoice deleted successfully");
@@ -1000,41 +985,32 @@ const SalesInVoice = () => {
 
                             // ✅ Store Sales Order voucher in each row
                             sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
-
                             productCode: item?.productCode || "",
                             productName: item?.productName || "",
                             productId: item?.productId || "",
-                            productDescription:
-                                item?.productDescription || item?.description || "",
-                            description:
-                                item?.description || item?.productDescription || "",
+                            productDescription: item?.productDescription || item?.description || "",
+                            description: item?.description || item?.productDescription || "",
                             productHSNCode: item?.productHSNCode || "",
                             remarks: item?.remarks || "",
                             quantity: item?.quantity || "",
                             unit: item?.unit,
                             uom: item?.uom,
-                            unitName:
-                                item?.unitName || getUnitLabelFromSchema(item?.unitName),
+                            unitName: item?.unitName || getUnitLabelFromSchema(item?.unitName),
                             rate: item?.rate || "",
                             gross: item?.gross || item?.grossAmount || 0,
                             grossAmount: item?.grossAmount || item?.gross || 0,
-                            discount:
-                                item?.discount || item?.discountPercentage || "",
-                            discountPercentage:
-                                item?.discountPercentage || item?.discount || "",
+                            discount: item?.discount || item?.discountPercentage || "",
+                            discountPercentage: item?.discountPercentage || item?.discount || "",
                             discountAmount: item?.discountAmount || 0,
                             taxableAmount: item?.taxableAmount || 0,
                             cgst: item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage:
-                                item?.cgstPercentage || item?.cgst || "",
+                            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
                             cgstAmount: item?.cgstAmount || 0,
                             sgst: item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage:
-                                item?.sgstPercentage || item?.sgst || "",
+                            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
                             sgstAmount: item?.sgstAmount || 0,
                             igst: item?.igst || item?.igstPercentage || "",
-                            igstPercentage:
-                                item?.igstPercentage || item?.igst || "",
+                            igstPercentage: item?.igstPercentage || item?.igst || "",
                             igstAmount: item?.igstAmount || 0,
                             taxAmount: item?.taxAmount || 0,
                             otherAmount: item?.otherAmount || 0,
@@ -1093,18 +1069,15 @@ const SalesInVoice = () => {
             return;
         }
         const rect = e.currentTarget.getBoundingClientRect();
-
         let x = rect.left - 150;
         if (x < 10) x = 10;
-
         const y = rect.top + window.scrollY - 5;
-
         const salesOrderVoucherNumber =
+            record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber || 
             record?.sInvSalesOrderVoucherNumber ||
             record?.sOrderVoucherNumber ||
             record?.sInvOrderVoucherNumber ||
             record?.sInvBody?.[0]?.sOrderNumber ||
-            record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber ||
             "";
 
         setConfirmTooltip({

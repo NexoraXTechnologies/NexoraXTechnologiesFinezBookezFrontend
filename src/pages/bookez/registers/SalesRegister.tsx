@@ -70,7 +70,7 @@ const mainColumns = [
         title: "Order",
         render: (row: any) => (
             <span className="font-medium text-card-foreground">
-                {row?.sOrderNumber || "-"}
+                {row?.sInvBody?.[0]?.sOrderNumber || "-"}
             </span>
         ),
     },

@@ -612,7 +612,7 @@ const POS = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-80px)] w-full overflow-hidden bg-background p-3 text-foreground">
+        <div className=" w-full overflow-hidden bg-background p-3 text-foreground">
             {/* TOP BAR */}
             <motion.div
                 variants={fadeUp}
@@ -693,7 +693,7 @@ const POS = () => {
             </motion.div>
 
             {/* MAIN */}
-            <div className="grid h-[calc(100%-52px)] grid-cols-1 gap-3 overflow-hidden xl:grid-cols-[1fr_390px]">
+            <div className="grid grid-cols-1 gap-3 overflow-hidden xl:grid-cols-[1fr_390px]">
                 {/* PRODUCTS */}
                 <div className="h-full min-h-0 overflow-y-auto pr-1">
                     {productLoader ? (
@@ -880,10 +880,11 @@ const POS = () => {
                     initial={{ x: 20 }}
                     animate={{ x: 0 }}
                     transition={{ duration: 0.25 }}
-                    className="h-full min-h-0 overflow-hidden"
+                    className="h-full min-h-0 overflow-y-auto pr-1"
                 >
-                    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-sm">
-                        <div className="flex items-center justify-between border-b border-border bg-gradient-to-r from-card to-muted/40 px-3 py-3">
+                    <div className="flex min-h-full flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-sm">
+                        {/* Header */}
+                        <div className="shrink-0 flex items-center justify-between border-b border-border bg-gradient-to-r from-card to-muted/40 px-3 py-3">
                             <div>
                                 <h2 className="text-base font-black text-card-foreground">
                                     Order Summary
@@ -903,6 +904,7 @@ const POS = () => {
                             </motion.p>
                         </div>
 
+                        {/* Edit Selected Item */}
                         <AnimatePresence>
                             {selectedProduct ? (
                                 <motion.div
@@ -911,7 +913,7 @@ const POS = () => {
                                     animate={{ height: "auto" }}
                                     exit={{ height: 0 }}
                                     transition={{ duration: 0.2 }}
-                                    className="overflow-hidden border-b border-border"
+                                    className="shrink-0 overflow-hidden border-b border-border"
                                 >
                                     <div className="p-3">
                                         <div className="mb-2.5 flex items-center justify-between gap-2">
@@ -981,9 +983,7 @@ const POS = () => {
 
                                             <input
                                                 value={igstText}
-                                                disabled={
-                                                    toNum(cgstText) > 0 || toNum(sgstText) > 0
-                                                }
+                                                disabled={toNum(cgstText) > 0 || toNum(sgstText) > 0}
                                                 onChange={(e) => {
                                                     const value = sanitizeDecimal(e.target.value);
                                                     setIgstText(value);
@@ -1025,7 +1025,7 @@ const POS = () => {
                                             whileTap={{ scale: 0.97 }}
                                             type="button"
                                             onClick={onAdd}
-                                            className="mt-2.5 h-9 cursor-pointer w-full rounded-md bg-primary text-sm font-black text-primary-foreground transition hover:opacity-90"
+                                            className="mt-2.5 h-9 w-full cursor-pointer rounded-md bg-primary text-sm font-black text-primary-foreground transition hover:opacity-90"
                                         >
                                             Update Item
                                         </motion.button>
@@ -1034,103 +1034,107 @@ const POS = () => {
                             ) : null}
                         </AnimatePresence>
 
-                        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                            {cart.length ? (
-                                <motion.div layout className="space-y-2">
-                                    <AnimatePresence initial={false}>
-                                        {cart.map((item) => (
-                                            <motion.div
-                                                layout
-                                                key={item.id}
-                                                initial={{ x: 24, scale: 0.96 }}
-                                                animate={{ x: 0, scale: 1 }}
-                                                exit={{ x: -24, scale: 0.96 }}
-                                                transition={{
-                                                    type: "spring",
-                                                    stiffness: 260,
-                                                    damping: 22,
-                                                }}
-                                                className="rounded-lg border border-border bg-card p-2.5 shadow-sm transition hover:border-primary/40 hover:bg-muted/30"
-                                            >
-                                                <div className="flex gap-2.5">
-                                                    <div className="h-12 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
-                                                        {item?.imageUrl ? (
-                                                            <img
-                                                                src={item.imageUrl}
-                                                                alt={item.productName}
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div className="flex h-full w-full items-center justify-center">
-                                                                <Upload
-                                                                    size={18}
-                                                                    className="text-muted-foreground"
+                        {/* Cart Items */}
+                        <div className="shrink-0 border-b border-border p-3">
+                            <div className="max-h-[350px] min-h-[150px] overflow-y-auto pr-1">
+                                {cart.length ? (
+                                    <motion.div layout className="space-y-2">
+                                        <AnimatePresence initial={false}>
+                                            {cart.map((item) => (
+                                                <motion.div
+                                                    layout
+                                                    key={item.id}
+                                                    initial={{ x: 24, scale: 0.96 }}
+                                                    animate={{ x: 0, scale: 1 }}
+                                                    exit={{ x: -24, scale: 0.96 }}
+                                                    transition={{
+                                                        type: "spring",
+                                                        stiffness: 260,
+                                                        damping: 22,
+                                                    }}
+                                                    className="rounded-md border border-border bg-card p-2.5 shadow-sm transition hover:border-primary/40 hover:bg-muted/30"
+                                                >
+                                                    <div className="flex gap-2.5">
+                                                        <div className="h-10 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                                                            {item?.imageUrl ? (
+                                                                <img
+                                                                    src={item.imageUrl}
+                                                                    alt={item.productName}
+                                                                    className="h-full w-full object-cover"
                                                                 />
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                            ) : (
+                                                                <div className="flex h-full w-full items-center justify-center">
+                                                                    <Upload
+                                                                        size={18}
+                                                                        className="text-muted-foreground"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
 
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <div className="min-w-0">
-                                                                <p className="line-clamp-1 text-sm font-black text-card-foreground">
-                                                                    {item.productName || item.name}
-                                                                    <span className="ml-1 text-muted-foreground">
-                                                                        ({item.qty})
-                                                                    </span>
-                                                                </p>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <div className="min-w-0">
+                                                                    <p className="line-clamp-1 text-sm font-black text-card-foreground">
+                                                                        {item.productName || item.name}
+                                                                        <span className="ml-1 text-muted-foreground">
+                                                                            ({item.qty})
+                                                                        </span>
+                                                                    </p>
 
-                                                                <p className="mt-0.5 text-xs font-bold text-muted-foreground">
-                                                                    Price: ₹
-                                                                    {formatIndianNumber(item.basePrice)}
-                                                                </p>
-                                                            </div>
+                                                                    <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                                                                        Price: ₹
+                                                                        {formatIndianNumber(item.basePrice)}
+                                                                    </p>
+                                                                </div>
 
-                                                            <div className="flex gap-1.5">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => onSelect(item)}
-                                                                    className="text-muted-foreground transition hover:text-foreground"
-                                                                >
-                                                                    <Pencil size={15} />
-                                                                </button>
+                                                                <div className="flex gap-1.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => onSelect(item)}
+                                                                        className="text-muted-foreground transition hover:text-foreground"
+                                                                    >
+                                                                        <Pencil size={15} />
+                                                                    </button>
 
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => onRemove(item)}
-                                                                    className="text-muted-foreground transition hover:text-danger"
-                                                                >
-                                                                    <Trash2 size={15} />
-                                                                </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => onRemove(item)}
+                                                                        className="text-muted-foreground transition hover:text-danger"
+                                                                    >
+                                                                        <Trash2 size={15} />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </motion.div>
-                                        ))}
-                                    </AnimatePresence>
-                                </motion.div>
-                            ) : (
-                                <div className="flex h-full items-center justify-center text-center">
-                                    <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-10 py-12">
-                                        <ShoppingCart
-                                            size={42}
-                                            className="mx-auto mb-3 text-muted-foreground"
-                                        />
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                ) : (
+                                        <div className="flex h-full min-h-[250px] items-center justify-center text-center">
+                                            <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-10 py-12">
+                                                <ShoppingCart
+                                                    size={42}
+                                                    className="mx-auto mb-3 text-muted-foreground"
+                                                />
 
-                                        <p className="text-sm font-black text-foreground">
-                                            No item added
-                                        </p>
+                                                <p className="text-sm font-black text-foreground">
+                                                    No item added
+                                                </p>
 
-                                        <p className="mt-1 text-xs font-bold text-muted-foreground">
-                                            Add products from the menu
-                                        </p>
+                                            <p className="mt-1 text-xs font-bold text-muted-foreground">
+                                                Add products from the menu
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
 
-                        <motion.div layout className="border-t border-border p-3">
+                        {/* Footer */}
+                        <motion.div layout className="shrink-0 p-3">
                             <div className="rounded-md border border-border p-3 text-sm">
                                 <div className="flex justify-between">
                                     <span className="font-bold text-muted-foreground">
@@ -1180,7 +1184,8 @@ const POS = () => {
                                 type="button"
                                 onClick={onNext}
                                 disabled={!cart.length}
-                                className="mt-2 h-10 w-full cursor-pointer rounded-md bg-primary text-sm font-black text-primary-foreground shadow-md shadow-primary/20 transition hover:-translate-y-0.5 hover:opacity-95 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none">
+                                className="mt-2 h-10 w-full cursor-pointer rounded-md bg-primary text-sm font-black text-primary-foreground shadow-md shadow-primary/20 transition hover:-translate-y-0.5 hover:opacity-95 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+                            >
                                 Confirm Payment
                             </motion.button>
                         </motion.div>

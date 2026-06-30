@@ -19,6 +19,7 @@ import { getAllSalesInvoice, getByVoucherNumberSalesInvoice, updateSalesInvoice 
 import { ListingModel } from "../../../../../components/modal";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
+import { getByVoucherNumberSalesInvoiceReturn, updateSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 
@@ -387,6 +388,7 @@ const SalesReceipt = () => {
         });
         handleCloseReferenceModal();
     };
+
     const getFilledRows = () => {
         const bodyKeys = (bodyFieldsWithoutReference || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
         return (form.recBody || []).filter((row: any) => bodyKeys.some((key: string) => {
@@ -472,66 +474,245 @@ const SalesReceipt = () => {
             paymentMode: form.paymentMode,
             bankReferenceNumber: form.bankReferenceNumber,
             receivedBy: form.receivedBy,
-            recBody: rows.map((row: any) => ({ ...row, references: Array.isArray(row.references) ? row.references.map((ref: any) => ({ ...ref, referenceType: String(ref.referenceType || "").toUpperCase(), billAmount: String(ref.billAmount ?? 0), adjustedAmount: String(ref.adjustedAmount ?? 0), returnAmount: Number(ref.returnAmount || ref.netReturnAmount || 0) })) : [] })),
-            recFooter: { netAmount: String(netAmount), adjustedAmount: String(adjustedAmount), balanceAmount: String(balanceAmount) },
+
+            recBody: rows.map((row: any) => ({
+                ...row,
+                references: Array.isArray(row.references)
+                    ? row.references.map((ref: any) => ({
+                        ...ref,
+                        referenceType: String(ref.referenceType || "").toUpperCase(),
+                        billAmount: String(ref.billAmount ?? 0),
+                        adjustedAmount: String(ref.adjustedAmount ?? 0),
+                        returnAmount: Number(
+                            ref.returnAmount || ref.netReturnAmount || 0
+                        ),
+                    }))
+                    : [],
+            })),
+
+            recFooter: {
+                netAmount: String(netAmount),
+                adjustedAmount: String(adjustedAmount),
+                balanceAmount: String(balanceAmount),
+            },
         };
+
+        const getSalesReturnVoucherNumber = (ref: any) => {
+            return (
+                ref.salesReturnVoucherNumber ||
+                ref.saleReturn ||
+                ref.salesReturn ||
+                ref.salesInvoiceReturn ||
+                ref.sInvReturnVoucherNumber ||
+                ref.sInvReturn
+            );
+        };
+
+        const updateLinkedSalesReturn = async ({ ref, oldAdj = 0, newAdj = 0, receiptVoucherNumber, }: any) => {
+            const salesReturnVoucherNumber = getSalesReturnVoucherNumber(ref);
+            if (!salesReturnVoucherNumber) return;
+            const getSalesReturn = await dispatch(getByVoucherNumberSalesInvoiceReturn({ voucherNumber: salesReturnVoucherNumber, }) as any);
+            const salesReturn = getSalesReturn?.payload;
+            if (!salesReturn) {
+                toast.error("Sales return not found");
+                console.warn("Sales return not found:", salesReturnVoucherNumber);
+                return;
+            }
+
+            const returnFooter = salesReturn.sInvReturnFooter || {};
+            const returnNetAmount = toNumber(returnFooter.netAmount);
+            const previousAdjusted = toNumber(returnFooter.adjustedAmount);
+            const recalculatedAdjusted = previousAdjusted - toNumber(oldAdj) + toNumber(newAdj);
+            const newBalanceAmount = returnNetAmount - recalculatedAdjusted;
+            if (newBalanceAmount < 0) { throw new Error(`Adjusted amount exceeds sales return balance for ${salesReturnVoucherNumber}`) }
+            let returnReferenceCodes = Array.isArray(salesReturn.sInvReturnReferenceCodes) ? [...salesReturn.sInvReturnReferenceCodes] : [];
+            if (toNumber(newAdj) === 0) {
+                returnReferenceCodes = returnReferenceCodes.filter((code: string) => code !== receiptVoucherNumber);
+            } else if (toNumber(oldAdj) === 0 && receiptVoucherNumber) {
+                returnReferenceCodes = Array.from(new Set([...returnReferenceCodes, receiptVoucherNumber]));
+            }
+            const updateSalesReturnPayload: any = {
+                sInvReturnFooter: {
+                    ...returnFooter,
+                    adjustedAmount: String(recalculatedAdjusted),
+                    balanceAmount: String(newBalanceAmount),
+                },
+                sInvReturnStatus: newBalanceAmount < 1 ? "close" : "open",
+                sInvReturnReferenceCodes: returnReferenceCodes,
+            };
+
+            await dispatch(updateSalesInvoiceReturn({ sInvReturnVoucherNumber: salesReturnVoucherNumber, payload: updateSalesReturnPayload, }) as any);
+        };
+
         try {
             if (editingRecord) {
                 const buildReferenceDiff = (oldReceipt: any, newPayload: any) => {
                     const oldMap: any = {};
                     const newMap: any = {};
-                    (oldReceipt?.recBody || oldReceipt?.data?.recBody || editingRecord?.recBody || []).forEach((body: any) => {
+
+                    (
+                        oldReceipt?.recBody ||
+                        oldReceipt?.data?.recBody ||
+                        editingRecord?.recBody ||
+                        []
+                    ).forEach((body: any) => {
                         (body.references || []).forEach((ref: any) => {
                             const invoiceNo = ref.saleInvoice || ref.salesInvoice;
-                            if (invoiceNo) oldMap[invoiceNo] = { adjustedAmount: toNumber(oldMap[invoiceNo]?.adjustedAmount) + toNumber(ref.adjustedAmount) };
+
+                            if (!invoiceNo) return;
+
+                            oldMap[invoiceNo] = {
+                                adjustedAmount:
+                                    toNumber(oldMap[invoiceNo]?.adjustedAmount) +
+                                    toNumber(ref.adjustedAmount),
+                                returnVoucherNumber:
+                                    getSalesReturnVoucherNumber(ref),
+                                originalRef: ref,
+                            };
                         });
                     });
+
                     (newPayload?.recBody || []).forEach((body: any) => {
                         (body.references || []).forEach((ref: any) => {
                             const invoiceNo = ref.saleInvoice || ref.salesInvoice;
-                            if (invoiceNo) newMap[invoiceNo] = { adjustedAmount: toNumber(newMap[invoiceNo]?.adjustedAmount) + toNumber(ref.adjustedAmount), returnAmount: toNumber(newMap[invoiceNo]?.returnAmount) + toNumber(ref.returnAmount || ref.netReturnAmount || 0) };
+
+                            if (!invoiceNo) return;
+
+                            newMap[invoiceNo] = {
+                                adjustedAmount:
+                                    toNumber(newMap[invoiceNo]?.adjustedAmount) +
+                                    toNumber(ref.adjustedAmount),
+                                returnAmount:
+                                    toNumber(newMap[invoiceNo]?.returnAmount) +
+                                    toNumber(
+                                        ref.returnAmount ||
+                                        ref.netReturnAmount ||
+                                        0
+                                    ),
+                                returnVoucherNumber:
+                                    getSalesReturnVoucherNumber(ref),
+                                originalRef: ref,
+                            };
                         });
                     });
-                    const allInvoices = new Set([...Object.keys(oldMap), ...Object.keys(newMap)]);
-                    return Array.from(allInvoices).map((invoiceNo: any) => ({ saleInvoice: invoiceNo, oldAdjustedAmount: oldMap[invoiceNo]?.adjustedAmount ?? 0, newAdjustedAmount: newMap[invoiceNo]?.adjustedAmount ?? 0, returnAmount: newMap[invoiceNo]?.returnAmount ?? 0 }));
+
+                    const allInvoices = new Set([
+                        ...Object.keys(oldMap),
+                        ...Object.keys(newMap),
+                    ]);
+
+                    return Array.from(allInvoices).map((invoiceNo: any) => ({
+                        saleInvoice: invoiceNo,
+                        oldAdjustedAmount:
+                            oldMap[invoiceNo]?.adjustedAmount ?? 0,
+                        newAdjustedAmount:
+                            newMap[invoiceNo]?.adjustedAmount ?? 0,
+                        returnAmount: newMap[invoiceNo]?.returnAmount ?? 0,
+
+                        returnVoucherNumber:
+                            newMap[invoiceNo]?.returnVoucherNumber ||
+                            oldMap[invoiceNo]?.returnVoucherNumber,
+
+                        originalRef:
+                            newMap[invoiceNo]?.originalRef ||
+                            oldMap[invoiceNo]?.originalRef,
+                    }));
                 };
+
                 const diffs = buildReferenceDiff(editingRecord, payload);
+
                 for (const ref of diffs) {
                     // @ts-ignore
                     const invoiceNo = ref.saleInvoice || ref.salesInvoice;
+
                     if (!invoiceNo) continue;
-                    const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: invoiceNo }) as any);
+
+                    const getSalesInv = await dispatch(
+                        getByVoucherNumberSalesInvoice({
+                            voucherNumber: invoiceNo,
+                        }) as any
+                    );
+
                     const salesInv = getSalesInv?.payload;
+
                     if (!salesInv) {
                         toast.error("Sales invoice not found");
                         console.warn("Sales invoice not found:", invoiceNo);
                         continue;
                     }
+
                     const footer = salesInv.sInvFooter || {};
+
                     const invoiceNetAmount = toNumber(footer.netAmount);
                     const previousAdjusted = toNumber(footer.adjustedAmount);
+
                     const oldAdj = toNumber(ref.oldAdjustedAmount);
                     const newAdj = toNumber(ref.newAdjustedAmount);
                     const returnAmount = toNumber(ref.returnAmount);
-                    const recalculatedAdjusted = previousAdjusted - oldAdj + newAdj;
-                    const newBalanceAmount = invoiceNetAmount - recalculatedAdjusted;
-                    if (newBalanceAmount < 0) throw new Error(`Adjusted amount exceeds balance for ${invoiceNo}`);
-                    let referenceCodes = Array.isArray(salesInv.sInvReferenceCodes) ? [...salesInv.sInvReferenceCodes] : [];
-                    if (newAdj === 0) referenceCodes = referenceCodes.filter((code: string) => code !== form.recVoucherNumber);
-                    else if (oldAdj === 0) referenceCodes = Array.from(new Set([...referenceCodes, form.recVoucherNumber]));
-                    const updateInvoicePayload: any = { sInvFooter: { ...footer, adjustedAmount: String(recalculatedAdjusted), balanceAmount: String(newBalanceAmount) }, sInvStatus: newBalanceAmount - returnAmount < 1 ? "close" : "open", sInvReferenceCodes: referenceCodes };
-                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: invoiceNo, payload: updateInvoicePayload }) as any);
+
+                    const recalculatedAdjusted =
+                        previousAdjusted - oldAdj + newAdj;
+
+                    const newBalanceAmount =
+                        invoiceNetAmount - recalculatedAdjusted;
+
+                    if (newBalanceAmount < 0) {
+                        throw new Error(
+                            `Adjusted amount exceeds balance for ${invoiceNo}`
+                        );
+                    }
+
+                    let referenceCodes = Array.isArray(
+                        salesInv.sInvReferenceCodes
+                    )
+                        ? [...salesInv.sInvReferenceCodes]
+                        : [];
+
+                    if (newAdj === 0) {
+                        referenceCodes = referenceCodes.filter(
+                            (code: string) => code !== form.recVoucherNumber
+                        );
+                    } else if (oldAdj === 0) {
+                        referenceCodes = Array.from(
+                            new Set([...referenceCodes, form.recVoucherNumber])
+                        );
+                    }
+
+                    const updateInvoicePayload: any = {
+                        sInvFooter: {
+                            ...footer,
+                            adjustedAmount: String(recalculatedAdjusted),
+                            balanceAmount: String(newBalanceAmount),
+                        },
+                        sInvStatus: newBalanceAmount - returnAmount < 1 ? "close" : "open", sInvReferenceCodes: referenceCodes,
+                    };
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: invoiceNo, payload: updateInvoicePayload, }) as any);
+                    await updateLinkedSalesReturn({
+                        ref: { ...ref.originalRef, salesInvoiceReturn: ref.returnVoucherNumber, },
+                        oldAdj,
+                        newAdj,
+                        receiptVoucherNumber: form.recVoucherNumber,
+                    });
                 }
-                await dispatch(updateSalesReceipt({ receiptVoucherNumber: form.recVoucherNumber, payload }) as any).unwrap();
+                await dispatch(updateSalesReceipt({ receiptVoucherNumber: form.recVoucherNumber, payload, }) as any).unwrap();
                 toast.success("Sales receipt updated successfully");
             } else {
                 const invoiceAdjustments: any[] = [];
                 for (const bodyItem of payload.recBody) {
-                    const references = Array.isArray(bodyItem.references) ? bodyItem.references : [];
+                    const references = Array.isArray(bodyItem.references)
+                        ? bodyItem.references
+                        : [];
+
                     for (const ref of references) {
                         const invoiceNo = ref.saleInvoice || ref.salesInvoice;
                         if (!invoiceNo) continue;
-                        const { payload: salesInv } = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: invoiceNo }) as any);
+
+                        const { payload: salesInv } = await dispatch(
+                            getByVoucherNumberSalesInvoice({
+                                voucherNumber: invoiceNo,
+                            }) as any
+                        );
+
                         if (!salesInv) {
                             console.warn("Sales invoice not found:", invoiceNo);
                             continue;
@@ -543,8 +724,22 @@ const SalesReceipt = () => {
                         const returnAmount = toNumber(ref.returnAmount || ref.netReturnAmount || 0);
                         const newAdjustedAmount = oldAdjusted + receiptAdjusted;
                         const newBalanceAmount = invoiceNetAmount - newAdjustedAmount;
-                        if (newBalanceAmount < 0) throw new Error(`Adjusted amount exceeds balance for ${invoiceNo}`);
-                        invoiceAdjustments.push({ saleInvoice: invoiceNo, salesInvoice: invoiceNo, salesInv, footer, newAdjustedAmount, newBalanceAmount, returnAmount });
+
+                        if (newBalanceAmount < 0) {
+                            throw new Error(`Adjusted amount exceeds balance for ${invoiceNo}`);
+                        }
+
+                        invoiceAdjustments.push({
+                            saleInvoice: invoiceNo,
+                            salesInvoice: invoiceNo,
+                            salesInv,
+                            footer,
+                            newAdjustedAmount,
+                            newBalanceAmount,
+                            returnAmount,
+                            receiptAdjusted,
+                            originalRef: ref,
+                        });
                     }
                 }
 
@@ -552,10 +747,27 @@ const SalesReceipt = () => {
                 const savedReceiptVoucherNumber = getReceiptVoucherNumberFromResponse(receiptData);
                 for (const item of invoiceAdjustments) {
                     const oldReferenceCodes = Array.isArray(item.salesInv.sInvReferenceCodes) ? item.salesInv.sInvReferenceCodes : [];
-                    const newReferenceCodes = savedReceiptVoucherNumber ? Array.from(new Set([...oldReferenceCodes, savedReceiptVoucherNumber])) : oldReferenceCodes;
-                    const updateInvoicePayload: any = { sInvFooter: { ...item.footer, adjustedAmount: String(item.newAdjustedAmount), balanceAmount: String(item.newBalanceAmount) }, sInvStatus: item.newBalanceAmount - item.returnAmount < 1 ? "close" : "open", sInvReferenceCodes: newReferenceCodes };
-                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: item.saleInvoice || item.salesInvoice, payload: updateInvoicePayload }) as any);
+
+                    const newReferenceCodes = savedReceiptVoucherNumber ? Array.from(new Set([...oldReferenceCodes, savedReceiptVoucherNumber,])) : oldReferenceCodes;
+
+                    const updateInvoicePayload: any = {
+                        sInvFooter: {
+                            ...item.footer,
+                            adjustedAmount: String(item.newAdjustedAmount),
+                            balanceAmount: String(item.newBalanceAmount),
+                        },
+                        sInvStatus: item.newBalanceAmount - item.returnAmount < 1 ? "close" : "open",
+                        sInvReferenceCodes: newReferenceCodes,
+                    };
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: item.saleInvoice || item.salesInvoice, payload: updateInvoicePayload, }) as any);
+                    await updateLinkedSalesReturn({
+                        ref: item.originalRef,
+                        oldAdj: 0,
+                        newAdj: item.receiptAdjusted,
+                        receiptVoucherNumber: savedReceiptVoucherNumber,
+                    });
                 }
+
                 toast.success("Sales receipt created successfully");
             }
             setShowModal(false);
@@ -563,7 +775,11 @@ const SalesReceipt = () => {
             await fetchSalesReceipts();
         } catch (error: any) {
             console.error("Sales receipt save error:", error);
-            toast.error(error?.response?.data?.message || error?.message || "Failed to save sales receipt");
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to save sales receipt"
+            );
         }
     };
 
