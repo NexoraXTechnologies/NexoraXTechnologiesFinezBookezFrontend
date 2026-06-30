@@ -1,4 +1,3 @@
-import professionalAxios from "../../../../services/professionalAxios";
 import { buildChassisDrawingSvgHtml } from "./chassisDrawingSvgHtml";
 
 /* ===================================================

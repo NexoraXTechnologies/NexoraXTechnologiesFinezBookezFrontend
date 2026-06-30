@@ -1,5 +1,3 @@
-import { Download, Send } from "lucide-react";
-
 const BOMTab = ({ bomData = {} }: any) => {
     const d = bomData?.dimensions || {};
     const isChassis = bomData?.finishedProduct === "chassis";

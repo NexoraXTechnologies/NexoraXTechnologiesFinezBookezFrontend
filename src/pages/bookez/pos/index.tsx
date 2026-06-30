@@ -46,7 +46,7 @@ const staggerContainer = {
     show: {},
 };
 
-const cardMotion = {
+const cardMotion:any = {
     hidden: {},
     show: {
         transition: {
@@ -82,7 +82,7 @@ const modalBackdropMotion = {
     },
 };
 
-const productPreviewMotion = {
+const productPreviewMotion:any = {
     hidden: {
         scale: 0.9,
         y: 28,

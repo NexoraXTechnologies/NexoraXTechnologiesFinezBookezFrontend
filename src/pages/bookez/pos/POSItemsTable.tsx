@@ -15,7 +15,7 @@ const formatIndianNumber = (value: any) => {
     });
 };
 
-const tableRowMotion = {
+const tableRowMotion:any = {
     hidden: {
         opacity: 0,
         y: 8,
@@ -41,7 +41,7 @@ const tableRowMotion = {
     },
 };
 
-const summaryMotion = {
+const summaryMotion:any = {
     hidden: {
         opacity: 0,
         scale: 0.96,
@@ -214,6 +214,7 @@ const POSItemsTable = ({ items = [] }: any) => {
                                         <motion.tr
                                             layout
                                             key={item?.id || item?.productCode || index}
+                                            
                                             variants={tableRowMotion}
                                             initial="hidden"
                                             animate="show"
