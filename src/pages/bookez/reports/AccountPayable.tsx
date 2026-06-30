@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { IndianRupee, Users } from "lucide-react";
 
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import ReportsOverviewCards from "./ReportsOverviewCards";
-import { getAccountReceivable } from "../../../redux/slices/professionalSlice/ledgerReports/accountsReceivableSlice";
+
+import { getAccountPayable } from "../../../redux/slices/professionalSlice/ledgerReports/accountsPayableSlice";
+import { IndianRupee, Users } from "lucide-react";
 
 const mainColumns = [
     {
-        key: "sInvCustomerName",
-        title: "Customer Name",
+        key: "pInvVendorName",
+        title: "Vendor Name",
     },
     {
-        key: "sInvCustomerCode",
-        title: "Customer Code",
+        key: "pInvVendorCode",
+        title: "Vendor Code",
     },
     {
         key: "totalBalanceAmount",
@@ -25,16 +26,16 @@ const mainColumns = [
     },
 ];
 
-const AccountsReceivable = () => {
+const AccountPayable = () => {
     const dispatch = useDispatch<any>();
 
     const {
-        accountReceivable = [],
+        accountPayable = [],
         listingLoader,
         pagination,
         summary = {},
         count,
-    } = useSelector((s: any) => s.accountReceivable);
+    } = useSelector((s: any) => s.accountPayable);
 
     const [search, setSearch] = useState("");
     const [localOffset, setLocalOffset] = useState(0);
@@ -45,11 +46,11 @@ const AccountsReceivable = () => {
 
     useEffect(() => {
         dispatch(
-            getAccountReceivable({
+            (getAccountPayable as any)({
                 offset: localOffset,
                 limit: localLimit,
                 search,
-            } as any)
+            })
         );
     }, [dispatch, localOffset, localLimit, search]);
 
@@ -62,12 +63,12 @@ const AccountsReceivable = () => {
             }
 
             await dispatch(
-                getAccountReceivable({
+                (getAccountPayable as any)({
                     offset: localOffset,
                     limit: localLimit,
                     search,
                     exportType,
-                } as any)
+                })
             );
         } finally {
             setPdfLoading(false);
@@ -80,14 +81,12 @@ const AccountsReceivable = () => {
             <ReportsOverviewCards
                 cards={[
                     {
-                        title: "Total Receivable Amount",
-                        value: `₹${Number(
-                            summary?.totalReceivableAmount || 0
-                        ).toFixed(2)}`,
+                        title: "Total Payable Amount",
+                        value: `₹${Number(summary?.totalPayableAmount || 0).toFixed(2)}`,
                         icon: <IndianRupee size={16} />,
                     },
                     {
-                        title: "Total Customers",
+                        title: "Total Vendors",
                         value: Number(count || 0),
                         icon: <Users size={16} />,
                     },
@@ -105,7 +104,7 @@ const AccountsReceivable = () => {
 
             <DataTable
                 columns={mainColumns}
-                data={accountReceivable}
+                data={accountPayable}
                 loading={listingLoader}
                 emptyMessage="No data found"
                 showFieldSelector={false}
@@ -128,4 +127,4 @@ const AccountsReceivable = () => {
     );
 };
 
-export default AccountsReceivable;
+export default AccountPayable;

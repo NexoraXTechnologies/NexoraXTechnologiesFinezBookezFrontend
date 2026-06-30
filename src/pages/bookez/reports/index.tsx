@@ -3,11 +3,13 @@ import {
   Factory,
   PackageMinus,
   PackagePlus,
+  CircleDollarSign,
 } from "lucide-react";
 import TransactionDashboard from "../transactions/components/TransactionDashboard";
 import AccountsReceivable from "./AccountsReceivable";
 import AccountLedger from "./AccountLedger";
 import StockLedger from "./StockLedger";
+import AccountPayable from "./AccountPayable";
 
 const cards: any[] = [
   {
@@ -16,6 +18,13 @@ const cards: any[] = [
     component: AccountsReceivable,
     icon: <Factory size={22} />,
     permissionKey: "accountReceivable"
+  },
+  {
+    title: "Accounts Payable",
+    description: "Monitor outstanding vendor bills, pending payments, and payable balances.",
+    component: AccountPayable,
+    icon: <CircleDollarSign size={22} />,
+    permissionKey: "accountPayable",
   },
   {
     title: "Account Ledger",
