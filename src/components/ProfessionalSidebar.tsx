@@ -109,38 +109,32 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "accountMaster",
 							action: "view",
 						},
+
 						{
-							name: "Transaction",
-							icon: <ReceiptText size={20} />,
+							name: "Opening Balances / Stocks",
+							path: "/bookEz/transaction/opening-balances",
+							icon: <WalletCards size={19} />,
 							module: "bookez",
-							permissionKey: "bookez",
-							children: [
-								{
-									name: "Opening Balances / Stocks",
-									path: "/bookEz/transaction/opening-balances",
-									icon: <WalletCards size={19} />,
-									module: "bookez",
-									permissionKey: "openingBalance",
-									action: "view",
-								},
-								{
-									name: "Sale Workflow",
-									path: "/bookEz/transaction/sale-workflow",
-									icon: <BadgeIndianRupee size={19} />,
-									module: "bookez",
-									permissionKey: "salesInvoice",
-									action: "view",
-								},
-								{
-									name: "Purchase Workflow",
-									path: "/bookEz/transaction/purchase-workflow",
-									icon: <ShoppingCart size={19} />,
-									module: "bookez",
-									permissionKey: "purchaseInvoice",
-									action: "view",
-								},
-							],
+							permissionKey: "openingBalance",
+							action: "view",
 						},
+						{
+							name: "Sale Workflow",
+							path: "/bookEz/transaction/sale-workflow",
+							icon: <BadgeIndianRupee size={19} />,
+							module: "bookez",
+							permissionKey: "salesInvoice",
+							action: "view",
+						},
+						{
+							name: "Purchase Workflow",
+							path: "/bookEz/transaction/purchase-workflow",
+							icon: <ShoppingCart size={19} />,
+							module: "bookez",
+							permissionKey: "purchaseInvoice",
+							action: "view",
+						},
+
 
 						{
 							name: "Engineering Module",
