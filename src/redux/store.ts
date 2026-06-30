@@ -56,6 +56,7 @@ import getAllTransactionSchema from "./slices/professionalSlice/transactionSchem
 
 // ledger report
 import accountReceivableReducer from "./slices/professionalSlice/ledgerReports/accountsReceivableSlice"
+import accountPayableReducer from "./slices/professionalSlice/ledgerReports/accountsPayableSlice"
 import accountLedgerReducer from "./slices/professionalSlice/ledgerReports/accountLedgerSlice";
 import stockLedgerReducer from "./slices/professionalSlice/ledgerReports/stockLedgerSlice";
 
@@ -130,6 +131,7 @@ export const store = configureStore({
     getAllTransactionSchema,
 
     // ledger report 
+    accountPayable:accountPayableReducer,
     accountReceivable: accountReceivableReducer,
     accountLedger: accountLedgerReducer,
     stockLedger: stockLedgerReducer,

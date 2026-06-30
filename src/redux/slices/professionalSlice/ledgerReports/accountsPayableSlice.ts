@@ -6,27 +6,27 @@
 //     message: string;
 // };
 
-// export const getAccountReceivable = createAsyncThunk<
+// export const getAccountPayable = createAsyncThunk<
 //     any,
 //     void,
 //     { rejectValue: RejectValue }
 
 // >(
-//     "accountReceivable/getAccountReceivable", async (_, { rejectWithValue }) => {
+//     "accountPayable/getAccountPayable", async (_, { rejectWithValue }) => {
 
 //         try {
-//             const res = await professionalAxios.get("/eTaxSolnMongoApiBackend/users/bookEZ/reporting/accountsReceivable/customers")
+//             const res = await professionalAxios.get("/eTaxSolnMongoApiBackend//users/bookEZ/reporting/accountsPayable/vendors")
 
 //             if (!res.data?.success) {
 //                 return rejectWithValue({
-//                     message: res.data?.message || "failed to fetch account receivable"
+//                     message: res.data?.message || "failed to fetch account payable"
 //                 })
 //             }
 //             return res.data;
 //         } catch (error: any) {
 //             return rejectWithValue({
 //                 message: error?.response?.data?.message ||
-//                     error?.response?.data?.error || "failed to fetch account receivable",
+//                     error?.response?.data?.error || "failed to fetch account payable",
 //             })
 //         }
 //     }
@@ -37,13 +37,13 @@
 //    SLICE
 // =================================================== */
 
-// const accountReceivableSlice = createSlice({
-//     name: "accountReceivable",
+// const accountPayableSlice = createSlice({
+//     name: "accountPayable",
 //     initialState: {
 //         addLoader: false,
 //         listingLoader: false,
 //         deleteLoader: false,
-//         accountReceivable: [] as any[],
+//         accountPayable: [] as any[],
 //         error: null as string | null,
 //         summary: {
 //             totalReceivableAmount: 0,
@@ -63,7 +63,7 @@
 
 
 //     reducers: {
-//         clearAccountReceivableState: (state) => {
+//         clearAccountPayable: (state) => {
 //             state.error = null;
 //             state.addLoader = false;
 //             state.deleteLoader = false;
@@ -77,23 +77,23 @@
 //     extraReducers: (builder) => {
 //         builder
 
-//             .addCase(getAccountReceivable.pending, (state) => {
+//             .addCase(getAccountPayable.pending, (state) => {
 //                 state.listingLoader = true;
 //                 state.error = null;
 //             })
-//             .addCase(getAccountReceivable.fulfilled, (state, action) => {
+//             .addCase(getAccountPayable.fulfilled, (state, action) => {
 //                 state.listingLoader = false;
 //                 state.pagination = action.payload?.data?.pagination ?? state.pagination;
-//                 state.accountReceivable = action.payload?.data?.records ?? [];
+//                 state.accountPayable = action.payload?.data?.records ?? [];
 //                 state.summary=action.payload?.data?.summary
 //                 state.count=action.payload?.data?.count
 //             })
-//             .addCase(getAccountReceivable.rejected, (state, action) => {
+//             .addCase(getAccountPayable.rejected, (state, action) => {
 //                 state.listingLoader = false;
 //                 state.error =
-//                     action.payload?.message || "failed to fetch account receivable";
+//                     action.payload?.message || "failed to fetch account payable";
 
-//                 state.accountReceivable = [];
+//                 state.accountPayable = [];
 //                 state.summary = {
 //                     totalReceivableAmount: 0,
 //                 };
@@ -102,8 +102,8 @@
 //     }
 // })
 
-// export const { clearAccountReceivableState } = accountReceivableSlice.actions;
-// export default accountReceivableSlice.reducer;
+// export const { clearAccountPayable } = accountPayableSlice.actions;
+// export default accountPayableSlice.reducer;
 
 
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
@@ -113,20 +113,22 @@ type RejectValue = {
     message: string;
 };
 
-type AccountReceivableParams = {
+type AccountPayableParams = {
     offset?: number;
     limit?: number;
     search?: string;
     exportType?: "pdf" | "excel" | "xlsx";
 };
 
-const downloadBlobFile = (blob: Blob, fileName: string) => {
+const downloadBlobFile = (
+    blob: Blob,
+    fileName: string
+) => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = url;
     link.download = fileName;
-
     document.body.appendChild(link);
     link.click();
 
@@ -134,12 +136,12 @@ const downloadBlobFile = (blob: Blob, fileName: string) => {
     window.URL.revokeObjectURL(url);
 };
 
-export const getAccountReceivable = createAsyncThunk<
+export const getAccountPayable = createAsyncThunk<
     any,
-    AccountReceivableParams | undefined,
+    AccountPayableParams | undefined,
     { rejectValue: RejectValue }
 >(
-    "accountReceivable/getAccountReceivable",
+    "accountPayable/getAccountPayable",
     async (params = {}, { rejectWithValue }) => {
         try {
             const {
@@ -152,8 +154,8 @@ export const getAccountReceivable = createAsyncThunk<
             const isExport = Boolean(exportType);
 
             const apiUrl = isExport
-                ? "/eTaxSolnMongoApiBackend/users/bookEZ/reporting/accountsReceivable"
-                : "/eTaxSolnMongoApiBackend/users/bookEZ/reporting/accountsReceivable/customers";
+                ? "/eTaxSolnMongoApiBackend/users/bookEZ/reporting/accountsPayable"
+                : "/eTaxSolnMongoApiBackend/users/bookEZ/reporting/accountsPayable/vendors";
 
             const res = await professionalAxios.get(apiUrl, {
                 params: {
@@ -167,13 +169,13 @@ export const getAccountReceivable = createAsyncThunk<
 
             if (isExport) {
                 const fileExt = exportType === "pdf" ? "pdf" : "xlsx";
-                const fileName = `AccountsReceivable_${Date.now()}.${fileExt}`;
+                const fileName = `AccountsPayable_${Date.now()}.${fileExt}`;
 
                 downloadBlobFile(res.data, fileName);
 
                 return {
-                    downloaded: true,
                     exportType,
+                    downloaded: true,
                 };
             }
 
@@ -181,7 +183,7 @@ export const getAccountReceivable = createAsyncThunk<
                 return rejectWithValue({
                     message:
                         res.data?.message ||
-                        "Failed to fetch account receivable",
+                        "Failed to fetch account payable",
                 });
             }
 
@@ -192,7 +194,7 @@ export const getAccountReceivable = createAsyncThunk<
                     error?.response?.data?.message ||
                     error?.response?.data?.error ||
                     error?.message ||
-                    "Failed to fetch account receivable",
+                    "Failed to fetch account payable",
             });
         }
     }
@@ -202,8 +204,8 @@ export const getAccountReceivable = createAsyncThunk<
    SLICE
 =================================================== */
 
-const accountReceivableSlice = createSlice({
-    name: "accountReceivable",
+const accountPayableSlice = createSlice({
+    name: "accountPayable",
 
     initialState: {
         addLoader: false,
@@ -211,12 +213,11 @@ const accountReceivableSlice = createSlice({
         deleteLoader: false,
         exportLoader: false,
 
-        accountReceivable: [] as any[],
-
+        accountPayable: [] as any[],
         error: null as string | null,
 
         summary: {
-            totalReceivableAmount: 0,
+            totalPayableAmount: 0,
         },
 
         count: 0,
@@ -233,7 +234,7 @@ const accountReceivableSlice = createSlice({
     },
 
     reducers: {
-        clearAccountReceivableState: (state) => {
+        clearAccountPayable: (state) => {
             state.error = null;
             state.addLoader = false;
             state.deleteLoader = false;
@@ -244,7 +245,7 @@ const accountReceivableSlice = createSlice({
 
     extraReducers: (builder) => {
         builder
-            .addCase(getAccountReceivable.pending, (state, action) => {
+            .addCase(getAccountPayable.pending, (state, action) => {
                 const isExport = Boolean(action.meta.arg?.exportType);
 
                 if (isExport) {
@@ -256,7 +257,7 @@ const accountReceivableSlice = createSlice({
                 state.error = null;
             })
 
-            .addCase(getAccountReceivable.fulfilled, (state, action) => {
+            .addCase(getAccountPayable.fulfilled, (state, action) => {
                 const isExport = Boolean(action.meta.arg?.exportType);
 
                 if (isExport) {
@@ -269,19 +270,19 @@ const accountReceivableSlice = createSlice({
                 state.pagination =
                     action.payload?.data?.pagination ?? state.pagination;
 
-                state.accountReceivable =
+                state.accountPayable =
                     action.payload?.data?.records ?? [];
 
                 state.summary =
                     action.payload?.data?.summary ?? {
-                        totalReceivableAmount: 0,
+                        totalPayableAmount: 0,
                     };
 
                 state.count =
                     action.payload?.data?.count ?? 0;
             })
 
-            .addCase(getAccountReceivable.rejected, (state, action) => {
+            .addCase(getAccountPayable.rejected, (state, action) => {
                 const isExport = Boolean(action.meta.arg?.exportType);
 
                 if (isExport) {
@@ -292,12 +293,12 @@ const accountReceivableSlice = createSlice({
 
                 state.error =
                     action.payload?.message ||
-                    "Failed to fetch account receivable";
+                    "Failed to fetch account payable";
 
                 if (!isExport) {
-                    state.accountReceivable = [];
+                    state.accountPayable = [];
                     state.summary = {
-                        totalReceivableAmount: 0,
+                        totalPayableAmount: 0,
                     };
                     state.count = 0;
                 }
@@ -305,7 +306,5 @@ const accountReceivableSlice = createSlice({
     },
 });
 
-export const { clearAccountReceivableState } =
-    accountReceivableSlice.actions;
-
-export default accountReceivableSlice.reducer;
+export const { clearAccountPayable } = accountPayableSlice.actions;
+export default accountPayableSlice.reducer;
