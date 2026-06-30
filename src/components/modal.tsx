@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PrimaryButton, SecondaryButton } from "./buttons";
 import { LogOut, X } from "lucide-react";
@@ -286,10 +286,7 @@ type NoDataConfirmAlertProps = {
     onConfirm?: () => void;
 };
 
-const WarningModel = ({
-    show,
-    title = "No Data Found",
-    message = "Please create at least one record to proceed.",
+const WarningModel = ({ show, title = "No Data Found", message = "Please create at least one record to proceed.",
     cancelText = "Cancel",
     confirmText = "Yes",
     onCancel,
@@ -330,36 +327,24 @@ const WarningModel = ({
     );
 };
 
-const ListingModel = ({
-    show,
-    setShow,
-    title = "No Data Found",
-    report,
-    rowData,
-    downlaodPDF,
-    entryType = "sales-invoice",
-}: any) => {
+const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData, downlaodPDF, entryType = "sales-invoice", GstToggle = false }: any) => {
     const dispatch = useDispatch<any>();
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
     const [gstType, setGstType] = useState("");
     const { company } = useSelector((s: any) => s.professionalCompanyMaster);
-    const [loader, setLoader] = useState(false)
+    const [loader, setLoader] = useState(false);
     const { selectedAccount } = useSelector((s: any) => s.accountMaster);
-    const isReportDownload = Boolean(report?.length);
+    const autoPrintDoneRef = useRef(false);
+    const isReportDownload = Array.isArray(report) && report.length > 0;
 
-    useEffect(() => {
-        if (!show) return;
-        dispatch(getCompany(""));
-        if (downlaodPDF?.CustomerCode) {   
-            dispatch(getAccountByCode(downlaodPDF?.CustomerCode));
-        }
-    }, [show, downlaodPDF?.CustomerCode, dispatch]);
+    const handleLocalPdfPrint = async (forcedGstType?: string) => {
+        const finalGstType = forcedGstType || gstType;
 
-    const handleLocalPdfPrint = async () => {
-        if (!gstType) { return toast.warn("Select With GST Or Without GST") }
-        if (!Object.keys(company)?.length) return toast.error("Add Company Details")        
+        if (!finalGstType) return toast.warn("Select With GST Or Without GST");
+        if (!Object.keys(company || {})?.length) return toast.error("Add Company Details");
+
         try {
-            const includeGst = gstType === "With GST";
+            const includeGst = finalGstType === "With GST";
             const normalized: any = normalizeDoc(rowData);
             const footer = normalized?.footer || {};
             const invoiceNo = normalized?.docNo || rowData?.voucherNumber || rowData?.sInvVoucherNumber || rowData?.sQuoteVoucherNumber || "";
@@ -367,31 +352,18 @@ const ListingModel = ({
             const companyUpiId = company?.upiId || company?.upiID || company?.companyUpiId || company?.upi || "";
             let upiUrl = "";
             let upiQrUri = "";
+
             if (entryType === "sales-invoice" && companyUpiId) {
-                upiUrl = buildUpiLink({
-                    upiId: companyUpiId,
-                    amount,
-                    invoiceNo,
-                    name: company?.companyName || company?.businessName || "",
-                });
+                upiUrl = buildUpiLink({ upiId: companyUpiId, amount, invoiceNo, name: company?.companyName || company?.businessName || "" });
                 upiQrUri = await generateQrDataUrl(upiUrl);
             }
 
-            const htmlContent = buildPdfHtml({
-                ...company,
-                selectedAccount,
-                rowData,
-                includeGst,
-                primaryColor: "#1E88E5",
-                entryType,
-                gstType,
-
-                upiId: companyUpiId,
-                upiUrl,
-                upiQrUri,
-            });
+            const htmlContent = buildPdfHtml({ ...company, selectedAccount, rowData, includeGst, primaryColor: "#1E88E5", entryType, gstType: finalGstType, upiId: companyUpiId, upiUrl, upiQrUri });
 
             printHtmlUsingIframe(htmlContent);
+            setShow(false);
+            setGstType("");
+            setSelectedTemplate(null);
         } catch (error) {
             console.log("Local PDF print failed:", error);
         }
@@ -403,26 +375,19 @@ const ListingModel = ({
                 toast.warn("Please select template");
                 return;
             }
-            setLoader(true)
-            const blobData = await dispatch(
-                reportGeneratePdf({
-                    moduleType: downlaodPDF?.moduleType,
-                    templateFileId: selectedTemplate?.templateFileId,
-                    CustomerCode: downlaodPDF?.CustomerCode,
-                    voucherNumber: downlaodPDF?.voucherNumber,
-                })
-            ).unwrap();
 
-            downloadBlobPdf({
-                blobData,
-                fileName: `${rowData?.voucherNumber || "report"}.pdf`,
-            });
-            setShow(false)
+            setLoader(true);
+
+            const blobData = await dispatch(reportGeneratePdf({ moduleType: downlaodPDF?.moduleType, templateFileId: selectedTemplate?.templateFileId, CustomerCode: downlaodPDF?.CustomerCode, voucherNumber: downlaodPDF?.voucherNumber })).unwrap();
+
+            downloadBlobPdf({ blobData, fileName: `${rowData?.voucherNumber || "report"}.pdf` });
+            setShow(false);
         } catch (error) {
-            toast.error("PDF download failed")
+            toast.error("PDF download failed");
             console.error("PDF download failed:", error);
         }
-        setLoader(false)
+
+        setLoader(false);
     };
 
     const handleConfirm = async () => {
@@ -433,37 +398,47 @@ const ListingModel = ({
 
         await handleLocalPdfPrint();
     };
+
+    useEffect(() => {
+        if (!show) {
+            autoPrintDoneRef.current = false;
+            return;
+        }
+
+        dispatch(getCompany(""));
+
+        if (downlaodPDF?.CustomerCode) {
+            dispatch(getAccountByCode(downlaodPDF?.CustomerCode));
+        }
+    }, [show, downlaodPDF?.CustomerCode, dispatch]);
+
+    useEffect(() => {
+        if (!show) return;
+        if (!GstToggle) return;
+        if (isReportDownload) return;
+        if (autoPrintDoneRef.current) return;
+        if (!Object.keys(company || {})?.length) return;
+
+        autoPrintDoneRef.current = true;
+        handleLocalPdfPrint("With GST");
+    }, [show, GstToggle, isReportDownload, company]);
+
     if (!show) return null;
+    if (GstToggle && !isReportDownload) return null;
 
     return (
         <AnimatePresence>
-            <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-            >
+            <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: 40 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    transition={{
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20,
-                    }}
-                    className={`
-                        relative flex w-full max-h-[90vh] flex-col overflow-hidden
-                        rounded-md border border-border bg-card text-card-foreground shadow-2xl
-                        ${maxWidthClass["lg"]}
-                    `}
+                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                    className={`relative flex w-full max-h-[90vh] flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-2xl ${maxWidthClass["lg"]}`}
                 >
                     <div className="flex shrink-0 items-center justify-between border-b border-border bg-secondary px-6 py-3">
                         <div>
-                            <h2 className="mb-0 text-xl font-semibold text-secondary-foreground">
-                                {title}
-                            </h2>
+                            <h2 className="mb-0 text-xl font-semibold text-secondary-foreground">{title}</h2>
                         </div>
 
                         <button
@@ -486,13 +461,7 @@ const ListingModel = ({
                                     <li
                                         key={e?.id || index}
                                         onClick={() => setSelectedTemplate(e)}
-                                        className={`
-                                            rounded-lg p-4 shadow-sm cursor-pointer transition-all duration-200
-                                            ${e?.id === selectedTemplate?.id
-                                                ? "border-2 border-primary bg-primary/10 text-primary shadow-md"
-                                                : "border border-border bg-card text-card-foreground hover:bg-muted hover:shadow-md"
-                                            }
-                                        `}
+                                        className={`rounded-lg p-4 shadow-sm cursor-pointer transition-all duration-200 ${e?.id === selectedTemplate?.id ? "border-2 border-primary bg-primary/10 text-primary shadow-md" : "border border-border bg-card text-card-foreground hover:bg-muted hover:shadow-md"}`}
                                     >
                                         {e?.templateName}
                                     </li>
@@ -504,13 +473,7 @@ const ListingModel = ({
                                     <div
                                         key={option}
                                         onClick={() => setGstType(option)}
-                                        className={`
-                                            rounded-lg border px-4 py-2 cursor-pointer transition-all
-                                            ${gstType === option
-                                                ? "border-primary bg-primary text-primary-foreground"
-                                                : "border-border bg-card text-card-foreground hover:border-primary hover:bg-muted"
-                                            }
-                                        `}
+                                        className={`rounded-lg border px-4 py-2 cursor-pointer transition-all ${gstType === option ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-card-foreground hover:border-primary hover:bg-muted"}`}
                                     >
                                         {option}
                                     </div>
@@ -520,12 +483,7 @@ const ListingModel = ({
                     </div>
 
                     <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
-                        <PrimaryButton
-                            callBackFn={handleConfirm}
-                            text="Confirm"
-                            loader={loader}
-                        />
-
+                        <PrimaryButton callBackFn={handleConfirm} text="Confirm" loader={loader} />
                         <SecondaryButton
                             disabled={loader}
                             callBackFn={() => {

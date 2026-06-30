@@ -1,4 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ImagePlus, X } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Select, { components } from "react-select";
 
 const ToggleInput = ({
@@ -583,14 +585,267 @@ const SelectInput = ({
 
             {!!error?.length && <p className="text-xs text-danger">{error}</p>}
 
-            {largeData && matchedOptions.length > visibleOptions.length && (
+            {/* {largeData && matchedOptions.length > visibleOptions.length && (
                 <p className="text-[11px] text-muted-foreground">
                     Showing {visibleOptions.length} of {matchedOptions.length}.
                     Scroll down to load more.
                 </p>
-            )}
+            )} */}
         </div>
     );
 };
 
-export { TextInput, SelectInput, TextArea, SelectInputNormal,ToggleInput };
+type ImageUploadInputProps = {
+    label: string;
+    value?: string | null;
+    error?: string;
+    placeholder?: string;
+    alt?: string;
+    mandatory?: boolean;
+    onChange: (value: string | null) => void;
+    className?: string,
+};
+
+const ImageUploadInput = ({
+    label,
+    value = "",
+    error = "",
+    placeholder = "Click to upload image",
+    alt = "Uploaded Image",
+    mandatory = false,
+    onChange,
+    className = "",
+}: ImageUploadInputProps) => {
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const validateImage = (file: File) => {
+        const allowedTypes = [
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "image/webp",
+        ];
+
+        const maxSize = 2 * 1024 * 1024; // 2MB
+
+        if (!allowedTypes.includes(file.type)) {
+            alert("Only PNG, JPG, JPEG, or WEBP images are allowed.");
+            return false;
+        }
+
+        if (file.size > maxSize) {
+            alert("Image size should be less than 2MB.");
+            return false;
+        }
+
+        return true;
+    };
+
+    const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleFileChange = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        if (!validateImage(file)) {
+            e.target.value = "";
+            return;
+        }
+
+        const base64 = await fileToBase64(file);
+        onChange(base64);
+        e.target.value = "";
+    };
+
+    return (
+        <div className={`flex w-full min-w-0 flex-col gap-1.5 ${className}`}>
+            {!!label?.length && (
+                <label className="text-sm font-semibold text-card-foreground">
+                    {label}
+                    {mandatory && <span className="ml-0.5 text-danger">*</span>}
+                </label>
+            )}
+
+            <motion.div
+                role="button"
+                tabIndex={0}
+                whileHover={{
+                    y: -2,
+                    scale: 1.01,
+                }}
+                whileTap={{
+                    scale: 0.99,
+                }}
+                transition={{
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                }}
+                onClick={() => inputRef.current?.click()}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        inputRef.current?.click();
+                    }
+                }}
+                className={`
+            group relative flex h-[118px] w-full min-w-0 cursor-pointer
+            items-center justify-center overflow-hidden rounded-xl border-2
+            border-dashed bg-card p-3 transition-colors duration-200
+            hover:border-primary hover:bg-primary/5 hover:shadow-md
+            focus:outline-none focus:ring-2 focus:ring-primary/20
+            sm:h-[130px]
+            ${error ? "border-danger bg-danger/5" : "border-border"}
+        `}
+            >
+                <AnimatePresence mode="wait">
+                    {value ? (
+                        <motion.div
+                            key="preview"
+                            initial={{ opacity: 0, scale: 0.92, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 260,
+                                damping: 22,
+                            }}
+                            className="relative flex h-full w-full items-center justify-center"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-background/40 to-background/10" />
+
+                            <motion.img
+                                src={value}
+                                alt={alt}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.25 }}
+                                className="
+                            relative z-10 max-h-[88px] max-w-full rounded-lg
+                            object-contain transition duration-200
+                            group-hover:scale-[1.02] sm:max-h-[98px] sm:max-w-[220px]
+                        "
+                            />
+
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                whileHover={{ opacity: 1 }}
+                                className="
+                            absolute inset-0 z-20 flex items-center justify-center
+                            bg-black/0 opacity-0 transition duration-200
+                             group-hover:opacity-100
+                        "
+                            >
+                                <motion.span
+                                    initial={{ scale: 0.9, y: 5 }}
+                                    whileHover={{ scale: 1, y: 0 }}
+                                    className="rounded-full bg-card/95 px-3 py-1.5 text-xs font-semibold text-card-foreground shadow"
+                                >
+                                    Click to change
+                                </motion.span>
+                            </motion.div>
+
+                            <motion.button
+                                type="button"
+                                title="Remove image"
+                                whileHover={{
+                                    scale: 1.08,
+                                    rotate: 6,
+                                }}
+                                whileTap={{
+                                    scale: 0.92,
+                                }}
+                                className="
+                            absolute right-1 top-0 z-30 flex h-7 w-7 items-center
+                            justify-center rounded-full bg-card text-danger shadow-md
+                            transition hover:bg-danger hover:text-white
+                        "
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onChange(null);
+                                }}
+                            >
+                                <X size={15} strokeWidth={2.5} />
+                            </motion.button>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="empty"
+                            initial={{ opacity: 0, scale: 0.92, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 260,
+                                damping: 22,
+                            }}
+                            className="flex flex-col items-center justify-center gap-2 text-center"
+                        >
+                            <motion.div
+                                animate={{
+                                    y: [0, -3, 0],
+                                }}
+                                transition={{
+                                    duration: 1.8,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                }}
+                                className="
+                            flex h-10 w-10 items-center justify-center rounded-full
+                            bg-primary/10 text-primary transition duration-200
+                            group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground
+                        "
+                            >
+                                <ImagePlus size={20} />
+                            </motion.div>
+
+                            <div className="space-y-0.5">
+                                <p className="text-sm font-semibold text-card-foreground">
+                                    {placeholder}
+                                </p>
+
+                                <p className="text-[11px] text-muted-foreground">
+                                    PNG, JPG, JPEG or WEBP
+                                </p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
+
+            <AnimatePresence>
+                {!!error?.length && (
+                    <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="text-xs font-medium text-danger"
+                    >
+                        {error}
+                    </motion.p>
+                )}
+            </AnimatePresence>
+
+            <input
+                ref={inputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/jpg, image/webp"
+                className="hidden"
+                onChange={handleFileChange}
+            />
+        </div>
+    );
+};
+
+export { TextInput, SelectInput, TextArea, SelectInputNormal, ToggleInput, ImageUploadInput };
