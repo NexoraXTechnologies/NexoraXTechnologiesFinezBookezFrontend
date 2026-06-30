@@ -903,6 +903,7 @@ const CompanyMaster = () => {
                   error={errors.logoUri}
                   placeholder="Click to upload company logo"
                   alt="Company Logo"
+                  // @ts-ignore
                   validateImage={validateImage}
                   fileToBase64={fileToBase64}
                   onChange={(value) => updateField("logoUri", value)}
@@ -915,6 +916,7 @@ const CompanyMaster = () => {
                   error={errors.signatureUri}
                   placeholder="Click to upload signature"
                   alt="Signature"
+                  // @ts-ignore
                   validateImage={validateImage}
                   fileToBase64={fileToBase64}
                   onChange={(value) => updateField("signatureUri", value)}

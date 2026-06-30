@@ -20,7 +20,6 @@ import {
 	ShoppingCart,
 	BarChart3,
 	BookOpenCheck,
-	ReceiptText,
 	LockKeyhole,
 	Palette,
 	Wrench,

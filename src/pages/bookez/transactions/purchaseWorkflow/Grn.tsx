@@ -454,14 +454,18 @@ const Grn = () => {
         return updated;
     };
 
-    const getFinalQuantity = (row: any) => {
-        const originalQuantity = num(row.quantity);
-        const acceptedQuantity = num(row.acceptedQuantity);
-        const rejectedQuantity = num(row.rejectedQuantity);
+    // const getFinalQuantity = (row: any) => {
+    //     const originalQuantity = num(row.quantity);
+    //     const acceptedQuantity = num(row.acceptedQuantity);
+    //     const rejectedQuantity = num(row.rejectedQuantity);
 
-        return originalQuantity > 0
-            ? originalQuantity
-            : acceptedQuantity + rejectedQuantity;
+    //     return originalQuantity > 0
+    //         ? originalQuantity
+    //         : acceptedQuantity + rejectedQuantity;
+    // };
+
+    const getFinalQuantity = (row: any) => {
+        return num(row.acceptedQuantity);
     };
 
     const hasValue = (value: any) =>
@@ -556,7 +560,8 @@ const Grn = () => {
         return {
             ...row,
 
-            quantity: finalQuantity ? String(finalQuantity) : row.quantity,
+            // quantity: finalQuantity ? String(finalQuantity) : row.quantity,/
+            quantity: row.quantity,
             rate: row.rate,
 
             acceptedQuantity:
@@ -1012,30 +1017,106 @@ const Grn = () => {
         });
     };
 
-    const handleQuantityFields = (updatedRow: any, key: string, value: any, isPurchaseOrderGrn: boolean) => {
+    // const handleQuantityFields = (updatedRow: any, key: string, value: any, isPurchaseOrderGrn: boolean) => {
+    //     if (key === "acceptedQuantity") {
+    //         const originalQuantity = num(updatedRow.quantity);
+    //         const acceptedQuantity = num(value);
+    //         const rejectedQuantity = num(updatedRow.rejectedQuantity);
+
+    //         if (
+    //             isPurchaseOrderGrn &&
+    //             originalQuantity > 0 &&
+    //             acceptedQuantity > originalQuantity
+    //         ) {
+    //             updatedRow.acceptedQuantity = updatedRow.quantity || "";
+    //             toast.error("Accepted quantity cannot be greater than quantity");
+    //         }
+
+    //         if (isPurchaseOrderGrn && originalQuantity > 0) {
+    //             updatedRow.rejectedQuantity = Math.max(
+    //                 originalQuantity - num(updatedRow.acceptedQuantity),
+    //                 0
+    //             ).toString();
+    //         }
+
+    //         if (!isPurchaseOrderGrn) {
+    //             updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
+    //         }
+
+    //         if (num(updatedRow.rejectedQuantity) === 0) {
+    //             updatedRow.rejectedReason = "";
+    //         }
+    //     }
+
+    //     if (key === "rejectedQuantity") {
+    //         const originalQuantity = num(updatedRow.quantity);
+    //         const rejectedQuantity = num(value);
+    //         const acceptedQuantity = num(updatedRow.acceptedQuantity);
+
+    //         if (
+    //             isPurchaseOrderGrn &&
+    //             originalQuantity > 0 &&
+    //             rejectedQuantity > originalQuantity
+    //         ) {
+    //             updatedRow.rejectedQuantity = "0";
+    //             toast.error("Rejected quantity cannot be greater than quantity");
+    //         }
+
+    //         if (isPurchaseOrderGrn && originalQuantity > 0) {
+    //             updatedRow.acceptedQuantity = Math.max(
+    //                 originalQuantity - num(updatedRow.rejectedQuantity),
+    //                 0
+    //             ).toString();
+    //         }
+
+    //         if (!isPurchaseOrderGrn) {
+    //             updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
+    //         }
+
+    //         if (num(updatedRow.rejectedQuantity) === 0) {
+    //             updatedRow.rejectedReason = "";
+    //         }
+    //     }
+
+    //     return updatedRow;
+    // };
+
+
+    const handleQuantityFields = (
+        updatedRow: any,
+        key: string,
+        value: any,
+        isPurchaseOrderGrn: boolean
+    ) => {
+        const originalQuantity = num(updatedRow.quantity);
+
         if (key === "acceptedQuantity") {
-            const originalQuantity = num(updatedRow.quantity);
-            const acceptedQuantity = num(value);
-            const rejectedQuantity = num(updatedRow.rejectedQuantity);
+            let acceptedQuantity = num(value);
+
+            if (acceptedQuantity < 0) {
+                acceptedQuantity = 0;
+                toast.error("Accepted quantity cannot be negative");
+            }
 
             if (
                 isPurchaseOrderGrn &&
                 originalQuantity > 0 &&
                 acceptedQuantity > originalQuantity
             ) {
-                updatedRow.acceptedQuantity = updatedRow.quantity || "";
+                acceptedQuantity = originalQuantity;
                 toast.error("Accepted quantity cannot be greater than quantity");
             }
 
-            if (isPurchaseOrderGrn && originalQuantity > 0) {
-                updatedRow.rejectedQuantity = Math.max(
-                    originalQuantity - num(updatedRow.acceptedQuantity),
-                    0
-                ).toString();
-            }
+            updatedRow.acceptedQuantity = String(acceptedQuantity);
 
-            if (!isPurchaseOrderGrn) {
-                updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
+            if (isPurchaseOrderGrn && originalQuantity > 0) {
+                updatedRow.rejectedQuantity = String(
+                    Math.max(originalQuantity - acceptedQuantity, 0)
+                );
+            } else {
+                updatedRow.quantity = String(
+                    acceptedQuantity + num(updatedRow.rejectedQuantity)
+                );
             }
 
             if (num(updatedRow.rejectedQuantity) === 0) {
@@ -1044,31 +1125,35 @@ const Grn = () => {
         }
 
         if (key === "rejectedQuantity") {
-            const originalQuantity = num(updatedRow.quantity);
-            const rejectedQuantity = num(value);
-            const acceptedQuantity = num(updatedRow.acceptedQuantity);
+            let rejectedQuantity = num(value);
+
+            if (rejectedQuantity < 0) {
+                rejectedQuantity = 0;
+                toast.error("Rejected quantity cannot be negative");
+            }
 
             if (
                 isPurchaseOrderGrn &&
                 originalQuantity > 0 &&
                 rejectedQuantity > originalQuantity
             ) {
-                updatedRow.rejectedQuantity = "0";
+                rejectedQuantity = originalQuantity;
                 toast.error("Rejected quantity cannot be greater than quantity");
             }
 
+            updatedRow.rejectedQuantity = String(rejectedQuantity);
+
             if (isPurchaseOrderGrn && originalQuantity > 0) {
-                updatedRow.acceptedQuantity = Math.max(
-                    originalQuantity - num(updatedRow.rejectedQuantity),
-                    0
-                ).toString();
+                updatedRow.acceptedQuantity = String(
+                    Math.max(originalQuantity - rejectedQuantity, 0)
+                );
+            } else {
+                updatedRow.quantity = String(
+                    num(updatedRow.acceptedQuantity) + rejectedQuantity
+                );
             }
 
-            if (!isPurchaseOrderGrn) {
-                updatedRow.quantity = String(acceptedQuantity + rejectedQuantity);
-            }
-
-            if (num(updatedRow.rejectedQuantity) === 0) {
+            if (rejectedQuantity === 0) {
                 updatedRow.rejectedReason = "";
             }
         }

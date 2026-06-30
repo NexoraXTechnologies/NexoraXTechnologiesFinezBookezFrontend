@@ -1,6 +1,6 @@
 import { FileDown } from "lucide-react";
-import { SelectInput } from "../../../components/inputs";
-import { PrimaryButton } from "../../../components/buttons";
+import { SelectInput } from "../../../../components/inputs";
+import { PrimaryButton } from "../../../../components/buttons";
 
 type Option = {
     label: string;

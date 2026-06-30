@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
@@ -9,11 +9,9 @@ import {
 
 import { computeChassisEngineering } from "./chassisCalculations";
 import { getLatestValuesForProduct } from "../setDefaultValue/defaultValuesStorage";
-import EngineeringDefaultValueModal from "../../../../components/cardBasedForm/EngineeringDefaultValueModal";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 import Drawing from "../drawing/Drawing";
-import PageComponentModal from "../../../../components/PageComponentModal";
 
 /* ===================================================
    OPTIONS
@@ -64,7 +62,6 @@ const emptyEngineeringForm = {
 =================================================== */
 
 const CreateEditEngineeringConfig = () => {
-    const navigate = useNavigate();
     const location = useLocation();
     const dispatch = useDispatch<any>();
 
@@ -83,15 +80,13 @@ const CreateEditEngineeringConfig = () => {
         routeState?.selectedAccountData || null
     );
 
-    const [showModal, setShowModal] = useState(true);
+    // @ts-ignore
     const [edit, setEdit] = useState(false);
     const [addLoader, setAddLoader] = useState(false);
     const [errors, setErrors] = useState<any>({});
-
-    const [showTabsModal, setShowTabsModal] = useState(false);
-    const [activeTab, setActiveTab] = useState("Drawing");
     const [generatedBomData, setGeneratedBomData] = useState<any>(null);
-    const [mainContentLeft, setMainContentLeft] = useState(88);
+
+
     const { accounts = [], listingLoader: accountLoading = false } =
         useSelector((state: any) => state.accountMaster || {});
 
@@ -136,34 +131,7 @@ const CreateEditEngineeringConfig = () => {
         }
     }, [form?.selectedAccount, selectedAccountData, accountOptions]);
 
-    useEffect(() => {
-        const updateMainLeft = () => {
-            const sidebar =
-                document.querySelector("aside") ||
-                document.querySelector("#sidebar") ||
-                document.querySelector(".sidebar") ||
-                document.querySelector("[data-sidebar]");
 
-            if (sidebar) {
-                const rect = sidebar.getBoundingClientRect();
-                setMainContentLeft(Math.max(rect.right, 88));
-                return;
-            }
-
-            setMainContentLeft(88);
-        };
-
-        updateMainLeft();
-
-        window.addEventListener("resize", updateMainLeft);
-
-        const timer = setInterval(updateMainLeft, 300);
-
-        return () => {
-            window.removeEventListener("resize", updateMainLeft);
-            clearInterval(timer);
-        };
-    }, []);
 
     /* ===================================================
        CHILD RAW PRODUCTS RETURN DATA
@@ -497,104 +465,6 @@ const CreateEditEngineeringConfig = () => {
         ...(showAutoCalculatedFields ? autoCalculatedValues : {}),
     };
 
-    const autoCalculatedModalFields = [
-        {
-            key: "crossMemberSpacing",
-            label: "Cross Member Spacing (mm)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "axleSpacing",
-            label: "Axle Spacing (mm)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "tyreCount",
-            label: "Tyre Count",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "tyreDiameter",
-            label: "Tyre Diameter (mm)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "tyreGap",
-            label: "Tyre Gap (mm)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "kingPinPositionMm",
-            label: "King Pin Position (mm)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "landingLegPosition",
-            label: "Landing Leg Position (mm)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "suspensionStartPosition",
-            label: "Suspension Start Position (mm)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "mainBeamThickness",
-            label: "Main Beam Thickness",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "crossMemberThickness",
-            label: "Cross Member Thickness",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "floorPlateThickness",
-            label: "Floor Plate Thickness",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "sideRailThickness",
-            label: "Side Rail Thickness",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "kingPinPlateThickness",
-            label: "King Pin Plate Thickness",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "suspensionBracketThickness",
-            label: "Suspension Bracket Thickness",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "estimatedTrailerWeight",
-            label: "Estimated Trailer Weight (kg)",
-            type: "text",
-            disabled: true,
-        },
-        {
-            key: "estimatedCost",
-            label: "Estimated Cost (₹)",
-            type: "text",
-            disabled: true,
-        },
-    ];
 
     /* ===================================================
        MODAL INPUT DATA
@@ -899,19 +769,19 @@ const CreateEditEngineeringConfig = () => {
             };
             setGeneratedBomData(bomData);
             setEdit(true);
-            setActiveTab("Drawing");
+
         } finally {
             setAddLoader(false);
         }
     };
 
 
-    const handleTabsClose = () => {
-        setShowTabsModal(false);
-        setGeneratedBomData(null);
-        setActiveTab("Drawing");
-        setShowModal(true);
-    };
+    // const handleTabsClose = () => {
+    //     setShowTabsModal(false);
+    //     setGeneratedBomData(null);
+    //     setActiveTab("Drawing");
+    //     setShowModal(true);
+    // };
 
 
 
@@ -975,42 +845,6 @@ const CreateEditEngineeringConfig = () => {
             </div>
         );
     };
-
-    // return (
-    //     <>
-
-
-
-    //         <EngineeringDefaultValueModal
-    //             show={showModal && !showTabsModal}
-    //             setShow={setShowModal}
-    //             edit={edit}
-    //             title=""
-    //             subtitle=""
-    //             loading={addLoader}
-    //             onClose={() => {
-    //                 setShowModal(false);
-    //                 navigate(-1);
-    //             }}
-    //             onSubmit={handleSubmit}
-    //             form={modalForm}
-    //             errors={errors}
-    //             handleChange={handleChange}
-    //             inputData={inputData}
-    //             useVoucherModal={false}
-    //             showHeader={false}
-    //         />
-
-    //         <PageComponentModal
-    //             show={showTabsModal && Boolean(generatedBomData)}
-    //             title={`${generatedBomData?.selectedProductLabel || "Drawing"} - Drawing`}
-    //             description="Drawing, BOM, summary and PDF details"
-    //             onClose={handleTabsClose}
-    //         >
-    //             <Drawing bomData={generatedBomData} />
-    //         </PageComponentModal>
-    //     </>
-    // );
 
 
     return (

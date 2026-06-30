@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
-import ReportsOverviewCards from "./ReportsOverviewCards";
+import ReportsOverviewCards from "./components/ReportsOverviewCards";
 
 import { getAccountPayable } from "../../../redux/slices/professionalSlice/ledgerReports/accountsPayableSlice";
 import { IndianRupee, Users } from "lucide-react";

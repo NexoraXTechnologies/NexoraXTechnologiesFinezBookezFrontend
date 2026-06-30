@@ -53,7 +53,7 @@ const formatIndianNumber = (value: any) => {
     });
 };
 
-const fadeUp = {
+const fadeUp:any = {
     hidden: {
         opacity: 0,
         y: 10,
@@ -71,7 +71,7 @@ const fadeUp = {
     },
 };
 
-const slideIn = {
+const slideIn:any = {
     hidden: {
         opacity: 0,
         x: 18,
@@ -89,7 +89,7 @@ const slideIn = {
     },
 };
 
-const modalMotion = {
+const modalMotion:any = {
     hidden: {
         opacity: 0,
         scale: 0.94,

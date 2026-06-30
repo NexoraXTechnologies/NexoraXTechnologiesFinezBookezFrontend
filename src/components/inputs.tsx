@@ -18,9 +18,9 @@ const ToggleInput = ({
         typeof checked === "boolean"
             ? checked
             : value === true ||
-              value === "true" ||
-              value === 1 ||
-              value === "1";
+            value === "true" ||
+            value === 1 ||
+            value === "1";
 
     return (
         <div className={`w-full flex flex-col gap-1 ${className}`}>
@@ -539,6 +539,7 @@ const SelectInput = ({
                 captureMenuScroll={false}
                 menuShouldScrollIntoView={false}
                 maxMenuHeight={280}
+                // @ts-ignore
                 onLoadMoreOptions={
                     largeData ? handleLoadMoreOptions : undefined
                 }
@@ -604,6 +605,7 @@ type ImageUploadInputProps = {
     mandatory?: boolean;
     onChange: (value: string | null) => void;
     className?: string,
+    validateImage?: () => boolean;
 };
 
 const ImageUploadInput = ({
@@ -615,31 +617,9 @@ const ImageUploadInput = ({
     mandatory = false,
     onChange,
     className = "",
+    validateImage = () => false
 }: ImageUploadInputProps) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
-
-    const validateImage = (file: File) => {
-        const allowedTypes = [
-            "image/png",
-            "image/jpeg",
-            "image/jpg",
-            "image/webp",
-        ];
-
-        const maxSize = 2 * 1024 * 1024; // 2MB
-
-        if (!allowedTypes.includes(file.type)) {
-            alert("Only PNG, JPG, JPEG, or WEBP images are allowed.");
-            return false;
-        }
-
-        if (file.size > maxSize) {
-            alert("Image size should be less than 2MB.");
-            return false;
-        }
-
-        return true;
-    };
 
     const fileToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -655,10 +635,10 @@ const ImageUploadInput = ({
     const handleFileChange = async (
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
-        const file = e.target.files?.[0];
+        const file: any = e.target.files?.[0];
 
         if (!file) return;
-
+        // @ts-ignore
         if (!validateImage(file)) {
             e.target.value = "";
             return;

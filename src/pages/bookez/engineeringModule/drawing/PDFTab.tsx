@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     CheckCircle,
     Download,
-    FileText,
     Loader2,
     Send,
 } from "lucide-react";

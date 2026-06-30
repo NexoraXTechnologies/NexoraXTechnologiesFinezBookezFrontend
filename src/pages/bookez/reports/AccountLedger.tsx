@@ -4,8 +4,8 @@ import { useDispatch, useSelector } from "react-redux";
 
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
-import ReportFilterCard from "./ReportFilterCard";
-import AccountSummaryCard from "./AccountSummaryCard";
+import ReportFilterCard from "./components/ReportFilterCard";
+import AccountSummaryCard from "./components/AccountSummaryCard";
 import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
 
 import { getAccountLedger } from "../../../redux/slices/professionalSlice/ledgerReports/accountLedgerSlice";

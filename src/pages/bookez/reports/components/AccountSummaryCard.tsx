@@ -1,4 +1,4 @@
-import { formatProductType } from "../../../utils/helperFunctions";
+import { formatProductType } from "../../../../utils/helperFunctions";
 
 type SummaryItem = {
     label: string;
