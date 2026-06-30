@@ -1745,6 +1745,7 @@ const Payment = () => {
                 {...{
                     show: downlaodPDF?.show,
                     downlaodPDF,
+                    GstToggle: true, 
                     entryType: "purchasePayment",
                     setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
                     rowData: downlaodPDF?.record,
