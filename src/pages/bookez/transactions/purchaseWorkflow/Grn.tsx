@@ -355,6 +355,10 @@ const Grn = () => {
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
 
+    const [showReturnConfirmModal, setShowReturnConfirmModal] = useState(false);
+    const [returnConfirmLoading, setReturnConfirmLoading] = useState(false);
+    const [pendingReturnData, setPendingReturnData] = useState<any>(null);
+
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
         body: [],
@@ -1360,6 +1364,9 @@ const Grn = () => {
             .map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
 
+
+
+
     const buildGrnBodyPayload = (products: any[]) => {
         return products.map((item: any) =>
             removeEmptyValues({
@@ -1466,6 +1473,259 @@ const Grn = () => {
         };
     };
 
+
+    const createPurchaseReturnFromRejectedGrn = async (
+        grnVoucherNumber: string,
+        payload: any
+    ) => {
+        if (!grnVoucherNumber) {
+            toast.error("GRN voucher number not found for purchase return");
+            return;
+        }
+
+        const pendingProducts = await getPendingRejectedProductsForGrn(
+            grnVoucherNumber,
+            payload?.grnBody || []
+        );
+
+        if (!pendingProducts.length) {
+            toast.info("Purchase Return already created for rejected quantity");
+            return;
+        }
+
+        const rejectedProducts = pendingProducts
+            .map((item: any) => {
+                const quantity = num(item?.pendingRejectedQuantity);
+
+                if (quantity <= 0) return null;
+
+                const rate = num(item?.rate);
+
+                const discountPercent = safePercent(
+                    item?.discount !== undefined &&
+                        item?.discount !== null &&
+                        item?.discount !== ""
+                        ? item.discount
+                        : item?.discountPercentage
+                );
+
+                const cgstPercent = safePercent(
+                    item?.cgst !== undefined &&
+                        item?.cgst !== null &&
+                        item?.cgst !== ""
+                        ? item.cgst
+                        : item?.cgstPercentage
+                );
+
+                const sgstPercent = safePercent(
+                    item?.sgst !== undefined &&
+                        item?.sgst !== null &&
+                        item?.sgst !== ""
+                        ? item.sgst
+                        : item?.sgstPercentage
+                );
+
+                const igstPercent = safePercent(
+                    item?.igst !== undefined &&
+                        item?.igst !== null &&
+                        item?.igst !== ""
+                        ? item.igst
+                        : item?.igstPercentage
+                );
+
+                const grossAmount = quantity * rate;
+                const discountAmount = (grossAmount * discountPercent) / 100;
+                const taxableAmount = grossAmount - discountAmount;
+
+                const cgstAmount = (taxableAmount * cgstPercent) / 100;
+                const sgstAmount = (taxableAmount * sgstPercent) / 100;
+                const igstAmount = (taxableAmount * igstPercent) / 100;
+
+                const taxAmount = cgstAmount + sgstAmount + igstAmount;
+                const otherAmount = num(item?.otherAmount);
+                const netAmount = taxableAmount + taxAmount + otherAmount;
+
+                return {
+                    grnVoucherNumber,
+
+                    productCode: item?.productCode || "",
+                    productName: item?.productName || "",
+                    productId: item?.productId || "",
+                    productType: item?.productType || "",
+
+                    productDescription:
+                        item?.productDescription || item?.description || "",
+                    description:
+                        item?.description || item?.productDescription || "",
+
+                    productHSNCode: item?.productHSNCode || "",
+                    remarks: item?.remarks || "",
+
+                    quantity: String(quantity),
+
+                    uom: item?.uom || item?.unit || "",
+                    unit: item?.unit || item?.uom || "",
+
+                    rate: String(rate),
+
+                    gross: fmtMoney(grossAmount),
+                    grossAmount: fmtMoney(grossAmount),
+
+                    discount: String(discountPercent),
+                    discountPercentage: String(discountPercent),
+                    discountAmount: fmtMoney(discountAmount),
+
+                    taxableAmount: fmtMoney(taxableAmount),
+
+                    cgst: String(cgstPercent),
+                    cgstPercentage: String(cgstPercent),
+                    cgstAmount: fmtMoney(cgstAmount),
+
+                    sgst: String(sgstPercent),
+                    sgstPercentage: String(sgstPercent),
+                    sgstAmount: fmtMoney(sgstAmount),
+
+                    igst: String(igstPercent),
+                    igstPercentage: String(igstPercent),
+                    igstAmount: fmtMoney(igstAmount),
+
+                    taxAmount: fmtMoney(taxAmount),
+                    otherAmount: fmtMoney(otherAmount),
+
+                    netAmount: fmtMoney(netAmount),
+                    netTotal: fmtMoney(netAmount),
+                };
+            })
+            .filter(Boolean);
+
+        if (!rejectedProducts.length) {
+            toast.info("Purchase Return already created for rejected quantity");
+            return;
+        }
+
+        const totals = calculateFooter(rejectedProducts);
+
+        const purchaseReturnPayload = {
+            grnVoucherNumber,
+            pRetVoucherDate: todayYMD(),
+
+            pRetVendorCode: payload?.grnVendorCode || "",
+            pRetVendorName: payload?.grnVendorName || "",
+
+            pRetPurAccount: "SA003",
+            pRetStatus: "open",
+            pRetRemark: "Auto created from rejected GRN quantity",
+
+            pRetBody: rejectedProducts,
+
+            pRetFooter: buildGrnFooterPayload(totals),
+        };
+
+        const result = await professionalAxios.post(
+            `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseReturn/save`,
+            purchaseReturnPayload
+        );
+
+        toast.success("Purchase Return created for rejected GRN quantity");
+
+        return result?.data;
+    };
+
+
+    const hasRejectedQuantity = (body: any[] = []) => {
+        return body.some((item: any) => num(item?.rejectedQuantity) > 0);
+    };
+
+    const getPendingRejectedProductsForGrn = async (
+        grnVoucherNumber: string,
+        grnBody: any[] = []
+    ) => {
+        if (!grnVoucherNumber) return [];
+
+        const res = await professionalAxios.get(
+            `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/analysis/grnPendingPurchaseReturn/byGrn/${grnVoucherNumber}`
+        );
+
+        const pendingItems =
+            res?.data?.data?.record?.pendingItems ||
+            res?.data?.record?.pendingItems ||
+            res?.data?.data?.pendingItems ||
+            res?.data?.pendingItems ||
+            [];
+
+        return (pendingItems || [])
+            .map((pendingItem: any) => {
+                const bodyItem = (grnBody || []).find((item: any) => {
+                    return (
+                        String(item?.productCode || "") ===
+                        String(pendingItem?.productCode || "")
+                    );
+                });
+
+                const pendingRejectedQuantity = num(
+                    pendingItem?.balanceQuantity ??
+                    pendingItem?.pendingQuantity ??
+                    pendingItem?.rejectedQuantity ??
+                    0
+                );
+
+                if (pendingRejectedQuantity <= 0) return null;
+
+                return {
+                    ...(bodyItem || pendingItem),
+                    ...pendingItem,
+                    pendingRejectedQuantity,
+                    rejectedQuantity: String(pendingRejectedQuantity),
+                    quantity: String(pendingRejectedQuantity),
+                };
+            })
+            .filter(Boolean);
+    };
+
+    const openPurchaseReturnConfirm = (grnVoucherNumber: string, payload: any) => {
+        setPendingReturnData({
+            grnVoucherNumber,
+            payload,
+        });
+
+        setShowReturnConfirmModal(true);
+    };
+
+    const handleConfirmPurchaseReturn = async () => {
+        if (!pendingReturnData?.grnVoucherNumber || !pendingReturnData?.payload) {
+            toast.error("Purchase return data not found");
+            return;
+        }
+
+        try {
+            setReturnConfirmLoading(true);
+
+            await createPurchaseReturnFromRejectedGrn(
+                pendingReturnData.grnVoucherNumber,
+                pendingReturnData.payload
+            );
+
+            setShowReturnConfirmModal(false);
+            setPendingReturnData(null);
+
+            await fetchGrns();
+            await fetchPurchaseOrders("");
+        } catch (error: any) {
+            toast.error(
+                error?.message ||
+                error?.payload?.message ||
+                "Failed to create purchase return"
+            );
+        } finally {
+            setReturnConfirmLoading(false);
+        }
+    };
+
+    const handleCancelPurchaseReturn = () => {
+        setShowReturnConfirmModal(false);
+        setPendingReturnData(null);
+    };
+
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
@@ -1487,14 +1747,26 @@ const Grn = () => {
             grnFooter: buildGrnFooterPayload(footer),
         };
 
+
         try {
+            let result: any = null;
+            let savedGrnVoucherNumber = form?.grnVoucherNumber;
+
             if (editingRecord) {
-                await dispatch(
+                result = await dispatch(
                     updateGrn({
                         grnVoucherNumber: form?.grnVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
+
+                savedGrnVoucherNumber =
+                    result?.data?.grn?.grnVoucherNumber ||
+                    result?.data?.voucherNumber ||
+                    result?.data?.grnVoucherNumber ||
+                    result?.grn?.grnVoucherNumber ||
+                    result?.voucherNumber ||
+                    form?.grnVoucherNumber;
 
                 if (payload?.pOrdVoucherNumber) {
                     await syncPurchaseOrderStatusAfterGrn(
@@ -1503,8 +1775,19 @@ const Grn = () => {
                 }
 
                 toast.success("GRN updated successfully");
+
+
+
             } else {
-                await dispatch(addGrn({ payload }) as any).unwrap();
+                result = await dispatch(addGrn({ payload }) as any).unwrap();
+
+                savedGrnVoucherNumber =
+                    result?.data?.grn?.grnVoucherNumber ||
+                    result?.data?.voucherNumber ||
+                    result?.data?.grnVoucherNumber ||
+                    result?.grn?.grnVoucherNumber ||
+                    result?.voucherNumber ||
+                    payload?.grnVoucherNumber;
 
                 if (payload?.pOrdVoucherNumber) {
                     const poStatus = await syncPurchaseOrderStatusAfterGrn(
@@ -1523,6 +1806,8 @@ const Grn = () => {
                 }
             }
 
+            const rejectedQtyFound = hasRejectedQuantity(payload?.grnBody || []);
+
             setShowModal(false);
             resetMainForm();
 
@@ -1532,6 +1817,20 @@ const Grn = () => {
 
             await fetchGrns();
             await fetchPurchaseOrders("");
+
+            if (rejectedQtyFound && savedGrnVoucherNumber) {
+                const pendingRejectedProducts = await getPendingRejectedProductsForGrn(
+                    savedGrnVoucherNumber,
+                    payload?.grnBody || []
+                );
+
+                if (pendingRejectedProducts.length > 0) {
+                    openPurchaseReturnConfirm(savedGrnVoucherNumber, {
+                        ...payload,
+                        grnBody: pendingRejectedProducts,
+                    });
+                }
+            }
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }
@@ -2001,6 +2300,79 @@ const Grn = () => {
                     cancelText: "Cancel",
                     confirmText: "Confirm",
                 }}
+            />
+
+
+
+            <Modal
+                show={showReturnConfirmModal}
+                setShow={setShowReturnConfirmModal}
+                title="Create Purchase Return?"
+                state={false}
+                handleSubmit={handleConfirmPurchaseReturn}
+                handleClose={handleCancelPurchaseReturn}
+                loader={returnConfirmLoading}
+                gridCols={1}
+                maxWidth="md"
+                modalClassName="rounded-xl"
+                headerClassName="bg-card"
+                footerClassName="bg-card"
+                bodyClassName="!block !p-0 bg-card text-card-foreground"
+                hideFooter
+                body={
+                    <div className="space-y-5 p-5">
+                        <div className="rounded-lg border border-border bg-card p-4">
+                            <h3 className="text-base font-bold text-card-foreground">
+                                Rejected quantity found in this GRN
+                            </h3>
+
+                            <p className="text-sm font-medium text-muted-foreground">
+                                Do you want to create Purchase Return for rejected items?
+                            </p>
+
+                            <p className="mt-2 text-sm font-bold text-card-foreground">
+                                Quantity:{" "}
+                                <span className="text-danger">
+                                    {Number(
+                                        (pendingReturnData?.payload?.grnBody || []).reduce(
+                                            (total: number, item: any) => {
+                                                const qty =
+                                                    item?.pendingRejectedQuantity ??
+                                                    item?.balanceQuantity ??
+                                                    item?.rejectedQuantity ??
+                                                    item?.quantity ??
+                                                    0;
+
+                                                return total + Number(qty || 0);
+                                            },
+                                            0
+                                        )
+                                    )}
+                                </span>
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                disabled={returnConfirmLoading}
+                                onClick={handleCancelPurchaseReturn}
+                                className="rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold text-card-foreground transition hover:bg-muted disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={returnConfirmLoading}
+                                onClick={handleConfirmPurchaseReturn}
+                                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                            >
+                                {returnConfirmLoading ? "Creating..." : "OK"}
+                            </button>
+                        </div>
+                    </div>
+                }
             />
         </div>
     );
