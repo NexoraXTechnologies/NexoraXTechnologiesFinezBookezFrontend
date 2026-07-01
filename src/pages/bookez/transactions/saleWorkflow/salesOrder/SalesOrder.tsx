@@ -312,6 +312,7 @@ const SalesOrder = () => {
                 updatedRow.cgst = raw?.csgst;
                 updatedRow.sgst = raw?.csgst;
                 updatedRow.igst = raw?.igst;
+                updatedRow.productDescription = raw?.productDescription;
                 if (num(updatedRow.igst) > 0) {
                     updatedRow.cgst = "";
                     updatedRow.sgst = "";

@@ -85,36 +85,6 @@ export const createAccount = createAsyncThunk(
   }
 );
 
-/* ===================================================
-    GET ALL ACCOUNTS
-=================================================== */
-// export const getAllAccounts = createAsyncThunk(
-//   "accountMaster/getAllAccounts",
-//   async ({ offset = 0, limit = 10, search = "" ,accountType=""} : { offset?: number; limit?: number; search?: string ,accountType:string}, { rejectWithValue }) => {
-//     try {
-//       const params: { offset?: number; limit?: number; search?: string ,accountType?:string} = { offset, limit };
-//       if (search.trim()) params.search = search.trim();
-
-//       const res = await professionalAxios.get(
-//         "/eTaxSolnMongoApiBackend/accountMaster/getAllAccounts",
-//         { params }
-//       );
-
-//       if (!res.data?.success)
-//         return rejectWithValue({
-//           message: res.data?.message || "Failed to fetch accounts",
-//         });
-
-//       return res.data?.data;
-//     } catch (err: any) {
-//       return rejectWithValue({
-//         message: err?.response?.data?.message || "Failed to fetch accounts",
-//       });
-//     }
-//   }
-// );
-
-
 export const getAllAccounts = createAsyncThunk(
   "accountMaster/getAllAccounts",
   async (

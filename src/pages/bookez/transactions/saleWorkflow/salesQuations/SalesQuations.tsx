@@ -17,6 +17,9 @@ import { getAllTransactionSchema } from "../../../../../redux/slices/professiona
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { ListingModel } from "../../../../../components/modal";
 import Permission from "../../../../../components/PermissionGuard";
+import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
+import { getProfessionalUsers } from "../../../../../redux/slices/professionalSlice/professionalUserSlice";
+import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 
@@ -51,7 +54,9 @@ const SalesQuotations = () => {
     const preparedSchemaRef = useRef<any>(null);
 
     const { report } = useSelector((s: any) => s.reportMapping);
-
+    const { accounts } = useSelector((s: any) => s.accountMaster);
+    const { company } = useSelector((s: any) => s.professionalCompanyMaster);
+    console.log({ company, accounts })
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
@@ -175,6 +180,8 @@ const SalesQuotations = () => {
     };
 
     const handleMainChange = (key: string, value: any) => {
+        dispatch(getAllAccounts({ limit: 100 }) as any)
+        dispatch(getCompany({ withParent: true, limit: 100 }) as any)
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
             let updated = { ...prev, [key]: value };
@@ -194,6 +201,8 @@ const SalesQuotations = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
+
+        if (!form?.sQuoteCustomerName) return toast.error("Please select customer first");
         const lowerKey = String(key || "").toLowerCase();
         const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
 
@@ -202,7 +211,9 @@ const SalesQuotations = () => {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
             return;
         }
-
+        //sQuoteCustomerName accountName
+        console.log({ get: accounts?.filter((e) => e.accountName == form?.sQuoteCustomerName) })
+        console.log({ form, accounts, company })
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
@@ -213,6 +224,7 @@ const SalesQuotations = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
             const raw = selectedOption?.raw || {};
+            console.log({ raw, })
 
             if (raw?._id && !updatedRow.productId) updatedRow.productId = raw._id;
 

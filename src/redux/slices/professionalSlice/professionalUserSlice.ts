@@ -8,7 +8,7 @@ export const getProfessionalUsers = createAsyncThunk(
     // @ts-ignore
     const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
     const parentMobile = professionalHeaders?.['x-db-name'];
-      console.log({ parentMobile })
+
     if (!parentMobile) {
       return rejectWithValue({ message: 'Parent user mobile number not found in localStorage' });
     }

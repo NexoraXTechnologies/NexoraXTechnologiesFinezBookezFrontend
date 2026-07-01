@@ -101,9 +101,7 @@ const Login = () => {
   // OTP digits
   const [otp, setOtp] = useState(["", "", "", ""]);
   const otpRefs: any = useRef([]);
-  const { professionalRequestID } = useSelector(
-    (state: any) => state.professionalAuth
-  );
+  const { professionalRequestID } = useSelector((state: any) => state.professionalAuth);
 
   useEffect(() => {
     const finalOtp = otp.join("");
@@ -141,16 +139,8 @@ const Login = () => {
     setIsVerifying(true);
 
     // @ts-ignore
-    dispatchP(
-      verifyProfessionalOtp({
-        mobile,
-        requestID: professionalRequestID,
-        otp: finalOtp,
-      })
-    )
-      .unwrap()
-      .then(async (res: any) => {
-        toast.success("OTP Verified!");
+    dispatchP(verifyProfessionalOtp({ mobile, requestID: professionalRequestID, otp: finalOtp, })).unwrap().then(async (res: any) => {
+      toast.success("OTP Verified!");
 
         // ✅ If user already exists
         if (res.existingUser && res.userData) {
@@ -171,7 +161,6 @@ const Login = () => {
 
           const fullName = `${user.userFirstName || ""}  ${user.userLastName || ""
             }`.trim();
-
           localStorage.setItem(
             "professionalUser",
             JSON.stringify({

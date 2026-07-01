@@ -323,7 +323,6 @@ const Users = () => {
 
   const openEditModal = (acc: any) => {
     // @ts-ignore
-    console.log({ acc });
     setEditingAccount(acc);
     setFormData({
       userFirstName: acc.userFirstName,
