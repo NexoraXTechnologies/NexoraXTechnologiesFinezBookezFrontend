@@ -19,6 +19,10 @@ type UpdateSalesInvoicePayload = {
   payload: any;
 };
 
+type SalesReturnAnalysisParams = {
+  voucherNumber: string;
+};
+
 type SalesInvoiceState = {
   salesInvoices: any[];
   selectedSalesInvoice: any;
@@ -30,12 +34,14 @@ type SalesInvoiceState = {
   detailsLoading: boolean;
   error: string | null;
 
-
   // add this
   byCustomerCodeSalesInvoice: any[];
   byCustomerCodeLoader: boolean;
   byCustomerCodeCount: number;
 
+  // sales return analysis
+  salesReturnAnalysis: any;
+  salesReturnAnalysisLoader: boolean;
 };
 
 const initialState: SalesInvoiceState = {
@@ -46,6 +52,9 @@ const initialState: SalesInvoiceState = {
   byCustomerCodeSalesInvoice: [],
   byCustomerCodeLoader: false,
   byCustomerCodeCount: 0,
+
+  salesReturnAnalysis: null,
+  salesReturnAnalysisLoader: false,
 
   loading: false,
   createLoading: false,
@@ -146,14 +155,20 @@ export const getAllSalesInvoice = createAsyncThunk<
 =================================================== */
 
 export const getByVoucherNumberSalesInvoice = createAsyncThunk<any, GetAllSalesInvoiceParams | undefined, { rejectValue: RejectValue }>(
-  "salesInvoice/getAllSalesInvoice",
+  "salesInvoice/getByVoucherNumberSalesInvoice",
   async (
     { voucherNumber }: any,
     { rejectWithValue }
   ) => {
     try {
+      const encodedVoucher = encodeURIComponent(
+        String(voucherNumber || "")
+          .trim()
+          .replace(/[\u2013\u2014]/g, "-")
+      );
+
       const res = await professionalAxios.get(
-        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/getByVoucherNumber/${voucherNumber}`,
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/getByVoucherNumber/${encodedVoucher}`,
       );
 
       if (!res.data?.success) {
@@ -179,6 +194,48 @@ export const getByVoucherNumberSalesInvoice = createAsyncThunk<any, GetAllSalesI
     }
   }
 );
+
+/* ===================================================
+   SALES RETURN ANALYSIS BY SALES INVOICE VOUCHER
+=================================================== */
+
+export const getSalesReturnAnalysisByInvoiceVoucher = createAsyncThunk<
+  any,
+  SalesReturnAnalysisParams,
+  { rejectValue: RejectValue }
+>(
+  "salesInvoice/getSalesReturnAnalysisByInvoiceVoucher",
+  async ({ voucherNumber }, { rejectWithValue }) => {
+    try {
+      const encodedVoucher = encodeURIComponent(
+        String(voucherNumber || "")
+          .trim()
+          .replace(/[\u2013\u2014]/g, "-")
+      );
+
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/analysis/byInvoiceVoucharNumber/${encodedVoucher}`
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch sales return analysis",
+        });
+      }
+
+      return res.data?.data ?? null;
+    } catch (err: any) {
+      console.log(err)
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Failed to fetch sales return analysis",
+      });
+    }
+  }
+);
+
 /* ===================================================
    getByCustomerCode ALL SALES INVOICE
 =================================================== */
@@ -230,8 +287,14 @@ export const updateSalesInvoice = createAsyncThunk<
   "salesInvoice/updateSalesInvoice",
   async ({ sInvVoucherNumber, payload }: any, { rejectWithValue }) => {
     try {
+      const encodedVoucher = encodeURIComponent(
+        String(sInvVoucherNumber || "")
+          .trim()
+          .replace(/[\u2013\u2014]/g, "-")
+      );
+
       const res = await professionalAxios.put(
-        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/update/${sInvVoucherNumber}`,
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/update/${encodedVoucher}`,
         { ...payload }
       );
 
@@ -265,8 +328,14 @@ export const deleteSalesInvoice = createAsyncThunk<
   "salesInvoice/deleteSalesInvoice",
   async (voucherNumber, { rejectWithValue }) => {
     try {
+      const encodedVoucher = encodeURIComponent(
+        String(voucherNumber || "")
+          .trim()
+          .replace(/[\u2013\u2014]/g, "-")
+      );
+
       const res = await professionalAxios.delete(
-        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/delete/${voucherNumber}`
+        `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoice/delete/${encodedVoucher}`
       );
 
       if (!res.data?.success) {
@@ -300,6 +369,13 @@ const salesInvoiceSlice = createSlice({
       state.selectedSalesInvoice = null;
       state.pagination = null;
 
+      state.byCustomerCodeSalesInvoice = [];
+      state.byCustomerCodeLoader = false;
+      state.byCustomerCodeCount = 0;
+
+      state.salesReturnAnalysis = null;
+      state.salesReturnAnalysisLoader = false;
+
       state.loading = false;
       state.createLoading = false;
       state.updateLoading = false;
@@ -315,6 +391,11 @@ const salesInvoiceSlice = createSlice({
 
     clearSalesInvoiceError: (state) => {
       state.error = null;
+    },
+
+    clearSalesReturnAnalysis: (state) => {
+      state.salesReturnAnalysis = null;
+      state.salesReturnAnalysisLoader = false;
     },
   },
 
@@ -354,6 +435,40 @@ const salesInvoiceSlice = createSlice({
           action.payload?.message || "Failed to fetch sales invoices";
         state.salesInvoices = [];
         state.pagination = null;
+      })
+
+      /* ================= GET BY VOUCHER ================= */
+      .addCase(getByVoucherNumberSalesInvoice.pending, (state) => {
+        state.detailsLoading = true;
+        state.selectedSalesInvoice = null;
+        state.error = null;
+      })
+      .addCase(getByVoucherNumberSalesInvoice.fulfilled, (state, action) => {
+        state.detailsLoading = false;
+        state.selectedSalesInvoice = action.payload;
+      })
+      .addCase(getByVoucherNumberSalesInvoice.rejected, (state, action) => {
+        state.detailsLoading = false;
+        state.selectedSalesInvoice = null;
+        state.error =
+          action.payload?.message || "Failed to fetch sales invoice";
+      })
+
+      /* ================= SALES RETURN ANALYSIS ================= */
+      .addCase(getSalesReturnAnalysisByInvoiceVoucher.pending, (state) => {
+        state.salesReturnAnalysisLoader = true;
+        state.salesReturnAnalysis = null;
+        state.error = null;
+      })
+      .addCase(getSalesReturnAnalysisByInvoiceVoucher.fulfilled, (state, action) => {
+        state.salesReturnAnalysisLoader = false;
+        state.salesReturnAnalysis = action.payload;
+      })
+      .addCase(getSalesReturnAnalysisByInvoiceVoucher.rejected, (state, action) => {
+        state.salesReturnAnalysisLoader = false;
+        state.salesReturnAnalysis = null;
+        state.error =
+          action.payload?.message || "Failed to fetch sales return analysis";
       })
 
       /* ================= GET BY CUSTOMER CODE ================= */
@@ -428,6 +543,7 @@ export const {
   clearSalesInvoiceState,
   clearSelectedSalesInvoice,
   clearSalesInvoiceError,
+  clearSalesReturnAnalysis,
 } = salesInvoiceSlice.actions;
 
 export default salesInvoiceSlice.reducer;

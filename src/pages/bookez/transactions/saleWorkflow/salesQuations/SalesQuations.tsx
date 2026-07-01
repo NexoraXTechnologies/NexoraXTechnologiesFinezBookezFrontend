@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -44,6 +44,11 @@ const SalesQuotations = () => {
     const [confirmTooltip, setConfirmTooltip]: any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
     const [tooltip, setTooltip]: any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
+
+    const lastSalesQuotationFetchKeyRef = useRef("");
+    const schemaCalledRef = useRef(false);
+    const reportMappingCalledRef = useRef(false);
+    const preparedSchemaRef = useRef<any>(null);
 
     const { report } = useSelector((s: any) => s.reportMapping);
 
@@ -121,7 +126,13 @@ const SalesQuotations = () => {
     const igstAmount = footerTotals.totalIgstAmount;
     const netAmount = footerTotals.totalNetAmount;
 
-    const fetchSalesQuotations = async () => {
+    const fetchSalesQuotations = async (force = false) => {
+        const fetchKey = `${localOffset}-${localLimit}-${debouncedSearch}-${status}`;
+
+        if (!force && lastSalesQuotationFetchKeyRef.current === fetchKey) return;
+
+        lastSalesQuotationFetchKeyRef.current = fetchKey;
+
         await dispatch(getSalesQuotationList({ offset: localOffset, limit: localLimit, search: debouncedSearch, docStatus: status }) as any);
     };
 
@@ -139,7 +150,12 @@ const SalesQuotations = () => {
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        try { await fetchSalesQuotations(); toast.success("Sales quotation list refreshed"); } finally { setRefreshing(false); }
+        try {
+            await fetchSalesQuotations(true);
+            toast.success("Sales quotation list refreshed");
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     const resetMainForm = () => { setEditingRecord(null); setErrors({}); setForm(getDefaultForm()); };
@@ -159,7 +175,6 @@ const SalesQuotations = () => {
     };
 
     const handleMainChange = (key: string, value: any) => {
-        console.log({ value });
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
             let updated = { ...prev, [key]: value };
@@ -179,7 +194,10 @@ const SalesQuotations = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
+        const lowerKey = String(key || "").toLowerCase();
+        const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
+
+        const duplicate = isProductField && Boolean(form?.products?.filter((e: any, i: number) => i !== index && String(e?.productCode || e?.productName || e?.productId || "") === String(value || ""))?.length);
         if (duplicate) {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
             return;
@@ -199,11 +217,10 @@ const SalesQuotations = () => {
             if (raw?._id && !updatedRow.productId) updatedRow.productId = raw._id;
 
             updatedRow = normalizeRowKeys(updatedRow);
-            console.log({ raw });
 
             if (key === "productCode" || key === "productName" || key === "productId") {
-                updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
-                updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
+                updatedRow.cgst = raw?.cgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
+                updatedRow.sgst = raw?.sgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
                 updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
 
                 if (num(updatedRow.igst) > 0) {
@@ -332,7 +349,7 @@ const SalesQuotations = () => {
 
             setShowModal(false);
             resetMainForm();
-            fetchSalesQuotations();
+            fetchSalesQuotations(true);
         } catch (err: any) {
             toast.error(err?.message || "Operation failed");
         }
@@ -343,7 +360,7 @@ const SalesQuotations = () => {
             if (!confirmTooltip.voucherNumber) return;
             await dispatch(deleteSalesQuotation(confirmTooltip.voucherNumber) as any).unwrap();
             toast.success("Sales quotation deleted");
-            fetchSalesQuotations();
+            fetchSalesQuotations(true);
         } catch (err: any) {
             toast.error(err?.message || "Failed to delete sales quotation");
         } finally {
@@ -360,17 +377,32 @@ const SalesQuotations = () => {
         });
     }, [templateFields?.footer, footerValues]);
 
-    useEffect(() => { dispatch(getAllTransactionSchema("salesQuotation") as any); }, [dispatch]);
-    useEffect(() => { fetchSalesQuotations(); }, [localOffset, localLimit, debouncedSearch, status]);
+    useEffect(() => {
+        if (schemaCalledRef.current) return;
+        schemaCalledRef.current = true;
+        dispatch(getAllTransactionSchema("salesQuotation") as any);
+    }, [dispatch]);
 
     useEffect(() => {
-        const timer = setTimeout(() => { setDebouncedSearch(search.trim()); setLocalOffset(0); }, 400);
+        fetchSalesQuotations();
+    }, [localOffset, localLimit, debouncedSearch, status]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
         return () => clearTimeout(timer);
     }, [search]);
 
     useEffect(() => {
         const prepareFields = async () => {
             if (!transactionsSchema) return;
+
+            const schemaKey = JSON.stringify(transactionsSchema);
+            if (preparedSchemaRef.current === schemaKey) return;
+            preparedSchemaRef.current = schemaKey;
+
             const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
             if (!hasSchema) return;
 
@@ -389,9 +421,11 @@ const SalesQuotations = () => {
     }, [transactionsSchema]);
 
     useEffect(() => {
+        if (reportMappingCalledRef.current) return;
+        reportMappingCalledRef.current = true;
         /* @ts-ignore */
         dispatch(getAllReportMapping({ moduleType: "salesQuotation" }));
-    }, []);
+    }, [dispatch]);
 
     const isClosedSalesQuations = (record: any) => {
         const quationsStatus = String(record?.sQuoteDocStatus || "").toLowerCase();
@@ -447,7 +481,7 @@ const SalesQuotations = () => {
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <button
-                            id="sales-quotation-edit-button"
+                            id="sales-quotation-download-button"
                             onClick={() => setDownlaodPDF((pre: any) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }))}
                             className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
@@ -455,13 +489,13 @@ const SalesQuotations = () => {
                         </button>
 
                         <Permission module="bookez" permissionKey="salesQuotation" action="update">
-                            <button id="sales-quotation-edit-button" onClick={() => handleEditSalesQuations(record)} className={`rounded-md p-2transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary ${isClosedSalesQuations(record)}`}>
+                            <button id="sales-quotation-edit-button" onClick={() => handleEditSalesQuations(record)} className={`cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary`}>
                                 <Edit size={16} />
                             </button>
                         </Permission>
 
                         <Permission module="bookez" permissionKey="salesQuotation" action="delete">
-                            <button id="sales-quotation-delete-button" disabled={deleteLoading} onClick={(e) => handleDeleteSalesQuationsClick(e, record)} className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger ${isClosedSalesQuations(record)}`}>
+                            <button id="sales-quotation-delete-button" disabled={deleteLoading} onClick={(e) => handleDeleteSalesQuationsClick(e, record)} className={`cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50`}>
                                 <Trash2 size={16} />
                             </button>
                         </Permission>
@@ -474,8 +508,6 @@ const SalesQuotations = () => {
             {confirmTooltip.show && <ConfirmTooltip x={confirmTooltip.x} y={confirmTooltip.y} message="Are you sure you want to delete this sales quotation?" confirmText="Delete" cancelText="Cancel" onConfirm={handleDeleteConfirm} onCancel={() => setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null })} />}
 
             <ListTooltip x={tooltip.x} y={tooltip.y} onClose={() => setTooltip({ x: null, y: null })} items={[{ label: "Auto Posting", onClick: () => console.log("Duplicate") }]} />
-
-            {downlaodPDF.show && <ConfirmTooltip x={downlaodPDF.x} y={downlaodPDF.y} message="Are you sure you want to delete this sales quotation?" confirmText="Delete" cancelText="Cancel" onCancel={() => setDownlaodPDF({ show: false, x: null, y: null })} />}
 
             {/* @ts-ignore */}
             <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-quotation", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Quotation PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
