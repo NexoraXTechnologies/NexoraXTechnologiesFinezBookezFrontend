@@ -39,7 +39,7 @@ const mainColumns = [
                 : [];
 
             if (!returns.length) {
-                return <span className="text-muted-foreground">-</span>;
+                return <span className="text-muted-foreground">N/A</span>;
             }
 
             return (
@@ -47,7 +47,7 @@ const mainColumns = [
                     {returns.map((item: any, index: number) => (
                         <div
                             key={`${item?.sInvReturnVoucherNumber || index}`}
-                            className="flex flex-col rounded-md  px-2 py-1 text-xs"
+                            className="flex flex-col rounded-md text-xs"
                         >
                             <span className="font-semibold text-danger">
                                 {item?.sInvReturnVoucherNumber || "-"}
