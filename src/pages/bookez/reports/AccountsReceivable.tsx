@@ -30,6 +30,38 @@ const mainColumns = [
             <>₹{Number(row?.totalBalanceAmount || 0).toFixed(2)}</>
         ),
     },
+    {
+        key: "salesInvoiceReturns",
+        title: "Return Invoices",
+        render: (row: any) => {
+            const returns = Array.isArray(row?.salesInvoiceReturns)
+                ? row.salesInvoiceReturns
+                : [];
+
+            if (!returns.length) {
+                return <span className="text-muted-foreground">-</span>;
+            }
+
+            return (
+                <div className="flex flex-col gap-1">
+                    {returns.map((item: any, index: number) => (
+                        <div
+                            key={`${item?.sInvReturnVoucherNumber || index}`}
+                            className="flex flex-col rounded-md  px-2 py-1 text-xs"
+                        >
+                            <span className="font-semibold text-danger">
+                                {item?.sInvReturnVoucherNumber || "-"}
+                            </span>
+
+                            <span className="font-medium text-card-foreground">
+                                ₹{Number(item?.returnAmount || 0).toFixed(2)}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            );
+        },
+    }
 ];
 
 const balanceColumns = [
@@ -48,7 +80,7 @@ const balanceColumns = [
     },
     {
         key: "netAmount",
-        title: "Bill Amount",
+        title: "Net Amount",
         render: (row: any) => (
             <>
                 ₹
@@ -88,6 +120,7 @@ const AccountsReceivable = () => {
         listingLoader,
         pagination,
         summary = {},
+        count,
     } = useSelector((s: any) => s.accountReceivable);
 
 
@@ -390,7 +423,7 @@ const AccountsReceivable = () => {
                     },
                     {
                         title: "Total Customers",
-                        value: Number(summary?.count || 0),
+                        value: Number(count || 0),
                         icon: <Users size={16} />,
                     },
                 ]}
