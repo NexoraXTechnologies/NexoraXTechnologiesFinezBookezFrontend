@@ -5,7 +5,7 @@ import {
   PackagePlus,
   CircleDollarSign,
 } from "lucide-react";
-import TransactionDashboard from "../transactions/components/TransactionDashboard";
+import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import AccountsReceivable from "./AccountsReceivable";
 import AccountLedger from "./AccountLedger";
 import StockLedger from "./StockLedger";

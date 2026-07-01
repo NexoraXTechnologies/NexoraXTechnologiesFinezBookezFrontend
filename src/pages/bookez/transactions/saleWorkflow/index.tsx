@@ -5,7 +5,7 @@ import {
   ReceiptText,
   RotateCcw,
 } from "lucide-react";
-import TransactionDashboard from "../components/TransactionDashboard";
+import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
 import SalesQuotations from "./salesQuations/SalesQuations";
 import SalesOrder from "./salesOrder/SalesOrder";
 import SalesInVoice from "./salesInvoice/SalesInvoice";

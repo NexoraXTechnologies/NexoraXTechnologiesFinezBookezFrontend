@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { FaRegFilePowerpoint } from "react-icons/fa";
 
-import TransactionDashboard from "../transactions/components/TransactionDashboard";
+import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 
 import AccountMaster from "./AccountMaster";
 import ProductMaster from "./productMaster/ProductMaster";

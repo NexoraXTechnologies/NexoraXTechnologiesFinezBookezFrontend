@@ -7,7 +7,7 @@ import {
   FilePlus2,
   FileMinus2,
 } from "lucide-react";
-import TransactionDashboard from "../components/TransactionDashboard";
+import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
 import OpeningBalance from "./openingBalance";
 import OpeningStock from "./openingStock";
 import JournalVoucher from "./JournalVoucher";

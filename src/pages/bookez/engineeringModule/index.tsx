@@ -4,7 +4,7 @@ import {
   FileImage,
   Wrench,
 } from "lucide-react";
-import TransactionDashboard from "../transactions/components/TransactionDashboard";
+import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import SetDefaultValue from "./setDefaultValue/SetDefaultValue";
 import Bom from "./BOM/Bom";
 import CreateEditEngineeringConfig from "./EngineeringConfig/CreateEditEngineeringConfig";
