@@ -6,7 +6,7 @@ import {
   CreditCard,
 } from "lucide-react";
 
-import TransactionDashboard from "../transactions/components/TransactionDashboard";
+import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import SalesRegister from "./SalesRegister";
 import PurchaseRegister from "./PurchaseRegister";
 import ReceiptRegister from "./ReceiptRegister";

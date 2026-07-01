@@ -66,7 +66,7 @@ const SalesReceipt = () => {
         return clean;
     };
 
-    const getRecords = (res: any) => Array.isArray(res?.items) ? res.items : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+    // const getRecords = (res: any) => Array.isArray(res?.items) ? res.items : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
 
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);

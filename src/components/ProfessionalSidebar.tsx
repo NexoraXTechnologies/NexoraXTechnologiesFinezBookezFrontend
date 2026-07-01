@@ -23,6 +23,7 @@ import {
 	LockKeyhole,
 	Palette,
 	Wrench,
+	Truck,
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
@@ -139,6 +140,15 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							name: "Engineering Module",
 							path: "/bookEz/engineering-module",
 							icon: <Wrench size={24} />,
+							module: "bookez",
+							permissionKey: "",
+							action: "view",
+
+						},
+						{
+							name: "Transportation",
+							path: "/bookEz/transportation",
+							icon: <Truck size={24} />,
 							module: "bookez",
 							permissionKey: "",
 							action: "view",

@@ -7,7 +7,7 @@ import {
   WalletCards,
 
 } from "lucide-react";
-import TransactionDashboard from "../components/TransactionDashboard";
+import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
 import PurchaseOrder from "./purchaseOrder";
 import Grn from "./Grn";
 import PurchaseReturn from "./PurchaseReturn";

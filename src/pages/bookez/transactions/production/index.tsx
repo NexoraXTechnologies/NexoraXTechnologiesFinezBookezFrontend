@@ -4,7 +4,7 @@ import {
   PackageMinus,
   PackagePlus,
 } from "lucide-react";
-import TransactionDashboard from "../components/TransactionDashboard";
+import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
 import AssemblyProduction from "./assemblyProduction/AssemblyProduction";
 
 
