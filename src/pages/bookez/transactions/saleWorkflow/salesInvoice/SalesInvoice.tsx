@@ -506,11 +506,9 @@ const SalesInVoice = () => {
     const openEditModal = (record: any) => {
         const footer = record?.sInvFooter || {};
 
-        const products =
-            record?.sInvBody?.length > 0
+        const products = record?.sInvBody?.length > 0
                 ? record.sInvBody.map((item: any) => {
                     const unitCode = item?.unit || item?.uom || "";
-
                     return calculateRow(
                         normalizeRowKeys({
                             id: item?.id || Date.now() + Math.random(),
@@ -561,21 +559,12 @@ const SalesInVoice = () => {
                     );
                 })
                 : [{ ...emptyProductRow, id: Date.now() }];
-
         setEditingRecord(true);
         setErrors({});
 
         setForm({
             sInvVoucherNumber: record?.sInvVoucherNumber || "AUTO",
-
-            sInvSalesOrderVoucherNumber:
-                record?.sInvSalesOrderVoucherNumber ||
-                record?.sOrderVoucherNumber ||
-                record?.sInvOrderVoucherNumber ||
-                record?.sInvBody?.[0]?.sOrderNumber ||
-                record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber ||
-                "",
-
+            sInvSalesOrderVoucherNumber: record?.sInvSalesOrderVoucherNumber || record?.sOrderVoucherNumber || record?.sInvOrderVoucherNumber || record?.sInvBody?.[0]?.sOrderNumber || record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber || "",
             sInvVoucherDate: formatDateForInput(record?.sInvVoucherDate),
             sInvCustomerCode: record?.sInvCustomerCode || "",
             sInvCustomerName: record?.sInvCustomerName || "",
@@ -587,8 +576,7 @@ const SalesInVoice = () => {
             isAutoPost: record?.isAutoPost || false,
             products,
             grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-            discountAmount:
-                footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+            discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
             cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
             sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
             igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
@@ -810,7 +798,6 @@ const SalesInVoice = () => {
             )
             .map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
-
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
@@ -819,15 +806,14 @@ const SalesInVoice = () => {
 
         const payload: any = {
             sInvSalesOrderVoucherNumber: form?.sInvSalesOrderVoucherNumber || "",
-
             sInvCustomerCode: form.sInvCustomerCode,
             sInvCustomerName: form.sInvCustomerName,
             sInvVoucherDate: form.sInvVoucherDate,
             sInvStatus: form.sInvStatus || form.sInvDocStatus || "open",
             sInvRemarks: form.sInvRemarks || form.sInvRemark || "",
             sInvSalesAccount: form.sInvSalesAccount || "SA021",
-            sInvDocStatus: form.sInvDocStatus || form.sInvStatus || "open",
-
+            // sInvDocStatus: form.sInvDocStatus || form.sInvStatus || "open",
+            sOrderNumber: products?.[0]?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
             sInvBody: products.map((item: any) => ({
                 // ✅ Store Sales Order voucher in invoice body also
                 sOrderNumber: item?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
@@ -1072,21 +1058,8 @@ const SalesInVoice = () => {
         let x = rect.left - 150;
         if (x < 10) x = 10;
         const y = rect.top + window.scrollY - 5;
-        const salesOrderVoucherNumber =
-            record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber || 
-            record?.sInvSalesOrderVoucherNumber ||
-            record?.sOrderVoucherNumber ||
-            record?.sInvOrderVoucherNumber ||
-            record?.sInvBody?.[0]?.sOrderNumber ||
-            "";
-
-        setConfirmTooltip({
-            show: true,
-            x,
-            y,
-            voucherNumber: record?.sInvVoucherNumber,
-            salesOrderVoucherNumber,
-        });
+        const salesOrderVoucherNumber = record?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber || record?.sInvSalesOrderVoucherNumber || record?.sOrderVoucherNumber || record?.sInvOrderVoucherNumber || record?.sInvBody?.[0]?.sOrderNumber || "";
+        setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sInvVoucherNumber, salesOrderVoucherNumber, });
     };
 
     useEffect(() => {

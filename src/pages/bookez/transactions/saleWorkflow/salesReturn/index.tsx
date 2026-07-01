@@ -15,7 +15,7 @@ import { getAllTransactionSchema } from "../../../../../redux/slices/professiona
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 import Modal, { ListingModel } from "../../../../../components/modal";
-import { getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { getAllSalesInvoice, getSalesReturnAnalysisByInvoiceVoucher, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
@@ -125,6 +125,27 @@ const SalesReturn = () => {
         await dispatch(getAllSalesInvoiceReturn({ offset: localOffset, limit: localLimit, search: purchaseOrderSearch, status }) as any);
     };
 
+    const getPendingReturnQtyFromAnalysis = (summary: any) => {
+        const productWiseDetail = Array.isArray(summary?.productWiseDetail) ? summary.productWiseDetail : [];
+        if (productWiseDetail.length > 0) return productWiseDetail.reduce((sum: number, item: any) => sum + num(item?.pendingQty || 0), 0);
+        return num(summary?.pendingReturnQuantity?.totalPendingQty ?? summary?.pendingReturnQuantity ?? summary?.totalPendingQty ?? 0);
+    };
+
+    const syncSalesInvoiceStatusAfterReturnAnalysis = async (sInvVoucherNumber: string) => {
+        if (!sInvVoucherNumber) return "";
+        try {
+            const summary = await dispatch(getSalesReturnAnalysisByInvoiceVoucher({ voucherNumber: sInvVoucherNumber }) as any).unwrap();
+            const totalPendingQuantity = getPendingReturnQtyFromAnalysis(summary);
+            const nextInvoiceStatus = totalPendingQuantity === 0 ? "close" : "open";
+            await dispatch(updateSalesInvoice({ sInvVoucherNumber, payload: { sInvStatus: nextInvoiceStatus } }) as any);
+            return nextInvoiceStatus;
+        } catch (error: any) {
+            console.log("From Sales Return Analysis", error);
+            toast.error(error?.response?.data?.message || error?.message || "Sales return analysis failed");
+            return "";
+        }
+    };
+
     const columns = [
         { key: "sInvReturnVoucherNumber", title: "Voucher" },
         { key: "sInvReturnVoucherDate", title: "Date", render: (row: any) => row?.sInvReturnVoucherDate ? formatDateForList(row.sInvReturnVoucherDate) : "-" },
@@ -199,23 +220,6 @@ const SalesReturn = () => {
         setShowModal(true);
     };
 
-    const syncPurchaseOrderStatusAfterGrn = async (pOrdVoucherNumber: string) => {
-        if (!pOrdVoucherNumber) return "";
-        try {
-            const summaryRes = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesInvoiceReturn/analysis/byInvoiceVoucharNumber/${pOrdVoucherNumber}`);
-            const summary = summaryRes?.data?.data || {};
-            const pendingRaw = summary?.pendingReturnQuantity?.totalPendingQty;
-            const totalPendingQuantity = num(pendingRaw);
-            const nextPoStatus = totalPendingQuantity === 0 ? "close" : "open";
-            dispatch(updateSalesInvoice({ sInvVoucherNumber: pOrdVoucherNumber, payload: { sInvStatus: nextPoStatus } }));
-            return nextPoStatus;
-        } catch (error) {
-            console.log("From Sales Return", error);
-            toast.error("Somthing went wrong");
-            return "";
-        }
-    };
-
     const handleMainChange = (key: string, value: any) => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
@@ -238,8 +242,8 @@ const SalesReturn = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
-        if (duplicate) {
+        const duplicate = Boolean(form?.products?.filter((e: any, i: number) => i !== index && e?.productCode == value)?.length);
+        if (duplicate && (key === "productCode" || key === "productName" || key === "productId")) {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
             return;
         }
@@ -344,39 +348,39 @@ const SalesReturn = () => {
             sInvReturnRemark: form.sInvReturnRemark || form.sInvRemark || "",
             sInvReturnSalesAccount: form.sInvReturnSalesAccount || "SA021",
             sInvReturnStatus: form.sInvReturnStatus || form.sInvStatus || "open",
-            sInvReturnBody: products.map((item: any) => ({ productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, unitName: item.unitName, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) })),
+            sInvReturnBody: products.map((item: any) => ({ sInvVoucherNumber: form?.sInvVoucherNumber, productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, unitName: item.unitName, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) })),
             sInvReturnFooter: { grossAmount: fmtMoney(footer.totalGrossAmount), discountAmount: fmtMoney(footer.totalDiscountAmount), cgstAmount: fmtMoney(footer.totalCgstAmount), sgstAmount: fmtMoney(footer.totalSgstAmount), igstAmount: fmtMoney(footer.totalIgstAmount), taxAmount: fmtMoney(footer.totalTaxAmount), otherAmount: fmtMoney(footer.totalOtherAmount), netAmount: fmtMoney(footer.totalNetAmount), adjustedAmount: "0", balanceAmount: fmtMoney(footer.totalNetAmount), totalQuantity: footer.totalQuantity, totalGrossAmount: fmtMoney(footer.totalGrossAmount), totalDiscountAmount: fmtMoney(footer.totalDiscountAmount), totalCgstAmount: fmtMoney(footer.totalCgstAmount), totalSgstAmount: fmtMoney(footer.totalSgstAmount), totalIgstAmount: fmtMoney(footer.totalIgstAmount), totalTaxAmount: fmtMoney(footer.totalTaxAmount), totalOtherAmount: fmtMoney(footer.totalOtherAmount), totalNetAmount: fmtMoney(footer.totalNetAmount) },
         };
 
         try {
             if (editingRecord) {
                 await dispatch(updateSalesInvoiceReturn({ sInvReturnVoucherNumber: form?.sInvReturnVoucherNumber, payload }) as any).unwrap();
-                toast.success("Sales invoice updated successfully");
+                if (payload?.sInvVoucherNumber) await syncSalesInvoiceStatusAfterReturnAnalysis(payload?.sInvVoucherNumber);
+                toast.success("Sales Return updated successfully");
             } else {
                 await dispatch(createSalesInvoiceReturn({ payload }) as any).unwrap();
-                if (form?.sInvVoucherNumber) {
-                    await syncPurchaseOrderStatusAfterGrn(form?.sInvVoucherNumber);
-                    await fetchSalesInvoices();
-                    // if (poStatus === "close") toast.success("GRN created successfully and Purchase Order closed");
-                }
+                if (payload?.sInvVoucherNumber) await syncSalesInvoiceStatusAfterReturnAnalysis(payload?.sInvVoucherNumber);
                 toast.success("Sales Return created successfully");
             }
             setShowModal(false);
             resetMainForm();
             fetchSalesInvoices();
         } catch (err: any) {
-            toast.error(err?.message || "Operation failed");
+            toast.error(err?.response?.data?.message || err?.message || "Operation failed");
         }
     };
 
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
+            const deletedRecord = salesInvoiceReturns?.find((item: any) => item?.sInvReturnVoucherNumber === confirmTooltip.voucherNumber);
+            const linkedInvoiceVoucherNumber = deletedRecord?.sInvVoucherNumber || "";
             await dispatch(deleteSalesInvoiceReturn(confirmTooltip.voucherNumber) as any).unwrap();
-            toast.success("Sales invoice deleted successfully");
+            if (linkedInvoiceVoucherNumber) await syncSalesInvoiceStatusAfterReturnAnalysis(linkedInvoiceVoucherNumber);
+            toast.success("Sales Return deleted successfully");
             fetchSalesInvoices();
         } catch (err: any) {
-            toast.error(err?.message || "Failed to delete sales invoice");
+            toast.error(err?.response?.data?.message || err?.message || "Failed to delete sales return");
         } finally {
             setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
         }
@@ -557,7 +561,7 @@ const SalesReturn = () => {
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message="Are you sure you want to delete this sales invoice?"
+                    message="Are you sure you want to delete this sales return?"
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteConfirm}
@@ -610,7 +614,7 @@ const SalesReturn = () => {
                             <input
                                 value={purchaseOrderSearch}
                                 onChange={(e) => setPurchaseOrderSearch(e.target.value)}
-                                placeholder="Search Purchase Order code..."
+                                placeholder="Search Invoice code..."
                                 className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-input focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
@@ -618,16 +622,16 @@ const SalesReturn = () => {
                         <div className="min-h-0 flex-1 overflow-y-auto p-5">
                             {invoiceLoader ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
-                                    Loading purchase orders...
+                                    Loading invoices...
                                 </div>
                             ) : salesInvoices.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
-                                    No purchase order found
+                                    No invoice found
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesInvoices.map((e: any, index: number) => {
-                                        const poNumber = e?.pOrdVoucherNumber || "-";
+                                        const poNumber = e?.sInvVoucherNumber || "-";
                                         const isSelected = selectedPurchaseOrder?.sInvVoucherNumber == e?.sInvVoucherNumber;
                                         return (
                                             <button
