@@ -56,7 +56,6 @@ const SalesQuotations = () => {
     const { report } = useSelector((s: any) => s.reportMapping);
     const { accounts } = useSelector((s: any) => s.accountMaster);
     const { company } = useSelector((s: any) => s.professionalCompanyMaster);
-    console.log({ company, accounts })
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
@@ -133,11 +132,8 @@ const SalesQuotations = () => {
 
     const fetchSalesQuotations = async (force = false) => {
         const fetchKey = `${localOffset}-${localLimit}-${debouncedSearch}-${status}`;
-
         if (!force && lastSalesQuotationFetchKeyRef.current === fetchKey) return;
-
         lastSalesQuotationFetchKeyRef.current = fetchKey;
-
         await dispatch(getSalesQuotationList({ offset: localOffset, limit: localLimit, search: debouncedSearch, docStatus: status }) as any);
     };
 
@@ -180,8 +176,6 @@ const SalesQuotations = () => {
     };
 
     const handleMainChange = (key: string, value: any) => {
-        dispatch(getAllAccounts({ limit: 100 }) as any)
-        dispatch(getCompany({ withParent: true, limit: 100 }) as any)
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
             let updated = { ...prev, [key]: value };
@@ -201,7 +195,6 @@ const SalesQuotations = () => {
     };
 
     const handleRowChange = (index: number, key: string, value: any) => {
-
         if (!form?.sQuoteCustomerName) return toast.error("Please select customer first");
         const lowerKey = String(key || "").toLowerCase();
         const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
@@ -211,30 +204,26 @@ const SalesQuotations = () => {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
             return;
         }
-        //sQuoteCustomerName accountName
-        console.log({ get: accounts?.filter((e) => e.accountName == form?.sQuoteCustomerName) })
-        console.log({ form, accounts, company })
+
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
             let updatedRow = { ...currentRow, [key]: value };
-
             if (currentField?.mapFields) updatedRow = applyMappedFields(currentField, value, updatedRow);
-
             const selectedOption = getOptionByValue(currentField, value);
             const raw = selectedOption?.raw || {};
-            console.log({ raw, })
-
             if (raw?._id && !updatedRow.productId) updatedRow.productId = raw._id;
-
             updatedRow = normalizeRowKeys(updatedRow);
 
             if (key === "productCode" || key === "productName" || key === "productId") {
-                updatedRow.cgst = raw?.cgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
-                updatedRow.sgst = raw?.sgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
-                updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
-
+                const getCustomer = accounts?.filter((e: any) => e?.accountType == "customer")?.find((e: any) => e.accountName == form?.sQuoteCustomerName)
+                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
+                    updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
+                    updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
+                } else {
+                    updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
+                }
                 if (num(updatedRow.igst) > 0) {
                     updatedRow.cgst = "";
                     updatedRow.sgst = "";
@@ -467,6 +456,15 @@ const SalesQuotations = () => {
         setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sQuoteVoucherNumber });
     };
 
+    useEffect(() => {
+        if (!accounts?.length) {
+            dispatch(getAllAccounts({ limit: 100 }) as any);
+        }
+        if (!Object.keys(company ?? {})?.length) {
+            dispatch(getCompany({ withParent: true, limit: 100 }) as any);
+        }
+    }, [])
+    
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">
