@@ -1614,7 +1614,7 @@ const Grn = () => {
 
             pRetPurAccount: "SA003",
             pRetStatus: "open",
-            pRetRemark: "Auto created from rejected GRN quantity",
+            pRetRemark: "",
 
             pRetBody: rejectedProducts,
 
