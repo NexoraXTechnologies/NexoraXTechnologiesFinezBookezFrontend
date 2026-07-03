@@ -1,24 +1,56 @@
 const statusBadge = (status: any) => {
     const value = String(status || "-").toUpperCase();
 
+    const getVariant = () => {
+        if (
+            value === "CLOSE" ||
+            value === "CLOSED" ||
+            value === "PAID" ||
+            value === "ACCEPTED" ||
+            value === "APPROVED"
+        ) {
+            return "success";
+        }
+
+        if (
+            value === "REJECTED" ||
+            value === "CANCELLED" ||
+            value === "DELETED"
+        ) {
+            return "danger";
+        }
+
+        return "primary";
+    };
+
+    const variant = getVariant();
+
+    const badgeColl: any = {
+        success: {
+            text: "text-success",
+            bg: "bg-success/10",
+            border: "border-success/20",
+        },
+        primary: {
+            text: "text-primary",
+            bg: "bg-primary/10",
+            border: "border-primary/20",
+        },
+        danger: {
+            text: "text-danger",
+            bg: "bg-danger/10",
+            border: "border-danger/20",
+        },
+    };
+
     return (
         <span
             className={`
-                rounded px-3 py-1 text-xs font-bold uppercase
-                ${value === "CLOSE" ||
-                    value === "CLOSED" ||
-                    value === "PAID" ||
-                    value === "ACCEPTED" ||
-                    value === "APPROVED"
-                    ? "bg-success/10 text-success"
-                    : value === "REJECTED" ||
-                        value === "CANCELLED" ||
-                        value === "DELETED"
-                        ? "bg-danger/10 text-danger"
-                        : value === "OPEN"
-                            ? "bg-warning/10 text-warning"
-                            : "bg-muted text-muted-foreground"
-                }
+                inline-flex h-6 items-center justify-center rounded-md border px-2 py-1
+                text-xs font-semibold uppercase
+                ${badgeColl[variant]?.bg}
+                ${badgeColl[variant]?.border}
+                ${badgeColl[variant]?.text}
             `}
         >
             {value}

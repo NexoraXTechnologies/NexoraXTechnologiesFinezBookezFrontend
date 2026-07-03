@@ -29,7 +29,7 @@ const Pagination = ({
         <div
             id="account-pagination"
             className="
-                my-4 w-full
+                my-3 w-full
                 flex flex-col gap-3
                 sm:flex-row sm:items-center sm:justify-between
                 text-sm text-muted-foreground
@@ -62,6 +62,10 @@ const Pagination = ({
                     ))}
                 </select>
             </div>
+
+            {pagination?.totalDocs && <div>
+                Grand Total : <span className="font-bold">{pagination?.totalDocs}</span>
+            </div>}
 
             {/* Pagination buttons */}
             <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 justify-start sm:justify-end">

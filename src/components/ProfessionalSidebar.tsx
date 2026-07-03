@@ -217,11 +217,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/system-configuration",
 					icon: <MonitorCog size={19} />,
 				},
-				{
+				...(localUser?.accountType == "SUPER_ADMIN" ? [{
 					name: "User Explorer",
 					path: "/user-explorer",
 					icon: <MonitorCog size={19} />,
-				},
+				}] : []),
 				...(localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash
 					? [
 						{

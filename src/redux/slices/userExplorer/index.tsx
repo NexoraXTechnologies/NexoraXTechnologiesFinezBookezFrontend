@@ -20,7 +20,9 @@ export const requestDbAccess = createAsyncThunk(
             lastName,
             userEmail,
             userAddress,
-            authTokenDigest
+            authTokenDigest,
+            state,
+            city
         }: {
             parentMobileNumber: string;
             requestMessage: string;
@@ -30,6 +32,8 @@ export const requestDbAccess = createAsyncThunk(
             userEmail: string;
                 userAddress: string;
                 authTokenDigest: string;
+                state: any;
+                city: any;
         },
         { rejectWithValue }
     ) => {
@@ -44,7 +48,9 @@ export const requestDbAccess = createAsyncThunk(
                     lastName,
                     userEmail,
                     userAddress,
-                    authTokenDigest 
+                    authTokenDigest,
+                    state,
+                    city
                 },
                 {
                     headers: DB_ACCESS_HEADERS,

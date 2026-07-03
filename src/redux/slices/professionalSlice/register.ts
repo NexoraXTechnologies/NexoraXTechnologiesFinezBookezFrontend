@@ -275,6 +275,54 @@ export const getOpeningStockRegister = createAsyncThunk(
 );
 
 /* ===================================================
+   SALES ORDER REGISTER
+=================================================== */
+
+export const getSalesOrderRegister = createAsyncThunk(
+    "allRegisters/getSalesOrderRegister",
+    async (payload: RegisterPayload = {}, { rejectWithValue }) => {
+        return registerPostApi(
+            "/eTaxSolnMongoApiBackend/users/bookEZ/registers/salesOrderRegister",
+            payload,
+            rejectWithValue,
+            "Failed to fetch sales order register"
+        );
+    }
+);
+
+/* ===================================================
+   PURCHASE ORDER REGISTER
+=================================================== */
+
+export const getPurchaseOrderRegister = createAsyncThunk(
+    "allRegisters/getPurchaseOrderRegister",
+    async (payload: RegisterPayload = {}, { rejectWithValue }) => {
+        return registerPostApi(
+            "/eTaxSolnMongoApiBackend/users/bookEZ/registers/purchaseOrderRegister",
+            payload,
+            rejectWithValue,
+            "Failed to fetch purchase order register"
+        );
+    }
+);
+
+/* ===================================================
+   GRN REGISTER
+=================================================== */
+
+export const getGrnRegister = createAsyncThunk(
+    "allRegisters/getGrnRegister",
+    async (payload: RegisterPayload = {}, { rejectWithValue }) => {
+        return registerPostApi(
+            "/eTaxSolnMongoApiBackend/users/bookEZ/registers/grnRegister",
+            payload,
+            rejectWithValue,
+            "Failed to fetch GRN register"
+        );
+    }
+);
+
+/* ===================================================
    SLICE
 =================================================== */
 
@@ -291,6 +339,9 @@ const allRegistersSlice = createSlice({
         purchaseReturnRegisterData: [],
         openingBalanceData: [],
         openingStockData: [],
+        salesOrderRegisterData: [],
+        purchaseOrderRegisterData: [],
+        grnRegisterData: [],
 
         loading: false,
         quotationLoading: false,
@@ -303,6 +354,9 @@ const allRegistersSlice = createSlice({
         openingBalanceLoading: false,
         openingStockLoading: false,
         exportLoading: false,
+        salesOrderLoading: false,
+        purchaseOrderLoading: false,
+        grnLoading: false,
 
         error: null,
 
@@ -315,6 +369,9 @@ const allRegistersSlice = createSlice({
         purchaseReturnPagination: defaultPagination,
         openingBalancePagination: defaultPagination,
         openingStockPagination: defaultPagination,
+        salesOrderPagination: defaultPagination,
+        purchaseOrderPagination: defaultPagination,
+        grnPagination: defaultPagination,
     },
 
     reducers: {
@@ -331,6 +388,9 @@ const allRegistersSlice = createSlice({
             state.openingStockLoading = false;
             state.exportLoading = false;
             state.error = null;
+            state.salesOrderLoading = false;
+            state.purchaseOrderLoading = false;
+            state.grnLoading = false;
         },
 
         clearAllRegistersData: (state: any) => {
@@ -343,6 +403,13 @@ const allRegistersSlice = createSlice({
             state.purchaseReturnRegisterData = [];
             state.openingBalanceData = [];
             state.openingStockData = [];
+            state.salesOrderRegisterData = [];
+            state.purchaseOrderRegisterData = [];
+            state.grnRegisterData = [];
+
+            state.salesOrderPagination = defaultPagination;
+            state.purchaseOrderPagination = defaultPagination;
+            state.grnPagination = defaultPagination;
 
             state.quotationPagination = defaultPagination;
             state.receiptPagination = defaultPagination;
@@ -353,6 +420,7 @@ const allRegistersSlice = createSlice({
             state.purchaseReturnPagination = defaultPagination;
             state.openingBalancePagination = defaultPagination;
             state.openingStockPagination = defaultPagination;
+
         },
     },
 
@@ -737,7 +805,126 @@ const allRegistersSlice = createSlice({
                         action.payload?.message ||
                         "Failed to fetch opening stock register";
                 }
-            );
+        );
+
+        /* ================= SALES ORDER REGISTER ================= */
+
+        builder
+            .addCase(getSalesOrderRegister.pending, (state: any, action: any) => {
+                state.error = null;
+
+                if (action.meta.arg?.exportType) {
+                    state.exportLoading = true;
+                } else {
+                    state.salesOrderLoading = true;
+                }
+            })
+            .addCase(getSalesOrderRegister.fulfilled, (state: any, action: any) => {
+                state.salesOrderLoading = false;
+                state.exportLoading = false;
+
+                if (action.payload?.blob) return;
+
+                state.salesOrderRegisterData =
+                    action.payload?.orders ||
+                    action.payload?.salesOrders ||
+                    action.payload?.salesOrder ||
+                    action.payload?.records ||
+                    action.payload?.data ||
+                    [];
+
+                state.salesOrderPagination = normalizePagination(
+                    action.payload?.pagination
+                );
+            })
+            .addCase(getSalesOrderRegister.rejected, (state: any, action: any) => {
+                state.salesOrderLoading = false;
+                state.exportLoading = false;
+                state.salesOrderRegisterData = [];
+                state.salesOrderPagination = defaultPagination;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to fetch sales order register";
+            });
+
+        /* ================= PURCHASE ORDER REGISTER ================= */
+
+        builder
+            .addCase(getPurchaseOrderRegister.pending, (state: any, action: any) => {
+                state.error = null;
+
+                if (action.meta.arg?.exportType) {
+                    state.exportLoading = true;
+                } else {
+                    state.purchaseOrderLoading = true;
+                }
+            })
+            .addCase(getPurchaseOrderRegister.fulfilled, (state: any, action: any) => {
+                state.purchaseOrderLoading = false;
+                state.exportLoading = false;
+
+                if (action.payload?.blob) return;
+
+                state.purchaseOrderRegisterData =
+                    action.payload?.orders ||
+                    action.payload?.purchaseOrders ||
+                    action.payload?.purchaseOrder ||
+                    action.payload?.records ||
+                    action.payload?.data ||
+                    [];
+
+                state.purchaseOrderPagination = normalizePagination(
+                    action.payload?.pagination
+                );
+            })
+            .addCase(getPurchaseOrderRegister.rejected, (state: any, action: any) => {
+                state.purchaseOrderLoading = false;
+                state.exportLoading = false;
+                state.purchaseOrderRegisterData = [];
+                state.purchaseOrderPagination = defaultPagination;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to fetch purchase order register";
+            });
+
+        /* ================= GRN REGISTER ================= */
+
+        builder
+            .addCase(getGrnRegister.pending, (state: any, action: any) => {
+                state.error = null;
+
+                if (action.meta.arg?.exportType) {
+                    state.exportLoading = true;
+                } else {
+                    state.grnLoading = true;
+                }
+            })
+            .addCase(getGrnRegister.fulfilled, (state: any, action: any) => {
+                state.grnLoading = false;
+                state.exportLoading = false;
+
+                if (action.payload?.blob) return;
+
+                state.grnRegisterData =
+                    action.payload?.grns ||
+                    action.payload?.grn ||
+                    action.payload?.records ||
+                    action.payload?.data ||
+                    [];
+
+                state.grnPagination = normalizePagination(
+                    action.payload?.pagination
+                );
+            })
+            .addCase(getGrnRegister.rejected, (state: any, action: any) => {
+                state.grnLoading = false;
+                state.exportLoading = false;
+                state.grnRegisterData = [];
+                state.grnPagination = defaultPagination;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to fetch GRN register";
+            });
     },
 });
 

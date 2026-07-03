@@ -82,7 +82,7 @@ import postingReduce from "./slices/professionalSlice/posting";
 import posReducer from "./slices/professionalSlice/pos";
 import dbAccessReducer from "./slices/userExplorer";
 import allRegistersReducer from "../redux/slices/professionalSlice/register";
-
+import areaDashboardReducer from "../redux/slices/professionalSlice/dashboard/registerDashboard"
 
 export const store = configureStore({
   reducer: {
@@ -168,6 +168,7 @@ export const store = configureStore({
     pos: posReducer,
     dbAccess: dbAccessReducer,
     allRegisters: allRegistersReducer,
+    registerDashboard: areaDashboardReducer,
   },
 });
 
