@@ -60,6 +60,14 @@ import accountPayableReducer from "./slices/professionalSlice/ledgerReports/acco
 import accountLedgerReducer from "./slices/professionalSlice/ledgerReports/accountLedgerSlice";
 import stockLedgerReducer from "./slices/professionalSlice/ledgerReports/stockLedgerSlice";
 
+// transportation
+import transportOrderReducer from "./slices/professionalSlice/transportation/transportOrderSlice";
+import tripAllocationReducer from "./slices/professionalSlice/transportation/tripAllocationSlice";
+import tripExpensesReducer from "./slices/professionalSlice/transportation/tripExpensesSlice";
+import tripLRCollectionReducer from "./slices/professionalSlice/transportation/tripLRCollectionSlice";
+import vehicleMaintenanceReducer from "./slices/professionalSlice/transportation/vehicleMaintenanceEntrySlice";
+import transportContractReducer from "./slices/professionalSlice/transportation/transportContractSlice";
+
 
 // bookEz register
 import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
@@ -134,10 +142,18 @@ export const store = configureStore({
     getAllTransactionSchema,
 
     // ledger report 
-    accountPayable:accountPayableReducer,
+    accountPayable: accountPayableReducer,
     accountReceivable: accountReceivableReducer,
     accountLedger: accountLedgerReducer,
     stockLedger: stockLedgerReducer,
+
+    // transportation
+    transportOrder: transportOrderReducer,
+    tripAllocation: tripAllocationReducer,
+    tripExpenses: tripExpensesReducer,
+    tripLRCollection: tripLRCollectionReducer,
+    vehicleMaintenance: vehicleMaintenanceReducer,
+    transportContract: transportContractReducer,
 
     // bookEz register
     salesRegister: salesRegisterReducer,
