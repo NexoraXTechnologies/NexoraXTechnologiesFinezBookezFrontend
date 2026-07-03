@@ -249,7 +249,7 @@ const transportOrderSlice = createSlice({
                 const payload = action.payload;
 
                 state.transportOrders =
-                    payload?.data || [];
+                    payload?.data.records || [];
 
                 state.error = null;
             })

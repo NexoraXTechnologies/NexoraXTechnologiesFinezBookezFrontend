@@ -18,7 +18,6 @@ import { getAllReportMapping } from "../../../../../redux/slices/professionalSli
 import { ListingModel } from "../../../../../components/modal";
 import Permission from "../../../../../components/PermissionGuard";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
-import { getProfessionalUsers } from "../../../../../redux/slices/professionalSlice/professionalUserSlice";
 import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };

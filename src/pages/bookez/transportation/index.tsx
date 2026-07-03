@@ -11,10 +11,17 @@ import {
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 
 const cards: any[] = [
+   {
+    title: "Create Contract",
+    description: "Create transport contracts with customers, vendors, or fleet partners.",
+    path: "/bookEz/transportation/transport-contract",
+    icon: <FileSignature size={22} />,
+    permissionKey: "accountLedger",
+  },
   {
     title: "Create Transport Order",
     description: "Create and manage transport orders for customer goods movement.",
-    path: "/bookEz/transportation/create-transport-order",
+    path: "/bookEz/transportation/transport-order",
     icon: <PackagePlus size={22} />,
     permissionKey: "accountLedger",
   },
@@ -46,13 +53,7 @@ const cards: any[] = [
     icon: <Wrench size={22} />,
     permissionKey: "accountLedger",
   },
-  {
-    title: "Create Contract",
-    description: "Create transport contracts with customers, vendors, or fleet partners.",
-    component: "",
-    icon: <FileSignature size={22} />,
-    permissionKey: "accountLedger",
-  },
+ 
   {
     title: "Driver Settlement",
     description: "Calculate and settle driver advances, expenses, and final trip balance.",
