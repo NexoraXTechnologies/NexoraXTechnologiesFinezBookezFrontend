@@ -54,7 +54,10 @@ import POS from './pages/bookez/pos';
 import POSPaymentPage from './pages/bookez/pos/POSPaymentPage';
 import EngineeringModuleDashboard from './pages/bookez/engineeringModule';
 import TransportationDashboard from './pages/bookez/transportation';
-import CreateTransportOrder from './pages/bookez/transportation/transportOrder/TransportOrder';
+import TransportContractList from './pages/bookez/transportation/transportContract/TransportContractList';
+import CreateEditTransportContract from './pages/bookez/transportation/transportContract/CreateEditTransportContract';
+import TransportOrderList from './pages/bookez/transportation/transportOrder/TransportOrderList';
+import CreateTransportOrder from './pages/bookez/transportation/transportOrder/CreateTransportOrder';
 
 function App() {
   useAppearance();
@@ -69,117 +72,118 @@ function App() {
         draggable={false}
         theme="colored"
       />
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/professionalRegister" element={<ProfessionalRegister />} />
-      {/* professional route */}
-      <Route
-          path="/"
-        element={
-          <ProtectedRoute allowedRoles={['Professional']}>
-            <TourProvider>
-              <ProfessionalDashboardLayout />
-            </TourProvider>
-          </ProtectedRoute>
-        }>
-        <Route index element={<ProfessionalDashboard />} />
-        <Route path="profile" element={<ProfessionalProfile />} />
-        <Route path="permission" element={<PermissionManagement />} />
-          <Route path="appearance" element={<Appearance />} />
-        <Route path="documentmngt" element={<DocumentMangement />} />
-        <Route path="taskmngt" element={<TaskManagement />} />
-        <Route path="incometx" element={<ProfessionlIncomeTaxLaw />} />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/professionalRegister" element={<ProfessionalRegister />} />
+        {/* professional route */}
         <Route
-          path="users"
+          path="/"
           element={
-            <ProtectedUsersRoute>
-              {' '}
-              <Users />{' '}
-            </ProtectedUsersRoute>
-          }
-        />
+            <ProtectedRoute allowedRoles={['Professional']}>
+              <TourProvider>
+                <ProfessionalDashboardLayout />
+              </TourProvider>
+            </ProtectedRoute>
+          }>
+          <Route index element={<ProfessionalDashboard />} />
+          <Route path="profile" element={<ProfessionalProfile />} />
+          <Route path="permission" element={<PermissionManagement />} />
+          <Route path="appearance" element={<Appearance />} />
+          <Route path="documentmngt" element={<DocumentMangement />} />
+          <Route path="taskmngt" element={<TaskManagement />} />
+          <Route path="incometx" element={<ProfessionlIncomeTaxLaw />} />
+          <Route
+            path="users"
+            element={
+              <ProtectedUsersRoute>
+                {' '}
+                <Users />{' '}
+              </ProtectedUsersRoute>
+            }
+          />
 
           <Route path="/bookEz/master" element={<MasterDashboard />} />
-        <Route path="master/company" element={<CompanyMaster />} />
-        <Route path="master/account" element={<AccountMaster />} />
-        <Route path="master/product" element={<ProductMaster />} />
-        <Route path="master/unit" element={<UnitMaster />} />
-        <Route path="master/reports-mapping" element={<ReportMapping />} />
+          <Route path="master/company" element={<CompanyMaster />} />
+          <Route path="master/account" element={<AccountMaster />} />
+          <Route path="master/product" element={<ProductMaster />} />
+          <Route path="master/unit" element={<UnitMaster />} />
+          <Route path="master/reports-mapping" element={<ReportMapping />} />
 
 
-        <Route
+          <Route
             path="/bookEz/transaction/opening-balances"
-          element={<OpeningBalancesDashboard />}
-        />
+            element={<OpeningBalancesDashboard />}
+          />
 
-        <Route
+          <Route
             path="/bookEz/transaction/production"
-          element={<ProductionDashboard />}
-        />
+            element={<ProductionDashboard />}
+          />
 
-        <Route
+          <Route
             path="/bookEz/transaction/sale-workflow"
-          element={<SaleWorkflowDashboard />}
-        />
+            element={<SaleWorkflowDashboard />}
+          />
 
-        <Route
+          <Route
             path="/bookEz/transaction/purchase-workflow"
-          element={<PurchaseWorkflowDashboard />}
-        />
+            element={<PurchaseWorkflowDashboard />}
+          />
 
-        <Route
+          <Route
             path="/bookEz/reports"
-          element={<ReportsDashboard/>}
-        />
-        <Route
+            element={<ReportsDashboard />}
+          />
+          <Route
             path="/bookEz/registers"
-          element={<RegistersDashboard/>}
-        />
+            element={<RegistersDashboard />}
+          />
           <Route path="/bookEz/pos" element={<POS />} />
 
           <Route
             path="/bookEz/pos/payment"
             element={<POSPaymentPage />}
           />
-        <Route
+          <Route
             path="/bookEz/engineering-module"
-          element={<EngineeringModuleDashboard/>}
-        />
+            element={<EngineeringModuleDashboard />}
+          />
 
 
-        {/* transportation */}
-        <Route
+          {/* transportation */}
+          <Route
             path="/bookEz/transportation"
-          element={<TransportationDashboard/>}
-        />
-        <Route
-            path="/bookEz/transportation/create-transport-order"
-          element={<CreateTransportOrder/>}
-        />
+            element={<TransportationDashboard />}
+          />
+          <Route path="/bookEz/transportation/transport-order" element={<TransportOrderList />} />
+          <Route path="/bookEz/transportation/transport-order/create" element={<CreateTransportOrder/>} />
+          <Route path="/bookEz/transportation/transport-contract" element={<TransportContractList />} />
+          <Route path="/bookEz/transportation/transport-contract/create" element={<CreateEditTransportContract />} />
+          <Route path="/bookEz/transportation/transport-contract/edit/:contractNumber" element={<CreateEditTransportContract />} />
 
-        {/* configuration */}
-        <Route path="configuration" element={<Configuration />} />
+          {/* configuration */}
+          <Route path="configuration" element={<Configuration />} />
 
-        {/* incometax */}
-        <Route path="incometax/form26as" element={<Form26AS />} />
-        <Route path="incometax/ais" element={<AIS />} />
-        <Route path="incometax/tis" element={<TIS />} />
-        <Route path="incometax/addtaxpayer" element={<AddTaxPayer />} />
-        <Route path="incometax/fileitr" element={<FileITR />} />
-        <Route path="incometax/fileitr/edit/:pan/:ay" element={<FileITR />} />
-        <Route path="incometax/fileitrlist" element={<FileITRList />} />
-        <Route path="incometax/uploadform16" element={<UploadForm16 />} />
-        <Route path="incometax/downloaditr" element={<DownloadITR />} />
-        <Route path="incometax/refund" element={<Refund />} />
-        <Route path="incometax/resetitrpassword" element={<ResetitrPassword />} />
+          {/* incometax */}
+          <Route path="incometax/form26as" element={<Form26AS />} />
+          <Route path="incometax/ais" element={<AIS />} />
+          <Route path="incometax/tis" element={<TIS />} />
+          <Route path="incometax/addtaxpayer" element={<AddTaxPayer />} />
+          <Route path="incometax/fileitr" element={<FileITR />} />
+          <Route path="incometax/fileitr/edit/:pan/:ay" element={<FileITR />} />
+          <Route path="incometax/fileitrlist" element={<FileITRList />} />
+          <Route path="incometax/uploadform16" element={<UploadForm16 />} />
+          <Route path="incometax/downloaditr" element={<DownloadITR />} />
+          <Route path="incometax/refund" element={<Refund />} />
+          <Route path="incometax/resetitrpassword" element={<ResetitrPassword />} />
 
-        {/* Subscribe  */}
-        <Route path="subscription" element={<Subscription />} />
+          {/* Subscribe  */}
+          <Route path="subscription" element={<Subscription />} />
 
-        {/* ai */}
-        <Route path="ai-tax-copilot" element={<AiTaxCopilot />} />
-        <Route path="automation" element={<AutomationDashboard />} />
-      </Route>
+          {/* ai */}
+          <Route path="ai-tax-copilot" element={<AiTaxCopilot />} />
+          <Route path="automation" element={<AutomationDashboard />} />
+        </Route>
       </Routes>
     </>
   )
