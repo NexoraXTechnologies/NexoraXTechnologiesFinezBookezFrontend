@@ -72,6 +72,9 @@ import seederConfgReducer from "./slices/professionalSlice/seeder"
 import permissionReducer from "./slices/permissionSlice";
 import postingReduce from "./slices/professionalSlice/posting";
 import posReducer from "./slices/professionalSlice/pos";
+import dbAccessReducer from "./slices/userExplorer";
+import allRegistersReducer from "../redux/slices/professionalSlice/register";
+
 
 export const store = configureStore({
   reducer: {
@@ -147,6 +150,8 @@ export const store = configureStore({
     permissions: permissionReducer,
     posting: postingReduce,
     pos: posReducer,
+    dbAccess: dbAccessReducer,
+    allRegisters: allRegistersReducer,
   },
 });
 

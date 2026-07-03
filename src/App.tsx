@@ -55,6 +55,8 @@ import POSPaymentPage from './pages/bookez/pos/POSPaymentPage';
 import EngineeringModuleDashboard from './pages/bookez/engineeringModule';
 import TransportationDashboard from './pages/bookez/transportation';
 import CreateTransportOrder from './pages/bookez/transportation/transportOrder/TransportOrder';
+import SystemConfiguration from './pages/setting/systemConfiguration';
+import UserExplorer from './pages/setting/userExplorer';
 
 function App() {
   useAppearance();
@@ -105,7 +107,6 @@ function App() {
         <Route path="master/product" element={<ProductMaster />} />
         <Route path="master/unit" element={<UnitMaster />} />
         <Route path="master/reports-mapping" element={<ReportMapping />} />
-
 
         <Route
             path="/bookEz/transaction/opening-balances"
@@ -159,7 +160,8 @@ function App() {
 
         {/* configuration */}
         <Route path="configuration" element={<Configuration />} />
-
+          <Route path="system-configuration" element={<SystemConfiguration />} />
+          <Route path="user-explorer" element={<UserExplorer />} />
         {/* incometax */}
         <Route path="incometax/form26as" element={<Form26AS />} />
         <Route path="incometax/ais" element={<AIS />} />

@@ -107,7 +107,7 @@ export const deleteSalesQuotation = createAsyncThunk<
   { rejectValue: RejectValue }
 >(
   "salesQuotation/deleteSalesQuotation",
-  async (sQuoteVoucherNumber , { rejectWithValue }) => {
+  async ({ sQuoteVoucherNumber }, { rejectWithValue }) => {
     try {
       const res = await professionalAxios.delete(
         `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/delete/${sQuoteVoucherNumber}`
@@ -133,6 +133,8 @@ export const deleteSalesQuotation = createAsyncThunk<
 
 /* ===================================================
    GET SALES QUOTATION LIST
+   - Normal pages: uses default professionalAxios token
+   - Special file: pass customAuthToken to override token only for this request
 =================================================== */
 
 export const getSalesQuotationList = createAsyncThunk<
@@ -153,22 +155,11 @@ export const getSalesQuotationList = createAsyncThunk<
     { rejectWithValue }
   ) => {
     try {
-      const params: any = {
-        offset,
-        limit,
-      };
+      const params: any = { offset, limit, };
 
-      if (status) {
-        params.status = status;
-      }
-
-      if (docStatus) {
-        params.docStatus = docStatus;
-      }
-
-      if (search.trim()) {
-        params.search = search.trim();
-      }
+      if (status) { params.status = status; }
+      if (docStatus) { params.docStatus = docStatus; }
+      if (search.trim()) { params.search = search.trim(); }
 
       if (
         isAutoPost !== "" &&
@@ -243,7 +234,20 @@ const salesQuotationSlice = createSlice({
     },
 
     clearSelectedSalesQuotation: (state) => {
+      state.selectedSalesQuotation = null;
+    },
+
+    clearSalesQuotationList: (state) => {
       state.salesQuotations = [];
+      state.pagination = {
+        offset: 0,
+        limit: 10,
+        totalDocs: 0,
+        totalPages: 1,
+        currentPage: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+      };
     },
 
     setSelectedSalesQuotation: (state, action) => {
@@ -337,6 +341,7 @@ const salesQuotationSlice = createSlice({
 export const {
   clearSalesQuotationState,
   clearSelectedSalesQuotation,
+  clearSalesQuotationList,
   setSelectedSalesQuotation,
 } = salesQuotationSlice.actions;
 
