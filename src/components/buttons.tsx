@@ -39,7 +39,7 @@ const DataREfreshButton = ({ callBackFn }: any) => (
     <button
         onClick={callBackFn}
         className="
-      h-9 w-11 cursor-pointer flex items-center justify-center rounded-md border
+      h-9 w-11 cursor-pointer flex items-center justify-center rounded border
       border-border bg-card text-muted-foreground shadow-sm
       transition-all duration-200
       hover:bg-muted hover:text-primary hover:border-primary

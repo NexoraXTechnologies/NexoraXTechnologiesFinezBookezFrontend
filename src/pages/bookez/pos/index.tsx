@@ -35,6 +35,21 @@ const formatIndianNumber = (value: any) => {
     });
 };
 
+const getTaxPercentLabel = (cart: any[], key1: string, key2: string) => {
+    const rates = Array.from(
+        new Set(
+            cart
+                .map((item) => toNum(item?.[key1] ?? item?.[key2]))
+                .filter((rate) => rate > 0)
+        )
+    );
+
+    if (!rates.length) return "0%";
+    if (rates.length === 1) return `${formatIndianNumber(rates[0])}%`;
+
+    return "Mixed";
+};
+
 /* No fade / no blur */
 const fadeUp = {
     hidden: {},
@@ -46,7 +61,7 @@ const staggerContainer = {
     show: {},
 };
 
-const cardMotion:any = {
+const cardMotion: any = {
     hidden: {},
     show: {
         transition: {
@@ -82,7 +97,7 @@ const modalBackdropMotion = {
     },
 };
 
-const productPreviewMotion:any = {
+const productPreviewMotion: any = {
     hidden: {
         scale: 0.9,
         y: 28,
@@ -205,6 +220,30 @@ const POS = () => {
 
     const cartTax = useMemo(() => {
         return cart.reduce((sum, item) => sum + toNum(item.taxAmount), 0);
+    }, [cart]);
+
+    const cartCgst = useMemo(() => {
+        return cart.reduce((sum, item) => sum + toNum(item.cgstAmount), 0);
+    }, [cart]);
+
+    const cartSgst = useMemo(() => {
+        return cart.reduce((sum, item) => sum + toNum(item.sgstAmount), 0);
+    }, [cart]);
+
+    const cartIgst = useMemo(() => {
+        return cart.reduce((sum, item) => sum + toNum(item.igstAmount), 0);
+    }, [cart]);
+
+    const cartCgstPercent = useMemo(() => {
+        return getTaxPercentLabel(cart, "cgstPercent", "cgst");
+    }, [cart]);
+
+    const cartSgstPercent = useMemo(() => {
+        return getTaxPercentLabel(cart, "sgstPercent", "sgst");
+    }, [cart]);
+
+    const cartIgstPercent = useMemo(() => {
+        return getTaxPercentLabel(cart, "igstPercent", "igst");
     }, [cart]);
 
     const cartDiscount = useMemo(() => {
@@ -737,10 +776,10 @@ const POS = () => {
                                                 },
                                             }}
                                             className={`group cursor-pointer overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl ${isSelected
-                                                ? "border-primary shadow-primary/20 ring-2 ring-primary/25"
-                                                : isAdded
-                                                    ? "border-success shadow-success/20 ring-2 ring-success/25"
-                                                    : "border-border hover:border-primary/40"
+                                                    ? "border-primary shadow-primary/20 ring-2 ring-primary/25"
+                                                    : isAdded
+                                                        ? "border-success shadow-success/20 ring-2 ring-success/25"
+                                                        : "border-border hover:border-primary/40"
                                                 }`}
                                         >
                                             <button
@@ -847,7 +886,7 @@ const POS = () => {
                                                             e.stopPropagation();
                                                             quickAdd(item);
                                                         }}
-                                                        className="flex cursor-pointer h-9 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-black text-primary-foreground shadow-sm transition hover:shadow-md hover:opacity-95"
+                                                        className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-primary text-sm font-black text-primary-foreground shadow-sm transition hover:shadow-md hover:opacity-95"
                                                     >
                                                         <Plus size={15} />
                                                         Add to Cart
@@ -884,7 +923,7 @@ const POS = () => {
                 >
                     <div className="flex min-h-full flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-sm">
                         {/* Header */}
-                        <div className="shrink-0 flex items-center justify-between border-b border-border bg-gradient-to-r from-card to-muted/40 px-3 py-3">
+                        <div className="flex shrink-0 items-center justify-between border-b border-border bg-gradient-to-r from-card to-muted/40 px-3 py-3">
                             <div>
                                 <h2 className="text-base font-black text-card-foreground">
                                     Order Summary
@@ -1086,6 +1125,29 @@ const POS = () => {
                                                                         Price: ₹
                                                                         {formatIndianNumber(item.basePrice)}
                                                                     </p>
+
+                                                                    <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] font-bold text-muted-foreground">
+                                                                        {toNum(item.cgstAmount) > 0 ? (
+                                                                            <span>
+                                                                                CGST {formatIndianNumber(item.cgstPercent)}%: ₹
+                                                                                {formatIndianNumber(item.cgstAmount)}
+                                                                            </span>
+                                                                        ) : null}
+
+                                                                        {toNum(item.sgstAmount) > 0 ? (
+                                                                            <span>
+                                                                                SGST {formatIndianNumber(item.sgstPercent)}%: ₹
+                                                                                {formatIndianNumber(item.sgstAmount)}
+                                                                            </span>
+                                                                        ) : null}
+
+                                                                        {toNum(item.igstAmount) > 0 ? (
+                                                                            <span>
+                                                                                IGST {formatIndianNumber(item.igstPercent)}%: ₹
+                                                                                {formatIndianNumber(item.igstAmount)}
+                                                                            </span>
+                                                                        ) : null}
+                                                                    </div>
                                                                 </div>
 
                                                                 <div className="flex gap-1.5">
@@ -1113,16 +1175,16 @@ const POS = () => {
                                         </AnimatePresence>
                                     </motion.div>
                                 ) : (
-                                        <div className="flex h-full min-h-[250px] items-center justify-center text-center">
-                                            <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-10 py-12">
-                                                <ShoppingCart
-                                                    size={42}
-                                                    className="mx-auto mb-3 text-muted-foreground"
-                                                />
+                                    <div className="flex h-full min-h-[250px] items-center justify-center text-center">
+                                        <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-10 py-12">
+                                            <ShoppingCart
+                                                size={42}
+                                                className="mx-auto mb-3 text-muted-foreground"
+                                            />
 
-                                                <p className="text-sm font-black text-foreground">
-                                                    No item added
-                                                </p>
+                                            <p className="text-sm font-black text-foreground">
+                                                No item added
+                                            </p>
 
                                             <p className="mt-1 text-xs font-bold text-muted-foreground">
                                                 Add products from the menu
@@ -1138,7 +1200,7 @@ const POS = () => {
                             <div className="rounded-md border border-border p-3 text-sm">
                                 <div className="flex justify-between">
                                     <span className="font-bold text-muted-foreground">
-                                        Subtotal
+                                        MRP
                                     </span>
 
                                     <span className="font-black text-foreground">
@@ -1146,15 +1208,51 @@ const POS = () => {
                                     </span>
                                 </div>
 
-                                <div className="mt-1.5 flex justify-between">
+                                {cartCgst > 0 ? (
+                                    <div className="mt-1.5 flex justify-between">
+                                        <span className="font-bold text-muted-foreground">
+                                            CGST ({cartCgstPercent})
+                                        </span>
+
+                                        <span className="font-black text-foreground">
+                                            ₹{formatIndianNumber(cartCgst)}
+                                        </span>
+                                    </div>
+                                ) : null}
+
+                                {cartSgst > 0 ? (
+                                    <div className="mt-1.5 flex justify-between">
+                                        <span className="font-bold text-muted-foreground">
+                                            SGST ({cartSgstPercent})
+                                        </span>
+
+                                        <span className="font-black text-foreground">
+                                            ₹{formatIndianNumber(cartSgst)}
+                                        </span>
+                                    </div>
+                                ) : null}
+
+                                {cartIgst > 0 ? (
+                                    <div className="mt-1.5 flex justify-between">
+                                        <span className="font-bold text-muted-foreground">
+                                            IGST ({cartIgstPercent})
+                                        </span>
+
+                                        <span className="font-black text-foreground">
+                                            ₹{formatIndianNumber(cartIgst)}
+                                        </span>
+                                    </div>
+                                ) : null}
+
+                                {/* <div className="mt-1.5 flex justify-between">
                                     <span className="font-bold text-muted-foreground">
-                                        Taxes
+                                        GST
                                     </span>
 
                                     <span className="font-black text-foreground">
                                         ₹{formatIndianNumber(cartTax)}
                                     </span>
-                                </div>
+                                </div> */}
 
                                 <div className="mt-1.5 flex justify-between">
                                     <span className="font-bold text-muted-foreground">
@@ -1170,7 +1268,7 @@ const POS = () => {
 
                                 <div className="flex justify-between text-base">
                                     <span className="font-black text-card-foreground">
-                                        Total Payment
+                                        Total Amount
                                     </span>
 
                                     <span className="font-black text-foreground">
@@ -1192,13 +1290,22 @@ const POS = () => {
                     </div>
                 </motion.div>
             </div>
-            <ProductPreviewModal {...{ quickAdd, previewProduct, cartMap, setPreviewProduct }} />
+
+            <ProductPreviewModal
+                {...{ quickAdd, previewProduct, cartMap, setPreviewProduct }}
+            />
         </div>
     );
 };
 
-const ProductPreviewModal = ({ quickAdd, previewProduct, cartMap, setPreviewProduct }: any) => {
+const ProductPreviewModal = ({
+    quickAdd,
+    previewProduct,
+    cartMap,
+    setPreviewProduct,
+}: any) => {
     if (!previewProduct) return null;
+
     const item = previewProduct;
     const isAdded = cartMap.has(item.id);
     const addedQty = cartMap.get(item.id)?.qty ?? 0;
@@ -1282,6 +1389,7 @@ const ProductPreviewModal = ({ quickAdd, previewProduct, cartMap, setPreviewProd
                                 <p className="text-xs font-black uppercase text-muted-foreground">
                                     Price
                                 </p>
+
                                 <p className="mt-1 text-base font-black text-foreground">
                                     ₹{formatIndianNumber(item.price)}
                                 </p>
@@ -1291,6 +1399,7 @@ const ProductPreviewModal = ({ quickAdd, previewProduct, cartMap, setPreviewProd
                                 <p className="text-xs font-black uppercase text-muted-foreground">
                                     HSN
                                 </p>
+
                                 <p className="mt-1 text-base font-black text-foreground">
                                     {item.raw?.productHSNCode || "—"}
                                 </p>
@@ -1300,6 +1409,7 @@ const ProductPreviewModal = ({ quickAdd, previewProduct, cartMap, setPreviewProd
                                 <p className="text-xs font-black uppercase text-muted-foreground">
                                     Unit
                                 </p>
+
                                 <p className="mt-1 text-base font-black text-foreground">
                                     {item.raw?.unit || item.raw?.unitName || "—"}
                                 </p>
@@ -1309,6 +1419,7 @@ const ProductPreviewModal = ({ quickAdd, previewProduct, cartMap, setPreviewProd
                                 <p className="text-xs font-black uppercase text-muted-foreground">
                                     Type
                                 </p>
+
                                 <p className="mt-1 text-base font-black text-foreground">
                                     {item.raw?.productType || "—"}
                                 </p>
@@ -1321,22 +1432,9 @@ const ProductPreviewModal = ({ quickAdd, previewProduct, cartMap, setPreviewProd
                             </p>
 
                             <p className="mt-1 text-sm font-bold leading-6 text-card-foreground">
-                                {item.raw?.productDescription ||
-                                    "No description available"}
+                                {item.raw?.productDescription || "No description available"}
                             </p>
                         </div>
-
-                        {/* <motion.button
-                                    whileTap={{ scale: 0.97 }}
-                                    type="button"
-                                    onClick={() => {
-                                        onSelect(item);
-                                        setPreviewProduct(null);
-                                    }}
-                                    className="h-11 rounded-md border border-border bg-card text-sm font-black text-card-foreground transition hover:bg-muted"
-                                >
-                                    Edit Details
-                                </motion.button> */}
 
                         <motion.button
                             whileTap={{ scale: 0.97 }}
@@ -1345,7 +1443,8 @@ const ProductPreviewModal = ({ quickAdd, previewProduct, cartMap, setPreviewProd
                                 quickAdd(item);
                                 setPreviewProduct(null);
                             }}
-                            className="flex cursor-pointer w-full h-11 items-center justify-center rounded-md bg-primary text-sm font-black text-primary-foreground shadow-md shadow-primary/20 transition hover:opacity-95">
+                            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-primary text-sm font-black text-primary-foreground shadow-md shadow-primary/20 transition hover:opacity-95"
+                        >
                             <Plus size={17} />
                             Add to Cart
                         </motion.button>

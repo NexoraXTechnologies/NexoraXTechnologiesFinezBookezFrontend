@@ -2,19 +2,31 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
 import {
+    Activity,
+    ArrowDownRight,
+    ArrowUpRight,
     BarChart3,
     Database,
     Eye,
     Filter,
+    IndianRupee,
+    Layers,
     ListChecks,
     Loader2,
     MessageSquareText,
+    PackageCheck,
     Phone,
+    ReceiptText,
+    RotateCcw,
     ShieldCheck,
+    ShoppingCart,
+    TrendingUp,
+    Users,
+    WalletCards,
     X,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
 import {
     requestDbAccess,
     getDbAccessRequests,
@@ -23,7 +35,6 @@ import {
 
 import Badge from "../../../components/badge";
 import DataTable from "../../../components/DataTable";
-import SearchInput from "../../../components/searchInput";
 import Pagination from "../../../components/pagination";
 import { DataREfreshButton } from "../../../components/buttons";
 
@@ -38,13 +49,13 @@ import {
 } from "../../../redux/slices/professionalSlice/stateCitySlice";
 
 import {
+    Area,
     Bar,
     BarChart,
     CartesianGrid,
     Cell,
     ComposedChart,
     Legend,
-    Line,
     Pie,
     PieChart,
     ResponsiveContainer,
@@ -402,6 +413,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
             for (const stateCode of stateCodes) {
                 const res = await dispatch(
+                    //@ts-ignore
                     getCitiesByState({ stateCode }) as any
                 ).unwrap();
 
@@ -591,6 +603,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     useEffect(() => {
         if (activePageTab !== "dashboard") return;
 
+        // @ts-ignore
         dispatch(getStates() as any);
         fetchAreaDashboard();
     }, [activePageTab]);
@@ -798,21 +811,17 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
     const dashboardData = registerDashboardData || {};
 
-    const moduleLabelMap: any = {
-        salesQuotation: "Sales Quotation",
-        salesOrder: "Sales Order",
-        salesInvoice: "Sales Invoice",
-        salesInvoiceReturn: "Sales Return",
-        receipt: "Receipt",
-        purchaseOrder: "Purchase Order",
-        grn: "GRN",
-        purchaseInvoice: "Purchase Invoice",
-        purchaseReturn: "Purchase Return",
-        payment: "Payment",
+    const toNumber = (value: any) => {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
+    };
+
+    const formatCount = (value: any) => {
+        return toNumber(value).toLocaleString("en-IN");
     };
 
     const formatAmount = (value: any) => {
-        const amount = Number(value || 0);
+        const amount = toNumber(value);
 
         if (amount >= 10000000) {
             return `₹${(amount / 10000000).toFixed(2)}Cr`;
@@ -823,53 +832,305 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         }
 
         if (amount >= 1000) {
-            return `₹${(amount / 1000).toFixed(2)}K`;
+            return `₹${(amount / 1000).toFixed(1)}K`;
         }
 
-        return `₹${amount}`;
+        return `₹${amount.toFixed(0)}`;
     };
 
     const formatFullAmount = (value: any) => {
-        return Number(value || 0).toLocaleString("en-IN", {
-            style: "currency",
-            currency: "INR",
-            maximumFractionDigits: 0,
+        return `₹${toNumber(value).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
+    };
+
+    const formatDate = (value: any) => {
+        if (!value) return "-";
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) return String(value);
+
+        return date.toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
         });
     };
 
-    const moduleSummaryData = Object.entries(moduleLabelMap)
-        .map(([key, label]: any) => {
-            const item = dashboardData?.[key];
+    const getModuleAmount = (key: string) => {
+        return toNumber(dashboardData?.[key]?.totalAmount);
+    };
 
-            return {
-                key,
-                module: label,
-                count: Number(item?.totalCount || 0),
-                amount: Number(item?.totalAmount || 0),
-                records: Array.isArray(item?.details)
-                    ? item.details.length
-                    : 0,
-                details: Array.isArray(item?.details) ? item.details : [],
-            };
-        })
+    const getModuleCount = (key: string) => {
+        return toNumber(dashboardData?.[key]?.totalCount);
+    };
+
+    const getModuleDetails = (key: string) => {
+        return Array.isArray(dashboardData?.[key]?.details)
+            ? dashboardData[key].details
+            : [];
+    };
+
+    const dashboardModuleConfig = [
+        {
+            key: "salesQuotation",
+            label: "Sales Quotation",
+            shortLabel: "Quotation",
+            group: "sales",
+            icon: <ReceiptText size={16} />,
+            statusKey: "sQuoteDocStatus",
+            voucherKey: "sQuoteVoucherNumber",
+            partyKey: "sQuoteCustomerName",
+            dateKey: "sQuoteVoucherDate",
+            footerKey: "sQuoteFooter",
+        },
+        {
+            key: "salesOrder",
+            label: "Sales Order",
+            shortLabel: "Order",
+            group: "sales",
+            icon: <ShoppingCart size={16} />,
+            statusKey: "sOrderStatus",
+            voucherKey: "sOrderVoucherNumber",
+            partyKey: "sOrderCustomerName",
+            dateKey: "sOrderVoucherDate",
+            footerKey: "sOrderFooter",
+        },
+        {
+            key: "salesInvoice",
+            label: "Sales Invoice",
+            shortLabel: "Invoice",
+            group: "sales",
+            icon: <IndianRupee size={16} />,
+            statusKey: "sInvStatus",
+            voucherKey: "sInvVoucherNumber",
+            partyKey: "sInvCustomerName",
+            dateKey: "sInvVoucherDate",
+            footerKey: "sInvFooter",
+        },
+        {
+            key: "salesInvoiceReturn",
+            label: "Sales Return",
+            shortLabel: "Sales Return",
+            group: "sales-return",
+            icon: <RotateCcw size={16} />,
+            statusKey: "sInvReturnStatus",
+            voucherKey: "sInvReturnVoucherNumber",
+            partyKey: "sInvReturnCustomerName",
+            dateKey: "sInvReturnVoucherDate",
+            footerKey: "sInvReturnFooter",
+        },
+        {
+            key: "receipt",
+            label: "Receipt",
+            shortLabel: "Receipt",
+            group: "cash-in",
+            icon: <WalletCards size={16} />,
+            statusKey: "recStatus",
+            voucherKey: "recVoucherNumber",
+            partyKey: "recAccountName",
+            dateKey: "recVoucherDate",
+            footerKey: "recFooter",
+        },
+        {
+            key: "purchaseOrder",
+            label: "Purchase Order",
+            shortLabel: "PO",
+            group: "purchase",
+            icon: <ShoppingCart size={16} />,
+            statusKey: "pOrdStatus",
+            voucherKey: "pOrdVoucherNumber",
+            partyKey: "pOrdVendorName",
+            dateKey: "pOrdVoucherDate",
+            footerKey: "pOrdFooter",
+        },
+        {
+            key: "grn",
+            label: "GRN",
+            shortLabel: "GRN",
+            group: "purchase",
+            icon: <PackageCheck size={16} />,
+            statusKey: "grnStatus",
+            voucherKey: "grnVoucherNumber",
+            partyKey: "grnVendorName",
+            dateKey: "grnVoucherDate",
+            footerKey: "grnFooter",
+        },
+        {
+            key: "purchaseInvoice",
+            label: "Purchase Invoice",
+            shortLabel: "Purchase Inv.",
+            group: "purchase",
+            icon: <IndianRupee size={16} />,
+            statusKey: "pInvStatus",
+            voucherKey: "pInvVoucherNumber",
+            partyKey: "pInvVendorName",
+            dateKey: "pInvVoucherDate",
+            footerKey: "pInvFooter",
+        },
+        {
+            key: "purchaseReturn",
+            label: "Purchase Return",
+            shortLabel: "Purchase Ret.",
+            group: "purchase-return",
+            icon: <RotateCcw size={16} />,
+            statusKey: "pRetStatus",
+            voucherKey: "pRetVoucherNumber",
+            partyKey: "pRetVendorName",
+            dateKey: "pRetVoucherDate",
+            footerKey: "pRetFooter",
+        },
+        {
+            key: "payment",
+            label: "Payment",
+            shortLabel: "Payment",
+            group: "cash-out",
+            icon: <WalletCards size={16} />,
+            statusKey: "payStatus",
+            voucherKey: "payVoucherNumber",
+            partyKey: "payAccountName",
+            dateKey: "payVoucherDate",
+            footerKey: "payFooter",
+        },
+    ];
+
+    const moduleSummaryData = dashboardModuleConfig
+        .map((item: any) => ({
+            ...item,
+            module: item.label,
+            amount: getModuleAmount(item.key),
+            count: getModuleCount(item.key),
+            records: getModuleDetails(item.key).length,
+            details: getModuleDetails(item.key),
+        }))
         .filter((item: any) => item.count > 0 || item.amount > 0);
 
-    const totalBusinesses = Number(dashboardData?.totalBusinesses || 0);
+    const totalBusinesses = toNumber(dashboardData?.totalBusinesses);
 
     const totalTransactions = moduleSummaryData.reduce(
-        (sum: number, item: any) => sum + Number(item.count || 0),
+        (sum: number, item: any) => sum + toNumber(item.count),
         0
     );
 
     const totalAmount = moduleSummaryData.reduce(
-        (sum: number, item: any) => sum + Number(item.amount || 0),
+        (sum: number, item: any) => sum + toNumber(item.amount),
         0
     );
 
+    const salesFlowData = [
+        "salesQuotation",
+        "salesOrder",
+        "salesInvoice",
+        "salesInvoiceReturn",
+        "receipt",
+    ].map((key) => {
+        const module = dashboardModuleConfig.find((item) => item.key === key);
+
+        return {
+            key,
+            module: module?.shortLabel || key,
+            amount: getModuleAmount(key),
+            count: getModuleCount(key),
+        };
+    });
+
+    const purchaseFlowData = [
+        "purchaseOrder",
+        "grn",
+        "purchaseInvoice",
+        "purchaseReturn",
+        "payment",
+    ].map((key) => {
+        const module = dashboardModuleConfig.find((item) => item.key === key);
+
+        return {
+            key,
+            module: module?.shortLabel || key,
+            amount: getModuleAmount(key),
+            count: getModuleCount(key),
+        };
+    });
+
+    const totalSalesAmount =
+        getModuleAmount("salesInvoice") -
+        getModuleAmount("salesInvoiceReturn");
+
+    const totalPurchaseAmount =
+        getModuleAmount("purchaseInvoice") -
+        getModuleAmount("purchaseReturn");
+
+    const cashInAmount = getModuleAmount("receipt");
+    const cashOutAmount = getModuleAmount("payment");
+
+    const outstandingReceivable =
+        getModuleAmount("salesInvoice") -
+        getModuleAmount("salesInvoiceReturn") -
+        cashInAmount;
+
+    const outstandingPayable =
+        getModuleAmount("purchaseInvoice") -
+        getModuleAmount("purchaseReturn") -
+        cashOutAmount;
+
     const topAmountModule = [...moduleSummaryData].sort(
-        (a: any, b: any) => Number(b.amount || 0) - Number(a.amount || 0)
+        (a: any, b: any) => toNumber(b.amount) - toNumber(a.amount)
     )?.[0];
-    
+
+    const topModulesByAmount = [...moduleSummaryData]
+        .filter((item: any) => item.amount > 0)
+        .sort((a: any, b: any) => toNumber(b.amount) - toNumber(a.amount))
+        .slice(0, 7);
+
+    const statusMap = moduleSummaryData.reduce((acc: any, module: any) => {
+        const details = getModuleDetails(module.key);
+
+        details.forEach((row: any) => {
+            const status = String(
+                row?.[module?.statusKey || ""] || "unknown"
+            ).toLowerCase();
+
+            acc[status] = (acc[status] || 0) + 1;
+        });
+
+        return acc;
+    }, {});
+
+    const statusChartData = Object.entries(statusMap).map(
+        ([name, value]: any) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            value,
+        })
+    );
+
+    const recentTransactions = dashboardModuleConfig
+        .flatMap((config: any) =>
+            getModuleDetails(config.key).map((row: any) => {
+                const footer = row?.[config.footerKey] || {};
+
+                return {
+                    module: config.label,
+                    voucher: row?.[config.voucherKey] || "-",
+                    party: row?.[config.partyKey] || "-",
+                    date: row?.[config.dateKey],
+                    status: row?.[config.statusKey] || "-",
+                    amount: toNumber(
+                        footer?.netAmount || footer?.totalNetAmount || 0
+                    ),
+                    icon: config.icon,
+                    group: config.group,
+                };
+            })
+        )
+        .sort((a: any, b: any) => {
+            const aTime = new Date(a.date || 0).getTime();
+            const bTime = new Date(b.date || 0).getTime();
+
+            return bTime - aTime;
+        })
+        .slice(0, 8);
+
     const pieColors = [
         "var(--primary, #4f46e5)",
         "var(--success, #16a34a)",
@@ -883,11 +1144,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         "#22c55e",
     ];
 
-    if (selectedRequest) {
-        return <Tabs {...{ selectedRequest, setSelectedRequest }} />;
-    }
-
-    const cardVariants = {
+    const cardVariants: any = {
         hidden: { opacity: 0, y: 12, scale: 0.98 },
         visible: (index: number) => ({
             opacity: 1,
@@ -901,7 +1158,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         }),
     };
 
-    const chartVariants = {
+    const chartVariants: any = {
         hidden: { opacity: 0, y: 14 },
         visible: (index: number) => ({
             opacity: 1,
@@ -917,35 +1174,105 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     const summaryCards = [
         {
             title: "Businesses",
-            value: totalBusinesses,
-            helper: "Total active businesses",
+            value: formatCount(totalBusinesses),
+            helper: "Total businesses found",
             badge: "Count",
-            icon: <Database size={17} />,
+            icon: <Users size={17} />,
+            accent: "primary",
         },
         {
             title: "Transactions",
-            value: totalTransactions,
-            helper: "Total entries across all modules",
+            value: formatCount(totalTransactions),
+            helper: "Entries across all modules",
             badge: "Count",
-            icon: <ListChecks size={17} />,
+            icon: <Activity size={17} />,
+            accent: "success",
         },
         {
             title: "Total Value",
-            value: formatFullAmount(totalAmount),
-            helper: "Combined amount of all modules",
+            value: formatAmount(totalAmount),
+            helper: formatFullAmount(totalAmount),
             badge: "Amount",
-            icon: <BarChart3 size={17} />,
+            icon: <IndianRupee size={17} />,
+            accent: "primary",
         },
         {
-            title: "Highest Value Module",
+            title: "Highest Module",
             value: topAmountModule?.module || "-",
             helper: topAmountModule?.amount
-                ? `Amount: ${formatFullAmount(topAmountModule?.amount)}`
+                ? formatFullAmount(topAmountModule?.amount)
                 : "No module data found",
-            badge: "Top Amount",
+            badge: "Top",
             icon: <ShieldCheck size={17} />,
+            accent: "primary",
+        },
+        {
+            title: "Net Sales",
+            value: formatAmount(totalSalesAmount),
+            helper: "Sales Invoice - Sales Return",
+            badge: "Sales",
+            icon: <ArrowUpRight size={17} />,
+            accent: "success",
+        },
+        {
+            title: "Net Purchase",
+            value: formatAmount(totalPurchaseAmount),
+            helper: "Purchase Invoice - Return",
+            badge: "Purchase",
+            icon: <ArrowDownRight size={17} />,
+            accent: "danger",
+        },
+        {
+            title: "Cash In",
+            value: formatAmount(cashInAmount),
+            helper: "Receipt amount",
+            badge: "Receipt",
+            icon: <WalletCards size={17} />,
+            accent: "success",
+        },
+        {
+            title: "Cash Out",
+            value: formatAmount(cashOutAmount),
+            helper: "Payment amount",
+            badge: "Payment",
+            icon: <WalletCards size={17} />,
+            accent: "danger",
         },
     ];
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (!active || !payload?.length) return null;
+
+        return (
+            <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-xl">
+                <p className="mb-1 text-xs font-black text-card-foreground">
+                    {label}
+                </p>
+
+                {payload.map((entry: any) => (
+                    <div
+                        key={`${entry.name}-${entry.value}`}
+                        className="flex items-center justify-between gap-4 text-xs"
+                    >
+                        <span className="font-bold text-muted-foreground">
+                            {entry.name}
+                        </span>
+
+                        <span className="font-black text-card-foreground">
+                            {entry.name?.toLowerCase()?.includes("amount")
+                                ? formatFullAmount(entry.value)
+                                : formatCount(entry.value)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    if (selectedRequest) {
+        return <Tabs {...{ selectedRequest, setSelectedRequest }} />;
+    }
+
     return (
         <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
             {/* ================= PAGE TABS ================= */}
@@ -987,8 +1314,6 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                         </div>
 
                         <div className="ml-auto flex flex-wrap items-center gap-2">
-                            {/* <SearchInput {...{ search, setSearch }} /> */}
-
                             <DataREfreshButton
                                 {...{
                                     callBackFn: handleRefresh,
@@ -999,7 +1324,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                             <button
                                 type="button"
                                 onClick={openRequestModal}
-                                className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90"
+                                className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90"
                             >
                                 <ShieldCheck size={16} />
                                 Request Access
@@ -1255,10 +1580,11 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                             Loading dashboard...
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-3">
-                            {/* ================= COMPACT SUMMARY CARDS ================= */}
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                    {summaryCards.map((card: any, index: number) => (
+                        <div className="flex flex-col gap-4">
+                            {/* ================= KPI CARDS ================= */}
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                {summaryCards.map(
+                                    (card: any, index: number) => (
                                         <motion.div
                                             key={card.title}
                                             custom={index}
@@ -1270,9 +1596,9 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                                                 scale: 1.015,
                                                 transition: { duration: 0.2 },
                                             }}
-                                            className="group relative overflow-hidden rounded-lg border border-border bg-background p-3 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+                                            className="group relative overflow-hidden rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
                                         >
-                                            <div className="absolute right-0 top-0 h-16 w-16 rounded-bl-full bg-primary/5 transition-all duration-300 group-hover:bg-primary/10" />
+                                            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-125 group-hover:bg-primary/10" />
 
                                             <div className="relative flex items-start justify-between gap-3">
                                                 <div className="min-w-0 flex-1">
@@ -1286,7 +1612,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                                                         </span>
                                                     </div>
 
-                                                    <h2 className="truncate text-xl font-black text-card-foreground">
+                                                    <h2 className="truncate text-2xl font-black tracking-tight text-card-foreground">
                                                         {card.value}
                                                     </h2>
 
@@ -1295,73 +1621,141 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                                                     </p>
                                                 </div>
 
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                                                <div
+                                                    className={`
+                                                        flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110
+                                                        ${card.accent ===
+                                                            "success"
+                                                            ? "bg-success/10 text-success group-hover:bg-success group-hover:text-white"
+                                                            : card.accent ===
+                                                                "danger"
+                                                                ? "bg-danger/10 text-danger group-hover:bg-danger group-hover:text-white"
+                                                                : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                                                        }
+                                                    `}
+                                                >
                                                     {card.icon}
                                                 </div>
                                             </div>
                                         </motion.div>
-                                    ))}
-                                </div>
+                                    )
+                                )}
+                            </div>
 
-                            {/* ================= AMOUNT / COUNT CHARTS ================= */}
-                            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                            {/* ================= SALES + PURCHASE FLOW ================= */}
+                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                                 <motion.div
                                     custom={0}
                                     variants={chartVariants}
                                     initial="hidden"
                                     animate="visible"
                                     whileHover={{ y: -2 }}
-                                    className="rounded-lg border border-border bg-background p-3 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
                                 >
-                                    <div className="mb-3 flex items-start justify-between gap-3">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
                                         <div>
                                             <h2 className="text-sm font-black text-card-foreground">
-                                                Module-wise Amount
+                                                Sales Flow
                                             </h2>
 
                                             <p className="text-xs font-medium text-muted-foreground">
-                                                Total amount by module.
+                                                Quotation to receipt conversion
+                                                overview.
                                             </p>
                                         </div>
 
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                            <BarChart3 size={16} />
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
+                                            <ArrowUpRight size={17} />
                                         </div>
                                     </div>
 
-                                    <div className="h-[285px] w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={moduleSummaryData}>
-                                                <CartesianGrid strokeDasharray="3 3" />
+                                    <div className="h-[310px] w-full">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
+                                        >
+                                            <ComposedChart data={salesFlowData}>
+                                                <defs>
+                                                    <linearGradient
+                                                        id="salesAmountGradient"
+                                                        x1="0"
+                                                        y1="0"
+                                                        x2="0"
+                                                        y2="1"
+                                                    >
+                                                        <stop
+                                                            offset="5%"
+                                                            stopColor="var(--primary)"
+                                                            stopOpacity={0.28}
+                                                        />
+                                                        <stop
+                                                            offset="95%"
+                                                            stopColor="var(--primary)"
+                                                            stopOpacity={0.02}
+                                                        />
+                                                    </linearGradient>
+                                                </defs>
+
+                                                <CartesianGrid
+                                                    strokeDasharray="3 3"
+                                                    vertical={false}
+                                                />
 
                                                 <XAxis
                                                     dataKey="module"
-                                                    tick={{ fontSize: 10 }}
-                                                    interval={0}
-                                                    angle={-25}
-                                                    textAnchor="end"
-                                                    height={75}
+                                                    tick={{ fontSize: 11 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
                                                 />
 
                                                 <YAxis
+                                                    yAxisId="left"
                                                     tick={{ fontSize: 10 }}
-                                                    tickFormatter={(value: any) => formatAmount(value)}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tickFormatter={(
+                                                        value: any
+                                                    ) => formatAmount(value)}
+                                                />
+
+                                                <YAxis
+                                                    yAxisId="right"
+                                                    orientation="right"
+                                                    tick={{ fontSize: 10 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    allowDecimals={false}
                                                 />
 
                                                 <Tooltip
-                                                    formatter={(value: any) => [
-                                                        formatFullAmount(value),
-                                                        "Amount",
-                                                    ]}
+                                                    content={<CustomTooltip />}
+                                                />
+
+                                                <Legend
+                                                    wrapperStyle={{
+                                                        fontSize: 11,
+                                                    }}
+                                                />
+
+                                                <Area
+                                                    yAxisId="left"
+                                                    type="monotone"
+                                                    dataKey="amount"
+                                                    name="Amount"
+                                                    stroke="var(--primary)"
+                                                    fill="url(#salesAmountGradient)"
+                                                    strokeWidth={3}
                                                 />
 
                                                 <Bar
-                                                    dataKey="amount"
-                                                    name="Amount"
-                                                    radius={[6, 6, 0, 0]}
-                                                    fill="var(--primary)"
+                                                    yAxisId="right"
+                                                    dataKey="count"
+                                                    name="Count"
+                                                    radius={[8, 8, 0, 0]}
+                                                    fill="var(--success)"
+                                                    barSize={28}
                                                 />
-                                            </BarChart>
+                                            </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </motion.div>
@@ -1372,151 +1766,202 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                                     initial="hidden"
                                     animate="visible"
                                     whileHover={{ y: -2 }}
-                                    className="rounded-lg border border-border bg-background p-3 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
                                 >
-                                    <div className="mb-3 flex items-start justify-between gap-3">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
                                         <div>
                                             <h2 className="text-sm font-black text-card-foreground">
-                                                Module-wise Count
+                                                Purchase Flow
                                             </h2>
 
                                             <p className="text-xs font-medium text-muted-foreground">
-                                                Total records by module.
+                                                Purchase order to payment
+                                                overview.
                                             </p>
                                         </div>
 
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success">
-                                            <ListChecks size={16} />
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-danger/10 text-danger">
+                                            <ArrowDownRight size={17} />
                                         </div>
                                     </div>
 
-                                    <div className="h-[285px] w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={moduleSummaryData}>
-                                                <CartesianGrid strokeDasharray="3 3" />
+                                    <div className="h-[310px] w-full">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
+                                        >
+                                            <ComposedChart
+                                                data={purchaseFlowData}
+                                            >
+                                                <defs>
+                                                    <linearGradient
+                                                        id="purchaseAmountGradient"
+                                                        x1="0"
+                                                        y1="0"
+                                                        x2="0"
+                                                        y2="1"
+                                                    >
+                                                        <stop
+                                                            offset="5%"
+                                                            stopColor="var(--danger)"
+                                                            stopOpacity={0.25}
+                                                        />
+                                                        <stop
+                                                            offset="95%"
+                                                            stopColor="var(--danger)"
+                                                            stopOpacity={0.02}
+                                                        />
+                                                    </linearGradient>
+                                                </defs>
+
+                                                <CartesianGrid
+                                                    strokeDasharray="3 3"
+                                                    vertical={false}
+                                                />
 
                                                 <XAxis
                                                     dataKey="module"
-                                                    tick={{ fontSize: 10 }}
-                                                    interval={0}
-                                                    angle={-25}
-                                                    textAnchor="end"
-                                                    height={75}
-                                                />
-
-                                                <YAxis tick={{ fontSize: 10 }} />
-
-                                                <Tooltip
-                                                    formatter={(value: any) => [
-                                                        Number(value || 0),
-                                                        "Count",
-                                                    ]}
-                                                />
-
-                                                <Bar
-                                                    dataKey="count"
-                                                    name="Count"
-                                                    radius={[6, 6, 0, 0]}
-                                                    fill="var(--success)"
-                                                />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </motion.div>
-                            </div>
-
-                            {/* ================= MODULE SUMMARY + PIE ================= */}
-                            <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-                                <motion.div
-                                    custom={2}
-                                    variants={chartVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    whileHover={{ y: -2 }}
-                                    className="rounded-lg border border-border bg-background p-3 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md xl:col-span-2"
-                                >
-                                    <div className="mb-3 flex items-start justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-sm font-black text-card-foreground">
-                                                Module Summary
-                                            </h2>
-
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Count, records and amount summary by module.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                            <BarChart3 size={16} />
-                                        </div>
-                                    </div>
-
-                                    <div className="h-[315px] w-full rounded-lg border border-border bg-card p-2">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={moduleSummaryData}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-
-                                                <XAxis
-                                                    dataKey="module"
-                                                    tick={{ fontSize: 10 }}
-                                                    interval={0}
-                                                    angle={-25}
-                                                    textAnchor="end"
-                                                    height={80}
+                                                    tick={{ fontSize: 11 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
                                                 />
 
                                                 <YAxis
                                                     yAxisId="left"
                                                     tick={{ fontSize: 10 }}
-                                                    allowDecimals={false}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tickFormatter={(
+                                                        value: any
+                                                    ) => formatAmount(value)}
                                                 />
 
                                                 <YAxis
                                                     yAxisId="right"
                                                     orientation="right"
                                                     tick={{ fontSize: 10 }}
-                                                    tickFormatter={(value: any) => formatAmount(value)}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    allowDecimals={false}
                                                 />
 
                                                 <Tooltip
-                                                    formatter={(value: any, name: any) => {
-                                                        if (name === "Amount") {
-                                                            return [formatFullAmount(value), "Amount"];
-                                                        }
+                                                    content={<CustomTooltip />}
+                                                />
 
-                                                        return [Number(value || 0), name];
+                                                <Legend
+                                                    wrapperStyle={{
+                                                        fontSize: 11,
                                                     }}
                                                 />
 
-                                                <Legend wrapperStyle={{ fontSize: 11 }} />
-
-                                                <Bar
+                                                <Area
                                                     yAxisId="left"
-                                                    dataKey="count"
-                                                    name="Count"
-                                                    radius={[6, 6, 0, 0]}
-                                                    fill="var(--primary)"
-                                                />
-
-                                                <Bar
-                                                    yAxisId="left"
-                                                    dataKey="records"
-                                                    name="Records"
-                                                    radius={[6, 6, 0, 0]}
-                                                    fill="var(--success)"
-                                                />
-
-                                                <Line
-                                                    yAxisId="right"
                                                     type="monotone"
                                                     dataKey="amount"
                                                     name="Amount"
                                                     stroke="var(--danger)"
+                                                    fill="url(#purchaseAmountGradient)"
                                                     strokeWidth={3}
-                                                    dot={{ r: 3 }}
-                                                    activeDot={{ r: 5 }}
+                                                />
+
+                                                <Bar
+                                                    yAxisId="right"
+                                                    dataKey="count"
+                                                    name="Count"
+                                                    radius={[8, 8, 0, 0]}
+                                                    fill="var(--primary)"
+                                                    barSize={28}
                                                 />
                                             </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </motion.div>
+                            </div>
+
+                            {/* ================= MODULE PERFORMANCE + STATUS ================= */}
+                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                                <motion.div
+                                    custom={2}
+                                    variants={chartVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    whileHover={{ y: -2 }}
+                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md xl:col-span-2"
+                                >
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                        <div>
+                                            <h2 className="text-sm font-black text-card-foreground">
+                                                Top Modules by Amount
+                                            </h2>
+
+                                            <p className="text-xs font-medium text-muted-foreground">
+                                                Highest value modules in
+                                                selected period.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                            <BarChart3 size={17} />
+                                        </div>
+                                    </div>
+
+                                    <div className="h-[340px] w-full">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
+                                        >
+                                            <BarChart
+                                                data={topModulesByAmount}
+                                                layout="vertical"
+                                                margin={{
+                                                    left: 18,
+                                                    right: 24,
+                                                    top: 10,
+                                                    bottom: 10,
+                                                }}
+                                            >
+                                                <CartesianGrid
+                                                    strokeDasharray="3 3"
+                                                    horizontal={false}
+                                                />
+
+                                                <XAxis
+                                                    type="number"
+                                                    tick={{ fontSize: 10 }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tickFormatter={(
+                                                        value: any
+                                                    ) => formatAmount(value)}
+                                                />
+
+                                                <YAxis
+                                                    type="category"
+                                                    dataKey="shortLabel"
+                                                    tick={{ fontSize: 11 }}
+                                                    width={95}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                />
+
+                                                <Tooltip
+                                                    formatter={(
+                                                        value: any
+                                                    ) => [
+                                                            formatFullAmount(value),
+                                                            "Amount",
+                                                        ]}
+                                                />
+
+                                                <Bar
+                                                    dataKey="amount"
+                                                    name="Amount"
+                                                    radius={[0, 8, 8, 0]}
+                                                    fill="var(--primary)"
+                                                    barSize={24}
+                                                />
+                                            </BarChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </motion.div>
@@ -1527,84 +1972,342 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                                     initial="hidden"
                                     animate="visible"
                                     whileHover={{ y: -2 }}
-                                    className="rounded-lg border border-border bg-background p-3 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
                                 >
-                                    <div className="mb-3 flex items-start justify-between gap-3">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
                                         <div>
                                             <h2 className="text-sm font-black text-card-foreground">
-                                                Amount Share
+                                                Status Split
                                             </h2>
 
                                             <p className="text-xs font-medium text-muted-foreground">
-                                                Module-wise amount distribution.
+                                                Open, close, draft and other
+                                                records.
                                             </p>
                                         </div>
 
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                            <Database size={16} />
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                            <Layers size={17} />
                                         </div>
                                     </div>
 
-                                    <div className="h-[250px] w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                    <div className="h-[230px] w-full">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
+                                        >
                                             <PieChart>
                                                 <Pie
-                                                    data={moduleSummaryData}
-                                                    dataKey="amount"
-                                                    nameKey="module"
-                                                    innerRadius={48}
-                                                    outerRadius={82}
-                                                    paddingAngle={3}
+                                                    data={statusChartData}
+                                                    dataKey="value"
+                                                    nameKey="name"
+                                                    innerRadius={58}
+                                                    outerRadius={88}
+                                                    paddingAngle={4}
                                                 >
-                                                    {moduleSummaryData.map((entry: any, index: number) => (
-                                                        <Cell
-                                                            key={`cell-${entry.key}`}
-                                                            fill={pieColors[index % pieColors.length]}
-                                                        />
-                                                    ))}
+                                                    {statusChartData.map(
+                                                        (
+                                                            entry: any,
+                                                            index: number
+                                                        ) => (
+                                                            <Cell
+                                                                key={entry.name}
+                                                                fill={
+                                                                    pieColors[
+                                                                    index %
+                                                                    pieColors.length
+                                                                    ]
+                                                                }
+                                                            />
+                                                        )
+                                                    )}
                                                 </Pie>
 
                                                 <Tooltip
-                                                    formatter={(value: any) => [
-                                                        formatFullAmount(value),
-                                                        "Amount",
-                                                    ]}
+                                                    formatter={(
+                                                        value: any
+                                                    ) => [
+                                                            formatCount(value),
+                                                            "Records",
+                                                        ]}
                                                 />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
 
-                                    <div className="mt-2 flex flex-col gap-1.5">
-                                        {moduleSummaryData.slice(0, 5).map((item: any, index: number) => (
-                                            <motion.div
-                                                key={item.key}
-                                                initial={{ opacity: 0, x: 8 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{
-                                                    delay: 0.25 + index * 0.05,
-                                                    duration: 0.25,
-                                                }}
-                                                className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-xs transition hover:bg-muted/60"
-                                            >
-                                                <div className="flex min-w-0 items-center gap-2">
-                                                    <span
-                                                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                                        style={{
-                                                            backgroundColor:
-                                                                pieColors[index % pieColors.length],
+                                    <div className="mt-3 flex flex-col gap-2">
+                                        {statusChartData.length ? (
+                                            statusChartData.map(
+                                                (
+                                                    item: any,
+                                                    index: number
+                                                ) => (
+                                                    <div
+                                                        key={item.name}
+                                                        className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2"
+                                                    >
+                                                        <div className="flex min-w-0 items-center gap-2">
+                                                            <span
+                                                                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        pieColors[
+                                                                        index %
+                                                                        pieColors.length
+                                                                        ],
+                                                                }}
+                                                            />
+
+                                                            <span className="truncate text-xs font-black text-card-foreground">
+                                                                {item.name}
+                                                            </span>
+                                                        </div>
+
+                                                        <span className="text-xs font-black text-muted-foreground">
+                                                            {formatCount(
+                                                                item.value
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )
+                                        ) : (
+                                            <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border text-xs font-bold text-muted-foreground">
+                                                No status data found
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            </div>
+
+                            {/* ================= MODULE TABLE + RECENT ACTIVITY ================= */}
+                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                <motion.div
+                                    custom={4}
+                                    variants={chartVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    className="rounded-xl border border-border bg-background p-4 shadow-sm"
+                                >
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                        <div>
+                                            <h2 className="text-sm font-black text-card-foreground">
+                                                Module Summary
+                                            </h2>
+
+                                            <p className="text-xs font-medium text-muted-foreground">
+                                                Count and amount by module.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                            <Database size={17} />
+                                        </div>
+                                    </div>
+
+                                    <div className="max-h-[390px] overflow-auto rounded-lg border border-border">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="sticky top-0 bg-card">
+                                                <tr className="border-b border-border">
+                                                    <th className="px-3 py-2 font-black text-muted-foreground">
+                                                        Module
+                                                    </th>
+                                                    <th className="px-3 py-2 text-right font-black text-muted-foreground">
+                                                        Count
+                                                    </th>
+                                                    <th className="px-3 py-2 text-right font-black text-muted-foreground">
+                                                        Amount
+                                                    </th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody>
+                                                {moduleSummaryData.length ? (
+                                                    moduleSummaryData.map(
+                                                        (item: any) => (
+                                                            <tr
+                                                                key={item.key}
+                                                                className="border-b border-border last:border-b-0 hover:bg-muted/40"
+                                                            >
+                                                                <td className="px-3 py-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                                            {
+                                                                                item.icon
+                                                                            }
+                                                                        </div>
+
+                                                                        <div className="min-w-0">
+                                                                            <p className="truncate font-black text-card-foreground">
+                                                                                {
+                                                                                    item.label
+                                                                                }
+                                                                            </p>
+
+                                                                            <p className="text-[10px] font-bold text-muted-foreground">
+                                                                                {
+                                                                                    item.records
+                                                                                }{" "}
+                                                                                records
+                                                                                loaded
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+
+                                                                <td className="px-3 py-2 text-right font-black text-card-foreground">
+                                                                    {formatCount(
+                                                                        item.count
+                                                                    )}
+                                                                </td>
+
+                                                                <td className="px-3 py-2 text-right font-black text-card-foreground">
+                                                                    {formatAmount(
+                                                                        item.amount
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    )
+                                                ) : (
+                                                    <tr>
+                                                        <td
+                                                            colSpan={3}
+                                                            className="px-3 py-8 text-center text-xs font-bold text-muted-foreground"
+                                                        >
+                                                            No module data found
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </motion.div>
+
+                                <motion.div
+                                    custom={5}
+                                    variants={chartVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    className="rounded-xl border border-border bg-background p-4 shadow-sm"
+                                >
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                        <div>
+                                            <h2 className="text-sm font-black text-card-foreground">
+                                                Recent Transactions
+                                            </h2>
+
+                                            <p className="text-xs font-medium text-muted-foreground">
+                                                Latest records across all
+                                                modules.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
+                                            <Activity size={17} />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex max-h-[390px] flex-col gap-2 overflow-auto">
+                                        {recentTransactions.length ? (
+                                            recentTransactions.map(
+                                                (item: any, index: number) => (
+                                                    <motion.div
+                                                        key={`${item.module}-${item.voucher}-${index}`}
+                                                        initial={{
+                                                            opacity: 0,
+                                                            x: 10,
                                                         }}
-                                                    />
+                                                        animate={{
+                                                            opacity: 1,
+                                                            x: 0,
+                                                        }}
+                                                        transition={{
+                                                            delay:
+                                                                index * 0.04,
+                                                        }}
+                                                        className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 transition hover:border-primary/30 hover:bg-muted/30"
+                                                    >
+                                                        <div className="flex min-w-0 items-center gap-3">
+                                                            <div
+                                                                className={`
+                                                                    flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
+                                                                    ${item.group ===
+                                                                        "purchase" ||
+                                                                        item.group ===
+                                                                        "cash-out" ||
+                                                                        item.group ===
+                                                                        "purchase-return"
+                                                                        ? "bg-danger/10 text-danger"
+                                                                        : item.group ===
+                                                                            "cash-in"
+                                                                            ? "bg-success/10 text-success"
+                                                                            : "bg-primary/10 text-primary"
+                                                                    }
+                                                                `}
+                                                            >
+                                                                {item.icon}
+                                                            </div>
 
-                                                    <span className="truncate font-bold text-card-foreground">
-                                                        {item.module}
-                                                    </span>
-                                                </div>
+                                                            <div className="min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className="truncate text-xs font-black text-card-foreground">
+                                                                        {
+                                                                            item.voucher
+                                                                        }
+                                                                    </p>
 
-                                                <span className="shrink-0 font-black text-muted-foreground">
-                                                    {formatAmount(item.amount)}
-                                                </span>
-                                            </motion.div>
-                                        ))}
+                                                                    <span
+                                                                        className={`
+                                                                            rounded-full px-2 py-0.5 text-[10px] font-black capitalize
+                                                                            ${String(
+                                                                            item.status
+                                                                        ).toLowerCase() ===
+                                                                                "close"
+                                                                                ? "bg-success/10 text-success"
+                                                                                : "bg-primary/10 text-primary"
+                                                                            }
+                                                                        `}
+                                                                    >
+                                                                        {
+                                                                            item.status
+                                                                        }
+                                                                    </span>
+                                                                </div>
+
+                                                                <p className="truncate text-[11px] font-bold text-muted-foreground">
+                                                                    {
+                                                                        item.module
+                                                                    }{" "}
+                                                                    •{" "}
+                                                                    {
+                                                                        item.party
+                                                                    }
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="shrink-0 text-right">
+                                                            <p className="text-xs font-black text-card-foreground">
+                                                                {formatAmount(
+                                                                    item.amount
+                                                                )}
+                                                            </p>
+
+                                                            <p className="text-[10px] font-bold text-muted-foreground">
+                                                                {formatDate(
+                                                                    item.date
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </motion.div>
+                                                )
+                                            )
+                                        ) : (
+                                            <div className="flex h-36 items-center justify-center rounded-lg border border-dashed border-border text-xs font-bold text-muted-foreground">
+                                                No recent transactions found
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             </div>
