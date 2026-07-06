@@ -218,9 +218,9 @@ const POS = () => {
         return cart.reduce((sum, item) => sum + toNum(item.gross), 0);
     }, [cart]);
 
-    const cartTax = useMemo(() => {
-        return cart.reduce((sum, item) => sum + toNum(item.taxAmount), 0);
-    }, [cart]);
+    // const cartTax = useMemo(() => {
+    //     return cart.reduce((sum, item) => sum + toNum(item.taxAmount), 0);
+    // }, [cart]);
 
     const cartCgst = useMemo(() => {
         return cart.reduce((sum, item) => sum + toNum(item.cgstAmount), 0);

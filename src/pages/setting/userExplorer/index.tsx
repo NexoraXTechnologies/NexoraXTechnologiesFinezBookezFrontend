@@ -20,7 +20,6 @@ import {
     RotateCcw,
     ShieldCheck,
     ShoppingCart,
-    TrendingUp,
     Users,
     WalletCards,
     X,
@@ -1064,15 +1063,15 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     const cashInAmount = getModuleAmount("receipt");
     const cashOutAmount = getModuleAmount("payment");
 
-    const outstandingReceivable =
-        getModuleAmount("salesInvoice") -
-        getModuleAmount("salesInvoiceReturn") -
-        cashInAmount;
+    // const outstandingReceivable =
+    //     getModuleAmount("salesInvoice") -
+    //     getModuleAmount("salesInvoiceReturn") -
+    //     cashInAmount;
 
-    const outstandingPayable =
-        getModuleAmount("purchaseInvoice") -
-        getModuleAmount("purchaseReturn") -
-        cashOutAmount;
+    // const outstandingPayable =
+    //     getModuleAmount("purchaseInvoice") -
+    //     getModuleAmount("purchaseReturn") -
+    //     cashOutAmount;
 
     const topAmountModule = [...moduleSummaryData].sort(
         (a: any, b: any) => toNumber(b.amount) - toNumber(a.amount)

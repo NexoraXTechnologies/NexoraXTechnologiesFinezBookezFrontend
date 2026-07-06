@@ -609,7 +609,7 @@ export default function DataTable<T>({
 	columns = [],
 	data,
 	loading,
-	emptyMessage = "No data found",
+	// emptyMessage = "No data found",
 	actions,
 	showFieldSelector = true,
 	showFloatingFilter = false,
@@ -787,12 +787,7 @@ export default function DataTable<T>({
 										className="py-10 text-center text-muted-foreground"
 									>
 										No data found for{" "}
-										<span className="font-semibold text-primary">
-											{
-												filterOptions.find(
-													(item) => item.value === selectedFilter
-												)?.label
-											}
+												<span className="font-semibold text-primary">													{filterOptions.find((item) => item.value === selectedFilter)?.label}
 										</span>
 									</td>
 								</tr>
