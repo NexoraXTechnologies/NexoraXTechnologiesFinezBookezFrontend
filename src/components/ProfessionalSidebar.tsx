@@ -24,6 +24,7 @@ import {
 	Palette,
 	Wrench,
 	Truck,
+	MonitorCog,
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
@@ -211,6 +212,16 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/appearance",
 					icon: <Palette size={19} />,
 				},
+				{
+					name: "System Configuration",
+					path: "/system-configuration",
+					icon: <MonitorCog size={19} />,
+				},
+				...(localUser?.accountType == "SUPER_ADMIN" ? [{
+					name: "User Explorer",
+					path: "/user-explorer",
+					icon: <MonitorCog size={19} />,
+				}] : []),
 				...(localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash
 					? [
 						{

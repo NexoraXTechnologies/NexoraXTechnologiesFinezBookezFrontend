@@ -117,6 +117,31 @@ export const getProfessionalUsers = createAsyncThunk(
   }
 );
 
+export const getProfessionalUser = createAsyncThunk(
+  'professionalUser/getProfessionalUser', async ({ number = null }: { page?: number; limit?: number, withParent?: boolean, number?: any }, { rejectWithValue }) => {
+    try {
+
+      if (!number) {
+        return rejectWithValue({ message: 'Mobile Number is required' });
+      }
+
+      const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/${number}`);
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || 'Failed to fetch users',
+        });
+      }
+      const allData = res.data.data?.ChildUsers || [];
+      const pagination = res.data.data?.pagination || null;
+      return { users: allData, pagination };
+    } catch (err: any) {
+      return rejectWithValue({
+        message: err.response?.data?.message || 'Failed to fetch users',
+      });
+
+    }
+  }
+);
 
 // ADD NEW PROFESSIONAL USER
 export const addProfessionalUser = createAsyncThunk(
@@ -222,6 +247,7 @@ const professionalUserSlice = createSlice({
   name: 'professionalUser',
   initialState: {
     users: [],
+    singleUser: [],
     loading: false,
     updating: false,
     error: null,
@@ -315,6 +341,20 @@ const professionalUserSlice = createSlice({
       })
       .addCase(updateProfessionalUser.rejected, (state: any, action: any) => {
         state.updating = false;
+        state.error = action.payload?.message;
+      });
+
+    builder
+      .addCase(getProfessionalUser.pending, (state: any) => {
+        state.loading = true;
+      })
+      .addCase(getProfessionalUser.fulfilled, (state: any, action: any) => {
+        state.loading = false;
+        const updated = action.payload;
+        state.singleUser = updated;
+      })
+      .addCase(getProfessionalUser.rejected, (state: any, action: any) => {
+        state.loading = false;
         state.error = action.payload?.message;
       });
   },

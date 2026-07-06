@@ -285,6 +285,16 @@ console.log({productMasterSchemaFields})
         columns={columns}
         data={products}
         loading={loading}
+        showFloatingFilter={true}
+        filterOptions={[
+          { value: "all", label: "All" },
+          { value: "rawmaterial", label: "Raw Material" },
+          { value: "finishedgoods", label: "Finished Goods" },
+          { value: "serviceproduct", label: "Service Product" },
+          { value: "nonstockproduct", label: "Non Stock Product" },
+          { value: "intermediaryproduct", label: "Intermediary Product" },
+        ]}
+        filterKeys={["productType"]}
         emptyMessage="No products found"
         actions={(prod: any) => (
           <div className="flex items-center gap-2">

@@ -12,7 +12,6 @@ const professionalAxios = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-
 // REQUEST interceptor (already you have)
 professionalAxios.interceptors.request.use(
   (config) => {

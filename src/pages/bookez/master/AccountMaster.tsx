@@ -669,6 +669,17 @@ const AccountMaster = () => {
 				columns={columns}
 				data={accounts}
 				loading={loading}
+				showFloatingFilter={true}
+				filterOptions={[
+					{ label: "All", value: "all" },
+					{ label: "Cash", value: "cash" },
+					{ label: "Bank", value: "bank" },
+					{ label: "Sale", value: "sale" },
+					{ label: "Purchase", value: "purchase" },
+					{ label: "Customer", value: "customer" },
+					{ label: "Vendor", value: "vendor" },
+				]}
+				filterKeys={["accountType", "type", "module", "category", "groupName"]}
 				emptyMessage="No accounts found"
 				actions={(acc: any) => (
 					<div className="flex items-center gap-2">

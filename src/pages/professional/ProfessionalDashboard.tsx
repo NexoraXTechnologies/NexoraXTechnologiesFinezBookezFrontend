@@ -612,7 +612,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								{balanceScore}%
 							</h2>
 							<p className="text-xs font-semibold text-muted-foreground">
-								receivable share
+								Receivable Share
 							</p>
 						</div>
 

@@ -60,6 +60,8 @@ import TransportOrderList from './pages/bookez/transportation/transportOrder/Tra
 import CreateTransportOrder from './pages/bookez/transportation/transportOrder/CreateTransportOrder';
 import TripAllocationList from './pages/bookez/transportation/tripAllocation/TripAllocationList';
 import CreateTripAllocation from './pages/bookez/transportation/tripAllocation/CreateTripAllocation';
+import SystemConfiguration from './pages/setting/systemConfiguration';
+import UserExplorer from './pages/setting/userExplorer';
 
 function App() {
   useAppearance();
@@ -112,10 +114,7 @@ function App() {
           <Route path="master/reports-mapping" element={<ReportMapping />} />
 
 
-          <Route
-            path="/bookEz/transaction/opening-balances"
-            element={<OpeningBalancesDashboard />}
-          />
+          <Route path="/bookEz/transaction/opening-balances" element={<OpeningBalancesDashboard />} />
 
           <Route
             path="/bookEz/transaction/production"
@@ -171,6 +170,22 @@ function App() {
           <Route path="/bookEz/transportation/trip-allocation/edit/:voucherNumber" element={<CreateTripAllocation />}/>
 
 
+          {/* configuration */}
+          <Route path="configuration" element={<Configuration />} />
+          <Route path="system-configuration" element={<SystemConfiguration />} />
+          <Route path="user-explorer" element={<UserExplorer />} />
+          {/* incometax */}
+          <Route path="incometax/form26as" element={<Form26AS />} />
+          <Route path="incometax/ais" element={<AIS />} />
+          <Route path="incometax/tis" element={<TIS />} />
+          <Route path="incometax/addtaxpayer" element={<AddTaxPayer />} />
+          <Route path="incometax/fileitr" element={<FileITR />} />
+          <Route path="incometax/fileitr/edit/:pan/:ay" element={<FileITR />} />
+          <Route path="incometax/fileitrlist" element={<FileITRList />} />
+          <Route path="incometax/uploadform16" element={<UploadForm16 />} />
+          <Route path="incometax/downloaditr" element={<DownloadITR />} />
+          <Route path="incometax/refund" element={<Refund />} />
+          <Route path="incometax/resetitrpassword" element={<ResetitrPassword />} />
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />
 
