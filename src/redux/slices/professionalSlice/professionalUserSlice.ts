@@ -2,45 +2,121 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 
 // GET PROFESSIONAL USERS
+// export const getProfessionalUsers = createAsyncThunk(
+//   'professionalUser/getProfessionalUsers', async ({ page = 1, limit = 20, withParent = false }: { page?: number; limit?: number, withParent?: boolean }, { rejectWithValue }) => {
+//     try {
+//     // @ts-ignore
+//     const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
+//     const parentMobile = professionalHeaders?.['x-db-name'];
+
+//     if (!parentMobile) {
+//       return rejectWithValue({ message: 'Parent user mobile number not found in localStorage' });
+//     }
+
+//     const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users`, {
+//       params: {
+//         userMobileNumberHash: parentMobile,
+//         page,
+//         limit,
+//       },
+//     });
+//       console.log({ res })
+//     if (!res.data?.success) {
+//       return rejectWithValue({
+//         message: res.data?.message || 'Failed to fetch users',
+//       });
+//     }
+
+//     // data
+//     const allData = res.data.data?.result || [];
+//     const childUsers = allData[0]?.ChildUsers || [];
+//       const filtered = withParent ? childUsers : childUsers.slice(1);
+
+//     const pagination = res.data.data?.pagination || null;
+
+//     return { users: filtered, pagination };
+//     } catch (err: any) {
+//     return rejectWithValue({
+//       message: err.response?.data?.message || 'Failed to fetch users',
+//     });
+//   }
+// });
+
+
 export const getProfessionalUsers = createAsyncThunk(
-  'professionalUser/getProfessionalUsers', async ({ page = 1, limit = 20, withParent = false }: { page?: number; limit?: number, withParent?: boolean }, { rejectWithValue }) => {
+  "professionalUser/getProfessionalUsers",
+  async (
+    {
+      page = 1,
+      limit = 20,
+      withParent = false,
+      type = "",
+      inputFields = [],
+    }: {
+      page?: number;
+      limit?: number;
+      withParent?: boolean;
+      type?: string;
+      inputFields?: string[];
+    } = {},
+    { rejectWithValue }
+  ) => {
     try {
-    // @ts-ignore
-    const professionalHeaders = JSON.parse(localStorage.getItem('professionalHeaders'));
-    const parentMobile = professionalHeaders?.['x-db-name'];
+      // @ts-ignore
+      const professionalHeaders = JSON.parse(
+        localStorage.getItem("professionalHeaders") || "{}"
+      );
 
-    if (!parentMobile) {
-      return rejectWithValue({ message: 'Parent user mobile number not found in localStorage' });
-    }
+      const parentMobile = professionalHeaders?.["x-db-name"];
 
-    const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users`, {
-      params: {
-        userMobileNumberHash: parentMobile,
-        page,
-        limit,
-      },
-    });
-      console.log({ res })
-    if (!res.data?.success) {
+      if (!parentMobile) {
+        return rejectWithValue({
+          message: "Parent user mobile number not found in localStorage",
+        });
+      }
+
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users`,
+        {
+          params: {
+            userMobileNumberHash: parentMobile,
+            page,
+            limit,
+            type,
+            inputFields: Array.isArray(inputFields)
+              ? inputFields.join(",")
+              : "",
+          },
+        }
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch users",
+        });
+      }
+
+      const allData = res.data.data?.result || [];
+      const childUsers = allData[0]?.ChildUsers || [];
+
+      const filtered = withParent ? childUsers : childUsers.slice(1);
+      const pagination = res.data.data?.pagination || null;
+
+      return {
+        users: filtered,
+        pagination,
+      };
+    } catch (err: any) {
       return rejectWithValue({
-        message: res.data?.message || 'Failed to fetch users',
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch users",
       });
     }
-
-    // data
-    const allData = res.data.data?.result || [];
-    const childUsers = allData[0]?.ChildUsers || [];
-      const filtered = withParent ? childUsers : childUsers.slice(1);
-
-    const pagination = res.data.data?.pagination || null;
-
-    return { users: filtered, pagination };
-    } catch (err: any) {
-    return rejectWithValue({
-      message: err.response?.data?.message || 'Failed to fetch users',
-    });
   }
-});
+);
+
 
 // ADD NEW PROFESSIONAL USER
 export const addProfessionalUser = createAsyncThunk(
@@ -88,15 +164,15 @@ export const deleteProfessionalUser = createAsyncThunk(
       // @ts-ignore
       const professionalUser = JSON.parse(localStorage.getItem("professionalUser"));
       const parentName = professionalUser?.name;
-      
+
       const payload = {
         parentMobileNumber: parentMobile,  // from localStorage
-        parentName:parentName             // hard-coded value
+        parentName: parentName             // hard-coded value
       };
       const res = await professionalAxios.delete(
-        `/eTaxSolnMongoApiBackend/users/${mobile}`,{
-          data: payload  // axios DELETE body
-        }
+        `/eTaxSolnMongoApiBackend/users/${mobile}`, {
+        data: payload  // axios DELETE body
+      }
       );
 
       if (!res.data?.success) {
@@ -147,7 +223,7 @@ const professionalUserSlice = createSlice({
   initialState: {
     users: [],
     loading: false,
-    updating:false,
+    updating: false,
     error: null,
     deleteSuccess: false,
     addSuccess: false,

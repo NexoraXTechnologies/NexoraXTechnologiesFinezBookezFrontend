@@ -1,6 +1,14 @@
 import professionalAxios from "../services/professionalAxios";
 
-export const todayYMD = () => new Date().toISOString().split("T")[0];
+// export const todayYMD = () => new Date().toISOString().split("T")[0];
+
+export const todayYMD = () => {
+	const now = new Date();
+	now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+	return now.toISOString().slice(0, 10);
+};
+
+
 
 export const getFirstDateOfCurrentMonth = () => {
     const date = new Date();
@@ -27,9 +35,31 @@ export const formatDateForInput = (value: any) => {
     if (!value) return todayYMD();
 
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
 
-    return date.toISOString().split("T")[0];
+    if (Number.isNaN(date.getTime())) {
+        return String(value).slice(0, 10);
+    }
+
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 10);
+};
+
+
+export const formatDateTimeForInput = (value: any) => {
+    if (!value) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return String(value).slice(0, 16);
+    }
+
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 16);
 };
 
 export const formatDateForList = (value: any) => {

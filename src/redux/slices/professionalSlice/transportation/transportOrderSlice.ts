@@ -41,7 +41,7 @@ export const createTransportOrder = createAsyncThunk(
         try {
             const response = await professionalAxios.post(
                 "/eTaxSolnMongoApiBackend/users/bookEZ/transportOrder/save",
-                { payload }
+                 payload 
             );
 
             if (!response?.data?.success) {
@@ -172,7 +172,7 @@ export const updateTransportOrderByVoucherNumber = createAsyncThunk(
         try {
             const response = await professionalAxios.put(
                 `/eTaxSolnMongoApiBackend/users/bookEZ/transportOrder/update/${voucherNumber}`,
-                { payload }
+                 payload 
             );
 
             if (!response?.data?.success) {

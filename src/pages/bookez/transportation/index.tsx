@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 
+
 const cards: any[] = [
    {
     title: "Create Contract",
@@ -28,7 +29,7 @@ const cards: any[] = [
   {
     title: "Trip Allocation",
     description: "Assign vehicles, drivers, and routes to planned transport trips.",
-    component: "",
+    path: "/bookEz/transportation/trip-allocation",
     icon: <Route size={22} />,
     permissionKey: "accountLedger",
   },
