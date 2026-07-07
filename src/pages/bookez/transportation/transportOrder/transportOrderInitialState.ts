@@ -1,3 +1,5 @@
+import { todayYMD } from "../../../../utils/helperFunctions";
+
 export const STEPS = [
     "Customer",
     "Load",
@@ -15,6 +17,7 @@ export const todayDateTime = () => {
 };
 
 export const createInitialTransportOrder = () => ({
+    orderDate:todayYMD(),
     orderType: "market",
 
     contractDetails: {
@@ -48,7 +51,7 @@ export const createInitialTransportOrder = () => ({
             ewayBillRequired: false,
             ewayBillGeneratedBy: "customer",
             ewayBillNumber: "",
-            ewayBillDate: todayDateTime(),
+            ewayBillDate: todayYMD(),
         },
         specialHandlingInstructions: "",
     },

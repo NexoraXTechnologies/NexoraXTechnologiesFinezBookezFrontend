@@ -66,17 +66,17 @@ const MasterDashboard = () => {
     const apiCards: any[] = customMasterModules.map((item: any) => {
       const moduleName = item?.moduleName || "Custom Master";
       const moduleCode = item?.moduleCode || item?._id || "";
-
       const CustomMasterScreen = () => (
         <CustomMasterComp name={moduleName} moduleCode={moduleCode} />
       );
-
+      if (item?.status !== "active") return {}
       return {
         title: moduleName,
         description:
           item?.description || `Manage ${moduleName} custom master data.`,
         icon: <Boxes size={22} />,
-        component: CustomMasterScreen
+        component: CustomMasterScreen,
+        permissionKey: "Pass"
       };
     });
 
@@ -86,7 +86,7 @@ const MasterDashboard = () => {
         description: "Configure templates and mapped report formats.",
         icon: <FaRegFilePowerpoint size={22} />,
         component: ReportMapping,
-        permissionKey:"reportMappingMaster"
+        permissionKey: "reportMappingMaster"
       },
     ];
 

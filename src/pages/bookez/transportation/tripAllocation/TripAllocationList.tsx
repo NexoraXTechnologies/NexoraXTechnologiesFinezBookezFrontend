@@ -15,23 +15,26 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Pagination from "../../../../components/pagination";
 import { toast } from "react-toastify";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import { deleteTransportOrderByVoucherNumber, getTransportOrders } from "../../../../redux/slices/professionalSlice/transportation/transportOrderSlice";
+import {
+	deleteTripAllocationByVoucherNumber,
+	getAllTripAllocation,
+} from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 
 /* ===================================================
-   TRANSPORT ORDER LIST
+   TRIP ALLOCATION LIST
 =================================================== */
 
-const TransportOrderList = () => {
+const TripAllocationList = () => {
 	const dispatch = useDispatch<any>();
 	const location = useLocation();
 	const navigate = useNavigate();
 
 	const {
-		transportOrders = [],
+		tripAllocations = [],
 		pagination = {},
 		listingLoader = false,
 		deleteLoader = false,
-	} = useSelector((state: any) => state.transportOrder);
+	} = useSelector((state: any) => state.tripAllocation);
 
 	const [search, setSearch] = useState("");
 	const [refreshing, setRefreshing] = useState(false);
@@ -43,28 +46,29 @@ const TransportOrderList = () => {
 		show: false,
 		x: null,
 		y: null,
-		orderNumber: null,
+		tripAllocationNumber: null,
 	});
 
-	const pageTitle = location.state?.title || "Transport Order";
+	const pageTitle = location.state?.title || "Trip Allocation";
 	const pageDescription =
 		location.state?.description ||
-		"Create and manage transport orders for customer goods movement.";
+		"Assign vehicles, drivers, and routes to planned transport trips.";
 
-	const getOrderNumber = (record: any) =>
-		record?.orderNumber ||
-		record?.transportOrderNumber ||
-		record?.tOrderNumber ||
+	const getTripAllocationNumber = (record: any) =>
+		record?.tripAllocationNumber ||
+		record?.allocationNumber ||
+		record?.tripNumber ||
 		record?.voucherNumber ||
+		record?.transportOrderNumber ||
 		"";
 
-	const fetchTransportOrders = ({
+	const fetchTripAllocations = ({
 		offset = localOffset,
 		limit = localLimit,
 		searchValue = search,
 	}: any = {}) => {
 		dispatch(
-			getTransportOrders({
+			getAllTripAllocation({
 				limit,
 				offset,
 				search: searchValue,
@@ -73,7 +77,7 @@ const TransportOrderList = () => {
 	};
 
 	useEffect(() => {
-		fetchTransportOrders();
+		fetchTripAllocations();
 	}, [dispatch, localOffset, localLimit]);
 
 	useEffect(() => {
@@ -81,7 +85,7 @@ const TransportOrderList = () => {
 			setLocalOffset(0);
 
 			dispatch(
-				getTransportOrders({
+				getAllTripAllocation({
 					limit: localLimit,
 					offset: 0,
 					search,
@@ -96,7 +100,7 @@ const TransportOrderList = () => {
 		setRefreshing(true);
 
 		dispatch(
-			getTransportOrders({
+			getAllTripAllocation({
 				limit: localLimit,
 				offset: localOffset,
 				search,
@@ -106,42 +110,45 @@ const TransportOrderList = () => {
 		});
 	};
 
-	const openCreateOrder = () => {
-		navigate("/bookEz/transportation/transport-order/create", {
+	const openCreateTripAllocation = () => {
+		navigate("/bookEz/transportation/trip-allocation/create", {
 			state: {
-				title: "Create Transport Order",
+				title: "Create Trip Allocation",
 				description:
-					"Create transport order with contract, customer, route, and trip details.",
+					"Assign vehicle, driver, route, and trip details for a transport order.",
 				mode: "add",
 			},
 		});
 	};
 
-	const handleEditOrder = (record: any) => {
-		const orderNumber = getOrderNumber(record);
+	const handleEditTripAllocation = (record: any) => {
+		const tripAllocationNumber = getTripAllocationNumber(record);
 
-		if (!orderNumber) {
-			toast.warn("Transport order number not found");
+		if (!tripAllocationNumber) {
+			toast.warn("Trip allocation number not found");
 			return;
 		}
 
-		navigate(`/bookEz/transportation/transport-order/edit/${orderNumber}`, {
-			state: {
-				title: "Edit Transport Order",
-				description: "Update transport order details.",
-				mode: "edit",
-				orderNumber,
-				voucherNumber: orderNumber,
-				transportOrderNumber: orderNumber,
-			},
-		});
+		navigate(
+			`/bookEz/transportation/trip-allocation/edit/${tripAllocationNumber}`,
+			{
+				state: {
+					title: "Edit Trip Allocation",
+					description: "Update trip allocation details.",
+					mode: "edit",
+					tripAllocationNumber,
+					voucherNumber: tripAllocationNumber,
+					allocationNumber: tripAllocationNumber,
+				},
+			}
+		);
 	};
 
 	const handleDeleteClick = (e: any, record: any) => {
-		const orderNumber = getOrderNumber(record);
+		const tripAllocationNumber = getTripAllocationNumber(record);
 
-		if (!orderNumber) {
-			toast.warn("Transport order number not found");
+		if (!tripAllocationNumber) {
+			toast.warn("Trip allocation number not found");
 			return;
 		}
 
@@ -156,96 +163,152 @@ const TransportOrderList = () => {
 			show: true,
 			x,
 			y,
-			orderNumber,
+			tripAllocationNumber,
 		});
 	};
 
 	const handleDeleteConfirm = async () => {
 		try {
-			if (!confirmTooltip?.orderNumber) {
-				toast.warn("Transport order number not found");
+			if (!confirmTooltip?.tripAllocationNumber) {
+				toast.warn("Trip allocation number not found");
 				return;
 			}
 
 			await dispatch(
-				deleteTransportOrderByVoucherNumber(confirmTooltip.orderNumber)
+				deleteTripAllocationByVoucherNumber(
+					confirmTooltip.tripAllocationNumber
+				)
 			).unwrap();
 
-			toast.success("Transport order deleted successfully");
+			toast.success("Trip allocation deleted successfully");
 
 			setConfirmTooltip({
 				show: false,
 				x: null,
 				y: null,
-				orderNumber: null,
+				tripAllocationNumber: null,
 			});
 
-			fetchTransportOrders();
+			fetchTripAllocations();
 		} catch (error: any) {
-			toast.error(error?.message || "Failed to delete transport order");
+			toast.error(error?.message || "Failed to delete trip allocation");
 		}
 	};
 
 	const columns = [
-		{
-			key: "transportOrderNumber",
-			title: "Order No",
-			render: (row: any) => getOrderNumber(row) || "-",
-		},
-		{
-			key: "orderDate",
-			title: "Date",
-			render: (row: any) =>
-				row?.orderDate ? formatDateForList(row.orderDate) : "-",
-		},
-		{
-			key: "customer",
-			title: "Customer",
-			render: (row: any) => (
-				<div>
-					<div className="font-medium text-card-foreground">
-						{row?.customerDetails?.customerName || "-"}
-					</div>
-
-					<div className="text-xs text-muted-foreground">
-						{row?.customerDetails?.customerCode || "-"}
-					</div>
+	{
+		key: "tripNumber",
+		title: "Allocation No",
+		render: (row: any) => row?.tripNumber || "-",
+	},
+	{
+		key: "allocationDate",
+		title: "Date",
+		render: (row: any) =>
+			row?.allocationDate ? formatDateForList(row.allocationDate) : "-",
+	},
+	{
+		key: "transportOrder.transportOrderNumber",
+		title: "Transport Order",
+		render: (row: any) => row?.transportOrder?.transportOrderNumber || "-",
+	},
+	{
+		key: "transportOrder.customerName",
+		title: "Customer",
+		render: (row: any) => (
+			<div>
+				<div className="font-medium text-card-foreground">
+					{row?.transportOrder?.customerName || "-"}
 				</div>
-			),
-		},
-		{
-			key: "route",
-			title: "Route",
-			render: (row: any) => {
-				const from =
-					row?.pickupDetails?.pickupLocation ||
-					row?.pickupDetails?.pickupCityName ||
-					"";
 
-				const to =
-					row?.deliveryDetails?.deliveryLocation ||
-					row?.deliveryDetails?.deliveryCityName ||
-					"";
+				<div className="text-xs text-muted-foreground">
+					{row?.transportOrder?.customerCode || "-"}
+				</div>
+			</div>
+		),
+	},
+	{
+		key: "vehicleSelection.vehicleNumber",
+		title: "Vehicle",
+		render: (row: any) => (
+			<div>
+				<div className="font-medium text-card-foreground">
+					{row?.vehicleSelection?.vehicleNumber || "-"}
+				</div>
 
-				return from || to ? `${from || "-"} - ${to || "-"}` : "-";
-			},
-		},
-		{
-			key: "expectedFreight",
-			title: "Expected Freight",
-			render: (row: any) => {
-				const value = row?.freightDetails?.expectedFreight;
+				<div className="text-xs text-muted-foreground">
+					{row?.vehicleSelection?.vehicleType || "-"}
+					{row?.vehicleSelection?.vehicleCapacityTon
+						? ` • ${row.vehicleSelection.vehicleCapacityTon} Ton`
+						: ""}
+				</div>
+			</div>
+		),
+	},
+	// {
+	// 	key: "driverAllocation.driverName",
+	// 	title: "Driver",
+	// 	render: (row: any) => (
+	// 		<div>
+	// 			<div className="font-medium text-card-foreground">
+	// 				{row?.driverAllocation?.driverName || "-"}
+	// 			</div>
 
-				return value ? money(value) : "-";
-			},
-			type: "amount"
-		},
-	];
+	// 			<div className="text-xs text-muted-foreground">
+	// 				{row?.driverAllocation?.mobileNumber || "-"}
+	// 			</div>
+	// 		</div>
+	// 	),
+	// },
+	{
+		key: "transportOrder.source",
+		title: "Route",
+		render: (row: any) =>
+			`${row?.transportOrder?.source || "-"} - ${
+				row?.transportOrder?.destination || "-"
+			}`,
+	},
+	// {
+	// 	key: "tripPlan.routeDistanceKm",
+	// 	title: "Trip Plan",
+	// 	render: (row: any) => (
+	// 		<div>
+	// 			<div className="font-medium text-card-foreground">
+	// 				{row?.tripPlan?.routeDistanceKm
+	// 					? `${row.tripPlan.routeDistanceKm} KM`
+	// 					: "-"}
+	// 			</div>
+
+	// 			<div className="text-xs text-muted-foreground">
+	// 				{row?.tripPlan?.routeType || "-"}
+	// 			</div>
+	// 		</div>
+	// 	),
+	// },
+	// {
+	// 	key: "transportOrder.expectedFreight",
+	// 	title: "Freight",
+	// 	render: (row: any) =>
+	// 		row?.transportOrder?.expectedFreight
+	// 			? money(row.transportOrder.expectedFreight)
+	// 			: "-",
+	// 	type: "amount",
+	// },
+	{
+		key: "tripStatus",
+		title: "Status",
+		render: (row: any) => (
+			<span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
+				{row?.tripStatus || "-"}
+			</span>
+		),
+	},
+];
 
 	return (
 		<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
-			<div id="transport-order-header" className="mb-3 flex items-center">
-				<div id="transport-order-summary" className="flex items-start gap-3">
+			<div id="trip-allocation-header" className="mb-3 flex items-center">
+				<div id="trip-allocation-summary" className="flex items-start gap-3">
 					<div>
 						<h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
 							<button
@@ -271,9 +334,9 @@ const TransportOrderList = () => {
 							count:
 								pagination?.totalDocs ??
 								pagination?.totalRecords ??
-								transportOrders?.length ??
+								tripAllocations?.length ??
 								0,
-							text: "Total Orders:",
+							text: "Total Allocations:",
 							varient: "primary",
 						}}
 					/>
@@ -300,8 +363,8 @@ const TransportOrderList = () => {
 						{/* @ts-ignore */}
 						<DataCreateButton
 							{...{
-								callBackFn: openCreateOrder,
-								text: "Create Order",
+								callBackFn: openCreateTripAllocation,
+								text: "Create Allocation",
 							}}
 						/>
 					</Permission>
@@ -311,9 +374,9 @@ const TransportOrderList = () => {
 			<div className="min-h-0 flex-1 overflow-hidden">
 				<DataTable
 					columns={columns}
-					data={transportOrders}
+					data={tripAllocations}
 					loading={listingLoader}
-					emptyMessage="No transport order found"
+					emptyMessage="No trip allocation found"
 					actions={(record: any) => (
 						<div className="flex items-center gap-2">
 							<Permission
@@ -323,7 +386,7 @@ const TransportOrderList = () => {
 							>
 								<button
 									type="button"
-									onClick={() => handleEditOrder(record)}
+									onClick={() => handleEditTripAllocation(record)}
 									className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
 								>
 									<Edit size={16} />
@@ -367,7 +430,7 @@ const TransportOrderList = () => {
 				<ConfirmTooltip
 					x={confirmTooltip.x}
 					y={confirmTooltip.y}
-					message="Are you sure you want to delete this transport order?"
+					message="Are you sure you want to delete this trip allocation?"
 					confirmText="Delete"
 					cancelText="Cancel"
 					onConfirm={handleDeleteConfirm}
@@ -376,7 +439,7 @@ const TransportOrderList = () => {
 							show: false,
 							x: null,
 							y: null,
-							orderNumber: null,
+							tripAllocationNumber: null,
 						})
 					}
 				/>
@@ -385,4 +448,4 @@ const TransportOrderList = () => {
 	);
 };
 
-export default TransportOrderList;
+export default TripAllocationList;

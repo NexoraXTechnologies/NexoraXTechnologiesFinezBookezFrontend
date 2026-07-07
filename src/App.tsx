@@ -58,6 +58,8 @@ import TransportContractList from './pages/bookez/transportation/transportContra
 import CreateEditTransportContract from './pages/bookez/transportation/transportContract/CreateEditTransportContract';
 import TransportOrderList from './pages/bookez/transportation/transportOrder/TransportOrderList';
 import CreateTransportOrder from './pages/bookez/transportation/transportOrder/CreateTransportOrder';
+import TripAllocationList from './pages/bookez/transportation/tripAllocation/TripAllocationList';
+import CreateTripAllocation from './pages/bookez/transportation/tripAllocation/CreateTripAllocation';
 import SystemConfiguration from './pages/setting/systemConfiguration';
 import UserExplorer from './pages/setting/userExplorer';
 
@@ -154,11 +156,19 @@ function App() {
             path="/bookEz/transportation"
             element={<TransportationDashboard />}
           />
-          <Route path="/bookEz/transportation/transport-order" element={<TransportOrderList />} />
-          <Route path="/bookEz/transportation/transport-order/create" element={<CreateTransportOrder />} />
           <Route path="/bookEz/transportation/transport-contract" element={<TransportContractList />} />
           <Route path="/bookEz/transportation/transport-contract/create" element={<CreateEditTransportContract />} />
           <Route path="/bookEz/transportation/transport-contract/edit/:contractNumber" element={<CreateEditTransportContract />} />
+
+
+          <Route path="/bookEz/transportation/transport-order" element={<TransportOrderList />} />
+          <Route path="/bookEz/transportation/transport-order/create" element={<CreateTransportOrder />} />
+          <Route path="/bookEz/transportation/transport-order/edit/:orderNumber" element={<CreateTransportOrder />} />
+
+          <Route path='/bookEz/transportation/trip-allocation' element={<TripAllocationList />} />
+          <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />}/>
+          <Route path="/bookEz/transportation/trip-allocation/edit/:voucherNumber" element={<CreateTripAllocation />}/>
+
 
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />

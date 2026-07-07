@@ -21,6 +21,7 @@ export const getStoredPermissions = () => {
 };
 
 const Permission = ({ module, permissionKey, action = "view", children, fallback = null }: PermissionGuardProps) => {
+
     const permissions = getStoredPermissions();
     const isAllowed = checkPermissionFromData(
         permissions,
@@ -28,6 +29,7 @@ const Permission = ({ module, permissionKey, action = "view", children, fallback
         permissionKey,
         action
     );
+    if(permissionKey == "Pass") return children
     if (!isAllowed) return <>{fallback}</>;
     return <>{children}</>;
 };
