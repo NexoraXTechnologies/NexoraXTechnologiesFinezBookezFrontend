@@ -1,0 +1,1075 @@
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import professionalAxios from "../../../services/professionalAxios";
+
+/* ===================================================
+   CONSTANTS
+=================================================== */
+
+const WHATSAPP_MODULE_ORDER = [
+    "salesQuotation",
+    "salesOrder",
+    "salesInvoice",
+    "salesReturn",
+    "receipt",
+    "purchaseOrder",
+    "grn",
+    "purchaseInvoice",
+    "purchaseReturn",
+    "payment",
+];
+
+const toBool = (value: any) => {
+    return value === true || value === "true" || value === 1 || value === "1";
+};
+
+const createModuleConfigurationTemplate = (enabledDefault: boolean) => {
+    return Object.fromEntries(
+        WHATSAPP_MODULE_ORDER.map((key) => [
+            key,
+            {
+                enabled: !!enabledDefault,
+            },
+        ])
+    );
+};
+
+const normalizeWhatsAppModuleConfiguration = (whatsAppSection: any) => {
+    const src = whatsAppSection?.moduleConfiguration;
+
+    const hasStructuredConfig =
+        src &&
+        typeof src === "object" &&
+        WHATSAPP_MODULE_ORDER.some((key) => {
+            const item = src[key];
+            return item != null && typeof item === "object" && "enabled" in item;
+        });
+
+    if (!hasStructuredConfig) {
+        return createModuleConfigurationTemplate(true);
+    }
+
+    const out: any = {};
+
+    for (const key of WHATSAPP_MODULE_ORDER) {
+        out[key] = {
+            enabled: toBool(src?.[key]?.enabled),
+        };
+    }
+
+    return out;
+};
+
+/* ===================================================
+   EMPTY CONFIG
+=================================================== */
+
+export const getEmptySystemConfiguration = () => ({
+    _id: "",
+    configurationCode: "",
+    configurationName: "Default System Config",
+    status: "active",
+
+    systemConfiguration: {
+        salesQuotation: {
+            enableLocation: false,
+        },
+
+        bankStatementImport: {
+            enableBankStatementImport: false,
+        },
+
+        productSettings: {
+            allowDuplicateProduct: false,
+        },
+
+        posConfiguration: {
+            enablePOSModule: false,
+        },
+
+        scrapManagement: {
+            enableScrapManagement: false,
+        },
+
+        transportationConfiguration: {
+            enableBookEzTransportation: false,
+        },
+
+        whatsAppConfiguration: {
+            enableWhatsAppModule: false,
+            provider: "META",
+            defaultLanguage: "en_US",
+            moduleConfiguration: createModuleConfigurationTemplate(false),
+        },
+    },
+
+    inventoryConfiguration: {
+        maintainInventory: false,
+        inventoryTagLevel: "",
+        inventoryPickMethod: "",
+        negativeStockPolicy: "",
+    },
+
+    financeConfiguration: {
+        isActive: false,
+    },
+
+    createdOn: "",
+    createdBy: "",
+    modifiedOn: "",
+    modifiedBy: "",
+    anyOtherField: "",
+});
+
+/* ===================================================
+   NORMALIZE CONFIG
+=================================================== */
+
+export const normalizeSystemConfiguration = (raw: any) => ({
+    _id: raw?._id || "",
+    configurationCode: raw?.configurationCode || "",
+    configurationName: raw?.configurationName || "Default System Config",
+    status: raw?.status || "active",
+
+    systemConfiguration: {
+        salesQuotation: {
+            enableLocation: toBool(
+                raw?.systemConfiguration?.salesQuotation?.enableLocation
+            ),
+        },
+
+        bankStatementImport: {
+            enableBankStatementImport: toBool(
+                raw?.systemConfiguration?.bankStatementImport
+                    ?.enableBankStatementImport
+            ),
+        },
+
+        productSettings: {
+            allowDuplicateProduct: toBool(
+                raw?.systemConfiguration?.productSettings?.allowDuplicateProduct
+            ),
+        },
+
+        posConfiguration: {
+            enablePOSModule: toBool(
+                raw?.systemConfiguration?.posConfiguration?.enablePOSModule
+            ),
+        },
+
+        scrapManagement: {
+            enableScrapManagement: toBool(
+                raw?.systemConfiguration?.scrapManagement?.enableScrapManagement
+            ),
+        },
+
+        transportationConfiguration: {
+            enableBookEzTransportation: toBool(
+                raw?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule
+            ),
+        },
+
+        whatsAppConfiguration: {
+            enableWhatsAppModule: toBool(
+                raw?.systemConfiguration?.whatsAppConfiguration
+                    ?.enableWhatsAppModule
+            ),
+
+            provider:
+                String(
+                    raw?.systemConfiguration?.whatsAppConfiguration?.provider ||
+                    "META"
+                )
+                    .trim()
+                    .toUpperCase() || "META",
+
+            defaultLanguage:
+                String(
+                    raw?.systemConfiguration?.whatsAppConfiguration
+                        ?.defaultLanguage || "en_US"
+                ).trim() || "en_US",
+
+            moduleConfiguration: normalizeWhatsAppModuleConfiguration(
+                raw?.systemConfiguration?.whatsAppConfiguration
+            ),
+        },
+    },
+
+    inventoryConfiguration: {
+        maintainInventory: toBool(raw?.inventoryConfiguration?.maintainInventory),
+        inventoryTagLevel: raw?.inventoryConfiguration?.inventoryTagLevel || "",
+        inventoryPickMethod: raw?.inventoryConfiguration?.inventoryPickMethod || "",
+        negativeStockPolicy:
+            raw?.inventoryConfiguration?.negativeStockPolicy || "",
+    },
+
+    financeConfiguration: {
+        isActive: toBool(raw?.financeConfiguration?.isActive),
+    },
+
+    createdOn: raw?.createdOn || "",
+    createdBy: raw?.createdBy || "",
+    modifiedOn: raw?.modifiedOn || "",
+    modifiedBy: raw?.modifiedBy || "",
+    anyOtherField: raw?.anyOtherField || "",
+});
+
+/* ===================================================
+   API RESPONSE HELPERS
+=================================================== */
+
+const unwrapApiRecord = (res: any) => {
+    if (res == null) return null;
+
+    const inner = res?.data ?? res?.record ?? res?.result ?? res?.payload ?? res;
+
+    if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+        if (inner.success === false) return null;
+
+        if (
+            "data" in inner &&
+            inner.data != null &&
+            typeof inner.data === "object"
+        ) {
+            return inner.data;
+        }
+    }
+
+    return inner;
+};
+
+const extractConfigurationRecords = (apiData: any) => {
+    if (Array.isArray(apiData)) return apiData;
+
+    if (Array.isArray(apiData?.records)) return apiData.records;
+
+    if (Array.isArray(apiData?.data?.records)) return apiData.data.records;
+
+    if (Array.isArray(apiData?.data)) return apiData.data;
+
+    if (Array.isArray(apiData?.configurations)) return apiData.configurations;
+
+    if (Array.isArray(apiData?.configuration)) return apiData.configuration;
+
+    return [];
+};
+
+const extractPagination = (apiData: any, fallback: any) => {
+    return apiData?.pagination || apiData?.data?.pagination || fallback;
+};
+
+export const whatsAppMetaCredentialsHasData = (apiResponse: any) => {
+    const root = unwrapApiRecord(apiResponse);
+
+    if (root == null) return false;
+
+    if (typeof root === "string") {
+        return root.trim().length > 0;
+    }
+
+    if (Array.isArray(root)) {
+        return root.length > 0;
+    }
+
+    if (typeof root !== "object") return false;
+
+    const keys = Object.keys(root).filter(
+        (key) =>
+            root[key] != null &&
+            String(root[key]).trim().length > 0 &&
+            key !== "message" &&
+            key !== "code" &&
+            key !== "success"
+    );
+
+    return keys.length > 0;
+};
+
+/* ===================================================
+   PAYLOAD BUILDER
+=================================================== */
+
+const buildConfigurationPayload = (configuration: any) => {
+    const wa = configuration?.systemConfiguration?.whatsAppConfiguration || {};
+
+    const baseMods = { ...(wa?.moduleConfiguration || {}) };
+    const moduleConfiguration: any = {};
+
+    for (const key of WHATSAPP_MODULE_ORDER) {
+        moduleConfiguration[key] = {
+            enabled: !!baseMods[key]?.enabled,
+        };
+    }
+
+    return {
+        configurationName: configuration?.configurationName?.trim() || "Default System Config",
+
+        status: configuration?.status || "active",
+
+        systemConfiguration: {
+            salesQuotation: {
+                enableLocation: !!configuration?.systemConfiguration?.salesQuotation?.enableLocation,
+            },
+
+            bankStatementImport: {
+                enableBankStatementImport: !!configuration?.systemConfiguration?.bankStatementImport?.enableBankStatementImport,
+            },
+
+            productSettings: {
+                allowDuplicateProduct: !!configuration?.systemConfiguration?.productSettings?.allowDuplicateProduct,
+            },
+
+            posConfiguration: {
+                enablePOSModule: !!configuration?.systemConfiguration?.posConfiguration?.enablePOSModule,
+            },
+
+            scrapManagement: {
+                enableScrapManagement: !!configuration?.systemConfiguration?.scrapManagement?.enableScrapManagement,
+            },
+
+            transportationConfiguration: {
+                enableBookEzTransportation: !!configuration?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule,
+            },
+
+            whatsAppConfiguration: {
+                enableWhatsAppModule: !!wa?.enableWhatsAppModule,
+                provider: String(wa?.provider || "META").trim().toUpperCase() || "META",
+                defaultLanguage: String(wa?.defaultLanguage || "en_US").trim() || "en_US", moduleConfiguration,
+            },
+        },
+
+        inventoryConfiguration: {
+            maintainInventory: !!configuration?.inventoryConfiguration?.maintainInventory,
+            inventoryTagLevel: configuration?.inventoryConfiguration?.inventoryTagLevel || "",
+            inventoryPickMethod: configuration?.inventoryConfiguration?.inventoryPickMethod || "",
+            negativeStockPolicy: configuration?.inventoryConfiguration?.negativeStockPolicy || "",
+        },
+
+        financeConfiguration: {
+            isActive: !!configuration?.financeConfiguration?.isActive,
+        },
+
+        anyOtherField: configuration?.anyOtherField || "",
+    };
+};
+
+/* ===================================================
+   GET ALL CONFIGURATIONS
+=================================================== */
+
+export const getAllSystemConfigurations = createAsyncThunk(
+    "systemConfiguration/getAllSystemConfigurations",
+    async (
+        {
+            offset = 0,
+            limit = 100000,
+            status = "",
+        }: {
+            offset?: number;
+            limit?: number;
+            status?: string;
+        } = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const params: {
+                offset: number;
+                limit: number;
+                status?: string;
+            } = {
+                offset,
+                limit,
+            };
+
+            if (status?.trim()) {
+                params.status = status.trim();
+            }
+
+            const res = await professionalAxios.get(
+                "eTaxSolnMongoApiBackend/users/configuration/getAll",
+                {
+                    params,
+                }
+            );
+
+            if (
+                !res.data?.success &&
+                !res.data?.records &&
+                !res.data?.data?.records &&
+                !Array.isArray(res.data)
+            ) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message || "Failed to fetch configurations",
+                    status: res?.status,
+                });
+            }
+
+            return res.data?.data || res.data;
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to fetch configurations",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
+   GET LATEST CONFIGURATION
+=================================================== */
+
+export const getLatestSystemConfiguration = createAsyncThunk(
+    "systemConfiguration/getLatestSystemConfiguration",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.get(
+                "eTaxSolnMongoApiBackend/users/configuration/getAll",
+                {
+                    params: {
+                        offset: 0,
+                        limit: 100000,
+                        status: "",
+                    },
+                }
+            );
+
+            if (
+                !res.data?.success &&
+                !res.data?.records &&
+                !res.data?.data?.records &&
+                !Array.isArray(res.data)
+            ) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message ||
+                        "Failed to fetch latest configuration",
+                    status: res?.status,
+                });
+            }
+
+            const data = res.data?.data || res.data;
+            const records = extractConfigurationRecords(data);
+
+            if (!records.length) {
+                return getEmptySystemConfiguration();
+            }
+
+            const sortedRecords = [...records].sort((a, b) => {
+                const aTime = new Date(
+                    a?.modifiedOn || a?.createdOn || "1970-01-01"
+                ).getTime();
+
+                const bTime = new Date(
+                    b?.modifiedOn || b?.createdOn || "1970-01-01"
+                ).getTime();
+
+                return bTime - aTime;
+            });
+
+            return normalizeSystemConfiguration(sortedRecords[0]);
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to fetch latest configuration",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
+   GET CONFIGURATION BY CODE
+=================================================== */
+
+export const getSystemConfigurationByCode = createAsyncThunk(
+    "systemConfiguration/getSystemConfigurationByCode",
+    async (
+        {
+            configurationCode,
+        }: {
+            configurationCode: string;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await professionalAxios.get(
+                `eTaxSolnMongoApiBackend/users/configuration/getByCode/${configurationCode}`
+            );
+
+            if (!res.data?.success && !res.data?.data && !res.data?.configurationCode) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message || "Failed to fetch configuration",
+                    status: res?.status,
+                });
+            }
+
+            const record = res?.data?.data || res?.data?.record || res?.data;
+
+            return normalizeSystemConfiguration(record);
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to fetch configuration",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
+   SAVE CONFIGURATION
+=================================================== */
+
+export const saveSystemConfiguration = createAsyncThunk(
+    "systemConfiguration/saveSystemConfiguration",
+    async (
+        {
+            configuration,
+        }: {
+            configuration: any;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const payload = buildConfigurationPayload(configuration);
+
+            const res = await professionalAxios.post(
+                "eTaxSolnMongoApiBackend/users/configuration/save",
+                payload
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message || "Failed to save configuration",
+                    status: res?.status,
+                });
+            }
+
+            return {
+                message: res.data?.message,
+                data: res.data?.data,
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to save configuration",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
+   UPDATE CONFIGURATION
+=================================================== */
+
+export const updateSystemConfiguration = createAsyncThunk(
+    "systemConfiguration/updateSystemConfiguration",
+    async (
+        {
+            configurationCode,
+            configuration,
+        }: {
+            configurationCode: string;
+            configuration: any;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const payload = buildConfigurationPayload(configuration);
+
+            const res = await professionalAxios.put(
+                `eTaxSolnMongoApiBackend/users/configuration/update/${configurationCode}`,
+                payload
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message || "Failed to update configuration",
+                    status: res?.status,
+                });
+            }
+
+            return {
+                message: res.data?.message,
+                data: res.data?.data,
+                configurationCode,
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to update configuration",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
+   SAVE OR UPDATE CONFIGURATION
+=================================================== */
+
+export const saveOrUpdateSystemConfiguration = createAsyncThunk(
+    "systemConfiguration/saveOrUpdateSystemConfiguration",
+    async (
+        {
+            configuration,
+        }: {
+            configuration: any;
+        },
+        { dispatch, rejectWithValue }
+    ) => {
+        try {
+            const configurationCode = configuration?.configurationCode;
+
+            let result: any;
+
+            if (configurationCode) {
+                result = await dispatch(
+                    updateSystemConfiguration({
+                        configurationCode,
+                        configuration,
+                    }) as any
+                ).unwrap();
+
+                const latest = await dispatch(
+                    getSystemConfigurationByCode({
+                        configurationCode,
+                    }) as any
+                ).unwrap();
+
+                return {
+                    message:
+                        result?.message || "Configuration updated successfully",
+                    configuration: latest,
+                    mode: "update",
+                };
+            }
+
+            result = await dispatch(
+                saveSystemConfiguration({
+                    configuration,
+                }) as any
+            ).unwrap();
+
+            const newCode = result?.data?.configurationCode;
+
+            if (newCode) {
+                const latest = await dispatch(
+                    getSystemConfigurationByCode({
+                        configurationCode: newCode,
+                    }) as any
+                ).unwrap();
+
+                return {
+                    message:
+                        result?.message || "Configuration saved successfully",
+                    configuration: latest,
+                    mode: "save",
+                };
+            }
+
+            const latest = await dispatch(
+                getLatestSystemConfiguration() as any
+            ).unwrap();
+
+            return {
+                message: result?.message || "Configuration saved successfully",
+                configuration: latest,
+                mode: "save",
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.message ||
+                    err?.response?.data?.message ||
+                    "Failed to save configuration",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
+   VERIFY WHATSAPP META CREDENTIALS
+=================================================== */
+
+export const verifyWhatsAppMetaCredentials = createAsyncThunk(
+    "systemConfiguration/verifyWhatsAppMetaCredentials",
+    async (
+        {
+            loginuser,
+        }: {
+            loginuser: string;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const encoded = encodeURIComponent(String(loginuser || "").trim());
+
+            if (!encoded) {
+                return rejectWithValue({
+                    message:
+                        "Logged-in user identity is missing. Please sign in again.",
+                    status: 400,
+                });
+            }
+
+            const res = await professionalAxios.get(
+                `eTaxSolnMongoApiBackend/users/whatsapp/metaCredentials/get/${encoded}`
+            );
+
+            const hasCredentials = whatsAppMetaCredentialsHasData(res?.data);
+
+            if (!hasCredentials) {
+                return rejectWithValue({
+                    message: "WhatsApp Meta credentials are not configured",
+                    status: res?.status,
+                });
+            }
+
+            return {
+                hasCredentials,
+                data: res?.data?.data || res?.data,
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to verify WhatsApp Meta credentials",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
+   SLICE
+=================================================== */
+
+const systemConfigurationSlice = createSlice({
+    name: "systemConfiguration",
+
+    initialState: {
+        configuration: getEmptySystemConfiguration(),
+        configurations: [],
+
+        pagination: {
+            offset: 0,
+            limit: 100000,
+            totalDocs: 0,
+            totalPages: 1,
+            currentPage: 1,
+            hasNextPage: false,
+            hasPrevPage: false,
+        },
+
+        loading: false,
+        listLoading: false,
+        detailLoading: false,
+        saveLoading: false,
+        updateLoading: false,
+        whatsappVerifyLoading: false,
+
+        whatsappVerified: false,
+        whatsappMetaCredentials: null,
+
+        error: null,
+        successMessage: "",
+    },
+
+    reducers: {
+        clearSystemConfigurationState: (state) => {
+            state.error = null;
+            state.successMessage = "";
+            state.loading = false;
+            state.listLoading = false;
+            state.detailLoading = false;
+            state.saveLoading = false;
+            state.updateLoading = false;
+            state.whatsappVerifyLoading = false;
+        },
+
+        clearSystemConfigurationError: (state) => {
+            state.error = null;
+        },
+
+        clearSystemConfigurationSuccess: (state) => {
+            state.successMessage = "";
+        },
+
+        resetSystemConfiguration: (state) => {
+            state.configuration = getEmptySystemConfiguration();
+            state.error = null;
+            state.successMessage = "";
+        },
+
+        setSystemConfigurationLocal: (state, action: any) => {
+            state.configuration = action.payload;
+        },
+
+        updateSystemConfigurationLocalField: (state, action: any) => {
+            const { key, value } = action.payload || {};
+            state.configuration = {
+                ...state.configuration,
+                [key]: value,
+            };
+        },
+
+        updateInventoryConfigurationLocalField: (state, action: any) => {
+            const { key, value } = action.payload || {};
+
+            state.configuration.inventoryConfiguration = {
+                ...state.configuration.inventoryConfiguration,
+                [key]: value,
+            };
+        },
+
+        updateFinanceConfigurationLocalField: (state, action: any) => {
+            const { key, value } = action.payload || {};
+
+            state.configuration.financeConfiguration = {
+                ...state.configuration.financeConfiguration,
+                [key]: value,
+            };
+        },
+
+        updateSystemConfigurationNestedField: (state, action: any) => {
+            const { section, key, value } = action.payload || {};
+
+            state.configuration.systemConfiguration = {
+                ...state.configuration.systemConfiguration,
+                [section]: {
+                    ...state.configuration.systemConfiguration?.[section],
+                    [key]: value,
+                },
+            };
+        },
+
+        updateWhatsAppModuleLocalToggle: (state, action: any) => {
+            const { moduleKey, enabled } = action.payload || {};
+
+            const wa =
+                state.configuration.systemConfiguration?.whatsAppConfiguration ||
+                {};
+
+            const moduleConfiguration = {
+                ...(wa.moduleConfiguration || {}),
+                [moduleKey]: {
+                    enabled: !!enabled,
+                },
+            };
+
+            state.configuration.systemConfiguration.whatsAppConfiguration = {
+                ...wa,
+                moduleConfiguration,
+            };
+        },
+
+        setWhatsAppModuleEnabledLocal: (state, action: any) => {
+            const enabled = !!action.payload;
+
+            const wa =
+                state.configuration.systemConfiguration?.whatsAppConfiguration ||
+                {};
+
+            state.configuration.systemConfiguration.whatsAppConfiguration = {
+                ...wa,
+                enableWhatsAppModule: enabled,
+            };
+        },
+
+        enableWhatsAppWithDefaultModulesLocal: (state) => {
+            const wa =
+                state.configuration.systemConfiguration?.whatsAppConfiguration ||
+                {};
+
+            const oldMods = wa.moduleConfiguration || {};
+
+            const noneOn = WHATSAPP_MODULE_ORDER.every(
+                (key) => !toBool(oldMods?.[key]?.enabled)
+            );
+
+            const mergedMods: any = createModuleConfigurationTemplate(false);
+
+            for (const key of WHATSAPP_MODULE_ORDER) {
+                mergedMods[key] = {
+                    enabled: toBool(oldMods?.[key]?.enabled),
+                };
+            }
+
+            state.configuration.systemConfiguration.whatsAppConfiguration = {
+                ...wa,
+                provider:
+                    String(wa?.provider || "META")
+                        .trim()
+                        .toUpperCase() || "META",
+                defaultLanguage:
+                    String(wa?.defaultLanguage || "en_US").trim() || "en_US",
+                enableWhatsAppModule: true,
+                moduleConfiguration: noneOn
+                    ? createModuleConfigurationTemplate(true)
+                    : mergedMods,
+            };
+        },
+
+        clearWhatsAppVerification: (state) => {
+            state.whatsappVerified = false;
+            state.whatsappMetaCredentials = null;
+            state.whatsappVerifyLoading = false;
+        },
+    },
+
+    extraReducers: (builder) => {
+        builder
+            .addCase(getAllSystemConfigurations.pending, (state) => {
+                state.listLoading = true;
+                state.error = null;
+            })
+            .addCase(getAllSystemConfigurations.fulfilled, (state, action: any) => {
+                state.listLoading = false;
+
+                const data = action.payload;
+
+                state.configurations = extractConfigurationRecords(data);
+                state.pagination = extractPagination(data, state.pagination);
+            })
+            .addCase(getAllSystemConfigurations.rejected, (state, action: any) => {
+                state.listLoading = false;
+                state.error = action.payload?.message;
+                state.configurations = [];
+            });
+
+        builder
+            .addCase(getLatestSystemConfiguration.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(getLatestSystemConfiguration.fulfilled, (state, action: any) => {
+                state.loading = false;
+                state.configuration =
+                    action.payload || getEmptySystemConfiguration();
+            })
+            .addCase(getLatestSystemConfiguration.rejected, (state, action: any) => {
+                state.loading = false;
+                state.error = action.payload?.message;
+                state.configuration = getEmptySystemConfiguration();
+            });
+
+        builder
+            .addCase(getSystemConfigurationByCode.pending, (state) => {
+                state.detailLoading = true;
+                state.error = null;
+            })
+            .addCase(getSystemConfigurationByCode.fulfilled, (state, action: any) => {
+                state.detailLoading = false;
+                state.configuration =
+                    action.payload || getEmptySystemConfiguration();
+            })
+            .addCase(getSystemConfigurationByCode.rejected, (state, action: any) => {
+                state.detailLoading = false;
+                state.error = action.payload?.message;
+                state.configuration = getEmptySystemConfiguration();
+            });
+
+        builder
+            .addCase(saveSystemConfiguration.pending, (state) => {
+                state.saveLoading = true;
+                state.error = null;
+                state.successMessage = "";
+            })
+            .addCase(saveSystemConfiguration.fulfilled, (state, action: any) => {
+                state.saveLoading = false;
+                state.successMessage =
+                    action.payload?.message || "Configuration saved successfully";
+            })
+            .addCase(saveSystemConfiguration.rejected, (state, action: any) => {
+                state.saveLoading = false;
+                state.error = action.payload?.message;
+            });
+
+        builder
+            .addCase(updateSystemConfiguration.pending, (state) => {
+                state.updateLoading = true;
+                state.error = null;
+                state.successMessage = "";
+            })
+            .addCase(updateSystemConfiguration.fulfilled, (state, action: any) => {
+                state.updateLoading = false;
+                state.successMessage =
+                    action.payload?.message ||
+                    "Configuration updated successfully";
+            })
+            .addCase(updateSystemConfiguration.rejected, (state, action: any) => {
+                state.updateLoading = false;
+                state.error = action.payload?.message;
+            });
+
+        builder
+            .addCase(saveOrUpdateSystemConfiguration.pending, (state) => {
+                state.saveLoading = true;
+                state.error = null;
+                state.successMessage = "";
+            })
+            .addCase(saveOrUpdateSystemConfiguration.fulfilled, (state, action: any) => {
+                state.saveLoading = false;
+                state.configuration =
+                    action.payload?.configuration ||
+                    state.configuration ||
+                    getEmptySystemConfiguration();
+                state.successMessage =
+                    action.payload?.message ||
+                    "Configuration saved successfully";
+            })
+            .addCase(saveOrUpdateSystemConfiguration.rejected, (state, action: any) => {
+                state.saveLoading = false;
+                state.error = action.payload?.message;
+            });
+
+        builder
+            .addCase(verifyWhatsAppMetaCredentials.pending, (state) => {
+                state.whatsappVerifyLoading = true;
+                state.whatsappVerified = false;
+                state.whatsappMetaCredentials = null;
+                state.error = null;
+            })
+            .addCase(verifyWhatsAppMetaCredentials.fulfilled, (state, action: any) => {
+                state.whatsappVerifyLoading = false;
+                state.whatsappVerified = true;
+                state.whatsappMetaCredentials = action.payload?.data || null;
+            })
+            .addCase(verifyWhatsAppMetaCredentials.rejected, (state, action: any) => {
+                state.whatsappVerifyLoading = false;
+                state.whatsappVerified = false;
+                state.whatsappMetaCredentials = null;
+                state.error = action.payload?.message;
+            });
+    },
+});
+
+export const {
+    clearSystemConfigurationState,
+    clearSystemConfigurationError,
+    clearSystemConfigurationSuccess,
+    resetSystemConfiguration,
+    setSystemConfigurationLocal,
+    updateSystemConfigurationLocalField,
+    updateInventoryConfigurationLocalField,
+    updateFinanceConfigurationLocalField,
+    updateSystemConfigurationNestedField,
+    updateWhatsAppModuleLocalToggle,
+    setWhatsAppModuleEnabledLocal,
+    enableWhatsAppWithDefaultModulesLocal,
+    clearWhatsAppVerification,
+} = systemConfigurationSlice.actions;
+
+export default systemConfigurationSlice.reducer;
