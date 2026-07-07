@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { formatDateForList, money } from "../../../../utils/helperFunctions";
+import { formatDateForList, formatDateTime, money } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
@@ -204,8 +204,7 @@ const TripAllocationList = () => {
 	{
 		key: "allocationDate",
 		title: "Date",
-		render: (row: any) =>
-			row?.allocationDate ? formatDateForList(row.allocationDate) : "-",
+		 render: (row: any) => formatDateTime(row?.allocationDate),
 	},
 	{
 		key: "transportOrder.transportOrderNumber",
@@ -357,7 +356,7 @@ const TripAllocationList = () => {
 
 					<Permission
 						module="bookez"
-						permissionKey="allRegisters"
+						permissionKey="Pass"
 						action="create"
 					>
 						{/* @ts-ignore */}
@@ -381,7 +380,7 @@ const TripAllocationList = () => {
 						<div className="flex items-center gap-2">
 							<Permission
 								module="bookez"
-								permissionKey="allRegisters"
+								permissionKey="Pass"
 								action="update"
 							>
 								<button
@@ -395,7 +394,7 @@ const TripAllocationList = () => {
 
 							<Permission
 								module="bookez"
-								permissionKey="allRegisters"
+								permissionKey="Pass"
 								action="delete"
 							>
 								<button

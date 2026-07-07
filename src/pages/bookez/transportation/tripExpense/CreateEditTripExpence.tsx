@@ -1,0 +1,3500 @@
+
+// import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// import { useDispatch, useSelector } from "react-redux";
+// import { useLocation, useNavigate, useParams } from "react-router-dom";
+// import {
+//     ArrowLeft,
+//     CalendarDays,
+//     CheckCircle2,
+//     Coffee,
+//     CreditCard,
+//     Droplets,
+//     FileText,
+//     Loader2,
+//     Map,
+//     MoreHorizontal,
+//     Navigation,
+//     Paperclip,
+//     Plus,
+//     Route,
+//     Save,
+//     Trash2,
+//     Truck,
+//     Upload,
+//     User,
+//     Wrench,
+//     X,
+// } from "lucide-react";
+// import { toast } from "react-toastify";
+
+// import { SectionCard } from "../../../../components/SectionCards";
+// import { canChildEditTrip, computeTripExpenseSummary, createEmptyAdvanceEntry, createEmptyBreakdownEntry, createEmptyDieselEntry, createEmptyFoodEntry, createEmptyOtherEntry, createEmptyRunningEntry, createInitialTripExpense, getAllocationVoucher, isTripInProgress, isTripPendingAccept, mapTripAllocationToExpenseForm, mergeTripExpenseForm, toTripExpensePayload } from "./tripExpenseInitialState";
+// import { getTripExpensesByVoucherNumber, updateTripExpenses, uploadTripExpensePodFile } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
+// import {
+//     DRIVER_VEHICLE_STATUS_OPTIONS,
+//     VEHICLE_STATUS,
+//     getActiveTripAllocations,
+//     getVehicleMasterByVoucher,
+//     getVehicleVoucherFromTripExpense,
+//     isDriverSelectableStatus,
+//     readVehicleStatusFromRecord,
+//     syncAllocationStatusOnComplete,
+//     updateVehicleMasterStatus,
+// } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
+// import TripRoutePlannerCard from "./TripRoutePlannerCard";
+// import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
+
+
+
+
+// /* ===================================================
+//    CONSTANTS
+// =================================================== */
+
+// const DRIVER_EDITABLE_CATEGORY_KEYS = ["breakdownCost", "pod"];
+
+// const SECTION_KEYS = [
+//     "tripSetup",
+//     "tripSummary",
+//     "routePlanner",
+//     "vehicleStatus",
+//     "advanceReceived",
+//     "dieselCost",
+//     "foodCost",
+//     "runningCost",
+//     "breakdownCost",
+//     "otherCost",
+//     "pod",
+// ];
+
+// const createExpandedSectionsState = () =>
+//     Object.fromEntries(SECTION_KEYS.map((key) => [key, true]));
+
+// const CATEGORIES = [
+//     {
+//         key: "advanceReceived",
+//         title: "Advance Received",
+//         icon: <CreditCard size={18} />,
+//         factory: createEmptyAdvanceEntry,
+//     },
+//     {
+//         key: "dieselCost",
+//         title: "Diesel Cost",
+//         icon: <Droplets size={18} />,
+//         factory: createEmptyDieselEntry,
+//     },
+//     {
+//         key: "foodCost",
+//         title: "Food",
+//         icon: <Coffee size={18} />,
+//         factory: createEmptyFoodEntry,
+//     },
+//     {
+//         key: "runningCost",
+//         title: "Running Cost",
+//         icon: <Navigation size={18} />,
+//         factory: createEmptyRunningEntry,
+//     },
+//     {
+//         key: "breakdownCost",
+//         title: "Breakdown Cost",
+//         icon: <Wrench size={18} />,
+//         factory: createEmptyBreakdownEntry,
+//     },
+//     {
+//         key: "otherCost",
+//         title: "Other Cost",
+//         icon: <MoreHorizontal size={18} />,
+//         factory: createEmptyOtherEntry,
+//     },
+// ];
+
+// const deliveryStatusOptions = [
+//     { label: "Pending", value: "pending" },
+//     { label: "Delivered", value: "delivered" },
+//     { label: "Partial", value: "partial" },
+// ];
+
+// /* ===================================================
+//    HELPERS
+// =================================================== */
+
+// const unwrapThunk = async (dispatch: any, action: any) => {
+//     const res = await dispatch(action);
+
+//     if (res?.unwrap) return res.unwrap();
+//     if (res?.error) throw res.error;
+
+//     return res?.payload ?? res;
+// };
+
+// const formatIndianNumber = (value: any) =>
+//     Number(value || 0).toLocaleString("en-IN", {
+//         maximumFractionDigits: 2,
+//     });
+
+// const toDateInputValue = (value: any) => {
+//     if (!value) return "";
+
+//     const d = new Date(value);
+
+//     if (Number.isNaN(d.getTime())) return "";
+
+//     return d.toISOString().slice(0, 10);
+// };
+
+// const toDateTimeInputValue = (value: any) => {
+//     if (!value) return "";
+
+//     const d = new Date(value);
+
+//     if (Number.isNaN(d.getTime())) return "";
+
+//     const pad = (n: number) => String(n).padStart(2, "0");
+
+//     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+//         d.getDate()
+//     )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+// };
+
+// const dateTimeInputToIso = (value: string) =>
+//     value ? new Date(value).toISOString() : "";
+
+// const formatTripDate = (value: any) => {
+//     if (!value) return "-";
+
+//     const d = new Date(value);
+
+//     if (Number.isNaN(d.getTime())) return "-";
+
+//     return d.toLocaleDateString("en-IN", {
+//         day: "2-digit",
+//         month: "short",
+//         year: "numeric",
+//     });
+// };
+
+// const formatDateTime = (value: any) => {
+//     if (!value) return "-";
+
+//     const d = new Date(value);
+
+//     if (Number.isNaN(d.getTime())) return "-";
+
+//     return d.toLocaleString("en-IN", {
+//         day: "2-digit",
+//         month: "short",
+//         year: "numeric",
+//         hour: "2-digit",
+//         minute: "2-digit",
+//     });
+// };
+
+// const inputClass =
+//     "h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
+
+// const textareaClass =
+//     "min-h-[90px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
+
+// const Field = ({ label, mandatory = false, children, className = "" }: any) => (
+//     <label className={`flex min-w-0 flex-col gap-1 ${className}`}>
+//         <span className="text-sm font-medium text-card-foreground">
+//             {label}
+//             {mandatory && <span className="text-danger">*</span>}
+//         </span>
+
+//         {children}
+//     </label>
+// );
+
+// const SelectInput = ({ value, onChange, options, disabled = false }: any) => (
+//     <select
+//         value={value || ""}
+//         onChange={(e) => onChange(e.target.value)}
+//         disabled={disabled}
+//         className={inputClass}
+//     >
+//         <option value="">Select</option>
+
+//         {options.map((opt: any) => (
+//             <option key={opt.value} value={opt.value}>
+//                 {opt.label}
+//             </option>
+//         ))}
+//     </select>
+// );
+
+// const SummaryBox = ({ title, value, danger = false }: any) => {
+//     const amount = Number(value || 0);
+
+//     return (
+//         <div
+//             className={`flex min-w-0 items-center justify-between gap-3 rounded-md border bg-muted/30 p-3 ${danger ? "border-success/30" : "border-border"
+//                 }`}
+//         >
+//             <p className="truncate text-xs font-bold uppercase tracking-wide text-muted-foreground">
+//                 {title}
+//             </p>
+
+//             <p
+//                 className={`whitespace-nowrap text-xl font-black ${danger ? "text-success" : "text-card-foreground"
+//                     }`}
+//             >
+//                 ₹{formatIndianNumber(amount)}
+//             </p>
+//         </div>
+//     );
+// };
+// /* ===================================================
+//    CATEGORY DETAILS
+// =================================================== */
+
+// const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
+//     const entries = form.expenses?.[category.key]?.entries || [];
+
+//     const patchEntry = (index: number, patch: any) => {
+//         if (readOnly) return;
+
+//         setForm((prev: any) => {
+//             const nextEntries = [...(prev.expenses?.[category.key]?.entries || [])];
+
+//             nextEntries[index] = {
+//                 ...nextEntries[index],
+//                 ...patch,
+//             };
+
+//             return {
+//                 ...prev,
+//                 expenses: {
+//                     ...prev.expenses,
+//                     [category.key]: {
+//                         ...prev.expenses?.[category.key],
+//                         entries: nextEntries,
+//                     },
+//                 },
+//             };
+//         });
+//     };
+
+//     const addEntry = () => {
+//         if (readOnly) return;
+
+//         setForm((prev: any) => ({
+//             ...prev,
+//             expenses: {
+//                 ...prev.expenses,
+//                 [category.key]: {
+//                     ...prev.expenses?.[category.key],
+//                     entries: [
+//                         ...(prev.expenses?.[category.key]?.entries || []),
+//                         category.factory(),
+//                     ],
+//                 },
+//             },
+//         }));
+//     };
+
+//     const removeEntry = (index: number) => {
+//         if (readOnly) return;
+
+//         setForm((prev: any) => ({
+//             ...prev,
+//             expenses: {
+//                 ...prev.expenses,
+//                 [category.key]: {
+//                     ...prev.expenses?.[category.key],
+//                     entries: (prev.expenses?.[category.key]?.entries || []).filter(
+//                         (_: any, i: number) => i !== index
+//                     ),
+//                 },
+//             },
+//         }));
+//     };
+
+//     const renderShortFields = (entry: any, index: number) => {
+//         switch (category.key) {
+//             case "advanceReceived":
+//                 return (
+//                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+//                         <Field label="Source">
+//                             <input
+//                                 disabled={readOnly}
+//                                 className={inputClass}
+//                                 value={entry.sourceName || ""}
+//                                 onChange={(e) =>
+//                                     patchEntry(index, { sourceName: e.target.value })
+//                                 }
+//                             />
+//                         </Field>
+
+//                         <Field label="Amount">
+//                             <input
+//                                 disabled={readOnly}
+//                                 type="number"
+//                                 className={inputClass}
+//                                 value={entry.amount ?? ""}
+//                                 onChange={(e) => patchEntry(index, { amount: e.target.value })}
+//                             />
+//                         </Field>
+
+//                         <Field label="Payment Mode">
+//                             <input
+//                                 disabled={readOnly}
+//                                 className={inputClass}
+//                                 value={entry.paymentMode || ""}
+//                                 onChange={(e) =>
+//                                     patchEntry(index, { paymentMode: e.target.value })
+//                                 }
+//                             />
+//                         </Field>
+//                     </div>
+//                 );
+
+//             case "dieselCost":
+//                 return (
+//                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+//                         <Field label="Fuel Station">
+//                             <input
+//                                 disabled={readOnly}
+//                                 className={inputClass}
+//                                 value={entry.fuelStation || ""}
+//                                 onChange={(e) =>
+//                                     patchEntry(index, { fuelStation: e.target.value })
+//                                 }
+//                             />
+//                         </Field>
+
+//                         <Field label="Amount">
+//                             <input
+//                                 disabled={readOnly}
+//                                 type="number"
+//                                 className={inputClass}
+//                                 value={entry.amount ?? ""}
+//                                 onChange={(e) => patchEntry(index, { amount: e.target.value })}
+//                             />
+//                         </Field>
+
+//                         <Field label="Liters">
+//                             <input
+//                                 disabled={readOnly}
+//                                 type="number"
+//                                 className={inputClass}
+//                                 value={entry.liters ?? ""}
+//                                 onChange={(e) => patchEntry(index, { liters: e.target.value })}
+//                             />
+//                         </Field>
+
+//                         <Field label="Odometer">
+//                             <input
+//                                 disabled={readOnly}
+//                                 type="number"
+//                                 className={inputClass}
+//                                 value={entry.odometerReading ?? ""}
+//                                 onChange={(e) =>
+//                                     patchEntry(index, { odometerReading: e.target.value })
+//                                 }
+//                             />
+//                         </Field>
+//                     </div>
+//                 );
+
+//             case "foodCost":
+//             case "runningCost":
+//             case "breakdownCost":
+//             case "otherCost": {
+//                 const typeKey =
+//                     category.key === "foodCost"
+//                         ? "mealType"
+//                         : category.key === "breakdownCost"
+//                             ? "issueType"
+//                             : "expenseType";
+
+//                 const typeLabel =
+//                     category.key === "foodCost"
+//                         ? "Meal Type"
+//                         : category.key === "breakdownCost"
+//                             ? "Issue Type"
+//                             : "Expense Type";
+
+//                 return (
+//                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+//                         <Field label={typeLabel}>
+//                             <input
+//                                 disabled={readOnly}
+//                                 className={inputClass}
+//                                 value={entry[typeKey] || ""}
+//                                 onChange={(e) =>
+//                                     patchEntry(index, { [typeKey]: e.target.value })
+//                                 }
+//                             />
+//                         </Field>
+
+//                         <Field label="Amount">
+//                             <input
+//                                 disabled={readOnly}
+//                                 type="number"
+//                                 className={inputClass}
+//                                 value={entry.amount ?? ""}
+//                                 onChange={(e) => patchEntry(index, { amount: e.target.value })}
+//                             />
+//                         </Field>
+
+//                         <Field label="Location / Remarks">
+//                             <input
+//                                 disabled={readOnly}
+//                                 className={inputClass}
+//                                 value={entry.location || entry.remarks || ""}
+//                                 onChange={(e) =>
+//                                     patchEntry(
+//                                         index,
+//                                         category.key === "otherCost"
+//                                             ? { remarks: e.target.value }
+//                                             : { location: e.target.value }
+//                                     )
+//                                 }
+//                             />
+//                         </Field>
+//                     </div>
+//                 );
+//             }
+
+//             default:
+//                 return null;
+//         }
+//     };
+
+//     return (
+//         <div className="md:col-span-2 xl:col-span-3">
+//             <div className="flex flex-col gap-3">
+//                 {entries.map((entry: any, index: number) => (
+//                     <div
+//                         key={`${category.key}-${index}`}
+//                         className="rounded-md border border-border bg-muted/30 p-3"
+//                     >
+//                         <div className="mb-3 flex items-center justify-between gap-3">
+//                             <h3 className="text-sm font-bold text-card-foreground">
+//                                 Entry {index + 1}
+//                             </h3>
+
+//                             {!readOnly && entries.length > 1 && (
+//                                 <button
+//                                     type="button"
+//                                     onClick={() => removeEntry(index)}
+//                                     className="rounded-md p-2 text-danger transition hover:bg-danger/10"
+//                                 >
+//                                     <Trash2 size={16} />
+//                                 </button>
+//                             )}
+//                         </div>
+
+//                         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+//                             <Field label="Date">
+//                                 <input
+//                                     disabled={readOnly}
+//                                     type="datetime-local"
+//                                     className={inputClass}
+//                                     value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+//                                     onChange={(e) =>
+//                                         patchEntry(index, {
+//                                             date: dateTimeInputToIso(e.target.value),
+//                                         })
+//                                     }
+//                                 />
+//                             </Field>
+//                         </div>
+
+//                         {renderShortFields(entry, index)}
+//                     </div>
+//                 ))}
+
+//                 {!readOnly && (
+//                     <div className="flex justify-end">
+//                         <button
+//                             type="button"
+//                             onClick={addEntry}
+//                             className="inline-flex h-8 w-auto items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15"
+//                         >
+//                             <Plus size={14} />
+//                             Add Entry
+//                         </button>
+//                     </div>
+//                 )}
+//             </div>
+//         </div>
+//     );
+// };
+
+// /* ===================================================
+//    POD DETAILS
+// =================================================== */
+
+// const PodDetails = ({ form, setForm, readOnly }: any) => {
+//     const dispatch = useDispatch<any>();
+//     const [uploadingField, setUploadingField] = useState("");
+
+//     const patchPod = (patch: any) => {
+//         if (readOnly) return;
+
+//         setForm((prev: any) => ({
+//             ...prev,
+//             pod: {
+//                 ...prev.pod,
+//                 ...patch,
+//             },
+//         }));
+//     };
+
+//     const uploadFile = async (field: string, file: File) => {
+//         try {
+//             setUploadingField(field);
+
+//             const formData = new FormData();
+
+//             formData.append("file", file);
+//             formData.append("field", field);
+//             formData.append("tripId", form.tripId || "trip");
+
+//             const res = await unwrapThunk(
+//                 dispatch,
+//                 uploadTripExpensePodFile(formData)
+//             );
+
+//             const uploadedName =
+//                 res?.fileName || res?.filename || res?.data?.fileName || file.name;
+
+//             const patch: any = {
+//                 [field]: uploadedName,
+//             };
+
+//             if (String(form.pod?.deliveryStatus || "").toLowerCase() === "delivered") {
+//                 patch.submittedAt = new Date().toISOString();
+//             }
+
+//             patchPod(patch);
+
+//             toast.success("POD file uploaded");
+//         } catch (e: any) {
+//             toast.error(e?.message || "Upload failed");
+//         } finally {
+//             setUploadingField("");
+//         }
+//     };
+
+//     const MediaRow = ({ label, field, accept }: any) => (
+//         <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3 md:flex-row md:items-center md:justify-between">
+//             <div className="min-w-0">
+//                 <p className="text-sm font-bold text-card-foreground">{label}</p>
+
+//                 <p className="mt-1 truncate text-xs font-medium text-muted-foreground">
+//                     {form.pod?.[field] || "Not attached"}
+//                 </p>
+//             </div>
+
+//             {!readOnly && (
+//                 <div className="flex items-center gap-2">
+//                     {form.pod?.[field] && (
+//                         <button
+//                             type="button"
+//                             onClick={() => patchPod({ [field]: "" })}
+//                             className="rounded-md border border-border bg-card p-2 text-muted-foreground transition hover:bg-muted"
+//                         >
+//                             <X size={15} />
+//                         </button>
+//                     )}
+
+//                     <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15">
+//                         {uploadingField === field ? (
+//                             <Loader2 className="animate-spin" size={14} />
+//                         ) : (
+//                             <Upload size={14} />
+//                         )}
+//                         Attach
+//                         <input
+//                             hidden
+//                             type="file"
+//                             accept={accept}
+//                             disabled={!!uploadingField}
+//                             onChange={(e) =>
+//                                 e.target.files?.[0] && uploadFile(field, e.target.files[0])
+//                             }
+//                         />
+//                     </label>
+//                 </div>
+//             )}
+//         </div>
+//     );
+
+//     return (
+//         <div className="md:col-span-2 xl:col-span-3">
+//             <div className="flex flex-col gap-4">
+//                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+//                     <Field label="Delivery Status">
+//                         <SelectInput
+//                             disabled={readOnly}
+//                             value={form.pod?.deliveryStatus}
+//                             options={deliveryStatusOptions}
+//                             onChange={(value: string) =>
+//                                 patchPod({
+//                                     deliveryStatus: value,
+//                                     submittedAt:
+//                                         String(value).toLowerCase() === "delivered"
+//                                             ? form.pod?.submittedAt || new Date().toISOString()
+//                                             : form.pod?.submittedAt || "",
+//                                 })
+//                             }
+//                         />
+//                     </Field>
+
+//                     <Field label="Receiver Name">
+//                         <input
+//                             disabled={readOnly}
+//                             className={inputClass}
+//                             value={form.pod?.receiverName || ""}
+//                             onChange={(e) => patchPod({ receiverName: e.target.value })}
+//                         />
+//                     </Field>
+
+//                     <Field label="Receiver Mobile">
+//                         <input
+//                             disabled={readOnly}
+//                             className={inputClass}
+//                             value={form.pod?.receiverMobile || ""}
+//                             onChange={(e) => patchPod({ receiverMobile: e.target.value })}
+//                         />
+//                     </Field>
+//                 </div>
+
+//                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+//                     <MediaRow
+//                         label="POD Document"
+//                         field="podDocument"
+//                         accept="application/pdf,image/*"
+//                     />
+
+//                     <MediaRow
+//                         label="Delivery Photo"
+//                         field="deliveryPhoto"
+//                         accept="image/*"
+//                     />
+//                 </div>
+
+//                 <Field label="POD Remarks">
+//                     <textarea
+//                         disabled={readOnly}
+//                         className={textareaClass}
+//                         value={form.pod?.remarks || ""}
+//                         onChange={(e) => patchPod({ remarks: e.target.value })}
+//                     />
+//                 </Field>
+
+//                 {form.pod?.submittedAt && (
+//                     <p className="text-xs font-bold text-success">
+//                         Submitted: {formatDateTime(form.pod.submittedAt)}
+//                     </p>
+//                 )}
+//             </div>
+//         </div>
+//     );
+// };
+
+// /* ===================================================
+//    CREATE / EDIT TRIP EXPENSE
+// =================================================== */
+
+// const CreateEditTripExpence = () => {
+//     const dispatch = useDispatch<any>();
+//     const navigate = useNavigate();
+//     const location = useLocation();
+
+//     const routeState: any = location.state || {};
+
+//     const user =
+//         useSelector((s: any) => s?.auth?.user) ||
+//         JSON.parse(localStorage.getItem("user") || "{}");
+//     const params = useParams();
+//     const voucherNumber =
+//         routeState?.voucherNumber ||
+//         params?.voucherNumber ||
+//         "";
+
+//     const mode = routeState?.mode || (voucherNumber ? "edit" : "add");
+//     const isEdit = Boolean(voucherNumber) || mode === "edit";
+
+//     const isChildUser =
+//         !!user?.parentUserMobileNumber &&
+//         user?.parentUserMobileNumber !== user?.userMobileNumberHash;
+
+//     const [form, setForm] = useState<any>(createInitialTripExpense());
+//     const [loading, setLoading] = useState(false);
+//     const [expandedSections, setExpandedSections] = useState<any>(
+//         createExpandedSectionsState
+//     );
+
+
+//     const [allocations, setAllocations] = useState<any[]>([]);
+//     const [allocationsLoading, setAllocationsLoading] = useState(false);
+//     const [selectedAllocationVoucher, setSelectedAllocationVoucher] = useState("");
+
+//     const serverExpenseRef = useRef<any>(null);
+//     const [statusUpdating, setStatusUpdating] = useState(false);
+
+//     const visibleCategories = useMemo(() => {
+//         if (!isChildUser) return CATEGORIES;
+
+//         return CATEGORIES.filter((category) =>
+//             DRIVER_EDITABLE_CATEGORY_KEYS.includes(category.key)
+//         );
+//     }, [isChildUser]);
+
+//     const readOnly = isChildUser && !canChildEditTrip(form);
+
+//     const pageTitle =
+//         routeState?.title || (isEdit ? "Edit Trip Expense" : "Create Trip Expense");
+
+//     const pageDescription =
+//         routeState?.description ||
+//         (isEdit
+//             ? "Update trip expense details, POD, and route-wise trip records."
+//             : "Create trip expense, assign trips, record advance, diesel, food, running, breakdown, other costs, and POD.");
+
+//     const summary = useMemo(() => computeTripExpenseSummary(form), [form]);
+
+//     const startOdometer = useMemo(() => {
+//         if (form.startOdometer) return form.startOdometer;
+
+//         const dieselEntries = form.expenses?.dieselCost?.entries || [];
+//         const first = dieselEntries.find((e: any) => e?.odometerReading);
+
+//         return first?.odometerReading || "";
+//     }, [form.startOdometer, form.expenses?.dieselCost?.entries]);
+
+//     const endOdometer = form.endOdometer || "";
+
+//     const tripStatus = String(form.tripStatus || "").toLowerCase();
+
+//     const isPodPending =
+//         String(form.pod?.deliveryStatus || "pending").toLowerCase() === "pending";
+
+
+//     const tripStatusLower = String(form.tripStatus || "").toLowerCase();
+
+//     const isCompletedTrip = tripStatusLower === "completed";
+
+//     const showAcceptTripButton =
+//         isEdit &&
+//         isChildUser &&
+//         !isCompletedTrip &&
+//         !form.driverAccepted &&
+//         (
+//             isTripInProgress(form) ||
+//             form.notificationType === "trip_started_by_parent" ||
+//             form.enteredBy === "dispatcher"
+//         );
+
+//     const showCompleteTripButton =
+//         isEdit &&
+//         isChildUser &&
+//         isTripInProgress(form) &&
+//         Boolean(form.driverAccepted) &&
+//         !isPodPending;
+//     const vehicleVoucher = useMemo(
+//         () => getVehicleVoucherFromTripExpense(form),
+//         [form]
+//     );
+
+//     const showVehicleStatusDropdown = useMemo(
+//         () => isTripInProgress(form) && Boolean(vehicleVoucher),
+//         [form, vehicleVoucher]
+//     );
+
+//     /* ===================================================
+//        LOAD DATA
+//     =================================================== */
+
+//     const hydrateVehicleStatus = useCallback(async (expenseForm: any) => {
+//         const voucher = getVehicleVoucherFromTripExpense(expenseForm);
+
+//         if (!voucher) return expenseForm;
+
+//         try {
+//             const record = await getVehicleMasterByVoucher(voucher);
+//             const masterStatus = readVehicleStatusFromRecord(record);
+//             const dropdownValue = isDriverSelectableStatus(masterStatus)
+//                 ? masterStatus
+//                 : expenseForm.vehicleCurrentStatus || "";
+
+//             return {
+//                 ...expenseForm,
+//                 vehicleCurrentStatus: dropdownValue,
+//             };
+//         } catch {
+//             return expenseForm;
+//         }
+//     }, []);
+
+//     const loadExpense = useCallback(async () => {
+//         if (!isEdit) return;
+
+//         const passedData = routeState?.expenseData;
+
+//         if (passedData) {
+//             const merged = mergeTripExpenseForm(passedData);
+//             const hydrated = await hydrateVehicleStatus(merged);
+
+//             serverExpenseRef.current = hydrated;
+
+//             setForm(hydrated);
+
+//             return;
+//         }
+
+//         if (!voucherNumber) return;
+
+//         try {
+//             setLoading(true);
+
+//             const res = await unwrapThunk(
+//                 dispatch,
+//                 getTripExpensesByVoucherNumber(voucherNumber)
+//             );
+
+//             const merged = mergeTripExpenseForm(res?.data || res);
+//             const hydrated = await hydrateVehicleStatus(merged);
+
+//             serverExpenseRef.current = hydrated;
+
+//             setForm(hydrated);
+//         } catch (e: any) {
+//             toast.error(e?.message || "Failed to load trip expense");
+//             navigate(-1);
+//         } finally {
+//             setLoading(false);
+//         }
+//     }, [dispatch, hydrateVehicleStatus, isEdit, navigate, routeState?.expenseData, voucherNumber]);
+
+//     const loadAllocations = useCallback(async () => {
+//         if (isEdit) return;
+
+//         try {
+//             setAllocationsLoading(true);
+
+//             const res = await unwrapThunk(
+//                 dispatch,
+//                 getActiveTripAllocations({
+//                     limit: 100,
+//                     offset: 0,
+//                 })
+//             );
+
+//             const list =
+//                 res?.data?.records || res?.data?.data || res?.records || res?.data || [];
+
+//             const active = (Array.isArray(list) ? list : []).filter((item: any) => {
+//                 const status = String(item?.tripStatus || item?.status || "assigned").toLowerCase();
+
+//                 return status !== "cancelled";
+//             });
+
+//             setAllocations(active);
+//         } catch (e: any) {
+//             toast.error(e?.message || "Failed to load trip allocations");
+//         } finally {
+//             setAllocationsLoading(false);
+//         }
+//     }, [dispatch, isEdit]);
+
+//     useEffect(() => {
+//         loadExpense();
+//     }, [loadExpense]);
+
+//     useEffect(() => {
+//         loadAllocations();
+//     }, [loadAllocations]);
+
+//     useEffect(() => {
+//         if (!isEdit && isChildUser) {
+//             toast.error("Trips are assigned by parent. Please edit an assigned trip only.");
+//             navigate(-1);
+//         }
+//     }, [isEdit, isChildUser, navigate]);
+
+//     /*
+//        Child users should stay on this page in edit mode so they can accept
+//        the assigned trip from the footer. Do not auto-redirect pending trips.
+//     */
+
+//     /* ===================================================
+//        FORM HANDLERS
+//     =================================================== */
+
+//     const toggleSection = (sectionKey: string) => {
+//         setExpandedSections((prev: any) => ({
+//             ...prev,
+//             [sectionKey]: !prev[sectionKey],
+//         }));
+//     };
+
+//     const patchHeader = (patch: any) => {
+//         setForm((prev: any) => ({
+//             ...prev,
+//             ...patch,
+//         }));
+//     };
+
+//     const patchNested = (key: string, patch: any) => {
+//         setForm((prev: any) => ({
+//             ...prev,
+//             [key]: {
+//                 ...prev[key],
+//                 ...patch,
+//             },
+//         }));
+//     };
+
+//     const syncLrNumberForTrip = useCallback(
+//         async (tripNumber: string) => {
+//             const tripKey = String(tripNumber || "").trim();
+
+//             if (!tripKey) return;
+
+//             try {
+//                 const res = await unwrapThunk(
+//                     dispatch,
+//                     getAllLRCollection({
+//                         limit: 200,
+//                         offset: 0,
+//                     })
+//                 );
+
+//                 const list =
+//                     res?.data?.records ||
+//                     res?.data?.data ||
+//                     res?.records ||
+//                     res?.data ||
+//                     [];
+
+//                 const match = (Array.isArray(list) ? list : []).find((item: any) => {
+//                     const itemTrip = String(
+//                         item?.tripNumber || item?.transportOrderNumber || ""
+//                     ).trim();
+
+//                     return itemTrip && itemTrip === tripKey;
+//                 });
+
+//                 if (match) {
+//                     const lrNumber = match.lrNumber || "";
+//                     const lrDate = match.lrDate || match.createdAt || "";
+
+//                     setForm((prev: any) =>
+//                         prev.lrNumber === lrNumber && prev.lrDate === lrDate
+//                             ? prev
+//                             : {
+//                                 ...prev,
+//                                 lrNumber,
+//                                 lrDate,
+//                             }
+//                     );
+//                 }
+//             } catch (error) {
+//                 console.log("[TripExpense] LR lookup failed", error);
+//             }
+//         },
+//         [dispatch]
+//     );
+
+//     useEffect(() => {
+//         if (!form.tripId?.trim()) return;
+//         syncLrNumberForTrip(form.tripId);
+//     }, [form.tripId, syncLrNumberForTrip]);
+
+//     const handleAllocationSelect = (voucher: string) => {
+//         setSelectedAllocationVoucher(voucher);
+
+//         const allocation = allocations.find(
+//             (item) => getAllocationVoucher(item) === voucher
+//         );
+
+//         if (!allocation) return;
+
+//         setForm((prev: any) => ({
+//             ...mapTripAllocationToExpenseForm(allocation),
+//             expenses: prev.expenses,
+//             pod: prev.pod,
+//             summary: prev.summary,
+//         }));
+
+//         const tripId =
+//             allocation?.transportOrder?.transportOrderNumber ||
+//             getAllocationVoucher(allocation) ||
+//             "";
+
+//         if (tripId) {
+//             syncLrNumberForTrip(tripId);
+//         }
+//     };
+
+//     const buildChildSaveForm = useCallback(
+//         (currentForm: any) => {
+//             if (!isChildUser) return currentForm;
+
+//             const serverForm = serverExpenseRef.current;
+
+//             if (!serverForm) return currentForm;
+
+//             return {
+//                 ...currentForm,
+//                 expenses: {
+//                     ...(serverForm.expenses || {}),
+//                     breakdownCost:
+//                         currentForm.expenses?.breakdownCost ||
+//                         serverForm.expenses?.breakdownCost,
+//                 },
+//                 pod: currentForm.pod || serverForm.pod,
+//             };
+//         },
+//         [isChildUser]
+//     );
+
+//     /* ===================================================
+//        VALIDATION + SAVE
+//     =================================================== */
+
+//     const validateForm = () => {
+//         if (!String(form.tripId || "").trim()) {
+//             toast.error("Trip ID is required");
+//             return false;
+//         }
+
+//         if (!String(form.vehicle?.vehicleNumber || "").trim()) {
+//             toast.error("Vehicle number is required");
+//             return false;
+//         }
+
+//         if (!String(form.driver?.driverName || "").trim()) {
+//             toast.error("Driver name is required");
+//             return false;
+//         }
+
+//         return true;
+//     };
+
+//     const handleVehicleStatusChange = async (nextStatus: string) => {
+//         if (!nextStatus || !vehicleVoucher) return;
+
+//         try {
+//             setStatusUpdating(true);
+
+//             await updateVehicleMasterStatus({
+//                 vehicleVoucher,
+//                 nextStatus,
+//             });
+
+//             setForm((prev: any) => ({
+//                 ...prev,
+//                 vehicleCurrentStatus: nextStatus,
+//             }));
+
+//             toast.success("Vehicle status updated");
+//         } catch (e: any) {
+//             toast.error(e?.message || "Failed to update vehicle status");
+//         } finally {
+//             setStatusUpdating(false);
+//         }
+//     };
+
+//     const syncVehicleStatusOnSave = async () => {
+//         if (
+//             !vehicleVoucher ||
+//             !form.vehicleCurrentStatus ||
+//             !isDriverSelectableStatus(form.vehicleCurrentStatus)
+//         ) {
+//             return;
+//         }
+
+//         try {
+//             await updateVehicleMasterStatus({
+//                 vehicleVoucher,
+//                 nextStatus: form.vehicleCurrentStatus,
+//             });
+//         } catch (e: any) {
+//             toast.error(e?.message || "Trip saved but vehicle status sync failed");
+//         }
+//     };
+
+//     const persistExpense = async (
+//         overrides: any = {},
+//         successMessage = "Trip expense saved"
+//     ) => {
+//         if (!isEdit || !voucherNumber) {
+//             toast.error("Trip expense can only be updated from existing voucher");
+//             return;
+//         }
+
+//         if (!validateForm()) return;
+
+//         try {
+//             setLoading(true);
+
+//             const saveForm = buildChildSaveForm(form);
+
+//             const payload = toTripExpensePayload(saveForm, {
+//                 ...overrides,
+//                 tripStatus: overrides.tripStatus || form.tripStatus,
+//                 enteredBy:
+//                     isChildUser
+//                         ? "driver"
+//                         : overrides.enteredBy || form.enteredBy || "dispatcher",
+//                 enteredDate: form.enteredDate || new Date().toISOString(),
+//             });
+
+//             await unwrapThunk(
+//                 dispatch,
+//                 updateTripExpenses({
+//                     voucherNumber,
+//                     payload,
+//                 })
+//             );
+
+//             await syncVehicleStatusOnSave();
+
+//             toast.success(successMessage);
+//             navigate(-1);
+//         } catch (e: any) {
+//             toast.error(e?.message || "Trip expense save failed");
+//         } finally {
+//             setLoading(false);
+//         }
+//     };
+
+//     const handleAcceptTrip = () => {
+//         if (!isEdit || !voucherNumber) {
+//             toast.error("Trip expense voucher number not found");
+//             return;
+//         }
+
+//         if (!isChildUser) {
+//             toast.error("Only driver can accept trip");
+//             return;
+//         }
+
+//         const confirmed = window.confirm("Accept this trip request?");
+
+//         if (!confirmed) return;
+
+//         persistExpense(
+//             {
+//                 tripStatus: "in_progress",
+//                 driverAccepted: true,
+//                 acceptedAt: new Date().toISOString(),
+//                 enteredBy: "driver",
+//                 notificationType: "trip_accepted_by_driver",
+//                 sendNotificationTo: user?.parentUserMobileNumber || "",
+//                 notificationMessage: `Trip ${form.tripId || voucherNumber} accepted by driver.`,
+//                 notifyParent: true,
+//             },
+//             "Trip accepted successfully"
+//         );
+//     };
+
+    
+//     const handleCompleteTrip = () => {
+//         const confirmComplete = window.confirm(
+//             "Mark this trip as completed? Your parent will be notified."
+//         );
+
+//         if (!confirmComplete) return;
+//         if (!validateForm()) return;
+
+//         if (!voucherNumber) {
+//             toast.error("Trip expense voucher number not found");
+//             return;
+//         }
+
+//         (async () => {
+//             try {
+//                 setLoading(true);
+
+//                 if (vehicleVoucher) {
+//                     await updateVehicleMasterStatus({
+//                         vehicleVoucher,
+//                         nextStatus: VEHICLE_STATUS.AVAILABLE,
+//                     });
+//                 }
+
+//                 const payload = toTripExpensePayload(buildChildSaveForm(form), {
+//                     tripStatus: "completed",
+//                     vehicleCurrentStatus: VEHICLE_STATUS.AVAILABLE,
+//                     notificationType: "trip_completed",
+//                     sendNotificationTo: user?.parentUserMobileNumber || "",
+//                     notificationMessage: `Trip ${form.tripId || ""} marked completed by driver.`,
+//                     notifyParent: true,
+//                     enteredBy: "driver",
+//                     enteredDate: form.enteredDate || new Date().toISOString(),
+//                 });
+
+//                 await unwrapThunk(
+//                     dispatch,
+//                     updateTripExpenses({
+//                         voucherNumber,
+//                         payload,
+//                     })
+//                 );
+
+//                 if (form.allocationVoucherNumber) {
+//                     try {
+//                         await unwrapThunk(
+//                             dispatch,
+//                             syncAllocationStatusOnComplete(form.allocationVoucherNumber)
+//                         );
+//                     } catch (allocationError) {
+//                         console.log("[TripExpense] allocation complete sync failed", allocationError);
+//                     }
+//                 }
+
+//                 toast.success("Trip completed successfully");
+//                 navigate(-1);
+//             } catch (e: any) {
+//                 toast.error(e?.message || "Failed to complete trip");
+//             } finally {
+//                 setLoading(false);
+//             }
+//         })();
+//     };
+
+//     const handleSave = () => {
+//         if (isChildUser && isTripPendingAccept(form)) {
+//             toast.error("Please accept the trip from the list first");
+//             return;
+//         }
+
+//         return persistExpense(
+//             {
+//                 enteredDate: form.enteredDate || new Date().toISOString(),
+//             },
+//             isEdit ? "Trip expense updated" : "Trip expense saved"
+//         );
+//     };
+
+//     /* ===================================================
+//        RENDER
+//     =================================================== */
+//     const showVehicleStatusSection =
+//         showVehicleStatusDropdown || isTripInProgress(form);
+//     return (
+//         <div className="flex h-full w-full flex-col bg-background text-foreground">
+//             <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
+//                 <div className="min-w-0">
+//                     <h1 className="flex items-center gap-2 text-lg font-bold text-card-foreground">
+//                         <button
+//                             type="button"
+//                             onClick={() => navigate(-1)}
+//                             className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+//                         >
+//                             <ArrowLeft size={20} />
+//                         </button>
+
+//                         <span className="truncate">{pageTitle}</span>
+//                     </h1>
+
+//                     <p className="ml-8 mt-1 truncate text-sm text-muted-foreground">
+//                         {pageDescription}
+//                     </p>
+//                 </div>
+//             </header>
+
+//             {(loading || statusUpdating) && (
+//                 <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 backdrop-blur-sm">
+//                     <div className="rounded-md bg-card p-5 shadow-xl">
+//                         <Loader2 className="animate-spin text-primary" size={34} />
+//                     </div>
+//                 </div>
+//             )}
+
+//             <main className="flex-1 overflow-auto pb-28 sm:p-2">
+//                 <div className="flex flex-col gap-4">
+//                     <SectionCard
+//                         index={1}
+//                         title="Trip Setup"
+//                         icon={<CalendarDays size={18} />}
+//                         expanded={expandedSections.tripSetup}
+//                         onToggle={() => toggleSection("tripSetup")}
+//                     >
+//                         <div className="md:col-span-2 xl:col-span-3">
+//                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+//                                 {!isEdit && !isChildUser && (
+//                                     <Field
+//                                         label="Select Trip Allocation"
+//                                         className="md:col-span-2 xl:col-span-4"
+//                                     >
+//                                         <select
+//                                             disabled={allocationsLoading}
+//                                             className={inputClass}
+//                                             value={selectedAllocationVoucher}
+//                                             onChange={(e) => handleAllocationSelect(e.target.value)}
+//                                         >
+//                                             <option value="">Select Allocation</option>
+
+//                                             {allocations.map((allocation: any) => {
+//                                                 const voucher = getAllocationVoucher(allocation);
+
+//                                                 return (
+//                                                     <option key={voucher} value={voucher}>
+//                                                         {voucher} -{" "}
+//                                                         {allocation?.vehicleSelection?.vehicleNumber || ""}
+//                                                     </option>
+//                                                 );
+//                                             })}
+//                                         </select>
+//                                     </Field>
+//                                 )}
+
+//                                 <Field label="Trip No." mandatory>
+//                                     <input
+//                                         disabled={readOnly}
+//                                         className={inputClass}
+//                                         value={form.tripId || ""}
+//                                         onChange={(e) => patchHeader({ tripId: e.target.value })}
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="Trip Date">
+//                                     <input
+//                                         disabled={readOnly}
+//                                         type="date"
+//                                         className={inputClass}
+//                                         value={toDateInputValue(form.tripDate)}
+//                                         onChange={(e) =>
+//                                             patchHeader({
+//                                                 tripDate: e.target.value
+//                                                     ? new Date(e.target.value).toISOString()
+//                                                     : "",
+//                                             })
+//                                         }
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="LR Number">
+//                                     <input
+//                                         disabled={readOnly}
+//                                         className={inputClass}
+//                                         value={form.lrNumber || ""}
+//                                         onChange={(e) => patchHeader({ lrNumber: e.target.value })}
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="LR Date">
+//                                     <input
+//                                         disabled={readOnly}
+//                                         type="date"
+//                                         className={inputClass}
+//                                         value={toDateInputValue(form.lrDate)}
+//                                         onChange={(e) => patchHeader({ lrDate: e.target.value })}
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="Vehicle No." mandatory>
+//                                     <input
+//                                         disabled={readOnly}
+//                                         className={inputClass}
+//                                         value={form.vehicle?.vehicleNumber || ""}
+//                                         onChange={(e) =>
+//                                             patchNested("vehicle", {
+//                                                 vehicleNumber: e.target.value,
+//                                             })
+//                                         }
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="Vehicle ID">
+//                                     <input
+//                                         disabled={readOnly}
+//                                         className={inputClass}
+//                                         value={form.vehicle?.vehicleId || ""}
+//                                         onChange={(e) =>
+//                                             patchNested("vehicle", {
+//                                                 vehicleId: e.target.value,
+//                                             })
+//                                         }
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="Driver Name" mandatory>
+//                                     <input
+//                                         disabled={readOnly}
+//                                         className={inputClass}
+//                                         value={form.driver?.driverName || ""}
+//                                         onChange={(e) =>
+//                                             patchNested("driver", {
+//                                                 driverName: e.target.value,
+//                                             })
+//                                         }
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="Driver Mobile / ID">
+//                                     <input
+//                                         disabled={readOnly}
+//                                         className={inputClass}
+//                                         value={form.driver?.driverId || ""}
+//                                         onChange={(e) => {
+//                                             patchNested("driver", {
+//                                                 driverId: e.target.value,
+//                                             });
+
+//                                             patchHeader({
+//                                                 assignedDriverMobile: e.target.value,
+//                                                 tripAssignedToMobile: e.target.value,
+//                                             });
+//                                         }}
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="Start Odometer">
+//                                     <input
+//                                         disabled={readOnly}
+//                                         type="number"
+//                                         className={inputClass}
+//                                         value={form.startOdometer || ""}
+//                                         onChange={(e) =>
+//                                             patchHeader({
+//                                                 startOdometer: e.target.value,
+//                                             })
+//                                         }
+//                                         placeholder={String(startOdometer)}
+//                                     />
+//                                 </Field>
+
+//                                 <Field label="End Odometer">
+//                                     <input
+//                                         disabled={readOnly}
+//                                         type="number"
+//                                         className={inputClass}
+//                                         value={form.endOdometer || ""}
+//                                         onChange={(e) =>
+//                                             patchHeader({
+//                                                 endOdometer: e.target.value,
+//                                             })
+//                                         }
+//                                         placeholder={String(endOdometer)}
+//                                     />
+//                                 </Field>
+//                             </div>
+//                         </div>
+//                     </SectionCard>
+
+
+
+//                     <div
+//                         className={`grid grid-cols-1 gap-4 ${showVehicleStatusSection ? "xl:grid-cols-[0.75fr_1.25fr]" : ""
+//                             }`}
+//                     >
+//                         {showVehicleStatusSection && (
+//                             <div className="min-w-0">
+//                                 <SectionCard
+//                                     index={2}
+//                                     title="Vehicle Status"
+//                                     icon={<Truck size={18} />}
+//                                     expanded={expandedSections.vehicleStatus ?? true}
+//                                     onToggle={() => toggleSection("vehicleStatus")}
+//                                 >
+//                                     <div className="md:col-span-2 xl:col-span-3">
+//                                         {showVehicleStatusDropdown ? (
+//                                             <div className="grid grid-cols-1 gap-2">
+//                                                 <Field label="Current Vehicle Status">
+//                                                     <SelectInput
+//                                                         disabled={
+//                                                             statusUpdating ||
+//                                                             isTripPendingAccept(form) ||
+//                                                             String(form.tripStatus || "").toLowerCase() ===
+//                                                             "completed"
+//                                                         }
+//                                                         value={form.vehicleCurrentStatus}
+//                                                         options={DRIVER_VEHICLE_STATUS_OPTIONS}
+//                                                         onChange={handleVehicleStatusChange}
+//                                                     />
+//                                                 </Field>
+
+//                                                 {!form.vehicleCurrentStatus && (
+//                                                     <div className="rounded-md  text-xs font-medium text-muted-foreground">
+//                                                         Vehicle is on the way to load. Select Loading,
+//                                                         In-Transit, or Unloading when applicable.
+//                                                     </div>
+//                                                 )}
+//                                             </div>
+//                                         ) : (
+//                                             <div className="rounded-md   p-3 text-sm font-medium text-amber-700">
+//                                                 Vehicle master link missing — status cannot be updated.
+//                                             </div>
+//                                         )}
+//                                     </div>
+//                                 </SectionCard>
+//                             </div>
+//                         )}
+
+//                         <div className="min-w-0">
+//                             <SectionCard
+//                                 index={showVehicleStatusSection ? 3 : 2}
+//                                 title="Route Planner"
+//                                 icon={<Route size={18} />}
+//                                 expanded={expandedSections.routePlanner}
+//                                 onToggle={() => toggleSection("routePlanner")}
+//                             >
+//                                 <div className="md:col-span-2 xl:col-span-3">
+//                                     <TripRoutePlannerCard routesData={form.routesData} />
+//                                 </div>
+//                             </SectionCard>
+//                         </div>
+//                     </div>
+
+//                     {visibleCategories.map((category: any, index: number) => (
+//                         <SectionCard
+//                             key={category.key}
+//                             index={index + 4}
+//                             title={category.title}
+//                             icon={category.icon}
+//                             expanded={expandedSections[category.key]}
+//                             onToggle={() => toggleSection(category.key)}
+//                         >
+//                             <CategoryDetails
+//                                 category={category}
+//                                 form={form}
+//                                 setForm={setForm}
+//                                 readOnly={readOnly}
+//                             />
+//                         </SectionCard>
+//                     ))}
+
+
+//                     <SectionCard
+//                         index={visibleCategories.length + 4}
+//                         title="POD Details"
+//                         icon={<Paperclip size={18} />}
+//                         expanded={expandedSections.pod}
+//                         onToggle={() => toggleSection("pod")}
+//                     >
+//                         <PodDetails form={form} setForm={setForm} readOnly={readOnly} />
+//                     </SectionCard>
+
+
+
+//                     <SectionCard
+//                         index={11}
+//                         title="Trip Summary"
+//                         icon={<Truck size={18} />}
+//                         expanded={expandedSections.tripSummary}
+//                         onToggle={() => toggleSection("tripSummary")}
+//                     >
+//                         <div className="md:col-span-2 xl:col-span-3">
+//                             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+//                                 <SummaryBox
+//                                     title="Advance Received"
+//                                     value={summary.totalAdvanceReceived}
+//                                 />
+
+//                                 <SummaryBox
+//                                     title="Trip Expense"
+//                                     value={summary.totalTripExpense}
+//                                 />
+
+//                                 <SummaryBox
+//                                     title="Balance"
+//                                     value={summary.balanceAmount}
+//                                     danger={summary.balanceAmount < 0}
+//                                 />
+//                             </div>
+
+//                             <div className="mt-4 rounded-md border border-border bg-muted/30 p-3">
+//                                 <div className="flex flex-wrap items-center justify-between gap-3">
+//                                     <div>
+//                                         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+//                                             Trip Summary
+//                                         </p>
+
+//                                         <h3 className="mt-1 text-lg font-bold text-card-foreground">
+//                                             {form.tripId || "Trip not setup"}
+//                                         </h3>
+
+//                                         <p className="mt-1 text-sm font-medium text-muted-foreground">
+//                                             Vehicle: {form.vehicle?.vehicleNumber || "-"} • Driver:{" "}
+//                                             {form.driver?.driverName || "-"} • Date:{" "}
+//                                             {formatTripDate(form.tripDate)}
+//                                         </p>
+//                                     </div>
+
+//                                     <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+//                                         <User size={16} />
+//                                         {form.enteredBy || "driver"}
+//                                     </div>
+//                                 </div>
+//                             </div>
+//                         </div>
+//                     </SectionCard>
+//                 </div>
+
+
+//             </main>
+
+//             <footer className="sticky bottom-0 z-20 flex flex-col gap-3 border-t border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
+//                 <button
+//                     type="button"
+//                     onClick={() => navigate(-1)}
+//                     disabled={loading}
+//                     className="inline-flex h-10 items-center justify-center rounded-md border border-primary bg-background px-5 text-sm font-bold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+//                 >
+//                     Cancel
+//                 </button>
+
+//                 {showAcceptTripButton && (
+//                     <button
+//                         type="button"
+//                         onClick={handleAcceptTrip}
+//                         disabled={loading}
+//                         className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-success bg-background px-5 text-sm font-semibold text-success transition hover:bg-success/10 disabled:opacity-60"
+//                     >
+//                         <CheckCircle2 size={17} />
+//                         Accept Trip
+//                     </button>
+//                 )}
+
+//                 {showCompleteTripButton && (
+//                     <button
+//                         type="button"
+//                         onClick={handleCompleteTrip}
+//                         disabled={loading}
+//                         className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-primary bg-background px-5 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+//                     >
+//                         <CheckCircle2 size={17} />
+//                         Complete Trip
+//                     </button>
+//                 )}
+
+//                 <button
+//                     type="button"
+//                     onClick={handleSave}
+//                     disabled={loading || readOnly || statusUpdating}
+//                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+//                 >
+//                     {loading ? <Loader2 className="animate-spin" size={17} /> : <Save size={17} />}
+//                     {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+//                 </button>
+//             </footer>
+//         </div>
+//     );
+// };
+
+// export default CreateEditTripExpence;
+
+
+
+
+
+
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+    ArrowLeft,
+    CalendarDays,
+    CheckCircle2,
+    Coffee,
+    CreditCard,
+    Droplets,
+    FileText,
+    Loader2,
+    Map,
+    MoreHorizontal,
+    Navigation,
+    Paperclip,
+    Plus,
+    Route,
+    Save,
+    Trash2,
+    Truck,
+    Upload,
+    User,
+    Wrench,
+    X,
+} from "lucide-react";
+import { toast } from "react-toastify";
+
+import { SectionCard } from "../../../../components/SectionCards";
+import { canChildEditTrip, computeTripExpenseSummary, createEmptyAdvanceEntry, createEmptyBreakdownEntry, createEmptyDieselEntry, createEmptyFoodEntry, createEmptyOtherEntry, createEmptyRunningEntry, createInitialTripExpense, getAllocationVoucher, isTripInProgress, isTripPendingAccept, mapTripAllocationToExpenseForm, mergeTripExpenseForm, toTripExpensePayload } from "./tripExpenseInitialState";
+import { getTripExpensesByVoucherNumber, updateTripExpenses, uploadTripExpensePodFile } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
+import {
+    DRIVER_VEHICLE_STATUS_OPTIONS,
+    VEHICLE_STATUS,
+    getActiveTripAllocations,
+    getVehicleMasterByVoucher,
+    getVehicleVoucherFromTripExpense,
+    isDriverSelectableStatus,
+    readVehicleStatusFromRecord,
+    syncAllocationStatusOnComplete,
+    updateVehicleMasterStatus,
+} from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
+import TripRoutePlannerCard from "./TripRoutePlannerCard";
+import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
+
+
+
+
+/* ===================================================
+   CONSTANTS
+=================================================== */
+
+const DRIVER_EDITABLE_CATEGORY_KEYS = ["breakdownCost", "pod"];
+
+const SECTION_KEYS = [
+    "tripSetup",
+    "tripSummary",
+    "routePlanner",
+    "vehicleStatus",
+    "advanceReceived",
+    "dieselCost",
+    "foodCost",
+    "runningCost",
+    "breakdownCost",
+    "otherCost",
+    "pod",
+];
+
+const createExpandedSectionsState = () =>
+    Object.fromEntries(SECTION_KEYS.map((key) => [key, true]));
+
+const CATEGORIES = [
+    {
+        key: "advanceReceived",
+        title: "Advance Received",
+        icon: <CreditCard size={18} />,
+        factory: createEmptyAdvanceEntry,
+    },
+    {
+        key: "dieselCost",
+        title: "Diesel Cost",
+        icon: <Droplets size={18} />,
+        factory: createEmptyDieselEntry,
+    },
+    {
+        key: "foodCost",
+        title: "Food",
+        icon: <Coffee size={18} />,
+        factory: createEmptyFoodEntry,
+    },
+    {
+        key: "runningCost",
+        title: "Running Cost",
+        icon: <Navigation size={18} />,
+        factory: createEmptyRunningEntry,
+    },
+    {
+        key: "breakdownCost",
+        title: "Breakdown Cost",
+        icon: <Wrench size={18} />,
+        factory: createEmptyBreakdownEntry,
+    },
+    {
+        key: "otherCost",
+        title: "Other Cost",
+        icon: <MoreHorizontal size={18} />,
+        factory: createEmptyOtherEntry,
+    },
+];
+
+const deliveryStatusOptions = [
+    { label: "Pending", value: "pending" },
+    { label: "Delivered", value: "delivered" },
+    { label: "Partial", value: "partial" },
+];
+
+/* ===================================================
+   HELPERS
+=================================================== */
+
+const unwrapThunk = async (dispatch: any, action: any) => {
+    const res = await dispatch(action);
+
+    if (res?.unwrap) return res.unwrap();
+    if (res?.error) throw res.error;
+
+    return res?.payload ?? res;
+};
+
+const formatIndianNumber = (value: any) =>
+    Number(value || 0).toLocaleString("en-IN", {
+        maximumFractionDigits: 2,
+    });
+
+const toDateInputValue = (value: any) => {
+    if (!value) return "";
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) return "";
+
+    return d.toISOString().slice(0, 10);
+};
+
+const toDateTimeInputValue = (value: any) => {
+    if (!value) return "";
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) return "";
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+        d.getDate()
+    )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const dateTimeInputToIso = (value: string) =>
+    value ? new Date(value).toISOString() : "";
+
+const formatTripDate = (value: any) => {
+    if (!value) return "-";
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) return "-";
+
+    return d.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const formatDateTime = (value: any) => {
+    if (!value) return "-";
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) return "-";
+
+    return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+const inputClass =
+    "h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
+
+const textareaClass =
+    "min-h-[90px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
+
+const Field = ({ label, mandatory = false, children, className = "" }: any) => (
+    <label className={`flex min-w-0 flex-col gap-1 ${className}`}>
+        <span className="text-sm font-medium text-card-foreground">
+            {label}
+            {mandatory && <span className="text-danger">*</span>}
+        </span>
+
+        {children}
+    </label>
+);
+
+const SelectInput = ({ value, onChange, options, disabled = false }: any) => (
+    <select
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className={inputClass}
+    >
+        <option value="">Select</option>
+
+        {options.map((opt: any) => (
+            <option key={opt.value} value={opt.value}>
+                {opt.label}
+            </option>
+        ))}
+    </select>
+);
+
+const SummaryBox = ({ title, value, danger = false }: any) => {
+    const amount = Number(value || 0);
+
+    return (
+        <div
+            className={`flex min-w-0 items-center justify-between gap-3 rounded-md border bg-muted/30 p-3 ${danger ? "border-success/30" : "border-border"
+                }`}
+        >
+            <p className="truncate text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {title}
+            </p>
+
+            <p
+                className={`whitespace-nowrap text-xl font-black ${danger ? "text-success" : "text-card-foreground"
+                    }`}
+            >
+                ₹{formatIndianNumber(amount)}
+            </p>
+        </div>
+    );
+};
+/* ===================================================
+   CATEGORY DETAILS
+=================================================== */
+
+const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
+    const entries = form.expenses?.[category.key]?.entries || [];
+
+    const patchEntry = (index: number, patch: any) => {
+        if (readOnly) return;
+
+        setForm((prev: any) => {
+            const nextEntries = [...(prev.expenses?.[category.key]?.entries || [])];
+
+            nextEntries[index] = {
+                ...nextEntries[index],
+                ...patch,
+            };
+
+            return {
+                ...prev,
+                expenses: {
+                    ...prev.expenses,
+                    [category.key]: {
+                        ...prev.expenses?.[category.key],
+                        entries: nextEntries,
+                    },
+                },
+            };
+        });
+    };
+
+    const addEntry = () => {
+        if (readOnly) return;
+
+        setForm((prev: any) => ({
+            ...prev,
+            expenses: {
+                ...prev.expenses,
+                [category.key]: {
+                    ...prev.expenses?.[category.key],
+                    entries: [
+                        ...(prev.expenses?.[category.key]?.entries || []),
+                        category.factory(),
+                    ],
+                },
+            },
+        }));
+    };
+
+    const removeEntry = (index: number) => {
+        if (readOnly) return;
+
+        setForm((prev: any) => ({
+            ...prev,
+            expenses: {
+                ...prev.expenses,
+                [category.key]: {
+                    ...prev.expenses?.[category.key],
+                    entries: (prev.expenses?.[category.key]?.entries || []).filter(
+                        (_: any, i: number) => i !== index
+                    ),
+                },
+            },
+        }));
+    };
+
+    const renderShortFields = (entry: any, index: number) => {
+        switch (category.key) {
+            case "advanceReceived":
+                return (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <Field label="Source">
+                            <input
+                                disabled={readOnly}
+                                className={inputClass}
+                                value={entry.sourceName || ""}
+                                onChange={(e) =>
+                                    patchEntry(index, { sourceName: e.target.value })
+                                }
+                            />
+                        </Field>
+
+                        <Field label="Amount">
+                            <input
+                                disabled={readOnly}
+                                type="number"
+                                className={inputClass}
+                                value={entry.amount ?? ""}
+                                onChange={(e) => patchEntry(index, { amount: e.target.value })}
+                            />
+                        </Field>
+
+                        <Field label="Payment Mode">
+                            <input
+                                disabled={readOnly}
+                                className={inputClass}
+                                value={entry.paymentMode || ""}
+                                onChange={(e) =>
+                                    patchEntry(index, { paymentMode: e.target.value })
+                                }
+                            />
+                        </Field>
+                    </div>
+                );
+
+            case "dieselCost":
+                return (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <Field label="Fuel Station">
+                            <input
+                                disabled={readOnly}
+                                className={inputClass}
+                                value={entry.fuelStation || ""}
+                                onChange={(e) =>
+                                    patchEntry(index, { fuelStation: e.target.value })
+                                }
+                            />
+                        </Field>
+
+                        <Field label="Amount">
+                            <input
+                                disabled={readOnly}
+                                type="number"
+                                className={inputClass}
+                                value={entry.amount ?? ""}
+                                onChange={(e) => patchEntry(index, { amount: e.target.value })}
+                            />
+                        </Field>
+
+                        <Field label="Liters">
+                            <input
+                                disabled={readOnly}
+                                type="number"
+                                className={inputClass}
+                                value={entry.liters ?? ""}
+                                onChange={(e) => patchEntry(index, { liters: e.target.value })}
+                            />
+                        </Field>
+
+                        <Field label="Odometer">
+                            <input
+                                disabled={readOnly}
+                                type="number"
+                                className={inputClass}
+                                value={entry.odometerReading ?? ""}
+                                onChange={(e) =>
+                                    patchEntry(index, { odometerReading: e.target.value })
+                                }
+                            />
+                        </Field>
+                    </div>
+                );
+
+            case "foodCost":
+            case "runningCost":
+            case "breakdownCost":
+            case "otherCost": {
+                const typeKey =
+                    category.key === "foodCost"
+                        ? "mealType"
+                        : category.key === "breakdownCost"
+                            ? "issueType"
+                            : "expenseType";
+
+                const typeLabel =
+                    category.key === "foodCost"
+                        ? "Meal Type"
+                        : category.key === "breakdownCost"
+                            ? "Issue Type"
+                            : "Expense Type";
+
+                return (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <Field label={typeLabel}>
+                            <input
+                                disabled={readOnly}
+                                className={inputClass}
+                                value={entry[typeKey] || ""}
+                                onChange={(e) =>
+                                    patchEntry(index, { [typeKey]: e.target.value })
+                                }
+                            />
+                        </Field>
+
+                        <Field label="Amount">
+                            <input
+                                disabled={readOnly}
+                                type="number"
+                                className={inputClass}
+                                value={entry.amount ?? ""}
+                                onChange={(e) => patchEntry(index, { amount: e.target.value })}
+                            />
+                        </Field>
+
+                        <Field label="Location / Remarks">
+                            <input
+                                disabled={readOnly}
+                                className={inputClass}
+                                value={entry.location || entry.remarks || ""}
+                                onChange={(e) =>
+                                    patchEntry(
+                                        index,
+                                        category.key === "otherCost"
+                                            ? { remarks: e.target.value }
+                                            : { location: e.target.value }
+                                    )
+                                }
+                            />
+                        </Field>
+                    </div>
+                );
+            }
+
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="md:col-span-2 xl:col-span-3">
+            <div className="flex flex-col gap-3">
+                {entries.map((entry: any, index: number) => (
+                    <div
+                        key={`${category.key}-${index}`}
+                        className="rounded-md border border-border bg-muted/30 p-3"
+                    >
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <h3 className="text-sm font-bold text-card-foreground">
+                                Entry {index + 1}
+                            </h3>
+
+                            {!readOnly && entries.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => removeEntry(index)}
+                                    className="rounded-md p-2 text-danger transition hover:bg-danger/10"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <Field label="Date">
+                                <input
+                                    disabled={readOnly}
+                                    type="datetime-local"
+                                    className={inputClass}
+                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+                                    onChange={(e) =>
+                                        patchEntry(index, {
+                                            date: dateTimeInputToIso(e.target.value),
+                                        })
+                                    }
+                                />
+                            </Field>
+                        </div>
+
+                        {renderShortFields(entry, index)}
+                    </div>
+                ))}
+
+                {!readOnly && (
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={addEntry}
+                            className="inline-flex h-8 w-auto items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15"
+                        >
+                            <Plus size={14} />
+                            Add Entry
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+/* ===================================================
+   POD DETAILS
+=================================================== */
+
+const PodDetails = ({ form, setForm, readOnly }: any) => {
+    const dispatch = useDispatch<any>();
+    const [uploadingField, setUploadingField] = useState("");
+
+    const patchPod = (patch: any) => {
+        if (readOnly) return;
+
+        setForm((prev: any) => ({
+            ...prev,
+            pod: {
+                ...prev.pod,
+                ...patch,
+            },
+        }));
+    };
+
+    const uploadFile = async (field: string, file: File) => {
+        try {
+            setUploadingField(field);
+
+            const formData = new FormData();
+
+            formData.append("file", file);
+            formData.append("field", field);
+            formData.append("tripId", form.tripId || "trip");
+
+            const res = await unwrapThunk(
+                dispatch,
+                uploadTripExpensePodFile(formData)
+            );
+
+            const uploadedName =
+                res?.fileName || res?.filename || res?.data?.fileName || file.name;
+
+            const patch: any = {
+                [field]: uploadedName,
+            };
+
+            if (String(form.pod?.deliveryStatus || "").toLowerCase() === "delivered") {
+                patch.submittedAt = new Date().toISOString();
+            }
+
+            patchPod(patch);
+
+            toast.success("POD file uploaded");
+        } catch (e: any) {
+            toast.error(e?.message || "Upload failed");
+        } finally {
+            setUploadingField("");
+        }
+    };
+
+    const MediaRow = ({ label, field, accept }: any) => (
+        <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+                <p className="text-sm font-bold text-card-foreground">{label}</p>
+
+                <p className="mt-1 truncate text-xs font-medium text-muted-foreground">
+                    {form.pod?.[field] || "Not attached"}
+                </p>
+            </div>
+
+            {!readOnly && (
+                <div className="flex items-center gap-2">
+                    {form.pod?.[field] && (
+                        <button
+                            type="button"
+                            onClick={() => patchPod({ [field]: "" })}
+                            className="rounded-md border border-border bg-card p-2 text-muted-foreground transition hover:bg-muted"
+                        >
+                            <X size={15} />
+                        </button>
+                    )}
+
+                    <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15">
+                        {uploadingField === field ? (
+                            <Loader2 className="animate-spin" size={14} />
+                        ) : (
+                            <Upload size={14} />
+                        )}
+                        Attach
+                        <input
+                            hidden
+                            type="file"
+                            accept={accept}
+                            disabled={!!uploadingField}
+                            onChange={(e) =>
+                                e.target.files?.[0] && uploadFile(field, e.target.files[0])
+                            }
+                        />
+                    </label>
+                </div>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="md:col-span-2 xl:col-span-3">
+            <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <Field label="Delivery Status">
+                        <SelectInput
+                            disabled={readOnly}
+                            value={form.pod?.deliveryStatus}
+                            options={deliveryStatusOptions}
+                            onChange={(value: string) =>
+                                patchPod({
+                                    deliveryStatus: value,
+                                    submittedAt:
+                                        String(value).toLowerCase() === "delivered"
+                                            ? form.pod?.submittedAt || new Date().toISOString()
+                                            : form.pod?.submittedAt || "",
+                                })
+                            }
+                        />
+                    </Field>
+
+                    <Field label="Receiver Name">
+                        <input
+                            disabled={readOnly}
+                            className={inputClass}
+                            value={form.pod?.receiverName || ""}
+                            onChange={(e) => patchPod({ receiverName: e.target.value })}
+                        />
+                    </Field>
+
+                    <Field label="Receiver Mobile">
+                        <input
+                            disabled={readOnly}
+                            className={inputClass}
+                            value={form.pod?.receiverMobile || ""}
+                            onChange={(e) => patchPod({ receiverMobile: e.target.value })}
+                        />
+                    </Field>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <MediaRow
+                        label="POD Document"
+                        field="podDocument"
+                        accept="application/pdf,image/*"
+                    />
+
+                    <MediaRow
+                        label="Delivery Photo"
+                        field="deliveryPhoto"
+                        accept="image/*"
+                    />
+                </div>
+
+                <Field label="POD Remarks">
+                    <textarea
+                        disabled={readOnly}
+                        className={textareaClass}
+                        value={form.pod?.remarks || ""}
+                        onChange={(e) => patchPod({ remarks: e.target.value })}
+                    />
+                </Field>
+
+                {form.pod?.submittedAt && (
+                    <p className="text-xs font-bold text-success">
+                        Submitted: {formatDateTime(form.pod.submittedAt)}
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+};
+
+/* ===================================================
+   CREATE / EDIT TRIP EXPENSE
+=================================================== */
+
+const CreateEditTripExpence = () => {
+    const dispatch = useDispatch<any>();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const routeState: any = location.state || {};
+
+    const user =
+        useSelector((s: any) => s?.auth?.user) ||
+        JSON.parse(localStorage.getItem("user") || "{}");
+    const params = useParams();
+    const voucherNumber =
+        routeState?.voucherNumber ||
+        params?.voucherNumber ||
+        "";
+
+    const mode = routeState?.mode || (voucherNumber ? "edit" : "add");
+    const isEdit = Boolean(voucherNumber) || mode === "edit";
+
+    const parentMobileValue =
+        user?.parentUserMobileNumber ||
+        user?.parentMobileNumber ||
+        user?.parentMobile ||
+        user?.parentMobileNo ||
+        user?.parentUserMobileNumberHash ||
+        "";
+
+    const currentUserMobileValue =
+        user?.userMobileNumberHash ||
+        user?.mobileNumberHash ||
+        user?.userMobileNumber ||
+        user?.mobile ||
+        user?.mobileNo ||
+        user?.registeredMobileNumber ||
+        "";
+
+    const roleValue = String(
+        user?.role || user?.userRole || user?.accountType || user?.userType || ""
+    ).toLowerCase();
+
+    const isChildUser =
+        (Boolean(parentMobileValue) &&
+            (!currentUserMobileValue ||
+                String(parentMobileValue) !== String(currentUserMobileValue))) ||
+        roleValue.includes("child") ||
+        roleValue.includes("driver");
+
+    const [form, setForm] = useState<any>(createInitialTripExpense());
+    const [loading, setLoading] = useState(false);
+    const [expandedSections, setExpandedSections] = useState<any>(
+        createExpandedSectionsState
+    );
+
+
+    const [allocations, setAllocations] = useState<any[]>([]);
+    const [allocationsLoading, setAllocationsLoading] = useState(false);
+    const [selectedAllocationVoucher, setSelectedAllocationVoucher] = useState("");
+
+    const serverExpenseRef = useRef<any>(null);
+    const parentStartedPromptRef = useRef(new Set<string>());
+    const [statusUpdating, setStatusUpdating] = useState(false);
+
+    const visibleCategories = useMemo(() => {
+        if (!isChildUser) return CATEGORIES;
+
+        return CATEGORIES.filter((category) =>
+            DRIVER_EDITABLE_CATEGORY_KEYS.includes(category.key)
+        );
+    }, [isChildUser]);
+
+    const readOnly = isChildUser && !canChildEditTrip(form);
+
+    
+
+    const pageTitle =
+        routeState?.title || (isEdit ? "Edit Trip Expense" : "Create Trip Expense");
+
+    const pageDescription =
+        routeState?.description ||
+        (isEdit
+            ? "Update trip expense details, POD, and route-wise trip records."
+            : "Create trip expense, start trips, record advance, diesel, food, running, breakdown, other costs, and POD.");
+
+    const summary = useMemo(() => computeTripExpenseSummary(form), [form]);
+
+    const startOdometer = useMemo(() => {
+        if (form.startOdometer) return form.startOdometer;
+
+        const dieselEntries = form.expenses?.dieselCost?.entries || [];
+        const first = dieselEntries.find((e: any) => e?.odometerReading);
+
+        return first?.odometerReading || "";
+    }, [form.startOdometer, form.expenses?.dieselCost?.entries]);
+
+    const endOdometer = form.endOdometer || "";
+
+    const isPodPending =
+        String(form.pod?.deliveryStatus || "pending").toLowerCase() === "pending";
+
+   
+    const vehicleVoucher = useMemo(
+        () => getVehicleVoucherFromTripExpense(form),
+        [form]
+    );
+
+    const showVehicleStatusDropdown = useMemo(
+        () => isTripInProgress(form) && Boolean(vehicleVoucher),
+        [form, vehicleVoucher]
+    );
+
+    const toBool = (value: any) => {
+	if (typeof value === "boolean") return value;
+
+	if (typeof value === "string") {
+		return value.toLowerCase() === "true";
+	}
+
+	return Boolean(value);
+};
+
+    const tripStatusLower = String(form.tripStatus || "").toLowerCase();
+
+const isCompletedTrip = tripStatusLower === "completed";
+
+const driverAccepted = toBool(form.driverAccepted);
+
+const showAcceptTripButton =
+	isEdit &&
+	isChildUser &&
+	!isCompletedTrip &&
+	!driverAccepted;
+
+const showCompleteTripButton =
+	isEdit &&
+	isChildUser &&
+	isTripInProgress(form) &&
+	driverAccepted &&
+	!isPodPending;
+
+    /* ===================================================
+       LOAD DATA
+    =================================================== */
+
+    const hydrateVehicleStatus = useCallback(async (expenseForm: any) => {
+        const voucher = getVehicleVoucherFromTripExpense(expenseForm);
+
+        if (!voucher) return expenseForm;
+
+        try {
+            const record = await getVehicleMasterByVoucher(voucher);
+            const masterStatus = readVehicleStatusFromRecord(record);
+            const dropdownValue = isDriverSelectableStatus(masterStatus)
+                ? masterStatus
+                : expenseForm.vehicleCurrentStatus || "";
+
+            return {
+                ...expenseForm,
+                vehicleCurrentStatus: dropdownValue,
+            };
+        } catch {
+            return expenseForm;
+        }
+    }, []);
+
+    const loadExpense = useCallback(async () => {
+        if (!isEdit) return;
+
+        const passedData = routeState?.expenseData;
+
+        if (passedData) {
+            const merged = mergeTripExpenseForm(passedData);
+            const hydrated = await hydrateVehicleStatus(merged);
+
+            serverExpenseRef.current = hydrated;
+
+            setForm(hydrated);
+
+            return;
+        }
+
+        if (!voucherNumber) return;
+
+        try {
+            setLoading(true);
+
+            const res = await unwrapThunk(
+                dispatch,
+                getTripExpensesByVoucherNumber(voucherNumber)
+            );
+
+            const merged = mergeTripExpenseForm(res?.data || res);
+            const hydrated = await hydrateVehicleStatus(merged);
+
+            serverExpenseRef.current = hydrated;
+
+            setForm(hydrated);
+        } catch (e: any) {
+            toast.error(e?.message || "Failed to load trip expense");
+            navigate(-1);
+        } finally {
+            setLoading(false);
+        }
+    }, [dispatch, hydrateVehicleStatus, isEdit, navigate, routeState?.expenseData, voucherNumber]);
+
+    const loadAllocations = useCallback(async () => {
+        if (isEdit) return;
+
+        try {
+            setAllocationsLoading(true);
+
+            const res = await unwrapThunk(
+                dispatch,
+                getActiveTripAllocations({
+                    limit: 100,
+                    offset: 0,
+                })
+            );
+
+            const list =
+                res?.data?.records || res?.data?.data || res?.records || res?.data || [];
+
+            const active = (Array.isArray(list) ? list : []).filter((item: any) => {
+                const status = String(item?.tripStatus || item?.status || "assigned").toLowerCase();
+
+                return status !== "cancelled";
+            });
+
+            setAllocations(active);
+        } catch (e: any) {
+            toast.error(e?.message || "Failed to load trip allocations");
+        } finally {
+            setAllocationsLoading(false);
+        }
+    }, [dispatch, isEdit]);
+
+    useEffect(() => {
+        loadExpense();
+    }, [loadExpense]);
+
+    useEffect(() => {
+        loadAllocations();
+    }, [loadAllocations]);
+
+    useEffect(() => {
+        if (!isEdit && isChildUser) {
+            toast.error("Trips are assigned by parent. Please edit an assigned trip only.");
+            navigate(-1);
+        }
+    }, [isEdit, isChildUser, navigate]);
+
+    const showParentStartedPopup = useCallback(
+        (expenseForm: any) => {
+            if (!isChildUser || !isEdit || !voucherNumber) return;
+
+            const promptKey = `${voucherNumber || expenseForm.tripId}::${expenseForm.enteredDate || ""}`;
+
+            if (parentStartedPromptRef.current.has(promptKey)) return;
+            parentStartedPromptRef.current.add(promptKey);
+
+            const tripLabel = expenseForm.tripId || voucherNumber || "this trip";
+            const message =
+                expenseForm.notificationMessage ||
+                `Your parent has started trip ${tripLabel}. You can now enter expenses.`;
+
+            const confirmed = window.confirm(message);
+
+            if (!confirmed) return;
+
+            (async () => {
+                try {
+                    setLoading(true);
+
+                    const payload = toTripExpensePayload(expenseForm, {
+                        tripStatus: "in_progress",
+                        driverAccepted: true,
+                        acceptedAt: new Date().toISOString(),
+                        enteredBy: "driver",
+                    });
+
+                    await unwrapThunk(
+                        dispatch,
+                        updateTripExpenses({
+                            voucherNumber,
+                            payload,
+                        })
+                    );
+
+                    setForm(mergeTripExpenseForm(payload));
+                    toast.success("Trip started. You can enter expenses now.");
+                } catch (e: any) {
+                    toast.error(e?.message || "Failed to acknowledge trip start");
+                } finally {
+                    setLoading(false);
+                }
+            })();
+        },
+        [dispatch, isChildUser, isEdit, voucherNumber]
+    );
+
+    useEffect(() => {
+        if (!isEdit || !isChildUser) return;
+
+        if (
+            isTripInProgress(form) &&
+            !form.driverAccepted &&
+            (form.notificationType === "trip_started_by_parent" ||
+                form.enteredBy === "dispatcher")
+        ) {
+            showParentStartedPopup(form);
+        }
+    }, [form, isChildUser, isEdit, showParentStartedPopup]);
+
+    /* ===================================================
+       FORM HANDLERS
+    =================================================== */
+
+    const toggleSection = (sectionKey: string) => {
+        setExpandedSections((prev: any) => ({
+            ...prev,
+            [sectionKey]: !prev[sectionKey],
+        }));
+    };
+
+    const patchHeader = (patch: any) => {
+        setForm((prev: any) => ({
+            ...prev,
+            ...patch,
+        }));
+    };
+
+    const patchNested = (key: string, patch: any) => {
+        setForm((prev: any) => ({
+            ...prev,
+            [key]: {
+                ...prev[key],
+                ...patch,
+            },
+        }));
+    };
+
+    const syncLrNumberForTrip = useCallback(
+        async (tripNumber: string) => {
+            const tripKey = String(tripNumber || "").trim();
+
+            if (!tripKey) return;
+
+            try {
+                const res = await unwrapThunk(
+                    dispatch,
+                    getAllLRCollection({
+                        limit: 200,
+                        offset: 0,
+                    })
+                );
+
+                const list =
+                    res?.data?.records ||
+                    res?.data?.data ||
+                    res?.records ||
+                    res?.data ||
+                    [];
+
+                const match = (Array.isArray(list) ? list : []).find((item: any) => {
+                    const itemTrip = String(
+                        item?.tripNumber || item?.transportOrderNumber || ""
+                    ).trim();
+
+                    return itemTrip && itemTrip === tripKey;
+                });
+
+                if (match) {
+                    const lrNumber = match.lrNumber || "";
+                    const lrDate = match.lrDate || match.createdAt || "";
+
+                    setForm((prev: any) =>
+                        prev.lrNumber === lrNumber && prev.lrDate === lrDate
+                            ? prev
+                            : {
+                                ...prev,
+                                lrNumber,
+                                lrDate,
+                            }
+                    );
+                }
+            } catch (error) {
+                console.log("[TripExpense] LR lookup failed", error);
+            }
+        },
+        [dispatch]
+    );
+
+    useEffect(() => {
+        if (!form.tripId?.trim()) return;
+        syncLrNumberForTrip(form.tripId);
+    }, [form.tripId, syncLrNumberForTrip]);
+
+    const handleAllocationSelect = (voucher: string) => {
+        setSelectedAllocationVoucher(voucher);
+
+        const allocation = allocations.find(
+            (item) => getAllocationVoucher(item) === voucher
+        );
+
+        if (!allocation) return;
+
+        setForm((prev: any) => ({
+            ...mapTripAllocationToExpenseForm(allocation),
+            expenses: prev.expenses,
+            pod: prev.pod,
+            summary: prev.summary,
+        }));
+
+        const tripId =
+            allocation?.transportOrder?.transportOrderNumber ||
+            getAllocationVoucher(allocation) ||
+            "";
+
+        if (tripId) {
+            syncLrNumberForTrip(tripId);
+        }
+    };
+
+    const buildChildSaveForm = useCallback(
+        (currentForm: any) => {
+            if (!isChildUser) return currentForm;
+
+            const serverForm = serverExpenseRef.current;
+
+            if (!serverForm) return currentForm;
+
+            return {
+                ...currentForm,
+                expenses: {
+                    ...(serverForm.expenses || {}),
+                    breakdownCost:
+                        currentForm.expenses?.breakdownCost ||
+                        serverForm.expenses?.breakdownCost,
+                },
+                pod: currentForm.pod || serverForm.pod,
+            };
+        },
+        [isChildUser]
+    );
+
+    /* ===================================================
+       VALIDATION + SAVE
+    =================================================== */
+
+    const validateForm = () => {
+        if (!String(form.tripId || "").trim()) {
+            toast.error("Trip ID is required");
+            return false;
+        }
+
+        if (!String(form.vehicle?.vehicleNumber || "").trim()) {
+            toast.error("Vehicle number is required");
+            return false;
+        }
+
+        if (!String(form.driver?.driverName || "").trim()) {
+            toast.error("Driver name is required");
+            return false;
+        }
+
+        return true;
+    };
+
+    const handleVehicleStatusChange = async (nextStatus: string) => {
+        if (!nextStatus || !vehicleVoucher) return;
+
+        try {
+            setStatusUpdating(true);
+
+            await updateVehicleMasterStatus({
+                vehicleVoucher,
+                nextStatus,
+            });
+
+            setForm((prev: any) => ({
+                ...prev,
+                vehicleCurrentStatus: nextStatus,
+            }));
+
+            toast.success("Vehicle status updated");
+        } catch (e: any) {
+            toast.error(e?.message || "Failed to update vehicle status");
+        } finally {
+            setStatusUpdating(false);
+        }
+    };
+
+    const syncVehicleStatusOnSave = async () => {
+        if (
+            !vehicleVoucher ||
+            !form.vehicleCurrentStatus ||
+            !isDriverSelectableStatus(form.vehicleCurrentStatus)
+        ) {
+            return;
+        }
+
+        try {
+            await updateVehicleMasterStatus({
+                vehicleVoucher,
+                nextStatus: form.vehicleCurrentStatus,
+            });
+        } catch (e: any) {
+            toast.error(e?.message || "Trip saved but vehicle status sync failed");
+        }
+    };
+
+    const persistExpense = async (
+        overrides: any = {},
+        successMessage = "Trip expense saved"
+    ) => {
+        if (!isEdit || !voucherNumber) {
+            toast.error("Trip expense can only be updated from existing voucher");
+            return;
+        }
+
+        if (!validateForm()) return;
+
+        try {
+            setLoading(true);
+
+            const saveForm = buildChildSaveForm(form);
+
+            const payload = toTripExpensePayload(saveForm, {
+                ...overrides,
+                tripStatus: overrides.tripStatus || form.tripStatus,
+                enteredBy:
+                    isChildUser
+                        ? "driver"
+                        : overrides.enteredBy || form.enteredBy || "dispatcher",
+                enteredDate: form.enteredDate || new Date().toISOString(),
+            });
+
+            await unwrapThunk(
+                dispatch,
+                updateTripExpenses({
+                    voucherNumber,
+                    payload,
+                })
+            );
+
+            await syncVehicleStatusOnSave();
+
+            toast.success(successMessage);
+            navigate(-1);
+        } catch (e: any) {
+            toast.error(e?.message || "Trip expense save failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+ 
+   const handleAcceptTrip = () => {
+	if (!isEdit || !voucherNumber) {
+		toast.error("Trip expense voucher number not found");
+		return;
+	}
+
+	if (!isChildUser) {
+		toast.error("Only driver can accept trip");
+		return;
+	}
+
+	const confirmed = window.confirm("Accept this trip request?");
+
+	if (!confirmed) return;
+
+	(async () => {
+		try {
+			setLoading(true);
+
+			const payload = toTripExpensePayload(form, {
+				tripStatus: "in_progress",
+				driverAccepted: true,
+				acceptedAt: new Date().toISOString(),
+				enteredBy: "driver",
+				notificationType: "trip_accepted_by_driver",
+				sendNotificationTo: user?.parentUserMobileNumber || "",
+				notificationMessage: `Trip ${form.tripId || voucherNumber} accepted by driver.`,
+				notifyParent: true,
+			});
+
+			await unwrapThunk(
+				dispatch,
+				updateTripExpenses({
+					voucherNumber,
+					payload,
+				})
+			);
+
+			if (vehicleVoucher) {
+				try {
+					await updateVehicleMasterStatus({
+						vehicleVoucher,
+						nextStatus: VEHICLE_STATUS.ON_WAY_TO_LOAD,
+					});
+				} catch (statusError: any) {
+					toast.error(
+						statusError?.message ||
+							"Trip accepted but vehicle status update failed"
+					);
+				}
+			}
+
+			const nextForm = mergeTripExpenseForm(payload);
+
+			serverExpenseRef.current = nextForm;
+			setForm(nextForm);
+
+			toast.success("Trip accepted successfully");
+		} catch (e: any) {
+			toast.error(e?.message || "Failed to accept trip");
+		} finally {
+			setLoading(false);
+		}
+	})();
+};
+    const handleCompleteTrip = () => {
+        const confirmComplete = window.confirm(
+            "Mark this trip as completed? Your parent will be notified."
+        );
+
+        if (!confirmComplete) return;
+        if (!validateForm()) return;
+
+        if (!voucherNumber) {
+            toast.error("Trip expense voucher number not found");
+            return;
+        }
+
+        (async () => {
+            try {
+                setLoading(true);
+
+                if (vehicleVoucher) {
+                    await updateVehicleMasterStatus({
+                        vehicleVoucher,
+                        nextStatus: VEHICLE_STATUS.AVAILABLE,
+                    });
+                }
+
+                const payload = toTripExpensePayload(buildChildSaveForm(form), {
+                    tripStatus: "completed",
+                    vehicleCurrentStatus: VEHICLE_STATUS.AVAILABLE,
+                    notificationType: "trip_completed",
+                    sendNotificationTo: user?.parentUserMobileNumber || "",
+                    notificationMessage: `Trip ${form.tripId || ""} marked completed by driver.`,
+                    notifyParent: true,
+                    enteredBy: "driver",
+                    enteredDate: form.enteredDate || new Date().toISOString(),
+                });
+
+                await unwrapThunk(
+                    dispatch,
+                    updateTripExpenses({
+                        voucherNumber,
+                        payload,
+                    })
+                );
+
+                if (form.allocationVoucherNumber) {
+                    try {
+                        await unwrapThunk(
+                            dispatch,
+                            syncAllocationStatusOnComplete(form.allocationVoucherNumber)
+                        );
+                    } catch (allocationError) {
+                        console.log("[TripExpense] allocation complete sync failed", allocationError);
+                    }
+                }
+
+                toast.success("Trip completed successfully");
+                navigate(-1);
+            } catch (e: any) {
+                toast.error(e?.message || "Failed to complete trip");
+            } finally {
+                setLoading(false);
+            }
+        })();
+    };
+
+    const handleSave = () => {
+        if (isChildUser && isTripPendingAccept(form)) {
+            toast.error("Please accept the trip from the list first");
+            return;
+        }
+
+        return persistExpense(
+            {
+                enteredDate: form.enteredDate || new Date().toISOString(),
+            },
+            isEdit ? "Trip expense updated" : "Trip expense saved"
+        );
+    };
+
+    /* ===================================================
+       RENDER
+    =================================================== */
+    const showVehicleStatusSection =
+        showVehicleStatusDropdown || isTripInProgress(form);
+    return (
+        <div className="flex h-full w-full flex-col bg-background text-foreground">
+            <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
+                <div className="min-w-0">
+                    <h1 className="flex items-center gap-2 text-lg font-bold text-card-foreground">
+                        <button
+                            type="button"
+                            onClick={() => navigate(-1)}
+                            className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+
+                        <span className="truncate">{pageTitle}</span>
+                    </h1>
+
+                    <p className="ml-8 mt-1 truncate text-sm text-muted-foreground">
+                        {pageDescription}
+                    </p>
+                </div>
+            </header>
+
+            {(loading || statusUpdating) && (
+                <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 backdrop-blur-sm">
+                    <div className="rounded-md bg-card p-5 shadow-xl">
+                        <Loader2 className="animate-spin text-primary" size={34} />
+                    </div>
+                </div>
+            )}
+
+            <main className="flex-1 overflow-auto pb-28 sm:p-2">
+                <div className="flex flex-col gap-4">
+                    <SectionCard
+                        index={1}
+                        title="Trip Setup"
+                        icon={<CalendarDays size={18} />}
+                        expanded={expandedSections.tripSetup}
+                        onToggle={() => toggleSection("tripSetup")}
+                    >
+                        <div className="md:col-span-2 xl:col-span-3">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                {!isEdit && !isChildUser && (
+                                    <Field
+                                        label="Select Trip Allocation"
+                                        className="md:col-span-2 xl:col-span-4"
+                                    >
+                                        <select
+                                            disabled={allocationsLoading}
+                                            className={inputClass}
+                                            value={selectedAllocationVoucher}
+                                            onChange={(e) => handleAllocationSelect(e.target.value)}
+                                        >
+                                            <option value="">Select Allocation</option>
+
+                                            {allocations.map((allocation: any) => {
+                                                const voucher = getAllocationVoucher(allocation);
+
+                                                return (
+                                                    <option key={voucher} value={voucher}>
+                                                        {voucher} -{" "}
+                                                        {allocation?.vehicleSelection?.vehicleNumber || ""}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    </Field>
+                                )}
+
+                                <Field label="Trip No." mandatory>
+                                    <input
+                                        disabled={readOnly}
+                                        className={inputClass}
+                                        value={form.tripId || ""}
+                                        onChange={(e) => patchHeader({ tripId: e.target.value })}
+                                    />
+                                </Field>
+
+                                <Field label="Trip Date">
+                                    <input
+                                        disabled={readOnly}
+                                        type="date"
+                                        className={inputClass}
+                                        value={toDateInputValue(form.tripDate)}
+                                        onChange={(e) =>
+                                            patchHeader({
+                                                tripDate: e.target.value
+                                                    ? new Date(e.target.value).toISOString()
+                                                    : "",
+                                            })
+                                        }
+                                    />
+                                </Field>
+
+                                <Field label="LR Number">
+                                    <input
+                                        disabled={readOnly}
+                                        className={inputClass}
+                                        value={form.lrNumber || ""}
+                                        onChange={(e) => patchHeader({ lrNumber: e.target.value })}
+                                    />
+                                </Field>
+
+                                <Field label="LR Date">
+                                    <input
+                                        disabled={readOnly}
+                                        type="date"
+                                        className={inputClass}
+                                        value={toDateInputValue(form.lrDate)}
+                                        onChange={(e) => patchHeader({ lrDate: e.target.value })}
+                                    />
+                                </Field>
+
+                                <Field label="Vehicle No." mandatory>
+                                    <input
+                                        disabled={readOnly}
+                                        className={inputClass}
+                                        value={form.vehicle?.vehicleNumber || ""}
+                                        onChange={(e) =>
+                                            patchNested("vehicle", {
+                                                vehicleNumber: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </Field>
+
+                                <Field label="Vehicle ID">
+                                    <input
+                                        disabled={readOnly}
+                                        className={inputClass}
+                                        value={form.vehicle?.vehicleId || ""}
+                                        onChange={(e) =>
+                                            patchNested("vehicle", {
+                                                vehicleId: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </Field>
+
+                                <Field label="Driver Name" mandatory>
+                                    <input
+                                        disabled={readOnly}
+                                        className={inputClass}
+                                        value={form.driver?.driverName || ""}
+                                        onChange={(e) =>
+                                            patchNested("driver", {
+                                                driverName: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </Field>
+
+                                <Field label="Driver Mobile / ID">
+                                    <input
+                                        disabled={readOnly}
+                                        className={inputClass}
+                                        value={form.driver?.driverId || ""}
+                                        onChange={(e) => {
+                                            patchNested("driver", {
+                                                driverId: e.target.value,
+                                            });
+
+                                            patchHeader({
+                                                assignedDriverMobile: e.target.value,
+                                                tripAssignedToMobile: e.target.value,
+                                            });
+                                        }}
+                                    />
+                                </Field>
+
+                                <Field label="Start Odometer">
+                                    <input
+                                        disabled={readOnly}
+                                        type="number"
+                                        className={inputClass}
+                                        value={form.startOdometer || ""}
+                                        onChange={(e) =>
+                                            patchHeader({
+                                                startOdometer: e.target.value,
+                                            })
+                                        }
+                                        placeholder={String(startOdometer)}
+                                    />
+                                </Field>
+
+                                <Field label="End Odometer">
+                                    <input
+                                        disabled={readOnly}
+                                        type="number"
+                                        className={inputClass}
+                                        value={form.endOdometer || ""}
+                                        onChange={(e) =>
+                                            patchHeader({
+                                                endOdometer: e.target.value,
+                                            })
+                                        }
+                                        placeholder={String(endOdometer)}
+                                    />
+                                </Field>
+                            </div>
+                        </div>
+                    </SectionCard>
+
+
+
+                    <div
+                        className={`grid grid-cols-1 gap-4 ${showVehicleStatusSection ? "xl:grid-cols-[0.75fr_1.25fr]" : ""
+                            }`}
+                    >
+                        {showVehicleStatusSection && (
+                            <div className="min-w-0">
+                                <SectionCard
+                                    index={2}
+                                    title="Vehicle Status"
+                                    icon={<Truck size={18} />}
+                                    expanded={expandedSections.vehicleStatus ?? true}
+                                    onToggle={() => toggleSection("vehicleStatus")}
+                                >
+                                    <div className="md:col-span-2 xl:col-span-3">
+                                        {showVehicleStatusDropdown ? (
+                                            <div className="grid grid-cols-1 gap-2">
+                                                <Field label="Current Vehicle Status">
+                                                    <SelectInput
+                                                        disabled={
+                                                            statusUpdating ||
+                                                            isTripPendingAccept(form) ||
+                                                            String(form.tripStatus || "").toLowerCase() ===
+                                                            "completed"
+                                                        }
+                                                        value={form.vehicleCurrentStatus}
+                                                        options={DRIVER_VEHICLE_STATUS_OPTIONS}
+                                                        onChange={handleVehicleStatusChange}
+                                                    />
+                                                </Field>
+
+                                                {!form.vehicleCurrentStatus && (
+                                                    <div className="rounded-md  text-xs font-medium text-muted-foreground">
+                                                        Vehicle is on the way to load. Select Loading,
+                                                        In-Transit, or Unloading when applicable.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-md   p-3 text-sm font-medium text-amber-700">
+                                                Vehicle master link missing — status cannot be updated.
+                                            </div>
+                                        )}
+                                    </div>
+                                </SectionCard>
+                            </div>
+                        )}
+
+                        <div className="min-w-0">
+                            <SectionCard
+                                index={showVehicleStatusSection ? 3 : 2}
+                                title="Route Planner"
+                                icon={<Route size={18} />}
+                                expanded={expandedSections.routePlanner}
+                                onToggle={() => toggleSection("routePlanner")}
+                            >
+                                <div className="md:col-span-2 xl:col-span-3">
+                                    <TripRoutePlannerCard routesData={form.routesData} />
+                                </div>
+                            </SectionCard>
+                        </div>
+                    </div>
+
+                    {visibleCategories.map((category: any, index: number) => (
+                        <SectionCard
+                            key={category.key}
+                            index={index + 4}
+                            title={category.title}
+                            icon={category.icon}
+                            expanded={expandedSections[category.key]}
+                            onToggle={() => toggleSection(category.key)}
+                        >
+                            <CategoryDetails
+                                category={category}
+                                form={form}
+                                setForm={setForm}
+                                readOnly={readOnly}
+                            />
+                        </SectionCard>
+                    ))}
+
+
+                    <SectionCard
+                        index={visibleCategories.length + 4}
+                        title="POD Details"
+                        icon={<Paperclip size={18} />}
+                        expanded={expandedSections.pod}
+                        onToggle={() => toggleSection("pod")}
+                    >
+                        <PodDetails form={form} setForm={setForm} readOnly={readOnly} />
+                    </SectionCard>
+
+
+
+                    <SectionCard
+                        index={11}
+                        title="Trip Summary"
+                        icon={<Truck size={18} />}
+                        expanded={expandedSections.tripSummary}
+                        onToggle={() => toggleSection("tripSummary")}
+                    >
+                        <div className="md:col-span-2 xl:col-span-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <SummaryBox
+                                    title="Advance Received"
+                                    value={summary.totalAdvanceReceived}
+                                />
+
+                                <SummaryBox
+                                    title="Trip Expense"
+                                    value={summary.totalTripExpense}
+                                />
+
+                                <SummaryBox
+                                    title="Balance"
+                                    value={summary.balanceAmount}
+                                    danger={summary.balanceAmount < 0}
+                                />
+                            </div>
+
+                            <div className="mt-4 rounded-md border border-border bg-muted/30 p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                                            Trip Summary
+                                        </p>
+
+                                        <h3 className="mt-1 text-lg font-bold text-card-foreground">
+                                            {form.tripId || "Trip not setup"}
+                                        </h3>
+
+                                        <p className="mt-1 text-sm font-medium text-muted-foreground">
+                                            Vehicle: {form.vehicle?.vehicleNumber || "-"} • Driver:{" "}
+                                            {form.driver?.driverName || "-"} • Date:{" "}
+                                            {formatTripDate(form.tripDate)}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                                        <User size={16} />
+                                        {form.enteredBy || "driver"}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </SectionCard>
+                </div>
+
+
+            </main>
+
+           <footer className="sticky bottom-0 z-20 flex flex-col gap-3 border-t border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
+	<button
+		type="button"
+		onClick={() => navigate(-1)}
+		disabled={loading}
+		className="inline-flex h-10 items-center justify-center rounded-md border border-primary bg-background px-5 text-sm font-bold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+	>
+		Cancel
+	</button>
+
+	{showAcceptTripButton && (
+		<button
+			type="button"
+			onClick={handleAcceptTrip}
+			disabled={loading || statusUpdating}
+			className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-success bg-background px-5 text-sm font-semibold text-success transition hover:bg-success/10 disabled:opacity-60"
+		>
+			<CheckCircle2 size={17} />
+			Accept Trip
+		</button>
+	)}
+
+	{showCompleteTripButton && (
+		<button
+			type="button"
+			onClick={handleCompleteTrip}
+			disabled={loading || statusUpdating}
+			className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-primary bg-background px-5 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+		>
+			<CheckCircle2 size={17} />
+			Complete Trip
+		</button>
+	)}
+
+	<button
+		type="button"
+		onClick={handleSave}
+		disabled={loading || readOnly || statusUpdating}
+		className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+	>
+		{loading ? <Loader2 className="animate-spin" size={17} /> : <Save size={17} />}
+		{loading ? "Saving..." : isEdit ? "Update" : "Save"}
+	</button>
+</footer>
+        </div>
+    );
+};
+
+export default CreateEditTripExpence;

@@ -161,3 +161,43 @@ export const formatProductType = (value: any) => {
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(" ");
 };
+
+
+
+
+
+export const formatIndianNumber = (value: any) =>
+    Number(value || 0).toLocaleString("en-IN", {
+        maximumFractionDigits: 2,
+    });
+
+export const formatDateTime = (value: any) => {
+    if (!value) return "-";
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) return "-";
+
+    return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+export const formatStatusLabel = (status: any) =>
+    String(status || "draft")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+export const unwrapThunk = async (dispatch: any, action: any) => {
+    const res = await dispatch(action);
+
+    if (res?.unwrap) return res.unwrap();
+    if (res?.error) throw res.error;
+
+    return res?.payload ?? res;
+};
+
