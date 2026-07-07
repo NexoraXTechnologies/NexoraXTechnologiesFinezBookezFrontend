@@ -617,7 +617,7 @@ const ImageUploadInput = ({
     mandatory = false,
     onChange,
     className = "",
-    validateImage = () => false
+    validateImage = () => true
 }: ImageUploadInputProps) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
 
