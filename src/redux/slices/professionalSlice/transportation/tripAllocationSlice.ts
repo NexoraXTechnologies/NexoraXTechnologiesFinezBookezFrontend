@@ -1344,11 +1344,11 @@ export const VEHICLE_STATUS = {
 };
 
 export const DRIVER_VEHICLE_STATUS_OPTIONS = [
-	{ label: "On Way To Load", value: VEHICLE_STATUS.ON_WAY_TO_LOAD },
+	// { label: "On Way To Load", value: VEHICLE_STATUS.ON_WAY_TO_LOAD },
 	{ label: "Loading", value: VEHICLE_STATUS.LOADING },
 	{ label: "In-Transit", value: VEHICLE_STATUS.IN_TRANSIT },
 	{ label: "Unloading", value: VEHICLE_STATUS.UNLOADING },
-	{ label: "Breakdown", value: VEHICLE_STATUS.BREAKDOWN },
+	// { label: "Breakdown", value: VEHICLE_STATUS.BREAKDOWN },
 ];
 
 export const isDriverSelectableStatus = (status: any) => {

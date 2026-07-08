@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import  { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -18,33 +18,48 @@ import SearchInput from "../../../../components/searchInput";
 import Pagination from "../../../../components/pagination";
 import Badge from "../../../../components/badge";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import {
-    DataCreateButton,
-    DataREfreshButton,
-} from "../../../../components/buttons";
+import { DataREfreshButton } from "../../../../components/buttons";
 
 import {
-    canChildEditTrip,
     getTripExpenseVoucher,
     isAssignedToDriver,
-    isParentStartedTrip,
-    isTripClosed,
-    isTripPendingAccept,
     mergeTripExpenseForm,
     toTripExpensePayload,
 } from "./tripExpenseInitialState";
 
 import {
-    createTripExpense,
     deleteTripExpenses,
     getAllTripExpenses,
     getTripExpensesByVoucherNumber,
+    updateTripExpenses,
 } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
-import { formatDateTime, formatIndianNumber, formatStatusLabel, unwrapThunk } from "../../../../utils/helperFunctions";
+
+import {
+    formatDateTime,
+    formatIndianNumber,
+    formatStatusLabel,
+    unwrapThunk,
+} from "../../../../utils/helperFunctions";
 
 /* ===================================================
-   HELPERS
+   COMMON HELPERS
 =================================================== */
+
+const safeJsonParse = (value: any) => {
+    try {
+        if (!value) return null;
+        if (typeof value === "object") return value;
+        return JSON.parse(value);
+    } catch {
+        return null;
+    }
+};
+
+const cleanMobile = (value: any) =>
+    String(value || "")
+        .replace(/"/g, "")
+        .trim();
+
 const getAssignmentPromptKey = (item: any) => {
     const voucher = getTripExpenseVoucher(item);
 
@@ -60,14 +75,99 @@ const getAssignmentPromptKey = (item: any) => {
     return `${voucher}::${stamp}`;
 };
 
+const toBool = (value: any) => {
+    if (typeof value === "boolean") return value;
+
+    if (typeof value === "string") {
+        const clean = value.trim().toLowerCase();
+
+        if (["true", "yes", "1"].includes(clean)) return true;
+        if (["false", "no", "0", ""].includes(clean)) return false;
+    }
+
+    if (typeof value === "number") return value === 1;
+
+    return Boolean(value);
+};
+
+const normalizeTripStatus = (status: any) => {
+    const raw = String(status || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+    if (!raw) return "draft";
+    if (raw === "inprogress" || raw === "in_progress") return "in_progress";
+    if (raw === "complete" || raw === "completed") return "completed";
+    if (raw === "cancelled" || raw === "canceled") return "cancelled";
+
+    return raw;
+};
+
+const isTripClosedSafe = (item: any = {}) =>
+    normalizeTripStatus(item?.tripStatus) === "completed";
+
+const isTripInProgressSafe = (item: any = {}) =>
+    normalizeTripStatus(item?.tripStatus) === "in_progress";
+
+const isTripPendingAcceptSafe = (item: any = {}) => {
+    const status = normalizeTripStatus(item?.tripStatus);
+    const driverAccepted = toBool(item?.driverAccepted);
+
+    return (status === "pending" || status === "assigned") && !driverAccepted;
+};
+
+const isParentStartedTripSafe = (item: any = {}) => {
+    const driverAccepted = toBool(item?.driverAccepted);
+
+    return (
+        !driverAccepted &&
+        String(item?.notificationType || "") === "trip_started_by_parent" &&
+        !isTripClosedSafe(item)
+    );
+};
+
+const canChildAcceptTripSafe = (item: any = {}) => {
+    const driverAccepted = toBool(item?.driverAccepted);
+
+    return (
+        !isTripClosedSafe(item) &&
+        !driverAccepted &&
+        (isTripPendingAcceptSafe(item) || isParentStartedTripSafe(item))
+    );
+};
+
+const canChildEditTripSafe = (item: any = {}) => {
+    const driverAccepted = toBool(item?.driverAccepted);
+
+    if (isTripClosedSafe(item)) return false;
+    if (!driverAccepted) return false;
+
+    return isTripInProgressSafe(item) || driverAccepted;
+};
+
+const getProfessionalUserFromLocalStorage = () => {
+    const localProfessionalUser =
+        safeJsonParse(localStorage.getItem("professionalUser")) || {};
+
+    return (
+        localProfessionalUser?.ChildUsers ||
+        localProfessionalUser?.data?.ChildUsers ||
+        localProfessionalUser?.data?.childUser ||
+        localProfessionalUser?.data?.user ||
+        localProfessionalUser?.user ||
+        localProfessionalUser
+    );
+};
+
 /* ===================================================
    STATUS BADGE
 =================================================== */
 
 const StatusBadge = ({ item }: { item: any }) => {
-    const closed = isTripClosed(item);
-    const pending = isTripPendingAccept(item);
-    const parentStarted = isParentStartedTrip(item);
+    const closed = isTripClosedSafe(item);
+    const pending = isTripPendingAcceptSafe(item);
+    const parentStarted = isParentStartedTripSafe(item);
 
     if (closed) {
         return (
@@ -105,6 +205,120 @@ const StatusBadge = ({ item }: { item: any }) => {
 };
 
 /* ===================================================
+   ACCEPT ASSIGNMENT MODAL
+=================================================== */
+
+const AcceptAssignmentModal = ({
+    item,
+    loading,
+    onAccept,
+    onClose,
+}: {
+    item: any;
+    loading: boolean;
+    onAccept: () => void;
+    onClose: () => void;
+}) => {
+    const voucher = getTripExpenseVoucher(item);
+    const tripLabel = item?.tripId || voucher || "New trip";
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+                <div className="border-b border-border px-5 py-4">
+                    <div className="flex items-start gap-3">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                            <Bell size={20} />
+                        </span>
+
+                        <div className="min-w-0">
+                            <h3 className="text-lg font-black text-card-foreground">
+                                New Trip Assigned
+                            </h3>
+
+                            <p className="mt-1 text-sm font-medium text-muted-foreground">
+                                Please accept this trip before entering expenses.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-3 px-5 py-4">
+                    <div className="rounded-xl border border-border bg-muted/30 p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            Trip
+                        </p>
+
+                        <p className="mt-1 text-base font-black text-card-foreground">
+                            {tripLabel}
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-border bg-muted/30 p-3">
+                            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                                Expense No
+                            </p>
+
+                            <p className="mt-1 text-sm font-black text-card-foreground">
+                                {voucher || "-"}
+                            </p>
+                        </div>
+
+                        <div className="rounded-xl border border-border bg-muted/30 p-3">
+                            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                                Vehicle
+                            </p>
+
+                            <p className="mt-1 text-sm font-black text-card-foreground">
+                                {item?.vehicle?.vehicleNumber || "-"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-muted/30 p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                            Date
+                        </p>
+
+                        <p className="mt-1 text-sm font-black text-card-foreground">
+                            {formatDateTime(item?.tripDate)}
+                        </p>
+                    </div>
+
+                    {item?.notificationMessage && (
+                        <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm font-semibold text-primary">
+                            {item.notificationMessage}
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-4">
+                    <button
+                        type="button"
+                        disabled={loading}
+                        onClick={onClose}
+                        className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-bold text-muted-foreground transition hover:bg-muted disabled:opacity-60"
+                    >
+                        Later
+                    </button>
+
+                    <button
+                        type="button"
+                        disabled={loading}
+                        onClick={onAccept}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                    >
+                        <CheckCircle2 size={17} />
+                        {loading ? "Accepting..." : "Accept Trip"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/* ===================================================
    TRIP EXPENSE LIST
 =================================================== */
 
@@ -113,19 +327,13 @@ const TripExpenseList = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const user =
-        useSelector((s: any) => s?.auth?.user) ||
-        JSON.parse(localStorage.getItem("user") || "{}");
-
-    const isChildUser =
-        !!user?.parentUserMobileNumber &&
-        user?.parentUserMobileNumber !== user?.userMobileNumberHash;
-
+    const authUser = useSelector((s: any) => s?.auth?.user);
     const [rows, setRows] = useState<any[]>([]);
     const [search, setSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [listingLoader, setListingLoader] = useState(false);
     const [deleteLoader, setDeleteLoader] = useState(false);
+    const [acceptPromptItem, setAcceptPromptItem] = useState<any>(null);
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
@@ -155,6 +363,92 @@ const TripExpenseList = () => {
         location.state?.description ||
         "Record fuel, toll, loading, unloading, and other trip-related expenses.";
 
+    const professionalHeaders = useMemo(() => {
+        return safeJsonParse(localStorage.getItem("professionalHeaders")) || {};
+    }, []);
+
+    const professionalUserLocal = useMemo(() => {
+        return getProfessionalUserFromLocalStorage();
+    }, []);
+
+    const currentUserMobile = useMemo(() => {
+        return cleanMobile(
+            professionalUserLocal?.userMobileNumberHash ||
+            professionalUserLocal?.userMobileNumber ||
+            professionalUserLocal?.mobileNumber ||
+            authUser?.userMobileNumberHash ||
+            authUser?.userMobileNumber ||
+            authUser?.mobileNumber ||
+            localStorage.getItem("userMobileNumberHash") ||
+            localStorage.getItem("loginuser") ||
+            localStorage.getItem("loginUser")
+        );
+    }, [authUser, professionalUserLocal]);
+
+    const parentUserMobile = useMemo(() => {
+        return cleanMobile(
+            professionalUserLocal?.parentUserMobileNumber ||
+            professionalUserLocal?.parentUserMobileNumberHash ||
+            authUser?.parentUserMobileNumber ||
+            authUser?.parentUserMobileNumberHash ||
+            professionalHeaders?.["x-db-name"] ||
+            professionalHeaders?.parentUserMobileNumber ||
+            localStorage.getItem("parentUserMobileNumber") ||
+            localStorage.getItem("parentUserMobileNumberHash")
+        );
+    }, [authUser, professionalHeaders, professionalUserLocal]);
+
+    const user = useMemo(
+        () => ({
+            ...(authUser || {}),
+            ...(professionalUserLocal || {}),
+            userMobileNumberHash: currentUserMobile,
+            parentUserMobileNumber: parentUserMobile,
+        }),
+        [authUser, professionalUserLocal, currentUserMobile, parentUserMobile]
+    );
+
+    const rowAssignedToCurrentUser = useCallback(
+        (item: any) => {
+            if (!currentUserMobile) return false;
+
+            const assignedMobiles = [
+                item?.assignedDriverMobile,
+                item?.tripAssignedToMobile,
+                item?.sendNotificationTo,
+                item?.driver?.driverId,
+                item?.driver?.driverMobile,
+                item?.driver?.mobileNumber,
+            ];
+
+            return assignedMobiles.some(
+                (value) => cleanMobile(value) === currentUserMobile
+            );
+        },
+        [currentUserMobile]
+    );
+
+    // const isChildUser = useMemo(() => {
+    //     const parentChildCheck = Boolean(
+    //         currentUserMobile &&
+    //             parentUserMobile &&
+    //             currentUserMobile !== parentUserMobile
+    //     );
+
+    //     const assignedRowCheck = rows.some(rowAssignedToCurrentUser);
+
+    //     return Boolean(currentUserMobile && (parentChildCheck || assignedRowCheck));
+    // }, [currentUserMobile, parentUserMobile, rows, rowAssignedToCurrentUser]);
+
+
+   
+
+    const isChildUser = Boolean(
+        currentUserMobile &&
+        parentUserMobile &&
+        currentUserMobile !== parentUserMobile
+    );
+
     /* ===================================================
        FETCH LIST
     =================================================== */
@@ -173,6 +467,8 @@ const TripExpenseList = () => {
                     getAllTripExpenses({
                         limit,
                         offset,
+                        // assignedDriverMobile: isChildUser ? currentUserMobile : "",
+                        // parentUserMobileNumber: isChildUser ? parentUserMobile : "",
                     })
                 );
 
@@ -181,6 +477,14 @@ const TripExpenseList = () => {
                 const pg = data?.pagination || {};
 
                 let listToUse = Array.isArray(list) ? list : [];
+
+                if (isChildUser) {
+                    listToUse = listToUse.filter(
+                        (item: any) =>
+                            rowAssignedToCurrentUser(item) ||
+                            isAssignedToDriver(item, currentUserMobile, user)
+                    );
+                }
 
                 if (isChildUser && offset === 0 && listToUse.length === 0) {
                     try {
@@ -199,9 +503,12 @@ const TripExpenseList = () => {
                             fallbackRes?.data ||
                             [];
 
-                        const matched = (Array.isArray(fallbackList) ? fallbackList : []).filter(
+                        const matched = (
+                            Array.isArray(fallbackList) ? fallbackList : []
+                        ).filter(
                             (item: any) =>
-                                isAssignedToDriver(item, user?.userMobileNumberHash, user)
+                                rowAssignedToCurrentUser(item) ||
+                                isAssignedToDriver(item, currentUserMobile, user)
                         );
 
                         if (matched.length) {
@@ -256,8 +563,10 @@ const TripExpenseList = () => {
             isChildUser,
             localOffset,
             localLimit,
-            user?.userMobileNumberHash,
-            user?.parentUserMobileNumber,
+            currentUserMobile,
+            parentUserMobile,
+            rowAssignedToCurrentUser,
+            user,
         ]
     );
 
@@ -272,26 +581,22 @@ const TripExpenseList = () => {
     const visibleRows = useMemo(() => {
         if (!isChildUser) return rows;
 
-        const childMobile = String(user?.userMobileNumberHash || "").trim();
-
         return rows.filter(
             (item) =>
-                isAssignedToDriver(item, childMobile, user) ||
-                String(item?.assignedDriverMobile || "").trim() === childMobile ||
-                String(item?.tripAssignedToMobile || "").trim() === childMobile ||
-                String(item?.driver?.driverMobile || "").trim() === childMobile ||
-                String(item?.driver?.mobileNumber || "").trim() === childMobile ||
-                String(item?.ownerUser || "").trim() === childMobile ||
-                String(item?.createdBy || "").trim() === childMobile
+                rowAssignedToCurrentUser(item) ||
+                isAssignedToDriver(item, currentUserMobile, user)
         );
-    }, [rows, isChildUser, user]);
+    }, [rows, isChildUser, rowAssignedToCurrentUser, currentUserMobile, user]);
 
-    const openCount = visibleRows.filter((item) => !isTripClosed(item)).length;
-    const closedCount = visibleRows.filter((item) => isTripClosed(item)).length;
+
+
+
+    const openCount = visibleRows.filter((item) => !isTripClosedSafe(item)).length;
+    const closedCount = visibleRows.filter((item) => isTripClosedSafe(item)).length;
 
     const filteredRows = useMemo(() => {
         return visibleRows.filter((item) => {
-            const closed = isTripClosed(item);
+            const closed = isTripClosedSafe(item);
 
             if (activeStatus === "open" && closed) return false;
             if (activeStatus === "close" && !closed) return false;
@@ -328,63 +633,53 @@ const TripExpenseList = () => {
         setRefreshing(false);
     };
 
-    // const openCreateTripExpense = () => {
-    //     navigate("/bookEz/transportation/trip-expense/create", {
-    //         state: {
-    //             title: "Create Trip Expense",
-    //             description:
-    //                 "Record fuel, toll, loading, unloading, and other expenses for a trip.",
-    //             // mode: "add",
-    //         },
-    //     });
-    // };
+    const handleEdit = async (item: any) => {
+        if (isTripClosedSafe(item)) {
+            toast.error("Completed trip expense cannot be edited");
+            return;
+        }
 
- const handleEdit = async (item: any) => {
-	if (isTripClosed(item)) {
-		toast.error("Completed trip expense cannot be edited");
-		return;
-	}
+        if (isChildUser && isTripPendingAcceptSafe(item)) {
+            toast.error("Please accept the trip assignment first");
+            return;
+        }
 
-	if (isChildUser && isTripPendingAccept(item)) {
-		toast.error("Please accept the trip assignment first");
-		return;
-	}
+        if (isChildUser && !canChildEditTripSafe(item)) {
+            toast.error("You can only edit trips that are in progress");
+            return;
+        }
 
-	if (isChildUser && !canChildEditTrip(item)) {
-		toast.error("You can only edit trips that are in progress");
-		return;
-	}
+        try {
+            setListingLoader(true);
 
-	try {
-		setListingLoader(true);
+            const voucherNumber = getTripExpenseVoucher(item);
 
-		const voucherNumber = getTripExpenseVoucher(item);
+            if (!voucherNumber) {
+                toast.warn("Trip expense voucher number not found");
+                return;
+            }
 
-		if (!voucherNumber) {
-			toast.warn("Trip expense voucher number not found");
-			return;
-		}
+            const res = await unwrapThunk(
+                dispatch,
+                getTripExpensesByVoucherNumber(voucherNumber)
+            );
 
-		const res = await unwrapThunk(
-			dispatch,
-			getTripExpensesByVoucherNumber(voucherNumber)
-		);
+            navigate(`/bookEz/transportation/trip-expense/edit/${voucherNumber}`, {
+                state: {
+                    title: "Edit Trip Expense",
+                    description: "Update trip expense details.",
+                    mode: "edit",
+                    voucherNumber,
+                    expenseData: res?.data || res,
+                },
+            });
+        } catch (e: any) {
+            toast.error(e?.message || "Failed to open trip expense");
+        } finally {
+            setListingLoader(false);
+        }
+    };
 
-		navigate(`/bookEz/transportation/trip-expense/edit/${voucherNumber}`, {
-			state: {
-				title: "Edit Trip Expense",
-				description: "Update trip expense details.",
-				mode: "edit",
-				voucherNumber,
-				expenseData: res?.data || res,
-			},
-		});
-	} catch (e: any) {
-		toast.error(e?.message || "Failed to open trip expense");
-	} finally {
-		setListingLoader(false);
-	}
-};
     const performAccept = async (item: any) => {
         const voucher = getTripExpenseVoucher(item);
 
@@ -408,8 +703,8 @@ const TripExpenseList = () => {
                 driverAccepted: true,
                 acceptedAt: new Date().toISOString(),
                 enteredBy: "driver",
-                notificationType: "trip_started",
-                sendNotificationTo: user?.parentUserMobileNumber || "",
+                notificationType: "trip_accepted_by_driver",
+                sendNotificationTo: parentUserMobile || "",
                 notificationMessage: `${data.driver?.driverName || "Driver"
                     } accepted trip ${data.tripId || voucher}.`,
                 notifyParent: true,
@@ -417,7 +712,7 @@ const TripExpenseList = () => {
 
             await unwrapThunk(
                 dispatch,
-                createTripExpense({
+                updateTripExpenses({
                     voucherNumber: voucher,
                     payload,
                 })
@@ -431,7 +726,7 @@ const TripExpenseList = () => {
 
             toast.success("Trip accepted. You can now enter expenses.");
 
-            navigate("/trip-expense/create-edit", {
+            navigate(`/bookEz/transportation/trip-expense/edit/${voucher}`, {
                 state: {
                     title: "Edit Trip Expense",
                     description: "Update trip expense details.",
@@ -447,21 +742,24 @@ const TripExpenseList = () => {
         }
     };
 
-    const handleAcceptTrip = (item: any) => {
-        const voucher = getTripExpenseVoucher(item);
-        const tripLabel = item?.tripId || voucher || "this trip";
+    const showAcceptAssignmentModal = useCallback(
+        (item: any, { skipDedup = false }: any = {}) => {
+            if (!canChildAcceptTripSafe(item)) return;
 
-        const confirmAccept = window.confirm(
-            `Accept trip ${tripLabel}? Your parent user will receive a notification.`
-        );
+            const key = getAssignmentPromptKey(item);
 
-        if (confirmAccept) {
-            performAccept(item);
-        }
-    };
+            if (!skipDedup) {
+                if (key && promptedAssignmentsRef.current.has(key)) return;
+                if (key) promptedAssignmentsRef.current.add(key);
+            }
+
+            setAcceptPromptItem(item);
+        },
+        []
+    );
 
     const handleDeleteClick = (e: any, item: any) => {
-        if (isTripClosed(item)) {
+        if (isTripClosedSafe(item)) {
             toast.error("Completed trip expense cannot be deleted");
             return;
         }
@@ -530,23 +828,41 @@ const TripExpenseList = () => {
     =================================================== */
 
     useEffect(() => {
-        if (listingLoader || !isChildUser) return;
+        if (listingLoader || !isChildUser || acceptPromptItem) return;
 
-        const pending = visibleRows.filter((item) => {
-            if (!isTripPendingAccept(item)) return false;
+        const pendingItem = visibleRows.find((item) => {
+            if (!canChildAcceptTripSafe(item)) return false;
 
             const key = getAssignmentPromptKey(item);
 
             return key && !promptedAssignmentsRef.current.has(key);
         });
 
-        if (!pending.length) return;
+        if (!pendingItem) return;
 
-        const first = pending[0];
-        const key = getAssignmentPromptKey(first);
+        showAcceptAssignmentModal(pendingItem, { skipDedup: false });
+    }, [
+        listingLoader,
+        isChildUser,
+        visibleRows,
+        acceptPromptItem,
+        showAcceptAssignmentModal,
+    ]);
 
-        if (key) promptedAssignmentsRef.current.add(key);
-    }, [listingLoader, isChildUser, visibleRows]);
+    /* ===================================================
+       DEBUG - remove after testing
+    =================================================== */
+
+    console.log("TRIP CHILD CHECK", {
+        professionalUserLocal,
+        currentUserMobile,
+        parentUserMobile,
+        isChildUser,
+        totalRows: rows.length,
+        visibleRows: visibleRows.length,
+        pendingRows: visibleRows.filter(canChildAcceptTripSafe).length,
+        firstPending: visibleRows.find(canChildAcceptTripSafe),
+    });
 
     /* ===================================================
        TABLE COLUMNS
@@ -578,7 +894,10 @@ const TripExpenseList = () => {
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                        {row?.driver?.driverMobile || row?.driver?.mobileNumber || "-"}
+                        {row?.driver?.driverMobile ||
+                            row?.driver?.mobileNumber ||
+                            row?.driver?.driverId ||
+                            "-"}
                     </div>
                 </div>
             ),
@@ -665,7 +984,7 @@ const TripExpenseList = () => {
                         <button
                             type="button"
                             onClick={() => setActiveStatus("open")}
-                            className={`rounded px-3 py-1.5 text-xs  transition ${activeStatus === "open"
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
                                 ? "bg-primary text-primary-foreground"
                                 : "text-muted-foreground hover:bg-muted"
                                 }`}
@@ -676,7 +995,7 @@ const TripExpenseList = () => {
                         <button
                             type="button"
                             onClick={() => setActiveStatus("close")}
-                            className={`rounded px-3 py-1.5 text-xs  transition ${activeStatus === "close"
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
                                 ? "bg-primary text-primary-foreground"
                                 : "text-muted-foreground hover:bg-muted"
                                 }`}
@@ -698,43 +1017,32 @@ const TripExpenseList = () => {
                             loading: refreshing,
                         }}
                     />
-
-                    {/* {!isChildUser && (
-                        <Permission
-                            module="bookez"
-                            permissionKey="Pass"
-                            action="create"
-                        >
-                          
-                            <DataCreateButton
-                                {...{
-                                    callBackFn: openCreateTripExpense,
-                                    text: "Create Expense",
-                                }}
-                            />
-                        </Permission>
-                    )} */}
                 </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden">
-                <DataTable
+                {/* <DataTable
                     columns={columns}
                     data={filteredRows}
                     loading={listingLoader}
                     emptyMessage="No trip expenses found"
                     actions={(record: any) => {
-                        const closed = isTripClosed(record);
-                        const pendingAccept = isTripPendingAccept(record);
-                        const childCanEdit = canChildEditTrip(record);
+                        const closed = isTripClosedSafe(record);
+                        const childCanAccept =
+                            isChildUser && !closed && canChildAcceptTripSafe(record);
+                        const childCanEdit = canChildEditTripSafe(record);
 
                         return (
                             <div className="flex items-center gap-2">
-                                {pendingAccept && isChildUser ? (
+                                {childCanAccept ? (
                                     <button
                                         type="button"
-                                        onClick={() => handleAcceptTrip(record)}
-                                        className="rounded-md border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/20"
+                                        onClick={() =>
+                                            showAcceptAssignmentModal(record, {
+                                                skipDedup: true,
+                                            })
+                                        }
+                                        className="rounded-md border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition hover:bg-success/20"
                                     >
                                         Accept
                                     </button>
@@ -765,7 +1073,9 @@ const TripExpenseList = () => {
                                                 <button
                                                     type="button"
                                                     disabled={deleteLoader}
-                                                    onClick={(e) => handleDeleteClick(e, record)}
+                                                    onClick={(e) =>
+                                                        handleDeleteClick(e, record)
+                                                    }
                                                     className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                                                 >
                                                     <Trash2 size={16} />
@@ -777,6 +1087,82 @@ const TripExpenseList = () => {
                             </div>
                         );
                     }}
+                /> */}
+
+                <DataTable
+                    columns={columns}
+                    data={filteredRows}
+                    loading={listingLoader}
+                    emptyMessage="No trip expenses found"
+                    {...(activeStatus !== "close"
+                        ? {
+                            actions: (record: any) => {
+                                const closed = isTripClosedSafe(record);
+
+                                if (closed) return null;
+
+                                const childCanAccept =
+                                    isChildUser && canChildAcceptTripSafe(record);
+
+                                const childCanEdit = canChildEditTripSafe(record);
+
+                                return (
+                                    <div className="flex items-center gap-2">
+                                        {childCanAccept ? (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    showAcceptAssignmentModal(record, {
+                                                        skipDedup: true,
+                                                    })
+                                                }
+                                                className="rounded-md border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition hover:bg-success/20"
+                                            >
+                                                Accept
+                                            </button>
+                                        ) : (
+                                            <>
+                                                {(isChildUser ? childCanEdit : true) && (
+                                                    <Permission
+                                                        module="bookez"
+                                                        permissionKey="Pass"
+                                                        action="update"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleEdit(record)}
+                                                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    </Permission>
+                                                )}
+
+                                                {!isChildUser && (
+                                                    <Permission
+                                                        module="bookez"
+                                                        permissionKey="allRegisters"
+                                                        action="delete"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            disabled={deleteLoader}
+                                                            onClick={(e) =>
+                                                                handleDeleteClick(e, record)
+                                                            }
+                                                            className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </Permission>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            },
+                        }
+                        : {})}
                 />
             </div>
 
@@ -812,6 +1198,19 @@ const TripExpenseList = () => {
                             voucherNumber: null,
                         })
                     }
+                />
+            )}
+
+            {acceptPromptItem && (
+                <AcceptAssignmentModal
+                    item={acceptPromptItem}
+                    loading={listingLoader}
+                    onClose={() => setAcceptPromptItem(null)}
+                    onAccept={() => {
+                        const selected = acceptPromptItem;
+                        setAcceptPromptItem(null);
+                        performAccept(selected);
+                    }}
                 />
             )}
         </div>

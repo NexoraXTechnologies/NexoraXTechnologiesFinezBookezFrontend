@@ -48,6 +48,11 @@ import {
 } from "../../../../utils/helperFunctions";
 
 import { getProfessionalUsers } from "../../../../redux/slices/professionalSlice/professionalUserSlice";
+import { createTripExpense } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
+import {
+    mapTripAllocationToExpenseForm,
+    toTripExpensePayload,
+} from "../tripExpense/tripExpenseInitialState";
 import truckImage from "../../../../assets/truck.png";
 const REMARKS_MAX = 200;
 
@@ -58,6 +63,26 @@ const routeTypeOptions = [
     { label: "Mixed Route", value: "Mixed Route" },
 ];
 
+const getSavedAllocationRecord = (response: any, fallback: any = {}) => {
+    return (
+        response?.data?.record ||
+        response?.data ||
+        response?.record ||
+        response ||
+        fallback
+    );
+};
+
+const getAllocationVoucherFromSaved = (record: any, fallback = "") => {
+    return String(
+        record?.tripAllocationVoucherNumber ||
+        record?.tripNumber ||
+        record?.voucherNumber ||
+        record?.allocationNumber ||
+        fallback ||
+        ""
+    ).trim();
+};
 
 
 const getLoginUser = () => {
@@ -116,7 +141,7 @@ const getVehicleStatusClasses = (status: any) => {
         key === "allocated" ||
         key === "pending"
     ) {
-        return "bg-warning/10 text-warning";
+        return "bg-amber-50 text-amber-700";
     }
 
     if (
@@ -873,7 +898,9 @@ const CreateTripAllocation = () => {
 
     useEffect(() => {
         dispatch(getTransportOrders({ limit: 200, offset: 0, status: "open" }));
-        dispatch(getActiveTripAllocations());
+        dispatch(getActiveTripAllocations({
+            limit: 200, offset: 0,
+        }));
 
         const loginUser = getLoginUser();
 
@@ -1325,6 +1352,83 @@ const CreateTripAllocation = () => {
         return true;
     };
 
+    const syncTripExpenseFromAllocation = async ({
+        allocationVoucher,
+        savedAllocation,
+    }: {
+        allocationVoucher: string;
+        savedAllocation: any;
+    }) => {
+        if (!allocationVoucher) {
+            throw new Error("Allocation voucher number not found");
+        }
+
+        const driverMobile = String(
+            form.driverAllocation?.driverId ||
+            form.driverAllocation?.mobileNumber ||
+            ""
+        ).trim();
+
+        if (!driverMobile) {
+            throw new Error("Driver mobile number not found");
+        }
+
+        const allocationForExpense = {
+            ...form,
+            ...(savedAllocation || {}),
+
+            voucherNumber: allocationVoucher,
+            tripNumber: allocationVoucher,
+            tripAllocationVoucherNumber: allocationVoucher,
+
+            transportOrder: {
+                ...form.transportOrder,
+                ...(savedAllocation?.transportOrder || {}),
+            },
+
+            vehicleSelection: {
+                ...form.vehicleSelection,
+                ...(savedAllocation?.vehicleSelection || {}),
+            },
+
+            driverAllocation: {
+                ...form.driverAllocation,
+                ...(savedAllocation?.driverAllocation || {}),
+            },
+
+            tripPlan: {
+                ...form.tripPlan,
+                ...(savedAllocation?.tripPlan || {}),
+            },
+        };
+
+        const expenseForm = mapTripAllocationToExpenseForm(allocationForExpense);
+
+        const payload = toTripExpensePayload(expenseForm, {
+            tripStatus: "assigned",
+            driverAccepted: false,
+            acceptedAt: "",
+            allocationVoucherNumber: allocationVoucher,
+
+            assignedDriverMobile: driverMobile,
+            tripAssignedToMobile: driverMobile,
+            sendNotificationTo: driverMobile,
+
+            enteredBy: "dispatcher",
+            enteredDate: new Date().toISOString(),
+
+            notificationType: "trip_assigned_by_parent",
+            notificationMessage: `Trip ${
+                expenseForm.tripId || allocationVoucher
+            } assigned to you. Please accept to start expense entry.`,
+            notifyParent: false,
+        });
+
+        await dispatch(createTripExpense(payload)).unwrap();
+
+        return payload;
+    };
+
     const handleSave = async () => {
         if (!validate()) return;
 
@@ -1349,9 +1453,30 @@ const CreateTripAllocation = () => {
                 return;
             }
 
-            await dispatch(createTripAllocation(payload)).unwrap();
+            const saveResponse = await dispatch(createTripAllocation(payload)).unwrap();
+            const savedAllocation = getSavedAllocationRecord(saveResponse, payload);
+            const allocationVoucher = getAllocationVoucherFromSaved(savedAllocation);
 
-            toast.success("Trip allocated successfully");
+            try {
+                await syncTripExpenseFromAllocation({
+                    allocationVoucher,
+                    savedAllocation,
+                });
+            } catch (expenseError: any) {
+                console.log(
+                    "[TripAllocation] trip expense assignment request failed",
+                    expenseError
+                );
+
+                toast.error(
+                    expenseError?.message ||
+                    "Trip allocation saved, but driver accept request failed"
+                );
+
+                return;
+            }
+
+            toast.success("Trip allocated successfully. Request sent to driver.");
             navigate(-1);
         } catch (error: any) {
             toast.error(error?.message || "Trip allocation failed");
