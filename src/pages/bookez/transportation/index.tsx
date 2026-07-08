@@ -43,7 +43,7 @@ const cards: any[] = [
   {
     title: "Trip L/R Entry",
     description: "Create and track lorry receipt entries for transport shipments.",
-    component: "",
+    path: "/bookEz/transportation/trip-lr-entry",
     icon: <FileText size={22} />,
     permissionKey: "Pass",
   },

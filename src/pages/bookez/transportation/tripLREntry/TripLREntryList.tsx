@@ -1,42 +1,106 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import {
-    ArrowLeft,
-    Edit,
-    Lock,
-    Plus,
-    RefreshCcw,
-    Search,
-    Trash2,
-    Truck,
-} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Edit, Lock, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 
+import DataTable from "../../../../components/DataTable";
+import Permission from "../../../../components/PermissionGuard";
+import SearchInput from "../../../../components/searchInput";
+import Pagination from "../../../../components/pagination";
+import Badge from "../../../../components/badge";
+import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import {
-    deleteTripLREntry,
-    getTripLREntries,
-    getTripLREntryByVoucher,
-} from "../../../../redux/slices/professionalSlice/transportation/tripLREntrySlice";
-
-import { getTripExpenses } from "../../../../redux/slices/professionalSlice/transportation/tripExpenseSlice";
-
-import {
-    isTripLREntryClosed,
-    normalizeTripLRStatus,
-} from "./tripLREntryInitialState";
+    DataCreateButton,
+    DataREfreshButton,
+} from "../../../../components/buttons";
 
 import {
-    getDeleteBlockReason,
-    getLRVoucher,
-} from "../tripLinkageHelpers";
+    deleteTripLRCollection,
+    getAllLRCollection,
+} from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
 
-const LIMIT = 10;
+/* ===================================================
+   HELPERS
+=================================================== */
 
-const formatTripLRStatusLabel = (status: any) =>
-    normalizeTripLRStatus(status)
+const getApiList = (res: any) => {
+    const data = res?.data || res || {};
+
+    const list =
+        data?.records ||
+        data?.tripLRCollection ||
+        data?.data?.records ||
+        data?.data?.tripLRCollection ||
+        data?.data ||
+        data?.items ||
+        [];
+
+    return Array.isArray(list) ? list : [];
+};
+
+const getPagination = (res: any, records: any[] = []) => {
+    const data = res?.data || res || {};
+
+    return (
+        data?.pagination ||
+        data?.data?.pagination || {
+            totalDocs: records.length,
+            totalRecords: records.length,
+            hasPrevPage: false,
+            hasNextPage: false,
+            offset: 0,
+            limit: records.length,
+        }
+    );
+};
+
+const getLRVoucher = (item: any) =>
+    item?.lrNumber ||
+    item?.voucherNumber ||
+    item?.lrVoucherNumber ||
+    item?.tripLRVoucherNumber ||
+    item?.tripLRCollectionVoucherNumber ||
+    item?.lrCollectionVoucherNumber ||
+    item?.lrNumber ||
+    "";
+
+const normalizeStatus = (value: any) =>
+    String(value || "open")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+const getLRStatus = (item: any) =>
+    normalizeStatus(
+        item?.tripStatus ||
+            item?.status ||
+            item?.docStatus ||
+            item?.lrStatus ||
+            item?.collectionStatus ||
+            "open"
+    );
+
+const isLRClosed = (item: any) => {
+    const status = getLRStatus(item);
+
+    return (
+        status === "close" ||
+        status === "closed" ||
+        status === "complete" ||
+        status === "completed"
+    );
+};
+
+const formatStatusLabel = (item: any) => {
+    const status = getLRStatus(item);
+
+    if (isLRClosed(item)) return "Closed";
+
+    return status
         .replace(/_/g, " ")
         .replace(/\b\w/g, (c: string) => c.toUpperCase());
+};
 
 const formatDateTime = (value: any) => {
     if (!value) return "-";
@@ -63,202 +127,256 @@ const formatIndianNumber = (value: any) => {
     });
 };
 
-const getApiList = (res: any) => {
-    const data = res?.data || res || {};
-    const list = data?.records || data?.data || data?.items || [];
+const getCustomerName = (row: any) =>
+    row?.customer?.customerName ||
+    row?.customerDetails?.customerName ||
+    row?.accountName ||
+    row?.customerName ||
+    "-";
 
-    return Array.isArray(list) ? list : [];
-};
+const getCustomerCode = (row: any) =>
+    row?.customer?.customerCode ||
+    row?.customerDetails?.customerCode ||
+    row?.accountCode ||
+    row?.customerCode ||
+    "-";
 
-const getPagination = (res: any) => {
-    const data = res?.data || res || {};
-    return data?.pagination || {};
-};
+const getVehicleNumber = (row: any) =>
+    row?.vehicle?.vehicleNumber ||
+    row?.vehicleDetails?.vehicleNumber ||
+    row?.vehicleNumber ||
+    "-";
+
+const getVehicleType = (row: any) =>
+    row?.vehicle?.vehicleType ||
+    row?.vehicleDetails?.vehicleType ||
+    row?.vehicleType ||
+    "-";
+
+const getDriverName = (row: any) =>
+    row?.driver?.driverName ||
+    row?.driverDetails?.driverName ||
+    row?.driverName ||
+    "-";
+
+// const getDriverMobile = (row: any) =>
+//     row?.driver?.driverMobile ||
+//     row?.driver?.mobileNumber ||
+//     row?.driver?.driverCode ||
+//     row?.driverDetails?.driverMobile ||
+//     row?.driverDetails?.mobileNumber ||
+//     row?.driverDetails?.driverCode ||
+//     row?.driverMobile ||
+//     row?.mobileNumber ||
+//     "-";
+
+const getRouteName = (row: any) =>
+    row?.route?.routeName ||
+    (row?.route?.source || row?.route?.destination
+        ? `${row?.route?.source || "-"} → ${row?.route?.destination || "-"}`
+        : "-");
+
+// const getRouteDistance = (row: any) =>
+//     row?.route?.distanceKm || row?.routeDetails?.routeDistanceKm || "";
+
+const getCargoName = (row: any) =>
+    row?.cargo?.productName ||
+    row?.cargo?.itemName ||
+    row?.productName ||
+    "-";
+
+// const getCargoQty = (row: any) => {
+//     const qty = row?.cargo?.quantity ?? row?.quantity ?? "";
+//     const unit = row?.cargo?.unit ?? row?.unit ?? "";
+
+//     if (!qty && !unit) return "-";
+
+//     return `${qty || "0"} ${unit || ""}`.trim();
+// };
+
+const getFreightAmount = (row: any) =>
+    row?.freight?.agreedFreight ||
+    row?.freightDetails?.agreedFreight ||
+    row?.freightDetails?.expectedFreight ||
+    row?.agreedFreight ||
+    row?.expectedFreight ||
+    row?.freightAmount ||
+    0;
+
+/* ===================================================
+   TRIP LR COLLECTION LIST
+=================================================== */
 
 const TripLREntryList = () => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [rows, setRows] = useState<any[]>([]);
-    const [searchText, setSearchText] = useState("");
+    const [search, setSearch] = useState("");
     const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
 
-    const [loading, setLoading] = useState(true);
+    const [listingLoader, setListingLoader] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteLoader, setDeleteLoader] = useState(false);
 
-    const [offset, setOffset] = useState(0);
-    const [hasNextPage, setHasNextPage] = useState(false);
-    const [totalDocs, setTotalDocs] = useState(0);
+    const [localOffset, setLocalOffset] = useState(0);
+    const [localLimit, setLocalLimit] = useState(20);
+
+    const [pagination, setPagination] = useState<any>({
+        totalDocs: 0,
+        totalRecords: 0,
+        hasPrevPage: false,
+        hasNextPage: false,
+        offset: 0,
+        limit: 20,
+    });
 
     const [openCount, setOpenCount] = useState(0);
     const [closedCount, setClosedCount] = useState(0);
-    const [tripExpenses, setTripExpenses] = useState<any[]>([]);
+
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({
+        show: false,
+        x: null,
+        y: null,
+        item: null,
+        voucherNumber: null,
+    });
 
     const searchTimerRef = useRef<any>(null);
 
-    const totalEntryCount = openCount + closedCount;
+    const pageTitle = location.state?.title || "Trip L/R Entry";
+    const pageDescription =
+        location.state?.description ||
+        "Create and track lorry receipt entries for transport shipments.";
 
-    const loadTripExpenses = useCallback(async () => {
-        try {
-            const res = await dispatch(
-                getTripExpenses({
-                    limit: 200,
-                    offset: 0,
-                }) as any
-            ).unwrap();
+    const totalLRCount = openCount + closedCount;
 
-            setTripExpenses(getApiList(res));
-        } catch {
-            setTripExpenses([]);
-        }
-    }, [dispatch]);
+    /* ===================================================
+       API LOADERS
+    =================================================== */
 
     const fetchTabCounts = useCallback(async () => {
         try {
-            const [openRes, closeRes, allRes] = await Promise.all([
-                dispatch(
-                    getTripLREntries({
-                        limit: 1,
-                        offset: 0,
-                        status: "open",
-                    }) as any
-                ).unwrap(),
+            const res = await dispatch(
+                getAllLRCollection({
+                    limit: 1000,
+                    offset: 0,
+                    search: "",
+                    tripStatus: "",
+                }) as any
+            ).unwrap();
 
-                dispatch(
-                    getTripLREntries({
-                        limit: 1,
-                        offset: 0,
-                        status: "close",
-                    }) as any
-                ).unwrap(),
+            const list = getApiList(res);
 
-                dispatch(
-                    getTripLREntries({
-                        limit: 200,
-                        offset: 0,
-                    }) as any
-                ).unwrap(),
-            ]);
+            const clientOpen = list.filter((item: any) => !isLRClosed(item)).length;
+            const clientClosed = list.filter((item: any) => isLRClosed(item)).length;
 
-            const openPg = getPagination(openRes);
-            const closePg = getPagination(closeRes);
-
-            const apiOpen = Number(openPg?.totalDocs ?? NaN);
-            const apiClosed = Number(closePg?.totalDocs ?? NaN);
-
-            const allList = getApiList(allRes);
-
-            const clientOpen = allList.filter(
-                (item: any) => !isTripLREntryClosed(item)
-            ).length;
-
-            const clientClosed = allList.filter((item: any) =>
-                isTripLREntryClosed(item)
-            ).length;
-
-            const apiCountsLookValid =
-                Number.isFinite(apiOpen) &&
-                Number.isFinite(apiClosed) &&
-                apiOpen !== apiClosed;
-
-            setOpenCount(apiCountsLookValid ? apiOpen : clientOpen);
-            setClosedCount(apiCountsLookValid ? apiClosed : clientClosed);
+            setOpenCount(clientOpen);
+            setClosedCount(clientClosed);
         } catch {
-            // keep old counts
+            setOpenCount(0);
+            setClosedCount(0);
         }
     }, [dispatch]);
 
     const fetchEntries = useCallback(
         async ({
-            pageOffset = 0,
-            status = activeStatus,
-            search = searchText,
-        }: {
-            pageOffset?: number;
-            status?: "open" | "close";
-            search?: string;
-        } = {}) => {
+            offset = localOffset,
+            limit = localLimit,
+            searchValue = search,
+            showLoader = true,
+        }: any = {}) => {
             try {
+                if (showLoader) setListingLoader(true);
+
+                /*
+                   IMPORTANT:
+                   Do not send tripStatus: "open" here because your API data has
+                   tripStatus like "in_transit". We fetch records and filter
+                   Open/Close on frontend.
+                */
                 const res = await dispatch(
-                    getTripLREntries({
-                        limit: LIMIT,
-                        offset: pageOffset,
-                        status,
-                        search: search?.trim() || undefined,
+                    getAllLRCollection({
+                        limit,
+                        offset,
+                        search: searchValue?.trim() || "",
+                        tripStatus: "",
                     }) as any
                 ).unwrap();
 
                 const list = getApiList(res);
-                const pg = getPagination(res);
+                const pg = getPagination(res, list);
 
                 setRows(list);
-                setTotalDocs(Number(pg?.totalDocs || list.length || 0));
-                setHasNextPage(Boolean(pg?.hasNextPage));
 
-                const nextOffset =
-                    Number(pg?.offset ?? pageOffset) + Number(pg?.limit ?? LIMIT);
-
-                setOffset(nextOffset);
+                setPagination({
+                    ...pg,
+                    totalDocs: pg?.totalDocs ?? list.length,
+                    totalRecords: pg?.totalRecords ?? pg?.totalDocs ?? list.length,
+                    hasPrevPage: !!pg?.hasPrevPage,
+                    hasNextPage: !!pg?.hasNextPage,
+                    offset: pg?.offset ?? offset,
+                    limit: pg?.limit ?? limit,
+                });
 
                 return list;
             } catch (error: any) {
                 setRows([]);
-                setTotalDocs(0);
-                setHasNextPage(false);
-                toast.error(error?.message || "Failed to load trip LR entries");
+
+                setPagination({
+                    totalDocs: 0,
+                    totalRecords: 0,
+                    hasPrevPage: false,
+                    hasNextPage: false,
+                    offset,
+                    limit,
+                });
+
+                toast.error(error?.message || "Failed to load trip LR collection");
                 return [];
+            } finally {
+                if (showLoader) setListingLoader(false);
             }
         },
-        [activeStatus, dispatch, searchText]
+        [dispatch, localLimit, localOffset, search]
     );
 
     const loadPage = useCallback(
         async ({
-            nextOffset = 0,
-            nextStatus = activeStatus,
-            nextSearch = searchText,
+            offset = localOffset,
+            limit = localLimit,
+            searchValue = search,
             showLoader = true,
-        }: {
-            nextOffset?: number;
-            nextStatus?: "open" | "close";
-            nextSearch?: string;
-            showLoader?: boolean;
-        } = {}) => {
+        }: any = {}) => {
             try {
-                if (showLoader) setLoading(true);
+                if (showLoader) setListingLoader(true);
 
                 await Promise.all([
-                    loadTripExpenses(),
                     fetchTabCounts(),
                     fetchEntries({
-                        pageOffset: nextOffset,
-                        status: nextStatus,
-                        search: nextSearch,
+                        offset,
+                        limit,
+                        searchValue,
+                        showLoader: false,
                     }),
                 ]);
             } finally {
-                setLoading(false);
+                if (showLoader) setListingLoader(false);
                 setRefreshing(false);
             }
         },
-        [
-            activeStatus,
-            fetchEntries,
-            fetchTabCounts,
-            loadTripExpenses,
-            searchText,
-        ]
+        [fetchEntries, fetchTabCounts, localLimit, localOffset, search]
     );
 
     useEffect(() => {
         loadPage({
-            nextOffset: 0,
-            nextStatus: activeStatus,
-            nextSearch: searchText,
+            offset: localOffset,
+            limit: localLimit,
+            searchValue: search,
             showLoader: true,
         });
-    }, []);
+    }, [localOffset, localLimit]);
 
     useEffect(() => {
         if (searchTimerRef.current) {
@@ -266,13 +384,13 @@ const TripLREntryList = () => {
         }
 
         searchTimerRef.current = setTimeout(() => {
-            setOffset(0);
-            setHasNextPage(false);
+            setLocalOffset(0);
 
             fetchEntries({
-                pageOffset: 0,
-                status: activeStatus,
-                search: searchText,
+                offset: 0,
+                limit: localLimit,
+                searchValue: search,
+                showLoader: true,
             });
         }, 400);
 
@@ -281,538 +399,497 @@ const TripLREntryList = () => {
                 clearTimeout(searchTimerRef.current);
             }
         };
-    }, [activeStatus, fetchEntries, searchText]);
+    }, [search, fetchEntries, localLimit]);
 
-    const visibleRows = useMemo(() => {
-        const q = searchText.trim().toLowerCase();
+    /* ===================================================
+       FILTERED ROWS
+    =================================================== */
+
+    const filteredRows = useMemo(() => {
+        const q = search.trim().toLowerCase();
 
         return rows.filter((item: any) => {
-            const closed = isTripLREntryClosed(item);
+            const closed = isLRClosed(item);
 
-            if (activeStatus === "close" ? !closed : closed) return false;
+            if (activeStatus === "open" && closed) return false;
+            if (activeStatus === "close" && !closed) return false;
 
             if (!q) return true;
 
             return (
                 String(getLRVoucher(item) || "").toLowerCase().includes(q) ||
                 String(item?.tripNumber || "").toLowerCase().includes(q) ||
-                String(item?.customer?.customerName || "")
-                    .toLowerCase()
-                    .includes(q) ||
-                String(item?.vehicle?.vehicleNumber || "")
-                    .toLowerCase()
-                    .includes(q) ||
-                String(item?.driver?.driverName || "")
-                    .toLowerCase()
-                    .includes(q)
+                String(item?.transportOrderNumber || "").toLowerCase().includes(q) ||
+                String(getCustomerName(item) || "").toLowerCase().includes(q) ||
+                String(getVehicleNumber(item) || "").toLowerCase().includes(q) ||
+                String(getDriverName(item) || "").toLowerCase().includes(q) ||
+                String(getRouteName(item) || "").toLowerCase().includes(q) ||
+                String(getCargoName(item) || "").toLowerCase().includes(q)
             );
         });
-    }, [activeStatus, rows, searchText]);
+    }, [activeStatus, rows, search]);
+
+    /* ===================================================
+       ACTIONS
+    =================================================== */
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        setOffset(0);
-        setHasNextPage(false);
 
         await loadPage({
-            nextOffset: 0,
-            nextStatus: activeStatus,
-            nextSearch: searchText,
+            offset: localOffset,
+            limit: localLimit,
+            searchValue: search,
             showLoader: false,
         });
     };
 
-    const handleNextPage = async () => {
-        if (!hasNextPage || loading) return;
-
-        await fetchEntries({
-            pageOffset: offset,
-            status: activeStatus,
-            search: searchText,
+    const handleCreate = () => {
+        navigate("/bookEz/transportation/trip-lr-entry/create", {
+            state: {
+                title: "Create Trip L/R Collection",
+                description:
+                    "Create LR collection with customer, route, vehicle, freight and status.",
+                mode: "add",
+            },
         });
     };
 
-    const handlePrevPage = async () => {
-        const prevOffset = Math.max(0, offset - LIMIT * 2);
+    // const handleEdit = async (item: any) => {
+    //     if (isLRClosed(item)) {
+    //         toast.error("Closed LR collection cannot be edited.");
+    //         return;
+    //     }
 
-        await fetchEntries({
-            pageOffset: prevOffset,
-            status: activeStatus,
-            search: searchText,
-        });
-    };
+    //     try {
+    //         setListingLoader(true);
 
-    const handleEdit = async (item: any) => {
-        if (isTripLREntryClosed(item)) {
-            toast.error("Closed trip LR entries cannot be edited.");
-            return;
-        }
+    //         const voucher = getLRVoucher(item);
 
-        const blockReason = getDeleteBlockReason(
-            "tripLREntry",
-            item,
-            tripExpenses
-        );
+    //         if (!voucher) {
+    //             toast.warn("LR number not found");
+    //             return;
+    //         }
 
-        if (blockReason) {
-            toast.error(blockReason);
-            return;
-        }
+    //         const res = await dispatch(
+    //             getTripLRCollectionByVoucherNumber(voucher) as any
+    //         ).unwrap();
 
+    //         navigate(`/bookEz/transportation/trip-lr-collection/edit/${voucher}`, {
+    //             state: {
+    //                 title: "Edit Trip L/R Collection",
+    //                 description: "Update LR collection details.",
+    //                 mode: "edit",
+    //                 voucherNumber: voucher,
+    //                 lrNumber: voucher,
+    //                 lrData: res?.data || res,
+    //             },
+    //         });
+    //     } catch (error: any) {
+    //         toast.error(error?.message || "Failed to open LR collection");
+    //     } finally {
+    //         setListingLoader(false);
+    //     }
+    // };
+
+    // const handleDeleteClick = (e: any, item: any) => {
+    //     if (isLRClosed(item)) {
+    //         toast.error("Closed LR collection cannot be deleted.");
+    //         return;
+    //     }
+
+    //     const voucher = getLRVoucher(item);
+
+    //     if (!voucher) {
+    //         toast.warn("LR number not found");
+    //         return;
+    //     }
+
+    //     const rect = e.currentTarget.getBoundingClientRect();
+
+    //     let x = rect.left - 160;
+    //     if (x < 10) x = 10;
+
+    //     const y = rect.top + window.scrollY - 5;
+
+    //     setConfirmTooltip({
+    //         show: true,
+    //         x,
+    //         y,
+    //         item,
+    //         voucherNumber: voucher,
+    //     });
+    // };
+
+    const handleDeleteConfirm = async () => {
         try {
-            setLoading(true);
+            if (!confirmTooltip?.voucherNumber) {
+                toast.warn("LR number not found");
+                return;
+            }
 
-            const voucher = getLRVoucher(item);
+            setDeleteLoader(true);
 
-            const res = await dispatch(
-                getTripLREntryByVoucher(voucher) as any
+            await dispatch(
+                deleteTripLRCollection(confirmTooltip.voucherNumber) as any
             ).unwrap();
 
-            navigate(`/bookez/transportation/trip-lr-entry/edit/${voucher}`, {
-                state: {
-                    mode: "edit",
-                    voucherNumber: voucher,
-                    lrData: res?.data || res,
-                },
+            toast.success("Trip LR collection deleted");
+
+            setConfirmTooltip({
+                show: false,
+                x: null,
+                y: null,
+                item: null,
+                voucherNumber: null,
             });
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to open trip LR entry");
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    const handleDelete = async (item: any) => {
-        if (isTripLREntryClosed(item)) {
-            toast.error("Closed trip LR entries cannot be deleted.");
-            return;
-        }
-
-        const blockReason = getDeleteBlockReason(
-            "tripLREntry",
-            item,
-            tripExpenses
-        );
-
-        if (blockReason) {
-            toast.error(blockReason);
-            return;
-        }
-
-        const voucher = getLRVoucher(item);
-
-        const confirmed = window.confirm(`Delete ${voucher || "this LR entry"}?`);
-
-        if (!confirmed) return;
-
-        try {
-            setDeleteLoading(true);
-
-            await dispatch(deleteTripLREntry(voucher) as any).unwrap();
-
-            toast.success("Trip LR deleted");
-
-            setOffset(0);
-            setHasNextPage(false);
+            setLocalOffset(0);
 
             await loadPage({
-                nextOffset: 0,
-                nextStatus: activeStatus,
-                nextSearch: searchText,
+                offset: 0,
+                limit: localLimit,
+                searchValue: search,
                 showLoader: false,
             });
         } catch (error: any) {
             toast.error(error?.message || "Delete failed");
         } finally {
-            setDeleteLoading(false);
+            setDeleteLoader(false);
         }
     };
 
-    const handleCreate = () => {
-        navigate("/bookez/transportation/trip-lr-entry/create");
-    };
+    /* ===================================================
+       COLUMNS
+    =================================================== */
 
-    const currentFrom = totalDocs ? Math.max(1, offset - LIMIT + 1) : 0;
-    const currentTo = Math.min(offset, totalDocs || offset);
+    const columns = [
+        {
+            key: "lrNumber",
+            title: "LR No",
+            render: (row: any) => (
+                <span className="">
+                    {getLRVoucher(row) || "-"}
+                </span>
+            ),
+        },
+        {
+            key: "lrDate",
+            title: "LR Date",
+            render: (row: any) => formatDateTime(row?.lrDate || row?.createdOn),
+        },
+        {
+            key: "tripNumber",
+            title: "Trip No",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-card-foreground">
+                        {row?.tripNumber || "-"}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                        {row?.transportOrderNumber || "-"}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: "customer",
+            title: "Customer",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-card-foreground">
+                        {getCustomerName(row)}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                        {getCustomerCode(row)}
+                    </div>
+                </div>
+            ),
+        },
+       
+        {
+            key: "vehicle",
+            title: "Vehicle",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-card-foreground">
+                        {getVehicleNumber(row)}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                        {getVehicleType(row)}
+                    </div>
+                </div>
+            ),
+        },
+        // {
+        //     key: "driver",
+        //     title: "Driver",
+        //     render: (row: any) => (
+        //         <div>
+        //             <div className="font-medium text-card-foreground">
+        //                 {getDriverName(row)}
+        //             </div>
+
+        //             <div className="text-xs text-muted-foreground">
+        //                 {getDriverMobile(row)}
+        //             </div>
+        //         </div>
+        //     ),
+        // },
+        // {
+        //     key: "cargo",
+        //     title: "Cargo",
+        //     render: (row: any) => (
+        //         <div>
+        //             <div className="font-medium text-card-foreground">
+        //                 {getCargoName(row)}
+        //             </div>
+
+        //             <div className="text-xs text-muted-foreground">
+        //                 {getCargoQty(row)}
+        //             </div>
+        //         </div>
+        //     ),
+        // },
+        {
+            key: "freight",
+            title: "Freight",
+            type: "amount",
+            render: (row: any) => (
+                <div className="text-right">
+                    <div className="">
+                        ₹{formatIndianNumber(getFreightAmount(row))}
+                    </div>
+
+                    {/* <div className="text-xs text-muted-foreground">
+                        {row?.freight?.paymentType || "-"}
+                    </div> */}
+                </div>
+            ),
+        },
+        {
+            key: "tripStatus",
+            title: "Status",
+            render: (row: any) => {
+                const closed = isLRClosed(row);
+
+                return closed ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-muted bg-muted px-2 py-1 text-xs font-bold text-muted-foreground">
+                        <Lock size={12} />
+                        Closed
+                    </span>
+                ) : (
+                    <span className="inline-flex rounded-md border border-success/20 bg-success/10 px-2 py-1 text-xs font-bold text-success">
+                        {formatStatusLabel(row) || "Open"}
+                    </span>
+                );
+            },
+        },
+    ];
+
+    /* ===================================================
+       RENDER
+    =================================================== */
 
     return (
-        <div className="flex h-full w-full flex-col bg-background text-foreground">
-            <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
-                <div className="min-w-0">
-                    <h1 className="flex items-center gap-2 text-lg font-bold text-card-foreground">
+        <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
+            <div id="trip-lr-collection-header" className="mb-3 flex items-center">
+                <div
+                    id="trip-lr-collection-summary"
+                    className="flex items-start gap-3"
+                >
+                    <div>
+                        <h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
+                            <button
+                                type="button"
+                                onClick={() => navigate(-1)}
+                                className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
+
+                            <span>{pageTitle}</span>
+                        </h1>
+
+                        <p className="px-2 text-sm text-muted-foreground">
+                            {pageDescription}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="ml-auto flex items-center gap-2">
+                    <Badge
+                        {...{
+                            count:
+                                pagination?.totalDocs ??
+                                pagination?.totalRecords ??
+                                filteredRows?.length ??
+                                totalLRCount ??
+                                0,
+                            text: "Total LR:",
+                            varient: "primary",
+                        }}
+                    />
+
+                    <div className="flex rounded-md border border-border bg-background p-1">
                         <button
                             type="button"
-                            onClick={() => navigate(-1)}
-                            className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                            onClick={() => {
+                                setActiveStatus("open");
+                                setLocalOffset(0);
+                            }}
+                            className={`rounded px-3 py-1.5 text-xs transition ${
+                                activeStatus === "open"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-muted"
+                            }`}
                         >
-                            <ArrowLeft size={20} />
+                            Open ({openCount})
                         </button>
 
-                        <span className="truncate">
-                            Trip L/R Entry ({totalEntryCount})
-                        </span>
-                    </h1>
-
-                    <p className="ml-8 mt-1 truncate text-sm text-muted-foreground">
-                        Manage LR entry, trip, customer, vehicle, freight and status.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={handleCreate}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90"
-                >
-                    <Plus size={16} />
-                    Create LR & Start Trip
-                </button>
-            </header>
-
-            <main className="flex-1 overflow-auto p-4 pb-8 sm:p-5">
-                <div className="space-y-4">
-                    <div className="rounded-lg border border-border bg-card p-3">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div className="flex rounded-md border border-border bg-background p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setActiveStatus("open");
-                                        setOffset(0);
-                                    }}
-                                    className={`h-9 rounded px-5 text-sm font-bold transition ${
-                                        activeStatus === "open"
-                                            ? "bg-primary text-primary-foreground"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    }`}
-                                >
-                                    Open ({openCount})
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setActiveStatus("close");
-                                        setOffset(0);
-                                    }}
-                                    className={`h-9 rounded px-5 text-sm font-bold transition ${
-                                        activeStatus === "close"
-                                            ? "bg-primary text-primary-foreground"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    }`}
-                                >
-                                    Closed ({closedCount})
-                                </button>
-                            </div>
-
-                            <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-                                <div className="relative w-full sm:w-[360px]">
-                                    <Search
-                                        size={15}
-                                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                    />
-
-                                    <input
-                                        value={searchText}
-                                        onChange={(e) =>
-                                            setSearchText(e.target.value)
-                                        }
-                                        placeholder="Search LR / trip / customer / vehicle"
-                                        className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-9 text-sm text-card-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-                                    />
-
-                                    {searchText && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setSearchText("")}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground transition hover:text-danger"
-                                        >
-                                            ✕
-                                        </button>
-                                    )}
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={handleRefresh}
-                                    disabled={refreshing || loading}
-                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-bold text-card-foreground transition hover:bg-muted disabled:opacity-60"
-                                >
-                                    <RefreshCcw
-                                        size={15}
-                                        className={refreshing ? "animate-spin" : ""}
-                                    />
-                                    Refresh
-                                </button>
-                            </div>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveStatus("close");
+                                setLocalOffset(0);
+                            }}
+                            className={`rounded px-3 py-1.5 text-xs transition ${
+                                activeStatus === "close"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-muted"
+                            }`}
+                        >
+                            Close ({closedCount})
+                        </button>
                     </div>
 
-                    <div className="rounded-lg border border-border bg-card">
-                        {loading ? (
-                            <div className="flex min-h-[280px] items-center justify-center text-sm font-semibold text-muted-foreground">
-                                Loading trip LR entries...
-                            </div>
-                        ) : visibleRows.length === 0 ? (
-                            <div className="flex min-h-[280px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-background p-6 text-center">
-                                <Truck
-                                    size={34}
-                                    className="mb-2 text-muted-foreground/40"
-                                />
+                    <SearchInput
+                        {...{
+                            search,
+                            setSearch,
+                        }}
+                    />
 
-                                <p className="text-base font-bold text-card-foreground">
-                                    {activeStatus === "close"
-                                        ? "No closed trip LR entries"
-                                        : "No open trip LR entries"}
-                                </p>
+                    <DataREfreshButton
+                        {...{
+                            callBackFn: handleRefresh,
+                            loading: refreshing,
+                        }}
+                    />
 
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    {activeStatus === "close"
-                                        ? "Completed LR entries will appear here."
-                                        : "Create LR and start trip from the button above."}
-                                </p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full border-separate border-spacing-0">
-                                        <thead className="sticky top-0 z-10 bg-muted/50">
-                                            <tr>
-                                                <Th>LR Voucher</Th>
-                                                <Th>Date</Th>
-                                                <Th>Trip No.</Th>
-                                                <Th>Customer</Th>
-                                                <Th>Vehicle</Th>
-                                                <Th>Driver</Th>
-                                                <Th align="right">Freight</Th>
-                                                <Th>Status</Th>
-                                                <Th align="center">Action</Th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            {visibleRows.map((item: any, index: number) => {
-                                                const voucher =
-                                                    getLRVoucher(item) || "-";
-
-                                                const closed =
-                                                    isTripLREntryClosed(item);
-
-                                                const expenseBlocked =
-                                                    !!getDeleteBlockReason(
-                                                        "tripLREntry",
-                                                        item,
-                                                        tripExpenses
-                                                    );
-
-                                                const canModify =
-                                                    !closed && !expenseBlocked;
-
-                                                const status =
-                                                    formatTripLRStatusLabel(
-                                                        item?.tripStatus
-                                                    );
-
-                                                const freight =
-                                                    item?.freight?.agreedFreight ??
-                                                    0;
-
-                                                return (
-                                                    <tr
-                                                        key={`${voucher}-${index}`}
-                                                        className="border-b border-border transition hover:bg-muted/30"
-                                                    >
-                                                        <Td>
-                                                            <div className="font-bold text-primary">
-                                                                {voucher}
-                                                            </div>
-                                                        </Td>
-
-                                                        <Td>
-                                                            {formatDateTime(
-                                                                item?.lrDate ||
-                                                                    item?.createdAt
-                                                            )}
-                                                        </Td>
-
-                                                        <Td>{item?.tripNumber || "-"}</Td>
-
-                                                        <Td>
-                                                            <span className="line-clamp-1 font-semibold text-card-foreground">
-                                                                {item?.customer
-                                                                    ?.customerName ||
-                                                                    "-"}
-                                                            </span>
-                                                        </Td>
-
-                                                        <Td>
-                                                            <span className="font-semibold text-card-foreground">
-                                                                {item?.vehicle
-                                                                    ?.vehicleNumber ||
-                                                                    "-"}
-                                                            </span>
-                                                        </Td>
-
-                                                        <Td>
-                                                            {item?.driver?.driverName ||
-                                                                "-"}
-                                                        </Td>
-
-                                                        <Td align="right">
-                                                            <span className="font-black text-card-foreground">
-                                                                ₹
-                                                                {formatIndianNumber(
-                                                                    freight || 0
-                                                                )}
-                                                            </span>
-                                                        </Td>
-
-                                                        <Td>
-                                                            {closed ? (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs font-bold text-muted-foreground">
-                                                                    <Lock size={12} />
-                                                                    Closed
-                                                                </span>
-                                                            ) : (
-                                                                <span className="inline-flex rounded bg-success/10 px-2 py-1 text-xs font-bold text-success">
-                                                                    {status || "Open"}
-                                                                </span>
-                                                            )}
-                                                        </Td>
-
-                                                        <Td align="center">
-                                                            {closed ? (
-                                                                <span className="text-xs font-bold text-muted-foreground">
-                                                                    Locked
-                                                                </span>
-                                                            ) : canModify ? (
-                                                                <div className="flex items-center justify-center gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleEdit(
-                                                                                item
-                                                                            )
-                                                                        }
-                                                                        className="rounded-md p-2 text-primary transition hover:bg-primary/10"
-                                                                        title="Edit"
-                                                                    >
-                                                                        <Edit size={16} />
-                                                                    </button>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            deleteLoading
-                                                                        }
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                item
-                                                                            )
-                                                                        }
-                                                                        className="rounded-md p-2 text-danger transition hover:bg-danger/10 disabled:opacity-60"
-                                                                        title="Delete"
-                                                                    >
-                                                                        <Trash2
-                                                                            size={16}
-                                                                        />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-xs font-bold text-warning">
-                                                                    Linked
-                                                                </span>
-                                                            )}
-                                                        </Td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <p className="text-sm text-muted-foreground">
-                                        Showing{" "}
-                                        <b className="text-card-foreground">
-                                            {currentFrom}
-                                        </b>{" "}
-                                        to{" "}
-                                        <b className="text-card-foreground">
-                                            {currentTo}
-                                        </b>{" "}
-                                        of{" "}
-                                        <b className="text-card-foreground">
-                                            {totalDocs || visibleRows.length}
-                                        </b>
-                                    </p>
-
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={handlePrevPage}
-                                            disabled={offset <= LIMIT || loading}
-                                            className="h-9 rounded-md border border-border bg-background px-3 text-sm font-bold text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            Previous
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={handleNextPage}
-                                            disabled={!hasNextPage || loading}
-                                            className="h-9 rounded-md border border-border bg-background px-3 text-sm font-bold text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                  
+                        <Permission
+                            module="bookez"
+                            permissionKey="Pass"
+                            action="create"
+                        >
+                            {/* @ts-ignore */}
+                            <DataCreateButton
+                                {...{
+                                    callBackFn: handleCreate,
+                                    text: "Create LR",
+                                }}
+                            />
+                        </Permission>
+                    
                 </div>
-            </main>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+                <DataTable
+                    columns={columns}
+                    data={filteredRows}
+                    loading={listingLoader}
+                    emptyMessage={
+                        activeStatus === "close"
+                            ? "No closed trip LR collection found"
+                            : "No open trip LR collection found"
+                    }
+                    // {...(activeStatus !== "close"
+                    //     ? {
+                    //           actions: (record: any) => {
+                    //               if (isLRClosed(record)) return null;
+
+                    //               return (
+                    //                   <div className="flex items-center gap-2">
+                    //                       <Permission
+                    //                           module="bookez"
+                    //                           permissionKey="Pass"
+                    //                           action="update"
+                    //                       >
+                    //                           <button
+                    //                               type="button"
+                    //                               onClick={() => handleEdit(record)}
+                    //                               className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                    //                           >
+                    //                               <Edit size={16} />
+                    //                           </button>
+                    //                       </Permission>
+
+                    //                       <Permission
+                    //                           module="bookez"
+                    //                           permissionKey="Pass"
+                    //                           action="delete"
+                    //                       >
+                    //                           <button
+                    //                               type="button"
+                    //                               disabled={deleteLoader}
+                    //                               onClick={(e) =>
+                    //                                   handleDeleteClick(e, record)
+                    //                               }
+                    //                               className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                    //                           >
+                    //                               <Trash2 size={16} />
+                    //                           </button>
+                    //                       </Permission>
+                    //                   </div>
+                    //               );
+                    //           },
+                    //       }
+                    //     : {})}
+                />
+            </div>
+
+            {pagination?.totalDocs > 0 && (
+                <Pagination
+                    localLimit={localLimit}
+                    selectCb={(e: any) => {
+                        setLocalLimit(Number(e.target.value));
+                        setLocalOffset(0);
+                    }}
+                    preDisabled={!pagination?.hasPrevPage}
+                    nextDisabled={!pagination?.hasNextPage}
+                    setLocalOffset={setLocalOffset}
+                    pagination={pagination}
+                />
+            )}
+
+            {confirmTooltip.show && (
+                <ConfirmTooltip
+                    x={confirmTooltip.x}
+                    y={confirmTooltip.y}
+                    message={`Are you sure you want to delete ${
+                        confirmTooltip?.voucherNumber || "this LR collection"
+                    }?`}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() =>
+                        setConfirmTooltip({
+                            show: false,
+                            x: null,
+                            y: null,
+                            item: null,
+                            voucherNumber: null,
+                        })
+                    }
+                />
+            )}
         </div>
     );
 };
-
-const Th = ({
-    children,
-    align = "left",
-}: {
-    children: any;
-    align?: "left" | "right" | "center";
-}) => (
-    <th
-        className={`border-b border-border px-4 py-3 text-xs font-black uppercase tracking-wide text-muted-foreground ${
-            align === "right"
-                ? "text-right"
-                : align === "center"
-                ? "text-center"
-                : "text-left"
-        }`}
-    >
-        {children}
-    </th>
-);
-
-const Td = ({
-    children,
-    align = "left",
-}: {
-    children: any;
-    align?: "left" | "right" | "center";
-}) => (
-    <td
-        className={`border-b border-border px-4 py-3 text-sm text-muted-foreground ${
-            align === "right"
-                ? "text-right"
-                : align === "center"
-                ? "text-center"
-                : "text-left"
-        }`}
-    >
-        {children}
-    </td>
-);
 
 export default TripLREntryList;

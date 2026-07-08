@@ -64,6 +64,8 @@ import SystemConfiguration from './pages/setting/systemConfiguration';
 import UserExplorer from './pages/setting/userExplorer';
 import TripExpenseList from './pages/bookez/transportation/tripExpense/TripExpenseList';
 import CreateEditTripExpence from './pages/bookez/transportation/tripExpense/CreateEditTripExpence';
+import TripLREntryList from './pages/bookez/transportation/tripLREntry/TripLREntryList';
+import CreateEditTripLREntry from './pages/bookez/transportation/tripLREntry/CreateEditTripLREntry';
 
 function App() {
   useAppearance();
@@ -174,6 +176,9 @@ function App() {
           <Route path='/bookEz/transportation/trip-expense' element={<TripExpenseList />} />
           <Route path='/bookEz/transportation/trip-expense/create' element={<CreateEditTripExpence />} />
           <Route path='/bookEz/transportation/trip-expense/edit/:voucherNumber' element={<CreateEditTripExpence />} />
+
+          <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
+          <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
 
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />

@@ -588,7 +588,7 @@ const PodDetails = ({ form, setForm, readOnly }: any) => {
             );
 
             const uploadedName =
-                res?.fileName ||
+                res?.file ||
                 res?.filename ||
                 res?.url ||
                 res?.path ||

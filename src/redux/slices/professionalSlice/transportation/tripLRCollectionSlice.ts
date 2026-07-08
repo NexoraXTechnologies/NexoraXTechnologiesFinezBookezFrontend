@@ -354,7 +354,7 @@ export const createLRCollection = createAsyncThunk(
     async (payload: any, { rejectWithValue }) => {
         try {
             const response = await professionalAxios.post(
-                "/eTaxSolnMongoApiBackend/users/bookEZ/tripLRCollection/save", { payload }
+                "/eTaxSolnMongoApiBackend/users/bookEZ/tripLRCollection/save", payload
             );
             if (!response?.data?.success) {
                 return rejectWithValue({

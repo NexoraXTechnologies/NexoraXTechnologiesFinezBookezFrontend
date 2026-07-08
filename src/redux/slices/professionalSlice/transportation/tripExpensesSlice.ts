@@ -621,7 +621,7 @@ export const uploadTripExpensePodFile = createAsyncThunk(
 	async (formData: FormData, { rejectWithValue }) => {
 		try {
 			const response = await professionalAxios.post(
-				"/eTaxSolnMongoApiBackend/users/bookEZ/tripExpenses/uploadPod",
+				"/eTaxSolnMongoApiBackend/documents",
 				formData,
 				{
 					headers: {
