@@ -702,9 +702,7 @@ const CreateTripAllocation = () => {
         ) ||
         (form.transportOrder?.transportOrderNumber
             ? {
-                label: `${form.transportOrder.transportOrderNumber} - ${form.transportOrder.customerName ||
-                    form.transportOrder.customerDetails?.customerName ||
-                    "-"
+                label: `${form.transportOrder.transportOrderNumber} - ${form.transportOrder.customerName ||form.transportOrder.customerDetails?.customerName ||"-"
                     } (${form.transportOrder.pickupLocation ||
                     form.transportOrder.pickupDetails?.pickupLocation ||
                     "-"
