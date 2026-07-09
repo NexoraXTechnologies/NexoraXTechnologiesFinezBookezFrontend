@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { formatDateForList, formatDateTime, money } from "../../../../utils/helperFunctions";
+import {  formatDateTime } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
@@ -313,7 +313,7 @@ const TripAllocationList = () => {
 							<button
 								type="button"
 								onClick={() => navigate(-1)}
-								className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+								className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
 							>
 								<ArrowLeft size={18} />
 							</button>

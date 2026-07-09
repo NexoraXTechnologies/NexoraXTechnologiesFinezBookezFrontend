@@ -4,8 +4,6 @@ import {
     BatteryCharging,
     Calendar,
     CheckCircle,
-    ChevronDown,
-    ChevronUp,
     Clipboard,
     CreditCard,
     FileText,
@@ -24,7 +22,6 @@ import {
     useEffect,
     useMemo,
     useState,
-    type ReactNode,
 } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";

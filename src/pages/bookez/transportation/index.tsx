@@ -13,7 +13,7 @@ import TransactionDashboard from "../../../components/mainPage/TransactionDashbo
 
 
 const cards: any[] = [
-   {
+  {
     title: "Create Contract",
     description: "Create transport contracts with customers, vendors, or fleet partners.",
     path: "/bookEz/transportation/transport-contract",
@@ -55,24 +55,24 @@ const cards: any[] = [
     icon: <Wrench size={22} />,
     permissionKey: "Pass",
   },
- 
+
   {
     title: "Driver Settlement",
     description: "Calculate and settle driver advances, expenses, and final trip balance.",
-    component: "",
+    path: "/bookez/transportation/driver-settlement",
     icon: <HandCoins size={22} />,
     permissionKey: "Pass",
   },
   {
     title: "Vehicle Status",
-    description: "Calculate and settle driver advances, expenses, and final trip balance.",
+    description: "Track vehicle availability, current status, assignment state, and movement updates.",
     path: "/bookez/transportation/vehicle-status",
     icon: <Truck size={22} />,
     permissionKey: "Pass",
   },
   {
     title: "Where Is My Driver?",
-    description: "Calculate and settle driver advances, expenses, and final trip balance.",
+    description: "View driver location, trip progress, assigned vehicle, and route tracking in real time.",
     path: "/bookez/transportation/where-is-driver",
     icon: <MapPinned size={22} />,
     permissionKey: "Pass",

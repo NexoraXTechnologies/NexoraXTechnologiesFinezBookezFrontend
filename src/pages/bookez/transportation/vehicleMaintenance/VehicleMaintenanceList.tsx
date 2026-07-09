@@ -397,7 +397,7 @@ const VehicleMaintenanceList = () => {
             key: "voucherNumber",
             title: "Voucher",
             render: (row: any) => (
-                <span className="font-bold text-primary">
+                <span className="">
                     {getVehicleMaintenanceVoucher(row) || "-"}
                 </span>
             ),
@@ -483,7 +483,7 @@ const VehicleMaintenanceList = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate(-1)}
-                                className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
                             >
                                 <ArrowLeft size={18} />
                             </button>

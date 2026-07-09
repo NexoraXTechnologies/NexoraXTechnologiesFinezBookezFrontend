@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Edit, Lock, Trash2 } from "lucide-react";
+import { ArrowLeft,  Lock } from "lucide-react";
 import { toast } from "react-toastify";
 
 import DataTable from "../../../../components/DataTable";
@@ -218,6 +218,7 @@ const TripLREntryList = () => {
 
     const [listingLoader, setListingLoader] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    // @ts-ignore
     const [deleteLoader, setDeleteLoader] = useState(false);
 
     const [localOffset, setLocalOffset] = useState(0);
@@ -706,7 +707,7 @@ const TripLREntryList = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate(-1)}
-                                className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
                             >
                                 <ArrowLeft size={18} />
                             </button>

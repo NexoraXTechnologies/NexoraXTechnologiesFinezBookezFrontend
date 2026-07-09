@@ -71,6 +71,8 @@ import CreateEditVehicleMaintenance from './pages/bookez/transportation/vehicleM
 import VehicleStatus from './pages/bookez/transportation/vehicleStatus';
 import WhereIsMyDriver from './pages/bookez/transportation/whereIsDriver';
 import LiveTripTracking from './pages/bookez/transportation/whereIsDriver/liveTrackMap';
+import CreateEditDriverSettlement from './pages/bookez/transportation/driverSettlement/CreateEditDriverSettlement';
+import DriverSettlementList from './pages/bookez/transportation/driverSettlement/DriverSettlementList';
 
 function App() {
   useAppearance();
@@ -187,6 +189,10 @@ function App() {
           <Route path="/bookez/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
           <Route path="/bookez/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>
           <Route path="/bookez/transportation/vehicle-maintenance/edit/:voucherNumber" element={<CreateEditVehicleMaintenance />}/>
+          
+          <Route path="/bookez/transportation/driver-settlement" element={<DriverSettlementList/>}/>
+          <Route path="/bookez/transportation/driver-settlement/create"element={<CreateEditDriverSettlement/>}/>
+          <Route path="/bookez/transportation/driver-settlement/edit/:voucherNumber" element={<CreateEditDriverSettlement />}/>
 
           <Route path="/bookez/transportation/vehicle-status" element={<VehicleStatus />} />
           <Route path="/bookez/transportation/where-is-driver" element={<WhereIsMyDriver />} />
