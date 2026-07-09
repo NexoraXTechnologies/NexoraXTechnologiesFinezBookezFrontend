@@ -174,7 +174,7 @@ export const getWhereIsMyDriverList = createAsyncThunk(
                     },
                 }
             );
-
+            console.log({ response })
             const list = unwrapTripTrackingList(response?.data);
 
             const activeList = (Array.isArray(list) ? list : []).filter((item: any) => {
@@ -192,16 +192,8 @@ export const getWhereIsMyDriverList = createAsyncThunk(
 
             const driversWithAddress = await Promise.all(
                 uniqueDrivers.map(async (item: any) => {
-                    const existingAddress =
-                        item?.currentLocation?.address ||
-                        item?.currentLocation?.formattedAddress ||
-                        item?.address ||
-                        "";
-
-                    const currentAddress =
-                        existingAddress ||
-                        (await reverseGeocodeLocation(item?.currentLocation));
-
+                    const existingAddress = item?.currentLocation?.address || item?.currentLocation?.formattedAddress || item?.address || "";
+                    const currentAddress = existingAddress || (await reverseGeocodeLocation(item?.currentLocation));
                     return {
                         ...item,
                         currentAddress,

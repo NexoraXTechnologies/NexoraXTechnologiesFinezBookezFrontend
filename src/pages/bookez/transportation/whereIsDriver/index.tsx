@@ -172,7 +172,6 @@ const DriverCard = ({
     const vehicleNumber = getVehicleNumber(item);
     const tripLabel = getTripLabel(item);
     const lastUpdated = getLastUpdated(item);
-
     return (
         <motion.div
             layout
@@ -338,13 +337,10 @@ const WhereIsMyDriver = () => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
 
-    const { drivers, listingLoader, error } = useSelector(
-        (state: any) => state.whereIsMyDriver
-    );
+    const { drivers, listingLoader, error } = useSelector((state: any) => state.whereIsMyDriver);
 
     const [selectedDriver, setSelectedDriver] = useState("all");
     const [search, setSearch] = useState("");
-
     const fetchDrivers = () => {
         dispatch(
             getWhereIsMyDriverList({
@@ -389,17 +385,9 @@ const WhereIsMyDriver = () => {
             if (selectedDriver !== "all") {
                 if (getDriverUniqueKey(item) !== selectedDriver) return false;
             }
-
+            console.log({ item })
             if (search.trim()) {
-                const text = [
-                    getDriverName(item),
-                    getVehicleNumber(item),
-                    getTripLabel(item),
-                    getTripTrackingVoucher(item),
-                    item?.currentAddress,
-                ]
-                    .join(" ")
-                    .toLowerCase();
+                const text = [getDriverName(item), getVehicleNumber(item), getTripLabel(item), getTripTrackingVoucher(item), item?.currentAddress].join(" ").toLowerCase();
 
                 if (!text.includes(search.trim().toLowerCase())) return false;
             }
@@ -407,7 +395,7 @@ const WhereIsMyDriver = () => {
             return true;
         });
     }, [drivers, selectedDriver, search]);
-
+    console.log({ drivers })
     const handleBack = () => {
         navigate(-1);
     };
