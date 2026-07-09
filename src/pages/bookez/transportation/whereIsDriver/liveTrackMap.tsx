@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import  { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
     ArrowLeft,
     Clock,
@@ -6,7 +6,6 @@ import {
     MapPin,
     Navigation,
     RefreshCcw,
-    Truck,
     User,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -50,7 +49,7 @@ const pageVariants = {
     },
 };
 
-const sectionVariants = {
+const sectionVariants: any = {
     hidden: { opacity: 0, y: 10 },
     show: {
         opacity: 1,
@@ -62,7 +61,7 @@ const sectionVariants = {
     },
 };
 
-const cardVariants = {
+const cardVariants: any     = {
     hidden: { opacity: 0, y: 10, scale: 0.99 },
     show: {
         opacity: 1,
