@@ -68,6 +68,9 @@ import TripLREntryList from './pages/bookez/transportation/tripLREntry/TripLREnt
 import CreateEditTripLREntry from './pages/bookez/transportation/tripLREntry/CreateEditTripLREntry';
 import VehicleMaintenanceList from './pages/bookez/transportation/vehicleMaintenance/VehicleMaintenanceList';
 import CreateEditVehicleMaintenance from './pages/bookez/transportation/vehicleMaintenance/CreateEditVehicleMaintenance';
+import VehicleStatus from './pages/bookez/transportation/vehicleStatus';
+import WhereIsMyDriver from './pages/bookez/transportation/whereIsDriver';
+import LiveTripTracking from './pages/bookez/transportation/whereIsDriver/liveTrackMap';
 
 function App() {
   useAppearance();
@@ -118,7 +121,6 @@ function App() {
           <Route path="master/product" element={<ProductMaster />} />
           <Route path="master/unit" element={<UnitMaster />} />
           <Route path="master/reports-mapping" element={<ReportMapping />} />
-
 
           <Route path="/bookEz/transaction/opening-balances" element={<OpeningBalancesDashboard />} />
 
@@ -186,6 +188,9 @@ function App() {
           <Route path="/bookez/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>
           <Route path="/bookez/transportation/vehicle-maintenance/edit/:voucherNumber" element={<CreateEditVehicleMaintenance />}/>
 
+          <Route path="/bookez/transportation/vehicle-status" element={<VehicleStatus />} />
+          <Route path="/bookez/transportation/where-is-driver" element={<WhereIsMyDriver />} />
+          <Route path="/bookez/transportation/live-trip-tracking" element={<LiveTripTracking />} />
 
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />

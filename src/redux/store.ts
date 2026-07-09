@@ -67,8 +67,8 @@ import tripExpensesReducer from "./slices/professionalSlice/transportation/tripE
 import tripLRCollectionReducer from "./slices/professionalSlice/transportation/tripLRCollectionSlice";
 import vehicleMaintenanceReducer from "./slices/professionalSlice/transportation/vehicleMaintenanceEntrySlice";
 import transportContractReducer from "./slices/professionalSlice/transportation/transportContractSlice";
-
-
+import vehicleStatusReducer from "./slices/professionalSlice/transportation/vehicleStatusSlice"
+import whereIsMyDriverReducer from "./slices/professionalSlice/transportation/whereIsMyDriverSlice"
 // bookEz register
 import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
 import salesReceiptReducer from "./slices/professionalSlice/salesWorkflow/salesReceipt";
@@ -171,6 +171,8 @@ export const store = configureStore({
     allRegisters: allRegistersReducer,
     registerDashboard: areaDashboardReducer,
     systemConfiguration: systemConfigurationReducer,
+    vehicleStatus: vehicleStatusReducer,
+    whereIsMyDriver: whereIsMyDriverReducer
   },
 });
 

@@ -7,6 +7,7 @@ import {
   FileSignature,
   HandCoins,
   PackagePlus,
+  MapPinned,
 } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 
@@ -65,16 +66,16 @@ const cards: any[] = [
   {
     title: "Vehicle Status",
     description: "Calculate and settle driver advances, expenses, and final trip balance.",
-    component: "",
-    icon: <HandCoins size={22} />,
-    permissionKey: "accountLedger",
+    path: "/bookez/transportation/vehicle-status",
+    icon: <Truck size={22} />,
+    permissionKey: "Pass",
   },
   {
     title: "Where Is My Driver?",
     description: "Calculate and settle driver advances, expenses, and final trip balance.",
-    component: "",
-    icon: <HandCoins size={22} />,
-    permissionKey: "accountLedger",
+    path: "/bookez/transportation/where-is-driver",
+    icon: <MapPinned size={22} />,
+    permissionKey: "Pass",
   },
 ];
 
