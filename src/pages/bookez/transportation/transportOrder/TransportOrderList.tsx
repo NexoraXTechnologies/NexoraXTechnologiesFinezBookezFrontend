@@ -117,9 +117,9 @@ const TransportOrderList = () => {
 		return allocatedLRMap[orderNumber] || null;
 	};
 
-	const isOrderAllocatedInLR = (record: any) => {
-		return Boolean(getAllocatedLR(record));
-	};
+	// const isOrderAllocatedInLR = (record: any) => {
+	// 	return Boolean(getAllocatedLR(record));
+	// };
 
 
 	const normalizeStatus = (value: any) =>
@@ -425,7 +425,7 @@ const TransportOrderList = () => {
 							<button
 								type="button"
 								onClick={() => navigate(-1)}
-								className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+								className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
 							>
 								<ArrowLeft size={18} />
 							</button>
