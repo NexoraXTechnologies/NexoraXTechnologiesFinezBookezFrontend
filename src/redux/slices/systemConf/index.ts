@@ -849,6 +849,7 @@ const systemConfigurationSlice = createSlice({
             state.configuration.systemConfiguration = {
                 ...state.configuration.systemConfiguration,
                 [section]: {
+                    // @ts-ignore
                     ...state.configuration.systemConfiguration?.[section],
                     [key]: value,
                 },

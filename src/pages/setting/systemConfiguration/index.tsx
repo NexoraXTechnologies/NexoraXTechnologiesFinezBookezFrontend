@@ -359,14 +359,15 @@ const SystemConfiguration = () => {
 
     const updateInventoryField = useCallback(
         (key: string, value: any) => {
-            dispatch(updateInventoryConfigurationLocalField({ key, value }));
+            // cast to any to satisfy dispatch type expectations
+            dispatch(updateInventoryConfigurationLocalField({ key, value } as any));
         },
         [dispatch]
     );
 
     const updateFinanceField = useCallback(
         (key: string, value: any) => {
-            dispatch(updateFinanceConfigurationLocalField({ key, value }));
+            dispatch(updateFinanceConfigurationLocalField({ key, value } as any));
         },
         [dispatch]
     );
@@ -378,7 +379,7 @@ const SystemConfiguration = () => {
                     section,
                     key,
                     value,
-                })
+                } as any)
             );
         },
         [dispatch]
@@ -386,7 +387,7 @@ const SystemConfiguration = () => {
 
     const updateWhatsAppModuleToggle = useCallback(
         (moduleKey: string, enabled: boolean) => {
-            dispatch(updateWhatsAppModuleLocalToggle({ moduleKey, enabled }));
+            dispatch(updateWhatsAppModuleLocalToggle({ moduleKey, enabled } as any));
         },
         [dispatch]
     );
@@ -400,7 +401,8 @@ const SystemConfiguration = () => {
     const handleEnableWhatsAppModuleToggle = useCallback(
         async (nextEnabled: boolean) => {
             if (!nextEnabled) {
-                dispatch(setWhatsAppModuleEnabledLocal(false));
+                // cast to any to satisfy action creator typing when passing a boolean payload
+                dispatch(setWhatsAppModuleEnabledLocal(false as any));
                 localStorage.removeItem(BOOKEZ_WHATSAPP_SEND_ENABLED_KEY);
                 localStorage.removeItem(BOOKEZ_WHATSAPP_MODULE_CONFIG_KEY);
                 return;
