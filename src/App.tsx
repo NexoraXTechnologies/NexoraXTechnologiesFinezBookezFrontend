@@ -66,6 +66,8 @@ import TripExpenseList from './pages/bookez/transportation/tripExpense/TripExpen
 import CreateEditTripExpence from './pages/bookez/transportation/tripExpense/CreateEditTripExpence';
 import TripLREntryList from './pages/bookez/transportation/tripLREntry/TripLREntryList';
 import CreateEditTripLREntry from './pages/bookez/transportation/tripLREntry/CreateEditTripLREntry';
+import VehicleMaintenanceList from './pages/bookez/transportation/vehicleMaintenance/VehicleMaintenanceList';
+import CreateEditVehicleMaintenance from './pages/bookez/transportation/vehicleMaintenance/CreateEditVehicleMaintenance';
 
 function App() {
   useAppearance();
@@ -170,8 +172,8 @@ function App() {
           <Route path="/bookEz/transportation/transport-order/edit/:orderNumber" element={<CreateTransportOrder />} />
 
           <Route path='/bookEz/transportation/trip-allocation' element={<TripAllocationList />} />
-          <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />}/>
-          <Route path="/bookEz/transportation/trip-allocation/edit/:voucherNumber" element={<CreateTripAllocation />}/>
+          <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />} />
+          <Route path="/bookEz/transportation/trip-allocation/edit/:voucherNumber" element={<CreateTripAllocation />} />
 
           <Route path='/bookEz/transportation/trip-expense' element={<TripExpenseList />} />
           <Route path='/bookEz/transportation/trip-expense/create' element={<CreateEditTripExpence />} />
@@ -179,6 +181,11 @@ function App() {
 
           <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
           <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
+
+          <Route path="/bookez/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
+          <Route path="/bookez/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>
+          <Route path="/bookez/transportation/vehicle-maintenance/edit/:voucherNumber" element={<CreateEditVehicleMaintenance />}/>
+
 
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />

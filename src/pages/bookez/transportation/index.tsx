@@ -50,7 +50,7 @@ const cards: any[] = [
   {
     title: "Vehicle Maintenance",
     description: "Manage vehicle service, repair history, and maintenance expenses.",
-    component: "",
+    path: "/bookez/transportation/vehicle-maintenance",
     icon: <Wrench size={22} />,
     permissionKey: "Pass",
   },
@@ -60,7 +60,7 @@ const cards: any[] = [
     description: "Calculate and settle driver advances, expenses, and final trip balance.",
     component: "",
     icon: <HandCoins size={22} />,
-    permissionKey: "accountLedger",
+    permissionKey: "Pass",
   },
   {
     title: "Vehicle Status",
