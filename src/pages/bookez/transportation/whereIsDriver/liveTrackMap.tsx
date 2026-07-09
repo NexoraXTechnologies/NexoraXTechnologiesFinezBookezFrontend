@@ -390,7 +390,7 @@ const RouteAddressCard = memo(
                             {title}
                         </p>
 
-                        <p className="mt-0.5 line-clamp-3 text-sm font-bold leading-5 text-foreground">
+                        <p className="mt-0.5 line-clamp-3 text-sm font-bold text-foreground">
                             {address || "-"}
                         </p>
 
@@ -442,49 +442,189 @@ const mapContainerStyle = {
     height: "100%",
 };
 
-const VehicleMarker = memo(
+const VehicleMarkerHtml = ({
+    heading,
+    vehicleNumber,
+}: {
+    heading: number;
+    vehicleNumber: string;
+}) => {
+    return `
+        <div class="truck-marker-wrap">
+            <div class="truck-shadow"></div>
+
+            <div class="truck-rotor" style="transform: rotate(${heading}deg);">
+                <div class="truck-arrow"></div>
+
+                <div class="truck-body">
+                    <div class="truck-window"></div>
+                    <div class="truck-box"></div>
+
+                    <div class="truck-wheel truck-wheel-1"></div>
+                    <div class="truck-wheel truck-wheel-2"></div>
+                    <div class="truck-wheel truck-wheel-3"></div>
+                    <div class="truck-wheel truck-wheel-4"></div>
+
+                    <div class="truck-light truck-light-1"></div>
+                    <div class="truck-light truck-light-2"></div>
+                </div>
+            </div>
+
+            <div class="truck-label">${vehicleNumber || "Vehicle"}</div>
+        </div>
+    `;
+};
+
+const SmoothVehicleMarker = memo(
     ({
+        map,
+        position,
         heading,
         vehicleNumber,
     }: {
+        map: google.maps.Map | null;
+        position: { lat: number; lng: number } | null;
         heading: number;
         vehicleNumber: string;
     }) => {
-        return (
-            <div className="pointer-events-none -translate-x-1/2 -translate-y-1/2">
-                <div className="relative flex flex-col items-center">
-                    <div className="absolute top-[36px] h-5 w-12 rounded-full bg-black/30 blur-md" />
+        const overlayRef = useRef<google.maps.OverlayView | null>(null);
+        const divRef = useRef<HTMLDivElement | null>(null);
+        const animationRef = useRef<number | null>(null);
 
-                    <div
-                        style={{
-                            transform: `rotate(${heading}deg)`,
-                            transition: "transform 0.35s ease",
-                        }}
-                        className="relative h-[58px] w-[58px]"
-                    >
-                        <div className="absolute left-1/2 top-1 h-0 w-0 -translate-x-1/2 border-x-[10px] border-b-[15px] border-x-transparent border-b-primary drop-shadow-md" />
-
-                        <div className="absolute left-1/2 top-3 h-10 w-7 -translate-x-1/2 rounded-[12px] bg-primary shadow-xl ring-2 ring-white">
-                            <div className="absolute left-1/2 top-1 h-3 w-5 -translate-x-1/2 rounded-t-md bg-white/85" />
-                            <div className="absolute left-1/2 top-5 h-3.5 w-5 -translate-x-1/2 rounded-md bg-white/20" />
-
-                            <div className="absolute -left-1 top-3 h-2.5 w-1.5 rounded-full bg-slate-900" />
-                            <div className="absolute -right-1 top-3 h-2.5 w-1.5 rounded-full bg-slate-900" />
-
-                            <div className="absolute -left-1 bottom-2 h-2.5 w-1.5 rounded-full bg-slate-900" />
-                            <div className="absolute -right-1 bottom-2 h-2.5 w-1.5 rounded-full bg-slate-900" />
-
-                            <div className="absolute left-1 top-0.5 h-1.5 w-1.5 rounded-full bg-yellow-300" />
-                            <div className="absolute right-1 top-0.5 h-1.5 w-1.5 rounded-full bg-yellow-300" />
-                        </div>
-                    </div>
-
-                    <div className="mt-0 max-w-[140px] truncate rounded-md bg-primary px-2 py-1 text-xs font-black text-primary-foreground shadow-lg ring-1 ring-primary/30">
-                        {vehicleNumber || "Vehicle"}
-                    </div>
-                </div>
-            </div>
+        const currentPositionRef = useRef<{ lat: number; lng: number } | null>(
+            position
         );
+
+        const drawMarker = () => {
+            const overlay = overlayRef.current;
+            const div = divRef.current;
+            const currentPosition = currentPositionRef.current;
+
+            if (!overlay || !div || !currentPosition) return;
+
+            const projection = overlay.getProjection();
+            if (!projection) return;
+
+            const point = projection.fromLatLngToDivPixel(
+                new google.maps.LatLng(currentPosition.lat, currentPosition.lng)
+            );
+
+            if (!point) return;
+
+            div.style.transform = `translate3d(${point.x}px, ${point.y}px, 0) translate(-50%, -50%)`;
+        };
+
+        useEffect(() => {
+            if (!map || !position) return;
+
+            const div = document.createElement("div");
+            div.style.position = "absolute";
+            div.style.willChange = "transform";
+            div.style.zIndex = "9999";
+            div.style.pointerEvents = "none";
+            div.innerHTML = VehicleMarkerHtml({ heading, vehicleNumber });
+
+            divRef.current = div;
+            currentPositionRef.current = position;
+
+            const overlay = new google.maps.OverlayView();
+
+            overlay.onAdd = function () {
+                const panes = overlay.getPanes();
+                panes?.overlayMouseTarget.appendChild(div);
+            };
+
+            overlay.draw = function () {
+                drawMarker();
+            };
+
+            overlay.onRemove = function () {
+                if (div.parentNode) {
+                    div.parentNode.removeChild(div);
+                }
+            };
+
+            overlay.setMap(map);
+            overlayRef.current = overlay;
+
+            return () => {
+                if (animationRef.current) {
+                    cancelAnimationFrame(animationRef.current);
+                }
+
+                overlay.setMap(null);
+                overlayRef.current = null;
+                divRef.current = null;
+            };
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [map]);
+
+        useEffect(() => {
+            const div = divRef.current;
+            if (!div) return;
+
+            const rotor = div.querySelector(".truck-rotor") as HTMLDivElement | null;
+            const label = div.querySelector(".truck-label") as HTMLDivElement | null;
+
+            if (rotor) {
+                rotor.style.transform = `rotate(${heading}deg)`;
+            }
+
+            if (label) {
+                label.textContent = vehicleNumber || "Vehicle";
+            }
+        }, [heading, vehicleNumber]);
+
+        useEffect(() => {
+            if (!position) return;
+
+            const from = currentPositionRef.current || position;
+            const to = position;
+
+            if (from.lat === to.lat && from.lng === to.lng) return;
+
+            if (animationRef.current) {
+                cancelAnimationFrame(animationRef.current);
+            }
+
+            const startTime = performance.now();
+            const duration = 950;
+
+            const animate = (now: number) => {
+                const elapsed = now - startTime;
+                const rawProgress = Math.min(elapsed / duration, 1);
+
+                const progress =
+                    rawProgress < 0.5
+                        ? 2 * rawProgress * rawProgress
+                        : 1 - Math.pow(-2 * rawProgress + 2, 2) / 2;
+
+                currentPositionRef.current = {
+                    lat: from.lat + (to.lat - from.lat) * progress,
+                    lng: from.lng + (to.lng - from.lng) * progress,
+                };
+
+                drawMarker();
+
+                if (rawProgress < 1) {
+                    animationRef.current = requestAnimationFrame(animate);
+                } else {
+                    currentPositionRef.current = to;
+                    drawMarker();
+                }
+            };
+
+            animationRef.current = requestAnimationFrame(animate);
+
+            return () => {
+                if (animationRef.current) {
+                    cancelAnimationFrame(animationRef.current);
+                }
+            };
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [position?.lat, position?.lng]);
+
+        return null;
     }
 );
 
@@ -547,6 +687,10 @@ const LiveTrackingMap = memo(
         const fitBoundsDoneRef = useRef(false);
         const lastPositionKeyRef = useRef("");
 
+        const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(
+            null
+        );
+
         const [directions, setDirections] =
             useState<google.maps.DirectionsResult | null>(null);
 
@@ -558,8 +702,9 @@ const LiveTrackingMap = memo(
             return decodePolyline(routePolyline);
         }, [routePolyline]);
 
-        const initialMapCenter =
-            coords || pickupCoords || deliveryCoords || DEFAULT_CENTER;
+        const initialMapCenterRef = useRef(
+            coords || pickupCoords || deliveryCoords || DEFAULT_CENTER
+        );
 
         const mapOptions = useMemo(() => {
             if (!isLoaded || !(window as any)?.google) return {};
@@ -674,13 +819,13 @@ const LiveTrackingMap = memo(
             window.requestAnimationFrame(() => {
                 if (!mapRef.current) return;
 
-                mapRef.current.panTo(coords);
-
                 const currentZoom = mapRef.current.getZoom() || 0;
 
                 if (currentZoom < FOLLOW_ZOOM) {
                     mapRef.current.setZoom(FOLLOW_ZOOM);
                 }
+
+                mapRef.current.panTo(coords);
             });
         }, [isLoaded, coords?.lat, coords?.lng]);
 
@@ -731,11 +876,12 @@ const LiveTrackingMap = memo(
         return (
             <GoogleMap
                 mapContainerStyle={mapContainerStyle}
-                center={initialMapCenter}
+                center={initialMapCenterRef.current}
                 zoom={FOLLOW_ZOOM}
                 options={mapOptions}
                 onLoad={(map) => {
                     mapRef.current = map;
+                    setMapInstance(map);
 
                     if (coords) {
                         window.setTimeout(() => {
@@ -746,6 +892,7 @@ const LiveTrackingMap = memo(
                 }}
                 onUnmount={() => {
                     mapRef.current = null;
+                    setMapInstance(null);
                 }}
             >
                 {decodedRoutePath.length > 1 ? (
@@ -819,22 +966,26 @@ const LiveTrackingMap = memo(
                     </>
                 )}
 
-                <MarkerF
+                <SmoothVehicleMarker
+                    map={mapInstance}
                     position={coords}
-                    icon={{
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 0,
-                    }}
-                    zIndex={9999}
+                    heading={heading}
+                    vehicleNumber={vehicleNumber}
                 />
-
-                <OverlayView
-                    position={coords}
-                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                >
-                    <VehicleMarker heading={heading} vehicleNumber={vehicleNumber} />
-                </OverlayView>
             </GoogleMap>
+        );
+    },
+    (prev, next) => {
+        return (
+            prev.coords?.lat === next.coords?.lat &&
+            prev.coords?.lng === next.coords?.lng &&
+            prev.pickupCoords?.lat === next.pickupCoords?.lat &&
+            prev.pickupCoords?.lng === next.pickupCoords?.lng &&
+            prev.deliveryCoords?.lat === next.deliveryCoords?.lat &&
+            prev.deliveryCoords?.lng === next.deliveryCoords?.lng &&
+            prev.routePolyline === next.routePolyline &&
+            prev.heading === next.heading &&
+            prev.vehicleNumber === next.vehicleNumber
         );
     }
 );
@@ -862,6 +1013,8 @@ const LiveTripTracking = () => {
     const [tracking, setTracking] = useState<any>(initialTracking || null);
     const [loading, setLoading] = useState(!initialTracking);
     const [refreshing, setRefreshing] = useState(false);
+
+    const fetchInProgressRef = useRef(false);
 
     const trackingVoucher = useMemo(
         () => String(routeVoucher || getTripTrackingVoucher(tracking) || "").trim(),
@@ -892,10 +1045,13 @@ const LiveTripTracking = () => {
                 return;
             }
 
-            if (silent) {
-                setRefreshing(true);
-            } else {
+            if (fetchInProgressRef.current) return;
+
+            fetchInProgressRef.current = true;
+
+            if (!silent) {
                 setLoading(true);
+                setRefreshing(true);
             }
 
             const response = await professionalAxios.get(
@@ -907,7 +1063,28 @@ const LiveTripTracking = () => {
             const detail = unwrapTripTrackingDetail(response);
 
             if (detail) {
-                setTracking(detail);
+                setTracking((prev: any) => {
+                    const oldLat = String(prev?.currentLocation?.lat || "");
+                    const oldLng = String(prev?.currentLocation?.lng || "");
+                    const oldHeading = String(prev?.currentLocation?.heading || "");
+                    const oldUpdated = String(prev?.lastUpdatedAt || prev?.updatedAt || "");
+
+                    const newLat = String(detail?.currentLocation?.lat || "");
+                    const newLng = String(detail?.currentLocation?.lng || "");
+                    const newHeading = String(detail?.currentLocation?.heading || "");
+                    const newUpdated = String(detail?.lastUpdatedAt || detail?.updatedAt || "");
+
+                    if (
+                        oldLat === newLat &&
+                        oldLng === newLng &&
+                        oldHeading === newHeading &&
+                        oldUpdated === newUpdated
+                    ) {
+                        return prev;
+                    }
+
+                    return detail;
+                });
             }
         } catch (error: any) {
             toast.error(
@@ -916,8 +1093,12 @@ const LiveTripTracking = () => {
                 "Failed to load live trip tracking"
             );
         } finally {
+            fetchInProgressRef.current = false;
             setLoading(false);
-            setRefreshing(false);
+
+            if (!silent) {
+                setRefreshing(false);
+            }
         }
     };
 
@@ -952,7 +1133,6 @@ const LiveTripTracking = () => {
             className="h-screen overflow-hidden bg-background p-3"
         >
             <div className="mx-auto flex h-full w-full max-w-[1700px] flex-col gap-3 overflow-hidden">
-                {/* TOP ACTION BAR */}
                 <motion.div
                     variants={sectionVariants}
                     className="shrink-0 rounded-md border border-border bg-card p-3 shadow-sm"
@@ -977,7 +1157,7 @@ const LiveTripTracking = () => {
                                         <span className="uppercase text-primary">
                                             {vehicleNumber}
                                         </span>{" "}
-                                        | Trip No. : {tripLabel}
+                                        | Trip No. :  <span className="uppercase text-primary">{tripLabel}</span>
                                     </h2>
                                 </div>
 
@@ -1065,13 +1245,11 @@ const LiveTripTracking = () => {
                             exit={{ opacity: 0, y: 10 }}
                             className="grid min-h-0 flex-1 grid-cols-[360px_minmax(0,1fr)] gap-3 overflow-hidden"
                         >
-                            {/* LEFT COMPACT PANEL */}
                             <motion.div
                                 variants={sectionVariants}
                                 className="min-h-0 overflow-hidden"
                             >
                                 <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
-                                    {/* MAIN DETAILS */}
                                     <div className="shrink-0 rounded-md border border-border bg-card p-3 shadow-sm">
                                         <div className="grid grid-cols-1 gap-3">
                                             <InfoItem icon={User} label="Driver" value={driverName} />
@@ -1096,7 +1274,6 @@ const LiveTripTracking = () => {
                                         </div>
                                     </div>
 
-                                    {/* ROUTE SUMMARY */}
                                     <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-card p-3 shadow-sm">
                                         <div className="mb-3 flex items-center justify-between gap-2">
                                             <h3 className="text-sm font-black uppercase tracking-wide text-primary">
@@ -1127,7 +1304,6 @@ const LiveTripTracking = () => {
                                 </div>
                             </motion.div>
 
-                            {/* MAP PANEL */}
                             <motion.div
                                 variants={sectionVariants}
                                 className="min-h-0 overflow-hidden"

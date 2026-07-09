@@ -723,3 +723,138 @@ body {
 .custom-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
 }
+
+
+.truck-marker-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateZ(0);
+}
+
+.truck-shadow {
+    position: absolute;
+    top: 36px;
+    height: 20px;
+    width: 48px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.3);
+    filter: blur(8px);
+}
+
+.truck-rotor {
+    position: relative;
+    height: 58px;
+    width: 58px;
+    transition: transform 0.35s ease;
+    will-change: transform;
+}
+
+.truck-arrow {
+    position: absolute;
+    left: 50%;
+    top: 4px;
+    height: 0;
+    width: 0;
+    transform: translateX(-50%);
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 15px solid var(--primary, #2563eb);
+    filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.25));
+}
+
+.truck-body {
+    position: absolute;
+    left: 50%;
+    top: 12px;
+    height: 40px;
+    width: 28px;
+    transform: translateX(-50%);
+    border-radius: 12px;
+    background: var(--primary, #2563eb);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
+    outline: 2px solid white;
+}
+
+.truck-window {
+    position: absolute;
+    left: 50%;
+    top: 4px;
+    height: 12px;
+    width: 20px;
+    transform: translateX(-50%);
+    border-radius: 6px 6px 3px 3px;
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.truck-box {
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    height: 14px;
+    width: 20px;
+    transform: translateX(-50%);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.truck-wheel {
+    position: absolute;
+    height: 10px;
+    width: 6px;
+    border-radius: 999px;
+    background: #0f172a;
+}
+
+.truck-wheel-1 {
+    left: -4px;
+    top: 12px;
+}
+
+.truck-wheel-2 {
+    right: -4px;
+    top: 12px;
+}
+
+.truck-wheel-3 {
+    left: -4px;
+    bottom: 8px;
+}
+
+.truck-wheel-4 {
+    right: -4px;
+    bottom: 8px;
+}
+
+.truck-light {
+    position: absolute;
+    top: 2px;
+    height: 6px;
+    width: 6px;
+    border-radius: 999px;
+    background: #fde047;
+}
+
+.truck-light-1 {
+    left: 4px;
+}
+
+.truck-light-2 {
+    right: 4px;
+}
+
+.truck-label {
+    margin-top: 0;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-radius: 6px;
+    background: var(--primary, #2563eb);
+    padding: 4px 8px;
+    color: white;
+    font-size: 12px;
+    font-weight: 900;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+}
