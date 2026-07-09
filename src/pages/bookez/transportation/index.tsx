@@ -62,6 +62,20 @@ const cards: any[] = [
     icon: <HandCoins size={22} />,
     permissionKey: "accountLedger",
   },
+  {
+    title: "Vehicle Status",
+    description: "Calculate and settle driver advances, expenses, and final trip balance.",
+    component: "",
+    icon: <HandCoins size={22} />,
+    permissionKey: "accountLedger",
+  },
+  {
+    title: "Where Is My Driver?",
+    description: "Calculate and settle driver advances, expenses, and final trip balance.",
+    component: "",
+    icon: <HandCoins size={22} />,
+    permissionKey: "accountLedger",
+  },
 ];
 
 const TransportationDashboard = () => {
