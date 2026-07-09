@@ -40,7 +40,7 @@ const pageVariants = {
     },
 };
 
-const sectionVariants = {
+const sectionVariants:any = {
     hidden: { opacity: 0, y: 18 },
     show: {
         opacity: 1,
@@ -62,7 +62,7 @@ const gridVariants = {
     },
 };
 
-const cardVariants = {
+const cardVariants:any = {
     hidden: { opacity: 0, y: 18, scale: 0.98 },
     show: {
         opacity: 1,
@@ -176,7 +176,7 @@ const SelectBox = ({
             onChange={(e) => onChange(e.target.value)}
             className="
                 h-10 w-full rounded-md border border-border bg-background px-3
-                text-sm font-bold text-foreground outline-none transition
+                text-sm font-semibold text-foreground outline-none transition
                 focus:border-primary focus:ring-2 focus:ring-primary/10
             "
         >
@@ -256,7 +256,7 @@ const FleetSummaryCard = ({
                 <motion.span
                     layout
                     className={`
-                        rounded-md px-2 py-0.5 text-xs font-black uppercase tracking-wide
+                        rounded-md px-2 py-0.5 text-xs font-semibold uppercase tracking-wide
                         ${selected
                             ? "bg-white/20 text-white"
                             : "bg-muted text-muted-foreground"
@@ -274,7 +274,7 @@ const FleetSummaryCard = ({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
                     className={`
-                        text-3xl font-black leading-none tracking-tight
+                        text-3xl font-semibold leading-none tracking-tight
                         ${selected ? "text-white" : "text-foreground"}
                     `}
                 >
@@ -283,7 +283,7 @@ const FleetSummaryCard = ({
 
                 <p
                     className={`
-                        mt-1 truncate text-xs font-black
+                        mt-1 truncate text-xs font-semibold
                         ${selected ? "text-white/90" : "text-muted-foreground"}
                     `}
                 >
@@ -307,11 +307,11 @@ const CompactInfoTile = ({
 }) => {
     return (
         <motion.div whileHover={{ x: 2 }} className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {label}
             </p>
 
-            <p className="mt-0 truncate text-sm font-black text-foreground">
+            <p className="mt-0 truncate text-sm font-semibold text-foreground">
                 {value || "-"}
             </p>
         </motion.div>
@@ -369,11 +369,11 @@ const VehicleCard = ({ vehicle }: { vehicle: any }) => {
                 <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                            <h3 className="truncate text-base font-black tracking-tight text-foreground">
+                            <h3 className="truncate text-base font-semibold tracking-tight text-foreground">
                                 {vehicle.vehicleNumber || "-"}
                             </h3>
 
-                            <p className="mt-1 truncate text-xs font-bold text-muted-foreground">
+                            <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">
                                 {vehicle.vehicleType || "-"}
                                 {vehicle.vehicleBodyType
                                     ? ` • ${vehicle.vehicleBodyType}`
@@ -387,7 +387,7 @@ const VehicleCard = ({ vehicle }: { vehicle: any }) => {
                             animate={{ scale: 1 }}
                             className={`
                                 inline-flex w-fit shrink-0 items-center gap-1 rounded-md border px-2 py-1
-                                text-xs font-black leading-none
+                                text-xs font-semibold leading-none
                                 ${statusStyle.badge}
                             `}
                         >
@@ -677,11 +677,11 @@ const VehicleStatus = () => {
                         </motion.button>
 
                         <div>
-                            <h2 className="text-sm font-black uppercase tracking-wide text-primary">
+                            <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">
                                 Fleet Overview
                             </h2>
 
-                            <p className="mt-1 text-xs font-bold text-muted-foreground">
+                            <p className="mt-1 text-xs font-semibold text-muted-foreground">
                                 {listingLoader
                                     ? "Updating fleet summary..."
                                     : `Total vehicles in master: ${totalVehicles}`}
@@ -703,7 +703,7 @@ const VehicleStatus = () => {
                                     whileTap={{ scale: 0.96 }}
                                     className="
                                         inline-flex h-10 items-center gap-2 rounded-md border border-border
-                                        bg-background px-3 text-sm font-black text-muted-foreground
+                                        bg-background px-3 text-sm font-semibold text-muted-foreground
                                         transition hover:bg-muted
                                     "
                                 >
@@ -721,7 +721,7 @@ const VehicleStatus = () => {
                             whileTap={!listingLoader ? { scale: 0.96 } : undefined}
                             className="
                                 inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3
-                                text-sm font-black text-primary-foreground shadow-sm transition
+                                text-sm font-semibold text-primary-foreground shadow-sm transition
                                 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60
                             "
                         >
@@ -767,7 +767,7 @@ const VehicleStatus = () => {
                                 </motion.div>
 
                                 <div>
-                                    <h2 className="text-base font-black text-foreground">
+                                    <h2 className="text-base font-semibold text-foreground">
                                         Available Vehicles
                                     </h2>
 
@@ -782,7 +782,7 @@ const VehicleStatus = () => {
                                             className="h-2 w-2 rounded-full bg-emerald-500"
                                         />
 
-                                        <p className="text-xs font-bold text-muted-foreground">
+                                        <p className="text-xs font-semibold text-muted-foreground">
                                             {listStatusText}
                                         </p>
                                     </div>
@@ -805,7 +805,7 @@ const VehicleStatus = () => {
                                 placeholder="Search vehicle number, type, location..."
                                 className="
                                     h-10 w-full rounded-md border border-border bg-background
-                                    pl-9 pr-3 text-sm font-bold text-foreground outline-none
+                                    pl-9 pr-3 text-sm font-semibold text-foreground outline-none
                                     transition focus:border-primary focus:ring-2 focus:ring-primary/10
                                 "
                             />
@@ -882,7 +882,7 @@ const VehicleStatus = () => {
                                 <Truck size={30} />
                             </motion.div>
 
-                            <h3 className="mt-4 text-lg font-black text-foreground">
+                            <h3 className="mt-4 text-lg font-semibold text-foreground">
                                 No vehicles found
                             </h3>
 
@@ -896,7 +896,7 @@ const VehicleStatus = () => {
                                     onClick={resetFilters}
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.96 }}
-                                    className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
+                                    className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
                                 >
                                     Clear Filters
                                 </motion.button>
@@ -933,3 +933,6 @@ const VehicleStatus = () => {
 };
 
 export default VehicleStatus;
+
+
+
