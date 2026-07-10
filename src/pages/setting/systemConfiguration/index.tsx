@@ -277,7 +277,7 @@ const BadgeStatus = ({ active }: { active: boolean }) => {
 const SystemConfiguration = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch<any>();
-    const [dbRequest, setDbRequest] = useState({});
+    const [dbRequest, setDbRequest] = useState([]);
     const {
         configuration,
         loading,
