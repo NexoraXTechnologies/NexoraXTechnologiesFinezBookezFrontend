@@ -19,7 +19,7 @@ import {
     PolylineF,
     useJsApiLoader,
 } from "@react-google-maps/api";
-
+import TruckImg from "../../../../assets/images/topviewtruck.png"
 import professionalAxios from "../../../../services/professionalAxios";
 
 /* ===================================================
@@ -441,6 +441,25 @@ const mapContainerStyle = {
     height: "100%",
 };
 
+const escapeHtml = (value: unknown) => {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+};
+
+const getCorrectedHeading = (heading: number) => {
+    const safeHeading = Number.isFinite(Number(heading))
+        ? Number(heading)
+        : 0;
+
+    const IMAGE_DIRECTION_OFFSET = 0;
+
+    return (safeHeading + IMAGE_DIRECTION_OFFSET + 360) % 360;
+};
+
 const VehicleMarkerHtml = ({
     heading,
     vehicleNumber,
@@ -448,32 +467,114 @@ const VehicleMarkerHtml = ({
     heading: number;
     vehicleNumber: string;
 }) => {
+    const correctedHeading = getCorrectedHeading(heading);
+    const safeVehicleNumber = escapeHtml(vehicleNumber || "Vehicle");
+
     return `
-        <div class="truck-marker-wrap">
-            <div class="truck-shadow"></div>
+        <div
+            class="
+                pointer-events-none
+                relative
+                h-[104px]
+                w-[76px]
+                select-none
+            "
+        >
+            <div
+                class="
+                    absolute
+                    left-1/2
+                    top-[58px]
+                    h-3
+                    w-[34px]
+                    -translate-x-1/2
+                    rounded-full
+                    bg-slate-900/30
+                    blur-[5px]
+                "
+            ></div>
 
-            <div class="truck-rotor" style="transform: rotate(${heading}deg);">
-                <div class="truck-arrow"></div>
-
-                <div class="truck-body">
-                    <div class="truck-window"></div>
-                    <div class="truck-box"></div>
-
-                    <div class="truck-wheel truck-wheel-1"></div>
-                    <div class="truck-wheel truck-wheel-2"></div>
-                    <div class="truck-wheel truck-wheel-3"></div>
-                    <div class="truck-wheel truck-wheel-4"></div>
-
-                    <div class="truck-light truck-light-1"></div>
-                    <div class="truck-light truck-light-2"></div>
-                </div>
+            <div
+                class="
+                    absolute
+                    left-[17px]
+                    top-1.5
+                    h-[68px]
+                    w-[42px]
+                    origin-center
+                    will-change-transform
+                    transition-transform
+                    duration-300
+                    ease-out
+                "
+                style="transform: rotate(${correctedHeading}deg);"
+            >
+                <img
+                    src="${TruckImg}"
+                    alt="Live vehicle"
+                    draggable="false"
+                    class="
+                        block
+                        h-40
+                        w-25.5
+                        select-none
+                        object-contain
+                        pointer-events-none
+                        drop-shadow-[0_7px_5px_rgba(15,23,42,0.28)]
+                    "
+                />
             </div>
 
-            <div class="truck-label">${vehicleNumber || "Vehicle"}</div>
+            <div
+                class="
+                    absolute
+                    left-1/2
+                    top-25
+                    flex
+                    max-w-35
+                    -translate-x-1/2
+                    items-center
+                    gap-1.5
+                    rounded-md
+                    border
+                    border-primary/25
+                    bg-white/95
+                    px-2
+                    py-1.5
+                    text-[11px]
+                    font-bold
+                    leading-none
+                    text-primary
+                    shadow-lg
+                    backdrop-blur-sm
+                "
+            >
+                <span
+                    class="
+                        h-1.5
+                        w-1.5
+                        shrink-0
+                        rounded-full
+                        bg-emerald-500
+                        shadow-[0_0_0_3px_rgba(34,197,94,0.15)]
+                    "
+                ></span>
+
+                <span
+                    class="
+                        vehicle-image-label-text
+                        block
+                        max-w-[110px]
+                        truncate
+                        whitespace-nowrap
+                    "
+                >
+                    ${safeVehicleNumber}
+                </span>
+            </div>
         </div>
     `;
 };
-
 const SmoothVehicleMarker = memo(
     ({
         map,
@@ -660,19 +761,7 @@ const MapPinLabel = memo(
     }
 );
 
-/* ===================================================
-   LIVE MAP
-=================================================== */
-
-const LiveTrackingMap = memo(
-    ({
-        coords,
-        pickupCoords,
-        deliveryCoords,
-        routePolyline,
-        heading,
-        vehicleNumber,
-    }: {
+const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyline, heading, vehicleNumber, }: {
         coords: { lat: number; lng: number } | null;
         pickupCoords: { lat: number; lng: number } | null;
         deliveryCoords: { lat: number; lng: number } | null;
