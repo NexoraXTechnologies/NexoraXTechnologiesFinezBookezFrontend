@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft,  Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { toast } from "react-toastify";
 
 import DataTable from "../../../../components/DataTable";
@@ -74,11 +74,11 @@ const normalizeStatus = (value: any) =>
 const getLRStatus = (item: any) =>
     normalizeStatus(
         item?.tripStatus ||
-            item?.status ||
-            item?.docStatus ||
-            item?.lrStatus ||
-            item?.collectionStatus ||
-            "open"
+        item?.status ||
+        item?.docStatus ||
+        item?.lrStatus ||
+        item?.collectionStatus ||
+        "open"
     );
 
 const isLRClosed = (item: any) => {
@@ -609,7 +609,7 @@ const TripLREntryList = () => {
                 </div>
             ),
         },
-       
+
         {
             key: "vehicle",
             title: "Vehicle",
@@ -700,22 +700,22 @@ const TripLREntryList = () => {
             <div id="trip-lr-collection-header" className="mb-3 flex items-center">
                 <div
                     id="trip-lr-collection-summary"
-                    className="flex items-start gap-3"
+                    className="flex items-center"
                 >
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                        title="Go back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
                     <div>
-                        <h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
-                            <button
-                                type="button"
-                                onClick={() => navigate(-1)}
-                                className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
-                            >
-                                <ArrowLeft size={18} />
-                            </button>
-
-                            <span>{pageTitle}</span>
+                        <h1 className="truncate text-lg font-bold text-card-foreground">
+                            {pageTitle}
                         </h1>
 
-                        <p className="px-2 text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                             {pageDescription}
                         </p>
                     </div>
@@ -742,11 +742,10 @@ const TripLREntryList = () => {
                                 setActiveStatus("open");
                                 setLocalOffset(0);
                             }}
-                            className={`rounded px-3 py-1.5 text-xs transition ${
-                                activeStatus === "open"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "text-muted-foreground hover:bg-muted"
-                            }`}
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted"
+                                }`}
                         >
                             Open ({openCount})
                         </button>
@@ -757,11 +756,10 @@ const TripLREntryList = () => {
                                 setActiveStatus("close");
                                 setLocalOffset(0);
                             }}
-                            className={`rounded px-3 py-1.5 text-xs transition ${
-                                activeStatus === "close"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "text-muted-foreground hover:bg-muted"
-                            }`}
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted"
+                                }`}
                         >
                             Close ({closedCount})
                         </button>
@@ -781,21 +779,21 @@ const TripLREntryList = () => {
                         }}
                     />
 
-                  
-                        <Permission
-                            module="bookez"
-                            permissionKey="Pass"
-                            action="create"
-                        >
-                            {/* @ts-ignore */}
-                            <DataCreateButton
-                                {...{
-                                    callBackFn: handleCreate,
-                                    text: "Create LR",
-                                }}
-                            />
-                        </Permission>
-                    
+
+                    <Permission
+                        module="bookez"
+                        permissionKey="Pass"
+                        action="create"
+                    >
+                        {/* @ts-ignore */}
+                        <DataCreateButton
+                            {...{
+                                callBackFn: handleCreate,
+                                text: "Create LR",
+                            }}
+                        />
+                    </Permission>
+
                 </div>
             </div>
 
@@ -809,48 +807,48 @@ const TripLREntryList = () => {
                             ? "No closed trip LR collection found"
                             : "No open trip LR collection found"
                     }
-                    // {...(activeStatus !== "close"
-                    //     ? {
-                    //           actions: (record: any) => {
-                    //               if (isLRClosed(record)) return null;
+                // {...(activeStatus !== "close"
+                //     ? {
+                //           actions: (record: any) => {
+                //               if (isLRClosed(record)) return null;
 
-                    //               return (
-                    //                   <div className="flex items-center gap-2">
-                    //                       <Permission
-                    //                           module="bookez"
-                    //                           permissionKey="Pass"
-                    //                           action="update"
-                    //                       >
-                    //                           <button
-                    //                               type="button"
-                    //                               onClick={() => handleEdit(record)}
-                    //                               className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                    //                           >
-                    //                               <Edit size={16} />
-                    //                           </button>
-                    //                       </Permission>
+                //               return (
+                //                   <div className="flex items-center gap-2">
+                //                       <Permission
+                //                           module="bookez"
+                //                           permissionKey="Pass"
+                //                           action="update"
+                //                       >
+                //                           <button
+                //                               type="button"
+                //                               onClick={() => handleEdit(record)}
+                //                               className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                //                           >
+                //                               <Edit size={16} />
+                //                           </button>
+                //                       </Permission>
 
-                    //                       <Permission
-                    //                           module="bookez"
-                    //                           permissionKey="Pass"
-                    //                           action="delete"
-                    //                       >
-                    //                           <button
-                    //                               type="button"
-                    //                               disabled={deleteLoader}
-                    //                               onClick={(e) =>
-                    //                                   handleDeleteClick(e, record)
-                    //                               }
-                    //                               className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                    //                           >
-                    //                               <Trash2 size={16} />
-                    //                           </button>
-                    //                       </Permission>
-                    //                   </div>
-                    //               );
-                    //           },
-                    //       }
-                    //     : {})}
+                //                       <Permission
+                //                           module="bookez"
+                //                           permissionKey="Pass"
+                //                           action="delete"
+                //                       >
+                //                           <button
+                //                               type="button"
+                //                               disabled={deleteLoader}
+                //                               onClick={(e) =>
+                //                                   handleDeleteClick(e, record)
+                //                               }
+                //                               className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                //                           >
+                //                               <Trash2 size={16} />
+                //                           </button>
+                //                       </Permission>
+                //                   </div>
+                //               );
+                //           },
+                //       }
+                //     : {})}
                 />
             </div>
 
@@ -872,9 +870,8 @@ const TripLREntryList = () => {
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message={`Are you sure you want to delete ${
-                        confirmTooltip?.voucherNumber || "this LR collection"
-                    }?`}
+                    message={`Are you sure you want to delete ${confirmTooltip?.voucherNumber || "this LR collection"
+                        }?`}
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteConfirm}

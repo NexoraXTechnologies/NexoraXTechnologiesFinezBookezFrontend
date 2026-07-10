@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import {  formatDateTime } from "../../../../utils/helperFunctions";
+import { formatDateTime } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
@@ -196,132 +196,132 @@ const TripAllocationList = () => {
 	};
 
 	const columns = [
-	{
-		key: "tripNumber",
-		title: "Allocation No",
-		render: (row: any) => row?.tripNumber || "-",
-	},
-	{
-		key: "allocationDate",
-		title: "Date",
-		 render: (row: any) => formatDateTime(row?.allocationDate),
-	},
-	{
-		key: "transportOrder.transportOrderNumber",
-		title: "Transport Order",
-		render: (row: any) => row?.transportOrder?.transportOrderNumber || "-",
-	},
-	{
-		key: "transportOrder.customerName",
-		title: "Customer",
-		render: (row: any) => (
-			<div>
-				<div className="font-medium text-card-foreground">
-					{row?.transportOrder?.customerName || "-"}
-				</div>
+		{
+			key: "tripNumber",
+			title: "Allocation No",
+			render: (row: any) => row?.tripNumber || "-",
+		},
+		{
+			key: "allocationDate",
+			title: "Date",
+			render: (row: any) => formatDateTime(row?.allocationDate),
+		},
+		{
+			key: "transportOrder.transportOrderNumber",
+			title: "Transport Order",
+			render: (row: any) => row?.transportOrder?.transportOrderNumber || "-",
+		},
+		{
+			key: "transportOrder.customerName",
+			title: "Customer",
+			render: (row: any) => (
+				<div>
+					<div className="font-medium text-card-foreground">
+						{row?.transportOrder?.customerName || "-"}
+					</div>
 
-				<div className="text-xs text-muted-foreground">
-					{row?.transportOrder?.customerCode || "-"}
+					<div className="text-xs text-muted-foreground">
+						{row?.transportOrder?.customerCode || "-"}
+					</div>
 				</div>
-			</div>
-		),
-	},
-	{
-		key: "vehicleSelection.vehicleNumber",
-		title: "Vehicle",
-		render: (row: any) => (
-			<div>
-				<div className="font-medium text-card-foreground">
-					{row?.vehicleSelection?.vehicleNumber || "-"}
+			),
+		},
+		{
+			key: "vehicleSelection.vehicleNumber",
+			title: "Vehicle",
+			render: (row: any) => (
+				<div>
+					<div className="font-medium text-card-foreground">
+						{row?.vehicleSelection?.vehicleNumber || "-"}
+					</div>
+
+					<div className="text-xs text-muted-foreground">
+						{row?.vehicleSelection?.vehicleType || "-"}
+						{row?.vehicleSelection?.vehicleCapacityTon
+							? ` • ${row.vehicleSelection.vehicleCapacityTon} Ton`
+							: ""}
+					</div>
 				</div>
+			),
+		},
+		// {
+		// 	key: "driverAllocation.driverName",
+		// 	title: "Driver",
+		// 	render: (row: any) => (
+		// 		<div>
+		// 			<div className="font-medium text-card-foreground">
+		// 				{row?.driverAllocation?.driverName || "-"}
+		// 			</div>
 
-				<div className="text-xs text-muted-foreground">
-					{row?.vehicleSelection?.vehicleType || "-"}
-					{row?.vehicleSelection?.vehicleCapacityTon
-						? ` • ${row.vehicleSelection.vehicleCapacityTon} Ton`
-						: ""}
-				</div>
-			</div>
-		),
-	},
-	// {
-	// 	key: "driverAllocation.driverName",
-	// 	title: "Driver",
-	// 	render: (row: any) => (
-	// 		<div>
-	// 			<div className="font-medium text-card-foreground">
-	// 				{row?.driverAllocation?.driverName || "-"}
-	// 			</div>
+		// 			<div className="text-xs text-muted-foreground">
+		// 				{row?.driverAllocation?.mobileNumber || "-"}
+		// 			</div>
+		// 		</div>
+		// 	),
+		// },
+		{
+			key: "transportOrder.source",
+			title: "Route",
+			render: (row: any) =>
+				`${row?.transportOrder?.source || "-"} - ${row?.transportOrder?.destination || "-"
+				}`,
+		},
+		// {
+		// 	key: "tripPlan.routeDistanceKm",
+		// 	title: "Trip Plan",
+		// 	render: (row: any) => (
+		// 		<div>
+		// 			<div className="font-medium text-card-foreground">
+		// 				{row?.tripPlan?.routeDistanceKm
+		// 					? `${row.tripPlan.routeDistanceKm} KM`
+		// 					: "-"}
+		// 			</div>
 
-	// 			<div className="text-xs text-muted-foreground">
-	// 				{row?.driverAllocation?.mobileNumber || "-"}
-	// 			</div>
-	// 		</div>
-	// 	),
-	// },
-	{
-		key: "transportOrder.source",
-		title: "Route",
-		render: (row: any) =>
-			`${row?.transportOrder?.source || "-"} - ${
-				row?.transportOrder?.destination || "-"
-			}`,
-	},
-	// {
-	// 	key: "tripPlan.routeDistanceKm",
-	// 	title: "Trip Plan",
-	// 	render: (row: any) => (
-	// 		<div>
-	// 			<div className="font-medium text-card-foreground">
-	// 				{row?.tripPlan?.routeDistanceKm
-	// 					? `${row.tripPlan.routeDistanceKm} KM`
-	// 					: "-"}
-	// 			</div>
-
-	// 			<div className="text-xs text-muted-foreground">
-	// 				{row?.tripPlan?.routeType || "-"}
-	// 			</div>
-	// 		</div>
-	// 	),
-	// },
-	// {
-	// 	key: "transportOrder.expectedFreight",
-	// 	title: "Freight",
-	// 	render: (row: any) =>
-	// 		row?.transportOrder?.expectedFreight
-	// 			? money(row.transportOrder.expectedFreight)
-	// 			: "-",
-	// 	type: "amount",
-	// },
-	{
-		key: "tripStatus",
-		title: "Status",
-		render: (row: any) => (
-			<span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
-				{row?.tripStatus || "-"}
-			</span>
-		),
-	},
-];
+		// 			<div className="text-xs text-muted-foreground">
+		// 				{row?.tripPlan?.routeType || "-"}
+		// 			</div>
+		// 		</div>
+		// 	),
+		// },
+		// {
+		// 	key: "transportOrder.expectedFreight",
+		// 	title: "Freight",
+		// 	render: (row: any) =>
+		// 		row?.transportOrder?.expectedFreight
+		// 			? money(row.transportOrder.expectedFreight)
+		// 			: "-",
+		// 	type: "amount",
+		// },
+		{
+			key: "tripStatus",
+			title: "Status",
+			render: (row: any) => (
+				<span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
+					{row?.tripStatus || "-"}
+				</span>
+			),
+		},
+	];
 
 	return (
 		<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
 			<div id="trip-allocation-header" className="mb-3 flex items-center">
-				<div id="trip-allocation-summary" className="flex items-start gap-3">
-					<div>
-						<h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
-							<button
-								type="button"
-								onClick={() => navigate(-1)}
-								className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
-							>
-								<ArrowLeft size={18} />
-							</button>
+				<div id="trip-allocation-summary" className="flex items-center">
+					<button
+						type="button"
+						onClick={() => navigate(-1)}
+						className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+						title="Go back"
+					>
+						<ArrowLeft size={18} />
+					</button>
 
-							<span>{pageTitle}</span>
+					<div>
+						<h1 className="truncate text-lg font-bold text-card-foreground">
+							{pageTitle}
 						</h1>
 
-						<p className="px-2 text-sm text-muted-foreground">
+						<p className="text-sm text-muted-foreground">
 							{pageDescription}
 						</p>
 					</div>

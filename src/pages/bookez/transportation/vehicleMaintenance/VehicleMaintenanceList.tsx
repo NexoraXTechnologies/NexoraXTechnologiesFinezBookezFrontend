@@ -476,22 +476,23 @@ const VehicleMaintenanceList = () => {
             >
                 <div
                     id="vehicle-maintenance-summary"
-                    className="flex items-start gap-3"
+                    className="flex items-center"
                 >
-                    <div>
-                        <h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
-                            <button
-                                type="button"
-                                onClick={() => navigate(-1)}
-                                className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
-                            >
-                                <ArrowLeft size={18} />
-                            </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                        title="Go back"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
 
-                            <span>{pageTitle}</span>
+                    <div className="min-w-0">
+                        <h1 className="truncate text-lg font-bold text-card-foreground">
+                            {pageTitle}
                         </h1>
 
-                        <p className="px-2 text-sm text-muted-foreground">
+                        <p className=" text-sm text-muted-foreground">
                             {pageDescription}
                         </p>
                     </div>

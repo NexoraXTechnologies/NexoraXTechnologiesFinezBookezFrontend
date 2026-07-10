@@ -1,4 +1,4 @@
-import  { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -441,7 +441,7 @@ const TripExpenseList = () => {
     // }, [currentUserMobile, parentUserMobile, rows, rowAssignedToCurrentUser]);
 
 
-   
+
 
     const isChildUser = Boolean(
         currentUserMobile &&
@@ -945,21 +945,22 @@ const TripExpenseList = () => {
     return (
         <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
             <div id="trip-expense-header" className="mb-3 flex items-center">
-                <div id="trip-expense-summary" className="flex items-start gap-3">
+                <div id="trip-expense-summary" className="flex items-center">
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                       className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+						title="Go back"
+					>
+                        <ArrowLeft size={18} />
+                    </button>
                     <div>
-                        <h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
-                            <button
-                                type="button"
-                                onClick={() => navigate(-1)}
-                                className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
-                            >
-                                <ArrowLeft size={18} />
-                            </button>
+						<h1 className="truncate text-lg font-bold text-card-foreground">
 
-                            <span>{pageTitle}</span>
+                            {pageTitle}
                         </h1>
 
-                        <p className="px-2 text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                             {pageDescription}
                         </p>
                     </div>
