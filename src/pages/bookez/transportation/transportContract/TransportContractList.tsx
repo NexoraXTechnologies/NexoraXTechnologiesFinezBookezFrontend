@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { formatDateForList } from "../../../../utils/helperFunctions";
@@ -41,6 +41,7 @@ const TransportContractList = () => {
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
+    const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
 
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
@@ -67,6 +68,65 @@ const TransportContractList = () => {
             })
         );
     };
+
+    const normalizeStatus = (value: any) =>
+        String(value || "active")
+            .trim()
+            .toLowerCase()
+            .replace(/[\s-]+/g, "_");
+
+    const getRowStatus = (row: any) =>
+        normalizeStatus(
+            row?.contractStatus ||
+            row?.docStatus ||
+            row?.status ||
+            "active"
+        );
+
+    const isClosedContract = (row: any) => {
+        const status = getRowStatus(row);
+
+        return (
+            status === "close" ||
+            status === "closed" ||
+            status === "inactive" ||
+            status === "expired" ||
+            status === "complete" ||
+            status === "completed"
+        );
+    };
+
+    const openCount = useMemo(
+        () =>
+            transportContract.filter(
+                (item: any) => !isClosedContract(item)
+            ).length,
+        [transportContract]
+    );
+
+    const closeCount = useMemo(
+        () =>
+            transportContract.filter(
+                (item: any) => isClosedContract(item)
+            ).length,
+        [transportContract]
+    );
+
+    const filteredTransportContracts = useMemo(() => {
+        return transportContract.filter((item: any) => {
+            const closed = isClosedContract(item);
+
+            if (activeStatus === "open" && closed) {
+                return false;
+            }
+
+            if (activeStatus === "close" && !closed) {
+                return false;
+            }
+
+            return true;
+        });
+    }, [transportContract, activeStatus]);
 
     useEffect(() => {
         fetchTransportContracts();
@@ -289,6 +349,30 @@ const TransportContractList = () => {
                         }}
                     />
 
+                    <div className="flex rounded-md border border-border bg-background p-1">
+                        <button
+                            type="button"
+                            onClick={() => setActiveStatus("open")}
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted"
+                                }`}
+                        >
+                            Open ({openCount})
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveStatus("close")}
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted"
+                                }`}
+                        >
+                            Close ({closeCount})
+                        </button>
+                    </div>
+
                     <SearchInput
                         {...{
                             search,
@@ -322,9 +406,13 @@ const TransportContractList = () => {
             <div className="min-h-0 flex-1 overflow-hidden">
                 <DataTable
                     columns={columns}
-                    data={transportContract}
+                    data={filteredTransportContracts}
                     loading={listingLoader}
-                    emptyMessage="No transport contract found"
+                    emptyMessage={
+                        activeStatus === "open"
+                            ? "No open transport contract found"
+                            : "No closed transport contract found"
+                    }
                     actions={(record: any) => (
                         <div className="flex items-center gap-2">
                             <Permission

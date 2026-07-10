@@ -41,6 +41,13 @@ const TripAllocationList = () => {
 
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(20);
+	const [activeStatus, setActiveStatus] =
+		useState<"open" | "close">("open");
+
+	const [statusCounts, setStatusCounts] = useState({
+		open: 0,
+		close: 0,
+	});
 
 	const [confirmTooltip, setConfirmTooltip] = useState<any>({
 		show: false,
@@ -62,23 +69,37 @@ const TripAllocationList = () => {
 		record?.transportOrderNumber ||
 		"";
 
+	const openCount = statusCounts.open;
+	const closeCount = statusCounts.close;
+
 	const fetchTripAllocations = ({
 		offset = localOffset,
 		limit = localLimit,
 		searchValue = search,
+		statusValue = activeStatus,
 	}: any = {}) => {
-		dispatch(
+		return dispatch(
 			getAllTripAllocation({
 				limit,
 				offset,
 				search: searchValue,
-			})
+				tripStatus: getApiStatus(statusValue),
+			}) as any
 		);
+	};
+
+	const getApiStatus = (status: "open" | "close") => {
+		return status === "open" ? "pending" : "completed";
 	};
 
 	useEffect(() => {
 		fetchTripAllocations();
-	}, [dispatch, localOffset, localLimit]);
+	}, [
+		dispatch,
+		localOffset,
+		localLimit,
+		activeStatus,
+	]);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -89,25 +110,91 @@ const TripAllocationList = () => {
 					limit: localLimit,
 					offset: 0,
 					search,
-				})
+					tripStatus: getApiStatus(activeStatus),
+				}) as any
 			);
 		}, 400);
 
 		return () => clearTimeout(timer);
-	}, [search, dispatch, localLimit]);
+	}, [search, dispatch]);
 
-	const handleRefresh = () => {
-		setRefreshing(true);
 
-		dispatch(
-			getAllTripAllocation({
-				limit: localLimit,
-				offset: localOffset,
-				search,
-			})
-		).finally(() => {
+	const getPaginationTotal = (response: any) => {
+		const responseData =
+			response?.payload?.data ||
+			response?.data ||
+			response?.payload ||
+			response ||
+			{};
+
+		const responsePagination =
+			responseData?.pagination ||
+			responseData?.data?.pagination ||
+			{};
+
+		return Number(
+			responsePagination?.totalDocs ??
+			responsePagination?.totalRecords ??
+			0
+		);
+	};
+
+	const fetchStatusCounts = async (searchValue = search) => {
+		try {
+			const [openResponse, closeResponse] = await Promise.all([
+				dispatch(
+					getAllTripAllocation({
+						limit: 1,
+						offset: 0,
+						search: searchValue,
+						tripStatus: "pending",
+					}) as any
+				),
+
+				dispatch(
+					getAllTripAllocation({
+						limit: 1,
+						offset: 0,
+						search: searchValue,
+						tripStatus: "completed",
+					}) as any
+				),
+			]);
+
+			setStatusCounts({
+				open: getPaginationTotal(openResponse),
+				close: getPaginationTotal(closeResponse),
+			});
+
+			await dispatch(
+				getAllTripAllocation({
+					limit: localLimit,
+					offset: localOffset,
+					search: searchValue,
+					tripStatus: getApiStatus(activeStatus),
+				}) as any
+			);
+		} catch (error) {
+			console.error("Failed to fetch trip allocation counts", error);
+		}
+	};
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			fetchStatusCounts(search);
+		}, 400);
+
+		return () => clearTimeout(timer);
+	}, [search]);
+
+	const handleRefresh = async () => {
+		try {
+			setRefreshing(true);
+
+			await fetchStatusCounts(search);
+		} finally {
 			setRefreshing(false);
-		});
+		}
 	};
 
 	const openCreateTripAllocation = () => {
@@ -189,7 +276,7 @@ const TripAllocationList = () => {
 				tripAllocationNumber: null,
 			});
 
-			fetchTripAllocations();
+			await fetchStatusCounts(search);
 		} catch (error: any) {
 			toast.error(error?.message || "Failed to delete trip allocation");
 		}
@@ -292,15 +379,39 @@ const TripAllocationList = () => {
 		// 			: "-",
 		// 	type: "amount",
 		// },
+		// {
+		// 	key: "tripStatus",
+		// 	title: "Status",
+		// 	render: (row: any) => (
+		// 		<span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
+		// 			{row?.tripStatus || "-"}
+		// 		</span>
+		// 	),
+		// },
+
+
 		{
 			key: "tripStatus",
 			title: "Status",
-			render: (row: any) => (
-				<span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
-					{row?.tripStatus || "-"}
-				</span>
-			),
-		},
+			render: (row: any) => {
+				const status = String(row?.tripStatus || "")
+					.trim()
+					.toLowerCase();
+
+				const completed = status === "completed";
+
+				return (
+					<span
+						className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium capitalize ${completed
+							? "border-success/20 bg-success/10 text-success"
+							: "border-primary/20 bg-primary/10 text-primary"
+							}`}
+					>
+						{completed ? "Completed" : "Pending"}
+					</span>
+				);
+			},
+		}
 	];
 
 	return (
@@ -330,15 +441,42 @@ const TripAllocationList = () => {
 				<div className="ml-auto flex items-center gap-2">
 					<Badge
 						{...{
-							count:
-								pagination?.totalDocs ??
-								pagination?.totalRecords ??
-								tripAllocations?.length ??
-								0,
+							count: openCount + closeCount,
 							text: "Total Allocations:",
 							varient: "primary",
 						}}
 					/>
+
+
+					<div className="flex rounded-md border border-border bg-background p-1">
+						<button
+							type="button"
+							onClick={() => {
+								setActiveStatus("open");
+								setLocalOffset(0);
+							}}
+							className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
+								? "bg-primary text-primary-foreground"
+								: "text-muted-foreground hover:bg-muted"
+								}`}
+						>
+							Open ({openCount})
+						</button>
+
+						<button
+							type="button"
+							onClick={() => {
+								setActiveStatus("close");
+								setLocalOffset(0);
+							}}
+							className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
+								? "bg-primary text-primary-foreground"
+								: "text-muted-foreground hover:bg-muted"
+								}`}
+						>
+							Close ({closeCount})
+						</button>
+					</div>
 
 					<SearchInput
 						{...{
