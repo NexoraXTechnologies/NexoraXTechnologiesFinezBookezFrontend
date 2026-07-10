@@ -487,16 +487,9 @@ const SystemConfiguration = () => {
                     <SettingRow
                         title="Enable Bank Statement Import"
                         description="Allow users to import bank statements."
-                        value={
-                            !!systemConfig?.bankStatementImport
-                                ?.enableBankStatementImport
-                        }
+                        value={!!systemConfig?.bankStatementImport?.enableBankStatementImport}
                         onChange={(value) =>
-                            updateSystemField(
-                                "bankStatementImport",
-                                "enableBankStatementImport",
-                                value
-                            )
+                            updateSystemField("bankStatementImport", "enableBankStatementImport", value)
                         }
                     />
                 </Panel>
