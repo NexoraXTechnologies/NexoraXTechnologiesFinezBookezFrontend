@@ -124,9 +124,9 @@ const getVehicleNumber = (record: any) =>
 const getNetPayable = (record: any) =>
     Number(
         record?.settlement?.netPayable ||
-            record?.netPayable ||
-            record?.summary?.netPayable ||
-            0
+        record?.netPayable ||
+        record?.summary?.netPayable ||
+        0
     );
 
 const getStatusClass = (status: any) => {
@@ -249,8 +249,8 @@ const DriverSettlementList = () => {
 
             toast.error(
                 error?.response?.data?.message ||
-                    error?.message ||
-                    "Failed to load driver settlements"
+                error?.message ||
+                "Failed to load driver settlements"
             );
         } finally {
             if (!silent) setLoading(false);
@@ -385,8 +385,8 @@ const DriverSettlementList = () => {
         } catch (error: any) {
             toast.error(
                 error?.response?.data?.message ||
-                    error?.message ||
-                    "Failed to delete driver settlement"
+                error?.message ||
+                "Failed to delete driver settlement"
             );
         } finally {
             setDeleteLoading(false);
@@ -472,9 +472,8 @@ const DriverSettlementList = () => {
 
                 return (
                     <span
-                        className={`font-black ${
-                            netPayable < 0 ? "text-danger" : "text-success"
-                        }`}
+                        className={`font-black ${netPayable < 0 ? "text-danger" : "text-success"
+                            }`}
                     >
                         {money(netPayable)}
                     </span>
@@ -506,22 +505,22 @@ const DriverSettlementList = () => {
             <div id="driver-settlement-header" className="mb-3 flex items-center">
                 <div
                     id="driver-settlement-summary"
-                    className="flex items-start gap-3"
+                    className="flex items-center"
                 >
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                        title="Go back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
                     <div>
-                        <h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
-                            <button
-                                type="button"
-                                onClick={() => navigate(-1)}
-                                className="rounded-md p-1 text-muted-foreground transition bg-muted hover:bg-muted hover:text-foreground cursor-pointer"
-                            >
-                                <ArrowLeft size={18} />
-                            </button>
-
-                            <span>{pageTitle}</span>
+                        <h1 className="truncate text-lg font-bold text-card-foreground">
+                            {pageTitle}
                         </h1>
 
-                        <p className="px-2 text-sm text-muted-foreground">
+                        <p className=" text-sm text-muted-foreground">
                             {pageDescription}
                         </p>
                     </div>

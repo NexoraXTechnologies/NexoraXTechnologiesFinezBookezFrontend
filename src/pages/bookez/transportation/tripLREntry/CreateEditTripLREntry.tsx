@@ -1432,7 +1432,7 @@ const CreateEditTripLREntry = () => {
             label: "Remarks",
             type: "textarea",
             placeholder: "Enter remarks",
-            
+
         },
     ];
 
@@ -1452,22 +1452,26 @@ const CreateEditTripLREntry = () => {
     return (
         <div className="flex h-full w-full flex-col bg-card text-card-foreground shadow-sm">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-4 py-3">
-                <div>
-                    <h1 className="flex items-center gap-1 text-md font-bold text-card-foreground">
-                        <button
-                            type="button"
-                            onClick={() => navigate(-1)}
-                            className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                        >
-                            <ArrowLeft size={18} />
-                        </button>
+                <div className="flex items-center">
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                        title="Go back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div>
 
-                        <span>{pageTitle}</span>
-                    </h1>
+                        <h1 className="truncate text-lg font-bold text-card-foreground">
 
-                    <p className="px-2 text-sm text-muted-foreground">
-                        {pageDescription}
-                    </p>
+                            {pageTitle}
+                        </h1>
+
+                        <p className="text-sm text-muted-foreground">
+                            {pageDescription}
+                        </p>
+                    </div>
                 </div>
 
                 {loading && (
@@ -1477,7 +1481,7 @@ const CreateEditTripLREntry = () => {
                 )}
             </div>
 
-            <div className="flex-1 overflow-auto p-4 ">
+            <div className="flex-1 overflow-auto p-2 ">
                 <div className="space-y-4">
                     <FormSectionCard
                         title="1. Basic Information"
@@ -1664,11 +1668,11 @@ const CreateEditTripLREntry = () => {
                         >
                             <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-1">
 
-                            {renderFields(remarksFields)}
+                                {renderFields(remarksFields)}
 
-                            <p className="mt-2 text-xs font-bold text-muted-foreground md:col-span-2 xl:col-span-3">
-                                {(form.remarks || "").length}/{REMARKS_MAX}
-                            </p>
+                                <p className="mt-2 text-xs font-bold text-muted-foreground md:col-span-2 xl:col-span-3">
+                                    {(form.remarks || "").length}/{REMARKS_MAX}
+                                </p>
                             </div>
                         </FormSectionCard>
                     </div>

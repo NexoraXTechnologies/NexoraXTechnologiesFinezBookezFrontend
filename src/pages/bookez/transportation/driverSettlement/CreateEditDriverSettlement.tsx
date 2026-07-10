@@ -1,4 +1,4 @@
-import  {
+import {
     Fragment,
     useCallback,
     useEffect,
@@ -204,9 +204,9 @@ const normalizeDriverUsers = (users: any[] = []) => {
 const flattenChildUsers = (users: any[] = []) => {
     return Array.isArray(users)
         ? users.flatMap((item: any) => {
-              if (Array.isArray(item?.ChildUsers)) return item.ChildUsers;
-              return item;
-          })
+            if (Array.isArray(item?.ChildUsers)) return item.ChildUsers;
+            return item;
+        })
         : [];
 };
 
@@ -217,26 +217,26 @@ const flattenChildUsers = (users: any[] = []) => {
 const getOrderNumber = (record: any) =>
     cleanText(
         record?.orderNumber ||
-            record?.transportOrderNumber ||
-            record?.tOrderNumber ||
-            record?.tripNumber ||
-            record?.tripId ||
-            record?.allocationVoucherNumber ||
-            record?.tripAllocationVoucherNumber ||
-            record?.voucherNumber ||
-            record?.allocationNumber ||
-            record?.transportOrder?.transportOrderNumber ||
-            ""
+        record?.transportOrderNumber ||
+        record?.tOrderNumber ||
+        record?.tripNumber ||
+        record?.tripId ||
+        record?.allocationVoucherNumber ||
+        record?.tripAllocationVoucherNumber ||
+        record?.voucherNumber ||
+        record?.allocationNumber ||
+        record?.transportOrder?.transportOrderNumber ||
+        ""
     );
 
 const getLRNumber = (record: any) =>
     cleanText(
         record?.lrNumber ||
-            record?.lrVoucherNumber ||
-            record?.tripLRCollectionVoucherNumber ||
-            record?.tripLREntryVoucherNumber ||
-            record?.voucherNumber ||
-            ""
+        record?.lrVoucherNumber ||
+        record?.tripLRCollectionVoucherNumber ||
+        record?.tripLREntryVoucherNumber ||
+        record?.voucherNumber ||
+        ""
     );
 
 const getVehicleNumber = (record: any, fallback = "-") =>
@@ -281,24 +281,24 @@ const getGoodsName = (record: any, fallback = "-") =>
 const getDriverIdFromAny = (record: any) =>
     cleanText(
         record?.driver?.driverId ||
-            record?.driver?.mobileNumber ||
-            record?.driverDetails?.driverId ||
-            record?.driverDetails?.driverMobileNumber ||
-            record?.driverDetails?.mobileNumber ||
-            record?.driverAllocation?.driverId ||
-            record?.driverAllocation?.mobileNumber ||
-            record?.assignedDriverMobile ||
-            record?.tripAssignedToMobile ||
-            ""
+        record?.driver?.mobileNumber ||
+        record?.driverDetails?.driverId ||
+        record?.driverDetails?.driverMobileNumber ||
+        record?.driverDetails?.mobileNumber ||
+        record?.driverAllocation?.driverId ||
+        record?.driverAllocation?.mobileNumber ||
+        record?.assignedDriverMobile ||
+        record?.tripAssignedToMobile ||
+        ""
     );
 
 const getDriverNameFromAny = (record: any) =>
     normalizeText(
         record?.driver?.driverName ||
-            record?.driverDetails?.driverName ||
-            record?.driverName ||
-            record?.driverAllocation?.driverName ||
-            ""
+        record?.driverDetails?.driverName ||
+        record?.driverName ||
+        record?.driverAllocation?.driverName ||
+        ""
     );
 
 const isActiveTripRecord = (record: any) => {
@@ -470,9 +470,8 @@ const buildOrderOptionsForDriver = ({
             "";
 
         optionMap.set(value, {
-            label: `${value} • ${vehicleNo}${lrNumber ? ` • LR: ${lrNumber}` : ""}${
-                route ? ` • ${route}` : ""
-            }`,
+            label: `${value} • ${vehicleNo}${lrNumber ? ` • LR: ${lrNumber}` : ""}${route ? ` • ${route}` : ""
+                }`,
             value,
             allocation,
             transportOrder,
@@ -573,10 +572,10 @@ const computeTripExpenseSummary = (tripExpense: any = {}) => {
     const totalTripExpense =
         Number(tripExpense?.summary?.totalTripExpense || 0) ||
         totalDieselCost +
-            totalFoodCost +
-            totalRunningCost +
-            totalBreakdownCost +
-            totalOtherCost;
+        totalFoodCost +
+        totalRunningCost +
+        totalBreakdownCost +
+        totalOtherCost;
 
     const balanceAmount =
         Number(tripExpense?.summary?.balanceAmount || 0) ||
@@ -699,10 +698,10 @@ const mapSelectionToTripDetails = ({
 
     const tripStatus = cleanText(
         tripExpense?.tripStatus ||
-            allocation?.tripStatus ||
-            transportOrder?.tripStatus ||
-            transportOrder?.status ||
-            "-"
+        allocation?.tripStatus ||
+        transportOrder?.tripStatus ||
+        transportOrder?.status ||
+        "-"
     )
         .replace(/_/g, " ")
         .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -783,8 +782,8 @@ const mapSelectionToTripDetails = ({
         balanceAmount: summaryMeta?.balanceAmount ?? 0,
         expectedFreight: Number(
             transportOrder?.freightDetails?.expectedFreight ||
-                allocation?.transportOrder?.freightDetails?.expectedFreight ||
-                0
+            allocation?.transportOrder?.freightDetails?.expectedFreight ||
+            0
         ),
     };
 };
@@ -861,9 +860,9 @@ const buildSettlementFromSelections = ({
 const isTripPendingAccept = (tripExpense: any) => {
     const status = normalizeText(
         tripExpense?.tripStatus ||
-            tripExpense?.driverStatus ||
-            tripExpense?.acceptanceStatus ||
-            ""
+        tripExpense?.driverStatus ||
+        tripExpense?.acceptanceStatus ||
+        ""
     );
 
     return (
@@ -890,17 +889,15 @@ const DetailCell = ({ label, value }: any) => (
 const SummaryLine = ({ label, value, muted = false }: any) => (
     <div className="flex items-center justify-between gap-3 border-b border-border py-2">
         <p
-            className={`text-sm font-semibold ${
-                muted ? "text-muted-foreground" : ""
-            }`}
+            className={`text-sm font-semibold ${muted ? "text-muted-foreground" : ""
+                }`}
         >
             {label}
         </p>
 
         <p
-            className={`text-sm font-semibold ${
-                muted ? "text-muted-foreground" : ""
-            }`}
+            className={`text-sm font-semibold ${muted ? "text-muted-foreground" : ""
+                }`}
         >
             {formatMoney(Math.abs(Number(value || 0)))}
         </p>
@@ -1207,8 +1204,8 @@ const CreateEditDriverSettlement = () => {
             const childUsersArray = Array.isArray(childUsersRaw)
                 ? childUsersRaw
                 : childUsersRaw && typeof childUsersRaw === "object"
-                ? [childUsersRaw]
-                : [];
+                    ? [childUsersRaw]
+                    : [];
 
             const child =
                 childUsersArray.find(
@@ -1397,33 +1394,38 @@ const CreateEditDriverSettlement = () => {
     return (
         <div className="flex h-full w-full flex-col bg-card shadow-sm">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-4 py-3">
-                <div>
-                    <h1 className="flex items-center gap-1 text-md font-semibold">
-                        <button
-                            type="button"
-                            onClick={() => navigate(-1)}
-                            className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                        >
-                            <ArrowLeft size={18} />
-                        </button>
+                <div
+                    className="flex items-center"
+                >
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                        title="Go back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div>
 
-                        <span>Driver Settlement</span>
-                    </h1>
+                        <h1 className="truncate text-lg font-bold text-card-foreground">
+                            <span>Driver Settlement</span>
+                        </h1>
 
-                    <p className="px-2 text-sm text-muted-foreground">
-                        Salary based driver settlement using allocation, order, LR, trip expense and advances.
-                    </p>
+                        <p className=" text-sm text-muted-foreground">
+                            Salary based driver settlement using allocation, order, LR, trip expense and advances.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto p-4">
+            <div className="min-h-0 flex-1 overflow-auto p-2">
                 <div className="space-y-4">
                     <FormSectionCard
                         index={1}
                         title="Select Driver & Order"
                         icon={<Users size={17} />}
                         expanded={true}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                     >
                         <div>
                             <label className="mb-1 block text-sm font-medium text-card-foreground">
@@ -1457,8 +1459,8 @@ const CreateEditDriverSettlement = () => {
                                     !selectedDriverId
                                         ? "Select driver first"
                                         : pageLoading
-                                        ? "Loading orders..."
-                                        : "Select Order / Trip"
+                                            ? "Loading orders..."
+                                            : "Select Order / Trip"
                                 }
                                 isDisabled={!selectedDriverId || pageLoading}
                                 isSearchable
@@ -1518,7 +1520,7 @@ const CreateEditDriverSettlement = () => {
                         title="Trip / LR Details"
                         icon={<FileText size={17} />}
                         expanded={true}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                     >
                         <div className="md:col-span-2 xl:col-span-3">
                             {!selectedTripId ? (
@@ -1601,7 +1603,7 @@ const CreateEditDriverSettlement = () => {
                         title="Trip Expenses Details"
                         icon={<ListChecks size={17} />}
                         expanded={true}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                     >
                         <div className="md:col-span-2 xl:col-span-3">
                             {!selectedTripId ? (
@@ -1667,7 +1669,7 @@ const CreateEditDriverSettlement = () => {
                         title="Advances to Driver"
                         icon={<BadgeIndianRupee size={17} />}
                         expanded={true}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                     >
                         <div className="md:col-span-2 xl:col-span-3">
                             {!selectedTripId ? (
@@ -1726,7 +1728,7 @@ const CreateEditDriverSettlement = () => {
                         title="Settlement Summary"
                         icon={<PieChart size={17} />}
                         expanded={true}
-                        onToggle={() => {}}
+                        onToggle={() => { }}
                     >
                         {renderFields(settlementFields)}
 

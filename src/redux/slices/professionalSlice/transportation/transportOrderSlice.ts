@@ -12,6 +12,15 @@ type GetTransportOrdersParams = {
 type TransportOrderState = {
     transportOrders: any[];
     transportOrder: any | null;
+    pagination: {
+        offset: number;
+        limit: number;
+        totalDocs: number;
+        totalPages: number;
+        currentPage: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+    };
     createLoader: boolean;
     listingLoader: boolean;
     detailLoader: boolean;
@@ -23,6 +32,17 @@ type TransportOrderState = {
 const initialState: TransportOrderState = {
     transportOrders: [],
     transportOrder: null,
+
+    pagination: {
+        offset: 0,
+        limit: 20,
+        totalDocs: 0,
+        totalPages: 0,
+        currentPage: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+    },
+
     createLoader: false,
     listingLoader: false,
     detailLoader: false,
@@ -41,7 +61,7 @@ export const createTransportOrder = createAsyncThunk(
         try {
             const response = await professionalAxios.post(
                 "/eTaxSolnMongoApiBackend/users/bookEZ/transportOrder/save",
-                 payload 
+                payload
             );
 
             if (!response?.data?.success) {
@@ -172,7 +192,7 @@ export const updateTransportOrderByVoucherNumber = createAsyncThunk(
         try {
             const response = await professionalAxios.put(
                 `/eTaxSolnMongoApiBackend/users/bookEZ/transportOrder/update/${voucherNumber}`,
-                 payload 
+                payload
             );
 
             if (!response?.data?.success) {
@@ -247,9 +267,21 @@ const transportOrderSlice = createSlice({
                 state.listingLoader = false;
 
                 const payload = action.payload;
+                const responseData = payload?.data || {};
 
-                state.transportOrders =
-                    payload?.data.records || [];
+                state.transportOrders = Array.isArray(responseData?.records)
+                    ? responseData.records
+                    : [];
+
+                state.pagination = {
+                    offset: Number(responseData?.pagination?.offset ?? 0),
+                    limit: Number(responseData?.pagination?.limit ?? 20),
+                    totalDocs: Number(responseData?.pagination?.totalDocs ?? 0),
+                    totalPages: Number(responseData?.pagination?.totalPages ?? 0),
+                    currentPage: Number(responseData?.pagination?.currentPage ?? 1),
+                    hasNextPage: Boolean(responseData?.pagination?.hasNextPage),
+                    hasPrevPage: Boolean(responseData?.pagination?.hasPrevPage),
+                };
 
                 state.error = null;
             })

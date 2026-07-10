@@ -438,27 +438,30 @@ const CreateTransportOrder = () => {
 
 	return (
 		<div className="flex h-full w-full flex-col bg-background text-foreground">
-			<header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
-				<div className="min-w-0">
-					<h1 className="flex items-center gap-2 text-lg font-bold text-card-foreground">
-						<button
-							type="button"
-							onClick={() => navigate(-1)}
-							className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-						>
-							<ArrowLeft size={20} />
-						</button>
+			<header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-4">
+				<div className="flex items-center">
+					<button
+						type="button"
+						onClick={() => navigate(-1)}
+						className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+						title="Go back"
+					>
+						<ArrowLeft size={20} />
+					</button>
+					<div>
+						<h1 className="truncate text-lg font-bold text-card-foreground">
 
-						<span className="truncate">{pageTitle}</span>
-					</h1>
+							{pageTitle}
+						</h1>
 
-					<p className="ml-8 mt-1 truncate text-sm text-muted-foreground">
-						{pageDescription}
-					</p>
+						<p className="text-sm text-muted-foreground">
+							{pageDescription}
+						</p>
+					</div>
 				</div>
 			</header>
 
-			<main className="flex-1 overflow-auto p-4 pb-28 sm:p-2">
+			<main className="flex-1 overflow-auto p-4 sm:p-2">
 				<TransportOrderStepper step={step} steps={STEPS} />
 
 				{prefillLoading ? (
