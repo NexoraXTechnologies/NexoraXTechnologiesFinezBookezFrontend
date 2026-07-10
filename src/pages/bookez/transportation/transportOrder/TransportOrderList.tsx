@@ -159,12 +159,18 @@ const TransportOrderList = () => {
 	};
 
 	const openCount = useMemo(
-		() => transportOrders.filter((item: any) => !isClosedOrder(item)).length,
+		() =>
+			transportOrders.filter(
+				(item: any) => !isClosedOrder(item)
+			).length,
 		[transportOrders]
 	);
 
 	const closeCount = useMemo(
-		() => transportOrders.filter((item: any) => isClosedOrder(item)).length,
+		() =>
+			transportOrders.filter(
+				(item: any) => isClosedOrder(item)
+			).length,
 		[transportOrders]
 	);
 
@@ -193,14 +199,12 @@ const TransportOrderList = () => {
 		offset = localOffset,
 		limit = localLimit,
 		searchValue = search,
-		statusValue = activeStatus,
 	}: any = {}) => {
 		dispatch(
 			getTransportOrders({
 				limit,
 				offset,
 				search: searchValue,
-				status: statusValue,
 			})
 		);
 	};
@@ -208,7 +212,7 @@ const TransportOrderList = () => {
 	useEffect(() => {
 		fetchTransportOrders();
 		fetchLRCollection();
-	}, [dispatch, localOffset, localLimit, activeStatus]);
+	}, [dispatch, localOffset, localLimit]);
 
 
 	useEffect(() => {
@@ -220,13 +224,12 @@ const TransportOrderList = () => {
 					limit: localLimit,
 					offset: 0,
 					search,
-					status: activeStatus,
 				})
 			);
 		}, 400);
 
 		return () => clearTimeout(timer);
-	}, [search, dispatch, localLimit, activeStatus]);
+	}, [search, dispatch]);
 
 	const handleRefresh = () => {
 		setRefreshing(true);
@@ -237,7 +240,6 @@ const TransportOrderList = () => {
 					limit: localLimit,
 					offset: localOffset,
 					search,
-					status: activeStatus,
 				}) as any
 			),
 			dispatch(
@@ -424,12 +426,12 @@ const TransportOrderList = () => {
 						type="button"
 						onClick={() => navigate(-1)}
 						className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
-                        title="Go back"
-                    >
+						title="Go back"
+					>
 						<ArrowLeft size={18} />
 					</button>
-					 <div >
-                        <h1 className="truncate text-lg font-bold text-card-foreground">
+					<div >
+						<h1 className="truncate text-lg font-bold text-card-foreground">
 
 							{pageTitle}
 						</h1>
@@ -446,8 +448,9 @@ const TransportOrderList = () => {
 							count:
 								pagination?.totalDocs ??
 								pagination?.totalRecords ??
-								filteredTransportOrders?.length ??
+								transportOrders?.length ??
 								0,
+								
 							text: "Total Orders:",
 							varient: "primary",
 						}}
@@ -456,13 +459,10 @@ const TransportOrderList = () => {
 					<div className="flex rounded-md border border-border bg-background p-1">
 						<button
 							type="button"
-							onClick={() => {
-								setActiveStatus("open");
-								setLocalOffset(0);
-							}}
+							onClick={() => setActiveStatus("open")}
 							className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
-								? "bg-primary text-primary-foreground"
-								: "text-muted-foreground hover:bg-muted"
+									? "bg-primary text-primary-foreground"
+									: "text-muted-foreground hover:bg-muted"
 								}`}
 						>
 							Open ({openCount})
@@ -470,13 +470,10 @@ const TransportOrderList = () => {
 
 						<button
 							type="button"
-							onClick={() => {
-								setActiveStatus("close");
-								setLocalOffset(0);
-							}}
+							onClick={() => setActiveStatus("close")}
 							className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
-								? "bg-primary text-primary-foreground"
-								: "text-muted-foreground hover:bg-muted"
+									? "bg-primary text-primary-foreground"
+									: "text-muted-foreground hover:bg-muted"
 								}`}
 						>
 							Close ({closeCount})

@@ -10,19 +10,30 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
+import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 
 const LoadStep = ({ form, update, updateNested }: any) => {
     const dispatch = useDispatch<any>()
     const { units = [] } = useSelector((state: any) => state.unitMaster)
+    const {products=[]}=useSelector((state:any)=> state.productMaster)
     const unitOptions = units.map((item: any) => ({
-        label: item.unitName || item.name || '-',
-        value: item.unitName || item.unitCode || item.unitId || '',
+        label: item.unitName ,
+        value: item.unitName 
+    }))
+
+    const productOptions=products.map((item:any)=>({
+        label:item.productName ,
+        value:item.productName
     }))
 
     useEffect(() => {
         dispatch(getAllUnits({
             limit: 200,
             offset: 0
+        }))
+        dispatch(getAllProducts({
+            limit:200,
+            offset:0
         }))
     }, [dispatch])
     const updateLoadField = (key: string, value: any) => {
@@ -107,8 +118,9 @@ const LoadStep = ({ form, update, updateNested }: any) => {
         {
             key: "loadDetails.materialName",
             label: "Material Name",
-            type: "text",
+            type: "select",
             placeholder: "Enter material name",
+            options:productOptions,
             mandatory: true,
         },
         {
