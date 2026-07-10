@@ -208,6 +208,102 @@ export const getDbAccessRequests = createAsyncThunk(
     }
 );
 
+export const getDbAccessRequestsUser = createAsyncThunk(
+    "dbAccess/getDbAccessRequestsUser",
+    async (
+        {
+            offset = 0,
+            limit = 100,
+            status = "",
+            search = "",
+        }: {
+            offset?: number;
+            limit?: number;
+            status?: string;
+            search?: string;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const params: {
+                offset: number;
+                limit: number;
+                status?: string;
+                search?: string;
+            } = {
+                offset,
+                limit,
+            };
+
+            if (status.trim()) {
+                params.status = status.trim();
+            }
+
+            if (search.trim()) {
+                params.search = search.trim();
+            }
+
+            const res = await professionalAxios.get(
+                `eTaxSolnMongoApiBackend/users/parent/dbAccess/requests`,
+                {
+                    params,
+                    headers: DB_ACCESS_HEADERS,
+                }
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message ||
+                        "Failed to fetch DB access requests",
+                    status: res?.status,
+                });
+            }
+
+            return res.data?.data;
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to fetch DB access requests",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+export const acceptRequestsUser = createAsyncThunk(
+    "dbAccess/acceptRequestsUser",
+    async ({ requestId, action=""}: any, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.patch(
+                `eTaxSolnMongoApiBackend/users/parent/dbAccess/request/action/${requestId}`,
+                {
+                    action
+                }
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message:
+                        res.data?.message ||
+                        "Failed to fetch DB access requests",
+                    status: res?.status,
+                });
+            }
+
+            return res.data;
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    "Failed to fetch DB access requests",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
 /* ===================================================
    GET DB ACCESS REQUEST BY REQUEST ID
 =================================================== */

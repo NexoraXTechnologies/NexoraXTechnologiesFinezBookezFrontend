@@ -74,9 +74,7 @@ export const getEmptySystemConfiguration = () => ({
             enableLocation: false,
         },
 
-        bankStatementImport: {
-            enableBankStatementImport: false,
-        },
+        bankStatementImport: { enableBankStatementImport: false, },
 
         productSettings: {
             allowDuplicateProduct: false,
@@ -138,10 +136,7 @@ export const normalizeSystemConfiguration = (raw: any) => ({
         },
 
         bankStatementImport: {
-            enableBankStatementImport: toBool(
-                raw?.systemConfiguration?.bankStatementImport
-                    ?.enableBankStatementImport
-            ),
+            enableBankStatementImport: toBool(raw?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport),
         },
 
         productSettings: {
@@ -311,7 +306,7 @@ const buildConfigurationPayload = (configuration: any) => {
             },
 
             bankStatementImport: {
-                enableBankStatementImport: !!configuration?.systemConfiguration?.bankStatementImport?.enableBankStatementImport,
+                enableBankStatementImport: !!configuration?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport,
             },
 
             productSettings: {
@@ -620,14 +615,7 @@ export const updateSystemConfiguration = createAsyncThunk(
 
 export const saveOrUpdateSystemConfiguration = createAsyncThunk(
     "systemConfiguration/saveOrUpdateSystemConfiguration",
-    async (
-        {
-            configuration,
-        }: {
-            configuration: any;
-        },
-        { dispatch, rejectWithValue }
-    ) => {
+    async ({ configuration, }: { configuration: any; }, { dispatch, rejectWithValue }) => {
         try {
             const configurationCode = configuration?.configurationCode;
 
@@ -648,39 +636,22 @@ export const saveOrUpdateSystemConfiguration = createAsyncThunk(
                 ).unwrap();
 
                 return {
-                    message:
-                        result?.message || "Configuration updated successfully",
+                    message: result?.message || "Configuration updated successfully",
                     configuration: latest,
                     mode: "update",
                 };
             }
-
-            result = await dispatch(
-                saveSystemConfiguration({
-                    configuration,
-                }) as any
-            ).unwrap();
-
+            result = await dispatch(saveSystemConfiguration({ configuration, }) as any).unwrap();
             const newCode = result?.data?.configurationCode;
-
             if (newCode) {
-                const latest = await dispatch(
-                    getSystemConfigurationByCode({
-                        configurationCode: newCode,
-                    }) as any
-                ).unwrap();
+                const latest = await dispatch(getSystemConfigurationByCode({ configurationCode: newCode, }) as any).unwrap();
 
                 return {
-                    message:
-                        result?.message || "Configuration saved successfully",
-                    configuration: latest,
-                    mode: "save",
+                    message: result?.message || "Configuration saved successfully", configuration: latest, mode: "save",
                 };
             }
 
-            const latest = await dispatch(
-                getLatestSystemConfiguration() as any
-            ).unwrap();
+            const latest = await dispatch(getLatestSystemConfiguration() as any).unwrap();
 
             return {
                 message: result?.message || "Configuration saved successfully",
@@ -689,19 +660,12 @@ export const saveOrUpdateSystemConfiguration = createAsyncThunk(
             };
         } catch (err: any) {
             return rejectWithValue({
-                message:
-                    err?.message ||
-                    err?.response?.data?.message ||
-                    "Failed to save configuration",
+                message: err?.message || err?.response?.data?.message || "Failed to save configuration",
                 status: err?.response?.status,
             });
         }
     }
 );
-
-/* ===================================================
-   VERIFY WHATSAPP META CREDENTIALS
-=================================================== */
 
 export const verifyWhatsAppMetaCredentials = createAsyncThunk(
     "systemConfiguration/verifyWhatsAppMetaCredentials",

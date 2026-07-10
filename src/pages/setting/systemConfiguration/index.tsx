@@ -2,16 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
     ArrowLeft,
+    Check,
     ChevronDown,
     ChevronRight,
     ChevronUp,
     Loader2,
+    MessageSquareText,
     Package,
+    Phone,
     Recycle,
     Settings,
+    ShieldCheck,
     ShoppingCart,
     Truck,
     WalletCards,
+    X,
+    Ticket
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +35,7 @@ import {
     updateWhatsAppModuleLocalToggle,
     verifyWhatsAppMetaCredentials,
 } from "../../../redux/slices/systemConf";
+import { acceptRequestsUser, getDbAccessRequestsUser } from "../../../redux/slices/userExplorer";
 
 /* ===================================================
    CONSTANTS
@@ -270,7 +277,7 @@ const BadgeStatus = ({ active }: { active: boolean }) => {
 const SystemConfiguration = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch<any>();
-
+    const [dbRequest, setDbRequest] = useState({});
     const {
         configuration,
         loading,
@@ -311,13 +318,17 @@ const SystemConfiguration = () => {
                 label: "Transportation",
                 icon: <Truck size={17} />,
             },
+            {
+                key: "dbRequest",
+                label: "DB Request",
+                icon: <Ticket size={17} />,
+            },
         ],
         []
     );
-
     const [activeTab, setActiveTab] = useState("system");
     const [waModulesExpanded, setWaModulesExpanded] = useState(true);
-
+    const [dbReqLoader, setDbReqLoader] = useState(false);
     const saving = saveLoading;
     const whatsAppVerifying = whatsappVerifyLoading;
 
@@ -325,6 +336,14 @@ const SystemConfiguration = () => {
     const inventoryConfig = configuration?.inventoryConfiguration || {};
     const financeConfig = configuration?.financeConfiguration || {};
     const whatsAppConfig = systemConfig?.whatsAppConfiguration || {};
+
+    const acceptDbRequest = async ({ action, requestId }: any) => {
+        setDbReqLoader(true);
+        const res = await dispatch(acceptRequestsUser({ requestId, action }) as any);
+        getDBAccessReq();
+        toast.success(res?.payload?.message)
+        setDbReqLoader(false);
+    }
 
     useEffect(() => {
         dispatch(getLatestSystemConfiguration());
@@ -336,6 +355,17 @@ const SystemConfiguration = () => {
         toast.error(error);
         dispatch(clearSystemConfigurationError());
     }, [error, dispatch]);
+
+    const getDBAccessReq = async () => {
+        let res;
+        res = await dispatch(getDbAccessRequestsUser({ status: "" }))
+        const get = res?.payload?.records?.filter((e: any) => e?.status == "PENDING")
+        setDbRequest(get);
+    }
+
+    useEffect(() => {
+        getDBAccessReq();
+    }, []);
 
     useEffect(() => {
         if (whatsAppConfig?.enableWhatsAppModule) {
@@ -617,6 +647,80 @@ const SystemConfiguration = () => {
         );
     };
 
+    const dbRequestTab = () => {
+
+        return (
+            <div className="space-y-2">
+                {dbRequest?.length ? (
+                    dbRequest.map((e: any) => (
+                        <div
+                            key={e?.requestId}
+                            className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 transition-all hover:border-primary/30 hover:shadow-sm"
+                        >
+                            <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                    <ShieldCheck className="h-5 w-5 text-primary" />
+                                </div>
+
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <h6 className="truncate text-sm font-semibold text-card-foreground">
+                                            {e?.requestId}
+                                        </h6>
+
+                                        <span className="rounded bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
+                                            Pending
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1">
+                                            <Phone size={13} />
+                                            {e?.requestedByAdminMobile}
+                                        </span>
+
+                                        <span className="flex items-center gap-1 truncate">
+                                            <MessageSquareText size={13} />
+                                            {e?.requestMessage}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="ml-4 flex shrink-0 items-center gap-2">
+                                <button
+                                    disabled={dbReqLoader}
+                                    onClick={() =>
+                                        acceptDbRequest({ action: "ACCEPT", requestId: e?.requestId })
+                                    }
+                                    className="flex h-8 items-center gap-1 rounded-md bg-success px-3 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                                >
+                                    <Check size={14} />
+                                    Accept
+                                </button>
+
+                                <button
+                                    disabled={dbReqLoader}
+                                    onClick={() =>
+                                        acceptDbRequest({ action: "REJECT", requestId: e?.requestId })
+                                    }
+                                    className="flex h-8 items-center gap-1 rounded-md bg-danger px-3 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                                >
+                                    <X size={14} />
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-border bg-card text-sm text-muted-foreground">
+                        No pending requests
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const renderInventoryTab = () => {
         return (
             <Panel
@@ -826,6 +930,11 @@ const SystemConfiguration = () => {
             case "transportation":
                 return renderTransportationTab();
 
+            case "dbRequest":
+                return dbRequestTab();
+            case "transportation":
+                return renderTransportationTab();
+
             case "system":
             default:
                 return renderSystemTab();
@@ -926,8 +1035,7 @@ const SystemConfiguration = () => {
                         ) : (
                             <>
                                 {renderActiveTabContent()}
-
-                                <div className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                                    {(activeTab !== "dbRequest") && <div className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                                     <div>
                                         <h3 className="text-sm font-black text-card-foreground">
                                             Save Changes
@@ -961,7 +1069,7 @@ const SystemConfiguration = () => {
                                             "Save Configuration"
                                         )}
                                     </button>
-                                </div>
+                                    </div>}
                             </>
                         )}
                     </main>
