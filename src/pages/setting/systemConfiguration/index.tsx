@@ -285,6 +285,7 @@ const SystemConfiguration = () => {
         whatsappVerifyLoading,
         error,
     } = useSelector((state: any) => state.systemConfiguration);
+    const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
 
     const tabs = useMemo(
         () => [
@@ -318,11 +319,11 @@ const SystemConfiguration = () => {
                 label: "Transportation",
                 icon: <Truck size={17} />,
             },
-            {
+            ...(localUser?.accountType !== "SUPER_ADMIN" ? [{
                 key: "dbRequest",
                 label: "DB Request",
                 icon: <Ticket size={17} />,
-            },
+            }] : []),
         ],
         []
     );
@@ -331,12 +332,11 @@ const SystemConfiguration = () => {
     const [dbReqLoader, setDbReqLoader] = useState(false);
     const saving = saveLoading;
     const whatsAppVerifying = whatsappVerifyLoading;
-
     const systemConfig = configuration?.systemConfiguration || {};
     const inventoryConfig = configuration?.inventoryConfiguration || {};
     const financeConfig = configuration?.financeConfiguration || {};
     const whatsAppConfig = systemConfig?.whatsAppConfiguration || {};
-
+    console.log({ localUser })
     const acceptDbRequest = async ({ action, requestId }: any) => {
         setDbReqLoader(true);
         const res = await dispatch(acceptRequestsUser({ requestId, action }) as any);
@@ -364,7 +364,7 @@ const SystemConfiguration = () => {
     }
 
     useEffect(() => {
-        getDBAccessReq();
+        localUser?.accountType !== "SUPER_ADMIN" && getDBAccessReq();
     }, []);
 
     useEffect(() => {
