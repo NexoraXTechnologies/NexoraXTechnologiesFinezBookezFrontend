@@ -142,7 +142,7 @@ const SelectBox = ({
             onChange={(e) => onChange(e.target.value)}
             className="
 				h-10 w-full rounded-md border border-border bg-background px-3
-				text-sm font-bold text-foreground outline-none transition
+				text-sm text-foreground outline-none transition
 				focus:border-primary focus:ring-2 focus:ring-primary/10
 			"
         >
@@ -201,16 +201,16 @@ const DriverCard = ({
                     <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                                <h3 className="truncate text-base font-black tracking-tight text-foreground">
+                                <h3 className="truncate text-sm font-bold text-card-foreground">
                                     {driverName}
                                 </h3>
 
-                                <p className="mt-1 truncate text-xs font-bold text-muted-foreground">
+                                <p className="mt-1 truncate text-xs text-muted-foreground">
                                     Trip: {tripLabel}
                                 </p>
                             </div>
 
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700">
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
                                 <motion.span
                                     animate={{ scale: [1, 1.3, 1] }}
                                     transition={{
@@ -220,37 +220,37 @@ const DriverCard = ({
                                     }}
                                     className="h-1.5 w-1.5 rounded-full bg-emerald-500"
                                 />
-                                LIVE
+                                Live
                             </span>
                         </div>
 
                         <div className="mt-4 border-t border-border/70 pt-3">
                             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                                 <div className="min-w-0">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                    <p className="text-xs font-medium text-muted-foreground">
                                         Vehicle
                                     </p>
-                                    <p className="mt-1 truncate text-sm font-black text-foreground">
+                                    <p className="mt-1 truncate text-sm font-semibold text-card-foreground">
                                         {vehicleNumber}
                                     </p>
                                 </div>
 
                                 <div className="min-w-0">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                    <p className="text-xs font-medium text-muted-foreground">
                                         Tracking Voucher
                                     </p>
-                                    <p className="mt-1 truncate text-sm font-black text-foreground">
+                                    <p className="mt-1 truncate text-sm font-semibold text-card-foreground">
                                         {getTripTrackingVoucher(item) || "-"}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mt-3">
-                                <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                <p className="text-xs font-medium text-muted-foreground">
                                     Current Location
                                 </p>
 
-                                <p className="mt-1 line-clamp-2 text-sm font-black leading-5 text-foreground">
+                                <p className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-card-foreground">
                                     {item?.currentAddress || "Fetching address..."}
                                 </p>
                             </div>
@@ -259,7 +259,7 @@ const DriverCard = ({
                                 <div className="inline-flex min-w-0 items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700">
                                     <Clock size={15} />
 
-                                    <p className="truncate text-xs font-black">
+                                    <p className="truncate text-xs font-medium">
                                         Last updated: {formatDateTime(lastUpdated)}
                                     </p>
                                 </div>
@@ -271,7 +271,7 @@ const DriverCard = ({
                                     whileTap={{ scale: 0.96 }}
                                     className="
 										inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-md
-										bg-primary px-3 text-xs font-black text-primary-foreground
+										bg-primary px-3 text-xs font-bold text-primary-foreground
 										shadow-sm transition hover:bg-primary/90
 									"
                                 >
@@ -456,11 +456,11 @@ const WhereIsMyDriver = () => {
                         </motion.button>
 
                         <div>
-                            <h2 className="text-sm font-black uppercase tracking-wide text-primary">
+                            <h2 className="text-lg font-bold text-card-foreground">
                                 Where Is My Driver?
                             </h2>
 
-                            <p className="mt-1 text-xs font-bold text-muted-foreground">
+                            <p className="mt-1 text-sm text-muted-foreground">
                                 {listingLoader
                                     ? "Finding active drivers..."
                                     : `Active drivers: ${totalDrivers} • Showing: ${showingDrivers}`}
@@ -482,7 +482,7 @@ const WhereIsMyDriver = () => {
                                     whileTap={{ scale: 0.96 }}
                                     className="
 										inline-flex h-10 items-center gap-2 rounded-md border border-border
-										bg-background px-3 text-sm font-black text-muted-foreground
+										bg-background px-3 text-sm font-medium text-muted-foreground
 										transition hover:bg-muted
 									"
                                 >
@@ -500,7 +500,7 @@ const WhereIsMyDriver = () => {
                             whileTap={!listingLoader ? { scale: 0.96 } : undefined}
                             className="
 								inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3
-								text-sm font-black text-primary-foreground shadow-sm transition
+								text-sm font-bold text-primary-foreground shadow-sm transition
 								hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60
 							"
                         >
@@ -530,7 +530,7 @@ const WhereIsMyDriver = () => {
                                 </motion.div>
 
                                 <div>
-                                    <h2 className="text-base font-black text-foreground">
+                                    <h2 className="text-sm font-bold text-card-foreground">
                                         Live Driver Locations
                                     </h2>
 
@@ -545,7 +545,7 @@ const WhereIsMyDriver = () => {
                                             className="h-2 w-2 rounded-full bg-emerald-500"
                                         />
 
-                                        <p className="text-xs font-bold text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             Auto-refreshing every 10 seconds
                                         </p>
                                     </div>
@@ -572,7 +572,7 @@ const WhereIsMyDriver = () => {
                                     placeholder="Search driver, vehicle, trip..."
                                     className="
 										h-10 w-full rounded-md border border-border bg-background
-										pl-9 pr-3 text-sm font-bold text-foreground outline-none
+										pl-9 pr-3 text-sm text-foreground outline-none
 										transition focus:border-primary focus:ring-2 focus:ring-primary/10
 									"
                                 />
@@ -621,11 +621,11 @@ const WhereIsMyDriver = () => {
                                 <MapPin size={30} />
                             </motion.div>
 
-                            <h3 className="mt-4 text-lg font-black text-foreground">
+                            <h3 className="mt-4 text-lg font-bold text-foreground">
                                 No active driver location
                             </h3>
 
-                            <p className="mt-1 max-w-md text-sm font-semibold text-muted-foreground">
+                            <p className="mt-1 max-w-md text-sm text-muted-foreground">
                                 Driver location will appear here after a driver accepts and starts
                                 live tracking.
                             </p>
@@ -636,7 +636,7 @@ const WhereIsMyDriver = () => {
                                     onClick={resetFilters}
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.96 }}
-                                    className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
+                                    className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
                                 >
                                     Clear Filters
                                 </motion.button>

@@ -319,7 +319,7 @@ const formatStatusLabel = (status: any) => {
     return String(status || "LIVE")
         .replaceAll("_", " ")
         .replaceAll("-", " ")
-        .toUpperCase();
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 /* ===================================================
@@ -344,11 +344,11 @@ const InfoItem = memo(
                     </div>
 
                     <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                        <p className="text-xs font-medium text-muted-foreground">
                             {label}
                         </p>
 
-                        <p className="mt-0.5 truncate text-sm font-black text-foreground">
+                        <p className="mt-0.5 truncate text-sm font-semibold text-card-foreground">
                             {value || "-"}
                         </p>
                     </div>
@@ -385,16 +385,16 @@ const RouteAddressCard = memo(
                     </div>
 
                     <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
+                        <p className="text-xs font-medium text-muted-foreground">
                             {title}
                         </p>
 
-                        <p className="mt-0.5 line-clamp-3 text-sm font-bold text-foreground">
+                        <p className="mt-0.5 line-clamp-3 text-sm font-medium leading-5 text-card-foreground">
                             {address || "-"}
                         </p>
 
                         {coords && (
-                            <p className="mt-0.5 truncate text-xs font-bold text-muted-foreground">
+                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
                                 {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
                             </p>
                         )}
@@ -650,7 +650,7 @@ const MapPinLabel = memo(
                     </div>
 
                     <div
-                        className={`mt-1 rounded-md px-2 py-1 text-xs font-black shadow-md ${color}`}
+                        className={`mt-1 rounded-md px-2 py-1 text-xs font-bold shadow-md ${color}`}
                     >
                         {label}
                     </div>
@@ -831,7 +831,7 @@ const LiveTrackingMap = memo(
         if (!apiKey) {
             return (
                 <div className="flex h-full items-center justify-center bg-muted p-6 text-center">
-                    <p className="text-sm font-black text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                         Google Maps API key missing. Add VITE_GOOGLE_MAPS_API_KEY in .env.
                     </p>
                 </div>
@@ -841,7 +841,7 @@ const LiveTrackingMap = memo(
         if (!isLoaded) {
             return (
                 <div className="flex h-full items-center justify-center bg-muted">
-                    <div className="text-sm font-black text-muted-foreground">
+                    <div className="text-sm text-muted-foreground">
                         Loading map...
                     </div>
                 </div>
@@ -855,11 +855,11 @@ const LiveTrackingMap = memo(
                         <MapPin size={30} />
                     </div>
 
-                    <h3 className="mt-4 text-lg font-black text-foreground">
+                    <h3 className="mt-4 text-lg font-bold text-foreground">
                         Location not available
                     </h3>
 
-                    <p className="mt-1 max-w-md text-sm font-semibold text-muted-foreground">
+                    <p className="mt-1 max-w-md text-sm text-muted-foreground">
                         Driver coordinates are missing for this tracking record.
                     </p>
                 </div>
@@ -1151,24 +1151,24 @@ const LiveTripTracking = () => {
 
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <h2 className="truncate text-sm font-black tracking-wide text-foreground">
+                                    <h2 className="truncate text-lg font-bold text-card-foreground">
                                         Vehicle No. :{" "}
-                                        <span className="uppercase text-primary">
+                                        <span className="font-bold text-primary">
                                             {vehicleNumber}
                                         </span>{" "}
-                                        | Trip No. :  <span className="uppercase text-primary">{tripLabel}</span>
+                                        | Trip No. :  <span className="font-bold text-primary">{tripLabel}</span>
                                     </h2>
                                 </div>
 
                                 <div className="flex items-center">
-                                    <p className="my-0 truncate text-sm font-bold text-muted-foreground">
+                                    <p className="my-0 truncate text-sm text-muted-foreground">
                                         {trackingVoucher
                                             ? `Tracking ID: ${trackingVoucher}`
                                             : "Tracking voucher not found"}
                                     </p>
 
                                     <span
-                                        className={`ms-3 inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs font-black ${getStatusClass(
+                                        className={`ms-3 inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${getStatusClass(
                                             tripStatus
                                         )}`}
                                     >
@@ -1188,7 +1188,7 @@ const LiveTripTracking = () => {
                                 whileTap={!loading && !refreshing ? { scale: 0.96 } : undefined}
                                 className="
                                     inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3
-                                    text-sm font-black text-primary-foreground shadow-sm transition
+                                    text-sm font-bold text-primary-foreground shadow-sm transition
                                     hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60
                                 "
                             >
@@ -1227,11 +1227,11 @@ const LiveTripTracking = () => {
                                 <MapPin size={30} />
                             </div>
 
-                            <h3 className="mt-4 text-lg font-black text-foreground">
+                            <h3 className="mt-4 text-lg font-bold text-foreground">
                                 Tracking not found
                             </h3>
 
-                            <p className="mt-1 max-w-md text-sm font-semibold text-muted-foreground">
+                            <p className="mt-1 max-w-md text-sm text-muted-foreground">
                                 Live tracking details are not available for this trip.
                             </p>
                         </motion.div>
@@ -1275,11 +1275,11 @@ const LiveTripTracking = () => {
 
                                     <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-card p-3 shadow-sm">
                                         <div className="mb-3 flex items-center justify-between gap-2">
-                                            <h3 className="text-sm font-black uppercase tracking-wide text-primary">
+                                            <h3 className="text-sm font-bold text-card-foreground">
                                                 Route Details
                                             </h3>
 
-                                            <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-black text-primary">
+                                            <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
                                                 Live
                                             </span>
                                         </div>
@@ -1310,7 +1310,7 @@ const LiveTripTracking = () => {
                                 <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card shadow-sm">
                                     <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-2">
                                         <div className="min-w-0">
-                                            <h3 className="text-sm font-black uppercase tracking-wide text-primary">
+                                            <h3 className="text-sm font-bold text-card-foreground">
                                                 Live Map
                                             </h3>
                                         </div>
@@ -1318,28 +1318,28 @@ const LiveTripTracking = () => {
                                         <div className="flex shrink-0 items-center gap-3">
                                             <div className="flex items-center gap-1">
                                                 <span className="h-3 w-3 rounded-full bg-emerald-500" />
-                                                <span className="text-sm font-black text-muted-foreground">
+                                                <span className="text-sm text-muted-foreground">
                                                     Pickup
                                                 </span>
                                             </div>
 
                                             <div className="flex items-center gap-1">
                                                 <span className="h-3 w-3 rounded-full bg-red-500" />
-                                                <span className="text-sm font-black text-muted-foreground">
+                                                <span className="text-sm text-muted-foreground">
                                                     Delivery
                                                 </span>
                                             </div>
 
                                             <div className="flex items-center gap-1">
                                                 <span className="h-3 w-3 rounded-full bg-primary" />
-                                                <span className="text-sm font-black text-muted-foreground">
+                                                <span className="text-sm text-muted-foreground">
                                                     Vehicle
                                                 </span>
                                             </div>
 
                                             <div className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700">
                                                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                                                <span className="text-sm font-black">LIVE</span>
+                                                <span className="text-sm font-medium">Live</span>
                                             </div>
                                         </div>
                                     </div>
