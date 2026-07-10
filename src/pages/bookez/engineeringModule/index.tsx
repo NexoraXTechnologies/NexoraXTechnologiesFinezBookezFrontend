@@ -16,7 +16,7 @@ const cards: any[] = [
       "Configure default engineering values used across BOM, drawings, and production-related processes.",
     component:SetDefaultValue,
     icon: <Settings2 size={22} />,
-    permissionKey: "accountLedger",
+    permissionKey: "Pass",
   },
   {
     title: "BOM",
@@ -24,7 +24,7 @@ const cards: any[] = [
       "Create and manage Bill of Materials with product components, quantities, units, and material details.",
     component: Bom,
     icon: <Layers3 size={22} />,
-    permissionKey: "accountLedger",
+    permissionKey: "Pass",
   },
   {
     title: "Engineering Drawing",
@@ -32,7 +32,7 @@ const cards: any[] = [
       "Upload, view, and manage product engineering drawings, technical layouts, and design references.",
     component:CreateEditEngineeringConfig,
     icon: <FileImage size={22} />,
-    permissionKey: "accountLedger",
+    permissionKey: "Pass",
   },
 ];
 
