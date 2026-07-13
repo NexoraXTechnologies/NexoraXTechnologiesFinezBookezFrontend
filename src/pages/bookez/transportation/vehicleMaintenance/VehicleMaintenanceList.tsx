@@ -527,7 +527,7 @@ const VehicleMaintenanceList = () => {
 
                     <Permission
                         module="bookez"
-                        permissionKey="Pass"
+                        permissionKey="vehicleMaintenance"
                         action="create"
                     >
                         {/* @ts-ignore */}
@@ -551,7 +551,7 @@ const VehicleMaintenanceList = () => {
                         <div className="flex items-center gap-2">
                             <Permission
                                 module="bookez"
-                                permissionKey="Pass"
+                                permissionKey="vehicleMaintenance"
                                 action="update"
                             >
                                 <button
@@ -565,7 +565,7 @@ const VehicleMaintenanceList = () => {
 
                             <Permission
                                 module="bookez"
-                                permissionKey="Pass"
+                                permissionKey="vehicleMaintenance"
                                 action="delete"
                             >
                                 <button

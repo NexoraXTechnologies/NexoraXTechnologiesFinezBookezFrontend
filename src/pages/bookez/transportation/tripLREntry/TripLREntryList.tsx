@@ -782,7 +782,7 @@ const TripLREntryList = () => {
 
                     <Permission
                         module="bookez"
-                        permissionKey="Pass"
+                        permissionKey="tripLrCollection"
                         action="create"
                     >
                         {/* @ts-ignore */}
@@ -816,7 +816,7 @@ const TripLREntryList = () => {
                 //                   <div className="flex items-center gap-2">
                 //                       <Permission
                 //                           module="bookez"
-                //                           permissionKey="Pass"
+                //                           permissionKey="tripLrCollection"
                 //                           action="update"
                 //                       >
                 //                           <button
@@ -830,7 +830,7 @@ const TripLREntryList = () => {
 
                 //                       <Permission
                 //                           module="bookez"
-                //                           permissionKey="Pass"
+                //                           permissionKey="tripLrCollection"
                 //                           action="delete"
                 //                       >
                 //                           <button

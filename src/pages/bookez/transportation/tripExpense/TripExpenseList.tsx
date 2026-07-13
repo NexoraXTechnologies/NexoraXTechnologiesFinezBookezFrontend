@@ -1052,7 +1052,7 @@ const TripExpenseList = () => {
                                         {(isChildUser ? childCanEdit : true) && (
                                             <Permission
                                                 module="bookez"
-                                                permissionKey="Pass"
+                                                permissionKey="tripExpense"
                                                 action="update"
                                             >
                                                 <button
@@ -1068,7 +1068,7 @@ const TripExpenseList = () => {
                                         {!isChildUser && (
                                             <Permission
                                                 module="bookez"
-                                                permissionKey="Pass"
+                                                permissionKey="tripExpense"
                                                 action="delete"
                                             >
                                                 <button
@@ -1126,7 +1126,7 @@ const TripExpenseList = () => {
                                                 {(isChildUser ? childCanEdit : true) && (
                                                     <Permission
                                                         module="bookez"
-                                                        permissionKey="Pass"
+                                                        permissionKey="tripExpense"
                                                         action="update"
                                                     >
                                                         <button
@@ -1142,7 +1142,7 @@ const TripExpenseList = () => {
                                                 {!isChildUser && (
                                                     <Permission
                                                         module="bookez"
-                                                        permissionKey="Pass"
+                                                        permissionKey="tripExpense"
                                                         action="delete"
                                                     >
                                                         <button

@@ -70,6 +70,15 @@ import transportContractReducer from "./slices/professionalSlice/transportation/
 import vehicleStatusReducer from "./slices/professionalSlice/transportation/vehicleStatusSlice"
 import whereIsMyDriverReducer from "./slices/professionalSlice/transportation/whereIsMyDriverSlice"
 import driverSettlementReducer from "./slices/professionalSlice/transportation/driverSettlementSlice";
+
+// transport register
+import transportOrderRegisterReducer from "./slices/professionalSlice/bookEzRegister/transportOrderRegister";
+import tripAllocationRegisterReducer from "./slices/professionalSlice/bookEzRegister/tripAllocationRegister";
+import tripExpenseRegisterReducer from "./slices/professionalSlice/bookEzRegister/tripExpenseRegister";
+import podRegisterReducer from "./slices/professionalSlice/bookEzRegister/podRegister"
+import driverSettlementRegisterReducer from "./slices/professionalSlice/bookEzRegister/driverSettlementRegister";
+import vehicleMaintenanceRegisterReducer from "./slices/professionalSlice/bookEzRegister/vehicleMaintenanceRegister";
+
 // bookEz register
 import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
 import salesReceiptReducer from "./slices/professionalSlice/salesWorkflow/salesReceipt";
@@ -155,9 +164,18 @@ export const store = configureStore({
     tripExpenses: tripExpensesReducer,
     tripLRCollection: tripLRCollectionReducer,
     vehicleMaintenance: vehicleMaintenanceReducer,
+    vehicleStatus: vehicleStatusReducer,
+    whereIsMyDriver: whereIsMyDriverReducer,
     transportContract: transportContractReducer,
-    driverSettlement:driverSettlementReducer,
+    driverSettlement: driverSettlementReducer,
 
+    // transport register
+    transportOrderRegister: transportOrderRegisterReducer,
+    tripAllocationRegister: tripAllocationRegisterReducer,
+    tripExpenseRegister: tripExpenseRegisterReducer,
+    podRegister: podRegisterReducer,
+    driverSettlementRegister: driverSettlementRegisterReducer,
+    vehicleMaintenanceRegister: vehicleMaintenanceRegisterReducer,
 
     // bookEz register
     salesRegister: salesRegisterReducer,
@@ -174,8 +192,6 @@ export const store = configureStore({
     allRegisters: allRegistersReducer,
     registerDashboard: areaDashboardReducer,
     systemConfiguration: systemConfigurationReducer,
-    vehicleStatus: vehicleStatusReducer,
-    whereIsMyDriver: whereIsMyDriverReducer
   },
 });
 

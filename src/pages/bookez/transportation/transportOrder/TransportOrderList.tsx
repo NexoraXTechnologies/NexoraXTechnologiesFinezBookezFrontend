@@ -497,7 +497,7 @@ const TransportOrderList = () => {
 					{/* {activeStatus !== "close" && ( */}
 					<Permission
 						module="bookez"
-						permissionKey="Pass"
+						permissionKey="transportOrder"
 						action="create"
 					>
 						{/* @ts-ignore */}
@@ -540,7 +540,7 @@ const TransportOrderList = () => {
 									<div className="flex items-center gap-2">
 										<Permission
 											module="bookez"
-											permissionKey="Pass"
+											permissionKey="transportOrder"
 											action="update"
 										>
 											<button
@@ -554,7 +554,7 @@ const TransportOrderList = () => {
 
 										<Permission
 											module="bookez"
-											permissionKey="Pass"
+											permissionKey="transportOrder"
 											action="delete"
 										>
 											<button
