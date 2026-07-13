@@ -1,4 +1,4 @@
-import  { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
     ArrowLeft,
     Clock,
@@ -19,7 +19,7 @@ import {
     PolylineF,
     useJsApiLoader,
 } from "@react-google-maps/api";
-import TruckImg from "../../../../assets/images/topviewtruck.png"
+import TruckImg from "../../../../assets/images/topviewtruck.png";
 import professionalAxios from "../../../../services/professionalAxios";
 
 /* ===================================================
@@ -61,7 +61,7 @@ const sectionVariants: any = {
     },
 };
 
-const cardVariants: any     = {
+const cardVariants: any = {
     hidden: { opacity: 0, y: 10, scale: 0.99 },
     show: {
         opacity: 1,
@@ -450,14 +450,179 @@ const escapeHtml = (value: unknown) => {
         .replaceAll("'", "&#039;");
 };
 
+type LatLngPoint = {
+    lat: number;
+    lng: number;
+};
+
+type SnappedRoutePoint = {
+    position: LatLngPoint;
+    routeHeading: number | null;
+    snapped: boolean;
+    distanceMeters: number;
+};
+
+/*
+ * Change this value only when the original PNG is not facing north/up:
+ *  0   = image front faces UP
+ * -90  = image front faces RIGHT
+ *  90  = image front faces LEFT
+ * 180  = image front faces DOWN
+ */
+const TRUCK_IMAGE_DIRECTION_OFFSET = -90;
+const MAX_ROUTE_SNAP_DISTANCE_METERS = 120;
+
 const getCorrectedHeading = (heading: number) => {
     const safeHeading = Number.isFinite(Number(heading))
         ? Number(heading)
         : 0;
 
-    const IMAGE_DIRECTION_OFFSET = 0;
+    return (
+        safeHeading +
+        TRUCK_IMAGE_DIRECTION_OFFSET +
+        360
+    ) % 360;
+};
 
-    return (safeHeading + IMAGE_DIRECTION_OFFSET + 360) % 360;
+const calculateDistanceMeters = (
+    first: LatLngPoint,
+    second: LatLngPoint
+) => {
+    const earthRadius = 6371000;
+
+    const lat1 = (first.lat * Math.PI) / 180;
+    const lat2 = (second.lat * Math.PI) / 180;
+    const deltaLat = ((second.lat - first.lat) * Math.PI) / 180;
+    const deltaLng = ((second.lng - first.lng) * Math.PI) / 180;
+
+    const value =
+        Math.sin(deltaLat / 2) ** 2 +
+        Math.cos(lat1) *
+        Math.cos(lat2) *
+        Math.sin(deltaLng / 2) ** 2;
+
+    return (
+        2 *
+        earthRadius *
+        Math.atan2(Math.sqrt(value), Math.sqrt(1 - value))
+    );
+};
+
+const calculateBearing = (
+    from: LatLngPoint,
+    to: LatLngPoint
+) => {
+    const lat1 = (from.lat * Math.PI) / 180;
+    const lat2 = (to.lat * Math.PI) / 180;
+    const deltaLng = ((to.lng - from.lng) * Math.PI) / 180;
+
+    const y = Math.sin(deltaLng) * Math.cos(lat2);
+    const x =
+        Math.cos(lat1) * Math.sin(lat2) -
+        Math.sin(lat1) *
+        Math.cos(lat2) *
+        Math.cos(deltaLng);
+
+    return (
+        (Math.atan2(y, x) * 180) / Math.PI +
+        360
+    ) % 360;
+};
+
+/**
+ * Projects a raw GPS point onto the nearest route-polyline segment.
+ * The raw GPS point is retained when it is too far from the route.
+ */
+const snapPointToRoute = (
+    point: LatLngPoint,
+    path: LatLngPoint[],
+    maxSnapDistanceMeters = MAX_ROUTE_SNAP_DISTANCE_METERS
+): SnappedRoutePoint => {
+    if (path.length < 2) {
+        return {
+            position: point,
+            routeHeading: null,
+            snapped: false,
+            distanceMeters: 0,
+        };
+    }
+
+    let nearestPoint = point;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    let nearestHeading: number | null = null;
+
+    const longitudeScale = Math.max(
+        Math.abs(Math.cos((point.lat * Math.PI) / 180)),
+        0.000001
+    );
+
+    for (let index = 0; index < path.length - 1; index++) {
+        const start = path[index];
+        const end = path[index + 1];
+
+        const startX = start.lng * longitudeScale;
+        const startY = start.lat;
+        const endX = end.lng * longitudeScale;
+        const endY = end.lat;
+        const pointX = point.lng * longitudeScale;
+        const pointY = point.lat;
+
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const segmentLengthSquared =
+            deltaX * deltaX + deltaY * deltaY;
+
+        if (segmentLengthSquared === 0) continue;
+
+        const rawProjection =
+            ((pointX - startX) * deltaX +
+                (pointY - startY) * deltaY) /
+            segmentLengthSquared;
+
+        const projection = Math.max(
+            0,
+            Math.min(1, rawProjection)
+        );
+
+        const candidate: LatLngPoint = {
+            lat: startY + projection * deltaY,
+            lng:
+                (startX + projection * deltaX) /
+                longitudeScale,
+        };
+
+        const distance = calculateDistanceMeters(
+            point,
+            candidate
+        );
+
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestPoint = candidate;
+            nearestHeading = calculateBearing(start, end);
+        }
+    }
+
+    if (
+        !Number.isFinite(nearestDistance) ||
+        nearestDistance > maxSnapDistanceMeters
+    ) {
+        return {
+            position: point,
+            routeHeading: null,
+            snapped: false,
+            distanceMeters: Number.isFinite(nearestDistance)
+                ? nearestDistance
+                : 0,
+        };
+    }
+
+    return {
+        position: nearestPoint,
+        routeHeading: nearestHeading,
+        snapped: true,
+        distanceMeters: nearestDistance,
+    };
 };
 
 const VehicleMarkerHtml = ({
@@ -468,105 +633,129 @@ const VehicleMarkerHtml = ({
     vehicleNumber: string;
 }) => {
     const correctedHeading = getCorrectedHeading(heading);
-    const safeVehicleNumber = escapeHtml(vehicleNumber || "Vehicle");
+    const safeVehicleNumber = escapeHtml(
+        vehicleNumber || "Vehicle"
+    );
 
     return `
         <div
-            class="
-                pointer-events-none
-                relative
-                h-[104px]
-                w-[76px]
-                select-none
+            style="
+                position: relative;
+                width: 90px;
+                height: 110px;
+                pointer-events: none;
+                user-select: none;
+                overflow: visible;
             "
         >
+            <!-- Shadow remains below the truck -->
             <div
-                class="
-                    absolute
-                    left-1/2
-                    top-[58px]
-                    h-3
-                    w-[34px]
-                    -translate-x-1/2
-                    rounded-full
-                    bg-slate-900/30
-                    blur-[5px]
+                style="
+                    position: absolute;
+                    left: 50%;
+                    top: 84px;
+                    width: 46px;
+                    height: 12px;
+                    transform: translateX(-50%);
+                    border-radius: 50%;
+                    background: rgba(15, 23, 42, 0.30);
+                    filter: blur(6px);
                 "
             ></div>
 
+            <!-- Only the truck rotates -->
             <div
-                class="
-                    absolute
-                    left-[17px]
-                    top-1.5
-                    h-[68px]
-                    w-[42px]
-                    origin-center
-                    will-change-transform
-                    transition-transform
-                    duration-300
-                    ease-out
+                class="truck-rotor"
+                style="
+                    position: absolute;
+                    left: 50%;
+                    top: 5px;
+                    width: 58px;
+                    height: 100px;
+                    transform: translateX(-50%) rotate(${correctedHeading}deg);
+                    transform-origin: center center;
+                    will-change: transform;
                 "
-                style="transform: rotate(${correctedHeading}deg);"
             >
                 <img
                     src="${TruckImg}"
                     alt="Live vehicle"
                     draggable="false"
-                    class="
-                        block
-                        h-40
-                        w-25.5
-                        select-none
-                        object-contain
-                        pointer-events-none
-                        drop-shadow-[0_7px_5px_rgba(15,23,42,0.28)]
+                    style="
+                        display: block;
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                        pointer-events: none;
+                        user-select: none;
+                        filter: drop-shadow(0 6px 4px rgba(15, 23, 42, 0.32));
                     "
                 />
             </div>
 
+            <!-- Small connector from truck to vehicle-number label -->
             <div
-                class="
-                    absolute
-                    left-1/2
-                    top-25
-                    flex
-                    max-w-35
-                    -translate-x-1/2
-                    items-center
-                    gap-1.5
-                    rounded-md
-                    border
-                    border-primary/25
-                    bg-white/95
-                    px-2
-                    py-1.5
-                    text-[11px]
-                    font-bold
-                    leading-none
-                    text-primary
-                    shadow-lg
-                    backdrop-blur-sm
+                style="
+                    position: absolute;
+                    left: calc(50% + 25px);
+                    top: 51px;
+                    width: 17px;
+                    height: 2px;
+                    border-radius: 999px;
+                    background: rgba(79, 70, 229, 0.75);
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+                "
+            ></div>
+
+            <!-- Vehicle number displayed beside the truck, not on it -->
+            <div
+                style="
+                    position: absolute;
+                    left: calc(50% + 40px);
+                    top: 52px;
+                    z-index: 10;
+                    transform: translateY(-50%);
+                    display: flex;
+                    align-items: center;
+                    gap: 7px;
+                    min-width: 118px;
+                    max-width: 155px;
+                    padding: 8px 10px;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    border: 1px solid rgba(79, 70, 229, 0.30);
+                    border-radius: 9px;
+                    background: rgba(255, 255, 255, 0.97);
+                    color: #4338ca;
+                    font-family: Arial, sans-serif;
+                    font-size: 12px;
+                    font-weight: 800;
+                    line-height: 1;
+                    box-sizing: border-box;
+                    box-shadow: 0 7px 18px rgba(15, 23, 42, 0.24);
+                    backdrop-filter: blur(4px);
                 "
             >
                 <span
-                    class="
-                        h-1.5
-                        w-1.5
-                        shrink-0
-                        rounded-full
-                        bg-emerald-500
-                        shadow-[0_0_0_3px_rgba(34,197,94,0.15)]
+                    style="
+                        display: block;
+                        width: 8px;
+                        height: 8px;
+                        flex: 0 0 8px;
+                        border-radius: 50%;
+                        background: #10b981;
+                        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
                     "
                 ></span>
 
                 <span
-                    class="
-                        vehicle-image-label-text
-                        block
-                        max-w-[110px]
-                        truncate
-                        whitespace-nowrap
+                    class="truck-label"
+                    style="
+                        display: block;
+                        min-width: 0;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
                     "
                 >
                     ${safeVehicleNumber}
@@ -575,6 +764,7 @@ const VehicleMarkerHtml = ({
         </div>
     `;
 };
+
 const SmoothVehicleMarker = memo(
     ({
         map,
@@ -663,11 +853,20 @@ const SmoothVehicleMarker = memo(
             const div = divRef.current;
             if (!div) return;
 
-            const rotor = div.querySelector(".truck-rotor") as HTMLDivElement | null;
-            const label = div.querySelector(".truck-label") as HTMLDivElement | null;
+            const rotor = div.querySelector(
+                ".truck-rotor"
+            ) as HTMLDivElement | null;
+
+            const label = div.querySelector(
+                ".truck-label"
+            ) as HTMLSpanElement | null;
 
             if (rotor) {
-                rotor.style.transform = `rotate(${heading}deg)`;
+                const correctedHeading =
+                    getCorrectedHeading(heading);
+
+                rotor.style.transform =
+                    `translateX(-50%) rotate(${correctedHeading}deg)`;
             }
 
             if (label) {
@@ -688,7 +887,7 @@ const SmoothVehicleMarker = memo(
             }
 
             const startTime = performance.now();
-            const duration = 950;
+            const duration = 4500;
 
             const animate = (now: number) => {
                 const elapsed = now - startTime;
@@ -761,10 +960,18 @@ const MapPinLabel = memo(
     }
 );
 
-const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyline, heading, vehicleNumber, }: {
-        coords: { lat: number; lng: number } | null;
-        pickupCoords: { lat: number; lng: number } | null;
-        deliveryCoords: { lat: number; lng: number } | null;
+const LiveTrackingMap = memo(
+    ({
+        coords,
+        pickupCoords,
+        deliveryCoords,
+        routePolyline,
+        heading,
+        vehicleNumber,
+    }: {
+        coords: LatLngPoint | null;
+        pickupCoords: LatLngPoint | null;
+        deliveryCoords: LatLngPoint | null;
         routePolyline: string;
         heading: number;
         vehicleNumber: string;
@@ -775,9 +982,8 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
         const fitBoundsDoneRef = useRef(false);
         const lastPositionKeyRef = useRef("");
 
-        const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(
-            null
-        );
+        const [mapInstance, setMapInstance] =
+            useState<google.maps.Map | null>(null);
 
         const [directions, setDirections] =
             useState<google.maps.DirectionsResult | null>(null);
@@ -786,12 +992,52 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
             googleMapsApiKey: apiKey || "",
         });
 
-        const decodedRoutePath = useMemo(() => {
+        const decodedRoutePath = useMemo<LatLngPoint[]>(() => {
             return decodePolyline(routePolyline);
         }, [routePolyline]);
 
+        const directionsRoutePath = useMemo<LatLngPoint[]>(() => {
+            const overviewPath =
+                directions?.routes?.[0]?.overview_path || [];
+
+            return overviewPath.map((point) => ({
+                lat: point.lat(),
+                lng: point.lng(),
+            }));
+        }, [directions]);
+
+        const activeRoutePath = useMemo<LatLngPoint[]>(() => {
+            if (decodedRoutePath.length > 1) {
+                return decodedRoutePath;
+            }
+
+            if (directionsRoutePath.length > 1) {
+                return directionsRoutePath;
+            }
+
+            return [];
+        }, [decodedRoutePath, directionsRoutePath]);
+
+        const snappedVehicle = useMemo<SnappedRoutePoint | null>(() => {
+            if (!coords) return null;
+
+            return snapPointToRoute(
+                coords,
+                activeRoutePath,
+                MAX_ROUTE_SNAP_DISTANCE_METERS
+            );
+        }, [coords?.lat, coords?.lng, activeRoutePath]);
+
+        const displayCoords = snappedVehicle?.position || coords;
+
+        const displayHeading =
+            snappedVehicle?.routeHeading ?? heading;
+
         const initialMapCenterRef = useRef(
-            coords || pickupCoords || deliveryCoords || DEFAULT_CENTER
+            displayCoords ||
+            pickupCoords ||
+            deliveryCoords ||
+            DEFAULT_CENTER
         );
 
         const mapOptions = useMemo(() => {
@@ -832,8 +1078,14 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
         }, [isLoaded]);
 
         useEffect(() => {
-            if (!isLoaded || !pickupCoords || !deliveryCoords) return;
-            if (decodedRoutePath.length > 1) return;
+            if (!isLoaded || !pickupCoords || !deliveryCoords) {
+                return;
+            }
+
+            if (decodedRoutePath.length > 1) {
+                setDirections(null);
+                return;
+            }
 
             const service = new google.maps.DirectionsService();
 
@@ -844,7 +1096,10 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
                     travelMode: google.maps.TravelMode.DRIVING,
                 },
                 (result, status) => {
-                    if (status === google.maps.DirectionsStatus.OK && result) {
+                    if (
+                        status === google.maps.DirectionsStatus.OK &&
+                        result
+                    ) {
                         setDirections(result);
                     } else {
                         setDirections(null);
@@ -861,26 +1116,40 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
         ]);
 
         useEffect(() => {
-            if (!isLoaded || !mapRef.current || fitBoundsDoneRef.current) return;
+            if (
+                !isLoaded ||
+                !mapRef.current ||
+                fitBoundsDoneRef.current
+            ) {
+                return;
+            }
 
             const bounds = new google.maps.LatLngBounds();
 
-            if (decodedRoutePath.length > 1) {
-                decodedRoutePath.forEach((point) => bounds.extend(point));
+            if (activeRoutePath.length > 1) {
+                activeRoutePath.forEach((point) =>
+                    bounds.extend(point)
+                );
             }
 
             if (pickupCoords) bounds.extend(pickupCoords);
             if (deliveryCoords) bounds.extend(deliveryCoords);
-            if (coords) bounds.extend(coords);
+            if (displayCoords) bounds.extend(displayCoords);
 
             if (!bounds.isEmpty()) {
                 mapRef.current.fitBounds(bounds, 50);
                 fitBoundsDoneRef.current = true;
 
                 window.setTimeout(() => {
-                    if (coords && mapRef.current) {
-                        mapRef.current.setZoom(FOLLOW_ZOOM);
-                        mapRef.current.panTo(coords);
+                    if (!displayCoords || !mapRef.current) return;
+
+                    mapRef.current.setZoom(FOLLOW_ZOOM);
+
+                    const visibleBounds =
+                        mapRef.current.getBounds();
+
+                    if (!visibleBounds?.contains(displayCoords)) {
+                        mapRef.current.panTo(displayCoords);
                     }
                 }, 650);
             }
@@ -890,38 +1159,53 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
             pickupCoords?.lng,
             deliveryCoords?.lat,
             deliveryCoords?.lng,
-            coords?.lat,
-            coords?.lng,
-            decodedRoutePath,
+            displayCoords?.lat,
+            displayCoords?.lng,
+            activeRoutePath,
         ]);
 
         useEffect(() => {
-            if (!isLoaded || !mapRef.current || !coords) return;
+            if (
+                !isLoaded ||
+                !mapRef.current ||
+                !displayCoords
+            ) {
+                return;
+            }
 
-            const positionKey = `${coords.lat},${coords.lng}`;
+            const positionKey =
+                `${displayCoords.lat},${displayCoords.lng}`;
 
-            if (lastPositionKeyRef.current === positionKey) return;
+            if (lastPositionKeyRef.current === positionKey) {
+                return;
+            }
 
             lastPositionKeyRef.current = positionKey;
 
             window.requestAnimationFrame(() => {
                 if (!mapRef.current) return;
 
-                const currentZoom = mapRef.current.getZoom() || 0;
+                const currentZoom =
+                    mapRef.current.getZoom() || 0;
 
                 if (currentZoom < FOLLOW_ZOOM) {
                     mapRef.current.setZoom(FOLLOW_ZOOM);
                 }
 
-                mapRef.current.panTo(coords);
+                mapRef.current.panTo(displayCoords);
             });
-        }, [isLoaded, coords?.lat, coords?.lng]);
+        }, [
+            isLoaded,
+            displayCoords?.lat,
+            displayCoords?.lng,
+        ]);
 
         if (!apiKey) {
             return (
                 <div className="flex h-full items-center justify-center bg-muted p-6 text-center">
                     <p className="text-sm text-muted-foreground">
-                        Google Maps API key missing. Add VITE_GOOGLE_MAPS_API_KEY in .env.
+                        Google Maps API key missing. Add
+                        VITE_GOOGLE_MAPS_API_KEY in .env.
                     </p>
                 </div>
             );
@@ -937,7 +1221,7 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
             );
         }
 
-        if (!coords) {
+        if (!coords || !displayCoords) {
             return (
                 <div className="flex h-full flex-col items-center justify-center bg-muted p-6 text-center">
                     <div className="flex h-14 w-14 items-center justify-center rounded-md bg-card text-muted-foreground shadow-sm">
@@ -949,7 +1233,8 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
                     </h3>
 
                     <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                        Driver coordinates are missing for this tracking record.
+                        Driver coordinates are missing for this
+                        tracking record.
                     </p>
                 </div>
             );
@@ -957,9 +1242,9 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
 
         const fallbackPath = [
             pickupCoords,
-            coords,
+            displayCoords,
             deliveryCoords,
-        ].filter(Boolean) as { lat: number; lng: number }[];
+        ].filter(Boolean) as LatLngPoint[];
 
         return (
             <GoogleMap
@@ -971,12 +1256,10 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
                     mapRef.current = map;
                     setMapInstance(map);
 
-                    if (coords) {
-                        window.setTimeout(() => {
-                            map.setZoom(FOLLOW_ZOOM);
-                            map.panTo(coords);
-                        }, 200);
-                    }
+                    window.setTimeout(() => {
+                        map.setZoom(FOLLOW_ZOOM);
+                        map.panTo(displayCoords);
+                    }, 200);
                 }}
                 onUnmount={() => {
                     mapRef.current = null;
@@ -1028,9 +1311,14 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
 
                         <OverlayView
                             position={pickupCoords}
-                            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                            mapPaneName={
+                                OverlayView.OVERLAY_MOUSE_TARGET
+                            }
                         >
-                            <MapPinLabel label="Pickup" tone="pickup" />
+                            <MapPinLabel
+                                label="Pickup"
+                                tone="pickup"
+                            />
                         </OverlayView>
                     </>
                 )}
@@ -1047,17 +1335,22 @@ const LiveTrackingMap = memo(({ coords, pickupCoords, deliveryCoords, routePolyl
 
                         <OverlayView
                             position={deliveryCoords}
-                            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                            mapPaneName={
+                                OverlayView.OVERLAY_MOUSE_TARGET
+                            }
                         >
-                            <MapPinLabel label="Delivery" tone="delivery" />
+                            <MapPinLabel
+                                label="Delivery"
+                                tone="delivery"
+                            />
                         </OverlayView>
                     </>
                 )}
 
                 <SmoothVehicleMarker
                     map={mapInstance}
-                    position={coords}
-                    heading={heading}
+                    position={displayCoords}
+                    heading={displayHeading}
                     vehicleNumber={vehicleNumber}
                 />
             </GoogleMap>

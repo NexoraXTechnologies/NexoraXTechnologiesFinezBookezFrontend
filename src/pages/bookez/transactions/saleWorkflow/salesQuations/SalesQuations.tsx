@@ -19,6 +19,7 @@ import { ListingModel } from "../../../../../components/modal";
 import Permission from "../../../../../components/PermissionGuard";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
+import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 
@@ -58,6 +59,7 @@ const SalesQuotations = () => {
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
@@ -456,14 +458,27 @@ const SalesQuotations = () => {
     };
 
     useEffect(() => {
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
         if (!accounts?.length) {
             dispatch(getAllAccounts({ limit: 100 }) as any);
         }
         if (!Object.keys(company ?? {})?.length) {
             dispatch(getCompany({ withParent: true, limit: 100 }) as any);
         }
-    }, [])
-    
+    }, []);
+
+    const enableLocation = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.salesQuotation?.enableLocation
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
+
+    console.log({ enableLocation })
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">
@@ -521,7 +536,7 @@ const SalesQuotations = () => {
             {/* @ts-ignore */}
             <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-quotation", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Quotation PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
 
-            {!fieldsLoading && <DynamicAddForm {...{ show: showModal, setShow: setShowModal, edit: Boolean(editingRecord), title: "Sales Quotation", subtitle: "Fill in the sales quotation details below", loading: createLoading || updateLoading, onClose: () => { setShowModal(false); resetMainForm(); }, onSubmit: handleSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange, footerTotals, inputData: { ...templateFields, footer: dynamicFooterArray }, bodyKey: "products", handleChange: handleMainChange }} />}
+            {!fieldsLoading && <DynamicAddForm {...{ show: showModal, setShow: setShowModal, edit: Boolean(editingRecord), title: "Sales Quotation", subtitle: "Fill in the sales quotation details below", loading: createLoading || updateLoading, onClose: () => { setShowModal(false); resetMainForm(); }, onSubmit: handleSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange, footerTotals, inputData: { ...templateFields, footer: dynamicFooterArray }, bodyKey: "products", handleChange: handleMainChange, enableLocation }} />}
         </div>
     );
 };

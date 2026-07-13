@@ -36,10 +36,7 @@ const createModuleConfigurationTemplate = (enabledDefault: boolean) => {
 const normalizeWhatsAppModuleConfiguration = (whatsAppSection: any) => {
     const src = whatsAppSection?.moduleConfiguration;
 
-    const hasStructuredConfig =
-        src &&
-        typeof src === "object" &&
-        WHATSAPP_MODULE_ORDER.some((key) => {
+    const hasStructuredConfig = src && typeof src === "object" && WHATSAPP_MODULE_ORDER.some((key) => {
             const item = src[key];
             return item != null && typeof item === "object" && "enabled" in item;
         });
@@ -49,7 +46,6 @@ const normalizeWhatsAppModuleConfiguration = (whatsAppSection: any) => {
     }
 
     const out: any = {};
-
     for (const key of WHATSAPP_MODULE_ORDER) {
         out[key] = {
             enabled: toBool(src?.[key]?.enabled),
