@@ -417,7 +417,36 @@ const ReceiptRegister = () => {
             });
     }, [viewTemplateFields?.footer, viewFooterTotals]);
 
+    // const viewInputData = useMemo(() => {
+    //     const hiddenBodyKeys = [
+    //         "references",
+    //         "reference",
+    //         "remarks",
+    //         "remark",
+    //         "recRemark",
+    //     ];
+
+    //     const filteredBody = (viewTemplateFields?.body || []).filter(
+    //         (field: any) =>
+    //             !hiddenBodyKeys.includes(String(field?.key || "").toLowerCase())
+    //     );
+
+    //     return {
+    //         ...viewTemplateFields,
+    //         body: filteredBody,
+    //         footer: viewFooterArray,
+    //     };
+    // }, [viewTemplateFields, viewFooterArray]);
+
+
     const viewInputData = useMemo(() => {
+        const filteredHeader = (viewTemplateFields?.header || []).filter(
+            (field: any) =>
+                String(field?.key || "")
+                    .trim()
+                    .toLowerCase() !== "isposposting"
+        );
+
         const hiddenBodyKeys = [
             "references",
             "reference",
@@ -428,11 +457,14 @@ const ReceiptRegister = () => {
 
         const filteredBody = (viewTemplateFields?.body || []).filter(
             (field: any) =>
-                !hiddenBodyKeys.includes(String(field?.key || "").toLowerCase())
+                !hiddenBodyKeys.includes(
+                    String(field?.key || "").trim()
+                )
         );
 
         return {
             ...viewTemplateFields,
+            header: filteredHeader,
             body: filteredBody,
             footer: viewFooterArray,
         };

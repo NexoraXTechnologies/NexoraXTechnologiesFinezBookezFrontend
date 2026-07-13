@@ -1068,7 +1068,7 @@ const TripExpenseList = () => {
                                         {!isChildUser && (
                                             <Permission
                                                 module="bookez"
-                                                permissionKey="allRegisters"
+                                                permissionKey="Pass"
                                                 action="delete"
                                             >
                                                 <button
@@ -1142,7 +1142,7 @@ const TripExpenseList = () => {
                                                 {!isChildUser && (
                                                     <Permission
                                                         module="bookez"
-                                                        permissionKey="allRegisters"
+                                                        permissionKey="Pass"
                                                         action="delete"
                                                     >
                                                         <button

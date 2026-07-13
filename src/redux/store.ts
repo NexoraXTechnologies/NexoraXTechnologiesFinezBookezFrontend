@@ -69,6 +69,7 @@ import vehicleMaintenanceReducer from "./slices/professionalSlice/transportation
 import transportContractReducer from "./slices/professionalSlice/transportation/transportContractSlice";
 import vehicleStatusReducer from "./slices/professionalSlice/transportation/vehicleStatusSlice"
 import whereIsMyDriverReducer from "./slices/professionalSlice/transportation/whereIsMyDriverSlice"
+import driverSettlementReducer from "./slices/professionalSlice/transportation/driverSettlementSlice";
 // bookEz register
 import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
 import salesReceiptReducer from "./slices/professionalSlice/salesWorkflow/salesReceipt";
@@ -155,6 +156,8 @@ export const store = configureStore({
     tripLRCollection: tripLRCollectionReducer,
     vehicleMaintenance: vehicleMaintenanceReducer,
     transportContract: transportContractReducer,
+    driverSettlement:driverSettlementReducer,
+
 
     // bookEz register
     salesRegister: salesRegisterReducer,

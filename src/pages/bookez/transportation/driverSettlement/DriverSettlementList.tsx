@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -13,8 +13,8 @@ import {
     DataCreateButton,
     DataREfreshButton,
 } from "../../../../components/buttons";
-
-import professionalAxios from "../../../../services/professionalAxios";
+import { deleteDriverSettlement, getAllDriverSettlement } from "../../../../redux/slices/professionalSlice/transportation/driverSettlementSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 /* ===================================================
    HELPERS
@@ -45,94 +45,51 @@ const formatDateTime = (value: any) => {
     });
 };
 
-const getApiList = (res: any) => {
-    const data = res?.data || res || {};
 
-    const list =
-        data?.records ||
-        data?.data?.records ||
-        data?.result ||
-        data?.data?.result ||
-        data?.items ||
-        data?.data?.items ||
-        data?.data ||
-        [];
-
-    return Array.isArray(list) ? list : [];
-};
-
-const getApiPagination = (res: any, fallback: any = {}) => {
-    const data = res?.data || res || {};
-
-    return (
-        data?.pagination ||
-        data?.data?.pagination ||
-        {
-            offset: fallback.offset || 0,
-            limit: fallback.limit || 20,
-            totalDocs: 0,
-            totalPages: 1,
-            currentPage: 1,
-            hasNextPage: false,
-            hasPrevPage: false,
-        }
-    );
-};
 
 const getSettlementNumber = (record: any) =>
-    record?.driverSettlementNumber ||
-    record?.settlementNumber ||
-    record?.voucherNumber ||
-    record?.driverSettlementVoucherNumber ||
-    "";
+    record?.settlementNumber || "-";
 
 const getDriverName = (record: any) =>
-    record?.driver?.driverName ||
-    record?.driverName ||
-    record?.driverAllocation?.driverName ||
-    "-";
+    record?.lrDetails?.driverName || "-";
 
 const getDriverMobile = (record: any) =>
-    record?.driver?.driverId ||
-    record?.driver?.mobileNumber ||
-    record?.driverMobile ||
-    record?.mobileNumber ||
-    "-";
+    record?.driverCode || "-";
 
 const getTripNumber = (record: any) =>
-    record?.tripId ||
-    record?.tripNumber ||
     record?.transportOrderNumber ||
-    record?.orderNumber ||
-    record?.tripDetails?.tripNo ||
+    record?.lrDetails?.tripNumber ||
     "-";
 
 const getLRNumber = (record: any) =>
-    record?.lrNumber ||
-    record?.lrNo ||
-    record?.tripDetails?.lrNo ||
-    record?.lrEntry?.lrNumber ||
-    "-";
+    record?.lrDetails?.lrNumber || "-";
 
 const getVehicleNumber = (record: any) =>
-    record?.vehicle?.vehicleNumber ||
-    record?.vehicleSelection?.vehicleNumber ||
-    record?.tripDetails?.vehicleNo ||
-    record?.vehicleNumber ||
-    "-";
+    record?.lrDetails?.vehicleNo || "-";
+const getRouteFrom = (record: any) =>
+    record?.lrDetails?.from || "-";
+const getRouteTo = (record: any) =>
+    record?.lrDetails?.to || "-";
 
 const getNetPayable = (record: any) =>
-    Number(
-        record?.settlement?.netPayable ||
-        record?.netPayable ||
-        record?.summary?.netPayable ||
-        0
-    );
+    Number(record?.netPayableToDriver || 0);
 
+// const getIncentives = (record: any) =>
+//     Number(record?.otherIncentives || 0);
+
+// const getAdvances = (record: any) =>
+//     Number(record?.lessAdvancesToDriver || 0);
+
+const getSettlementDate = (record: any) =>
+    record?.paymentDate ||
+    record?.createdOn;
+
+// FIX: status values on a driver-settlement record come from `status`
+// (e.g. "unsettled", "settled", "paid"), not `contractStatus` / `docStatus`.
 const getStatusClass = (status: any) => {
     const value = String(status || "").toLowerCase();
 
-    if (value === "paid" || value === "completed") {
+    if (value === "settled" || value === "paid" || value === "completed") {
         return "border-success/20 bg-success/10 text-success";
     }
 
@@ -140,41 +97,14 @@ const getStatusClass = (status: any) => {
         return "border-danger/20 bg-danger/10 text-danger";
     }
 
-    if (value === "pending" || value === "draft") {
+    if (value === "unsettled" || value === "pending" || value === "draft") {
         return "border-warning/20 bg-warning/10 text-warning";
     }
 
     return "border-primary/20 bg-primary/10 text-primary";
 };
 
-/* ===================================================
-   API HELPERS
-=================================================== */
 
-const getDriverSettlementsApi = ({
-    limit = 20,
-    offset = 0,
-    search = "",
-    status = "",
-}: any = {}) => {
-    return professionalAxios.get(
-        "",
-        {
-            params: {
-                limit,
-                offset,
-                search,
-                status,
-            },
-        }
-    );
-};
-
-const deleteDriverSettlementApi = (voucherNumber: string) => {
-    return professionalAxios.delete(
-        `${voucherNumber}`
-    );
-};
 
 /* ===================================================
    DRIVER SETTLEMENT LIST
@@ -184,18 +114,7 @@ const DriverSettlementList = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [settlements, setSettlements] = useState<any[]>([]);
-    const [pagination, setPagination] = useState<any>({
-        offset: 0,
-        limit: 20,
-        totalDocs: 0,
-        totalPages: 1,
-        currentPage: 1,
-        hasNextPage: false,
-        hasPrevPage: false,
-    });
 
-    const [loading, setLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -214,69 +133,85 @@ const DriverSettlementList = () => {
     const pageDescription =
         location.state?.description ||
         "Calculate and settle driver advances, expenses, and final trip balance.";
+    const dispatch = useDispatch<any>();
+    const { driverSettlement, pagination, listingLoader, } = useSelector((state: any) => state.driverSettlement)
+    const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
 
-    const loadSettlements = async ({
-        offset = localOffset,
-        limit = localLimit,
-        searchValue = search,
-        silent = false,
-    }: any = {}) => {
-        try {
-            if (!silent) setLoading(true);
 
-            const res = await getDriverSettlementsApi({
-                limit,
-                offset,
-                search: searchValue,
-            });
 
-            const list = getApiList(res);
-            const apiPagination = getApiPagination(res, { offset, limit });
+    // FIX: normalize from `status` (the real field on the record),
+    // not `contractStatus` / `docStatus`, and default to "unsettled".
+    const normalizeStatus = (value: any) =>
+        String(value || "unsettled")
+            .trim()
+            .toLowerCase()
+            .replace(/[\s-]+/g, "_");
 
-            setSettlements(list);
-            setPagination(apiPagination);
-        } catch (error: any) {
-            setSettlements([]);
-            setPagination({
-                offset,
-                limit,
-                totalDocs: 0,
-                totalPages: 1,
-                currentPage: 1,
-                hasNextPage: false,
-                hasPrevPage: false,
-            });
+    const getRowStatus = (row: any) => normalizeStatus(row?.status);
 
-            toast.error(
-                error?.response?.data?.message ||
-                error?.message ||
-                "Failed to load driver settlements"
-            );
-        } finally {
-            if (!silent) setLoading(false);
-        }
+    // FIX: match the actual status vocabulary used by driver settlements.
+    const isClosedContract = (row: any) => {
+        const status = getRowStatus(row);
+
+        return (
+            status === "settled" ||
+            status === "closed" ||
+            status === "complete" ||
+            status === "completed" ||
+            status === "paid"
+        );
     };
 
-    useEffect(() => {
-        loadSettlements({
-            offset: localOffset,
-            limit: localLimit,
-            searchValue: search,
-        });
+    const openCount = useMemo(
+        () =>
+            driverSettlement.filter(
+                (item: any) => !isClosedContract(item)
+            ).length,
+        [driverSettlement]
+    );
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    const closeCount = useMemo(
+        () =>
+            driverSettlement.filter(
+                (item: any) => isClosedContract(item)
+            ).length,
+        [driverSettlement]
+    );
+
+    // FIX: the table was always rendering the full unfiltered list.
+    // This actually applies the open/close tab to what gets displayed.
+    const filteredSettlements = useMemo(
+        () =>
+            driverSettlement.filter((item: any) =>
+                activeStatus === "open"
+                    ? !isClosedContract(item)
+                    : isClosedContract(item)
+            ),
+        [driverSettlement, activeStatus]
+    );
+
+    useEffect(() => {
+        dispatch(
+            getAllDriverSettlement({
+                limit: localLimit,
+                offset: localOffset,
+
+            })
+        ).unwrap();
+
     }, [localOffset, localLimit]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             setLocalOffset(0);
 
-            loadSettlements({
-                offset: 0,
-                limit: localLimit,
-                searchValue: search,
-                silent: false,
-            });
+            dispatch(
+                getAllDriverSettlement({
+                    offset: 0,
+                    limit: localLimit,
+                    search,
+                })
+            ).unwrap();
         }, 400);
 
         return () => clearTimeout(timer);
@@ -288,12 +223,13 @@ const DriverSettlementList = () => {
         try {
             setRefreshing(true);
 
-            await loadSettlements({
-                offset: localOffset,
-                limit: localLimit,
-                searchValue: search,
-                silent: true,
-            });
+            await dispatch(
+                getAllDriverSettlement({
+                    offset: localOffset,
+                    limit: localLimit,
+                    search,
+                })
+            ).unwrap();
         } finally {
             setRefreshing(false);
         }
@@ -365,7 +301,9 @@ const DriverSettlementList = () => {
 
             setDeleteLoading(true);
 
-            await deleteDriverSettlementApi(confirmTooltip.settlementNumber);
+            await dispatch(
+                deleteDriverSettlement(confirmTooltip.settlementNumber)
+            ).unwrap();
 
             toast.success("Driver settlement deleted successfully");
 
@@ -376,12 +314,13 @@ const DriverSettlementList = () => {
                 settlementNumber: null,
             });
 
-            await loadSettlements({
-                offset: localOffset,
-                limit: localLimit,
-                searchValue: search,
-                silent: true,
-            });
+            await dispatch(
+                getAllDriverSettlement({
+                    offset: localOffset,
+                    limit: localLimit,
+                    search,
+                })
+            ).unwrap();
         } catch (error: any) {
             toast.error(
                 error?.response?.data?.message ||
@@ -395,28 +334,26 @@ const DriverSettlementList = () => {
 
     const columns = [
         {
-            key: "driverSettlementNumber",
+            key: "settlementNumber",
             title: "Settlement No",
             render: (row: any) => (
                 <div>
-                    <div className="text-card-foreground">
-                        {getSettlementNumber(row) || "-"}
+                    <div className="font-medium">
+                        {getSettlementNumber(row)}
                     </div>
 
-                    <div className="text-xs font-medium text-muted-foreground">
-                        {formatDateTime(row?.settlementDate || row?.paymentDate)}
+                    <div className="text-xs text-muted-foreground">
+                        {formatDateTime(getSettlementDate(row))}
                     </div>
                 </div>
             ),
         },
         {
-            key: "driver.driverName",
+            key: "driverName",
             title: "Driver",
             render: (row: any) => (
                 <div>
-                    <div className="text-card-foreground">
-                        {getDriverName(row)}
-                    </div>
+                    <div>{getDriverName(row)}</div>
 
                     <div className="text-xs text-muted-foreground">
                         {getDriverMobile(row)}
@@ -425,76 +362,91 @@ const DriverSettlementList = () => {
             ),
         },
         {
-            key: "tripId",
+            key: "transportOrderNumber",
             title: "Trip / LR",
             render: (row: any) => (
                 <div>
-                    <div className="text-card-foreground">
-                        {getTripNumber(row)}
-                    </div>
+                    <div>{getTripNumber(row)}</div>
 
                     <div className="text-xs text-muted-foreground">
-                        LR: {getLRNumber(row)}
+                        LR : {getLRNumber(row)}
                     </div>
                 </div>
             ),
         },
         {
-            key: "vehicle.vehicleNumber",
+            key: "vehicleNo",
             title: "Vehicle",
             render: (row: any) => getVehicleNumber(row),
         },
+
         {
-            key: "salary",
-            title: "Salary",
-            type: "amount",
-            render: (row: any) => money(row?.salary),
+            key: "route",
+            title: "Route",
+            render: (row: any) => {
+                const from = getRouteFrom(row);
+                const to = getRouteTo(row);
+
+                return (
+                    <div>
+                        <div className="font-medium">
+                            {from} → {to}
+                        </div>
+                    </div>
+                );
+            },
         },
+        // {
+        //     key: "salary",
+        //     title: "Salary",
+        //     type: "amount",
+        //     render: (row: any) => money(row?.salary),
+        // },
+        // {
+        //     key: "incentives",
+        //     title: "Incentives",
+        //     type: "amount",
+        //     render: (row: any) => money(getIncentives(row)),
+        // },
+        // {
+        //     key: "totalAdvances",
+        //     title: "Advances",
+        //     type: "amount",
+        //     render: (row: any) =>
+        //         money(getAdvances(row))
+        // },
         {
-            key: "incentives",
-            title: "Incentives",
-            type: "amount",
-            render: (row: any) => money(row?.incentives),
-        },
-        {
-            key: "totalAdvances",
-            title: "Advances",
-            type: "amount",
-            render: (row: any) =>
-                money(row?.settlement?.totalAdvances || row?.totalAdvances || 0),
-        },
-        {
-            key: "settlement.netPayable",
+            key: "netPayableToDriver",
             title: "Net Payable",
             type: "amount",
             render: (row: any) => {
-                const netPayable = getNetPayable(row);
+                const amount = getNetPayable(row);
 
                 return (
                     <span
-                        className={`font-black ${netPayable < 0 ? "text-danger" : "text-success"
+                        className={`font-bold ${amount < 0 ? "text-danger" : "text-success"
                             }`}
                     >
-                        {money(netPayable)}
+                        {money(amount)}
                     </span>
                 );
             },
         },
-        {
-            key: "paymentMode",
-            title: "Payment Mode",
-            render: (row: any) => row?.paymentMode || "-",
-        },
+        // {
+        //     key: "paymentMode",
+        //     title: "Payment Mode",
+        //     render: (row: any) => row?.paymentMode || "-",
+        // },
         {
             key: "status",
             title: "Status",
             render: (row: any) => (
                 <span
                     className={`rounded-md border px-2 py-1 text-xs font-bold capitalize ${getStatusClass(
-                        row?.status || "draft"
+                        row?.status
                     )}`}
                 >
-                    {row?.status || "draft"}
+                    {row?.status}
                 </span>
             ),
         },
@@ -532,12 +484,37 @@ const DriverSettlementList = () => {
                             count:
                                 pagination?.totalDocs ??
                                 pagination?.totalRecords ??
-                                settlements?.length ??
+                                driverSettlement?.length ??
                                 0,
                             text: "Total Settlements:",
                             varient: "primary",
                         }}
                     />
+
+
+                    <div className="flex rounded-md border border-border bg-background p-1">
+                        <button
+                            type="button"
+                            onClick={() => setActiveStatus("open")}
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted"
+                                }`}
+                        >
+                            Open ({openCount})
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveStatus("close")}
+                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted"
+                                }`}
+                        >
+                            Close ({closeCount})
+                        </button>
+                    </div>
 
                     <SearchInput
                         {...{
@@ -568,8 +545,8 @@ const DriverSettlementList = () => {
             <div className="min-h-0 flex-1 overflow-hidden">
                 <DataTable
                     columns={columns}
-                    data={settlements}
-                    loading={loading}
+                    data={filteredSettlements}
+                    loading={listingLoader}
                     emptyMessage="No driver settlement found"
                     actions={(record: any) => (
                         <div className="flex items-center gap-2">
