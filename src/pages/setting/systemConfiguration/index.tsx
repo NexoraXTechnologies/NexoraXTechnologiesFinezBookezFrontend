@@ -291,32 +291,32 @@ const SystemConfiguration = () => {
         () => [
             {
                 key: "system",
-                label: "System",
+                label: "System Config",
                 icon: <Settings size={17} />,
             },
             {
                 key: "inventory",
-                label: "Inventory",
+                label: "Inventory Config",
                 icon: <Package size={17} />,
             },
             {
                 key: "finance",
-                label: "Finance",
+                label: "Finance Config",
                 icon: <WalletCards size={17} />,
             },
             {
                 key: "pos",
-                label: "POS",
+                label: "POS Config",
                 icon: <ShoppingCart size={17} />,
             },
             {
                 key: "scrap",
-                label: "Scrap Mgmt",
+                label: "Scrap Mgmt Config",
                 icon: <Recycle size={17} />,
             },
             {
                 key: "transportation",
-                label: "Transportation",
+                label: "Transportation Config",
                 icon: <Truck size={17} />,
             },
             ...(localUser?.accountType !== "SUPER_ADMIN" ? [{
@@ -402,8 +402,7 @@ const SystemConfiguration = () => {
         [dispatch]
     );
 
-    const updateSystemField = useCallback(
-        (section: string, key: string, value: any) => {
+    const updateSystemField = useCallback((section: string, key: string, value: any) => {
             dispatch(
                 updateSystemConfigurationNestedField({
                     section,
@@ -508,7 +507,7 @@ const SystemConfiguration = () => {
                     right={
                         <BadgeStatus
                             active={
-                                !!systemConfig?.bankStatementImport
+                                !!systemConfig?.bankStatementConfiguration
                                     ?.enableBankStatementImport
                             }
                         />
@@ -517,9 +516,9 @@ const SystemConfiguration = () => {
                     <SettingRow
                         title="Enable Bank Statement Import"
                         description="Allow users to import bank statements."
-                        value={!!systemConfig?.bankStatementImport?.enableBankStatementImport}
+                        value={!!systemConfig?.bankStatementConfiguration?.enableBankStatementImport}
                         onChange={(value) =>
-                            updateSystemField("bankStatementImport", "enableBankStatementImport", value)
+                            updateSystemField("bankStatementConfiguration", "enableBankStatementImport", value)
                         }
                     />
                 </Panel>
@@ -888,8 +887,8 @@ const SystemConfiguration = () => {
                 right={
                     <BadgeStatus
                         active={
-                            !!systemConfig?.transportationConfiguration
-                                ?.enableBookEzTransportation
+                            !!systemConfig?.transportationModuleConfiguration
+                                ?.enableTransportationModule
                         }
                     />
                 }
@@ -898,13 +897,13 @@ const SystemConfiguration = () => {
                     title="Enable BookEZ Transportation"
                     description="Allow transportation configuration in BookEZ."
                     value={
-                        !!systemConfig?.transportationConfiguration
-                            ?.enableBookEzTransportation
+                        !!systemConfig?.transportationModuleConfiguration
+                            ?.enableTransportationModule
                     }
                     onChange={(value) =>
                         updateSystemField(
-                            "transportationConfiguration",
-                            "enableBookEzTransportation",
+                            "transportationModuleConfiguration",
+                            "enableTransportationModule",
                             value
                         )
                     }

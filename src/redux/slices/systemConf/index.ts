@@ -74,7 +74,7 @@ export const getEmptySystemConfiguration = () => ({
             enableLocation: false,
         },
 
-        bankStatementImport: { enableBankStatementImport: false, },
+        bankStatementConfiguration: { enableBankStatementImport: false, },
 
         productSettings: {
             allowDuplicateProduct: false,
@@ -88,8 +88,8 @@ export const getEmptySystemConfiguration = () => ({
             enableScrapManagement: false,
         },
 
-        transportationConfiguration: {
-            enableBookEzTransportation: false,
+        transportationModuleConfiguration: {
+            enableTransportationModule: false,
         },
 
         whatsAppConfiguration: {
@@ -135,13 +135,15 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             ),
         },
 
-        bankStatementImport: {
-            enableBankStatementImport: toBool(raw?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport),
+        bankStatementConfiguration: {
+            enableBankStatementImport: toBool(
+                raw?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport
+            ),
         },
 
         productSettings: {
             allowDuplicateProduct: toBool(
-                raw?.systemConfiguration?.productSettings?.allowDuplicateProduct
+                raw?.systemConfiguration?.allowDuplicateProduct
             ),
         },
 
@@ -157,31 +159,29 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             ),
         },
 
-        transportationConfiguration: {
-            enableBookEzTransportation: toBool(
+        transportationModuleConfiguration: {
+            enableTransportationModule: toBool(
                 raw?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule
             ),
         },
 
         whatsAppConfiguration: {
             enableWhatsAppModule: toBool(
-                raw?.systemConfiguration?.whatsAppConfiguration
-                    ?.enableWhatsAppModule
+                raw?.systemConfiguration?.whatsAppConfiguration?.enableWhatsAppModule
             ),
 
             provider:
                 String(
-                    raw?.systemConfiguration?.whatsAppConfiguration?.provider ||
-                    "META"
+                    raw?.systemConfiguration?.whatsAppConfiguration?.provider || "META"
                 )
                     .trim()
-                    .toUpperCase() || "META",
+                    .toUpperCase(),
 
             defaultLanguage:
                 String(
-                    raw?.systemConfiguration?.whatsAppConfiguration
-                        ?.defaultLanguage || "en_US"
-                ).trim() || "en_US",
+                    raw?.systemConfiguration?.whatsAppConfiguration?.defaultLanguage ||
+                    "en_US"
+                ).trim(),
 
             moduleConfiguration: normalizeWhatsAppModuleConfiguration(
                 raw?.systemConfiguration?.whatsAppConfiguration
@@ -286,64 +286,94 @@ export const whatsAppMetaCredentialsHasData = (apiResponse: any) => {
 const buildConfigurationPayload = (configuration: any) => {
     const wa = configuration?.systemConfiguration?.whatsAppConfiguration || {};
 
-    const baseMods = { ...(wa?.moduleConfiguration || {}) };
+    const baseMods = wa?.moduleConfiguration || {};
+
     const moduleConfiguration: any = {};
 
     for (const key of WHATSAPP_MODULE_ORDER) {
         moduleConfiguration[key] = {
-            enabled: !!baseMods[key]?.enabled,
+            enabled: !!baseMods?.[key]?.enabled,
         };
     }
 
     return {
-        configurationName: configuration?.configurationName?.trim() || "Default System Config",
+        configurationName:
+            configuration?.configurationName?.trim() ||
+            "Default System Config",
 
         status: configuration?.status || "active",
 
         systemConfiguration: {
             salesQuotation: {
-                enableLocation: !!configuration?.systemConfiguration?.salesQuotation?.enableLocation,
+                enableLocation:
+                    !!configuration?.systemConfiguration?.salesQuotation
+                        ?.enableLocation,
             },
 
-            bankStatementImport: {
-                enableBankStatementImport: !!configuration?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport,
+            bankStatementConfiguration: {
+                enableBankStatementImport:
+                    !!configuration?.systemConfiguration
+                        ?.bankStatementConfiguration?.enableBankStatementImport,
             },
 
-            productSettings: {
-                allowDuplicateProduct: !!configuration?.systemConfiguration?.productSettings?.allowDuplicateProduct,
-            },
+            allowDuplicateProduct:
+                !!configuration?.systemConfiguration?.allowDuplicateProduct,
 
             posConfiguration: {
-                enablePOSModule: !!configuration?.systemConfiguration?.posConfiguration?.enablePOSModule,
+                enablePOSModule:
+                    !!configuration?.systemConfiguration?.posConfiguration
+                        ?.enablePOSModule,
             },
 
             scrapManagement: {
-                enableScrapManagement: !!configuration?.systemConfiguration?.scrapManagement?.enableScrapManagement,
+                enableScrapManagement:
+                    !!configuration?.systemConfiguration?.scrapManagement
+                        ?.enableScrapManagement,
             },
 
-            transportationConfiguration: {
-                enableBookEzTransportation: !!configuration?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule,
+            transportationModuleConfiguration: {
+                enableTransportationModule:
+                    !!configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.enableTransportationModule,
             },
 
             whatsAppConfiguration: {
                 enableWhatsAppModule: !!wa?.enableWhatsAppModule,
-                provider: String(wa?.provider || "META").trim().toUpperCase() || "META",
-                defaultLanguage: String(wa?.defaultLanguage || "en_US").trim() || "en_US", moduleConfiguration,
+
+                provider: String(wa?.provider || "META")
+                    .trim()
+                    .toUpperCase(),
+
+                defaultLanguage: String(
+                    wa?.defaultLanguage || "en_US"
+                ).trim(),
+
+                moduleConfiguration,
             },
         },
 
         inventoryConfiguration: {
-            maintainInventory: !!configuration?.inventoryConfiguration?.maintainInventory,
-            inventoryTagLevel: configuration?.inventoryConfiguration?.inventoryTagLevel || "",
-            inventoryPickMethod: configuration?.inventoryConfiguration?.inventoryPickMethod || "",
-            negativeStockPolicy: configuration?.inventoryConfiguration?.negativeStockPolicy || "",
+            maintainInventory:
+                !!configuration?.inventoryConfiguration?.maintainInventory,
+
+            inventoryTagLevel:
+                configuration?.inventoryConfiguration?.inventoryTagLevel || "",
+
+            inventoryPickMethod:
+                configuration?.inventoryConfiguration?.inventoryPickMethod || "",
+
+            negativeStockPolicy:
+                configuration?.inventoryConfiguration?.negativeStockPolicy || "",
         },
 
         financeConfiguration: {
-            isActive: !!configuration?.financeConfiguration?.isActive,
+            isActive:
+                !!configuration?.financeConfiguration?.isActive,
         },
 
-        anyOtherField: configuration?.anyOtherField || "",
+        anyOtherField:
+            configuration?.anyOtherField || "",
     };
 };
 
@@ -618,7 +648,6 @@ export const saveOrUpdateSystemConfiguration = createAsyncThunk(
     async ({ configuration, }: { configuration: any; }, { dispatch, rejectWithValue }) => {
         try {
             const configurationCode = configuration?.configurationCode;
-
             let result: any;
 
             if (configurationCode) {
