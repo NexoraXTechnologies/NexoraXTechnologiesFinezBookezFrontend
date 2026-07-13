@@ -494,7 +494,7 @@ const TripAllocationList = () => {
 
 					<Permission
 						module="bookez"
-						permissionKey="Pass"
+						permissionKey="tripAllocation"
 						action="create"
 					>
 						{/* @ts-ignore */}
@@ -518,7 +518,7 @@ const TripAllocationList = () => {
 						<div className="flex items-center gap-2">
 							<Permission
 								module="bookez"
-								permissionKey="Pass"
+								permissionKey="tripAllocation"
 								action="update"
 							>
 								<button
@@ -532,7 +532,7 @@ const TripAllocationList = () => {
 
 							<Permission
 								module="bookez"
-								permissionKey="Pass"
+								permissionKey="tripAllocation"
 								action="delete"
 							>
 								<button

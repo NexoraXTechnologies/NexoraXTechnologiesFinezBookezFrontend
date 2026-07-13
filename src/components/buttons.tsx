@@ -68,7 +68,7 @@ const DataCreateButton = ({
             onClick={callBackFn}
             disabled={disabled}
             className="
-        h-9 cursor-pointer px-5 flex items-center justify-center gap-2 rounded-md
+        h-9 cursor-pointer px-3 flex items-center justify-center  rounded-md
         bg-primary text-primary-foreground text-sm font-medium shadow-lg
         transition-all duration-200
         hover:opacity-90

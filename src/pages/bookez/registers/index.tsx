@@ -4,6 +4,11 @@ import {
   ReceiptText,
   WalletCards,
   CreditCard,
+  Truck,
+  Route,
+  Wrench,
+  FileCheck,
+  UserRoundCheck,
 } from "lucide-react";
 
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
@@ -41,6 +46,55 @@ const cards: any[] = [
     icon: <CreditCard size={22} />,
     permissionKey: "registers.paymentRegister"
   },
+  {
+    title: "Transport Order Register",
+    description: "Track and manage all transport orders including shipment details, routes, and order status.",
+    component: "",
+    icon: <Truck size={22} />,
+    permissionKey: "registers.transportOrderRegister"
+  },
+  {
+    title: "Trip Allocation Register",
+    description: "Manage vehicle and driver assignments for planned trips and transportation activities.",
+    component: "",
+    icon: <Route size={22} />,
+    permissionKey: "registers.tripRegister"
+  },
+  {
+    title: "Trip Expense Register",
+    description: "Monitor trip-related expenses including fuel, tolls, and other operational costs.",
+    component: "",
+    icon: <WalletCards size={22} />,
+    permissionKey: "registers.tripExpenseRegister"
+  },
+  {
+    title: "Vehicle Maintenance Register",
+    description: "Maintain vehicle service records, repair history, and maintenance schedules.",
+    component: "",
+    icon: <Wrench size={22} />,
+    permissionKey: "registers.vehicleMaintenanceRegister"
+  },
+  {
+    title: "POD Register",
+    description: "Manage proof of delivery records and track delivery completion status.",
+    component: "",
+    icon: <FileCheck size={22} />,
+    permissionKey: "registers.podRegister"
+  },
+  {
+    title: "Driver Settlement Register",
+    description: "Manage driver payments, settlements, allowances, and trip-wise expenses.",
+    component: "",
+    icon: <UserRoundCheck size={22} />,
+    permissionKey: "registers.driverSettlementRegister"
+  },
+
+
+
+
+
+
+
 ];
 
 const RegistersDashboard = () => {
