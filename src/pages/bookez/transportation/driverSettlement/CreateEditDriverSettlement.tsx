@@ -15,7 +15,7 @@ import {
     Users,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Select from "react-select";
 import { toast } from "react-toastify";
 
@@ -30,6 +30,8 @@ import {
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 import { getAllTripExpenses } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
 import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
+import { createDriverSettlement, getDriverSettlementByVoucherNumber, updateDriverSettlement } from "../../../../redux/slices/professionalSlice/transportation/driverSettlementSlice";
+import { formatDateForInput, formatDateTime, formatMoney } from "../../../../utils/helperFunctions";
 
 const REMARKS_MAX = 200;
 
@@ -55,40 +57,9 @@ const normalizeText = (value: any) =>
         .trim()
         .toLowerCase();
 
-const formatMoney = (value: any) => {
-    const num = Number(value || 0);
 
-    return `₹${num.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
-};
 
-const formatDateTime = (value: any) => {
-    if (!value) return "-";
 
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) return "-";
-
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
-
-const formatDateInput = (value: any) => {
-    if (!value) return "";
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) return "";
-
-    return date.toISOString().slice(0, 10);
-};
 
 const getInputValue = (input: any) => {
     if (input?.target?.type === "checkbox") return input.target.checked;
@@ -874,6 +845,58 @@ const isTripPendingAccept = (tripExpense: any) => {
 };
 
 /* ===================================================
+   EDIT-MODE MAPPERS (prefill from GET-by-voucher response)
+=================================================== */
+
+const formatTripStatusLabel = (value: any) =>
+    cleanText(value)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c: string) => c.toUpperCase()) || "-";
+
+const mapEditRecordToTripDetails = (record: any) => {
+    if (!record) return null;
+
+    const lr = record?.lrDetails || {};
+
+    return {
+        tripNo: lr?.tripNumber || record?.transportOrderNumber || "-",
+        lrNo: lr?.lrNumber || "-",
+        tripDate: lr?.tripDate || "",
+        lrDate: lr?.lrDate || "",
+        from: lr?.from || "-",
+        to: lr?.to || "-",
+        consignor: lr?.consignor || "-",
+        consignee: lr?.consignee || "-",
+        vehicleNo: lr?.vehicleNo || "-",
+        goods: lr?.goods || "-",
+        driverName: lr?.driverName || "-",
+        tripStatus: formatTripStatusLabel(lr?.tripStatus),
+        totalTripExpense: Number(lr?.totalTripExpense || 0),
+        balanceAmount: Number(lr?.balance || 0),
+        expectedFreight: 0,
+    };
+};
+
+const mapEditRecordToExpenseRows = (record: any) =>
+    (record?.expenses || []).map((row: any, index: number) => ({
+        id: `edit-expense-${index}`,
+        date: row?.date || "",
+        type: row?.type || "",
+        description: row?.description || "",
+        amount: Number(row?.amount || 0),
+    }));
+
+const mapEditRecordToAdvanceRows = (record: any) =>
+    (record?.advances || []).map((row: any, index: number) => ({
+        id: `edit-advance-${index}`,
+        date: row?.date || "",
+        source: row?.source || "",
+        paymentMode: row?.mode || "-",
+        amount: Number(row?.amount || 0),
+        remarks: row?.remarks || "",
+    }));
+
+/* ===================================================
    SMALL DISPLAY COMPONENTS
 =================================================== */
 
@@ -918,6 +941,11 @@ const CreateEditDriverSettlement = () => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
 
+    // NOTE: adjust the param name to whatever your route actually uses
+    // (e.g. useParams<{ id: string }>() -> const { id: voucherNumber } = useParams())
+    const { voucherNumber } = useParams<{ voucherNumber: string }>();
+    const isEditMode = Boolean(voucherNumber);
+
     const { users = [] } = useSelector((s: any) => s.professionalUser || {});
 
     const {
@@ -944,10 +972,14 @@ const CreateEditDriverSettlement = () => {
     const [salary, setSalary] = useState("");
     const [incentives, setIncentives] = useState("");
     const [paymentMode, setPaymentMode] = useState("");
-    const [paymentDate, setPaymentDate] = useState(formatDateInput(new Date()));
+    const [paymentDate, setPaymentDate] = useState(formatDateForInput(new Date()));
     const [remarks, setRemarks] = useState("");
 
-    const loading = pageLoading || driversLoader;
+    // Edit-mode state
+    const [editRecord, setEditRecord] = useState<any>(null);
+    const [fetchingEdit, setFetchingEdit] = useState(false);
+
+    const loading = pageLoading || driversLoader || fetchingEdit;
 
     const loginUser = useMemo(() => getLoginUser(), []);
 
@@ -994,7 +1026,7 @@ const CreateEditDriverSettlement = () => {
         try {
             setPageLoading(true);
 
-            const [ordersRes, allocationRes, expenseRes, lrRes] = await Promise.all([
+            const [ordersRes , expenseRes, lrRes] = await Promise.all([
                 unwrapThunk(
                     dispatch,
                     getTransportOrders({
@@ -1038,7 +1070,7 @@ const CreateEditDriverSettlement = () => {
 
             // activeAllocations is kept in redux like Trip Allocation screen.
             // Dispatch result above only refreshes the slice.
-            console.log("Settlement allocations:", getApiList(allocationRes));
+            // console.log("Settlement allocations:", getApiList(allocationRes));
         } catch (error: any) {
             toast.error(error?.message || "Failed to load settlement data");
             setTransportOrders([]);
@@ -1052,6 +1084,82 @@ const CreateEditDriverSettlement = () => {
     useEffect(() => {
         loadSettlementSources();
     }, [loadSettlementSources]);
+
+    /* ---------------------------------------------------
+       EDIT MODE: fetch settlement by voucher number and
+       prefill the simple fields (salary, incentives,
+       payment mode/date, remarks, linked trip id).
+    --------------------------------------------------- */
+    useEffect(() => {
+        if (!isEditMode) return;
+
+        const fetchSettlement = async () => {
+            try {
+                setFetchingEdit(true);
+
+                const response = await unwrapThunk(
+                    dispatch,
+                    getDriverSettlementByVoucherNumber(voucherNumber as string) as any
+                );
+
+                const record = response?.data || response;
+
+                setEditRecord(record);
+
+                setSalary(String(record?.salary ?? ""));
+                setIncentives(String(record?.otherIncentives ?? ""));
+                setRemarks(String(record?.remarks || "").slice(0, REMARKS_MAX));
+
+                setPaymentDate(
+                    formatDateForInput(record?.paymentDate) || formatDateForInput(new Date())
+                );
+
+                const matchedMode = paymentModeOptions.find(
+                    (opt) => normalizeText(opt.value) === normalizeText(record?.paymentMode)
+                );
+                setPaymentMode(matchedMode?.value || "");
+
+                setSelectedTripId(cleanText(record?.transportOrderNumber));
+            } catch (error: any) {
+                toast.error(error?.message || "Failed to load settlement details");
+            } finally {
+                setFetchingEdit(false);
+            }
+        };
+
+        fetchSettlement();
+    }, [isEditMode, voucherNumber, dispatch]);
+
+    /* ---------------------------------------------------
+       EDIT MODE: once driver list is loaded, match the
+       settlement's driver (by driverCode, falling back to
+       driver name from lrDetails) and prefill driver fields.
+    --------------------------------------------------- */
+    useEffect(() => {
+        if (!isEditMode || !editRecord || !driverUsers.length || selectedDriverId) {
+            return;
+        }
+
+        const driverCode = cleanText(editRecord?.driverCode);
+        const driverNameFromRecord = normalizeText(editRecord?.lrDetails?.driverName);
+
+        const matchedDriver =
+            driverUsers.find((d: any) => d.driverId === driverCode) ||
+            driverUsers.find(
+                (d: any) => normalizeText(d.driverName) === driverNameFromRecord
+            );
+
+        if (!matchedDriver) return;
+
+        setSelectedDriverId(matchedDriver.driverId);
+        setDriverDetail({
+            driverId: matchedDriver.driverId,
+            driverName: matchedDriver.driverName,
+            mobileNumber: matchedDriver.mobileNumber,
+            licenseNumber: matchedDriver.licenseNumber,
+            licenseExpiryDate: matchedDriver.licenseExpiryDate,
+        });
+    }, [isEditMode, editRecord, driverUsers, selectedDriverId]);
 
     const selectedDriver = useMemo(
         () =>
@@ -1095,13 +1203,18 @@ const CreateEditDriverSettlement = () => {
         orderOptions.find((item: any) => item.value === selectedTripId) || null;
 
     useEffect(() => {
+        // In edit mode the settlement's trip may already be closed out and
+        // therefore absent from the live "open trips" option list — don't
+        // clear it out in that case, we render its details from editRecord.
+        if (isEditMode) return;
+
         if (
             selectedTripId &&
             !orderOptions.some((option: any) => option.value === selectedTripId)
         ) {
             setSelectedTripId("");
         }
-    }, [selectedTripId, orderOptions]);
+    }, [selectedTripId, orderOptions, isEditMode]);
 
     const selectedAllocation = useMemo(
         () =>
@@ -1132,7 +1245,7 @@ const CreateEditDriverSettlement = () => {
         [selectedOrderOption, lrEntries, selectedTripId]
     );
 
-    const settlementData = useMemo(
+    const liveSettlementData = useMemo(
         () =>
             buildSettlementFromSelections({
                 allocation: selectedAllocation,
@@ -1154,9 +1267,39 @@ const CreateEditDriverSettlement = () => {
         ]
     );
 
+    // In edit mode, trip/LR/expense/advance details come straight from the
+    // GET-by-voucher response instead of the live open-trip selections.
+    const settlementData = useMemo(() => {
+        if (isEditMode && editRecord) {
+            const totalAllowedExpenses = Number(editRecord?.lessAllowedExpenses || 0);
+            const totalAdvances = Number(editRecord?.lessAdvancesToDriver || 0);
+            const expenseRows = mapEditRecordToExpenseRows(editRecord);
+
+            return {
+                tripDetails: mapEditRecordToTripDetails(editRecord),
+                expenseRows,
+                advanceRows: mapEditRecordToAdvanceRows(editRecord),
+                totalExpenses: expenseRows.reduce(
+                    (acc: number, row: any) => acc + Number(row.amount || 0),
+                    0
+                ),
+                totalAllowedExpenses,
+                totalAdvances,
+                settlement: computeSettlementSummary({
+                    salary,
+                    incentives,
+                    allowedExpenses: totalAllowedExpenses,
+                    totalAdvances,
+                }),
+            };
+        }
+
+        return liveSettlementData;
+    }, [isEditMode, editRecord, salary, incentives, liveSettlementData]);
+
     const tripPendingAccept = useMemo(
-        () => isTripPendingAccept(selectedTripExpense),
-        [selectedTripExpense]
+        () => (isEditMode ? false : isTripPendingAccept(selectedTripExpense)),
+        [isEditMode, selectedTripExpense]
     );
 
     const handleDriverSelect = async (driverId: string) => {
@@ -1336,7 +1479,9 @@ const CreateEditDriverSettlement = () => {
         },
     ];
 
-    const handleSave = () => {
+    const tripDetails = settlementData.tripDetails;
+
+    const handleSave = async () => {
         if (!selectedDriverId) {
             toast.warn("Please select a driver");
             return;
@@ -1352,44 +1497,100 @@ const CreateEditDriverSettlement = () => {
             return;
         }
 
-        const payload = {
-            driver: {
-                driverId: driverDetail.driverId || selectedDriver?.driverId,
-                driverName: driverDetail.driverName || selectedDriver?.driverName,
-                mobileNumber: driverDetail.mobileNumber || selectedDriver?.mobileNumber,
-                licenseNumber: driverDetail.licenseNumber || "",
-                licenseExpiryDate: driverDetail.licenseExpiryDate || "",
-            },
+        if (!paymentMode) {
+            toast.warn("Please select payment mode");
+            return;
+        }
 
-            orderNumber: selectedTripId,
-            allocation: selectedAllocation,
-            transportOrder: selectedTransportOrder,
-            tripExpense: selectedTripExpense,
-            lrEntry: selectedLREntry,
+        try {
+            setPageLoading(true);
 
-            salary: Number(salary || 0),
-            incentives: Number(incentives || 0),
-            paymentMode,
-            paymentDate,
-            remarks,
+            const payload = {
+                transportOrderNumber:
+                    selectedTransportOrder?.transportOrderNumber ||
+                    selectedTripId,
 
-            settlement: settlementData.settlement,
-            totalExpenses: settlementData.totalExpenses,
-            totalAllowedExpenses: settlementData.totalAllowedExpenses,
-            totalAdvances: settlementData.totalAdvances,
+                driverCode: driverDetail.driverId || selectedDriver?.driverId,
 
-            tripDetails: settlementData.tripDetails,
-            expenseRows: settlementData.expenseRows,
-            advanceRows: settlementData.advanceRows,
-        };
+                salary: Number(salary || 0),
 
-        console.log("Driver Settlement Payload", payload);
+                otherIncentives: Number(incentives || 0),
 
-        toast.success("Driver settlement saved");
-        navigate(-1);
+                grossAmount: Number(
+                    settlementData?.settlement?.grossAmount || 0
+                ),
+
+                lessAllowedExpenses: Number(
+                    settlementData?.settlement?.allowedExpenses || 0
+                ),
+
+                lessAdvancesToDriver: Number(
+                    settlementData?.settlement?.totalAdvances || 0
+                ),
+
+                netPayableToDriver: Number(
+                    settlementData?.settlement?.netPayable || 0
+                ),
+
+                paymentMode,
+
+                paymentDate,
+
+                remarks,
+
+                lrDetails: {
+                    lrNumber: tripDetails?.lrNo || "",
+                    lrDate: tripDetails?.lrDate || null,
+                    tripNumber: tripDetails?.tripNo || "",
+                    tripDate: tripDetails?.tripDate || null,
+                    driverName: tripDetails?.driverName || "",
+                    tripStatus: tripDetails?.tripStatus || "",
+                    from: tripDetails?.from || "",
+                    to: tripDetails?.to || "",
+                    consignor: tripDetails?.consignor || "",
+                    consignee: tripDetails?.consignee || "",
+                    vehicleNo: tripDetails?.vehicleNo || "",
+                    goods: tripDetails?.goods || "",
+                    totalTripExpense:
+                        settlementData?.totalExpenses || 0,
+                    balance:
+                        tripDetails?.balanceAmount || 0,
+                },
+
+                expenses: settlementData?.expenseRows || [],
+
+                advances: settlementData?.advanceRows || [],
+            };
+
+            if (isEditMode) {
+                // console.log("Driver Settlement Update Payload", payload);
+
+                await dispatch(
+                    updateDriverSettlement({
+                        voucherNumber: editRecord?.settlementNumber || voucherNumber,
+                        payload,
+                    }) as any
+                ).unwrap();
+
+                toast.success("Driver Settlement Updated Successfully");
+            } else {
+                // console.log("Driver Settlement Payload", payload);
+
+                await dispatch(createDriverSettlement(payload) as any).unwrap();
+
+                toast.success("Driver Settlement Created Successfully");
+            }
+
+            navigate("/bookez/transportation/driver-settlement");
+        } catch (error: any) {
+            toast.error(
+                error?.message ||
+                `Failed to ${isEditMode ? "update" : "create"} driver settlement`
+            );
+        } finally {
+            setPageLoading(false);
+        }
     };
-
-    const tripDetails = settlementData.tripDetails;
 
     return (
         <div className="flex h-full w-full flex-col bg-card shadow-sm">
@@ -1408,7 +1609,7 @@ const CreateEditDriverSettlement = () => {
                     <div>
 
                         <h1 className="truncate text-lg font-bold text-card-foreground">
-                            <span>Driver Settlement</span>
+                            <span>{isEditMode ? "Edit Driver Settlement" : "Driver Settlement"}</span>
                         </h1>
 
                         <p className=" text-sm text-muted-foreground">
@@ -1438,7 +1639,7 @@ const CreateEditDriverSettlement = () => {
                                 placeholder={
                                     driversLoader ? "Loading drivers..." : "Select Driver"
                                 }
-                                isDisabled={driversLoader || pageLoading}
+                                isDisabled={driversLoader || pageLoading || isEditMode}
                                 isSearchable
                                 onChange={(option: any) =>
                                     handleDriverSelect(option?.value || "")
@@ -1453,7 +1654,11 @@ const CreateEditDriverSettlement = () => {
                             </label>
 
                             <Select
-                                value={selectedOrderOption}
+                                value={
+                                    isEditMode
+                                        ? { label: selectedTripId, value: selectedTripId }
+                                        : selectedOrderOption
+                                }
                                 options={orderOptions}
                                 placeholder={
                                     !selectedDriverId
@@ -1462,7 +1667,7 @@ const CreateEditDriverSettlement = () => {
                                             ? "Loading orders..."
                                             : "Select Order / Trip"
                                 }
-                                isDisabled={!selectedDriverId || pageLoading}
+                                isDisabled={!selectedDriverId || pageLoading || isEditMode}
                                 isSearchable
                                 onChange={(option: any) =>
                                     handleOrderSelect(option?.value || "")
@@ -1503,7 +1708,7 @@ const CreateEditDriverSettlement = () => {
                             <input
                                 type="date"
                                 disabled
-                                value={formatDateInput(driverDetail?.licenseExpiryDate)}
+                                value={formatDateForInput(driverDetail?.licenseExpiryDate)}
                                 className="h-10 w-full rounded-md border border-border bg-muted px-3 text-sm text-muted-foreground"
                             />
                         </div>
@@ -1523,7 +1728,9 @@ const CreateEditDriverSettlement = () => {
                         onToggle={() => { }}
                     >
                         <div className="md:col-span-2 xl:col-span-3">
-                            {!selectedTripId ? (
+                            {fetchingEdit ? (
+                                <EmptyHint>Loading settlement details...</EmptyHint>
+                            ) : !selectedTripId ? (
                                 <EmptyHint>
                                     Select order / trip to view autofilled details.
                                 </EmptyHint>
@@ -1606,9 +1813,11 @@ const CreateEditDriverSettlement = () => {
                         onToggle={() => { }}
                     >
                         <div className="md:col-span-2 xl:col-span-3">
-                            {!selectedTripId ? (
+                            {fetchingEdit ? (
+                                <EmptyHint>Loading settlement details...</EmptyHint>
+                            ) : !selectedTripId ? (
                                 <EmptyHint>Select order / trip to view expenses.</EmptyHint>
-                            ) : !selectedTripExpense ? (
+                            ) : !isEditMode && !selectedTripExpense ? (
                                 <EmptyHint>No trip expense recorded yet.</EmptyHint>
                             ) : !settlementData.expenseRows.length ? (
                                 <EmptyHint>No expense entries in this trip.</EmptyHint>
@@ -1672,9 +1881,11 @@ const CreateEditDriverSettlement = () => {
                         onToggle={() => { }}
                     >
                         <div className="md:col-span-2 xl:col-span-3">
-                            {!selectedTripId ? (
+                            {fetchingEdit ? (
+                                <EmptyHint>Loading settlement details...</EmptyHint>
+                            ) : !selectedTripId ? (
                                 <EmptyHint>Select order / trip to view advances.</EmptyHint>
-                            ) : !selectedTripExpense ? (
+                            ) : !isEditMode && !selectedTripExpense ? (
                                 <EmptyHint>No trip expense recorded yet.</EmptyHint>
                             ) : !settlementData.advanceRows.length ? (
                                 <EmptyHint>No advances recorded for this trip.</EmptyHint>
@@ -1795,7 +2006,7 @@ const CreateEditDriverSettlement = () => {
                     className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
                 >
                     <Save size={16} />
-                    {loading ? "Loading..." : "Save & Proceed"}
+                    {loading ? "Loading..." : isEditMode ? "Update & Proceed" : "Save & Proceed"}
                 </button>
             </div>
         </div>
