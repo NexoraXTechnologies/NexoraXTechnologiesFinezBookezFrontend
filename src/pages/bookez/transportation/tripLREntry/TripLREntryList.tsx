@@ -247,10 +247,7 @@ const TripLREntryList = () => {
     const searchTimerRef = useRef<any>(null);
 
     const pageTitle = location.state?.title || "Trip L/R Entry";
-    const pageDescription =
-        location.state?.description ||
-        "Create and track lorry receipt entries for transport shipments.";
-
+  
     const totalLRCount = openCount + closedCount;
 
     /* ===================================================
@@ -715,9 +712,7 @@ const TripLREntryList = () => {
                             {pageTitle}
                         </h1>
 
-                        <p className="text-sm text-muted-foreground">
-                            {pageDescription}
-                        </p>
+                     
                     </div>
                 </div>
 

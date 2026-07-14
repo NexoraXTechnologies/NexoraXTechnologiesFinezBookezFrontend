@@ -130,9 +130,7 @@ const DriverSettlementList = () => {
     });
 
     const pageTitle = location.state?.title || "Driver Settlement";
-    const pageDescription =
-        location.state?.description ||
-        "Calculate and settle driver advances, expenses, and final trip balance.";
+   
     const dispatch = useDispatch<any>();
     const { driverSettlement, pagination, listingLoader, } = useSelector((state: any) => state.driverSettlement)
     const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
@@ -472,9 +470,7 @@ const DriverSettlementList = () => {
                             {pageTitle}
                         </h1>
 
-                        <p className=" text-sm text-muted-foreground">
-                            {pageDescription}
-                        </p>
+                       
                     </div>
                 </div>
 

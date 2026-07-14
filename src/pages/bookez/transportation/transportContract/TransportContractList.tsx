@@ -51,9 +51,7 @@ const TransportContractList = () => {
     });
 
     const pageTitle = location.state?.title || "Transport Contract";
-    const pageDescription =
-        location.state?.description ||
-        "Create transport contracts with customers, vendors, or fleet partners.";
+    
 
     const fetchTransportContracts = ({
         offset = localOffset,
@@ -330,9 +328,7 @@ const TransportContractList = () => {
                             {pageTitle}
                         </h1>
 
-                        <p className=" text-sm text-muted-foreground">
-                            {pageDescription}
-                        </p>
+                      
                     </div>
                 </div>
 
