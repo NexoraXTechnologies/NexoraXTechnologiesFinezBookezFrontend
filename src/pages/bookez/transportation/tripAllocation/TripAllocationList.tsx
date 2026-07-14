@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { formatDateTime } from "../../../../utils/helperFunctions";
+import { formatDateTime, truncate } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
@@ -57,7 +57,7 @@ const TripAllocationList = () => {
 	});
 
 	const pageTitle = location.state?.title || "Trip Allocation";
-	
+
 
 	const getTripAllocationNumber = (record: any) =>
 		record?.tripAllocationNumber ||
@@ -347,9 +347,12 @@ const TripAllocationList = () => {
 		{
 			key: "transportOrder.source",
 			title: "Route",
-			render: (row: any) =>
-				`${row?.transportOrder?.source || "-"} - ${row?.transportOrder?.destination || "-"
-				}`,
+			render: (row: any) => {
+				const source = row?.transportOrder?.source || "-";
+				const destination = row?.transportOrder?.destination || "-";
+
+				return `${truncate(source, 18)} → ${truncate(destination, 18)}`;
+			},
 		},
 		// {
 		// 	key: "tripPlan.routeDistanceKm",
@@ -430,7 +433,7 @@ const TripAllocationList = () => {
 							{pageTitle}
 						</h1>
 
-						
+
 					</div>
 				</div>
 
