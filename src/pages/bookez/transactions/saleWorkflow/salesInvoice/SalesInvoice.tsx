@@ -34,6 +34,7 @@ import {
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
+import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const defaultPagination = {
     offset: 0,
@@ -212,6 +213,7 @@ const SalesInVoice = () => {
         body: [],
         footer: [],
     });
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
     const { salesOrders, loading: orderLoader } = useSelector(
         (state: any) => state.salesOrder
@@ -634,10 +636,14 @@ const SalesInVoice = () => {
             };
         });
     };
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
         const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
-        if (duplicate) {
+        if (duplicate && !enableDuplicatePro) {
             setErrors((prev: any) => ({
                 ...prev,
                 products: "",
@@ -1111,6 +1117,13 @@ const SalesInVoice = () => {
 
     useEffect(() => {
         dispatch(getAllReportMapping({ moduleType: "salesInvoice" }));
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
     }, []);
 
     return (

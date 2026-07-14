@@ -148,6 +148,16 @@ const SalesQuotations = () => {
         { key: "sQuoteStatus", title: "Quote Status", render: (row: any) => (<span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">{row?.sQuoteStatus || "-"}</span>) },
     ];
 
+    const enableLocation = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.salesQuotation?.enableLocation
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
+
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
+
     const handleStatusChange = (nextStatus: string) => { setStatus(nextStatus); setLocalOffset(0); };
 
     const handleRefresh = async () => {
@@ -202,7 +212,7 @@ const SalesQuotations = () => {
         const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
 
         const duplicate = isProductField && Boolean(form?.products?.filter((e: any, i: number) => i !== index && String(e?.productCode || e?.productName || e?.productId || "") === String(value || ""))?.length);
-        if (duplicate) {
+        if (key === "productCode" && duplicate && !enableDuplicatePro) {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
             return;
         }
@@ -477,11 +487,6 @@ const SalesQuotations = () => {
             dispatch(getCompany({ withParent: true, limit: 100 }) as any);
         }
     }, []);
-
-    const enableLocation = useMemo(() => {
-        const locationConfig = configurations?.[0]?.systemConfiguration?.salesQuotation?.enableLocation
-        return locationConfig === true || locationConfig === "true";
-    }, [configurations]);
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">

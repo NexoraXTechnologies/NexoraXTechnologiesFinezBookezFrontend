@@ -18,6 +18,7 @@ import Modal, { ListingModel } from "../../../../../components/modal";
 import { getAllSalesInvoice, getSalesReturnAnalysisByInvoiceVoucher, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
+import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
@@ -45,7 +46,7 @@ const SalesReturn = () => {
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
     const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
-
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
@@ -240,9 +241,14 @@ const SalesReturn = () => {
         });
     };
 
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
+
     const handleRowChange = (index: number, key: string, value: any) => {
         const duplicate = Boolean(form?.products?.filter((e: any, i: number) => i !== index && e?.productCode == value)?.length);
-        if (duplicate && (key === "productCode" || key === "productName" || key === "productId")) {
+        if (!enableDuplicatePro && duplicate && (key === "productCode" || key === "productName" || key === "productId")) {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
             return;
         }
@@ -478,6 +484,13 @@ const SalesReturn = () => {
 
     useEffect(() => {
         dispatch(getAllReportMapping({ moduleType: "salesInvoiceReturn" }));
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
     }, []);
 
     return (
