@@ -3,7 +3,7 @@ import EditableLineTable from "./EditableLineTable";
 import SummaryCards from "./SummaryCards";
 import VoucherFormModal from "./VoucherFormModal";
 import { DynamicFormContentSkeleton } from "../skeleton/SkeletonLoader";
-// import LocationSection from "./LocationSection";
+import LocationSection from "./LocationSection";
 
 const DynamicAddForm = ({
     show,
@@ -34,7 +34,7 @@ const DynamicAddForm = ({
     contentSkeleton,
     isSummaryFooter,
     manualselected,
-    // enableLocation
+    enableLocation
 }: any) => {
     const renderInput = (e: any) => {
         if (e?.type === "date") {
@@ -164,12 +164,12 @@ const DynamicAddForm = ({
                             </div>
                             )}
 
-                            {/* {enableLocation && (
+                            {enableLocation && (
                                 <LocationSection
                                     form={form}
                                     handleChange={handleChange}
                                 />
-                            )} */}
+                            )}
 
                         {errors?.[bodyKey] && (
                             <p className="mt-4 text-sm text-danger">

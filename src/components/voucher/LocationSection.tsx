@@ -83,37 +83,17 @@ const LocationSection = ({ form, handleChange }: Props) => {
 
     return (
         <div className="mt-6 rounded-xl border border-border bg-card p-5">
-
-            <h3 className="mb-4 text-lg font-semibold">
+            {/* <h3 className="mb-4 text-lg font-semibold">
                 Location
-            </h3>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-
-                <TextInput
-                    label="Latitude"
-                    value={form.latitude || ""}
-                    disabled
-                />
-
-                <TextInput
-                    label="Longitude"
-                    value={form.longitude || ""}
-                    disabled
-                />
-
-            </div>
+            </h3> */}
 
             <div className="mt-4">
-
                 <TextArea
                     label="Location Address"
                     value={form.locationAddress || ""}
-                    disabled
+                    // disabled
                 />
-
             </div>
-
             <button
                 type="button"
                 onClick={fetchLocation}

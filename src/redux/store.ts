@@ -94,6 +94,7 @@ import dbAccessReducer from "./slices/userExplorer";
 import allRegistersReducer from "../redux/slices/professionalSlice/register";
 import areaDashboardReducer from "../redux/slices/professionalSlice/dashboard/registerDashboard"
 import systemConfigurationReducer from "../redux/slices/systemConf";
+import importBankStatementReducer from "../redux/slices/professionalSlice/openingBalancesStocks/bankImpStatement"
 
 export const store = configureStore({
   reducer: {
@@ -192,6 +193,7 @@ export const store = configureStore({
     allRegisters: allRegistersReducer,
     registerDashboard: areaDashboardReducer,
     systemConfiguration: systemConfigurationReducer,
+    importBankStatement: importBankStatementReducer,
   },
 });
 

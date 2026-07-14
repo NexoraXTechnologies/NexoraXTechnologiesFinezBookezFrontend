@@ -268,9 +268,7 @@ const OpeningStock = () => {
             })
         );
 
-        if (
-            (key === "productCode" || key === "productName" || key === "productId") &&
-            duplicate
+        if ((key === "productCode" || key === "productName" || key === "productId") && duplicate
         ) {
             setErrors((prev: any) => ({
                 ...prev,
@@ -291,8 +289,7 @@ const OpeningStock = () => {
             };
 
             if (key === "productCode" || key === "productName" || key === "productId") {
-                const selectedProduct =
-                    productOptions.find((item: any) => {
+                const selectedProduct = productOptions.find((item: any) => {
                         const raw = item?.raw || {};
 
                         return (
@@ -305,79 +302,18 @@ const OpeningStock = () => {
                     }) || null;
 
                 const product = selectedProduct?.raw || {};
-
-                updatedRow.productCode =
-                    product?.productCode ||
-                    selectedProduct?.value ||
-                    updatedRow.productCode ||
-                    "";
-
-                updatedRow.productName =
-                    product?.productName ||
-                    selectedProduct?.label ||
-                    updatedRow.productName ||
-                    "";
-
-                updatedRow.productId =
-                    product?._id ||
-                    product?.productId ||
-                    updatedRow.productId ||
-                    "";
-
-                updatedRow.description =
-                    product?.productDescription ||
-                    product?.description ||
-                    updatedRow.description ||
-                    "";
-
-                updatedRow.rate =
-                    product?.sellingPrice ||
-                    product?.saleRate ||
-                    product?.rate ||
-                    updatedRow.rate ||
-                    "";
-
-                updatedRow.unit =
-                    product?.unit ||
-                    product?.uom ||
-                    product?.unitCode ||
-                    updatedRow.unit ||
-                    "";
-
-                updatedRow.unitName =
-                    product?.unitName ||
-                    product?.unit ||
-                    product?.uom ||
-                    updatedRow.unitName ||
-                    "";
-
+                updatedRow.productCode = product?.productCode || selectedProduct?.value || updatedRow.productCode || "";
+                updatedRow.productName = product?.productName || selectedProduct?.label || updatedRow.productName || "";
+                updatedRow.productId = product?._id || product?.productId || updatedRow.productId || "";
+                updatedRow.description = product?.productDescription || product?.description || updatedRow.description || "";
+                updatedRow.rate = product?.sellingPrice || product?.saleRate || product?.rate || updatedRow.rate || "";
+                updatedRow.unit = product?.unit || product?.uom || product?.unitCode || updatedRow.unit || "";
+                updatedRow.unitName = product?.unitName || product?.unit || product?.uom || updatedRow.unitName || "";
                 // ✅ Same as Sales Order tax logic
                 // Your sales order uses raw?.csgst for both CGST and SGST
-                updatedRow.cgstPercentage =
-                    product?.cgstPercentage ||
-                    product?.cgst ||
-                    product?.csgst ||
-                    product?.cgstRate ||
-                    product?.tax?.cgstPercentage ||
-                    product?.tax?.cgst ||
-                    "";
-
-                updatedRow.sgstPercentage =
-                    product?.sgstPercentage ||
-                    product?.sgst ||
-                    product?.csgst ||
-                    product?.sgstRate ||
-                    product?.tax?.sgstPercentage ||
-                    product?.tax?.sgst ||
-                    "";
-
-                updatedRow.igstPercentage =
-                    product?.igstPercentage ||
-                    product?.igst ||
-                    product?.igstRate ||
-                    product?.tax?.igstPercentage ||
-                    product?.tax?.igst ||
-                    "";
+                updatedRow.cgstPercentage = product?.cgstPercentage || product?.cgst || product?.csgst || product?.cgstRate || product?.tax?.cgstPercentage || product?.tax?.cgst || "";
+                updatedRow.sgstPercentage = product?.sgstPercentage || product?.sgst || product?.csgst || product?.sgstRate || product?.tax?.sgstPercentage || product?.tax?.sgst || "";
+                updatedRow.igstPercentage = product?.igstPercentage || product?.igst || product?.igstRate || product?.tax?.igstPercentage || product?.tax?.igst || "";
 
                 if (num(updatedRow.igstPercentage) > 0) {
                     updatedRow.cgstPercentage = "";

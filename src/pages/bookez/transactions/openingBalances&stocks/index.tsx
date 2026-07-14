@@ -14,6 +14,7 @@ import JournalVoucher from "./JournalVoucher";
 import ContraVoucher from "./ContraVoucher";
 import CreditNote from "./CreditNote";
 import DebitNote from "./DebitNote";
+import ImpBankStatemnt from "./impBankStatemnt";
 
 const cards: any = [
   {
@@ -57,6 +58,13 @@ const cards: any = [
     component: DebitNote,
     icon: <FileMinus2 size={22} />,
     permissionKey: "debitNotes"
+  },
+  {
+    title: "Import Bank Statement",
+    description: "Attach bank statement and fetch data",
+    component: ImpBankStatemnt,
+    icon: <FileMinus2 size={22} />,
+    permissionKey: "Pass"
   },
 ];
 

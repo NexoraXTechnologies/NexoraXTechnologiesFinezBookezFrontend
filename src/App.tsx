@@ -37,7 +37,7 @@ import Subscription from './pages/subscription';
 import UnitMaster from './pages/bookez/master/UnitMaster';
 import ReportMapping from './pages/bookez/master/ReportMapping';
 import MasterDashboard from './pages/bookez/master';
-import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks/indec';
+import OpeningBalancesDashboard from './pages/bookez/transactions/openingBalances&stocks';
 import ProductionDashboard from './pages/bookez/transactions/production';
 import SaleWorkflowDashboard from './pages/bookez/transactions/saleWorkflow';
 import PurchaseWorkflowDashboard from './pages/bookez/transactions/purchaseWorkflow';

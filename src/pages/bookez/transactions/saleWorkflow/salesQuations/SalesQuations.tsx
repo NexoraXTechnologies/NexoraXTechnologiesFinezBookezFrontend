@@ -327,7 +327,8 @@ const SalesQuotations = () => {
 
         const products = cleanRows();
         const footer = calculateFooter(products);
-
+        console.log({ form })
+        // return
         const payload: any = {
             sQuoteVoucherDate: form.sQuoteVoucherDate,
             sQuoteCustomerCode: form.sQuoteCustomerCode,
@@ -338,6 +339,11 @@ const SalesQuotations = () => {
             sQuoteRemark: form.sQuoteRemark,
             sQuoteBody: products.map((item: any) => ({ productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) })),
             sQuoteFooter: { grossAmount: fmtMoney(footer.totalGrossAmount), discountAmount: fmtMoney(footer.totalDiscountAmount), cgstAmount: fmtMoney(footer.totalCgstAmount), sgstAmount: fmtMoney(footer.totalSgstAmount), igstAmount: fmtMoney(footer.totalIgstAmount), taxAmount: fmtMoney(footer.totalTaxAmount), otherAmount: fmtMoney(footer.totalOtherAmount), netAmount: fmtMoney(footer.totalNetAmount), adjustedAmount: "0", balanceAmount: fmtMoney(footer.totalNetAmount), totalQuantity: footer.totalQuantity, totalGrossAmount: fmtMoney(footer.totalGrossAmount), totalDiscountAmount: fmtMoney(footer.totalDiscountAmount), totalCgstAmount: fmtMoney(footer.totalCgstAmount), totalSgstAmount: fmtMoney(footer.totalSgstAmount), totalIgstAmount: fmtMoney(footer.totalIgstAmount), totalTaxAmount: fmtMoney(footer.totalTaxAmount), totalOtherAmount: fmtMoney(footer.totalOtherAmount), totalNetAmount: fmtMoney(footer.totalNetAmount) },
+            sQuoteLocation: {
+                lat: form?.latitude,
+                lng: form?.longitude,
+                address: form?.locationAddress
+            }
         };
 
         try {
@@ -360,7 +366,7 @@ const SalesQuotations = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip.voucherNumber) return;
-            await dispatch(deleteSalesQuotation(confirmTooltip.voucherNumber) as any).unwrap();
+            await dispatch(deleteSalesQuotation({ sQuoteVoucherNumber: confirmTooltip.voucherNumber }) as any).unwrap();
             toast.success("Sales quotation deleted");
             fetchSalesQuotations(true);
         } catch (err: any) {
