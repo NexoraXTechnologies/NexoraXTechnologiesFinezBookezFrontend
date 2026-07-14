@@ -51,7 +51,7 @@ const cards: any[] = [
   {
     title: "Vehicle Maintenance",
     description: "Manage vehicle service, repair history, and maintenance expenses.",
-    path: "/bookez/transportation/vehicle-maintenance",
+    path: "/bookEz/transportation/vehicle-maintenance",
     icon: <Wrench size={22} />,
     permissionKey: "vehicleMaintenance",
   },
@@ -59,21 +59,21 @@ const cards: any[] = [
   {
     title: "Driver Settlement",
     description: "Calculate and settle driver advances, expenses, and final trip balance.",
-    path: "/bookez/transportation/driver-settlement",
+    path: "/bookEz/transportation/driver-settlement",
     icon: <HandCoins size={22} />,
     permissionKey: "Pass",
   },
   {
     title: "Vehicle Status",
     description: "Track vehicle availability, current status, assignment state, and movement updates.",
-    path: "/bookez/transportation/vehicle-status",
+    path: "/bookEz/transportation/vehicle-status",
     icon: <Truck size={22} />,
     permissionKey: "Pass",
   },
   {
     title: "Where Is My Driver?",
     description: "View driver location, trip progress, assigned vehicle, and route tracking in real time.",
-    path: "/bookez/transportation/where-is-driver",
+    path: "/bookEz/transportation/where-is-driver",
     icon: <MapPinned size={22} />,
     permissionKey: "Pass",
   },

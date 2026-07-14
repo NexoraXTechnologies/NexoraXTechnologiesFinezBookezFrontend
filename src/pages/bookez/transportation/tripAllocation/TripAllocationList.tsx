@@ -57,9 +57,7 @@ const TripAllocationList = () => {
 	});
 
 	const pageTitle = location.state?.title || "Trip Allocation";
-	const pageDescription =
-		location.state?.description ||
-		"Assign vehicles, drivers, and routes to planned transport trips.";
+	
 
 	const getTripAllocationNumber = (record: any) =>
 		record?.tripAllocationNumber ||
@@ -432,9 +430,7 @@ const TripAllocationList = () => {
 							{pageTitle}
 						</h1>
 
-						<p className="text-sm text-muted-foreground">
-							{pageDescription}
-						</p>
+						
 					</div>
 				</div>
 

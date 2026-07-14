@@ -146,9 +146,7 @@ const VehicleMaintenanceList = () => {
     const searchTimerRef = useRef<any>(null);
 
     const pageTitle = location.state?.title || "Vehicle Maintenance";
-    const pageDescription =
-        location.state?.description ||
-        "Manage vehicle service, documents, parts, cost and maintenance status.";
+   
 
     /* ===================================================
        FETCH DATA
@@ -282,7 +280,7 @@ const VehicleMaintenanceList = () => {
     };
 
     const handleCreate = () => {
-        navigate("/bookez/transportation/vehicle-maintenance/create", {
+        navigate("/bookEz/transportation/vehicle-maintenance/create", {
             state: {
                 title: "Create Vehicle Maintenance",
                 description:
@@ -308,7 +306,7 @@ const VehicleMaintenanceList = () => {
             ).unwrap();
 
             navigate(
-                `/bookez/transportation/vehicle-maintenance/edit/${voucher}`,
+                `/bookEz/transportation/vehicle-maintenance/edit/${voucher}`,
                 {
                     state: {
                         title: "Edit Vehicle Maintenance",
@@ -492,9 +490,7 @@ const VehicleMaintenanceList = () => {
                             {pageTitle}
                         </h1>
 
-                        <p className=" text-sm text-muted-foreground">
-                            {pageDescription}
-                        </p>
+                   
                     </div>
                 </div>
 

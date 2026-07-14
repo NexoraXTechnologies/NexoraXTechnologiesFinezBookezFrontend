@@ -59,9 +59,7 @@ const TransportOrderList = () => {
 
 
 	const pageTitle = location.state?.title || "Transport Order";
-	const pageDescription =
-		location.state?.description ||
-		"Create and manage transport orders for customer goods movement.";
+	
 
 	const getOrderNumber = (record: any) =>
 		record?.orderNumber ||
@@ -436,9 +434,7 @@ const TransportOrderList = () => {
 							{pageTitle}
 						</h1>
 
-						<p className="text-sm text-muted-foreground">
-							{pageDescription}
-						</p>
+						
 					</div>
 				</div>
 

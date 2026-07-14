@@ -413,7 +413,7 @@ const WhereIsMyDriver = () => {
             return;
         }
 
-        navigate("/bookez/transportation/live-trip-tracking", {
+        navigate("/bookEz/transportation/live-trip-tracking", {
             state: {
                 isDriverMode: false,
                 trackingVoucherNumber: trackingVoucher,

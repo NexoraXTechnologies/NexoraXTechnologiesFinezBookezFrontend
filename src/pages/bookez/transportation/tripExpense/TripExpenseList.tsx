@@ -359,9 +359,7 @@ const TripExpenseList = () => {
     const promptedAssignmentsRef = useRef(new Set<string>());
 
     const pageTitle = location.state?.title || "Trip Expenses";
-    const pageDescription =
-        location.state?.description ||
-        "Record fuel, toll, loading, unloading, and other trip-related expenses.";
+   
 
     const professionalHeaders = useMemo(() => {
         return safeJsonParse(localStorage.getItem("professionalHeaders")) || {};
@@ -960,9 +958,6 @@ const TripExpenseList = () => {
                             {pageTitle}
                         </h1>
 
-                        <p className="text-sm text-muted-foreground">
-                            {pageDescription}
-                        </p>
                     </div>
                 </div>
 

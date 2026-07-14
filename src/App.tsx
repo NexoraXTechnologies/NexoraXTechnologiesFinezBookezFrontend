@@ -186,17 +186,17 @@ function App() {
           <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
           <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
 
-          <Route path="/bookez/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
-          <Route path="/bookez/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>
-          <Route path="/bookez/transportation/vehicle-maintenance/edit/:voucherNumber" element={<CreateEditVehicleMaintenance />}/>
+          <Route path="/bookEz/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
+          <Route path="/bookEz/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>
+          <Route path="/bookEz/transportation/vehicle-maintenance/edit/:voucherNumber" element={<CreateEditVehicleMaintenance />}/>
           
-          <Route path="/bookez/transportation/driver-settlement" element={<DriverSettlementList/>}/>
-          <Route path="/bookez/transportation/driver-settlement/create"element={<CreateEditDriverSettlement/>}/>
-          <Route path="/bookez/transportation/driver-settlement/edit/:voucherNumber" element={<CreateEditDriverSettlement />}/>
+          <Route path="/bookEz/transportation/driver-settlement" element={<DriverSettlementList/>}/>
+          <Route path="/bookEz/transportation/driver-settlement/create"element={<CreateEditDriverSettlement/>}/>
+          <Route path="/bookEz/transportation/driver-settlement/edit/:voucherNumber" element={<CreateEditDriverSettlement />}/>
 
-          <Route path="/bookez/transportation/vehicle-status" element={<VehicleStatus />} />
-          <Route path="/bookez/transportation/where-is-driver" element={<WhereIsMyDriver />} />
-          <Route path="/bookez/transportation/live-trip-tracking" element={<LiveTripTracking />} />
+          <Route path="/bookEz/transportation/vehicle-status" element={<VehicleStatus />} />
+          <Route path="/bookEz/transportation/where-is-driver" element={<WhereIsMyDriver />} />
+          <Route path="/bookEz/transportation/live-trip-tracking" element={<LiveTripTracking />} />
 
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />
