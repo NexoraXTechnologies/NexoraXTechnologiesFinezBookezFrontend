@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { formatDateForList, money } from "../../../../utils/helperFunctions";
+import { formatDateForList, money, truncate } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
@@ -59,7 +59,7 @@ const TransportOrderList = () => {
 
 
 	const pageTitle = location.state?.title || "Transport Order";
-	
+
 
 	const getOrderNumber = (record: any) =>
 		record?.orderNumber ||
@@ -369,6 +369,24 @@ const TransportOrderList = () => {
 				</div>
 			),
 		},
+		// {
+		// 	key: "route",
+		// 	title: "Route",
+		// 	render: (row: any) => {
+		// 		const from =
+		// 			row?.pickupDetails?.pickupLocation ||
+		// 			row?.pickupDetails?.pickupCityName ||
+		// 			"";
+
+		// 		const to =
+		// 			row?.deliveryDetails?.deliveryLocation ||
+		// 			row?.deliveryDetails?.deliveryCityName ||
+		// 			"";
+
+		// 		return from || to ? `${from || "-"} - ${to || "-"}` : "-";
+		// 	},
+		// },
+
 		{
 			key: "route",
 			title: "Route",
@@ -383,7 +401,9 @@ const TransportOrderList = () => {
 					row?.deliveryDetails?.deliveryCityName ||
 					"";
 
-				return from || to ? `${from || "-"} - ${to || "-"}` : "-";
+				return from || to
+					? `${truncate(from || "-", 18)} → ${truncate(to || "-", 18)}`
+					: "-";
 			},
 		},
 		{
@@ -434,7 +454,7 @@ const TransportOrderList = () => {
 							{pageTitle}
 						</h1>
 
-						
+
 					</div>
 				</div>
 
@@ -446,7 +466,7 @@ const TransportOrderList = () => {
 								pagination?.totalRecords ??
 								transportOrders?.length ??
 								0,
-								
+
 							text: "Total Orders:",
 							varient: "primary",
 						}}
@@ -457,8 +477,8 @@ const TransportOrderList = () => {
 							type="button"
 							onClick={() => setActiveStatus("open")}
 							className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
-									? "bg-primary text-primary-foreground"
-									: "text-muted-foreground hover:bg-muted"
+								? "bg-primary text-primary-foreground"
+								: "text-muted-foreground hover:bg-muted"
 								}`}
 						>
 							Open ({openCount})
@@ -468,8 +488,8 @@ const TransportOrderList = () => {
 							type="button"
 							onClick={() => setActiveStatus("close")}
 							className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
-									? "bg-primary text-primary-foreground"
-									: "text-muted-foreground hover:bg-muted"
+								? "bg-primary text-primary-foreground"
+								: "text-muted-foreground hover:bg-muted"
 								}`}
 						>
 							Close ({closeCount})

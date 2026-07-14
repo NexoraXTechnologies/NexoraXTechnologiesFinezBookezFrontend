@@ -1,95 +1,42 @@
 import { User } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { useEffect } from "react";
-
 import { FormSectionCard } from "../../../../../components/SectionCards";
 import { renderField } from "../../../../../components/inputs";
-import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 import { computeRemainingTrips } from "../transportOrderCalculations";
 import { orderTypeOptions } from "../transportOrderOptions";
-import { getAllTransportContract } from "../../../../../redux/slices/professionalSlice/transportation/transportContractSlice";
 
-const CustomerStep = ({ form, setForm, update }: any) => {
-	const dispatch = useDispatch<any>();
 
-	const { accounts = [] } = useSelector((state: any) => state.accountMaster);
-
-	const { transportContract = [] } = useSelector(
-		(state: any) => state.transportContract
-	);
-
+const CustomerStep = ({ form, setForm, update, accounts = [], transportContract = [], onContractSelect }: any) => {
+	
 	const isContractOrder = form.orderType === "contract";
 
-	const contractOptions = [
-		{
-			label: "Select Contract",
-			value: "",
-			contractNumber: "",
-		},
-		...(transportContract || [])
+	
+const contractOptions = [
+		{ label: "Select Contract", value: "", contractNumber: "" },
+		...transportContract
 			.filter((item: any) => item?.contractNumber || item?.voucherNumber)
-			.map((item: any) => {
-				const contractNumber =
-					item?.contractNumber || item?.voucherNumber || "";
-
-				const customerCode =
-					item?.customer?.customerCode ||
-					item?.customerCode ||
-					"";
-
-				const customerName =
-					item?.customer?.customerName ||
-					item?.customerName ||
-					"";
-
-				const validityFrom =
-					item?.contractPeriod?.startDate ||
-					item?.validityFrom ||
-					item?.periodStart ||
-					"";
-
-				const validityTo =
-					item?.contractPeriod?.endDate ||
-					item?.validityTo ||
-					item?.periodEnd ||
-					"";
-
-				const totalTrips =
-					item?.tripCommitment?.totalTrips ??
-					item?.totalTrips ??
-					"";
-
-				const completedTrips =
-					item?.tripCommitment?.completedTrips ??
-					item?.completedTrips ??
-					0;
-
-				const remainingTrips =
-					item?.tripCommitment?.balanceTrips ??
-					item?.tripCommitment?.remainingTrips ??
-					item?.remainingTrips ??
-					computeRemainingTrips(totalTrips, completedTrips);
-
-				return {
-					label: `${contractNumber}${customerName ? ` - ${customerName}` : ""}`,
-					value: contractNumber,
-					contractNumber,
-
-					customerCode,
-					customerName,
-
-					validityFrom: validityFrom ? String(validityFrom).slice(0, 10) : "",
-					validityTo: validityTo ? String(validityTo).slice(0, 10) : "",
-
-					totalTrips,
-					completedTrips,
-					remainingTrips,
-
-					raw: item,
-				};
-			}),
+			.map((item: any) => ({
+				label: `${item?.contractNumber || item?.voucherNumber}${item?.customer?.customerName ? ` - ${item.customer.customerName}` : ""}`,
+				value: item?.contractNumber || item?.voucherNumber,
+				raw: item, // keep the full raw record so the parent can use it
+			})),
 	];
+
+	const handleContractSelect = (value: any) => {
+		const selected = contractOptions.find((item: any) => String(item?.value) === String(value));
+
+		if (!selected?.raw) {
+			// cleared selection — still let the local contractDetails reset happen
+			update("contractDetails", "contractNumber", "");
+			return;
+		}
+
+		onContractSelect?.(selected.raw); // parent now owns filling every section
+	};
+
+
+
+
 
 	const customerOption = [
 		{
@@ -127,20 +74,7 @@ const CustomerStep = ({ form, setForm, update }: any) => {
 			})),
 	];
 
-	useEffect(() => {
-		dispatch(
-			getAllAccounts({
-				accountType: "customer",
-			})
-		);
 
-		dispatch(
-			getAllTransportContract({
-				limit: 500,
-				offset: 0,
-			})
-		);
-	}, [dispatch]);
 
 	const handleOrderTypeChange = (value: string) => {
 		setForm((prev: any) => ({
@@ -160,41 +94,41 @@ const CustomerStep = ({ form, setForm, update }: any) => {
 		}));
 	};
 
-	const handleContractSelect = (value: any) => {
-		const selectedContract = contractOptions.find(
-			(item: any) => String(item?.value) === String(value)
-		);
+	// const handleContractSelect = (value: any) => {
+	// 	const selectedContract = contractOptions.find(
+	// 		(item: any) => String(item?.value) === String(value)
+	// 	);
 
-		setForm((prev: any) => ({
-			...prev,
+	// 	setForm((prev: any) => ({
+	// 		...prev,
 
-			contractDetails: {
-				...prev.contractDetails,
-				contractNumber: selectedContract?.contractNumber || value || "",
-				validityFrom: selectedContract?.validityFrom || "",
-				validityTo: selectedContract?.validityTo || "",
-				totalTrips: selectedContract?.totalTrips || "",
-				completedTrips: selectedContract?.completedTrips || 0,
-				remainingTrips: selectedContract?.remainingTrips || 0,
-			},
+	// 		contractDetails: {
+	// 			...prev.contractDetails,
+	// 			contractNumber: selectedContract?.contractNumber || value || "",
+	// 			validityFrom: selectedContract?.validityFrom || "",
+	// 			validityTo: selectedContract?.validityTo || "",
+	// 			totalTrips: selectedContract?.totalTrips || "",
+	// 			completedTrips: selectedContract?.completedTrips || 0,
+	// 			remainingTrips: selectedContract?.remainingTrips || 0,
+	// 		},
 
-			customerDetails: {
-				...prev.customerDetails,
-				customerCode:
-					selectedContract?.customerCode ||
-					prev.customerDetails?.customerCode ||
-					"",
-				customerName:
-					selectedContract?.customerName ||
-					prev.customerDetails?.customerName ||
-					"",
-				contactPerson:
-					selectedContract?.customerName ||
-					prev.customerDetails?.contactPerson ||
-					"",
-			},
-		}));
-	};
+	// 		customerDetails: {
+	// 			...prev.customerDetails,
+	// 			customerCode:
+	// 				selectedContract?.customerCode ||
+	// 				prev.customerDetails?.customerCode ||
+	// 				"",
+	// 			customerName:
+	// 				selectedContract?.customerName ||
+	// 				prev.customerDetails?.customerName ||
+	// 				"",
+	// 			contactPerson:
+	// 				selectedContract?.customerName ||
+	// 				prev.customerDetails?.contactPerson ||
+	// 				"",
+	// 		},
+	// 	}));
+	// };
 
 	const handleContractTripsChange = (key: string, value: any) => {
 		setForm((prev: any) => {

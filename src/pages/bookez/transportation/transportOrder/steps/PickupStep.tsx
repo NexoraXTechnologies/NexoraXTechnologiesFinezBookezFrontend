@@ -6,17 +6,17 @@ import { FormSectionCard } from "../../../../../components/SectionCards";
 import { renderField } from "../../../../../components/inputs";
 import {
     getCitiesByState,
-    getStates,
 } from "../../../../../redux/slices/professionalSlice/stateCitySlice";
 import GoogleAddressAutocompleteWeb from "../../../../../components/common/GoogleAddressAutocompleteWeb";
 
-const PickupStep = ({ form, update }: any) => {
+const PickupStep = ({ form, update, states = [] }: any) => {
+
     const dispatch = useDispatch<any>();
 
     const pendingStateNameRef = useRef("");
     const pendingCityNameRef = useRef("");
 
-    const { states = [], cities = [] } = useSelector(
+    const { cities = [] } = useSelector(
         (state: any) => state.stateCity || {}
     );
 
@@ -149,11 +149,6 @@ const PickupStep = ({ form, update }: any) => {
             };
         }),
     ];
-
-    useEffect(() => {
-        // @ts-ignore
-        dispatch(getStates() as any);
-    }, [dispatch]);
 
     useEffect(() => {
         if (!form.pickupDetails?.pickupStateCode) return;
