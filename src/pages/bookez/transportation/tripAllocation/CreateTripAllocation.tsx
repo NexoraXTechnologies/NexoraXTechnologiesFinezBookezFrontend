@@ -49,7 +49,7 @@ import {
 } from "../../../../utils/helperFunctions";
 
 import { getProfessionalUsers } from "../../../../redux/slices/professionalSlice/professionalUserSlice";
-import { createTripExpense } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
+
 import {
     mapTripAllocationToExpenseForm,
     toTripExpensePayload,
@@ -1430,7 +1430,7 @@ const CreateTripAllocation = () => {
             notifyParent: false,
         });
 
-        await dispatch(createTripExpense(payload)).unwrap();
+        // await dispatch(createTripExpense(payload)).unwrap();
 
         return payload;
     };
