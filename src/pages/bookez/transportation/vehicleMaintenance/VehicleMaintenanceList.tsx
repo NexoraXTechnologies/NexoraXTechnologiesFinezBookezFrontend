@@ -280,7 +280,7 @@ const VehicleMaintenanceList = () => {
     };
 
     const handleCreate = () => {
-        navigate("/bookez/transportation/vehicle-maintenance/create", {
+        navigate("/bookEz/transportation/vehicle-maintenance/create", {
             state: {
                 title: "Create Vehicle Maintenance",
                 description:
@@ -306,7 +306,7 @@ const VehicleMaintenanceList = () => {
             ).unwrap();
 
             navigate(
-                `/bookez/transportation/vehicle-maintenance/edit/${voucher}`,
+                `/bookEz/transportation/vehicle-maintenance/edit/${voucher}`,
                 {
                     state: {
                         title: "Edit Vehicle Maintenance",

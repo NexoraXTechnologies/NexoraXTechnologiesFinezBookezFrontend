@@ -149,7 +149,7 @@ const TextArea = ({
                 onChange={onChange}
                 placeholder={placeholder}
                 className="
-          w-full rounded-md border border-border bg-input px-4
+          w-full rounded-md border border-border bg-input px-4 py-2
           text-sm text-foreground placeholder:text-muted-foreground
           outline-none transition duration-200
           hover:border-primary

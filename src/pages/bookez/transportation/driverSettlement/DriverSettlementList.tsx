@@ -234,7 +234,7 @@ const DriverSettlementList = () => {
     };
 
     const openCreateSettlement = () => {
-        navigate("/bookez/transportation/driver-settlement/create", {
+        navigate("/bookEz/transportation/driver-settlement/create", {
             state: {
                 title: "Create Driver Settlement",
                 description:
@@ -253,7 +253,7 @@ const DriverSettlementList = () => {
         }
 
         navigate(
-            `/bookez/transportation/driver-settlement/edit/${settlementNumber}`,
+            `/bookEz/transportation/driver-settlement/edit/${settlementNumber}`,
             {
                 state: {
                     title: "Edit Driver Settlement",

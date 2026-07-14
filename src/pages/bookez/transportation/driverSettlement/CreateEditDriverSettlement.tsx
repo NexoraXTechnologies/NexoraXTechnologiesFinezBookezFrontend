@@ -1581,7 +1581,7 @@ const CreateEditDriverSettlement = () => {
                 toast.success("Driver Settlement Created Successfully");
             }
 
-            navigate("/bookez/transportation/driver-settlement");
+            navigate("/bookEz/transportation/driver-settlement");
         } catch (error: any) {
             toast.error(
                 error?.message ||
