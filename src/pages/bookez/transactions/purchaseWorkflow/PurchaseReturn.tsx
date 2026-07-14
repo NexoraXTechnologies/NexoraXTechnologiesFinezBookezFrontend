@@ -43,6 +43,7 @@ import ModulePageSkeleton, {
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 
 const defaultPagination = {
     offset: 0,
@@ -170,7 +171,7 @@ const PurchaseReturn = () => {
     const { transactionsSchema } = useSelector(
         (state: any) => state.getAllTransactionSchema
     );
-
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
     const purchaseReturns =
         purchaseReturnState?.purchaseReturns ||
         purchaseReturnState?.purchaseReturnList ||
@@ -1035,8 +1036,17 @@ const PurchaseReturn = () => {
             };
         });
     };
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const duplicate = Boolean(form?.products?.filter((e: any, i: number) => i !== index && e?.productCode == value)?.length);
+        if (!enableDuplicatePro && duplicate && (key === "productCode" || key === "productName" || key === "productId")) {
+            setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
+            return;
+        }
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
@@ -1473,16 +1483,19 @@ const PurchaseReturn = () => {
             });
     }, [templateFields?.footer, footerValues]);
 
-    const showInitialSkeleton =
-        !refreshing &&
-        purchaseReturns.length === 0 &&
-        (loading || fieldsLoading);
-
+    const showInitialSkeleton = !refreshing && purchaseReturns.length === 0 && (loading || fieldsLoading);
     const showGrnSkeleton = grnModalLoading || grnLoading || !grnLoaded;
 
     useEffect(() => {
         /* @ts-ignore  */
         dispatch(getAllReportMapping({ moduleType: "purchaseReturn" }));
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
     }, []);
 
     if (showInitialSkeleton) {

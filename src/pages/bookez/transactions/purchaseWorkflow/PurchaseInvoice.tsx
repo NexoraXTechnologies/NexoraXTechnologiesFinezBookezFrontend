@@ -45,6 +45,7 @@ import ModulePageSkeleton, {
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 
 const defaultPagination = {
     offset: 0,
@@ -212,7 +213,8 @@ const PurchaseInvoice = () => {
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null,record: null, });
-
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    
     const getHeaderFieldByKey = (key: string) => {
         return templateFields?.header?.find((field: any) => field.key === key);
     };
@@ -1049,7 +1051,17 @@ const PurchaseInvoice = () => {
 
         return updatedRow;
     };
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
+
     const handleRowChange = (index: number, key: string, value: any) => {
+        const duplicate = Boolean(form?.products?.filter((e: any, i: number) => i !== index && e?.productCode == value)?.length);
+        if (!enableDuplicatePro && duplicate && (key === "productCode" || key === "productName" || key === "productId")) {
+            setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
+            return;
+        }
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
 
@@ -1594,6 +1606,14 @@ const PurchaseInvoice = () => {
     useEffect(() => {
         /* @ts-ignore  */
         dispatch(getAllReportMapping({ moduleType: "purchaseInvoice" }));
+
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
     }, []);
 
     if (showInitialSkeleton) {
