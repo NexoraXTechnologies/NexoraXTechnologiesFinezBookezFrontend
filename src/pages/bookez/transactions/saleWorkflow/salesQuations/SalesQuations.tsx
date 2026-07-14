@@ -172,10 +172,11 @@ const SalesQuotations = () => {
 
         setEditingRecord(true);
         setErrors({});
-        setForm({ sQuoteVoucherNumber: record?.sQuoteVoucherNumber || "AUTO", sQuoteVoucherDate: formatDateForInput(record?.sQuoteVoucherDate), sQuoteCustomerCode: record?.sQuoteCustomerCode || "", sQuoteCustomerName: record?.sQuoteCustomerName || "", sQuoteSalesAccount: record?.sQuoteSalesAccount || "SA021", sQuoteDocStatus: record?.sQuoteDocStatus || "open", sQuoteStatus: record?.sQuoteStatus || "draft", sQuoteRemark: record?.sQuoteRemark || "", sQuoteStatusRemark: record?.sQuoteStatusRemark || "", sQuoteStatusHistory: record?.sQuoteStatusHistory || [], isAutoPost: record?.isAutoPost || false, products, grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00", discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00", cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00", sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00", igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00", taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00", otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00", netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00" });
+        setForm({
+            sQuoteVoucherNumber: record?.sQuoteVoucherNumber || "AUTO", sQuoteVoucherDate: formatDateForInput(record?.sQuoteVoucherDate), sQuoteCustomerCode: record?.sQuoteCustomerCode || "", sQuoteCustomerName: record?.sQuoteCustomerName || "", sQuoteSalesAccount: record?.sQuoteSalesAccount || "SA021", sQuoteDocStatus: record?.sQuoteDocStatus || "open", sQuoteStatus: record?.sQuoteStatus || "draft", sQuoteRemark: record?.sQuoteRemark || "", sQuoteStatusRemark: record?.sQuoteStatusRemark || "", sQuoteStatusHistory: record?.sQuoteStatusHistory || [], isAutoPost: record?.isAutoPost || false, products, grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00", discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00", cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00", sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00", igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00", taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00", otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00", netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00", latitude: record?.sQuoteLocation?.lat, locationAddress: record?.sQuoteLocation?.address, longitude: record?.sQuoteLocation?.lng
+        });
         setShowModal(true);
     };
-
     const handleMainChange = (key: string, value: any) => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
@@ -327,8 +328,6 @@ const SalesQuotations = () => {
 
         const products = cleanRows();
         const footer = calculateFooter(products);
-        console.log({ form })
-        // return
         const payload: any = {
             sQuoteVoucherDate: form.sQuoteVoucherDate,
             sQuoteCustomerCode: form.sQuoteCustomerCode,
@@ -484,7 +483,6 @@ const SalesQuotations = () => {
         return locationConfig === true || locationConfig === "true";
     }, [configurations]);
 
-    console.log({ enableLocation })
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-quotation-header" className="mb-3 flex items-center">

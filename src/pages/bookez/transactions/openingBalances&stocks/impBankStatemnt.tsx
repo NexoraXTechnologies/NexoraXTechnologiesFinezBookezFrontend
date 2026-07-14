@@ -1052,8 +1052,7 @@ const ImportBankStatement = () => {
                                 </motion.div>
 
                                 <p className="text-sm font-medium text-card-foreground">
-                                    Drop bank
-                                    statement here
+                                    Drop bank statement here
                                 </p>
 
                                 <p className="mt-1 text-xs font-normal text-muted-foreground">
