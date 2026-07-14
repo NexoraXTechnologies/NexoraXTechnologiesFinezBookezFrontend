@@ -19,6 +19,7 @@ import Modal, { ListingModel } from "../../../../../components/modal";
 import { clearSelectedSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
+import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
@@ -75,6 +76,7 @@ const SalesOrder = () => {
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
     const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
@@ -277,6 +279,11 @@ const SalesOrder = () => {
         });
     };
 
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
+
     const handleRowChange = (index: number, key: string, value: any) => {
         const duplicate = Boolean(
             form?.products?.some((e: any, i: number) => {
@@ -289,7 +296,7 @@ const SalesOrder = () => {
             })
         );
 
-        if (key === "productCode" && duplicate) {
+        if (key === "productCode" && duplicate && !enableDuplicatePro) {
             setErrors((prev: any) => ({
                 ...prev,
                 products: "",
@@ -454,18 +461,6 @@ const SalesOrder = () => {
         }
     };
 
-    // const handleDeleteConfirm = async () => {
-    //     try {
-    //         if (!confirmTooltip.voucherNumber) return;
-    //         await dispatch(deleteSalesOrder(confirmTooltip.voucherNumber) as any).unwrap();
-    //         toast.success("Sales order deleted successfully");
-    //         fetchSalesOrders();
-    //     } catch (err: any) {
-    //         toast.error(err?.message || "Failed to delete sales order");
-    //     } finally {
-    //         setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
-    //     }
-    // };
 
     const handleDeleteConfirm = async () => {
         try {
@@ -544,6 +539,13 @@ const SalesOrder = () => {
     useEffect(() => {
         // @ts-ignore 
         dispatch(getAllReportMapping({ moduleType: "salesOrder" }))
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
     }, [])
 
     const isClosedSalesOrder = (record: any) => {

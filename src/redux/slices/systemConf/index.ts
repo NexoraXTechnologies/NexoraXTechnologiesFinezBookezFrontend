@@ -291,60 +291,37 @@ const buildConfigurationPayload = (configuration: any) => {
             enabled: !!baseMods?.[key]?.enabled,
         };
     }
-
+    console.log({ configuration })
     return {
-        configurationName:
-            configuration?.configurationName?.trim() ||
-            "Default System Config",
-
+        configurationName: configuration?.configurationName?.trim() || "Default System Config",
         status: configuration?.status || "active",
-
         systemConfiguration: {
             salesQuotation: {
-                enableLocation:
-                    !!configuration?.systemConfiguration?.salesQuotation
-                        ?.enableLocation,
+                enableLocation: !!configuration?.systemConfiguration?.salesQuotation?.enableLocation,
             },
-
             bankStatementConfiguration: {
-                enableBankStatementImport:
-                    !!configuration?.systemConfiguration
-                        ?.bankStatementConfiguration?.enableBankStatementImport,
+                enableBankStatementImport: !!configuration?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport,
             },
 
             allowDuplicateProduct:
-                !!configuration?.systemConfiguration?.allowDuplicateProduct,
+                !!configuration?.systemConfiguration?.productSettings?.allowDuplicateProduct,
 
             posConfiguration: {
-                enablePOSModule:
-                    !!configuration?.systemConfiguration?.posConfiguration
-                        ?.enablePOSModule,
+                enablePOSModule: !!configuration?.systemConfiguration?.posConfiguration?.enablePOSModule,
             },
 
             scrapManagement: {
-                enableScrapManagement:
-                    !!configuration?.systemConfiguration?.scrapManagement
-                        ?.enableScrapManagement,
+                enableScrapManagement: !!configuration?.systemConfiguration?.scrapManagement?.enableScrapManagement,
             },
 
             transportationModuleConfiguration: {
-                enableTransportationModule:
-                    !!configuration?.systemConfiguration
-                        ?.transportationModuleConfiguration
-                        ?.enableTransportationModule,
+                enableTransportationModule: !!configuration?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule,
             },
 
             whatsAppConfiguration: {
                 enableWhatsAppModule: !!wa?.enableWhatsAppModule,
-
-                provider: String(wa?.provider || "META")
-                    .trim()
-                    .toUpperCase(),
-
-                defaultLanguage: String(
-                    wa?.defaultLanguage || "en_US"
-                ).trim(),
-
+                provider: String(wa?.provider || "META").trim().toUpperCase(),
+                defaultLanguage: String(wa?.defaultLanguage || "en_US").trim(),
                 moduleConfiguration,
             },
         },

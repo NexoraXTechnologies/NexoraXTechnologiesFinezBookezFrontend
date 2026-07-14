@@ -88,12 +88,10 @@ const LocationSection = ({ form, handleChange }: Props) => {
                         type="button"
                         whileTap={{ scale: 0.97 }}
                         onClick={() => setShowMap((previous) => !previous)}
-                        className="flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-card px-4 text-sm font-medium text-card-foreground transition hover:bg-muted"
+                        className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-border bg-card px-4 text-sm font-medium text-card-foreground transition hover:bg-muted"
                     >
                         <MapPin size={16} />
-
                         {showMap ? "Hide Map" : "View Map"}
-
                         <motion.span
                             animate={{ rotate: showMap ? 180 : 0 }}
                             transition={{ duration: 0.2 }}
@@ -108,7 +106,7 @@ const LocationSection = ({ form, handleChange }: Props) => {
                 <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-3 rounded-xl border border-border bg-card p-3 text-card-foreground shadow-sm"
+                    className="mt-3 rounded-md border border-border bg-card p-3 text-card-foreground shadow-sm"
                 >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">

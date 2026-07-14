@@ -1,12 +1,5 @@
-import {
-    ChangeEvent,
-    DragEvent,
-    ReactNode,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+// @ts-ignore 
+import { ChangeEvent, DragEvent, ReactNode, useEffect, useMemo, useRef, useState, } from "react";
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -14,7 +7,6 @@ import {
     ArrowDownLeft,
     ArrowUpRight,
     BadgeIndianRupee,
-    Banknote,
     Building2,
     Check,
     ChevronDown,

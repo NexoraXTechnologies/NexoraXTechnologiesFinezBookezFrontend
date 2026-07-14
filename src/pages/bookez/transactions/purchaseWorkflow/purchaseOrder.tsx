@@ -16,6 +16,7 @@ import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Permission from "../../../../components/PermissionGuard";
 import { ListingModel } from "../../../../components/modal";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 
 const defaultPagination = {
     offset: 0,
@@ -158,6 +159,7 @@ const PurchaseOrder = () => {
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -488,6 +490,13 @@ const PurchaseOrder = () => {
     useEffect(() => {
         /* @ts-ignore  */
         dispatch(getAllReportMapping({ moduleType: "purchaseOrder" }));
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
     }, []);
 
     /* ===================================================
@@ -829,8 +838,22 @@ const PurchaseOrder = () => {
             };
         });
     };
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
+        if (duplicate && !enableDuplicatePro) {
+            setErrors((prev: any) => ({
+                ...prev,
+                products: "",
+                [`row_${index}_${key}`]: "This product already added",
+                [`row_${index}_tax`]: "",
+            }));
+            return;
+        }
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
