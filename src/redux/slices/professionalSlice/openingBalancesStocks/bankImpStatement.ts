@@ -160,14 +160,6 @@ const initialState: ImportBankStatementState = {
     error: null,
 };
 
-/* ===================================================
-   HELPER FUNCTIONS
-=================================================== */
-
-const toBoolean = (value: any): boolean => {
-    return value === true || String(value).toLowerCase() === "true";
-};
-
 const getErrorMessage = (
     error: any,
     fallbackMessage: string
