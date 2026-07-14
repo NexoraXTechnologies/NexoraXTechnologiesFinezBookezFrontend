@@ -3,9 +3,9 @@ import professionalAxios from "../services/professionalAxios";
 // export const todayYMD = () => new Date().toISOString().split("T")[0];
 
 export const todayYMD = () => {
-	const now = new Date();
-	now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-	return now.toISOString().slice(0, 10);
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 10);
 };
 
 
@@ -201,3 +201,8 @@ export const unwrapThunk = async (dispatch: any, action: any) => {
     return res?.payload ?? res;
 };
 
+
+export const truncate = (text: string = "", maxLength = 18) =>
+    text.length > maxLength
+        ? `${text.slice(0, maxLength)}...`
+        : text;

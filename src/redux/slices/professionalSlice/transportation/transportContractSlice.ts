@@ -5,7 +5,7 @@ type TransportContractState = {
 	limit?: number;
 	offset?: number;
 	search?: string;
-	tripStatus?: string;
+	status?: string;
 	priority?: string;
 };
 
@@ -52,7 +52,7 @@ export const getAllTransportContract = createAsyncThunk(
 			limit = 10,
 			offset = 0,
 			search = "",
-			tripStatus = "",
+			status = "",
 			priority = "",
 		}: TransportContractState = {},
 		{ rejectWithValue }
@@ -65,7 +65,7 @@ export const getAllTransportContract = createAsyncThunk(
 						limit,
 						offset,
 						search,
-						tripStatus,
+						status,
 						priority,
 					},
 				}

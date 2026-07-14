@@ -7,35 +7,21 @@ import {
     packagingOptions,
     ewayBillGeneratedByOptions,
 } from "../transportOrderOptions";
-import { useDispatch, useSelector } from "react-redux";
-import { useEffect } from "react";
-import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
-import { getAllProducts } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 
-const LoadStep = ({ form, update, updateNested }: any) => {
-    const dispatch = useDispatch<any>()
-    const { units = [] } = useSelector((state: any) => state.unitMaster)
-    const {products=[]}=useSelector((state:any)=> state.productMaster)
+
+const LoadStep = ({ form, update, updateNested, units = [], products = [] }: any) => {
+
     const unitOptions = units.map((item: any) => ({
-        label: item.unitName ,
-        value: item.unitName 
+        label: item.unitName,
+        value: item.unitName
     }))
 
-    const productOptions=products.map((item:any)=>({
-        label:item.productName ,
-        value:item.productName
+    const productOptions = products.map((item: any) => ({
+        label: item.productName,
+        value: item.productName
     }))
 
-    useEffect(() => {
-        dispatch(getAllUnits({
-            limit: 200,
-            offset: 0
-        }))
-        dispatch(getAllProducts({
-            limit:200,
-            offset:0
-        }))
-    }, [dispatch])
+   
     const updateLoadField = (key: string, value: any) => {
         if (key === "weight") {
             update("loadDetails", "weight", String(value).replace(/[^0-9]/g, ""));
@@ -120,7 +106,7 @@ const LoadStep = ({ form, update, updateNested }: any) => {
             label: "Material Name",
             type: "select",
             placeholder: "Enter material name",
-            options:productOptions,
+            options: productOptions,
             mandatory: true,
         },
         {

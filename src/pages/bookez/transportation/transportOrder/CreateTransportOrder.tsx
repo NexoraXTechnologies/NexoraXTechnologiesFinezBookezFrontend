@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -24,74 +24,12 @@ import TransportOrderStepper from "./component/TransportOrderStepper";
 import TransportOrderFooter from "./component/TransportOrderFooter";
 import { createTransportOrder, getTransportOrderByVoucherNumber, updateTransportOrderByVoucherNumber } from "../../../../redux/slices/professionalSlice/transportation/transportOrderSlice";
 import { formatDateForInput, formatDateTimeForInput } from "../../../../utils/helperFunctions";
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
+import { getAllTransportContract } from "../../../../redux/slices/professionalSlice/transportation/transportContractSlice";
+import { getStates } from "../../../../redux/slices/professionalSlice/stateCitySlice";
+import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
+import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 
-// const mergeTransportOrderWithInitial = (order: any) => {
-// 	const initial = createInitialTransportOrder();
-
-// 	return {
-// 		...initial,
-// 		...order,
-
-// 		contractDetails: {
-// 			...initial.contractDetails,
-// 			...(order?.contractDetails || {}),
-// 		},
-
-// 		customerDetails: {
-// 			...initial.customerDetails,
-// 			...(order?.customerDetails || {}),
-// 		},
-
-// 		loadDetails: {
-// 			...initial.loadDetails,
-// 			...(order?.loadDetails || {}),
-// 			ewayBillDetails: {
-// 				...initial.loadDetails.ewayBillDetails,
-// 				...(order?.loadDetails?.ewayBillDetails || {}),
-// 			},
-// 		},
-
-// 		pickupDetails: {
-// 			...initial.pickupDetails,
-// 			...(order?.pickupDetails || {}),
-// 		},
-
-// 		deliveryDetails: {
-// 			...initial.deliveryDetails,
-// 			...(order?.deliveryDetails || {}),
-// 		},
-
-// 		routeDetails: {
-// 			...initial.routeDetails,
-// 			...(order?.routeDetails || {}),
-// 		},
-
-// 		vehicleRequirement: {
-// 			...initial.vehicleRequirement,
-// 			...(order?.vehicleRequirement || {}),
-// 		},
-
-// 		freightDetails: {
-// 			...initial.freightDetails,
-// 			...(order?.freightDetails || {}),
-// 		},
-
-// 		brokerDetails: {
-// 			...initial.brokerDetails,
-// 			...(order?.brokerDetails || {}),
-// 		},
-
-// 		riskAndInsurance: {
-// 			...initial.riskAndInsurance,
-// 			...(order?.riskAndInsurance || {}),
-// 		},
-
-// 		trackingPreferences: {
-// 			...initial.trackingPreferences,
-// 			...(order?.trackingPreferences || {}),
-// 		},
-// 	};
-// };
 
 
 const mergeTransportOrderWithInitial = (order: any) => {
@@ -224,6 +162,428 @@ const CreateTransportOrder = () => {
 		(isEditMode
 			? "Update transport order details."
 			: "Create and manage transport orders for customer goods movement.");
+
+
+
+
+	const { accounts = [] } = useSelector((state: any) => state.accountMaster);
+	const { transportContract = [] } = useSelector((state: any) => state.transportContract);
+	const { states = [] } = useSelector((state: any) => state.stateCity || {});
+	const { units = [] } = useSelector((state: any) => state.unitMaster);
+	const { products = [] } = useSelector((state: any) => state.productMaster);
+
+	// fetch ALL shared reference data exactly once, here
+	useEffect(() => {
+		dispatch(getAllAccounts({ accountType: "customer" }));
+		dispatch(getAllTransportContract({ limit: 500, offset: 0 ,status:"active"  }));
+		// @ts-ignore
+		dispatch(getStates());
+		dispatch(getAllUnits({ limit: 200, offset: 0 }));
+		dispatch(getAllProducts({ limit: 200, offset: 0 }));
+	}, [dispatch]);
+
+	// This is the piece that was missing: a single place that knows how
+	// to spread ONE selected contract across MANY sections of the form.
+	// Adjust the right-hand-side field paths to match your actual
+	// transportContract schema (route/vehicle/freight defaults etc).
+	
+
+	const applyContractToForm = (contractRaw: any) => {
+	if (!contractRaw) return;
+
+	const customer = contractRaw?.customer || {};
+	const contractPeriod = contractRaw?.contractPeriod || {};
+	const tripCommitment = contractRaw?.tripCommitment || {};
+	const billingTerms = contractRaw?.billingTerms || {};
+	const customerCode =
+    customer?.customerCode || contractRaw?.customerCode || "";
+
+const account = (accounts || []).find(
+    (item: any) => String(item.accountCode) === String(customerCode)
+);
+
+	// Currently use the first route from the selected contract.
+	const selectedRoute =
+		Array.isArray(contractRaw?.routes) && contractRaw.routes.length > 0
+			? contractRaw.routes[0]
+			: {};
+
+	const totalTrips =
+		tripCommitment?.totalTrips ??
+		contractRaw?.totalTrips ??
+		"";
+
+	const completedTrips =
+		tripCommitment?.completedTrips ??
+		contractRaw?.completedTrips ??
+		0;
+
+	const remainingTrips =
+		tripCommitment?.balanceTrips ??
+		tripCommitment?.remainingTrips ??
+		Math.max(
+			Number(totalTrips || 0) - Number(completedTrips || 0),
+			0
+		);
+
+	const pickupLocation =
+		selectedRoute?.from ||
+		selectedRoute?.fromAddress ||
+		selectedRoute?.fromCityName ||
+		"";
+
+	const deliveryLocation =
+		selectedRoute?.to ||
+		selectedRoute?.toAddress ||
+		selectedRoute?.toCityName ||
+		"";
+
+	const routeRate =
+		selectedRoute?.rate !== undefined &&
+		selectedRoute?.rate !== null
+			? selectedRoute.rate
+			: "";
+
+	setForm((prev: any) => ({
+		...prev,
+
+		/* =====================================================
+		   CONTRACT DETAILS
+		===================================================== */
+		contractDetails: {
+			...prev.contractDetails,
+
+			contractNumber:
+				contractRaw?.contractNumber ||
+				contractRaw?.voucherNumber ||
+				"",
+
+			validityFrom: formatDateForInput(
+				contractPeriod?.startDate ||
+					contractRaw?.validityFrom ||
+					contractRaw?.periodStart
+			),
+
+			validityTo: formatDateForInput(
+				contractPeriod?.endDate ||
+					contractRaw?.validityTo ||
+					contractRaw?.periodEnd
+			),
+
+			totalTrips,
+			completedTrips,
+			remainingTrips,
+		},
+
+		/* =====================================================
+		   CUSTOMER DETAILS
+		===================================================== */
+		customerDetails: {
+    ...prev.customerDetails,
+
+    customerCode,
+
+    customerName:
+        account?.accountName ||
+        customer?.customerName ||
+        contractRaw?.customerName ||
+        "",
+
+    contactPerson:
+        account?.accountName ||
+        customer?.customerName ||
+        "",
+
+    gstNumber:
+        account?.gstNumber ||
+        account?.gst ||
+        account?.accountGSTNumber ||
+        customer?.gstNumber ||
+        "",
+
+    mobileNumber:
+        account?.mobileNumber ||
+        account?.mobile ||
+        account?.accountMobile ||
+        account?.accountMobileNumber ||
+        customer?.mobileNumber ||
+        "",
+
+    email:
+        account?.email ||
+        account?.accountEmail ||
+        account?.accountEmailId ||
+        customer?.email ||
+        "",
+},
+		/* =====================================================
+		   LOAD DETAILS
+		===================================================== */
+		loadDetails: {
+			...prev.loadDetails,
+
+			// FTL / PTL comes from the selected contract route.
+			loadType:
+				selectedRoute?.loadType ||
+				prev.loadDetails?.loadType ||
+				"",
+
+			// The contract does not currently contain material/product data.
+			// Existing manually entered material fields are preserved.
+			materialName:
+				selectedRoute?.materialName ||
+				prev.loadDetails?.materialName ||
+				"",
+
+			materialCategory:
+				selectedRoute?.materialCategory ||
+				prev.loadDetails?.materialCategory ||
+				"",
+
+			quantity:
+				selectedRoute?.quantity ??
+				prev.loadDetails?.quantity ??
+				"",
+
+			weight:
+				selectedRoute?.weight ??
+				prev.loadDetails?.weight ??
+				"",
+
+			weightUnit:
+				selectedRoute?.weightUnit ||
+				prev.loadDetails?.weightUnit ||
+				"",
+
+			packagingType:
+				selectedRoute?.packagingType ||
+				prev.loadDetails?.packagingType ||
+				"",
+
+			ewayBillDetails: {
+				...prev.loadDetails?.ewayBillDetails,
+			},
+		},
+
+		/* =====================================================
+		   PICKUP DETAILS
+		===================================================== */
+		pickupDetails: {
+			...prev.pickupDetails,
+
+			pickupLocation,
+
+			pickupAddress:
+				selectedRoute?.fromAddress ||
+				selectedRoute?.from ||
+				"",
+
+			pickupState:
+				selectedRoute?.fromState ||
+				prev.pickupDetails?.pickupState ||
+				null,
+
+			pickupStateCode:
+				selectedRoute?.fromStateCode ||
+				"",
+
+			pickupStateName:
+				selectedRoute?.fromStateName ||
+				"",
+
+			pickupCity:
+				selectedRoute?.fromCity ||
+				prev.pickupDetails?.pickupCity ||
+				null,
+
+			pickupCityName:
+				selectedRoute?.fromCityName ||
+				"",
+
+			pickupPincode:
+				selectedRoute?.fromPincode ||
+				"",
+
+			pickupLatitude:
+				selectedRoute?.fromLatitude ??
+				"",
+
+			pickupLongitude:
+				selectedRoute?.fromLongitude ??
+				"",
+
+			pickupPlaceId:
+				selectedRoute?.fromPlaceId ||
+				"",
+		},
+
+		/* =====================================================
+		   DELIVERY DETAILS
+		===================================================== */
+		deliveryDetails: {
+			...prev.deliveryDetails,
+
+			deliveryLocation,
+
+			deliveryAddress:
+				selectedRoute?.toAddress ||
+				selectedRoute?.to ||
+				"",
+
+			deliveryState:
+				selectedRoute?.toState ||
+				prev.deliveryDetails?.deliveryState ||
+				null,
+
+			deliveryStateCode:
+				selectedRoute?.toStateCode ||
+				"",
+
+			deliveryStateName:
+				selectedRoute?.toStateName ||
+				"",
+
+			deliveryCity:
+				selectedRoute?.toCity ||
+				prev.deliveryDetails?.deliveryCity ||
+				null,
+
+			deliveryCityName:
+				selectedRoute?.toCityName ||
+				"",
+
+			deliveryPincode:
+				selectedRoute?.toPincode ||
+				"",
+
+			deliveryLatitude:
+				selectedRoute?.toLatitude ??
+				"",
+
+			deliveryLongitude:
+				selectedRoute?.toLongitude ??
+				"",
+
+			deliveryPlaceId:
+				selectedRoute?.toPlaceId ||
+				"",
+		},
+
+		/* =====================================================
+		   VEHICLE REQUIREMENT
+		===================================================== */
+		vehicleRequirement: {
+			...prev.vehicleRequirement,
+
+			vehicleType:
+				selectedRoute?.vehicleType ||
+				prev.vehicleRequirement?.vehicleType ||
+				"",
+
+			vehicleBodyType:
+				selectedRoute?.vehicleBodyType ||
+				prev.vehicleRequirement?.vehicleBodyType ||
+				"",
+
+			vehicleCapacity:
+				selectedRoute?.vehicleCapacity ||
+				selectedRoute?.capacity ||
+				prev.vehicleRequirement?.vehicleCapacity ||
+				"",
+
+			numberOfVehicles:
+				selectedRoute?.numberOfVehicles ??
+				prev.vehicleRequirement?.numberOfVehicles ??
+				"",
+
+			specialVehicleRequirement:
+				selectedRoute?.specialVehicleRequirement ||
+				prev.vehicleRequirement?.specialVehicleRequirement ||
+				"",
+		},
+
+		/* =====================================================
+		   FREIGHT DETAILS
+		===================================================== */
+		freightDetails: {
+			...prev.freightDetails,
+
+			// Contract route contains one rate.
+			expectedFreight: routeRate,
+
+			// Fill freight per ton only when the rate type indicates per-ton.
+			freightPerTon:
+				String(selectedRoute?.rateType || "")
+					.toLowerCase()
+					.includes("ton")
+					? routeRate
+					: prev.freightDetails?.freightPerTon || "",
+
+			// Preserve advance because it is normally entered for this order.
+			advanceAmount:
+				prev.freightDetails?.advanceAmount || "",
+
+			paymentType:
+				selectedRoute?.paymentType ||
+				billingTerms?.paymentType ||
+				prev.freightDetails?.paymentType ||
+				"",
+
+			paymentMode:
+				selectedRoute?.paymentMode ||
+				billingTerms?.paymentMode ||
+				prev.freightDetails?.paymentMode ||
+				"",
+
+			// Optional supporting values if they exist in your initial state.
+			rateType:
+				selectedRoute?.rateType ||
+				prev.freightDetails?.rateType ||
+				"",
+
+			currency:
+				billingTerms?.currency ||
+				prev.freightDetails?.currency ||
+				"INR",
+
+			paymentDays:
+				billingTerms?.paymentDays ??
+				prev.freightDetails?.paymentDays ??
+				"",
+		},
+
+		/* =====================================================
+		   ROUTE DETAILS
+		===================================================== */
+		routeDetails: {
+			...prev.routeDetails,
+
+			routeCode:
+				selectedRoute?.routeCode ||
+				prev.routeDetails?.routeCode ||
+				"",
+
+			rateType:
+				selectedRoute?.rateType ||
+				prev.routeDetails?.rateType ||
+				"",
+
+			routeDistanceKm:
+				selectedRoute?.routeDistanceKm ??
+				selectedRoute?.distanceKm ??
+				prev.routeDetails?.routeDistanceKm ??
+				"",
+
+			expectedTollAmount:
+				selectedRoute?.expectedTollAmount ??
+				prev.routeDetails?.expectedTollAmount ??
+				"",
+		},
+	}));
+};
+
+
+
 
 	useEffect(() => {
 		if (!isEditMode) return;
@@ -370,6 +730,9 @@ const CreateTransportOrder = () => {
 						form={form}
 						setForm={setForm}
 						update={update}
+						accounts={accounts}
+						transportContract={transportContract}
+						onContractSelect={applyContractToForm}   // <-- key wiring
 					/>
 				);
 
@@ -379,6 +742,8 @@ const CreateTransportOrder = () => {
 						form={form}
 						update={update}
 						updateNested={updateNested}
+						units={units}
+						products={products}
 					/>
 				);
 
@@ -387,6 +752,7 @@ const CreateTransportOrder = () => {
 					<PickupStep
 						form={form}
 						update={update}
+						states={states}
 					/>
 				);
 

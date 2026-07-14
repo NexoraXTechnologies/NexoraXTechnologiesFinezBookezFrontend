@@ -45,6 +45,7 @@ import {
 import {
     formatDateForInput,
     formatDateTimeForInput,
+    truncate,
 } from "../../../../utils/helperFunctions";
 
 import { getProfessionalUsers } from "../../../../redux/slices/professionalSlice/professionalUserSlice";
@@ -565,6 +566,7 @@ const CreateTripAllocation = () => {
         });
     }, [filteredVehicles, vehicleSearch]);
 
+
     const transportOrderOptions = useMemo(
         () =>
             (transportOrders || [])
@@ -583,9 +585,16 @@ const CreateTripAllocation = () => {
                     return !allocatedOrderSet.has(voucher);
                 })
                 .map((order: any) => ({
-                    label: `${getTransportOrderVoucher(order)} - ${order?.customerDetails?.customerName || "-"
-                        } (${order?.pickupDetails?.pickupLocation || "-"} → ${order?.deliveryDetails?.deliveryLocation || "-"
-                        })`,
+                    label: `${getTransportOrderVoucher(order)} - ${truncate(
+                        order?.customerDetails?.customerName || "-",
+                        20
+                    )} (${truncate(
+                        order?.pickupDetails?.pickupLocation || "-",
+                        15
+                    )} → ${truncate(
+                        order?.deliveryDetails?.deliveryLocation || "-",
+                        15
+                    )})`,
                     value: getTransportOrderVoucher(order),
                 })),
         [
@@ -1485,18 +1494,18 @@ const CreateTripAllocation = () => {
     return (
         <div className="flex h-full w-full flex-col bg-background text-foreground">
             <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-4">
-              <div className="flex items-center">
+                <div className="flex items-center">
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
-                       	className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
-						title="Go back"
-					>
+                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                        title="Go back"
+                    >
                         <ArrowLeft size={20} />
                     </button>
 
                     <div>
-						<h1 className="truncate text-lg font-bold text-card-foreground">
+                        <h1 className="truncate text-lg font-bold text-card-foreground">
                             {pageTitle}
                         </h1>
 
