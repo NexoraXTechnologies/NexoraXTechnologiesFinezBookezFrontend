@@ -43,6 +43,7 @@ import ModulePageSkeleton, {
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 
 const defaultPagination = {
     offset: 0,
@@ -354,7 +355,7 @@ const Grn = () => {
     const [purchaseOrderLoaded, setPurchaseOrderLoaded] = useState(false);
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
-
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
     const [showReturnConfirmModal, setShowReturnConfirmModal] = useState(false);
     const [returnConfirmLoading, setReturnConfirmLoading] = useState(false);
     const [pendingReturnData, setPendingReturnData] = useState<any>(null);
@@ -1189,8 +1190,22 @@ const Grn = () => {
 
         return updatedRow;
     };
+    const enableDuplicatePro = useMemo(() => {
+        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
+        return locationConfig === true || locationConfig === "true";
+    }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
+        if (duplicate && !enableDuplicatePro) {
+            setErrors((prev: any) => ({
+                ...prev,
+                products: "",
+                [`row_${index}_${key}`]: "This product already added",
+                [`row_${index}_tax`]: "",
+            }));
+            return;
+        }
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
 
@@ -1363,9 +1378,6 @@ const Grn = () => {
             })
             .map((row: any) => calculateRow(normalizeRowKeys(row)));
     };
-
-
-
 
     const buildGrnBodyPayload = (products: any[]) => {
         return products.map((item: any) =>
@@ -1936,6 +1948,13 @@ const Grn = () => {
     useEffect(() => {
         /* @ts-ignore  */
         dispatch(getAllReportMapping({ moduleType: "grn" }));
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
     }, []);
 
     useEffect(() => {
