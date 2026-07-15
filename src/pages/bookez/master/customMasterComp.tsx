@@ -1,4 +1,4 @@
-import {  Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { deleteSingle, getCustomMasterListing, getCustomMasterSchema, updateCustomData, searchData, saveCustomData } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
@@ -12,13 +12,13 @@ import { PrimaryButton } from "../../../components/buttons";
 import Pagination from "../../../components/pagination";
 
 type CustomMasterCompProps = {
-  name?: string;
-  moduleCode?: string;
+	name?: string;
+	moduleCode?: string;
 };
 
 const CustomMasterComp = ({
-//   name = "Custom Master",
-  moduleCode = "",
+	//   name = "Custom Master",
+	moduleCode = "",
 }: CustomMasterCompProps) => {
 	const dispatch = useDispatch();
 	const {
@@ -32,13 +32,13 @@ const CustomMasterComp = ({
 	const [showModal, setShowModal] = useState(false);
 	const [edit, setEdit] = useState(false);
 	const [errors, setErrors] = useState({});
-	const [form, setForm]:any = useState({});
+	const [form, setForm]: any = useState({});
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [localOffset, setLocalOffset] = useState(0);
 	const [localLimit, setLocalLimit] = useState(10);
 
-	const [confirmTooltip, setConfirmTooltip]:any = useState({
+	const [confirmTooltip, setConfirmTooltip]: any = useState({
 		show: false,
 		x: null,
 		y: null,
@@ -141,6 +141,30 @@ const CustomMasterComp = ({
 			);
 		}
 
+
+		if (field.type === "date") {
+			return (
+				<TextInput
+					key={field.key}
+					// @ts-ignore
+					error={commonProps.error}
+					{...commonProps}
+					type="date"
+					value={
+						form[field.key]
+							? new Date(form[field.key]).toISOString().split("T")[0]
+							: ""
+					}
+					onChange={(e: any) =>
+						setForm({
+							...form,
+							[field.key]: e.target.value,
+						})
+					}
+				/>
+			);
+		}
+
 		if (field.type === "select") {
 			const options = field?.options?.reduce((a: any, c: any) => {
 				a.push({ label: c, value: c })
@@ -155,9 +179,10 @@ const CustomMasterComp = ({
 					placeholder={`Select ${field.label}`}
 					error={commonProps?.error}
 					onChange={(e: any) => {
-						setForm((pre:any) => ({ ...pre, [field?.key]: e?.target.value }))
+						setForm((pre: any) => ({ ...pre, [field?.key]: e?.target.value }))
 					}}
-					options={[{ label: `Select ${commonProps?.label}` }, ...options]}
+					options={[
+						...options]}
 				/>
 			);
 		}
@@ -258,7 +283,7 @@ const CustomMasterComp = ({
 				data={listing}
 				loading={loading}
 				emptyMessage="No data found"
-				actions={(acc:any) => (
+				actions={(acc: any) => (
 					<div className="flex items-center gap-2">
 						{/* EDIT */}
 						<button
@@ -274,11 +299,11 @@ const CustomMasterComp = ({
 						{/* DELETE */}
 						<button
 							id="account-delete-button"
-							onClick={(e:any) => {
+							onClick={(e: any) => {
 								const rect = e.currentTarget.getBoundingClientRect();
-								let x:any = rect.left - 150;
+								let x: any = rect.left - 150;
 								if (x < 10) x = 10;
-								const y:any = rect.top + window.scrollY - 5;
+								const y: any = rect.top + window.scrollY - 5;
 								setConfirmTooltip({ show: true, x, y, voucherNumber: acc.voucherNumber, });
 							}}
 							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
@@ -290,7 +315,7 @@ const CustomMasterComp = ({
 			/>
 
 			{pagination.totalDocs > 0 && <Pagination  {...{
-				localLimit, selectCb: (e:any) => {
+				localLimit, selectCb: (e: any) => {
 					setLocalLimit(Number(e.target.value));
 					setLocalOffset(0);
 				},
@@ -317,7 +342,7 @@ const CustomMasterComp = ({
 					}
 				/>
 			)}
-			 {/* @ts-ignore */}
+			{/* @ts-ignore */}
 			<Modal
 				{...{
 					show: showModal,
@@ -341,8 +366,8 @@ const CustomMasterComp = ({
 					),
 				}}
 			/>
-    </div>
-  );
+		</div>
+	);
 };
 
 export default CustomMasterComp;
