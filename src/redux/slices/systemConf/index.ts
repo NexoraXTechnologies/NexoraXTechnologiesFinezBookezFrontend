@@ -164,6 +164,13 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             enableTransportationModule: toBool(
                 raw?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule
             ),
+            advanceReceive: raw?.systemConfiguration?.transportationModuleConfiguration?.advanceReceive,
+            foodCost: raw?.systemConfiguration?.transportationModuleConfiguration?.foodCost,
+            petrolCost: raw?.systemConfiguration?.transportationModuleConfiguration?.petrolCost,
+            dieselCost: raw?.systemConfiguration?.transportationModuleConfiguration?.dieselCost,
+            runningCost: raw?.systemConfiguration?.transportationModuleConfiguration?.runningCost,
+            breakdownCost: raw?.systemConfiguration?.transportationModuleConfiguration?.breakdownCost,
+            otherCost: raw?.systemConfiguration?.transportationModuleConfiguration?.otherCost,
         },
 
         whatsAppConfiguration: {
@@ -350,6 +357,13 @@ const buildConfigurationPayload = (configuration: any) => {
 
             transportationModuleConfiguration: {
                 enableTransportationModule: !!configuration?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule,
+                advanceReceive: configuration?.systemConfiguration?.transportationModuleConfiguration?.advanceReceive,
+                foodCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.foodCost,
+                petrolCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.petrolCost,
+                dieselCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.dieselCost,
+                runningCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.runningCost,
+                breakdownCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.breakdownCost,
+                otherCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.otherCost,
             },
 
             whatsAppConfiguration: {
@@ -499,7 +513,7 @@ export const getLatestSystemConfiguration = createAsyncThunk(
 
                 return bTime - aTime;
             });
-
+            console.log({ sortedRecords: sortedRecords[0] })
             return normalizeSystemConfiguration(sortedRecords[0]);
         } catch (err: any) {
             return rejectWithValue({
@@ -1236,16 +1250,10 @@ const systemConfigurationSlice = createSlice({
 
             state.configuration.systemConfiguration.whatsAppConfiguration = {
                 ...wa,
-                provider:
-                    String(wa?.provider || "META")
-                        .trim()
-                        .toUpperCase() || "META",
-                defaultLanguage:
-                    String(wa?.defaultLanguage || "en_US").trim() || "en_US",
+                provider: String(wa?.provider || "META").trim().toUpperCase() || "META",
+                defaultLanguage: String(wa?.defaultLanguage || "en_US").trim() || "en_US",
                 enableWhatsAppModule: true,
-                moduleConfiguration: noneOn
-                    ? createModuleConfigurationTemplate(true)
-                    : mergedMods,
+                moduleConfiguration: noneOn ? createModuleConfigurationTemplate(true) : mergedMods,
             };
         },
 

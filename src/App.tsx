@@ -73,7 +73,7 @@ import WhereIsMyDriver from './pages/bookez/transportation/whereIsDriver';
 import LiveTripTracking from './pages/bookez/transportation/whereIsDriver/liveTrackMap';
 import CreateEditDriverSettlement from './pages/bookez/transportation/driverSettlement/CreateEditDriverSettlement';
 import DriverSettlementList from './pages/bookez/transportation/driverSettlement/DriverSettlementList';
-import PosPosting from './redux/slices/systemConf/posPosting';
+import PosPosting from './pages/setting/systemConfiguration/posPosting';
 
 function App() {
   useAppearance();

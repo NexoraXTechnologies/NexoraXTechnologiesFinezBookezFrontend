@@ -36,6 +36,8 @@ import {
     verifyWhatsAppMetaCredentials,
 } from "../../../redux/slices/systemConf";
 import { acceptRequestsUser, getDbAccessRequestsUser } from "../../../redux/slices/userExplorer";
+import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
+import { SelectInput } from "../../../components/inputs";
 
 /* ===================================================
    CONSTANTS
@@ -220,20 +222,10 @@ const SelectRow = ({
     );
 };
 
-const Panel = ({
-    title,
-    description,
-    children,
-    right,
-}: {
-    title: string;
-    description?: string;
-    children: ReactNode;
-    right?: ReactNode;
-}) => {
+const Panel = ({ title = "", description = "", children = <></>, right, isHeader = true }: { title: string; description?: string; children: ReactNode; right?: ReactNode; isHeader?: boolean; }) => {
     return (
         <div className="overflow-hidden rounded border border-border bg-card shadow-sm">
-            <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+            {isHeader && <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
                 <div>
                     <h3 className="text-base font-black text-card-foreground">
                         {title}
@@ -247,7 +239,7 @@ const Panel = ({
                 </div>
 
                 {right}
-            </div>
+            </div>}
 
             <div>{children}</div>
         </div>
@@ -335,8 +327,9 @@ const SystemConfiguration = () => {
     const systemConfig = configuration?.systemConfiguration || {};
     const inventoryConfig = configuration?.inventoryConfiguration || {};
     const financeConfig = configuration?.financeConfiguration || {};
+    const transportationModuleConfiguration = configuration?.systemConfiguration?.transportationModuleConfiguration || {};
     const whatsAppConfig = systemConfig?.whatsAppConfiguration || {};
-    console.log({ localUser })
+    const { accounts } = useSelector((s: any) => s.accountMaster);
     const acceptDbRequest = async ({ action, requestId }: any) => {
         setDbReqLoader(true);
         const res = await dispatch(acceptRequestsUser({ requestId, action }) as any);
@@ -344,7 +337,7 @@ const SystemConfiguration = () => {
         toast.success(res?.payload?.message)
         setDbReqLoader(false);
     }
-
+    console.log({ transportationModuleConfiguration })
     useEffect(() => {
         dispatch(getLatestSystemConfiguration());
     }, [dispatch]);
@@ -365,6 +358,7 @@ const SystemConfiguration = () => {
 
     useEffect(() => {
         localUser?.accountType !== "SUPER_ADMIN" && getDBAccessReq();
+        dispatch(getAllAccounts({ offset: 0, limit: 1000, accountType: "expense" }));
     }, []);
 
     useEffect(() => {
@@ -403,14 +397,14 @@ const SystemConfiguration = () => {
     );
 
     const updateSystemField = useCallback((section: string, key: string, value: any) => {
-            dispatch(
-                updateSystemConfigurationNestedField({
-                    section,
-                    key,
-                    value,
-                } as any)
-            );
-        },
+        dispatch(
+            updateSystemConfigurationNestedField({
+                section,
+                key,
+                value,
+            } as any)
+        );
+    },
         [dispatch]
     );
 
@@ -504,14 +498,7 @@ const SystemConfiguration = () => {
                 <Panel
                     title="Bank Statement Import"
                     description="Control bank statement import from system configuration."
-                    right={
-                        <BadgeStatus
-                            active={
-                                !!systemConfig?.bankStatementConfiguration
-                                    ?.enableBankStatementImport
-                            }
-                        />
-                    }
+                    right={<BadgeStatus active={!!systemConfig?.bankStatementConfiguration?.enableBankStatementImport} />}
                 >
                     <SettingRow
                         title="Enable Bank Statement Import"
@@ -877,38 +864,69 @@ const SystemConfiguration = () => {
             </Panel>
         );
     };
-
+    const getExpenseAccount = accounts?.map((e: any) => ({ label: e?.accountName, value: e?.accountCode, ...e }))
     const renderTransportationTab = () => {
-        console.log({ systemConfig })
         return (
-            <Panel
-                title="Book Transportation"
-                description="Control BookEZ transportation module availability."
-                right={
-                    <BadgeStatus
-                        active={
+            <>
+                <Panel
+                    title="Book Transportation"
+                    description="Control BookEZ transportation module availability."
+                    right={
+                        <BadgeStatus
+                            active={
+                                !!systemConfig?.transportationModuleConfiguration
+                                    ?.enableTransportationModule
+                            }
+                        />
+                    }
+                >
+                    <SettingRow
+                        title="Enable BookEZ Transportation"
+                        description="Allow transportation configuration in BookEZ."
+                        value={
                             !!systemConfig?.transportationModuleConfiguration
                                 ?.enableTransportationModule
                         }
+                        onChange={(value) =>
+                            updateSystemField(
+                                "transportationModuleConfiguration",
+                                "enableTransportationModule",
+                                value
+                            )
+                        }
                     />
-                }
-            >
-                <SettingRow
-                    title="Enable BookEZ Transportation"
-                    description="Allow transportation configuration in BookEZ."
-                    value={
-                        !!systemConfig?.transportationModuleConfiguration
-                            ?.enableTransportationModule
-                    }
-                    onChange={(value) =>
-                        updateSystemField(
-                            "transportationModuleConfiguration",
-                            "enableTransportationModule",
-                            value
-                        )
-                    }
-                />
-            </Panel>
+                </Panel>
+
+                <Panel title="Expenses"
+                    description="">
+                    {[{ label: "Advance Receive Account", key: "advanceReceive" }, { label: "Food Cost", key: "foodCost" }, { label: "Petrol Cost", key: "petrolCost" }, { label: "Diesel Cost", key: "dieselCost" }, { label: "Running Cost", key: "runningCost" }, { label: "Breakdown Cost", key: "breakdownCost" }, { label: "Other Cost", key: "otherCost" }]?.map(({ label, key }) => (
+                        <div className="flex px-5 my-3 flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <h4 className="text-sm font-semibold text-foreground">
+                                {label}
+                            </h4>
+
+                            <div className="w-full md:w-96">
+                                <SelectInput
+                                    name={key}
+                                    value={transportationModuleConfiguration?.[key]}
+                                    placeholder={`Select ${label}`}
+                                    options={getExpenseAccount}
+                                    mandatory
+                                    largeData
+                                    batchSize={100}
+                                    onChange={(event: any) => {
+                                        updateSystemField(
+                                            "transportationModuleConfiguration",
+                                            key,
+                                            String(event?.target?.value || "")
+                                        )
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    ))}
+                </Panel>
+            </>
         );
     };
 
@@ -944,7 +962,7 @@ const SystemConfiguration = () => {
         <div className="min-h-screen bg-background p-4 md:p-5">
             <div className="mx-auto max-w-[1400px] space-y-4">
                 <div className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-3">
                         <button
                             type="button"
                             onClick={() => window.history.back()}
@@ -1034,7 +1052,7 @@ const SystemConfiguration = () => {
                         ) : (
                             <>
                                 {renderActiveTabContent()}
-                                    {(activeTab !== "dbRequest") && <div className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                                {(activeTab !== "dbRequest") && <div className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                                     <div>
                                         <h3 className="text-sm font-black text-card-foreground">
                                             Save Changes
@@ -1068,7 +1086,7 @@ const SystemConfiguration = () => {
                                             "Save Configuration"
                                         )}
                                     </button>
-                                    </div>}
+                                </div>}
                             </>
                         )}
                     </main>

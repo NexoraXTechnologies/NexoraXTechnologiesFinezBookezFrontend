@@ -192,7 +192,6 @@ const AccountMaster = () => {
 	const findSelectedState = () => {
 		return states?.find((item: any) => {
 			const stateCode = item.isoCode || item.stateCode || item.code || "";
-
 			return stateCode === form.state;
 		});
 	};
