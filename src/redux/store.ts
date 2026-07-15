@@ -70,6 +70,7 @@ import transportContractReducer from "./slices/professionalSlice/transportation/
 import vehicleStatusReducer from "./slices/professionalSlice/transportation/vehicleStatusSlice"
 import whereIsMyDriverReducer from "./slices/professionalSlice/transportation/whereIsMyDriverSlice"
 import driverSettlementReducer from "./slices/professionalSlice/transportation/driverSettlementSlice";
+import transportRouteReducer from "./slices/professionalSlice/transportation/transportRoutes";
 
 // transport register
 import transportOrderRegisterReducer from "./slices/professionalSlice/bookEzRegister/transportOrderRegister";
@@ -169,6 +170,7 @@ export const store = configureStore({
     whereIsMyDriver: whereIsMyDriverReducer,
     transportContract: transportContractReducer,
     driverSettlement: driverSettlementReducer,
+    transportRoute:transportRouteReducer,
 
     // transport register
     transportOrderRegister: transportOrderRegisterReducer,
