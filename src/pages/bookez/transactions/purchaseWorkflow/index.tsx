@@ -1,12 +1,4 @@
-import {
-  ShoppingCart,
-  ClipboardList,
-  Truck,
-  RotateCcw,
-  ReceiptText,
-  WalletCards,
-
-} from "lucide-react";
+import { ShoppingCart, ClipboardList, Truck, RotateCcw, ReceiptText, WalletCards } from "lucide-react";
 import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
 import PurchaseOrder from "./purchaseOrder";
 import Grn from "./Grn";
@@ -21,7 +13,7 @@ const PurchaseWorkflowDashboard = () => {
   const dispatch = useDispatch();
   const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
-  const enableLocation = useMemo(() => {
+  const enablePayment = useMemo(() => {
     const locationConfig = configurations?.[0]?.financeConfiguration?.isActive
     return locationConfig === true || locationConfig === "true";
   }, [configurations]);
@@ -65,7 +57,7 @@ const PurchaseWorkflowDashboard = () => {
       icon: <ReceiptText size={22} />,
       permissionKey: "purchaseInvoice"
     },
-    ...(enableLocation ? [{
+    ...(enablePayment ? [{
       title: "Payment",
       description: "Create and manage payments.",
       component: Payment,

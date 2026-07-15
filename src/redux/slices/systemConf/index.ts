@@ -18,6 +18,11 @@ const WHATSAPP_MODULE_ORDER = [
     "payment",
 ];
 
+const BOOKEZ_API_PREFIX = "eTaxSolnMongoApiBackend";
+const POS_POSTING_API = `${BOOKEZ_API_PREFIX}/users/bookez/posPosting`;
+const ACCOUNT_MASTER_API = `${BOOKEZ_API_PREFIX}/accountMaster/getAllAccounts`;
+const POS_POSTING_KEYS = ["sales", "cash", "upi"] as const;
+
 const toBool = (value: any) => {
     return value === true || value === "true" || value === 1 || value === "1";
 };
@@ -37,9 +42,9 @@ const normalizeWhatsAppModuleConfiguration = (whatsAppSection: any) => {
     const src = whatsAppSection?.moduleConfiguration;
 
     const hasStructuredConfig = src && typeof src === "object" && WHATSAPP_MODULE_ORDER.some((key) => {
-            const item = src[key];
-            return item != null && typeof item === "object" && "enabled" in item;
-        });
+        const item = src[key];
+        return item != null && typeof item === "object" && "enabled" in item;
+    });
 
     if (!hasStructuredConfig) {
         return createModuleConfigurationTemplate(true);
@@ -247,6 +252,35 @@ const extractConfigurationRecords = (apiData: any) => {
 const extractPagination = (apiData: any, fallback: any) => {
     return apiData?.pagination || apiData?.data?.pagination || fallback;
 };
+
+
+const extractApiArray = (apiData: any, preferredKeys: string[]) => {
+    const roots = [
+        apiData,
+        apiData?.data,
+        apiData?.result,
+        apiData?.payload,
+        apiData?.data?.data,
+    ];
+
+    for (const root of roots) {
+        if (Array.isArray(root)) return root;
+
+        if (root && typeof root === "object") {
+            for (const key of preferredKeys) {
+                if (Array.isArray(root?.[key])) return root[key];
+            }
+        }
+    }
+
+    return [];
+};
+
+const extractPosPostingRecords = (apiData: any) =>
+    extractApiArray(apiData, ["records", "items", "posPostings"]);
+
+const extractAccountItems = (apiData: any) =>
+    extractApiArray(apiData, ["items", "records", "accounts"]);
 
 export const whatsAppMetaCredentialsHasData = (apiResponse: any) => {
     const root = unwrapApiRecord(apiResponse);
@@ -719,6 +753,278 @@ export const verifyWhatsAppMetaCredentials = createAsyncThunk(
 );
 
 /* ===================================================
+   POS POSTING APIS
+=================================================== */
+
+export const getAllPosPostings = createAsyncThunk(
+    "systemConfiguration/getAllPosPostings",
+    async (
+        {
+            offset = 0,
+            limit = 100,
+        }: {
+            offset?: number;
+            limit?: number;
+        } = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await professionalAxios.get(`${POS_POSTING_API}/getAll`, {
+                params: { offset, limit },
+            });
+
+            if (res?.data?.success === false) {
+                return rejectWithValue({
+                    message: res?.data?.message || "Failed to load POS posting configuration",
+                    status: res?.status,
+                });
+            }
+
+            const records = extractPosPostingRecords(res?.data);
+
+            return {
+                records,
+                pagination: extractPagination(res?.data, {
+                    offset,
+                    limit,
+                    totalDocs: records.length,
+                }),
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Failed to load POS posting configuration",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+export const getPosPostingAccountOptions = createAsyncThunk(
+    "systemConfiguration/getPosPostingAccountOptions",
+    async (_, { rejectWithValue }) => {
+        try {
+            const requestAccounts = (accountType: "sale" | "cash" | "bank") =>
+                professionalAxios.get(ACCOUNT_MASTER_API, {
+                    params: {
+                        accountType,
+                        offset: 0,
+                        limit: 200,
+                    },
+                });
+
+            const [salesRes, cashRes, bankRes] = await Promise.all([
+                requestAccounts("sale"),
+                requestAccounts("cash"),
+                requestAccounts("bank"),
+            ]);
+
+            const responses = [salesRes, cashRes, bankRes];
+            const failedResponse = responses.find(
+                (response) => response?.data?.success === false
+            );
+
+            if (failedResponse) {
+                return rejectWithValue({
+                    message:
+                        failedResponse?.data?.message ||
+                        "Failed to load POS account dropdowns",
+                    status: failedResponse?.status,
+                });
+            }
+
+            return {
+                sales: extractAccountItems(salesRes?.data),
+                cash: extractAccountItems(cashRes?.data),
+                bank: extractAccountItems(bankRes?.data),
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Failed to load POS account dropdowns",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+export const savePosPosting = createAsyncThunk(
+    "systemConfiguration/savePosPosting",
+    async ({ payload }: { payload: any }, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.post(
+                `${POS_POSTING_API}/save`,
+                payload
+            );
+
+            if (res?.data?.success === false) {
+                return rejectWithValue({
+                    message: res?.data?.message || "Failed to save POS posting",
+                    status: res?.status,
+                });
+            }
+
+            return {
+                message: res?.data?.message || "POS posting saved successfully",
+                data: res?.data?.data || res?.data,
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Failed to save POS posting",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+export const updatePosPosting = createAsyncThunk(
+    "systemConfiguration/updatePosPosting",
+    async (
+        {
+            commonId,
+            payload,
+        }: {
+            commonId: string;
+            payload: any;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const safeCommonId = encodeURIComponent(String(commonId || "").trim());
+
+            if (!safeCommonId) {
+                return rejectWithValue({
+                    message: "commonId is required to update POS posting",
+                    status: 400,
+                });
+            }
+
+            const res = await professionalAxios.put(
+                `${POS_POSTING_API}/update/${safeCommonId}`,
+                payload
+            );
+
+            if (res?.data?.success === false) {
+                return rejectWithValue({
+                    message: res?.data?.message || "Failed to update POS posting",
+                    status: res?.status,
+                });
+            }
+
+            return {
+                message: res?.data?.message || "POS posting updated successfully",
+                data: res?.data?.data || res?.data,
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Failed to update POS posting",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+export const saveOrUpdatePosPostingAccount = createAsyncThunk(
+    "systemConfiguration/saveOrUpdatePosPostingAccount",
+    async (
+        {
+            key,
+            account,
+        }: {
+            key: "sales" | "cash" | "upi";
+            account: any;
+        },
+        { dispatch, getState, rejectWithValue }
+    ) => {
+        try {
+            if (!POS_POSTING_KEYS.includes(key)) {
+                return rejectWithValue({
+                    message: "Invalid POS posting account type",
+                    status: 400,
+                });
+            }
+
+            if (!account?.accountCode) {
+                return rejectWithValue({
+                    message: "Please select a valid account",
+                    status: 400,
+                });
+            }
+
+            const rootState: any = getState();
+            const current = rootState?.systemConfiguration?.posPosting || null;
+
+            let result: any;
+            let mode: "save" | "update";
+
+            if (!current) {
+                mode = "save";
+                result = await dispatch(
+                    savePosPosting({
+                        payload: {
+                            [key]: account,
+                        },
+                    }) as any
+                ).unwrap();
+            } else {
+                const commonId = current?.commonId;
+
+                if (!commonId) {
+                    return rejectWithValue({
+                        message: "commonId missing in saved POS configuration",
+                        status: 400,
+                    });
+                }
+
+                mode = "update";
+                result = await dispatch(
+                    updatePosPosting({
+                        commonId,
+                        payload: {
+                            ...current,
+                            [key]: account,
+                        },
+                    }) as any
+                ).unwrap();
+            }
+
+            const refreshed: any = await dispatch(
+                getAllPosPostings({ offset: 0, limit: 100 }) as any
+            ).unwrap();
+
+            return {
+                mode,
+                key,
+                records: refreshed?.records || [],
+                message:
+                    result?.message ||
+                    (mode === "save"
+                        ? "POS posting saved successfully"
+                        : "POS posting updated successfully"),
+            };
+        } catch (err: any) {
+            return rejectWithValue({
+                message:
+                    err?.message ||
+                    err?.response?.data?.message ||
+                    "Failed to save POS posting",
+                status: err?.status || err?.response?.status,
+            });
+        }
+    }
+);
+
+/* ===================================================
    SLICE
 =================================================== */
 
@@ -749,6 +1055,25 @@ const systemConfigurationSlice = createSlice({
         whatsappVerified: false,
         whatsappMetaCredentials: null,
 
+        posPosting: null,
+        posPostingRecords: [],
+        posPostingPagination: {
+            offset: 0,
+            limit: 100,
+            totalDocs: 0,
+        },
+        posAccountOptions: {
+            sales: [],
+            cash: [],
+            bank: [],
+        },
+        posPostingLoading: false,
+        posAccountsLoading: false,
+        posPostingSaveLoading: false,
+        posPostingSavingKey: "",
+        posPostingError: null,
+        posPostingSuccessMessage: "",
+
         error: null,
         successMessage: "",
     },
@@ -763,6 +1088,41 @@ const systemConfigurationSlice = createSlice({
             state.saveLoading = false;
             state.updateLoading = false;
             state.whatsappVerifyLoading = false;
+            state.posPostingLoading = false;
+            state.posAccountsLoading = false;
+            state.posPostingSaveLoading = false;
+            state.posPostingSavingKey = "";
+            state.posPostingError = null;
+            state.posPostingSuccessMessage = "";
+        },
+
+        clearPosPostingError: (state) => {
+            state.posPostingError = null;
+        },
+
+        clearPosPostingSuccess: (state) => {
+            state.posPostingSuccessMessage = "";
+        },
+
+        resetPosPostingState: (state) => {
+            state.posPosting = null;
+            state.posPostingRecords = [];
+            state.posPostingPagination = {
+                offset: 0,
+                limit: 100,
+                totalDocs: 0,
+            };
+            state.posAccountOptions = {
+                sales: [],
+                cash: [],
+                bank: [],
+            };
+            state.posPostingLoading = false;
+            state.posAccountsLoading = false;
+            state.posPostingSaveLoading = false;
+            state.posPostingSavingKey = "";
+            state.posPostingError = null;
+            state.posPostingSuccessMessage = "";
         },
 
         clearSystemConfigurationError: (state) => {
@@ -1020,6 +1380,73 @@ const systemConfigurationSlice = createSlice({
                 state.whatsappMetaCredentials = null;
                 state.error = action.payload?.message;
             });
+
+        builder
+            .addCase(getAllPosPostings.pending, (state) => {
+                state.posPostingLoading = true;
+                state.posPostingError = null;
+            })
+            .addCase(getAllPosPostings.fulfilled, (state, action: any) => {
+                const records = action.payload?.records || [];
+
+                state.posPostingLoading = false;
+                state.posPostingRecords = records;
+                state.posPosting = records[0] || null;
+                state.posPostingPagination =
+                    action.payload?.pagination || state.posPostingPagination;
+            })
+            .addCase(getAllPosPostings.rejected, (state, action: any) => {
+                state.posPostingLoading = false;
+                state.posPosting = null;
+                state.posPostingRecords = [];
+                state.posPostingError = action.payload?.message;
+            });
+
+        builder
+            .addCase(getPosPostingAccountOptions.pending, (state) => {
+                state.posAccountsLoading = true;
+                state.posPostingError = null;
+            })
+            .addCase(getPosPostingAccountOptions.fulfilled, (state, action: any) => {
+                state.posAccountsLoading = false;
+                state.posAccountOptions = {
+                    sales: action.payload?.sales || [],
+                    cash: action.payload?.cash || [],
+                    bank: action.payload?.bank || [],
+                };
+            })
+            .addCase(getPosPostingAccountOptions.rejected, (state, action: any) => {
+                state.posAccountsLoading = false;
+                state.posAccountOptions = {
+                    sales: [],
+                    cash: [],
+                    bank: [],
+                };
+                state.posPostingError = action.payload?.message;
+            });
+
+        builder
+            .addCase(saveOrUpdatePosPostingAccount.pending, (state, action: any) => {
+                state.posPostingSaveLoading = true;
+                state.posPostingSavingKey = action.meta?.arg?.key || "";
+                state.posPostingError = null;
+                state.posPostingSuccessMessage = "";
+            })
+            .addCase(saveOrUpdatePosPostingAccount.fulfilled, (state, action: any) => {
+                const records = action.payload?.records || [];
+
+                state.posPostingSaveLoading = false;
+                state.posPostingSavingKey = "";
+                state.posPostingRecords = records;
+                state.posPosting = records[0] || null;
+                state.posPostingSuccessMessage =
+                    action.payload?.message || "POS posting saved successfully";
+            })
+            .addCase(saveOrUpdatePosPostingAccount.rejected, (state, action: any) => {
+                state.posPostingSaveLoading = false;
+                state.posPostingSavingKey = "";
+                state.posPostingError = action.payload?.message;
+            });
     },
 });
 
@@ -1037,6 +1464,9 @@ export const {
     setWhatsAppModuleEnabledLocal,
     enableWhatsAppWithDefaultModulesLocal,
     clearWhatsAppVerification,
+    clearPosPostingError,
+    clearPosPostingSuccess,
+    resetPosPostingState,
 } = systemConfigurationSlice.actions;
 
 export default systemConfigurationSlice.reducer;

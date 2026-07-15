@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
 	LogOut,
@@ -31,15 +31,18 @@ import ConfirmTooltip from "./common/ConfirmTooltip";
 import EZLogo from "../assets/Logo.EZ.png";
 import FinEzLogo from "../assets/FinEZ.png";
 import { isModuleEnabled } from "./PermissionGuard";
+import { useDispatch, useSelector } from "react-redux";
+import { getAllSystemConfigurations } from "../redux/slices/systemConf";
 
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [openMenus, setOpenMenus] = useState({});
 	const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
+	const dispatch = useDispatch();
+	const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
 	const navigate = useNavigate();
-	// const dispatchP = useDispatch();
 	const [confirm, setConfirm] = useState<{
 		show: boolean;
 		x: number | null;
@@ -87,6 +90,21 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			window.removeEventListener("resize", updateSidebarWidth);
 		};
 	}, [isExpanded]);
+
+	const enablePOS = useMemo(() => {
+		const locationConfig = configurations?.[0]?.systemConfiguration?.posConfiguration?.enablePOSModule
+		return locationConfig === true || locationConfig === "true";
+	}, [configurations]);
+
+	useEffect(() => {
+		dispatch(
+			getAllSystemConfigurations({
+				offset: 0,
+				limit: 100000,
+				status: "",
+			}) as any
+		);
+	}, [])
 
 	const menuItems = [
 		{
@@ -171,14 +189,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "allRegisters",
 							action: "view",
 						},
-						{
+						...(enablePOS ? [{
 							name: "POS",
 							path: "/bookEz/pos",
 							icon: <ShoppingCart size={20} />,
 							module: "bookez",
 							permissionKey: "allRegisters",
 							action: "view",
-						},
+						}] : [])
 					],
 				},
 			]

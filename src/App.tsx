@@ -73,6 +73,7 @@ import WhereIsMyDriver from './pages/bookez/transportation/whereIsDriver';
 import LiveTripTracking from './pages/bookez/transportation/whereIsDriver/liveTrackMap';
 import CreateEditDriverSettlement from './pages/bookez/transportation/driverSettlement/CreateEditDriverSettlement';
 import DriverSettlementList from './pages/bookez/transportation/driverSettlement/DriverSettlementList';
+import PosPosting from './redux/slices/systemConf/posPosting';
 
 function App() {
   useAppearance();
@@ -201,6 +202,7 @@ function App() {
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />
           <Route path="system-configuration" element={<SystemConfiguration />} />
+          <Route path="/bookEz/pos-posting" element={<PosPosting />} />
           <Route path="user-explorer" element={<UserExplorer />} />
           {/* incometax */}
           <Route path="incometax/form26as" element={<Form26AS />} />

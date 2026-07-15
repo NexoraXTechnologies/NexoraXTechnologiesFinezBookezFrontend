@@ -19,7 +19,7 @@ const SaleWorkflowDashboard = () => {
   const dispatch = useDispatch();
   const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
-  const enableLocation = useMemo(() => {
+  const enableReceipt = useMemo(() => {
     const locationConfig = configurations?.[0]?.financeConfiguration?.isActive
     return locationConfig === true || locationConfig === "true";
   }, [configurations]);
@@ -63,7 +63,7 @@ const SaleWorkflowDashboard = () => {
       icon: <RotateCcw size={22} />,
       permissionKey: "salesReturn"
     },
-    ...(enableLocation ? [{
+    ...(enableReceipt ? [{
       title: "Sales Receipt",
       description: "Manage sales return transactions.",
       component: SalesReceipt,
