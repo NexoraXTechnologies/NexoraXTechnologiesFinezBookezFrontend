@@ -32,6 +32,8 @@ import { getAllTripExpenses } from "../../../../redux/slices/professionalSlice/t
 import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
 import { createDriverSettlement, getDriverSettlementByVoucherNumber, updateDriverSettlement } from "../../../../redux/slices/professionalSlice/transportation/driverSettlementSlice";
 import { formatDateForInput, formatDateTime, formatMoney } from "../../../../utils/helperFunctions";
+import { addSalesReceipt } from "../../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
+import { addPayment } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
 
 const REMARKS_MAX = 200;
 
@@ -56,10 +58,6 @@ const normalizeText = (value: any) =>
     String(value || "")
         .trim()
         .toLowerCase();
-
-
-
-
 
 const getInputValue = (input: any) => {
     if (input?.target?.type === "checkbox") return input.target.checked;
@@ -185,30 +183,7 @@ const flattenChildUsers = (users: any[] = []) => {
    ORDER / TRIP / LR HELPERS
 =================================================== */
 
-const getOrderNumber = (record: any) =>
-    cleanText(
-        record?.orderNumber ||
-        record?.transportOrderNumber ||
-        record?.tOrderNumber ||
-        record?.tripNumber ||
-        record?.tripId ||
-        record?.allocationVoucherNumber ||
-        record?.tripAllocationVoucherNumber ||
-        record?.voucherNumber ||
-        record?.allocationNumber ||
-        record?.transportOrder?.transportOrderNumber ||
-        ""
-    );
 
-const getLRNumber = (record: any) =>
-    cleanText(
-        record?.lrNumber ||
-        record?.lrVoucherNumber ||
-        record?.tripLRCollectionVoucherNumber ||
-        record?.tripLREntryVoucherNumber ||
-        record?.voucherNumber ||
-        ""
-    );
 
 const getVehicleNumber = (record: any, fallback = "-") =>
     record?.vehicle?.vehicleNumber ||
@@ -218,36 +193,8 @@ const getVehicleNumber = (record: any, fallback = "-") =>
     record?.tripDetails?.vehicleNo ||
     fallback;
 
-const getRouteText = (record: any, fallback = "-") => {
-    const from =
-        record?.pickupDetails?.pickupLocation ||
-        record?.pickupDetails?.pickupCityName ||
-        record?.transportOrder?.pickupDetails?.pickupLocation ||
-        record?.route?.source ||
-        record?.route?.routeName?.split("-")?.[0] ||
-        record?.routesData?.pickupDetails?.pickupLocation ||
-        "";
 
-    const to =
-        record?.deliveryDetails?.deliveryLocation ||
-        record?.deliveryDetails?.deliveryCityName ||
-        record?.transportOrder?.deliveryDetails?.deliveryLocation ||
-        record?.route?.destination ||
-        record?.route?.routeName?.split("-")?.[1] ||
-        record?.routesData?.deliveryDetails?.deliveryLocation ||
-        "";
 
-    return from || to ? `${from || "-"} - ${to || "-"}` : fallback;
-};
-
-const getGoodsName = (record: any, fallback = "-") =>
-    record?.cargo?.productName ||
-    record?.goodsDetails?.goodsName ||
-    record?.goodsDetails?.productName ||
-    record?.cargoDetails?.productName ||
-    record?.transportOrder?.goodsDetails?.goodsName ||
-    [record?.cargo?.quantity, record?.cargo?.unit].filter(Boolean).join(" ") ||
-    fallback;
 
 const getDriverIdFromAny = (record: any) =>
     cleanText(
@@ -406,23 +353,27 @@ const buildOrderOptionsForDriver = ({
 
     const optionMap = new Map<string, any>();
 
-    const addOption = (orderNumber: string, base: any = {}) => {
-        const value = cleanText(orderNumber);
+    const addOption = (transportOrderNumber: string, base: any = {}) => {
+        const value = cleanText(transportOrderNumber);
 
         if (!value) return;
 
         const allocation =
-            base.allocation || findAllocationForTrip(activeAllocations, value);
+            base.allocation ||
+            findAllocationForTrip(activeAllocations, value);
 
         const tripExpense =
-            base.tripExpense || findTripExpenseForTrip(tripExpenses, value);
+            base.tripExpense ||
+            findTripExpenseForTrip(tripExpenses, value);
 
         const transportOrder =
             base.transportOrder ||
             allocation?.transportOrder ||
             findTransportOrderForTrip(transportOrders, value);
 
-        const lrEntry = base.lrEntry || findLREntryForTrip(lrEntries, value);
+        const lrEntry =
+            base.lrEntry ||
+            findLREntryForTrip(lrEntries, value);
 
         const vehicleNo =
             getVehicleNumber(allocation, "") ||
@@ -431,17 +382,15 @@ const buildOrderOptionsForDriver = ({
             getVehicleNumber(transportOrder, "") ||
             "-";
 
-        const lrNumber = getLRNumber(lrEntry);
-
-        const route =
-            getRouteText(allocation, "") ||
-            getRouteText(transportOrder, "") ||
-            getRouteText(lrEntry, "") ||
-            getRouteText(tripExpense, "") ||
-            "";
+        const tripStatus =
+            transportOrder?.tripStatus ||
+            allocation?.tripStatus ||
+            tripExpense?.tripStatus ||
+            transportOrder?.status ||
+            "Open";
 
         optionMap.set(value, {
-            label: `${value} • ${vehicleNo}${lrNumber ? ` • LR: ${lrNumber}` : ""}${route ? ` • ${route}` : ""
+            label: `${value} ${vehicleNo ? ` • ${vehicleNo} (${tripStatus})` : ""
                 }`,
             value,
             allocation,
@@ -451,48 +400,76 @@ const buildOrderOptionsForDriver = ({
         });
     };
 
+    /* ==========================================================
+       ACTIVE ALLOCATIONS
+    ========================================================== */
+
     for (const allocation of activeAllocations || []) {
         if (!isActiveTripRecord(allocation)) continue;
         if (!recordMatchesDriver(allocation, selectedDriver)) continue;
 
-        const orderNumber =
-            allocation?.transportOrder?.transportOrderNumber ||
-            allocation?.tripAllocationVoucherNumber ||
-            allocation?.tripNumber ||
-            allocation?.voucherNumber ||
-            "";
+        const transportOrder =
+            allocation?.transportOrder;
 
-        addOption(orderNumber, { allocation });
+        const orderNumber =
+            transportOrder?.transportOrderNumber || "";
+
+        addOption(orderNumber, {
+            allocation,
+            transportOrder,
+        });
     }
+
+    /* ==========================================================
+       TRIP EXPENSES
+    ========================================================== */
 
     for (const expense of tripExpenses || []) {
         if (!isActiveTripRecord(expense)) continue;
         if (!recordMatchesDriver(expense, selectedDriver)) continue;
 
+        const transportOrder =
+            findTransportOrderForTrip(
+                transportOrders,
+                expense?.transportOrderNumber
+            );
+
         const orderNumber =
-            expense?.tripId ||
-            expense?.tripNumber ||
-            expense?.allocationVoucherNumber ||
-            expense?.tripAllocationVoucherNumber ||
             expense?.transportOrderNumber ||
-            expense?.voucherNumber ||
+            transportOrder?.transportOrderNumber ||
             "";
 
-        addOption(orderNumber, { tripExpense: expense });
+        addOption(orderNumber, {
+            tripExpense: expense,
+            transportOrder,
+        });
     }
 
+    /* ==========================================================
+       LR ENTRIES
+    ========================================================== */
+
     for (const lr of lrEntries || []) {
+
+        const transportOrder =
+            lr?.transportOrder ||
+            findTransportOrderForTrip(
+                transportOrders,
+                lr?.transportOrderNumber
+            );
+
         const orderNumber =
             lr?.transportOrderNumber ||
-            lr?.tripNumber ||
-            lr?.orderNumber ||
-            lr?.transportOrder?.transportOrderNumber ||
+            transportOrder?.transportOrderNumber ||
             "";
 
         if (!orderNumber) continue;
 
-        const matchedAllocation = findAllocationForTrip(activeAllocations, orderNumber);
-        const matchedExpense = findTripExpenseForTrip(tripExpenses, orderNumber);
+        const matchedAllocation =
+            findAllocationForTrip(activeAllocations, orderNumber);
+
+        const matchedExpense =
+            findTripExpenseForTrip(tripExpenses, orderNumber);
 
         const matchedDriver =
             recordMatchesDriver(matchedAllocation, selectedDriver) ||
@@ -500,10 +477,17 @@ const buildOrderOptionsForDriver = ({
 
         if (!matchedDriver) continue;
 
-        addOption(orderNumber, { lrEntry: lr });
+        addOption(orderNumber, {
+            lrEntry: lr,
+            allocation: matchedAllocation,
+            tripExpense: matchedExpense,
+            transportOrder,
+        });
     }
 
-    return Array.from(optionMap.values());
+    return Array.from(optionMap.values()).sort((a, b) =>
+        a.value.localeCompare(b.value)
+    );
 };
 
 /* ===================================================
@@ -663,99 +647,195 @@ const mapSelectionToTripDetails = ({
     transportOrder,
     tripExpense,
     lrEntry,
-    driver,
+    
 }: any = {}) => {
     const summaryMeta = tripExpense ? computeTripExpenseSummary(tripExpense) : null;
 
-    const tripStatus = cleanText(
-        tripExpense?.tripStatus ||
-        allocation?.tripStatus ||
-        transportOrder?.tripStatus ||
-        transportOrder?.status ||
-        "-"
-    )
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
+    // const tripStatus = cleanText(
+    //     tripExpense?.tripStatus ||
+    //     allocation?.tripStatus ||
+    //     transportOrder?.tripStatus ||
+    //     transportOrder?.status ||
+    //     "-"
+    // )
+    //     .replace(/_/g, " ")
+    //     .replace(/\b\w/g, (c) => c.toUpperCase());
 
     if (!allocation && !transportOrder && !tripExpense && !lrEntry) return null;
 
     return {
-        tripNo:
-            getOrderNumber(lrEntry) ||
-            getOrderNumber(tripExpense) ||
-            getOrderNumber(allocation) ||
-            getOrderNumber(transportOrder) ||
-            "-",
+        // ==========================
+        // LR DETAILS ONLY
+        // ==========================
 
-        lrNo: getLRNumber(lrEntry) || tripExpense?.lrNumber || "-",
+        lrNo: lrEntry?.lrNumber || "-",
+        lrDate: lrEntry?.lrDate || "",
+
+        tripNo: lrEntry?.tripNumber || "-",
 
         tripDate:
-            lrEntry?.loading?.loadingDateTime ||
-            lrEntry?.createdAt ||
-            tripExpense?.tripDate ||
-            allocation?.tripPlan?.plannedStartDateTime ||
-            transportOrder?.orderDate ||
-            "",
+            lrEntry?.loading?.loadingDateTime || "",
 
-        lrDate: lrEntry?.lrDate || tripExpense?.lrDate || "",
+        customerCode:
+            lrEntry?.customer?.customerCode || "",
 
-        from:
-            lrEntry?.route?.source ||
-            lrEntry?.route?.routeName?.split("-")?.[0] ||
-            allocation?.transportOrder?.pickupDetails?.pickupLocation ||
-            transportOrder?.pickupDetails?.pickupLocation ||
-            tripExpense?.routesData?.pickupDetails?.pickupLocation ||
-            "-",
+        customerName:
+            lrEntry?.customer?.customerName || "",
 
-        to:
-            lrEntry?.route?.destination ||
-            lrEntry?.route?.routeName?.split("-")?.[1] ||
-            allocation?.transportOrder?.deliveryDetails?.deliveryLocation ||
-            transportOrder?.deliveryDetails?.deliveryLocation ||
-            tripExpense?.routesData?.deliveryDetails?.deliveryLocation ||
-            "-",
+        tripStatus:
+            lrEntry?.tripStatus || "-",
+
+        // ==========================
+        // CONSIGNOR
+        // ==========================
 
         consignor:
-            lrEntry?.consignor?.name ||
-            allocation?.transportOrder?.customerDetails?.customerName ||
-            transportOrder?.customerDetails?.customerName ||
-            "-",
+            lrEntry?.consignor?.name || "",
+
+        consignorAddress:
+            lrEntry?.consignor?.address || "",
+
+        consignorCity:
+            lrEntry?.consignor?.location?.city || "",
+
+        consignorState:
+            lrEntry?.consignor?.location?.state || "",
+
+        // ==========================
+        // CONSIGNEE
+        // ==========================
 
         consignee:
-            lrEntry?.consignee?.name ||
-            allocation?.transportOrder?.deliveryDetails?.consigneeName ||
-            transportOrder?.deliveryDetails?.consigneeName ||
-            "-",
+            lrEntry?.consignee?.name || "",
+
+        consigneeAddress:
+            lrEntry?.consignee?.address || "",
+
+        consigneeCity:
+            lrEntry?.consignee?.location?.city || "",
+
+        consigneeState:
+            lrEntry?.consignee?.location?.state || "",
+
+        // ==========================
+        // ROUTE
+        // ==========================
+
+        from:
+            lrEntry?.route?.source || "",
+
+        to:
+            lrEntry?.route?.destination || "",
+
+        routeCode:
+            lrEntry?.route?.routeCode || "",
+
+        routeName:
+            lrEntry?.route?.routeName || "",
+
+        distanceKm:
+            lrEntry?.route?.distanceKm || "",
+
+        // ==========================
+        // VEHICLE
+        // ==========================
+
+        vehicleCode:
+            lrEntry?.vehicle?.vehicleCode || "",
 
         vehicleNo:
-            getVehicleNumber(allocation, "") ||
-            getVehicleNumber(tripExpense, "") ||
-            getVehicleNumber(lrEntry, "") ||
-            getVehicleNumber(transportOrder, "") ||
-            "-",
+            lrEntry?.vehicle?.vehicleNumber || "",
 
-        goods:
-            getGoodsName(lrEntry, "") ||
-            getGoodsName(allocation?.transportOrder, "") ||
-            getGoodsName(transportOrder, "") ||
-            getGoodsName(tripExpense, "") ||
-            "-",
+        vehicleType:
+            lrEntry?.vehicle?.vehicleType || "",
+
+        // ==========================
+        // DRIVER
+        // ==========================
+
+        driverCode:
+            lrEntry?.driver?.driverCode || "",
 
         driverName:
-            driver?.driverName ||
-            tripExpense?.driver?.driverName ||
-            allocation?.driverAllocation?.driverName ||
-            lrEntry?.driver?.driverName ||
-            "-",
+            lrEntry?.driver?.driverName || "",
 
-        tripStatus,
-        totalTripExpense: summaryMeta?.totalTripExpense ?? 0,
-        balanceAmount: summaryMeta?.balanceAmount ?? 0,
-        expectedFreight: Number(
-            transportOrder?.freightDetails?.expectedFreight ||
-            allocation?.transportOrder?.freightDetails?.expectedFreight ||
-            0
-        ),
+        // ==========================
+        // CARGO
+        // ==========================
+
+        productCode:
+            lrEntry?.cargo?.productCode || "",
+
+        goods:
+            lrEntry?.cargo?.productName || "",
+
+        quantity:
+            lrEntry?.cargo?.quantity || "",
+
+        unit:
+            lrEntry?.cargo?.unit || "",
+
+        weight:
+            lrEntry?.cargo?.weight || "",
+
+        weightUnit:
+            lrEntry?.cargo?.weightUnit || "",
+
+        // ==========================
+        // FREIGHT
+        // ==========================
+
+        agreedFreight:
+            Number(lrEntry?.freight?.agreedFreight || 0),
+
+        advancePaid:
+            Number(lrEntry?.freight?.advancePaid || 0),
+
+        balancePayable:
+            Number(lrEntry?.freight?.balancePayable || 0),
+
+        paymentType:
+            lrEntry?.freight?.paymentType || "",
+
+        // ==========================
+        // LOADING
+        // ==========================
+
+        loadingDateTime:
+            lrEntry?.loading?.loadingDateTime || "",
+
+        loadingPoint:
+            lrEntry?.loading?.loadingPoint || "",
+
+        // ==========================
+        // DELIVERY
+        // ==========================
+
+        expectedDeliveryDateTime:
+            lrEntry?.delivery?.expectedDeliveryDateTime || "",
+
+        // ==========================
+        // DOCUMENTS
+        // ==========================
+
+        documents:
+            lrEntry?.documents || [],
+
+        remarks:
+            lrEntry?.remarks || "",
+
+        // ==========================
+        // DRIVER SETTLEMENT ONLY
+        // ==========================
+
+        totalTripExpense:
+            summaryMeta?.totalTripExpense ?? 0,
+
+        balanceAmount:
+            summaryMeta?.balanceAmount ?? 0,
+
+        expectedFreight:
+            Number(lrEntry?.freight?.agreedFreight || 0),
     };
 };
 
@@ -827,6 +907,8 @@ const buildSettlementFromSelections = ({
         settlement,
     };
 };
+
+
 
 const isTripPendingAccept = (tripExpense: any) => {
     const status = normalizeText(
@@ -941,8 +1023,6 @@ const CreateEditDriverSettlement = () => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
 
-    // NOTE: adjust the param name to whatever your route actually uses
-    // (e.g. useParams<{ id: string }>() -> const { id: voucherNumber } = useParams())
     const { voucherNumber } = useParams<{ voucherNumber: string }>();
     const isEditMode = Boolean(voucherNumber);
 
@@ -974,6 +1054,8 @@ const CreateEditDriverSettlement = () => {
     const [paymentMode, setPaymentMode] = useState("");
     const [paymentDate, setPaymentDate] = useState(formatDateForInput(new Date()));
     const [remarks, setRemarks] = useState("");
+    const [paymentAccountCode, setPaymentAccountCode] = useState("");
+    const [paymentAccountName, setPaymentAccountName] = useState("");
 
     // Edit-mode state
     const [editRecord, setEditRecord] = useState<any>(null);
@@ -1026,7 +1108,12 @@ const CreateEditDriverSettlement = () => {
         try {
             setPageLoading(true);
 
-            const [ordersRes , expenseRes, lrRes] = await Promise.all([
+            const [
+                ordersRes,
+                allocationsRes,
+                lrRes,
+                expenseRes,
+            ] = await Promise.all([
                 unwrapThunk(
                     dispatch,
                     getTransportOrders({
@@ -1046,17 +1133,16 @@ const CreateEditDriverSettlement = () => {
 
                 unwrapThunk(
                     dispatch,
-                    getAllTripExpenses({
+                    getAllLRCollection({
                         limit: 100000,
                         offset: 0,
                         search: "",
-                        // parentUserMobileNumber: parentMobile,
                     }) as any
                 ),
 
                 unwrapThunk(
                     dispatch,
-                    getAllLRCollection({
+                    getAllTripExpenses({
                         limit: 100000,
                         offset: 0,
                         search: "",
@@ -1064,13 +1150,21 @@ const CreateEditDriverSettlement = () => {
                 ),
             ]);
 
-            setTransportOrders(getApiList(ordersRes));
-            setTripExpenses(getApiList(expenseRes));
-            setLrEntries(getApiList(lrRes));
+            const orders = getApiList(ordersRes);
+            const allocations = getApiList(allocationsRes);
+            const expenses = getApiList(expenseRes);
+            const lrList = getApiList(lrRes);
 
-            // activeAllocations is kept in redux like Trip Allocation screen.
-            // Dispatch result above only refreshes the slice.
-            // console.log("Settlement allocations:", getApiList(allocationRes));
+            setTransportOrders(orders);
+            setTripExpenses(expenses);
+            setLrEntries(lrList);
+
+            console.log("Orders:", orders.length);
+            console.log("Allocations:", allocations.length);
+            console.log("Trip Expenses:", expenses.length);
+            console.log("LR Entries:", lrList.length);
+            console.log("Sample LR:", lrList[0]);
+
         } catch (error: any) {
             toast.error(error?.message || "Failed to load settlement data");
             setTransportOrders([]);
@@ -1203,9 +1297,6 @@ const CreateEditDriverSettlement = () => {
         orderOptions.find((item: any) => item.value === selectedTripId) || null;
 
     useEffect(() => {
-        // In edit mode the settlement's trip may already be closed out and
-        // therefore absent from the live "open trips" option list — don't
-        // clear it out in that case, we render its details from editRecord.
         if (isEditMode) return;
 
         if (
@@ -1244,6 +1335,14 @@ const CreateEditDriverSettlement = () => {
             findLREntryForTrip(lrEntries, selectedTripId),
         [selectedOrderOption, lrEntries, selectedTripId]
     );
+
+
+    console.log("selectedTripId", selectedTripId);
+    console.log("selectedOrderOption", selectedOrderOption);
+    console.log("selectedAllocation", selectedAllocation);
+    console.log("selectedTransportOrder", selectedTransportOrder);
+    console.log("selectedTripExpense", selectedTripExpense);
+    console.log("selectedLREntry", selectedLREntry);
 
     const liveSettlementData = useMemo(
         () =>
@@ -1392,6 +1491,8 @@ const CreateEditDriverSettlement = () => {
         incentives,
         paymentMode,
         paymentDate,
+        paymentAccountCode,
+        paymentAccountName,
         remarks,
     };
 
@@ -1415,6 +1516,16 @@ const CreateEditDriverSettlement = () => {
 
         if (key === "paymentDate") {
             setPaymentDate(value);
+            return;
+        }
+
+        if (key === "paymentAccountCode") {
+            setPaymentAccountCode(value);
+            return;
+        }
+
+        if (key === "paymentAccountName") {
+            setPaymentAccountName(value);
             return;
         }
 
@@ -1481,6 +1592,52 @@ const CreateEditDriverSettlement = () => {
 
     const tripDetails = settlementData.tripDetails;
 
+
+
+    const getSettlementVoucherNumber = (
+        response: any,
+        fallback = ""
+    ) => {
+        return (
+            response?.data?.settlement?.settlementNumber ||
+            response?.data?.record?.settlementNumber ||
+            response?.data?.settlementNumber ||
+            response?.data?.voucherNumber ||
+            response?.settlementNumber ||
+            response?.voucherNumber ||
+            fallback
+        );
+    };
+
+    const getPaymentVoucherNumber = (response: any) => {
+        return (
+            response?.data?.payment?.payVoucherNumber ||
+            response?.data?.record?.payVoucherNumber ||
+            response?.data?.payVoucherNumber ||
+            response?.data?.voucherNumber ||
+            response?.payVoucherNumber ||
+            response?.voucherNumber ||
+            ""
+        );
+    };
+
+    const getReceiptVoucherNumber = (response: any) => {
+        return (
+            response?.data?.receipt?.recVoucherNumber ||
+            response?.data?.record?.recVoucherNumber ||
+            response?.data?.recVoucherNumber ||
+            response?.data?.voucherNumber ||
+            response?.recVoucherNumber ||
+            response?.voucherNumber ||
+            ""
+        );
+    };
+
+  
+  
+
+
+
     const handleSave = async () => {
         if (!selectedDriverId) {
             toast.warn("Please select a driver");
@@ -1505,12 +1662,63 @@ const CreateEditDriverSettlement = () => {
         try {
             setPageLoading(true);
 
-            const payload = {
-                transportOrderNumber:
-                    selectedTransportOrder?.transportOrderNumber ||
-                    selectedTripId,
+            const calculatedNetPayable = Number(
+                settlementData?.settlement?.netPayable || 0
+            );
 
-                driverCode: driverDetail.driverId || selectedDriver?.driverId,
+            const expenseAmount = Number(
+                settlementData?.totalAllowedExpenses ??
+                settlementData?.totalExpenses ??
+                settlementData?.settlement?.allowedExpenses ??
+                0
+            );
+
+            const freightAmount = Number(
+                tripDetails?.expectedFreight ||
+                selectedTransportOrder?.freightDetails?.expectedFreight ||
+                selectedAllocation?.transportOrder?.freightDetails
+                    ?.expectedFreight ||
+                selectedAllocation?.transportOrder?.expectedFreight ||
+                0
+            );
+
+            const driverAccountCode =
+                driverDetail?.driverId ||
+                selectedDriver?.driverId ||
+                selectedDriverId ||
+                "";
+
+            const driverAccountName =
+                driverDetail?.driverName ||
+                selectedDriver?.driverName ||
+                tripDetails?.driverName ||
+                driverAccountCode;
+
+            const customerAccountCode =
+                selectedAllocation?.transportOrder?.customerCode ||
+                selectedAllocation?.transportOrder?.customerDetails
+                    ?.customerCode ||
+                selectedTransportOrder?.customerDetails?.customerCode ||
+                selectedTransportOrder?.customerCode ||
+                "";
+
+            const customerAccountName =
+                selectedAllocation?.transportOrder?.customerName ||
+                selectedAllocation?.transportOrder?.customerDetails
+                    ?.customerName ||
+                selectedTransportOrder?.customerDetails?.customerName ||
+                selectedTransportOrder?.customerName ||
+                customerAccountCode;
+
+            const transportOrderNumber =
+                selectedTransportOrder?.transportOrderNumber ||
+                selectedAllocation?.transportOrder?.transportOrderNumber ||
+                selectedTripId;
+
+            const payload: any = {
+                transportOrderNumber,
+
+                driverCode: driverAccountCode,
 
                 salary: Number(salary || 0),
 
@@ -1528,14 +1736,10 @@ const CreateEditDriverSettlement = () => {
                     settlementData?.settlement?.totalAdvances || 0
                 ),
 
-                netPayableToDriver: Number(
-                    settlementData?.settlement?.netPayable || 0
-                ),
+                netPayableToDriver: calculatedNetPayable,
 
                 paymentMode,
-
                 paymentDate,
-
                 remarks,
 
                 lrDetails: {
@@ -1551,47 +1755,399 @@ const CreateEditDriverSettlement = () => {
                     consignee: tripDetails?.consignee || "",
                     vehicleNo: tripDetails?.vehicleNo || "",
                     goods: tripDetails?.goods || "",
+
+                    expectedFreight: freightAmount,
+
                     totalTripExpense:
                         settlementData?.totalExpenses || 0,
+
                     balance:
                         tripDetails?.balanceAmount || 0,
                 },
 
-                expenses: settlementData?.expenseRows || [],
+                expenses:
+                    settlementData?.expenseRows || [],
 
-                advances: settlementData?.advanceRows || [],
+                advances:
+                    settlementData?.advanceRows || [],
             };
 
-            if (isEditMode) {
-                // console.log("Driver Settlement Update Payload", payload);
+            /* =====================================================
+               EDIT MODE
+               Prevent duplicate Payment and Receipt vouchers.
+            ===================================================== */
 
+            if (isEditMode) {
                 await dispatch(
                     updateDriverSettlement({
-                        voucherNumber: editRecord?.settlementNumber || voucherNumber,
+                        voucherNumber:
+                            editRecord?.settlementNumber ||
+                            voucherNumber,
+
                         payload,
                     }) as any
                 ).unwrap();
 
-                toast.success("Driver Settlement Updated Successfully");
-            } else {
-                // console.log("Driver Settlement Payload", payload);
+                toast.success(
+                    "Driver Settlement Updated Successfully"
+                );
 
-                await dispatch(createDriverSettlement(payload) as any).unwrap();
+                navigate(
+                    "/bookEz/transportation/driver-settlement"
+                );
 
-                toast.success("Driver Settlement Created Successfully");
+                return;
             }
 
-            navigate("/bookEz/transportation/driver-settlement");
+            /* =====================================================
+               CREATE DRIVER SETTLEMENT
+            ===================================================== */
+
+            const settlementResponse = await dispatch(
+                createDriverSettlement(payload) as any
+            ).unwrap();
+
+            const settlementNumber =
+                getSettlementVoucherNumber(
+                    settlementResponse
+                );
+
+            if (!settlementNumber) {
+                throw new Error(
+                    "Settlement created, but settlement number was not returned"
+                );
+            }
+
+            let paymentVoucherNumber = "";
+            let receiptVoucherNumber = "";
+
+            /* =====================================================
+               CREATE PAYMENT FOR ALL TRIP EXPENSES
+            ===================================================== */
+
+            if (expenseAmount > 0) {
+                if (!driverAccountCode) {
+                    throw new Error(
+                        "Driver account code is required to create expense payment"
+                    );
+                }
+
+                if (!driverAccountName) {
+                    throw new Error(
+                        "Driver account name is required to create expense payment"
+                    );
+                }
+
+                const paymentPayload: any = {
+                    payVoucherNumber: "AUTO",
+                    payVoucherDate: paymentDate,
+
+                    payAccountCode: customerAccountCode,
+                    payAccountName: customerAccountName,
+
+                    // payStatus: "close",
+
+                    payRemark:
+                        remarks ||
+                        `Trip expense payment against Driver Settlement ${settlementNumber}`,
+
+                    paymentMode,
+                    bankReferenceNumber: "",
+                    paidBy: "",
+
+                    payBody: [
+                        {
+                            id: Date.now(),
+
+                            accountCode: driverAccountCode,
+                            accountName: driverAccountName,
+
+                            amount: String(expenseAmount),
+                            netAmount: String(expenseAmount),
+
+                            references: [
+                                {
+                                    referenceType: "NEW",
+                                    adjustedAmount:
+                                        String(expenseAmount),
+                                },
+                            ],
+
+                            remarks:
+                                `Trip expense payment against settlement ${settlementNumber}`,
+                        },
+                    ],
+
+                    payFooter: {
+                        netAmount: String(expenseAmount),
+                        adjustedAmount: String(expenseAmount),
+                        balanceAmount: "0",
+                    },
+
+                    sourceModule: "DRIVER_SETTLEMENT",
+                    sourceVoucherNumber:
+                        settlementNumber,
+
+                    transportOrderNumber,
+
+                    transactionPurpose:
+                        "TRIP_EXPENSE_PAYMENT",
+                };
+
+                const paymentResponse = await dispatch(
+                    addPayment({
+                        payload: paymentPayload,
+                    }) as any
+                ).unwrap();
+
+                paymentVoucherNumber =
+                    getPaymentVoucherNumber(
+                        paymentResponse
+                    );
+
+                if (!paymentVoucherNumber) {
+                    console.warn(
+                        "Expense payment created, but voucher number was not returned",
+                        paymentResponse
+                    );
+                }
+            }
+
+            /* =====================================================
+               CREATE RECEIPT FOR EXPECTED FREIGHT
+            ===================================================== */
+
+            if (freightAmount > 0) {
+                if (!customerAccountCode) {
+                    throw new Error(
+                        "Customer account code is required to create freight receipt"
+                    );
+                }
+
+                if (!customerAccountName) {
+                    throw new Error(
+                        "Customer account name is required to create freight receipt"
+                    );
+                }
+
+                const receiptPayload: any = {
+                    recVoucherNumber: "AUTO",
+                    recVoucherDate: paymentDate,
+
+                    recAccountCode: customerAccountCode,
+                    recAccountName: customerAccountName,
+
+                    // recStatus: "close",
+
+                    recRemark:
+                        remarks ||
+                        `Freight receipt against Driver Settlement ${settlementNumber}`,
+
+                    paymentMode,
+                    bankReferenceNumber: "",
+                    receivedBy: "",
+
+                    recBody: [
+                        {
+                            id: Date.now(),
+
+                            accountCode:
+                                customerAccountCode,
+
+                            accountName:
+                                customerAccountName,
+
+                            amount: String(freightAmount),
+                            netAmount: String(freightAmount),
+
+                            references: [
+                                {
+                                    referenceType: "NEW",
+                                    adjustedAmount:
+                                        String(freightAmount),
+                                },
+                            ],
+
+                            remarks:
+                                `Freight receipt against settlement ${settlementNumber}`,
+                        },
+                    ],
+
+                    recFooter: {
+                        netAmount: String(freightAmount),
+                        adjustedAmount:
+                            String(freightAmount),
+                        balanceAmount: "0",
+                    },
+
+                    sourceModule: "DRIVER_SETTLEMENT",
+                    sourceVoucherNumber:
+                        settlementNumber,
+
+                    transportOrderNumber,
+
+                    transactionPurpose:
+                        "FREIGHT_RECEIPT",
+                };
+
+                const receiptResponse = await dispatch(
+                    addSalesReceipt({
+                        payload: receiptPayload,
+                    }) as any
+                ).unwrap();
+
+                receiptVoucherNumber =
+                    getReceiptVoucherNumber(
+                        receiptResponse
+                    );
+
+                if (!receiptVoucherNumber) {
+                    console.warn(
+                        "Freight receipt created, but voucher number was not returned",
+                        receiptResponse
+                    );
+                }
+            }
+
+            /* =====================================================
+               LINK ACCOUNTING VOUCHERS TO SETTLEMENT
+            ===================================================== */
+
+            const expensePaymentStatus =
+                expenseAmount <= 0
+                    ? "NOT_REQUIRED"
+                    : paymentVoucherNumber
+                        ? "CREATED"
+                        : "VOUCHER_NUMBER_PENDING";
+
+            const freightReceiptStatus =
+                freightAmount <= 0
+                    ? "NOT_REQUIRED"
+                    : receiptVoucherNumber
+                        ? "CREATED"
+                        : "VOUCHER_NUMBER_PENDING";
+
+            const accountingStatus =
+                expenseAmount <= 0 &&
+                    freightAmount <= 0
+                    ? "NOT_REQUIRED"
+                    : (
+                        (
+                            expenseAmount <= 0 ||
+                            Boolean(paymentVoucherNumber)
+                        ) &&
+                        (
+                            freightAmount <= 0 ||
+                            Boolean(receiptVoucherNumber)
+                        )
+                    )
+                        ? "CREATED"
+                        : "PARTIALLY_CREATED";
+
+            await dispatch(
+                updateDriverSettlement({
+                    voucherNumber: settlementNumber,
+
+                    payload: {
+                        ...payload,
+
+                        paymentVoucherNumber,
+                        receiptVoucherNumber,
+
+                        accountingReferences: {
+                            expensePayment: {
+                                voucherNumber:
+                                    paymentVoucherNumber,
+
+                                amount:
+                                    expenseAmount,
+
+                                accountCode:
+                                    driverAccountCode,
+
+                                accountName:
+                                    driverAccountName,
+
+                                status:
+                                    expensePaymentStatus,
+                            },
+
+                            freightReceipt: {
+                                voucherNumber:
+                                    receiptVoucherNumber,
+
+                                amount:
+                                    freightAmount,
+
+                                accountCode:
+                                    customerAccountCode,
+
+                                accountName:
+                                    customerAccountName,
+
+                                status:
+                                    freightReceiptStatus,
+                            },
+                        },
+
+                        accountingStatus,
+                    },
+                }) as any
+            ).unwrap();
+
+            /* =====================================================
+               SUCCESS MESSAGE
+            ===================================================== */
+
+            if (
+                expenseAmount > 0 &&
+                freightAmount > 0
+            ) {
+                toast.success(
+                    `Settlement created with Payment ${paymentVoucherNumber || ""
+                    } and Receipt ${receiptVoucherNumber || ""
+                    }`
+                );
+            } else if (expenseAmount > 0) {
+                toast.success(
+                    paymentVoucherNumber
+                        ? `Settlement and Expense Payment ${paymentVoucherNumber} created successfully`
+                        : "Settlement and Expense Payment created successfully"
+                );
+            } else if (freightAmount > 0) {
+                toast.success(
+                    receiptVoucherNumber
+                        ? `Settlement and Freight Receipt ${receiptVoucherNumber} created successfully`
+                        : "Settlement and Freight Receipt created successfully"
+                );
+            } else {
+                toast.success(
+                    "Driver Settlement created. No expense payment or freight receipt was required."
+                );
+            }
+
+            navigate(
+                "/bookEz/transportation/driver-settlement"
+            );
         } catch (error: any) {
+            console.error(
+                "Driver settlement accounting error:",
+                error
+            );
+
             toast.error(
+                error?.payload?.message ||
+                error?.response?.data?.message ||
                 error?.message ||
-                `Failed to ${isEditMode ? "update" : "create"} driver settlement`
+                `Failed to ${isEditMode
+                    ? "update"
+                    : "create"
+                } driver settlement`
             );
         } finally {
             setPageLoading(false);
         }
     };
-
     return (
         <div className="flex h-full w-full flex-col bg-card shadow-sm">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-4 py-3">
