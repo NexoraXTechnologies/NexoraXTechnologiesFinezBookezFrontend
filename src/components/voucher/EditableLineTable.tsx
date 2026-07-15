@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 import { SelectInput, TextInput } from "../inputs";
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 import { AnimatePresence, motion } from "framer-motion";
@@ -57,18 +57,26 @@ const EditableLineTable = ({
     RefrenceBtnText,
     emptyText = "No data found",
 }: EditableLineTableProps) => {
-    const getReferenceButtonText = (row: any, rowIndex: number) => {
-        if (typeof RefrenceBtnText === "function") {
-            return RefrenceBtnText(row, rowIndex);
-        }
+    // const getReferenceButtonText = (row: any, rowIndex: number) => {
+    //     if (typeof RefrenceBtnText === "function") {
+    //         return RefrenceBtnText(row, rowIndex);
+    //     }
 
-        if (RefrenceBtnText) {
-            return RefrenceBtnText;
-        }
+    //     if (RefrenceBtnText) {
+    //         return RefrenceBtnText;
+    //     }
 
-        return Array.isArray(row?.references) && row.references.length > 0
-            ? "Edit Reference"
-            : "Add Reference";
+    //     return Array.isArray(row?.references) && row.references.length > 0
+    //         ? "Edit Reference"
+    //         : "Add Reference";
+    // };
+
+    const getReferenceIcon = (row: any) => {
+        return Array.isArray(row?.references) && row.references.length > 0 ? (
+            <Edit size={16} />
+        ) : (
+            <Plus size={16} />
+        );
     };
 
     const getColumnLabel = (col: EditableColumn) => {
@@ -348,18 +356,126 @@ const EditableLineTable = ({
 
                     {/* RIGHT FIXED ACTION COLUMN */}
                     {!isView && (
-                        <div className="relative z-[30] border-l border-border bg-card">
+                        // <div className="relative z-[30] border-l border-border bg-card">
+                        //     <div
+                        //         className="
+                        //             flex items-center justify-center
+                        //             border-b border-border bg-secondary
+                        //             px-3 text-center text-xs font-bold uppercase tracking-wide text-secondary-foreground
+                        //         "
+                        //         style={{ height: HEADER_HEIGHT }}
+                        //     >
+                        //         Action
+                        //     </div>
+
+                        //     {!rows.length ? (
+                        //         <div
+                        //             className="border-b border-border bg-card"
+                        //             style={{ minHeight: "120px" }}
+                        //         />
+                        //     ) : (
+                        //         <AnimatePresence initial={false}>
+                        //             {rows.map((row, rowIndex) => (
+                        //                 <motion.div
+                        //                     key={row.id || rowIndex}
+                        //                     layout
+                        //                     initial={{ opacity: 0, y: 4 }}
+                        //                     animate={{ opacity: 1, y: 0 }}
+                        //                     exit={{ opacity: 0, y: -4 }}
+                        //                     transition={{
+                        //                         duration: 0.16,
+                        //                         ease: "easeOut",
+                        //                     }}
+                        //                     className="
+                        //                         flex items-center justify-center
+                        //                         border-b border-border bg-card
+                        //                         px-3 py-3
+                        //                         transition-colors
+                        //                         hover:bg-muted
+                        //                     "
+                        //                     style={{ minHeight: ROW_HEIGHT }}
+                        //                 >
+                        //                     <div className="flex w-full items-center justify-center gap-2">
+                        //                         {isRefrenceAction && (
+                        //                             <button
+                        //                                 type="button"
+                        //                                 onClick={() =>
+                        //                                     onRefrenceRow(rowIndex, row)
+                        //                                 }
+                        //                                 className="
+                        //                                     inline-flex items-center justify-center gap-1.5
+                        //                                     rounded-lg
+                        //                                     border border-primary/20
+                        //                                     bg-primary/10
+                        //                                     px-3 py-1.5
+                        //                                     text-xs font-semibold text-primary
+                        //                                     transition
+                        //                                     hover:border-primary/30 hover:bg-primary/20 hover:text-primary
+                        //                                     active:scale-[0.98]
+                        //                                 "
+                        //                             >
+                        //                                 <Plus size={14} />
+
+                        //                                 <span className="whitespace-nowrap">
+                        //                                     {getReferenceButtonText(
+                        //                                         row,
+                        //                                         rowIndex
+                        //                                     )}
+                        //                                 </span>
+                        //                             </button>
+                        //                         )}
+
+                        //                         <button
+                        //                             type="button"
+                        //                             onClick={() => onDeleteRow(rowIndex)}
+                        //                             className="
+                        //                                 inline-flex h-8 w-8 items-center justify-center
+                        //                                 rounded-lg
+                        //                                 border border-danger/20
+                        //                                 bg-danger/10
+                        //                                 text-danger
+                        //                                 transition
+                        //                                 hover:border-danger/30 hover:bg-danger/20 hover:text-danger
+                        //                                 active:scale-[0.96]
+                        //                             "
+                        //                             title="Delete"
+                        //                         >
+                        //                             <Trash2 size={16} />
+                        //                         </button>
+                        //                     </div>
+                        //                 </motion.div>
+                        //             ))}
+                        //         </AnimatePresence>
+                        //     )}
+                        // </div>
+
+                        <div
+                            className="
+                                relative z-[30]
+                                min-w-fit
+                                border-l border-border
+                                bg-card
+                            "
+                        >
+                            {/* Header */}
                             <div
                                 className="
                                     flex items-center justify-center
-                                    border-b border-border bg-secondary
-                                    px-3 text-center text-xs font-bold uppercase tracking-wide text-secondary-foreground
+                                    border-b border-border
+                                    bg-secondary
+                                    px-2 sm:px-3
+                                    text-center
+                                    text-[10px] sm:text-xs
+                                    font-bold uppercase tracking-wide
+                                    text-secondary-foreground
+                                    whitespace-nowrap
                                 "
                                 style={{ height: HEADER_HEIGHT }}
                             >
                                 Action
                             </div>
 
+                            {/* Empty state */}
                             {!rows.length ? (
                                 <div
                                     className="border-b border-border bg-card"
@@ -380,57 +496,73 @@ const EditableLineTable = ({
                                             }}
                                             className="
                                                 flex items-center justify-center
-                                                border-b border-border bg-card
-                                                px-3 py-3
+                                                border-b border-border
+                                                bg-card
+                                                px-1.5 py-2
+                                                sm:px-2 sm:py-3
                                                 transition-colors
                                                 hover:bg-muted
                                             "
                                             style={{ minHeight: ROW_HEIGHT }}
                                         >
-                                            <div className="flex w-full items-center justify-center gap-2">
+                                            <div
+                                                className="
+                                                    flex w-full
+                                                    flex-wrap
+                                                    items-center justify-center
+                                                    gap-1.5 sm:gap-2
+                                                "
+                                            >
                                                 {isRefrenceAction && (
                                                     <button
                                                         type="button"
-                                                        onClick={() =>
-                                                            onRefrenceRow(rowIndex, row)
-                                                        }
+                                                        onClick={() => onRefrenceRow(rowIndex, row)}
                                                         className="
-                                                            inline-flex items-center justify-center gap-1.5
+                                                            inline-flex
+                                                            h-8 w-8
+                                                            items-center
+                                                            justify-center
                                                             rounded-lg
                                                             border border-primary/20
                                                             bg-primary/10
-                                                            px-3 py-1.5
-                                                            text-xs font-semibold text-primary
+                                                            text-primary
                                                             transition
-                                                            hover:border-primary/30 hover:bg-primary/20 hover:text-primary
+                                                            hover:border-primary/30
+                                                            hover:bg-primary/20
                                                             active:scale-[0.98]
                                                         "
+                                                        title={
+                                                            Array.isArray(row?.references) && row.references.length > 0
+                                                                ? "Edit Reference"
+                                                                : "Add Reference"
+                                                        }
                                                     >
-                                                        <Plus size={14} />
-
-                                                        <span className="whitespace-nowrap">
-                                                            {getReferenceButtonText(
-                                                                row,
-                                                                rowIndex
-                                                            )}
-                                                        </span>
+                                                        {getReferenceIcon(row)}
                                                     </button>
                                                 )}
 
                                                 <button
                                                     type="button"
-                                                    onClick={() => onDeleteRow(rowIndex)}
+                                                    onClick={() =>
+                                                        onDeleteRow(rowIndex)
+                                                    }
                                                     className="
-                                                        inline-flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        border border-danger/20
-                                                        bg-danger/10
-                                                        text-danger
-                                                        transition
-                                                        hover:border-danger/30 hover:bg-danger/20 hover:text-danger
-                                                        active:scale-[0.96]
-                                                    "
+                                                            inline-flex
+                                                            h-7 w-7
+                                                            shrink-0
+                                                            items-center justify-center
+                                                            rounded-lg
+                                                            border border-danger/20
+                                                            bg-danger/10
+                                                            text-danger
+                                                            transition
+                                                            sm:h-8 sm:w-8
+                                                            hover:border-danger/30
+                                                            hover:bg-danger/20
+                                                            active:scale-[0.96]
+                                                        "
                                                     title="Delete"
+                                                    aria-label={`Delete row ${rowIndex + 1}`}
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
