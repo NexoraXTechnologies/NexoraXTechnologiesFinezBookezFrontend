@@ -120,6 +120,11 @@ const parseNumber = (value: any) => {
     return Number.isFinite(number) ? number : 0;
 };
 
+const normalizeOwnershipKey = (value: any) =>
+    String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
+
 const getStatusKey = (value: any) =>
     String(value || "")
         .toLowerCase()
@@ -222,6 +227,17 @@ const normalizeDriverUsers = (users: any[] = []) => {
         });
 };
 
+/**
+ * NOTE ON STATUS/OWNERSHIP FIELDS:
+ * Vehicles coming from tripAllocationSlice's getVehicleMasterVehicles are
+ * ALREADY mapped by mapVehicleMasterRecord() into a normalized shape where
+ * the live status lives at `availabilityStatus` (NOT `current_status` --
+ * that key only survives inside `rawRecord`). Same story for ownership: it
+ * is not mapped at all upstream, so we fall back through several possible
+ * raw key names AND the (currently absent) mapped key, so this keeps
+ * working whether the vehicle object is the raw custom-master record or the
+ * already-mapped Redux vehicle object.
+ */
 const normalizeVehicle = (vehicle: any = {}) => {
     const selectedVehicleId =
         vehicle?.selectedVehicleId ||
@@ -232,6 +248,16 @@ const normalizeVehicle = (vehicle: any = {}) => {
         vehicle?.vehicleCode ||
         vehicle?.vehicle_number ||
         vehicle?.vehicleNumber ||
+        "";
+
+    const vehicleOwnership =
+        vehicle?.vehicleOwnership ||
+        vehicle?.ownership ||
+        vehicle?.ownershipType ||
+        vehicle?.ownership_type ||
+        vehicle?.owner_type ||
+        vehicle?.vehicle_ownership ||
+        vehicle?.rawRecord?.ownership_type ||
         "";
 
     const vehicleNumber =
@@ -259,10 +285,11 @@ const normalizeVehicle = (vehicle: any = {}) => {
         0;
 
     const availabilityStatus =
-
         vehicle?.current_status ||
-
-
+        vehicle?.currentStatus ||
+        vehicle?.availability_status ||
+        vehicle?.availabilityStatus ||
+        vehicle?.rawRecord?.current_status ||
         "Available";
 
     return {
@@ -279,9 +306,11 @@ const normalizeVehicle = (vehicle: any = {}) => {
             vehicle?.currentLocation ||
             vehicle?.current_location ||
             vehicle?.location ||
+            vehicle?.rawRecord?.location ||
             "",
 
         availabilityStatus,
+        vehicleOwnership,
 
         vehicleBodyType:
             vehicle?.vehicleBodyType ||
@@ -376,6 +405,7 @@ const filterVehicles = ({
     vehicles,
     transportOrder,
     vehicleTypeFilter,
+    vehicleOwnershipFilter,
     capacityFilter,
     locationFilter,
 }: any) => {
@@ -386,6 +416,11 @@ const filterVehicles = ({
     return (vehicles || [])
         .map(normalizeVehicle)
         .filter((vehicle: any) => {
+            // Only ever show vehicles whose current status is Available/Active
+            if (!isAvailableVehicleStatus(vehicle?.availabilityStatus)) {
+                return false;
+            }
+
             if (
                 minimumCapacity > 0 &&
                 parseNumber(vehicle?.availableCapacityTon) < minimumCapacity
@@ -401,9 +436,17 @@ const filterVehicles = ({
             }
 
             if (
+                vehicleOwnershipFilter &&
+                normalizeOwnershipKey(vehicle?.vehicleOwnership) !==
+                normalizeOwnershipKey(vehicleOwnershipFilter)
+            ) {
+                return false;
+            }
+
+            if (
                 locationFilter &&
-                String(vehicle?.currentLocation || "").trim() !==
-                String(locationFilter || "").trim()
+                String(vehicle?.currentLocation || "").trim().toLowerCase() !==
+                String(locationFilter || "").trim().toLowerCase()
             ) {
                 return false;
             }
@@ -464,6 +507,7 @@ const CreateTripAllocation = () => {
     const [form, setForm] = useState<any>(createInitialTripAllocation());
     const [pageLoading, setPageLoading] = useState(false);
 
+    const [vehicleOwnershipFilter, setVehicleOwnershipFilter] = useState("");
     const [vehicleTypeFilter, setVehicleTypeFilter] = useState("");
     const [capacityFilter, setCapacityFilter] = useState("");
     const [locationFilter, setLocationFilter] = useState("");
@@ -517,6 +561,7 @@ const CreateTripAllocation = () => {
             filterVehicles({
                 vehicles: normalizedVehicles,
                 transportOrder: form.transportOrder,
+                vehicleOwnershipFilter,
                 vehicleTypeFilter,
                 capacityFilter,
                 locationFilter,
@@ -525,6 +570,7 @@ const CreateTripAllocation = () => {
             normalizedVehicles,
             form.transportOrder,
             vehicleTypeFilter,
+            vehicleOwnershipFilter,
             capacityFilter,
             locationFilter,
         ]
@@ -642,6 +688,12 @@ const CreateTripAllocation = () => {
         [driverUsers, form.driverAllocation?.driverId]
     );
 
+    const vehicleOwnershipOptions = [
+        { label: "All Vehicles", value: "" },
+        { label: "Own Fleet", value: "own" },
+        { label: "Market Vehicle", value: "market" },
+    ];
+
     const vehicleTypeOptions = useMemo(() => {
         const set = new Set<string>();
 
@@ -654,6 +706,8 @@ const CreateTripAllocation = () => {
         if (form.transportOrder?.requiredVehicleType) {
             set.add(form.transportOrder.requiredVehicleType);
         }
+
+
 
         return [
             { label: "All Types", value: "" },
@@ -674,12 +728,6 @@ const CreateTripAllocation = () => {
         if (requiredCapacity) set.add(String(requiredCapacity));
 
         return [
-            // {
-            //     label: requiredCapacity
-            //         ? `Min ${requiredCapacity} Ton`
-            //         : "All Capacities",
-            //     value: requiredCapacity ? String(requiredCapacity) : "",
-            // },
             ...[...set]
                 .sort((a, b) => Number(a) - Number(b))
                 .map((value) => ({
@@ -950,57 +998,6 @@ const CreateTripAllocation = () => {
         );
     }, [dispatch]);
 
-    // useEffect(() => {
-    //     if (!isEdit || !voucherNumber) return;
-
-    //     const loadAllocation = async () => {
-    //         try {
-    //             setPageLoading(true);
-
-    //             const response = await dispatch(
-    //                 getTripAllocationByVoucherNumber(voucherNumber)
-    //             ).unwrap();
-
-    //             const data =
-    //                 response?.data?.record || response?.data || response?.record || response;
-
-    //             const merged = mergeTripAllocationForm(data);
-
-    //             if (isAllocationClosed(merged)) {
-    //                 toast.warn("Completed trip allocation cannot be edited");
-    //                 navigate(-1);
-    //                 return;
-    //             }
-
-    //             const nextVehicleType = getRequiredVehicleType(merged?.transportOrder);
-    //             const nextRequiredCapacity =
-    //                 merged?.transportOrder?.requiredCapacityTon ||
-    //                 merged?.transportOrder?.requiredWeightTon ||
-    //                 "";
-
-    //             setVehicleTypeFilter(nextVehicleType);
-    //             setCapacityFilter(String(nextRequiredCapacity));
-    //             setLocationFilter("");
-    //             setVehicleSearch("");
-
-    //             if (merged?.transportOrder?.transportOrderNumber) {
-    //                 dispatch(
-    //                     getVehicleMasterVehicles({
-    //                         requiredWeight: merged?.transportOrder?.requiredWeightTon,
-    //                         transportOrder: merged?.transportOrder,
-    //                     })
-    //                 );
-    //             }
-    //         } catch (error: any) {
-    //             toast.error(error?.message || "Failed to load trip allocation");
-    //         } finally {
-    //             setPageLoading(false);
-    //         }
-    //     };
-
-    //     loadAllocation();
-    // }, [dispatch, isEdit, voucherNumber, navigate]);
-
     useEffect(() => {
         if (!isEdit || !voucherNumber) return;
 
@@ -1100,6 +1097,7 @@ const CreateTripAllocation = () => {
             vehicles: normalizedVehicles,
             transportOrder: form.transportOrder,
             vehicleTypeFilter,
+            vehicleOwnershipFilter,
             capacityFilter,
             locationFilter,
         });
@@ -1581,7 +1579,7 @@ const CreateTripAllocation = () => {
                             icon={<Truck size={18} />}
                         >
                             {!transportOrderSelected ? (
-                                <div className="md:col-span-2 xl:col-span-3 flex min-h-10 flex-col items-center justify-center rounded-md border border-dashed border-border bg-background p-3 text-center">
+                                <div className="md:col-span-2 xl:col-span-4 flex min-h-10 flex-col items-center justify-center rounded-md border border-dashed border-border bg-background p-3 text-center">
                                     <Truck
                                         size={32}
                                         className="mb-2 text-muted-foreground/40"
@@ -1647,8 +1645,26 @@ const CreateTripAllocation = () => {
                                         </select>
                                     </div>
 
+                                    <div>
+                                        <label className="mb-1 block text-sm font-medium text-card-foreground">
+                                            Vehicle Ownership
+                                        </label>
+
+                                        <select
+                                            value={vehicleOwnershipFilter}
+                                            onChange={(e) => setVehicleOwnershipFilter(e.target.value)}
+                                            className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                                        >
+                                            {vehicleOwnershipOptions.map((o) => (
+                                                <option key={o.value} value={o.value}>
+                                                    {o.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
                                     {selectedVehicle && (
-                                        <div className="md:col-span-2 xl:col-span-3">
+                                        <div className="md:col-span-2 xl:col-span-4">
                                             <VehicleSummary form={form} />
                                         </div>
                                     )}

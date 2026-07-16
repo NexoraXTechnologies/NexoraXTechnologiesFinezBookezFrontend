@@ -696,15 +696,15 @@ const CreateEditTripLREntry = () => {
                     "-";
 
                 const source =
-                    order?.pickupDetails?.pickupLocation ||
                     order?.pickupDetails?.pickupCityName ||
-                    order?.pickupLocation ||
+
+                    order?.pickupCityName ||
                     "-";
 
                 const destination =
-                    order?.deliveryDetails?.deliveryLocation ||
                     order?.deliveryDetails?.deliveryCityName ||
-                    order?.deliveryLocation ||
+
+                    order?.deliveryCityName ||
                     "-";
 
                 return {
