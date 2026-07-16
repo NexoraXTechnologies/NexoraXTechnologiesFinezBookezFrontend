@@ -996,7 +996,7 @@ const SystemConfiguration = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-                    <aside className="rounded border border-border bg-card p-2 shadow-sm">
+                    <aside className="rounded border border-border bg-card p-2 shadow-sm max-h-max">
                         <div className="mb-2 px-3 py-2">
                             <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
                                 Configuration Menu

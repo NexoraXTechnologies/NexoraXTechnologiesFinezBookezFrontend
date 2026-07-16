@@ -27,7 +27,6 @@ import Permission from "../../../../components/PermissionGuard";
 const ProductMaster = () => {
   const dispatch = useDispatch();
 
-  /* ================= REDUX STATE ================= */
   const {
     products,
     pagination,
@@ -35,32 +34,21 @@ const ProductMaster = () => {
     productMasterSchemaFields = [],
     schemaLoading,
   } = useSelector((s: any) => s.productMaster);
-console.log({productMasterSchemaFields})
   const { units = [] } = useSelector((s: any) => s.unitMaster || {});
   const { HSNCode } = useSelector((s: any) => s.HSNCode || {});
-  console.log({ HSNCode })
-  /* ================= LOCAL STATES ================= */
   const [localOffset, setLocalOffset] = useState(0);
   const [localLimit, setLocalLimit] = useState(10);
-
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [customeField, setCustomeField] = useState<any>([]);
-
-  /* ================= DELETE CONFIRM TOOLTIP STATE ================= */
   const [confirmTooltip, setConfirmTooltip] = useState<any>({
     show: false,
     x: null,
     y: null,
     productCode: null,
   });
-
-  console.log({ HSNCode });
 
   /* =====================================================
      FETCH PRODUCT MASTER SCHEMA
