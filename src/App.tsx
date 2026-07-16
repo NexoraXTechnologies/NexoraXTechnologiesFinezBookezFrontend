@@ -186,6 +186,7 @@ function App() {
 
           <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
           <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
+          <Route path='/bookEz/transportation/trip-lr-entry/edit/:voucherNumber' element={<CreateEditTripLREntry />} />
 
           <Route path="/bookEz/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
           <Route path="/bookEz/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>
