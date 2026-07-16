@@ -34,68 +34,83 @@ const DynamicAddForm = ({
     contentSkeleton,
     isSummaryFooter,
     manualselected,
-    enableLocation
+    enableLocation,
+
+    // Optional row-aware field visibility functions.
+    isBodyColumnVisible,
+    isBodyCellVisible,
+    isBodyCellDisabled
 }: any) => {
-    const renderInput = (e: any) => {
-        if (e?.type === "date") {
+    const renderInput = (field: any) => {
+        if (field?.type === "date") {
             return (
                 <TextInput
-                    label={e?.label}
-                    mandatory={e?.isRequired}
-                    disabled={e?.disabled || e?.isReadonly}
+                    label={field?.label}
+                    mandatory={field?.isRequired}
+                    disabled={field?.disabled || field?.isReadonly}
                     read
-                    type={e.type}
-                    value={form?.[e?.key] ? String(form?.[e?.key]).split("T")[0] : ""}
-                    error={errors?.[e?.key]}
-                    onChange={(event: any) => handleChange(e?.key, event.target.value)}
-                />
-            );
-        }
-
-        if (e?.type === "textarea") {
-            return (
-                <TextArea
-                    label={e?.label}
-                    mandatory={e?.isRequired}
-                    value={form?.[e?.key] || ""}
-                    placeholder={e?.placeholder}
-                    error={errors?.[e?.key]}
-                    onChange={(event: any) => handleChange(e?.key, event.target.value)}
-                />
-            );
-        }
-
-
-        if (e?.type === "toggle") {
-            return (
-                <ToggleInput
-                    key={e.key}
-                    label={e.label}
-                    name={e.key}
-                    value={form?.[e.key]}
-                    checked={Boolean(form?.[e.key])}
-                    mandatory={e.required}
-                    disabled={e.disabled}
-                    error={errors?.[e.key]}
+                    type={field.type}
+                    value={
+                        form?.[field?.key]
+                            ? String(form?.[field?.key]).split("T")[0]
+                            : ""
+                    }
+                    error={errors?.[field?.key]}
                     onChange={(event: any) =>
-                        handleChange(e.key, event.target.checked)
+                        handleChange(field?.key, event.target.value)
                     }
                 />
             );
         }
-        if (e?.type === "select") {
+
+        if (field?.type === "textarea") {
+            return (
+                <TextArea
+                    label={field?.label}
+                    mandatory={field?.isRequired}
+                    value={form?.[field?.key] || ""}
+                    placeholder={field?.placeholder}
+                    error={errors?.[field?.key]}
+                    onChange={(event: any) =>
+                        handleChange(field?.key, event.target.value)
+                    }
+                />
+            );
+        }
+
+        if (field?.type === "toggle") {
+            return (
+                <ToggleInput
+                    key={field.key}
+                    label={field.label}
+                    name={field.key}
+                    value={form?.[field.key]}
+                    checked={Boolean(form?.[field.key])}
+                    mandatory={field.required}
+                    disabled={field.disabled}
+                    error={errors?.[field.key]}
+                    onChange={(event: any) =>
+                        handleChange(field.key, event.target.checked)
+                    }
+                />
+            );
+        }
+
+        if (field?.type === "select") {
             return (
                 <SelectInput
-                    label={e?.label}
-                    value={form?.[e?.key] || ""}
-                    mandatory={e?.isRequired}
-                    placeholder={e?.placeholder}
-                    disabled={e?.disabled || e?.isReadonly}
-                    error={errors?.[e?.key]}
-                    onChange={(event: any) => handleChange(e?.key, event.target.value)}
+                    label={field?.label}
+                    value={form?.[field?.key] || ""}
+                    mandatory={field?.isRequired}
+                    placeholder={field?.placeholder}
+                    disabled={field?.disabled || field?.isReadonly}
+                    error={errors?.[field?.key]}
+                    onChange={(event: any) =>
+                        handleChange(field?.key, event.target.value)
+                    }
                     options={[
-                        { label: `Select ${e?.label}`, value: "" },
-                        ...(e?.options || []),
+                        { label: `Select ${field?.label}`, value: "" },
+                        ...(field?.options || []),
                     ]}
                 />
             );
@@ -103,13 +118,15 @@ const DynamicAddForm = ({
 
         return (
             <TextInput
-                label={e?.label}
-                mandatory={e?.isRequired}
-                value={form?.[e?.key] || ""}
-                disabled={e?.disabled || e?.isReadonly}
-                placeholder={e?.placeholder}
-                error={errors?.[e?.key]}
-                onChange={(event: any) => handleChange(e?.key, event.target.value)}
+                label={field?.label}
+                mandatory={field?.isRequired}
+                value={form?.[field?.key] || ""}
+                disabled={field?.disabled || field?.isReadonly}
+                placeholder={field?.placeholder}
+                error={errors?.[field?.key]}
+                onChange={(event: any) =>
+                    handleChange(field?.key, event.target.value)
+                }
             />
         );
     };
@@ -139,37 +156,54 @@ const DynamicAddForm = ({
                 ) : (
                     <>
                         <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
-                            {inputData?.header?.map((e: any, index: number) => {
-                                if (e?.isHidden) return null;
+                            {inputData?.header?.map(
+                                (field: any, index: number) => {
+                                    if (field?.isHidden) return null;
 
-                                return <div key={e?.key || index}>{renderInput(e)}</div>;
-                            })}
+                                    return (
+                                        <div key={field?.key || index}>
+                                            {renderInput(field)}
+                                        </div>
+                                    );
+                                }
+                            )}
                         </div>
 
-                        {inputData?.headerChild && inputData.headerChild.length > 0 && (
-                            <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-                                <div className="mb-4 border-b border-border pb-3">
-                                    <h1 className="text-lg font-bold text-card-foreground">
-                                        {headerChildTitle}
-                                    </h1>
-                                </div>
+                        {inputData?.headerChild &&
+                            inputData.headerChild.length > 0 && (
+                                <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm">
+                                    <div className="mb-4 border-b border-border pb-3">
+                                        <h1 className="text-lg font-bold text-card-foreground">
+                                            {headerChildTitle}
+                                        </h1>
+                                    </div>
 
-                                <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-3">
-                                    {inputData.headerChild.map((e: any, index: number) => {
-                                        if (e?.isHidden) return null;
+                                    <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-3">
+                                        {inputData.headerChild.map(
+                                            (field: any, index: number) => {
+                                                if (field?.isHidden) return null;
 
-                                        return <div key={e?.key || index}>{renderInput(e)}</div>;
-                                    })}
+                                                return (
+                                                    <div
+                                                        key={
+                                                            field?.key || index
+                                                        }
+                                                    >
+                                                        {renderInput(field)}
+                                                    </div>
+                                                );
+                                            }
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
                             )}
 
-                            {enableLocation && (
-                                <LocationSection
-                                    form={form}
-                                    handleChange={handleChange}
-                                />
-                            )}
+                        {enableLocation && (
+                            <LocationSection
+                                form={form}
+                                handleChange={handleChange}
+                            />
+                        )}
 
                         {errors?.[bodyKey] && (
                             <p className="mt-4 text-sm text-danger">
@@ -178,12 +212,13 @@ const DynamicAddForm = ({
                         )}
 
                         {!manualselected && (
-
                             <div className="mt-3 w-full max-w-full">
                                 <EditableLineTable
                                     isView={isView}
                                     bodyTitle={bodyTitle || "Products"}
-                                    addButtonText={addButtonText || "Add Product"}
+                                    addButtonText={
+                                        addButtonText || "Add Product"
+                                    }
                                     rows={form?.[bodyKey] || []}
                                     columns={inputData?.body || []}
                                     errors={errors}
@@ -195,6 +230,9 @@ const DynamicAddForm = ({
                                     isAddButton={isAddButton}
                                     RefrenceBtnText={RefrenceBtnText}
                                     isRefrenceAction={isRefrenceAction}
+                                    isColumnVisible={isBodyColumnVisible}
+                                        isCellVisible={isBodyCellVisible}
+                                        isCellDisabled={isBodyCellDisabled}
                                 />
                             </div>
                         )}
@@ -202,14 +240,17 @@ const DynamicAddForm = ({
                         {Object.keys(errors || {})
                             .filter((key) => key.includes("_tax"))
                             .map((key) => (
-                                <p key={key} className="mt-2 text-sm text-danger">
+                                <p
+                                    key={key}
+                                    className="mt-2 text-sm text-danger"
+                                >
                                     {errors[key]}
                                 </p>
                             ))}
 
                         <SummaryCards
-                                items={inputData?.footer || []}
-                                isSummaryFooter={isSummaryFooter}
+                            items={inputData?.footer || []}
+                            isSummaryFooter={isSummaryFooter}
                         />
                     </>
                 )}

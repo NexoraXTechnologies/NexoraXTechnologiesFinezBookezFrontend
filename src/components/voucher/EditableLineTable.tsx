@@ -3,7 +3,7 @@ import { SelectInput, TextInput } from "../inputs";
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 import { AnimatePresence, motion } from "framer-motion";
 
-type ColumnType = "select" | "text" | "number";
+type ColumnType = "select" | "text" | "number" | "date";
 
 export type EditableColumn = {
     key: string;
@@ -16,6 +16,8 @@ export type EditableColumn = {
     required?: boolean;
     isRequired?: boolean;
     disabled?: boolean;
+    isReadonly?: boolean;
+    isHidden?: boolean | string;
     align?: "left" | "right" | "center";
 };
 
@@ -34,6 +36,17 @@ type EditableLineTableProps = {
     onChange: (index: number, key: string, value: any) => void;
     emptyText?: string;
     isRefrenceAction: boolean;
+    isColumnVisible?: (column: EditableColumn, rows: any[]) => boolean;
+    isCellVisible?: (
+        column: EditableColumn,
+        row: any,
+        rowIndex: number
+    ) => boolean;
+    isCellDisabled?: (
+        column: EditableColumn,
+        row: any,
+        rowIndex: number
+    ) => boolean;
 };
 
 const LEFT_WIDTH = "70px";
@@ -56,6 +69,9 @@ const EditableLineTable = ({
     isRefrenceAction,
     RefrenceBtnText,
     emptyText = "No data found",
+    isColumnVisible,
+    isCellVisible,
+    isCellDisabled
 }: EditableLineTableProps) => {
     // const getReferenceButtonText = (row: any, rowIndex: number) => {
     //     if (typeof RefrenceBtnText === "function") {
@@ -98,6 +114,18 @@ const EditableLineTable = ({
         if (align === "center") return "justify-center";
         return "justify-start";
     };
+
+    const isTrueValue = (value: any) => {
+        return value === true || String(value ?? "").trim().toLowerCase() === "true";
+    };
+
+    const visibleColumns = columns.filter((column) => {
+        if (isColumnVisible) {
+            return isColumnVisible(column, rows);
+        }
+
+        return !isTrueValue(column?.isHidden);
+    });
 
     return (
         <div className="w-full max-w-full min-w-0 text-card-foreground">
@@ -190,7 +218,7 @@ const EditableLineTable = ({
                         >
                             <thead>
                                 <tr>
-                                    {columns.map((col) => (
+                                    {visibleColumns.map((col) => (
                                         <th
                                             key={col.key}
                                             className={`
@@ -226,7 +254,7 @@ const EditableLineTable = ({
                                 {!rows.length ? (
                                     <tr>
                                         <td
-                                            colSpan={columns.length}
+                                            colSpan={Math.max(visibleColumns.length, 1)}
                                             className="bg-card px-6 py-12 text-center"
                                         >
                                             <div className="flex flex-col items-center justify-center gap-2">
@@ -259,93 +287,137 @@ const EditableLineTable = ({
                                                 }}
                                                 className="group transition-colors hover:bg-muted"
                                             >
-                                                {columns.map((col) => (
-                                                    <motion.td
-                                                        layout
-                                                        key={col.key}
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        transition={{
-                                                            duration: 0.14,
-                                                            ease: "easeOut",
-                                                        }}
-                                                        className="
-                                                            bg-card
-                                                            border-b border-r border-border
-                                                            px-3 py-3
-                                                            transition-colors
-                                                            group-hover:bg-muted
-                                                        "
-                                                        style={{
-                                                            minWidth: getColumnMinWidth(col),
-                                                            height: ROW_HEIGHT,
-                                                        }}
-                                                    >
-                                                        <div className="min-w-0">
-                                                            {col.type === "select" ? (
-                                                                <SelectInput
-                                                                    label=""
-                                                                    mandatory={false}
-                                                                    value={row[col.key] || ""}
-                                                                    placeholder={
-                                                                        col.placeholder ||
-                                                                        `Select ${getColumnLabel(col)}`
-                                                                    }
-                                                                    error={
-                                                                        errors?.[
-                                                                        `row_${rowIndex}_${col.key}`
-                                                                        ]
-                                                                    }
-                                                                    disabled={col.disabled}
-                                                                    onChange={(e: any) =>
-                                                                        onChange(
-                                                                            rowIndex,
-                                                                            col.key,
-                                                                            e?.target?.value
-                                                                        )
-                                                                    }
-                                                                    options={[
-                                                                        {
-                                                                            label:
-                                                                                col.placeholder ||
-                                                                                `Select ${getColumnLabel(col)}`,
-                                                                            value: "",
-                                                                        },
-                                                                        ...(col.options || []),
-                                                                    ]}
-                                                                />
+                                                {visibleColumns.map((col) => {
+                                                    const disabledByModule = isCellDisabled ? isCellDisabled(col, row, rowIndex) : Boolean(col.disabled);
+                                                    const showCell = isCellVisible
+                                                        ? isCellVisible(
+                                                            col,
+                                                            row,
+                                                            rowIndex
+                                                        )
+                                                        : true;
+
+                                                    const isCalculatedGross =
+                                                        col.key === "taxGross" ||
+                                                        col.key === "nonTaxGross";
+
+                                                    return (
+                                                        <motion.td
+                                                            layout
+                                                            key={col.key}
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            transition={{
+                                                                duration: 0.14,
+                                                                ease: "easeOut",
+                                                            }}
+                                                            className="
+                                                                bg-card
+                                                                border-b border-r border-border
+                                                                px-3 py-3
+                                                                transition-colors
+                                                                group-hover:bg-muted
+                                                            "
+                                                            style={{
+                                                                minWidth:
+                                                                    getColumnMinWidth(
+                                                                        col
+                                                                    ),
+                                                                height: ROW_HEIGHT,
+                                                            }}
+                                                        >
+                                                            {!showCell ? (
+                                                                <div className="flex min-h-[42px] items-center justify-center text-muted-foreground">
+                                                                    —
+                                                                </div>
                                                             ) : (
-                                                                <TextInput
-                                                                    label=""
-                                                                    mandatory={false}
-                                                                    type={
-                                                                        col.type === "number"
-                                                                            ? "number"
-                                                                            : "text"
-                                                                    }
-                                                                    value={row[col.key] || ""}
-                                                                    placeholder={
-                                                                        col.placeholder ||
-                                                                        getColumnLabel(col)
-                                                                    }
-                                                                    error={
-                                                                        errors?.[
-                                                                        `row_${rowIndex}_${col.key}`
-                                                                        ]
-                                                                    }
-                                                                    disabled={col.disabled}
-                                                                    onChange={(e: any) =>
-                                                                        onChange(
-                                                                            rowIndex,
-                                                                            col.key,
-                                                                            e.target.value
-                                                                        )
-                                                                    }
-                                                                />
+                                                                    <div className="min-w-0">
+                                                                        {col.type ===
+                                                                            "select" ? (
+                                                                            <SelectInput
+                                                                                label=""
+                                                                                    mandatory={
+                                                                                        false
+                                                                                    }
+                                                                                    value={
+                                                                                        row?.[
+                                                                                        col
+                                                                                            .key
+                                                                                        ] ??
+                                                                                        ""
+                                                                                    }
+                                                                                    placeholder={
+                                                                                        col.placeholder ||
+                                                                                        `Select ${getColumnLabel(
+                                                                                            col
+                                                                                        )}`
+                                                                                    }
+                                                                                    error={
+                                                                                        errors?.[
+                                                                                        `row_${rowIndex}_${col.key}`
+                                                                                        ]
+                                                                                    }
+                                                                                    disabled={
+                                                                                        isView ||
+                                                                                        col.disabled ||
+                                                                                        col.isReadonly
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event: any
+                                                                                    ) =>
+                                                                                        onChange(
+                                                                                            rowIndex,
+                                                                                            col.key,
+                                                                                            event
+                                                                                                ?.target
+                                                                                                ?.value
+                                                                                        )
+                                                                                    }
+                                                                                    options={[
+                                                                                        {
+                                                                                            label:
+                                                                                                col.placeholder ||
+                                                                                                `Select ${getColumnLabel(
+                                                                                                    col
+                                                                                                )}`,
+                                                                                            value: "",
+                                                                                        },
+                                                                                    ...(col.options ||
+                                                                                        []),
+                                                                                ]}
+                                                                            />
+                                                                        ) : (
+                                                                            <TextInput
+                                                                                label=""
+                                                                                mandatory={false}
+                                                                                    type={col.type === "number" ? "number" : "text"}
+                                                                                    value={row?.[col.key] ?? ""}
+                                                                                    placeholder={
+                                                                                        col.placeholder || getColumnLabel(col)
+                                                                                    }
+                                                                                    error={
+                                                                                        errors?.[`row_${rowIndex}_${col.key}`]
+                                                                                    }
+                                                                                    disabled={
+                                                                                        isView ||
+                                                                                        isTrueValue(col.disabled) ||
+                                                                                        isTrueValue(col.isReadonly) ||
+                                                                                        disabledByModule
+                                                                                    }
+                                                                                    onChange={(event: any) =>
+                                                                                        onChange(
+                                                                                            rowIndex,
+                                                                                            col.key,
+                                                                                            event.target.value
+                                                                                        )
+                                                                                }
+                                                                            />
+                                                                        )}
+                                                                    </div>
                                                             )}
-                                                        </div>
-                                                    </motion.td>
-                                                ))}
+                                                        </motion.td>
+                                                    );
+                                                })}
                                             </motion.tr>
                                         ))}
                                     </AnimatePresence>
