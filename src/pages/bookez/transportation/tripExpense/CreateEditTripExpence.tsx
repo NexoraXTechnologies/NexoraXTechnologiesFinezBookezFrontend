@@ -343,7 +343,20 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
         switch (category.key) {
             case "advanceReceived":
                 return (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid grid-cols-3 gap-4 md:grid-cols-3 xl:grid-cols-3">
+                         <Field label="Date">
+                                <input
+                                    disabled={readOnly}
+                                    type="datetime-local"
+                                    className={inputClass}
+                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+                                    onChange={(e) =>
+                                        patchEntry(index, {
+                                            date: dateTimeInputToIso(e.target.value),
+                                        })
+                                    }
+                                />
+                            </Field>
                         <Field label="Source">
                             <input
                                 disabled={readOnly}
@@ -365,7 +378,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                             />
                         </Field>
 
-                        <Field label="Payment Mode">
+                        {/* <Field label="Payment Mode">
                             <input
                                 disabled={readOnly}
                                 className={inputClass}
@@ -374,13 +387,27 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                                     patchEntry(index, { paymentMode: e.target.value })
                                 }
                             />
-                        </Field>
+                        </Field> */}
                     </div>
                 );
 
             case "dieselCost":
                 return (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+                         <Field label="Date">
+                                <input
+                                    disabled={readOnly}
+                                    type="datetime-local"
+                                    className={inputClass}
+                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+                                    onChange={(e) =>
+                                        patchEntry(index, {
+                                            date: dateTimeInputToIso(e.target.value),
+                                        })
+                                    }
+                                />
+                            </Field>
                         <Field label="Fuel Station">
                             <input
                                 disabled={readOnly}
@@ -402,7 +429,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                             />
                         </Field>
 
-                        <Field label="Liters">
+                        {/* <Field label="Liters">
                             <input
                                 disabled={readOnly}
                                 type="number"
@@ -410,7 +437,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                                 value={entry.liters ?? ""}
                                 onChange={(e) => patchEntry(index, { liters: e.target.value })}
                             />
-                        </Field>
+                        </Field> */}
 
                         <Field label="Odometer">
                             <input
@@ -446,6 +473,20 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
 
                 return (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+                         <Field label="Date">
+                                <input
+                                    disabled={readOnly}
+                                    type="datetime-local"
+                                    className={inputClass}
+                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+                                    onChange={(e) =>
+                                        patchEntry(index, {
+                                            date: dateTimeInputToIso(e.target.value),
+                                        })
+                                    }
+                                />
+                            </Field>
                         <Field label={typeLabel}>
                             <input
                                 disabled={readOnly}
@@ -467,7 +508,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                             />
                         </Field>
 
-                        <Field label="Location / Remarks">
+                        {/* <Field label="Location / Remarks">
                             <input
                                 disabled={readOnly}
                                 className={inputClass}
@@ -481,7 +522,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                                     )
                                 }
                             />
-                        </Field>
+                        </Field> */}
                     </div>
                 );
             }
@@ -515,7 +556,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                             )}
                         </div>
 
-                        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {/* <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                             <Field label="Date">
                                 <input
                                     disabled={readOnly}
@@ -529,7 +570,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                                     }
                                 />
                             </Field>
-                        </div>
+                        </div> */}
 
                         {renderShortFields(entry, index)}
                     </div>

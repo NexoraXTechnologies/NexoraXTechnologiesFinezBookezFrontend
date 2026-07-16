@@ -922,13 +922,13 @@ const TripExpenseList = () => {
             render: (row: any) =>
                 `₹${formatIndianNumber(row?.summary?.totalTripExpense ?? 0)}`,
         },
-        {
-            key: "summary.balanceAmount",
-            title: "Balance",
-            type: "amount",
-            render: (row: any) =>
-                `₹${formatIndianNumber(row?.summary?.balanceAmount ?? 0)}`,
-        },
+        // {
+        //     key: "summary.balanceAmount",
+        //     title: "Balance",
+        //     type: "amount",
+        //     render: (row: any) =>
+        //         `₹${formatIndianNumber(row?.summary?.balanceAmount ?? 0)}`,
+        // },
         {
             key: "tripStatus",
             title: "Status",

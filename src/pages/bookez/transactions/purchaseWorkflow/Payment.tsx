@@ -510,8 +510,8 @@ const Payment = () => {
                 setFieldsLoading(true);
 
                 const updatedData = await loadAllTemplateOptions(transactionsSchema, {
-                    header: { accountType: "bank" },
-                    body: { accountType: "vendor" },
+                    header: { accountType: "bank , cash" },
+                    body: { accountType: "vendor , expense" ,limit:1000 },
                 });
 
                 setTemplateFields(updatedData);
