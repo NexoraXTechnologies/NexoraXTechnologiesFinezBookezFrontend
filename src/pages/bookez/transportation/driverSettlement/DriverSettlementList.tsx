@@ -15,6 +15,7 @@ import {
 } from "../../../../components/buttons";
 import { deleteDriverSettlement, getAllDriverSettlement } from "../../../../redux/slices/professionalSlice/transportation/driverSettlementSlice";
 import { useDispatch, useSelector } from "react-redux";
+import { truncate } from "../../../../utils/helperFunctions";
 
 /* ===================================================
    HELPERS
@@ -388,7 +389,7 @@ const DriverSettlementList = () => {
                 return (
                     <div>
                         <div className="font-medium">
-                            {from} → {to}
+                           {truncate(`${from} → ${to}`)} 
                         </div>
                     </div>
                 );

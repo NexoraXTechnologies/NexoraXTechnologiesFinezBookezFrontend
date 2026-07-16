@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import {  ImagePlus, Paperclip, X } from "lucide-react";
+import { ImagePlus, Paperclip, X } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import Select, { components } from "react-select";
 
@@ -830,112 +830,112 @@ const ImageUploadInput = ({
 
 
 type DocumentUploadInputProps = {
-	label?: string;
-	value?: any[];
-	error?: string;
-	mandatory?: boolean;
-	disabled?: boolean;
-	multiple?: boolean;
-	accept?: string;
-	placeholder?: string;
-	description?: string;
-	allowedText?: string;
-	className?: string;
-	onChange: (documents: any[]) => void;
+    label?: string;
+    value?: any[];
+    error?: string;
+    mandatory?: boolean;
+    disabled?: boolean;
+    multiple?: boolean;
+    accept?: string;
+    placeholder?: string;
+    description?: string;
+    allowedText?: string;
+    className?: string;
+    onChange: (documents: any[]) => void;
 };
 
 const documentFileToBase64 = (file: File): Promise<string> => {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = reject;
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
 
-		reader.readAsDataURL(file);
-	});
+        reader.readAsDataURL(file);
+    });
 };
 
 const DocumentUploadInput = ({
-	label = "",
-	value = [],
-	error = "",
-	mandatory = false,
-	disabled = false,
-	multiple = true,
-	accept = ".pdf,.png,.jpg,.jpeg,.xls,.xlsx,.doc,.docx",
-	placeholder = "Upload Documents",
-	description = "Attach PDF, Excel, Word, or image files.",
-	allowedText = "Allowed: PDF, PNG, JPG, JPEG, XLS, XLSX, DOC, DOCX",
-	className = "",
-	onChange,
+    label = "",
+    value = [],
+    error = "",
+    mandatory = false,
+    disabled = false,
+    multiple = true,
+    accept = ".pdf,.png,.jpg,.jpeg,.xls,.xlsx,.doc,.docx",
+    placeholder = "Upload Documents",
+    description = "Attach PDF, Excel, Word, or image files.",
+    allowedText = "Allowed: PDF, PNG, JPG, JPEG, XLS, XLSX, DOC, DOCX",
+    className = "",
+    onChange,
 }: DocumentUploadInputProps) => {
-	const inputRef = useRef<HTMLInputElement | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
 
-	const allowedTypes = [
-		"application/pdf",
-		"image/png",
-		"image/jpeg",
-		"image/jpg",
-		"application/vnd.ms-excel",
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		"application/msword",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-	];
+    const allowedTypes = [
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
 
-	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const files = Array.from(e.target.files || []);
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
 
-		if (!files.length) return;
+        if (!files.length) return;
 
-		const uploadedDocs: any[] = [];
+        const uploadedDocs: any[] = [];
 
-		for (const file of files) {
-			if (!allowedTypes.includes(file.type)) {
-				continue;
-			}
+        for (const file of files) {
+            if (!allowedTypes.includes(file.type)) {
+                continue;
+            }
 
-			const base64 = await documentFileToBase64(file);
+            const base64 = await documentFileToBase64(file);
 
-			uploadedDocs.push({
-				documentName: file.name,
-				documentUrl: base64,
-				fileSizeKB: Math.round(file.size / 1024),
-				mimeType: file.type,
-			});
-		}
+            uploadedDocs.push({
+                documentName: file.name,
+                documentUrl: base64,
+                fileSizeKB: Math.round(file.size / 1024),
+                mimeType: file.type,
+            });
+        }
 
-		onChange([...(value || []), ...uploadedDocs]);
+        onChange([...(value || []), ...uploadedDocs]);
 
-		e.target.value = "";
-	};
+        e.target.value = "";
+    };
 
-	const removeDocument = (index: number) => {
-		onChange((value || []).filter((_: any, i: number) => i !== index));
-	};
+    const removeDocument = (index: number) => {
+        onChange((value || []).filter((_: any, i: number) => i !== index));
+    };
 
-	return (
-		<div className={`flex w-full flex-col gap-1.5 ${className}`}>
-			{!!label?.length && (
-				<label className="text-sm font-semibold text-card-foreground">
-					{label}
-					{mandatory && <span className="ml-0.5 text-danger">*</span>}
-				</label>
-			)}
+    return (
+        <div className={`flex w-full flex-col gap-1.5 ${className}`}>
+            {!!label?.length && (
+                <label className="text-sm font-semibold text-card-foreground">
+                    {label}
+                    {mandatory && <span className="ml-0.5 text-danger">*</span>}
+                </label>
+            )}
 
-			<div
-				role="button"
-				tabIndex={0}
-				onClick={() => {
-					if (!disabled) inputRef.current?.click();
-				}}
-				onKeyDown={(e) => {
-					if (disabled) return;
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                    if (!disabled) inputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                    if (disabled) return;
 
-					if (e.key === "Enter" || e.key === " ") {
-						inputRef.current?.click();
-					}
-				}}
-				className={`
+                    if (e.key === "Enter" || e.key === " ") {
+                        inputRef.current?.click();
+                    }
+                }}
+                className={`
 					flex min-h-[118px] cursor-pointer flex-col items-center justify-center
 					rounded-xl border-2 border-dashed bg-card p-4 text-center
 					transition duration-200 hover:border-primary hover:bg-primary/5
@@ -944,73 +944,73 @@ const DocumentUploadInput = ({
 					${error ? "border-danger bg-danger/5" : "border-border"}
 					${disabled ? "pointer-events-none opacity-70" : ""}
 				`}
-			>
-				<div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-					<Paperclip size={20} />
-				</div>
+            >
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Paperclip size={20} />
+                </div>
 
-				<p className="text-sm font-semibold text-card-foreground">
-					{placeholder}
-				</p>
+                <p className="text-sm font-semibold text-card-foreground">
+                    {placeholder}
+                </p>
 
-				<p className="mt-1 text-xs text-muted-foreground">
-					{description}
-				</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                    {description}
+                </p>
 
-				<p className="mt-2 text-[11px] font-medium text-muted-foreground">
-					{allowedText}
-				</p>
-			</div>
+                <p className="mt-2 text-[11px] font-medium text-muted-foreground">
+                    {allowedText}
+                </p>
+            </div>
 
-			<input
-				ref={inputRef}
-				type="file"
-				multiple={multiple}
-				accept={accept}
-				disabled={disabled}
-				onChange={handleFileChange}
-				className="hidden"
-			/>
+            <input
+                ref={inputRef}
+                type="file"
+                multiple={multiple}
+                accept={accept}
+                disabled={disabled}
+                onChange={handleFileChange}
+                className="hidden"
+            />
 
-			{!!value?.length && (
-				<div className="mt-2 flex flex-col gap-2">
-					{value.map((doc: any, index: number) => (
-						<div
-							key={`${doc?.documentName || "document"}-${index}`}
-							className="flex items-center justify-between gap-3 rounded-md border border-border bg-input px-3 py-2"
-						>
-							<div className="min-w-0">
-								<p className="truncate text-sm font-semibold text-card-foreground">
-									{doc?.documentName || "-"}
-								</p>
+            {!!value?.length && (
+                <div className="mt-2 flex flex-col gap-2">
+                    {value.map((doc: any, index: number) => (
+                        <div
+                            key={`${doc?.documentName || "document"}-${index}`}
+                            className="flex items-center justify-between gap-3 rounded-md border border-border bg-input px-3 py-2"
+                        >
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-card-foreground">
+                                    {doc?.documentName || "-"}
+                                </p>
 
-								<p className="text-xs text-muted-foreground">
-									{doc?.fileSizeKB || 0} KB
-								</p>
-							</div>
+                                <p className="text-xs text-muted-foreground">
+                                    {doc?.fileSizeKB || 0} KB
+                                </p>
+                            </div>
 
-							<button
-								type="button"
-								disabled={disabled}
-								onClick={() => removeDocument(index)}
-								className="rounded-md p-2 text-danger transition hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
-							>
-								<X size={16} />
-							</button>
-						</div>
-					))}
-				</div>
-			)}
+                            <button
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => removeDocument(index)}
+                                className="rounded-md p-2 text-danger transition hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
 
-			{!!error?.length && (
-				<p className="text-xs font-medium text-danger">{error}</p>
-			)}
-		</div>
-	);
+            {!!error?.length && (
+                <p className="text-xs font-medium text-danger">{error}</p>
+            )}
+        </div>
+    );
 };
 
 
-export { TextInput, SelectInput, TextArea, SelectInputNormal, ToggleInput, ImageUploadInput , DocumentUploadInput };
+export { TextInput, SelectInput, TextArea, SelectInputNormal, ToggleInput, ImageUploadInput, DocumentUploadInput };
 
 
 
@@ -1020,89 +1020,97 @@ export { TextInput, SelectInput, TextArea, SelectInputNormal, ToggleInput, Image
 
 
 export const renderField = ({
-	field,
-	form,
-	handleInputChange,
-	handleSelectChange,
-	updateField,
+    field,
+    form,
+    handleInputChange,
+    handleSelectChange,
+    updateField,
+    isView
 }: any) => {
-	const commonProps = {
-		label: field.label,
-		value:
-			typeof field.value === "function"
-				? field.value(form)
-				: form?.[field.key],
-		mandatory: field.mandatory,
-		disabled: field.disabled,
-		error: field.error || "",
-	};
+    const commonProps = {
+        label: field.label,
+        value:
+            typeof field.value === "function"
+                ? field.value(form)
+                : form?.[field.key],
+        mandatory: field.mandatory,
+        disabled: field.disabled,
+        error: field.error || "",
+    };
 
-	if (field.type === "select") {
-		return (
-			<SelectInput
-				key={field.key}
-				{...commonProps}
-				options={field.options || []}
-				onChange={handleSelectChange(field.key)}
-			/>
-		);
-	}
+    if (field.type === "select") {
+        return (
+            <SelectInput
+                key={field.key}
+                {...commonProps}
+                options={field.options || []}
+                disabled={isView}
+                onChange={handleSelectChange(field.key)}
+            />
+        );
+    }
 
     if (field.type === "toggle" || field.type === "checkbox") {
-		return (
-			<div key={field.key} className={field.className || ""}>
-				<ToggleInput
-					label={field.label}
-					name={field.key}
-					value={Boolean(form?.[field.key])}
-					checked={Boolean(form?.[field.key])}
-					mandatory={field.mandatory}
-					disabled={field.disabled}
-					error={field.error || ""}
-					onChange={(event: any) => {
-						const checked =
-							event?.target?.checked ?? event?.checked ?? false;
+        return (
+            <div key={field.key} className={field.className || ""}>
+                <ToggleInput
+                    label={field.label}
+                    name={field.key}
+                    value={Boolean(form?.[field.key])}
+                    checked={Boolean(form?.[field.key])}
+                    mandatory={field.mandatory}
+                    disabled={field.disabled || isView}
+                    error={field.error || ""}
+                    onChange={(event: any) => {
+                        if (isView) return;
 
-						updateField(field.key, checked);
-					}}
-				/>
-			</div>
-		);
-	}
+                        const checked =
+                            event?.target?.checked ??
+                            event?.checked ??
+                            false;
 
-	if (field.type === "textarea") {
-		return (
-			<div key={field.key} className={field.className || "md:col-span-2 xl:col-span-3"}>
-				<TextArea
-					label={field.label}
-					value={form?.[field.key] || ""}
-					placeholder={field.placeholder}
-					onChange={(e: any) => {
-						const value = e?.target?.value || "";
+                        updateField(field.key, checked);
+                    }}
+                />
+            </div>
+        );
+    }
 
-						updateField(
-							field.key,
-							field.maxLength ? value.slice(0, field.maxLength) : value
-						);
-					}}
-				/>
+    if (field.type === "textarea") {
+        return (
+            <div key={field.key} className={field.className || "md:col-span-2 xl:col-span-3"}>
+                <TextArea
+                    label={field.label}
+                    value={form?.[field.key] || ""}
+                    placeholder={field.placeholder}
+                    onChange={(e: any) => {
+                        const value = e?.target?.value || "";
 
-				{field.maxLength && (
-					<p className="mt-1 text-right text-xs text-muted-foreground">
-						{String(form?.[field.key] || "").length}/{field.maxLength}
-					</p>
-				)}
-			</div>
-		);
-	}
+                        updateField(
+                            field.key,
+                            field.maxLength ? value.slice(0, field.maxLength) : value
+                        );
+                    }}
+                    disabled={isView}
+                />
 
-	return (
-		<TextInput
-			key={field.key}
-			{...commonProps}
-			type={field.type || "text"}
-			placeholder={field.placeholder}
-			onChange={field.disabled ? () => {} : handleInputChange(field.key)}
-		/>
-	);
+                {field.maxLength && (
+                    <p className="mt-1 text-right text-xs text-muted-foreground">
+                        {String(form?.[field.key] || "").length}/{field.maxLength}
+                    </p>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <TextInput
+            key={field.key}
+            {...commonProps}
+            type={field.type || "text"}
+            placeholder={field.placeholder}
+            onChange={field.disabled ? () => { } : handleInputChange(field.key)}
+            disabled={isView}
+        />
+    );
 };

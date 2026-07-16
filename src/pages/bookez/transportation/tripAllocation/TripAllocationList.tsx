@@ -19,10 +19,35 @@ import {
 	deleteTripAllocationByVoucherNumber,
 	getAllTripAllocation,
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
+import { getAllTripExpenses } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
 
 /* ===================================================
    TRIP ALLOCATION LIST
 =================================================== */
+
+
+const extractTripExpenseList = (response: any): any[] => {
+	const payload =
+		response?.payload?.data ||
+		response?.payload ||
+		response?.data ||
+		response ||
+		{};
+
+	const list =
+		payload?.tripExpenses ||
+		payload?.expenses ||
+		payload?.records ||
+		payload?.docs ||
+		payload?.data?.tripExpenses ||
+		payload?.data?.expenses ||
+		payload?.data?.records ||
+		payload?.data?.docs ||
+		payload?.data ||
+		[];
+
+	return Array.isArray(list) ? list : [];
+};
 
 const TripAllocationList = () => {
 	const dispatch = useDispatch<any>();
@@ -43,6 +68,8 @@ const TripAllocationList = () => {
 	const [localLimit, setLocalLimit] = useState(20);
 	const [activeStatus, setActiveStatus] =
 		useState<"open" | "close">("open");
+	const [checkingTripExpense, setCheckingTripExpense] = useState(false);
+
 
 	const [statusCounts, setStatusCounts] = useState({
 		open: 0,
@@ -54,6 +81,7 @@ const TripAllocationList = () => {
 		x: null,
 		y: null,
 		tripAllocationNumber: null,
+		transportOrderNumber: null,
 	});
 
 	const pageTitle = location.state?.title || "Trip Allocation";
@@ -229,27 +257,93 @@ const TripAllocationList = () => {
 		);
 	};
 
-	const handleDeleteClick = (e: any, record: any) => {
+
+
+	const handleDeleteClick = async (e: any, record: any) => {
 		const tripAllocationNumber = getTripAllocationNumber(record);
+
+		const transportOrderNumber =
+			record?.transportOrder?.transportOrderNumber ||
+			record?.transportOrderNumber ||
+			"";
 
 		if (!tripAllocationNumber) {
 			toast.warn("Trip allocation number not found");
 			return;
 		}
 
-		const rect = e.currentTarget.getBoundingClientRect();
+		if (!transportOrderNumber) {
+			toast.warn("Transport order number not found");
+			return;
+		}
 
-		let x = rect.left - 160;
-		if (x < 10) x = 10;
+		try {
+			setCheckingTripExpense(true);
 
-		const y = rect.top + window.scrollY - 5;
+			/*
+			 * Call the expense listing API.
+			 *
+			 * Update these arguments according to the payload accepted
+			 * by your actual getAllTripExpenses thunk.
+			 */
+			const expenseResponse = await dispatch(
+				getAllTripExpenses({
+					limit: 1000,
+					offset: 0,
+					search: transportOrderNumber,
+				}) as any
+			).unwrap();
 
-		setConfirmTooltip({
-			show: true,
-			x,
-			y,
-			tripAllocationNumber,
-		});
+			const tripExpenses = extractTripExpenseList(expenseResponse);
+
+			const linkedExpense = tripExpenses.find((expense: any) => {
+				const expenseTripId = String(expense?.tripId || "")
+					.trim()
+					.toLowerCase();
+
+				const orderNumber = String(transportOrderNumber)
+					.trim()
+					.toLowerCase();
+
+				return expenseTripId === orderNumber;
+			});
+
+			if (linkedExpense) {
+				toast.error(
+					`This trip allocation is linked to trip expense ${linkedExpense?.tripExpenseNumber || ""
+					}. Delete the trip expense first to remove the full trip.`
+				);
+
+				return;
+			}
+
+			const rect = e.currentTarget.getBoundingClientRect();
+
+			let x = rect.left - 160;
+
+			if (x < 10) {
+				x = 10;
+			}
+
+			const y = rect.top + window.scrollY - 5;
+
+			setConfirmTooltip({
+				show: true,
+				x,
+				y,
+				tripAllocationNumber,
+				transportOrderNumber,
+			});
+		} catch (error: any) {
+			console.error("Failed to check linked trip expenses", error);
+
+			toast.error(
+				error?.message ||
+				"Unable to verify linked trip expenses. Please try again."
+			);
+		} finally {
+			setCheckingTripExpense(false);
+		}
 	};
 
 	const handleDeleteConfirm = async () => {
@@ -576,6 +670,7 @@ const TripAllocationList = () => {
 							x: null,
 							y: null,
 							tripAllocationNumber: null,
+							transportOrderNumber: null,
 						})
 					}
 				/>

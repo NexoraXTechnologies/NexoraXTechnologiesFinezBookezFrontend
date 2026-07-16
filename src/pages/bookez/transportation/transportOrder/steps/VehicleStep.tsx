@@ -7,7 +7,7 @@ import {
     vehicleTypeOptions,
 } from "../transportOrderOptions";
 
-const VehicleStep = ({ form, update }: any) => {
+const VehicleStep = ({ form, update ,isView}: any) => {
     // const updateVehicleField = (key: string, value: any) => {
     // 	update("vehicleRequirement", key, value);
     // };
@@ -101,6 +101,7 @@ const VehicleStep = ({ form, update }: any) => {
                 handleInputChange,
                 handleSelectChange,
                 updateField,
+                isView
             })
         );
 

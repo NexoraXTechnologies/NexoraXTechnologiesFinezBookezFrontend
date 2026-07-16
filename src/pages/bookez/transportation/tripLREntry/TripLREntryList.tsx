@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Edit, Lock, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 
 import DataTable from "../../../../components/DataTable";
@@ -18,6 +18,7 @@ import {
 import {
     deleteTripLRCollection,
     getAllLRCollection,
+    getTripLRCollectionByVoucherNumber,
 } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
 
 /* ===================================================
@@ -453,71 +454,71 @@ const TripLREntryList = () => {
         });
     };
 
-    // const handleEdit = async (item: any) => {
-    //     if (isLRClosed(item)) {
-    //         toast.error("Closed LR collection cannot be edited.");
-    //         return;
-    //     }
+    const handleEdit = async (item: any) => {
+        if (isLRClosed(item)) {
+            toast.error("Closed LR collection cannot be edited.");
+            return;
+        }
 
-    //     try {
-    //         setListingLoader(true);
+        try {
+            setListingLoader(true);
 
-    //         const voucher = getLRVoucher(item);
+            const voucher = getLRVoucher(item);
 
-    //         if (!voucher) {
-    //             toast.warn("LR number not found");
-    //             return;
-    //         }
+            if (!voucher) {
+                toast.warn("LR number not found");
+                return;
+            }
 
-    //         const res = await dispatch(
-    //             getTripLRCollectionByVoucherNumber(voucher) as any
-    //         ).unwrap();
+            const res = await dispatch(
+                getTripLRCollectionByVoucherNumber(voucher) as any
+            ).unwrap();
 
-    //         navigate(`/bookEz/transportation/trip-lr-collection/edit/${voucher}`, {
-    //             state: {
-    //                 title: "Edit Trip L/R Collection",
-    //                 description: "Update LR collection details.",
-    //                 mode: "edit",
-    //                 voucherNumber: voucher,
-    //                 lrNumber: voucher,
-    //                 lrData: res?.data || res,
-    //             },
-    //         });
-    //     } catch (error: any) {
-    //         toast.error(error?.message || "Failed to open LR collection");
-    //     } finally {
-    //         setListingLoader(false);
-    //     }
-    // };
+            navigate(`/bookEz/transportation/trip-lr-entry/edit/${voucher}`, {
+                state: {
+                    title: "Edit Trip L/R Entry",
+                    description: "Update LR Entry details.",
+                    mode: "edit",
+                    voucherNumber: voucher,
+                    lrNumber: voucher,
+                    lrData: res?.data || res,
+                },
+            });
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to open LR Entry");
+        } finally {
+            setListingLoader(false);
+        }
+    };
 
-    // const handleDeleteClick = (e: any, item: any) => {
-    //     if (isLRClosed(item)) {
-    //         toast.error("Closed LR collection cannot be deleted.");
-    //         return;
-    //     }
+    const handleDeleteClick = (e: any, item: any) => {
+        if (isLRClosed(item)) {
+            toast.error("Closed LR Entry cannot be deleted.");
+            return;
+        }
 
-    //     const voucher = getLRVoucher(item);
+        const voucher = getLRVoucher(item);
 
-    //     if (!voucher) {
-    //         toast.warn("LR number not found");
-    //         return;
-    //     }
+        if (!voucher) {
+            toast.warn("LR number not found");
+            return;
+        }
 
-    //     const rect = e.currentTarget.getBoundingClientRect();
+        const rect = e.currentTarget.getBoundingClientRect();
 
-    //     let x = rect.left - 160;
-    //     if (x < 10) x = 10;
+        let x = rect.left - 160;
+        if (x < 10) x = 10;
 
-    //     const y = rect.top + window.scrollY - 5;
+        const y = rect.top + window.scrollY - 5;
 
-    //     setConfirmTooltip({
-    //         show: true,
-    //         x,
-    //         y,
-    //         item,
-    //         voucherNumber: voucher,
-    //     });
-    // };
+        setConfirmTooltip({
+            show: true,
+            x,
+            y,
+            item,
+            voucherNumber: voucher,
+        });
+    };
 
     const handleDeleteConfirm = async () => {
         try {
@@ -532,7 +533,7 @@ const TripLREntryList = () => {
                 deleteTripLRCollection(confirmTooltip.voucherNumber) as any
             ).unwrap();
 
-            toast.success("Trip LR collection deleted");
+            toast.success("Trip LR Entry deleted");
 
             setConfirmTooltip({
                 show: false,
@@ -802,48 +803,48 @@ const TripLREntryList = () => {
                             ? "No closed trip LR collection found"
                             : "No open trip LR collection found"
                     }
-                // {...(activeStatus !== "close"
-                //     ? {
-                //           actions: (record: any) => {
-                //               if (isLRClosed(record)) return null;
+                {...(activeStatus !== "close"
+                    ? {
+                          actions: (record: any) => {
+                              if (isLRClosed(record)) return null;
 
-                //               return (
-                //                   <div className="flex items-center gap-2">
-                //                       <Permission
-                //                           module="bookez"
-                //                           permissionKey="tripLrCollection"
-                //                           action="update"
-                //                       >
-                //                           <button
-                //                               type="button"
-                //                               onClick={() => handleEdit(record)}
-                //                               className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                //                           >
-                //                               <Edit size={16} />
-                //                           </button>
-                //                       </Permission>
+                              return (
+                                  <div className="flex items-center gap-2">
+                                      <Permission
+                                          module="bookez"
+                                          permissionKey="tripLrCollection"
+                                          action="update"
+                                      >
+                                          <button
+                                              type="button"
+                                              onClick={() => handleEdit(record)}
+                                              className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                          >
+                                              <Edit size={16} />
+                                          </button>
+                                      </Permission>
 
-                //                       <Permission
-                //                           module="bookez"
-                //                           permissionKey="tripLrCollection"
-                //                           action="delete"
-                //                       >
-                //                           <button
-                //                               type="button"
-                //                               disabled={deleteLoader}
-                //                               onClick={(e) =>
-                //                                   handleDeleteClick(e, record)
-                //                               }
-                //                               className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                //                           >
-                //                               <Trash2 size={16} />
-                //                           </button>
-                //                       </Permission>
-                //                   </div>
-                //               );
-                //           },
-                //       }
-                //     : {})}
+                                      <Permission
+                                          module="bookez"
+                                          permissionKey="tripLrCollection"
+                                          action="delete"
+                                      >
+                                          <button
+                                              type="button"
+                                              disabled={deleteLoader}
+                                              onClick={(e) =>
+                                                  handleDeleteClick(e, record)
+                                              }
+                                              className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                          >
+                                              <Trash2 size={16} />
+                                          </button>
+                                      </Permission>
+                                  </div>
+                              );
+                          },
+                      }
+                    : {})}
                 />
             </div>
 

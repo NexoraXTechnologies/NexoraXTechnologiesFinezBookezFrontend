@@ -175,6 +175,7 @@ function App() {
           <Route path="/bookEz/transportation/transport-order" element={<TransportOrderList />} />
           <Route path="/bookEz/transportation/transport-order/create" element={<CreateTransportOrder />} />
           <Route path="/bookEz/transportation/transport-order/edit/:orderNumber" element={<CreateTransportOrder />} />
+          <Route path="/bookEz/transportation/transport-order/view/:orderNumber" element={<CreateTransportOrder />} />
 
           <Route path='/bookEz/transportation/trip-allocation' element={<TripAllocationList />} />
           <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />} />
@@ -186,6 +187,7 @@ function App() {
 
           <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
           <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
+          <Route path='/bookEz/transportation/trip-lr-entry/edit/:voucherNumber' element={<CreateEditTripLREntry />} />
 
           <Route path="/bookEz/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
           <Route path="/bookEz/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>

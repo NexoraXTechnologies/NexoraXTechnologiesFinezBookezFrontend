@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Eye, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { formatDateForList, money, truncate } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
@@ -436,6 +436,27 @@ const TransportOrderList = () => {
 		},
 	];
 
+
+	const handleViewOrder = (record: any) => {
+		const orderNumber = getOrderNumber(record);
+
+		if (!orderNumber) {
+			toast.warn("Transport order number not found");
+			return;
+		}
+
+		navigate(`/bookEz/transportation/transport-order/view/${orderNumber}`, {
+			state: {
+				title: "View Transport Order",
+				description: "View transport order details.",
+				mode: "view",
+				orderNumber,
+				voucherNumber: orderNumber,
+				transportOrderNumber: orderNumber,
+			},
+		});
+	};
+
 	return (
 		<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
 			<div id="transport-order-header" className="mb-3 flex items-center">
@@ -536,55 +557,131 @@ const TransportOrderList = () => {
 					emptyMessage="No transport order found"
 					{...(activeStatus !== "close"
 						? {
+							// actions: (record: any) => {
+							// 	const allocatedLR = getAllocatedLR(record);
+
+							// 	if (allocatedLR) {
+							// 		return (
+							// 			<span className="inline-flex items-center rounded-md border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+							// 				Allocated
+							// 				{allocatedLR?.lrNumber
+							// 					? ` • ${allocatedLR.lrNumber}`
+							// 					: ""}
+							// 			</span>
+							// 		);
+							// 	}
+
+							// 	if (isClosedOrder(record)) return null;
+
+							// 	return (
+							// 		<div className="flex items-center gap-2">
+							// 			<Permission
+							// 				module="bookez"
+							// 				permissionKey="transportOrder"
+							// 				action="update"
+							// 			>
+							// 				<button
+							// 					type="button"
+							// 					onClick={() => handleEditOrder(record)}
+							// 					className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+							// 				>
+							// 					<Edit size={16} />
+							// 				</button>
+							// 			</Permission>
+
+							// 			<Permission
+							// 				module="bookez"
+							// 				permissionKey="transportOrder"
+							// 				action="delete"
+							// 			>
+							// 				<button
+							// 					type="button"
+							// 					disabled={deleteLoader || lrListingLoader}
+							// 					onClick={(e) => handleDeleteClick(e, record)}
+							// 					className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+							// 				>
+							// 					<Trash2 size={16} />
+							// 				</button>
+							// 			</Permission>
+							// 		</div>
+							// 	);
+							// },
+
 							actions: (record: any) => {
 								const allocatedLR = getAllocatedLR(record);
 
-								if (allocatedLR) {
-									return (
-										<span className="inline-flex items-center rounded-md border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
-											Allocated
-											{allocatedLR?.lrNumber
-												? ` • ${allocatedLR.lrNumber}`
-												: ""}
-										</span>
-									);
-								}
-
-								if (isClosedOrder(record)) return null;
-
 								return (
 									<div className="flex items-center gap-2">
-										<Permission
-											module="bookez"
-											permissionKey="transportOrder"
-											action="update"
-										>
-											<button
-												type="button"
-												onClick={() => handleEditOrder(record)}
-												className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-											>
-												<Edit size={16} />
-											</button>
-										</Permission>
 
-										<Permission
-											module="bookez"
-											permissionKey="transportOrder"
-											action="delete"
-										>
-											<button
-												type="button"
-												disabled={deleteLoader || lrListingLoader}
-												onClick={(e) => handleDeleteClick(e, record)}
-												className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-											>
-												<Trash2 size={16} />
-											</button>
-										</Permission>
+										{/* View */}
+
+
+
+										{!allocatedLR && !isClosedOrder(record) && (
+											<>
+												<Permission
+													module="bookez"
+													permissionKey="transportOrder"
+													action="update"
+												>
+													<button
+														type="button"
+														onClick={() => handleEditOrder(record)}
+														className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10"
+														title="Edit"
+													>
+														<Edit size={16} />
+													</button>
+												</Permission>
+
+												<Permission
+													module="bookez"
+													permissionKey="transportOrder"
+													action="delete"
+												>
+													<button
+														type="button"
+														disabled={deleteLoader || lrListingLoader}
+														onClick={(e) => handleDeleteClick(e, record)}
+														className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 disabled:opacity-50"
+														title="Delete"
+													>
+														<Trash2 size={16} />
+													</button>
+												</Permission>
+											</>
+										)}
+
+										{allocatedLR && (
+											<>
+
+												<Permission
+													module="bookez"
+													permissionKey="transportOrder"
+													action="view"
+												>
+													<button
+														type="button"
+														onClick={() => handleViewOrder(record)}
+														className="cursor-pointer rounded-md p-2 text-info transition-all duration-200 hover:bg-info/10"
+														title="View"
+													>
+														<Eye size={16} />
+													</button>
+												</Permission>
+												<span className="inline-flex items-center rounded-md border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+													Allocated
+													{allocatedLR?.lrNumber
+														? ` • ${allocatedLR.lrNumber}`
+														: ""}
+												</span>
+
+
+											</>
+										)}
 									</div>
 								);
-							},
+							}
 						}
 						: {})}
 				/>

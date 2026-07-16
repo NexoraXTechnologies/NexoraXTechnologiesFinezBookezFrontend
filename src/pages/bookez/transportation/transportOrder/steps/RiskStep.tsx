@@ -3,7 +3,7 @@ import { FormSectionCard } from "../../../../../components/SectionCards";
 import { renderField } from "../../../../../components/inputs";
 import { riskOptions } from "../transportOrderOptions";
 
-const RiskStep = ({ form, update }: any) => {
+const RiskStep = ({ form, update,isView }: any) => {
     const updateBrokerField = (key: string, value: any) => {
         update("brokerDetails", key, value);
     };
@@ -171,6 +171,7 @@ const RiskStep = ({ form, update }: any) => {
                 handleInputChange,
                 handleSelectChange,
                 updateField,
+                isView
             })
         );
 

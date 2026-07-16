@@ -6,7 +6,7 @@ import {
 	paymentTypeOptions,
 } from "../transportOrderOptions";
 
-const FreightStep = ({ form, update, balanceAmount }: any) => {
+const FreightStep = ({ form, update, balanceAmount,isView }: any) => {
 	const updateFreightField = (key: string, value: any) => {
 		update("freightDetails", key, value);
 	};
@@ -102,6 +102,7 @@ const FreightStep = ({ form, update, balanceAmount }: any) => {
 				handleInputChange,
 				handleSelectChange,
 				updateField,
+				isView
 			})
 		);
 
