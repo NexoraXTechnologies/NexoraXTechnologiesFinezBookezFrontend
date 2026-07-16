@@ -55,6 +55,7 @@ import {
     toTripExpensePayload,
 } from "../tripExpense/tripExpenseInitialState";
 import truckImage from "../../../../assets/truck.png";
+import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
 const REMARKS_MAX = 200;
 
 const routeTypeOptions = [
@@ -1433,6 +1434,65 @@ const CreateTripAllocation = () => {
         return payload;
     };
 
+    // const handleSave = async () => {
+    //     if (!validate()) return;
+
+    //     try {
+    //         setPageLoading(true);
+
+    //         const payload = toTripAllocationPayload({
+    //             ...form,
+    //             tripStatus: form.tripStatus || "pending",
+    //         });
+
+    //         if (isEdit) {
+    //             await dispatch(
+    //                 updateTripAllocationByVoucherNumber({
+    //                     voucherNumber: voucherNumber,
+    //                     updateData: payload,
+    //                 })
+    //             ).unwrap();
+
+
+
+    //             toast.success("Trip allocation updated");
+    //             navigate(-1);
+    //             return;
+    //         }
+
+    //         const saveResponse = await dispatch(createTripAllocation(payload)).unwrap();
+    //         const savedAllocation = getSavedAllocationRecord(saveResponse, payload);
+    //         const allocationVoucher = getAllocationVoucherFromSaved(savedAllocation);
+
+    //         try {
+    //             await syncTripExpenseFromAllocation({
+    //                 allocationVoucher,
+    //                 savedAllocation,
+    //             });
+    //         } catch (expenseError: any) {
+    //             console.log(
+    //                 "[TripAllocation] trip expense assignment request failed",
+    //                 expenseError
+    //             );
+
+    //             toast.error(
+    //                 expenseError?.message ||
+    //                 "Trip allocation saved, but driver accept request failed"
+    //             );
+
+    //             return;
+    //         }
+
+    //         toast.success("Trip allocated successfully. Request sent to driver.");
+    //         navigate(-1);
+    //     } catch (error: any) {
+    //         toast.error(error?.message || "Trip allocation failed");
+    //     } finally {
+    //         setPageLoading(false);
+    //     }
+    // };
+
+
     const handleSave = async () => {
         if (!validate()) return;
 
@@ -1444,37 +1504,84 @@ const CreateTripAllocation = () => {
                 tripStatus: form.tripStatus || "pending",
             });
 
+            // =====================================================
+            // UPDATE
+            // =====================================================
             if (isEdit) {
                 await dispatch(
                     updateTripAllocationByVoucherNumber({
-                        voucherNumber: voucherNumber,
+                        voucherNumber,
                         updateData: payload,
                     })
                 ).unwrap();
+
+                // Send WhatsApp (don't fail update if notification fails)
+                try {
+                    await dispatch(
+                        sendWhatsAppMessage({
+                            moduleType: "tripAllocation",
+                            voucherNumber,
+                        })
+                    ).unwrap();
+                } catch (err) {
+                    console.error(
+                        "[TripAllocation] WhatsApp notification failed",
+                        err
+                    );
+                }
 
                 toast.success("Trip allocation updated");
                 navigate(-1);
                 return;
             }
 
-            const saveResponse = await dispatch(createTripAllocation(payload)).unwrap();
-            const savedAllocation = getSavedAllocationRecord(saveResponse, payload);
-            const allocationVoucher = getAllocationVoucherFromSaved(savedAllocation);
+            // =====================================================
+            // CREATE
+            // =====================================================
+            const saveResponse = await dispatch(
+                createTripAllocation(payload)
+            ).unwrap();
 
+            const savedAllocation = getSavedAllocationRecord(
+                saveResponse,
+                payload
+            );
+
+            const allocationVoucher =
+                getAllocationVoucherFromSaved(savedAllocation);
+
+            // Send WhatsApp
+            if (allocationVoucher) {
+                try {
+                    await dispatch(
+                        sendWhatsAppMessage({
+                            moduleType: "tripAllocation",
+                            voucherNumber: allocationVoucher,
+                        })
+                    ).unwrap();
+                } catch (err) {
+                    console.error(
+                        "[TripAllocation] WhatsApp notification failed",
+                        err
+                    );
+                }
+            }
+
+            // Sync Trip Expense
             try {
                 await syncTripExpenseFromAllocation({
                     allocationVoucher,
                     savedAllocation,
                 });
             } catch (expenseError: any) {
-                console.log(
-                    "[TripAllocation] trip expense assignment request failed",
+                console.error(
+                    "[TripAllocation] Trip expense assignment failed",
                     expenseError
                 );
 
                 toast.error(
                     expenseError?.message ||
-                    "Trip allocation saved, but driver accept request failed"
+                    "Trip allocation saved, but driver request failed."
                 );
 
                 return;
@@ -1488,6 +1595,7 @@ const CreateTripAllocation = () => {
             setPageLoading(false);
         }
     };
+
 
     return (
         <div className="flex h-full w-full flex-col bg-background text-foreground">
