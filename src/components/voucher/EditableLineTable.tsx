@@ -67,7 +67,7 @@ const EditableLineTable = ({
     onChange,
     isAddButton,
     isRefrenceAction,
-    RefrenceBtnText,
+    // RefrenceBtnText,
     emptyText = "No data found",
     isColumnVisible,
     isCellVisible,
@@ -297,9 +297,9 @@ const EditableLineTable = ({
                                                         )
                                                         : true;
 
-                                                    const isCalculatedGross =
-                                                        col.key === "taxGross" ||
-                                                        col.key === "nonTaxGross";
+                                                    // const isCalculatedGross =
+                                                    //     col.key === "taxGross" ||
+                                                    //     col.key === "nonTaxGross";
 
                                                     return (
                                                         <motion.td

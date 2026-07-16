@@ -68,6 +68,7 @@ const TripAllocationList = () => {
 	const [localLimit, setLocalLimit] = useState(20);
 	const [activeStatus, setActiveStatus] =
 		useState<"open" | "close">("open");
+		// @ts-ignore
 	const [checkingTripExpense, setCheckingTripExpense] = useState(false);
 
 

@@ -1528,7 +1528,7 @@ const CreateEditDriverSettlement = () => {
 
             const [
                 ordersRes,
-                allocationsRes,
+                // allocationsRes,
                 lrRes,
                 expenseRes,
             ] = await Promise.all([
@@ -1569,7 +1569,7 @@ const CreateEditDriverSettlement = () => {
             ]);
 
             const orders = getApiList(ordersRes);
-            const allocations = getApiList(allocationsRes);
+            // const allocations = getApiList(allocationsRes);
             const expenses = getApiList(expenseRes);
             const lrList = getApiList(lrRes);
 
