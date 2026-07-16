@@ -3106,44 +3106,85 @@ const buildOrderOptionsForDriver = ({
 const sumAmounts = (entries: any[] = []) =>
     entries.reduce((acc, row) => acc + Number(row?.amount || 0), 0);
 
-const computeTripExpenseSummary = (tripExpense: any = {}) => {
+// const computeTripExpenseSummary = (tripExpense: any = {}) => {
+//     const expenses = tripExpense?.expenses || {};
+
+//     const totalAdvanceReceived =
+//         Number(expenses?.advanceReceived?.totalAdvance || 0) ||
+//         sumAmounts(expenses?.advanceReceived?.entries || []);
+
+//     const totalDieselCost =
+//         Number(expenses?.dieselCost?.totalDieselCost || 0) ||
+//         sumAmounts(expenses?.dieselCost?.entries || []);
+
+//     const totalFoodCost =
+//         Number(expenses?.foodCost?.totalFoodCost || 0) ||
+//         sumAmounts(expenses?.foodCost?.entries || []);
+
+//     const totalRunningCost =
+//         Number(expenses?.runningCost?.totalRunningCost || 0) ||
+//         sumAmounts(expenses?.runningCost?.entries || []);
+
+//     const totalBreakdownCost =
+//         Number(expenses?.breakdownCost?.totalBreakdownCost || 0) ||
+//         sumAmounts(expenses?.breakdownCost?.entries || []);
+
+//     const totalOtherCost =
+//         Number(expenses?.otherCost?.totalOtherCost || 0) ||
+//         sumAmounts(expenses?.otherCost?.entries || []);
+
+//     const totalTripExpense =
+//         Number(tripExpense?.summary?.totalTripExpense || 0) ||
+//         totalDieselCost +
+//         totalFoodCost +
+//         totalRunningCost +
+//         totalBreakdownCost +
+//         totalOtherCost;
+
+//     const balanceAmount =
+//         Number(tripExpense?.summary?.balanceAmount || 0) ||
+//         Math.max(totalTripExpense - totalAdvanceReceived, 0);
+
+//     return {
+//         totalAdvanceReceived,
+//         totalTripExpense,
+//         balanceAmount,
+//     };
+// };
+
+const computeTripExpenseSummary = (
+    tripExpense: any = {}
+) => {
     const expenses = tripExpense?.expenses || {};
 
+    const advanceEntries =
+        expenses?.advanceReceived?.entries || [];
+
     const totalAdvanceReceived =
-        Number(expenses?.advanceReceived?.totalAdvance || 0) ||
-        sumAmounts(expenses?.advanceReceived?.entries || []);
+        sumAmounts(advanceEntries);
 
-    const totalDieselCost =
-        Number(expenses?.dieselCost?.totalDieselCost || 0) ||
-        sumAmounts(expenses?.dieselCost?.entries || []);
+    const totalTripExpense = Object.entries(expenses)
+        .filter(([key]) => key !== "advanceReceived")
+        .reduce(
+            (
+                total,
+                [, expenseGroup]: [string, any]
+            ) => {
+                const entries = Array.isArray(
+                    expenseGroup?.entries
+                )
+                    ? expenseGroup.entries
+                    : [];
 
-    const totalFoodCost =
-        Number(expenses?.foodCost?.totalFoodCost || 0) ||
-        sumAmounts(expenses?.foodCost?.entries || []);
+                return total + sumAmounts(entries);
+            },
+            0
+        );
 
-    const totalRunningCost =
-        Number(expenses?.runningCost?.totalRunningCost || 0) ||
-        sumAmounts(expenses?.runningCost?.entries || []);
-
-    const totalBreakdownCost =
-        Number(expenses?.breakdownCost?.totalBreakdownCost || 0) ||
-        sumAmounts(expenses?.breakdownCost?.entries || []);
-
-    const totalOtherCost =
-        Number(expenses?.otherCost?.totalOtherCost || 0) ||
-        sumAmounts(expenses?.otherCost?.entries || []);
-
-    const totalTripExpense =
-        Number(tripExpense?.summary?.totalTripExpense || 0) ||
-        totalDieselCost +
-        totalFoodCost +
-        totalRunningCost +
-        totalBreakdownCost +
-        totalOtherCost;
-
-    const balanceAmount =
-        Number(tripExpense?.summary?.balanceAmount || 0) ||
-        Math.max(totalTripExpense - totalAdvanceReceived, 0);
+    const balanceAmount = Math.max(
+        totalTripExpense - totalAdvanceReceived,
+        0
+    );
 
     return {
         totalAdvanceReceived,
@@ -3152,88 +3193,250 @@ const computeTripExpenseSummary = (tripExpense: any = {}) => {
     };
 };
 
-const buildExpenseRowsFromTripExpense = (tripExpense: any) => {
+// const buildExpenseRowsFromTripExpense = (tripExpense: any) => {
+//     if (!tripExpense) return [];
+
+//     const expenses = tripExpense?.expenses || {};
+//     const rows: any[] = [];
+
+//     const pushRows = (entries: any[] = [], type: string, descriptionFn: any) => {
+//         entries.forEach((entry: any, index: number) => {
+//             const amount = Number(entry?.amount || 0);
+
+//             if (!amount && !entry?.fuelStation && !entry?.expenseType) return;
+
+//             rows.push({
+//                 id: `${type}-${index}`,
+//                 date:
+//                     entry?.date ||
+//                     entry?.receivedDate ||
+//                     entry?.billDate ||
+//                     tripExpense?.tripDate ||
+//                     tripExpense?.enteredDate ||
+//                     "",
+//                 type,
+//                 description: descriptionFn(entry),
+//                 amount,
+//             });
+//         });
+//     };
+
+//     pushRows(
+//         expenses?.dieselCost?.entries,
+//         "Diesel",
+//         (entry: any) =>
+//             [entry?.fuelStation, entry?.billNumber].filter(Boolean).join(" • ") ||
+//             "Diesel Refilling"
+//     );
+
+//     pushRows(
+//         expenses?.foodCost?.entries,
+//         "Driver Allowance / Food",
+//         (entry: any) =>
+//             [entry?.mealType, entry?.location].filter(Boolean).join(" • ") ||
+//             "Food / allowance"
+//     );
+
+//     pushRows(
+//         expenses?.runningCost?.entries,
+//         "Running",
+//         (entry: any) =>
+//             [entry?.expenseType, entry?.location].filter(Boolean).join(" • ") ||
+//             "Running expense"
+//     );
+
+//     pushRows(
+//         expenses?.breakdownCost?.entries,
+//         "Breakdown",
+//         (entry: any) =>
+//             [entry?.issueType, entry?.serviceCenter].filter(Boolean).join(" • ") ||
+//             "Breakdown expense"
+//     );
+
+//     pushRows(
+//         expenses?.otherCost?.entries,
+//         "Other",
+//         (entry: any) =>
+//             [entry?.expenseType, entry?.remarks].filter(Boolean).join(" • ") ||
+//             "Other expense"
+//     );
+
+//     const pod = tripExpense?.pod || {};
+//     const podStatus = cleanText(pod?.deliveryStatus);
+
+//     if (podStatus && normalizeText(podStatus) !== "pending") {
+//         rows.push({
+//             id: "pod-summary",
+//             date: pod?.deliveryDateTime || tripExpense?.tripDate || "",
+//             type: "POD",
+//             description: [podStatus, pod?.receiverName, pod?.deliveryLocation]
+//                 .filter(Boolean)
+//                 .join(" • "),
+//             amount: 0,
+//         });
+//     }
+
+//     return rows;
+// };
+
+
+const EXPENSE_TYPE_LABELS: Record<string, string> = {
+    dieselCost: "Diesel",
+    petrolCost: "Petrol",
+    foodCost: "Driver Allowance / Food",
+    runningCost: "Running",
+    breakdownCost: "Breakdown",
+    otherCost: "Other",
+};
+
+const formatExpenseTypeLabel = (key: string) => {
+    if (EXPENSE_TYPE_LABELS[key]) {
+        return EXPENSE_TYPE_LABELS[key];
+    }
+
+    return key
+        .replace(/Cost$/i, "")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/[_-]+/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .trim();
+};
+
+const getExpenseDescription = (
+    expenseKey: string,
+    entry: any
+) => {
+    const valuesByType: Record<string, any[]> = {
+        dieselCost: [
+            entry?.fuelStation,
+            entry?.billNumber,
+        ],
+
+        petrolCost: [
+            entry?.fuelStation,
+            entry?.billNumber,
+        ],
+
+        foodCost: [
+            entry?.mealType,
+            entry?.location,
+        ],
+
+        runningCost: [
+            entry?.expenseType,
+            entry?.location,
+        ],
+
+        breakdownCost: [
+            entry?.issueType,
+            entry?.serviceCenter,
+            entry?.location,
+        ],
+
+        otherCost: [
+            entry?.expenseType,
+            entry?.remarks,
+        ],
+    };
+
+    const configuredValues = valuesByType[expenseKey];
+
+    if (configuredValues) {
+        const description = configuredValues
+            .filter(Boolean)
+            .join(" • ");
+
+        if (description) return description;
+    }
+
+    // Generic fallback for future expense categories.
+    const ignoredFields = new Set([
+        "amount",
+        "date",
+        "receivedDate",
+        "billDate",
+        "billImage",
+        "document",
+        "attachment",
+        "_id",
+    ]);
+
+    const genericDescription = Object.entries(entry || {})
+        .filter(([key, value]) => {
+            return (
+                !ignoredFields.has(key) &&
+                value !== null &&
+                value !== undefined &&
+                value !== ""
+            );
+        })
+        .map(([key, value]) => {
+            const label = key
+                .replace(/([a-z])([A-Z])/g, "$1 $2")
+                .replace(/[_-]+/g, " ")
+                .replace(/\b\w/g, (char) => char.toUpperCase());
+
+            return `${label}: ${String(value)}`;
+        })
+        .join(" • ");
+
+    return (
+        genericDescription ||
+        `${formatExpenseTypeLabel(expenseKey)} expense`
+    );
+};
+
+const buildExpenseRowsFromTripExpense = (
+    tripExpense: any
+) => {
     if (!tripExpense) return [];
 
     const expenses = tripExpense?.expenses || {};
     const rows: any[] = [];
 
-    const pushRows = (entries: any[] = [], type: string, descriptionFn: any) => {
-        entries.forEach((entry: any, index: number) => {
-            const amount = Number(entry?.amount || 0);
+    Object.entries(expenses).forEach(
+        ([expenseKey, expenseGroup]: [string, any]) => {
+            // Advances are handled separately.
+            if (expenseKey === "advanceReceived") {
+                return;
+            }
 
-            if (!amount && !entry?.fuelStation && !entry?.expenseType) return;
+            const entries = Array.isArray(expenseGroup?.entries)
+                ? expenseGroup.entries
+                : [];
 
-            rows.push({
-                id: `${type}-${index}`,
-                date:
-                    entry?.date ||
-                    entry?.receivedDate ||
-                    entry?.billDate ||
-                    tripExpense?.tripDate ||
-                    tripExpense?.enteredDate ||
-                    "",
-                type,
-                description: descriptionFn(entry),
-                amount,
+            entries.forEach((entry: any, index: number) => {
+                const amount = Number(entry?.amount || 0);
+
+                if (amount <= 0) return;
+
+                rows.push({
+                    id: `${expenseKey}-${index}`,
+
+                    expenseKey,
+
+                    type: formatExpenseTypeLabel(expenseKey),
+
+                    date:
+                        entry?.date ||
+                        entry?.receivedDate ||
+                        entry?.billDate ||
+                        tripExpense?.tripDate ||
+                        tripExpense?.enteredDate ||
+                        "",
+
+                    description: getExpenseDescription(
+                        expenseKey,
+                        entry
+                    ),
+
+                    amount,
+
+                    raw: entry,
+                });
             });
-        });
-    };
-
-    pushRows(
-        expenses?.dieselCost?.entries,
-        "Diesel",
-        (entry: any) =>
-            [entry?.fuelStation, entry?.billNumber].filter(Boolean).join(" • ") ||
-            "Diesel Refilling"
+        }
     );
-
-    pushRows(
-        expenses?.foodCost?.entries,
-        "Driver Allowance / Food",
-        (entry: any) =>
-            [entry?.mealType, entry?.location].filter(Boolean).join(" • ") ||
-            "Food / allowance"
-    );
-
-    pushRows(
-        expenses?.runningCost?.entries,
-        "Running",
-        (entry: any) =>
-            [entry?.expenseType, entry?.location].filter(Boolean).join(" • ") ||
-            "Running expense"
-    );
-
-    pushRows(
-        expenses?.breakdownCost?.entries,
-        "Breakdown",
-        (entry: any) =>
-            [entry?.issueType, entry?.serviceCenter].filter(Boolean).join(" • ") ||
-            "Breakdown expense"
-    );
-
-    pushRows(
-        expenses?.otherCost?.entries,
-        "Other",
-        (entry: any) =>
-            [entry?.expenseType, entry?.remarks].filter(Boolean).join(" • ") ||
-            "Other expense"
-    );
-
-    const pod = tripExpense?.pod || {};
-    const podStatus = cleanText(pod?.deliveryStatus);
-
-    if (podStatus && normalizeText(podStatus) !== "pending") {
-        rows.push({
-            id: "pod-summary",
-            date: pod?.deliveryDateTime || tripExpense?.tripDate || "",
-            type: "POD",
-            description: [podStatus, pod?.receiverName, pod?.deliveryLocation]
-                .filter(Boolean)
-                .join(" • "),
-            amount: 0,
-        });
-    }
 
     return rows;
 };
@@ -3822,70 +4025,50 @@ const CreateEditDriverSettlement = () => {
 
 
     const transportExpenseAccountMap = useMemo(() => {
-        console.log("Configurations", configurations);
-        console.log("Active Configuration", activeSystemConfiguration);
-
         const cfg =
-            activeSystemConfiguration?.systemConfiguration
+            activeSystemConfiguration
+                ?.systemConfiguration
                 ?.transportationModuleConfiguration || {};
-        console.log("cfg", cfg);
-        console.log("dieselCost", cfg.dieselCost);
 
-        const resolveAccount = (
-            configuredAccountCode: any,
-            expenseType: string
-        ) => {
-            const accountCode = cleanText(configuredAccountCode);
+        const result: Record<
+            string,
+            {
+                code: string;
+                name: string;
+                isConfigured: boolean;
+                isAccountFound: boolean;
+            }
+        > = {};
 
-            if (!accountCode) {
-                return {
-                    code: "",
-                    name: "",
-                    expenseType,
-                    isConfigured: false,
-                    isAccountFound: false,
+        Object.entries(cfg).forEach(
+            ([configurationKey, configuredValue]) => {
+                if (
+                    configurationKey ===
+                    "enableTransportationModule"
+                ) {
+                    return;
+                }
+
+                const accountCode =
+                    cleanText(configuredValue);
+
+                if (!accountCode) return;
+
+                const matchedAccount =
+                    accountMasterByCode.get(
+                        accountCode.toLowerCase()
+                    );
+
+                result[configurationKey] = {
+                    code: accountCode,
+                    name: matchedAccount?.name || "",
+                    isConfigured: true,
+                    isAccountFound: Boolean(matchedAccount),
                 };
             }
+        );
 
-            const matchedAccount = accountMasterByCode.get(
-                accountCode.toLowerCase()
-            );
-
-            return {
-                code: accountCode,
-                name: matchedAccount?.name || "",
-                expenseType,
-                isConfigured: true,
-                isAccountFound: Boolean(matchedAccount),
-            };
-        };
-
-        return {
-            Diesel: resolveAccount(
-                cfg?.dieselCost,
-                "Diesel"
-            ),
-
-            "Driver Allowance / Food": resolveAccount(
-                cfg?.foodCost,
-                "Driver Allowance / Food"
-            ),
-
-            Running: resolveAccount(
-                cfg?.runningCost,
-                "Running"
-            ),
-
-            Breakdown: resolveAccount(
-                cfg?.breakdownCost,
-                "Breakdown"
-            ),
-
-            Other: resolveAccount(
-                cfg?.otherCost,
-                "Other"
-            ),
-        };
+        return result;
     }, [
         activeSystemConfiguration,
         accountMasterByCode,
@@ -3898,14 +4081,14 @@ const CreateEditDriverSettlement = () => {
     // );
 
 
-    const getExpenseAccountForType = useCallback(
-        (expenseType: string) => {
+    const getExpenseAccount = useCallback(
+        (expenseKey: string, expenseType: string) => {
             const account =
-                transportExpenseAccountMap[expenseType as keyof typeof transportExpenseAccountMap];
+                transportExpenseAccountMap[expenseKey];
 
             if (!account?.isConfigured || !account?.code) {
                 throw new Error(
-                    `Account code is not configured for expense type "${expenseType}". Please update Transportation Module Configuration.`
+                    `Account code is not configured for "${expenseType}" using configuration field "${expenseKey}".`
                 );
             }
 
@@ -4689,7 +4872,10 @@ const CreateEditDriverSettlement = () => {
 
                 const payBody = expenseLineItems.map(
                     (row: any, index: number) => {
-                        const account = getExpenseAccountForType(row.type);
+                        const account = getExpenseAccount(
+                            row.expenseKey,
+                            row.type
+                        );
                         const amountStr = String(row.amount);
 
                         return {
@@ -5313,10 +5499,10 @@ const CreateEditDriverSettlement = () => {
                             ) : (
                                 <div className="overflow-hidden rounded-lg border border-border">
                                     <div className="grid grid-cols-12 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
-                                        <div className="col-span-3">Date</div>
-                                        <div className="col-span-3">Source</div>
-                                        <div className="col-span-3">Mode</div>
-                                        <div className="col-span-3 text-right">
+                                        <div className="col-span-4">Date</div>
+                                        <div className="col-span-4">Source</div>
+                                        {/* <div className="col-span-3">Mode</div> */}
+                                        <div className="col-span-4 text-right">
                                             Amount
                                         </div>
                                     </div>
@@ -5326,19 +5512,19 @@ const CreateEditDriverSettlement = () => {
                                             key={item.id}
                                             className="grid grid-cols-12 border-t border-border px-3 py-2 text-sm"
                                         >
-                                            <div className="col-span-3 text-muted-foreground">
+                                            <div className="col-span-4 text-muted-foreground">
                                                 {formatDateTime(item.date)}
                                             </div>
 
-                                            <div className="col-span-3">
+                                            <div className="col-span-4">
                                                 {item.source}
                                             </div>
 
-                                            <div className="col-span-3">
+                                            {/* <div className="col-span-3">
                                                 {item.paymentMode}
-                                            </div>
+                                            </div> */}
 
-                                            <div className="col-span-3 text-right">
+                                            <div className="col-span-4 text-right">
                                                 {formatMoney(item.amount)}
                                             </div>
                                         </div>
