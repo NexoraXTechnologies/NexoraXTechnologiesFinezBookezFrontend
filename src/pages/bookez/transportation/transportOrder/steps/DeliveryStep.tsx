@@ -362,7 +362,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import GoogleAddressAutocompleteWeb from "../../../../../components/common/GoogleAddressAutocompleteWeb";
 
-const DeliveryStep = ({ form, update, setForm }: any) => {
+const DeliveryStep = ({ form, update, setForm ,isView}: any) => {
     const dispatch = useDispatch<any>();
 
     const pendingStateNameRef = useRef("");
@@ -888,6 +888,7 @@ const DeliveryStep = ({ form, update, setForm }: any) => {
                 handleInputChange,
                 handleSelectChange,
                 updateField,
+                isView
             })
         );
 

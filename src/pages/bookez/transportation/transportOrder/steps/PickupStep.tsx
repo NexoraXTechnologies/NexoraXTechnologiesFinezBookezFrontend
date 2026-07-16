@@ -9,7 +9,7 @@ import {
 } from "../../../../../redux/slices/professionalSlice/stateCitySlice";
 import GoogleAddressAutocompleteWeb from "../../../../../components/common/GoogleAddressAutocompleteWeb";
 
-const PickupStep = ({ form, update, states = [] }: any) => {
+const PickupStep = ({ form, update, states = [],isView }: any) => {
 
     const dispatch = useDispatch<any>();
 
@@ -430,6 +430,7 @@ const PickupStep = ({ form, update, states = [] }: any) => {
                 handleInputChange,
                 handleSelectChange,
                 updateField,
+                isView
             })
         );
 

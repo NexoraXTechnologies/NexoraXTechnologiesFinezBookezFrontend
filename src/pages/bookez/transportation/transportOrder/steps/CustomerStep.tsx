@@ -6,7 +6,7 @@ import { computeRemainingTrips } from "../transportOrderCalculations";
 import { orderTypeOptions } from "../transportOrderOptions";
 
 
-const CustomerStep = ({ form, setForm, update, accounts = [], transportContract = [], onContractSelect }: any) => {
+const CustomerStep = ({ form, setForm, update, accounts = [], transportContract = [], onContractSelect,isView}: any) => {
 	
 	const isContractOrder = form.orderType === "contract";
 
@@ -389,6 +389,7 @@ const contractOptions = [
 				handleInputChange,
 				handleSelectChange,
 				updateField,
+				isView
 			})
 		);
 

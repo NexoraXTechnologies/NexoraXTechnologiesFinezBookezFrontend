@@ -175,6 +175,7 @@ function App() {
           <Route path="/bookEz/transportation/transport-order" element={<TransportOrderList />} />
           <Route path="/bookEz/transportation/transport-order/create" element={<CreateTransportOrder />} />
           <Route path="/bookEz/transportation/transport-order/edit/:orderNumber" element={<CreateTransportOrder />} />
+          <Route path="/bookEz/transportation/transport-order/view/:orderNumber" element={<CreateTransportOrder />} />
 
           <Route path='/bookEz/transportation/trip-allocation' element={<TripAllocationList />} />
           <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />} />

@@ -9,7 +9,7 @@ import {
 } from "../transportOrderOptions";
 
 
-const LoadStep = ({ form, update, updateNested, units = [], products = [] }: any) => {
+const LoadStep = ({ form, update, updateNested, units = [], products = [],isView }: any) => {
 
     const unitOptions = units.map((item: any) => ({
         label: item.unitName,
@@ -191,6 +191,7 @@ const LoadStep = ({ form, update, updateNested, units = [], products = [] }: any
                 handleInputChange,
                 handleSelectChange,
                 updateField,
+                isView
             })
         );
 

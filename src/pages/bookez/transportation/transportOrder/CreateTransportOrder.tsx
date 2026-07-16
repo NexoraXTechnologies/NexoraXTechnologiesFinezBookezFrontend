@@ -145,9 +145,17 @@ const CreateTransportOrder = () => {
 
 	const orderNumber = routeOrderNumber || stateOrderNumber;
 
+	// const isEditMode =
+	// 	location.state?.mode === "edit" ||
+	// 	Boolean(orderNumber);
+
+	const mode = location.state?.mode;
+
+	const isView = mode === "view";
+
 	const isEditMode =
-		location.state?.mode === "edit" ||
-		Boolean(orderNumber);
+		mode === "edit" ||
+		(!mode && Boolean(orderNumber));
 
 	const [form, setForm] = useState<any>(createInitialTransportOrder());
 	const [step, setStep] = useState(0);
@@ -586,96 +594,96 @@ const CreateTransportOrder = () => {
 
 
 	useEffect(() => {
-    const pickup = form.pickupDetails;
-    const delivery = form.deliveryDetails;
+		const pickup = form.pickupDetails;
+		const delivery = form.deliveryDetails;
 
-    if (
-        !pickup?.pickupLatitude ||
-        !pickup?.pickupLongitude ||
-        !delivery?.deliveryLatitude ||
-        !delivery?.deliveryLongitude
-    ) {
-        return;
-    }
+		if (
+			!pickup?.pickupLatitude ||
+			!pickup?.pickupLongitude ||
+			!delivery?.deliveryLatitude ||
+			!delivery?.deliveryLongitude
+		) {
+			return;
+		}
 
-    const calculateRoute = async () => {
-        try {
-            const response = await dispatch(
-                createTransportRouteCalculate({
-                    origin: {
-                        latitude: Number(pickup.pickupLatitude),
-                        longitude: Number(pickup.pickupLongitude),
-                        address:
-                            pickup.pickupAddress ||
-                            pickup.pickupLocation,
-                        placeId: pickup.pickupPlaceId,
-                    },
+		const calculateRoute = async () => {
+			try {
+				const response = await dispatch(
+					createTransportRouteCalculate({
+						origin: {
+							latitude: Number(pickup.pickupLatitude),
+							longitude: Number(pickup.pickupLongitude),
+							address:
+								pickup.pickupAddress ||
+								pickup.pickupLocation,
+							placeId: pickup.pickupPlaceId,
+						},
 
-                    destination: {
-                        latitude: Number(delivery.deliveryLatitude),
-                        longitude: Number(delivery.deliveryLongitude),
-                        address:
-                            delivery.deliveryAddress ||
-                            delivery.deliveryLocation,
-                        placeId: delivery.deliveryPlaceId,
-                    },
+						destination: {
+							latitude: Number(delivery.deliveryLatitude),
+							longitude: Number(delivery.deliveryLongitude),
+							address:
+								delivery.deliveryAddress ||
+								delivery.deliveryLocation,
+							placeId: delivery.deliveryPlaceId,
+						},
 
-                    travelMode: "DRIVE",
-                    routingPreference: "TRAFFIC_AWARE",
-                    computeAlternativeRoutes: true,
-                    languageCode: "en-IN",
-                    units: "METRIC",
-                    avoidTolls: false,
-                    avoidHighways: false,
-                    avoidFerries: false,
-                    includeSteps: true,
-                    includeMajorCities: false,
-                    maximumMajorCities: 10,
-                })
-            ).unwrap();
+						travelMode: "DRIVE",
+						routingPreference: "TRAFFIC_AWARE",
+						computeAlternativeRoutes: true,
+						languageCode: "en-IN",
+						units: "METRIC",
+						avoidTolls: false,
+						avoidHighways: false,
+						avoidFerries: false,
+						includeSteps: true,
+						includeMajorCities: false,
+						maximumMajorCities: 10,
+					})
+				).unwrap();
 
-            const route = response?.data?.routes?.[0];
+				const route = response?.data?.routes?.[0];
 
-            if (!route) return;
+				if (!route) return;
 
-            setForm((prev: any) => ({
-                ...prev,
+				setForm((prev: any) => ({
+					...prev,
 
-                routeDetails: {
-                    ...prev.routeDetails,
+					routeDetails: {
+						...prev.routeDetails,
 
-                    routeDistanceKm:
-                        parseFloat(route.distanceText) ||
-                        route.distanceMeters / 1000,
+						routeDistanceKm:
+							parseFloat(route.distanceText) ||
+							route.distanceMeters / 1000,
 
-                    routeDuration:
-                        route.durationText || "",
+						routeDuration:
+							route.durationText || "",
 
-                    expectedTravelTime:
-                        route.durationText || "",
-                },
-            }));
-        } catch (err) {
-            console.error("Route calculation failed", err);
-        }
-    };
+						expectedTravelTime:
+							route.durationText || "",
+					},
+				}));
+			} catch (err) {
+				console.error("Route calculation failed", err);
+			}
+		};
 
-    calculateRoute();
-}, [
-    dispatch,
+		calculateRoute();
+	}, [
+		dispatch,
 
-    form.pickupDetails?.pickupLatitude,
-    form.pickupDetails?.pickupLongitude,
-    form.pickupDetails?.pickupPlaceId,
+		form.pickupDetails?.pickupLatitude,
+		form.pickupDetails?.pickupLongitude,
+		form.pickupDetails?.pickupPlaceId,
 
-    form.deliveryDetails?.deliveryLatitude,
-    form.deliveryDetails?.deliveryLongitude,
-    form.deliveryDetails?.deliveryPlaceId,
-]);
+		form.deliveryDetails?.deliveryLatitude,
+		form.deliveryDetails?.deliveryLongitude,
+		form.deliveryDetails?.deliveryPlaceId,
+	]);
 
 
 	useEffect(() => {
-		if (!isEditMode) return;
+		if (!isEditMode && !isView) return;
 
 		if (!orderNumber) {
 			toast.warn("Transport order number not found");
@@ -773,6 +781,11 @@ const CreateTransportOrder = () => {
 				},
 			};
 
+			if (isView) {
+				navigate(-1);
+				return;
+			}
+
 			if (isEditMode) {
 				const finalOrderNumber =
 					orderNumber ||
@@ -819,6 +832,7 @@ const CreateTransportOrder = () => {
 						form={form}
 						setForm={setForm}
 						update={update}
+						isView={isView}
 						accounts={accounts}
 						transportContract={transportContract}
 						onContractSelect={applyContractToForm}   // <-- key wiring
@@ -833,6 +847,7 @@ const CreateTransportOrder = () => {
 						updateNested={updateNested}
 						units={units}
 						products={products}
+						isView={isView}
 					/>
 				);
 
@@ -842,6 +857,7 @@ const CreateTransportOrder = () => {
 						form={form}
 						update={update}
 						states={states}
+						isView={isView}
 					/>
 				);
 
@@ -851,6 +867,7 @@ const CreateTransportOrder = () => {
 						form={form}
 						update={update}
 						setForm={setForm}
+						isView={isView}
 					/>
 				);
 
@@ -859,6 +876,7 @@ const CreateTransportOrder = () => {
 					<VehicleStep
 						form={form}
 						update={update}
+						isView={isView}
 					/>
 				);
 
@@ -867,6 +885,7 @@ const CreateTransportOrder = () => {
 					<FreightStep
 						form={form}
 						update={update}
+						isView={isView}
 						balanceAmount={balanceAmount}
 					/>
 				);
@@ -875,6 +894,7 @@ const CreateTransportOrder = () => {
 				return (
 					<RiskStep
 						form={form}
+						isView={isView}
 						update={update}
 					/>
 				);
@@ -884,13 +904,24 @@ const CreateTransportOrder = () => {
 		}
 	};
 
-	const buttonLabel =
-		step === STEPS.length - 1
-			? isEditMode
-				? "Update Order"
-				: "Save Order"
-			: `Next: ${STEPS[step + 1]}`;
+	// const buttonLabel =
+	// 	step === STEPS.length - 1
+	// 		? isEditMode
+	// 			? "Update Order"
+	// 			: "Save Order"
+	// 		: `Next: ${STEPS[step + 1]}`;
 
+
+	const buttonLabel =
+		isView
+			? step === STEPS.length - 1
+				? "Close"
+				: `Next: ${STEPS[step + 1]}`
+			: step === STEPS.length - 1
+				? isEditMode
+					? "Update Order"
+					: "Save Order"
+				: `Next: ${STEPS[step + 1]}`;
 	return (
 		<div className="flex h-full w-full flex-col bg-background text-foreground">
 			<header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-4">
@@ -935,6 +966,7 @@ const CreateTransportOrder = () => {
 				buttonLabel={buttonLabel}
 				onBack={back}
 				onNext={step === STEPS.length - 1 ? handleSave : next}
+				hideNext={isView}
 			/>
 		</div>
 	);
