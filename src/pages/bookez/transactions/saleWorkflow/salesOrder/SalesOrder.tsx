@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Edit, Trash2} from "lucide-react";
+import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import Badge from "../../../../../components/badge";
@@ -22,12 +22,63 @@ import Permission from "../../../../../components/PermissionGuard";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
-const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
+const emptyProductRow = {
+    id: Date.now(),
+    productCode: "",
+    productName: "",
+    productId: "",
+    productDescription: "",
+    description: "",
+    productHSNCode: "",
+    remarks: "",
+    quantity: "",
+    uom: "",
+    unit: "",
+    unitName: "",
+    rate: "",
+    gross: 0,
+    grossAmount: 0,
+    discount: "",
+    discountPercentage: "",
+    discountAmount: 0,
+    taxableAmount: 0,
+    cgst: "",
+    cgstPercentage: "",
+    cgstAmount: 0,
+    sgst: "",
+    sgstPercentage: "",
+    sgstAmount: 0,
+    igst: "",
+    igstPercentage: "",
+    igstAmount: 0,
+    taxAmount: 0,
+    otherAmount: "",
+    netAmount: 0,
+    netTotal: 0,
+
+    // Margin-product fields
+    marginProduct: false,
+    nonTaxRate: "",
+    taxGross: "",
+    nonTaxGross: "",
+};
+
 const getDefaultForm = () => ({ sOrderVoucherNumber: "AUTO", sOrderVoucherDate: todayYMD(), sOrderCustomerCode: "", sOrderCustomerName: "", sOrderSalesAccount: "SA021", sOrderStatus: "open", sOrderDocStatus: "open", sOrderRemark: "", sOrderRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
 
 const getRecords = (res: any) => {
     return Array.isArray(res?.items) ? res.items : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
 };
+
+const isTrueValue = (value: any) => {
+    return value === true || String(value ?? "").trim().toLowerCase() === "true";
+};
+
+const CONDITIONAL_MARGIN_FIELD_KEYS = new Set([
+    "taxRate",
+    "nonTaxRate",
+    "taxGross",
+    "nonTaxGross",
+]);
 
 export const loadFieldOptions = async (fields: any[]) => {
     const updatedFields = await Promise.all(
@@ -81,6 +132,93 @@ const SalesOrder = () => {
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
+
+
+    /**
+     * Finds the selected Product Master record for a table row.
+     * This is also used while editing older orders where marginProduct may
+     * not yet be present directly on the saved sales-order row.
+     */
+    const getProductMasterFromRow = (row: any) => {
+        if (!row) return null;
+
+        const rowProductValues = [
+            row?.productCode,
+            row?.productId,
+            row?.productName,
+        ]
+            .filter((value) => value !== undefined && value !== null && value !== "")
+            .map((value) => String(value));
+
+        if (!rowProductValues.length) return null;
+
+        const productFields = (templateFields?.body || []).filter((field: any) =>
+            ["productCode", "productId", "productName"].includes(field?.key)
+        );
+
+        for (const field of productFields) {
+            const selectedOption = (field?.options || []).find((option: any) => {
+                const optionValues = [
+                    option?.value,
+                    option?.raw?._id,
+                    option?.raw?.productId,
+                    option?.raw?.productCode,
+                    option?.raw?.productName,
+                ]
+                    .filter((value) => value !== undefined && value !== null && value !== "")
+                    .map((value) => String(value));
+
+                return optionValues.some((value) => rowProductValues.includes(value));
+            });
+
+            if (selectedOption?.raw) return selectedOption.raw;
+        }
+
+        return null;
+    };
+
+    /**
+     * Exact visibility condition requested:
+     * Product Master marginProduct === true / "true".
+     */
+    const isMarginProductRow = (row: any) => {
+        if (isTrueValue(row?.marginProduct)) return true;
+
+        const productMaster = getProductMasterFromRow(row);
+        return isTrueValue(productMaster?.marginProduct);
+    };
+
+    const isBodyFieldVisibleForRow = (field: any, row: any) => {
+        if (!field?.key) return false;
+
+        if (CONDITIONAL_MARGIN_FIELD_KEYS.has(field.key)) {
+            return isMarginProductRow(row);
+        }
+
+        return !isTrueValue(field?.isHidden);
+    };
+
+    /**
+     * A table column must be shared by every row. Therefore the two margin
+     * columns are added when at least one row contains a margin product.
+     */
+    const isBodyColumnVisible = (field: any, rows: any[]) => {
+        if (!field?.key) return false;
+
+        if (CONDITIONAL_MARGIN_FIELD_KEYS.has(field.key)) {
+            return (rows || []).some((row: any) => isMarginProductRow(row));
+        }
+
+        return !isTrueValue(field?.isHidden);
+    };
+
+    /**
+     * Inside a visible margin column, show the input only for margin-product
+     * rows. Other rows display a dash so all table columns remain aligned.
+     */
+    const isBodyCellVisible = (field: any, row: any) => {
+        return isBodyFieldVisibleForRow(field, row);
+    };
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
         const selectedOption = getOptionByValue(field, selectedValue);
@@ -117,20 +255,128 @@ const SalesOrder = () => {
     const calculateRow = (row: any) => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
+
+        const marginProduct =
+            row?.marginProduct === true ||
+            String(row?.marginProduct).toLowerCase() === "true";
+
+        /*
+         * Normal gross:
+         * Rate × Quantity
+         */
         const gross = quantity * rate;
-        const discountPercent = safePercent(row.discount);
-        const cgstPercent = safePercent(row.cgst);
-        const sgstPercent = safePercent(row.sgst);
-        const igstPercent = safePercent(row.igst);
-        const discountAmount = (gross * discountPercent) / 100;
-        const taxableAmount = gross - discountAmount;
-        const cgstAmount = (taxableAmount * cgstPercent) / 100;
-        const sgstAmount = (taxableAmount * sgstPercent) / 100;
-        const igstAmount = (taxableAmount * igstPercent) / 100;
+
+        /*
+         * Margin-product calculations:
+         * Tax Gross = Tax Rate × Quantity
+         * Non-Tax Gross = Non-Tax Rate × Quantity
+         */
+        const taxGross = marginProduct
+            ? num(row.taxRate) * quantity
+            : 0;
+
+        const nonTaxGross = marginProduct
+            ? num(row.nonTaxRate) * quantity
+            : 0;
+
+        const discountPercent = safePercent(
+            row.discountPercentage || row.discount
+        );
+
+        const cgstPercent = safePercent(
+            row.cgstPercentage || row.cgst
+        );
+
+        const sgstPercent = safePercent(
+            row.sgstPercentage || row.sgst
+        );
+
+        const igstPercent = safePercent(
+            row.igstPercentage || row.igst
+        );
+
+        const discountAmount =
+            (gross * discountPercent) / 100;
+
+        const taxableAmount =
+            gross - discountAmount;
+
+        const cgstAmount =
+            (taxableAmount * cgstPercent) / 100;
+
+        const sgstAmount =
+            (taxableAmount * sgstPercent) / 100;
+
+        const igstAmount =
+            (taxableAmount * igstPercent) / 100;
+
         const otherAmount = num(row.otherAmount);
-        const taxAmount = cgstAmount + sgstAmount + igstAmount;
-        const netAmount = taxableAmount + taxAmount + otherAmount;
-        return { ...row, quantity: row.quantity, rate: row.rate, discount: row.discount, cgst: row.cgst, sgst: row.sgst, igst: row.igst, otherAmount: row.otherAmount, gross, grossAmount: gross, discountAmount, taxableAmount, cgstAmount, sgstAmount, igstAmount, taxAmount, netAmount, netTotal: netAmount };
+
+        const taxAmount =
+            cgstAmount +
+            sgstAmount +
+            igstAmount;
+
+        const netAmount =
+            taxableAmount +
+            taxAmount +
+            otherAmount;
+
+        return {
+            ...row,
+
+            quantity: row.quantity,
+            rate: row.rate,
+
+            gross,
+            grossAmount: gross,
+
+            discount: row.discount,
+            discountPercentage:
+                row.discountPercentage || row.discount,
+            discountAmount,
+
+            taxableAmount,
+
+            cgst: row.cgst,
+            cgstPercentage:
+                row.cgstPercentage || row.cgst,
+            cgstAmount,
+
+            sgst: row.sgst,
+            sgstPercentage:
+                row.sgstPercentage || row.sgst,
+            sgstAmount,
+
+            igst: row.igst,
+            igstPercentage:
+                row.igstPercentage || row.igst,
+            igstAmount,
+
+            taxAmount,
+            otherAmount: row.otherAmount,
+
+            netAmount,
+            netTotal: netAmount,
+
+            marginProduct,
+
+            taxRate: marginProduct
+                ? row.taxRate
+                : "",
+
+            nonTaxRate: marginProduct
+                ? row.nonTaxRate
+                : "",
+
+            taxGross: marginProduct
+                ? taxGross.toFixed(2)
+                : "",
+
+            nonTaxGross: marginProduct
+                ? nonTaxGross.toFixed(2)
+                : "",
+        };
     };
 
     const calculateFooter = (products: any[]) => {
@@ -208,7 +454,7 @@ const SalesOrder = () => {
             ),
         },
         { key: "sOrderBody", title: "Items", render: (row: any) => row?.sOrderBody?.length || 0 },
-        { key: "sOrderFooter", title: "Net Amount",type: "amount", render: (row: any) => <span className="font-semibold text-primary">{money(row?.sOrderFooter?.netAmount || 0)}</span> },
+        { key: "sOrderFooter", title: "Net Amount", type: "amount", render: (row: any) => <span className="font-semibold text-primary">{money(row?.sOrderFooter?.netAmount || 0)}</span> },
         {
             key: "sOrderDocStatus",
             title: "Doc Status",
@@ -248,13 +494,104 @@ const SalesOrder = () => {
 
     const openEditModal = (record: any) => {
         const footer = record?.sOrderFooter || {};
-        const products = record?.sOrderBody?.length > 0 ? record.sOrderBody.map((item: any) => {
-            const unitCode = item?.unit || item?.uom || "";
-            return calculateRow(normalizeRowKeys({ id: item?.id || Date.now() + Math.random(), productCode: item?.productCode || "", productName: item?.productName || "", productId: item?.productId || "", productDescription: item?.productDescription || item?.description || "", description: item?.description || item?.productDescription || "", productHSNCode: item?.productHSNCode || "", remarks: item?.remarks || "", quantity: item?.quantity || "", unit: unitCode, uom: unitCode, unitName: item?.unitName || getUnitLabelFromSchema(unitCode), rate: item?.rate || "", gross: item?.gross || item?.grossAmount || 0, grossAmount: item?.grossAmount || item?.gross || 0, discount: item?.discount || item?.discountPercentage || "", discountPercentage: item?.discountPercentage || item?.discount || "", discountAmount: item?.discountAmount || 0, taxableAmount: item?.taxableAmount || 0, cgst: item?.cgst || item?.cgstPercentage || "", cgstPercentage: item?.cgstPercentage || item?.cgst || "", cgstAmount: item?.cgstAmount || 0, sgst: item?.sgst || item?.sgstPercentage || "", sgstPercentage: item?.sgstPercentage || item?.sgst || "", sgstAmount: item?.sgstAmount || 0, igst: item?.igst || item?.igstPercentage || "", igstPercentage: item?.igstPercentage || item?.igst || "", igstAmount: item?.igstAmount || 0, taxAmount: item?.taxAmount || 0, otherAmount: item?.otherAmount || 0, netAmount: item?.netAmount || item?.netTotal || 0, netTotal: item?.netTotal || item?.netAmount || 0 }));
-        }) : [{ ...emptyProductRow, id: Date.now() }];
+
+        const products = record?.sOrderBody?.length > 0
+            ? record.sOrderBody.map((item: any) => {
+                const unitCode = item?.unit || item?.uom || "";
+
+                const row = normalizeRowKeys({
+                    ...(item?.dynamicBodyFields || {}),
+                    ...item,
+                    id: item?.id || Date.now() + Math.random(),
+                    productCode: item?.productCode || "",
+                    productName: item?.productName || "",
+                    productId: item?.productId || "",
+                    productDescription:
+                        item?.productDescription || item?.description || "",
+                    description:
+                        item?.description || item?.productDescription || "",
+                    productHSNCode: item?.productHSNCode || "",
+                    remarks: item?.remarks || "",
+                    quantity: item?.quantity || "",
+                    unit: unitCode,
+                    uom: unitCode,
+                    unitName:
+                        item?.unitName || getUnitLabelFromSchema(unitCode),
+                    rate: item?.rate || "",
+                    gross: item?.gross || item?.grossAmount || 0,
+                    grossAmount: item?.grossAmount || item?.gross || 0,
+                    discount:
+                        item?.discount || item?.discountPercentage || "",
+                    discountPercentage:
+                        item?.discountPercentage || item?.discount || "",
+                    discountAmount: item?.discountAmount || 0,
+                    taxableAmount: item?.taxableAmount || 0,
+                    cgst: item?.cgst || item?.cgstPercentage || "",
+                    cgstPercentage:
+                        item?.cgstPercentage || item?.cgst || "",
+                    cgstAmount: item?.cgstAmount || 0,
+                    sgst: item?.sgst || item?.sgstPercentage || "",
+                    sgstPercentage:
+                        item?.sgstPercentage || item?.sgst || "",
+                    sgstAmount: item?.sgstAmount || 0,
+                    igst: item?.igst || item?.igstPercentage || "",
+                    igstPercentage:
+                        item?.igstPercentage || item?.igst || "",
+                    igstAmount: item?.igstAmount || 0,
+                    taxAmount: item?.taxAmount || 0,
+                    otherAmount: item?.otherAmount || 0,
+                    netAmount: item?.netAmount || item?.netTotal || 0,
+                    netTotal: item?.netTotal || item?.netAmount || 0,
+                    marginProduct: isTrueValue(item?.marginProduct),
+                    nonTaxRate:
+                        item?.nonTaxRate ?? item?.dynamicBodyFields?.nonTaxRate ?? "",
+                    taxGross:
+                        item?.taxGross ?? item?.dynamicBodyFields?.taxGross ?? "",
+                    nonTaxGross:
+                        item?.nonTaxGross ?? item?.dynamicBodyFields?.nonTaxGross ?? "",
+                });
+
+                return calculateRow(row);
+            })
+            : [{ ...emptyProductRow, id: Date.now() }];
+
         setEditingRecord(true);
         setErrors({});
-        setForm({ sOrderVoucherNumber: record?.sOrderVoucherNumber || "AUTO", sOrderVoucherDate: formatDateForInput(record?.sOrderVoucherDate), sOrderCustomerCode: record?.sOrderCustomerCode || "", sOrderCustomerName: record?.sOrderCustomerName || "", sOrderSalesAccount: record?.sOrderSalesAccount || "SA021", sOrderDocStatus: record?.sOrderDocStatus || record?.sOrderStatus || "open", sOrderStatus: record?.sOrderStatus || record?.sOrderDocStatus || "open", sOrderRemark: record?.sOrderRemark || record?.sOrderRemarks || "", sOrderRemarks: record?.sOrderRemarks || record?.sOrderRemark || "", isAutoPost: record?.isAutoPost || false, products, grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00", discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00", cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00", sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00", igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00", taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00", otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00", netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00" });
+        setForm({
+            sOrderVoucherNumber: record?.sOrderVoucherNumber || "AUTO",
+            sOrderVoucherDate: formatDateForInput(record?.sOrderVoucherDate),
+            sOrderCustomerCode: record?.sOrderCustomerCode || "",
+            sOrderCustomerName: record?.sOrderCustomerName || "",
+            sOrderSalesAccount: record?.sOrderSalesAccount || "SA021",
+            sOrderDocStatus:
+                record?.sOrderDocStatus || record?.sOrderStatus || "open",
+            sOrderStatus:
+                record?.sOrderStatus || record?.sOrderDocStatus || "open",
+            sOrderRemark:
+                record?.sOrderRemark || record?.sOrderRemarks || "",
+            sOrderRemarks:
+                record?.sOrderRemarks || record?.sOrderRemark || "",
+            isAutoPost: record?.isAutoPost || false,
+            products,
+            grossAmount:
+                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            discountAmount:
+                footer?.discountAmount ||
+                footer?.totalDiscountAmount ||
+                "0.00",
+            cgstAmount:
+                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount:
+                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount:
+                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            taxAmount:
+                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            otherAmount:
+                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            netAmount:
+                footer?.netAmount || footer?.totalNetAmount || "0.00",
+        });
         setShowModal(true);
     };
 
@@ -286,19 +623,19 @@ const SalesOrder = () => {
 
     const handleRowChange = (index: number, key: string, value: any) => {
         const duplicate = Boolean(
-            form?.products?.some((e: any, i: number) => {
-                if (i === index) return false;
+            form?.products?.some((product: any, productIndex: number) => {
+                if (productIndex === index) return false;
 
                 return (
-                    String(e?.productCode || "") === String(value || "") ||
-                    String(e?.productId || "") === String(value || "")
+                    String(product?.productCode || "") === String(value || "") ||
+                    String(product?.productId || "") === String(value || "")
                 );
             })
         );
 
         if (key === "productCode" && duplicate && !enableDuplicatePro) {
-            setErrors((prev: any) => ({
-                ...prev,
+            setErrors((previous: any) => ({
+                ...previous,
                 products: "",
                 [`row_${index}_${key}`]: "This product already added",
                 [`row_${index}_tax`]: "",
@@ -306,97 +643,166 @@ const SalesOrder = () => {
             return;
         }
 
-        setForm((prev: any) => {
-            const updatedProducts = [...(prev.products || [])];
+        setForm((previous: any) => {
+            const updatedProducts = [...(previous.products || [])];
             const currentRow = updatedProducts[index] || {};
             const currentField = getBodyFieldByKey(key);
-            let updatedRow = { ...currentRow, [key]: value, };
-            if (currentField?.mapFields) { updatedRow = applyMappedFields(currentField, value, updatedRow); }
+
+            let updatedRow = {
+                ...currentRow,
+                [key]: value,
+            };
+
+            if (currentField?.mapFields) {
+                updatedRow = applyMappedFields(currentField, value, updatedRow);
+            }
+
             const selectedOption = getOptionByValue(currentField, value);
             const raw = selectedOption?.raw || {};
-            if (raw?._id && !updatedRow.productId) { updatedRow.productId = raw._id; }
-            if (key === "productCode" || key === "productName" || key === "productId") {
+
+            if (raw?._id && !updatedRow.productId) {
+                updatedRow.productId = raw._id;
+            }
+
+            if (
+                key === "productCode" ||
+                key === "productName" ||
+                key === "productId"
+            ) {
                 updatedRow.cgst = raw?.csgst;
                 updatedRow.sgst = raw?.csgst;
                 updatedRow.igst = raw?.igst;
-                updatedRow.productDescription = raw?.productDescription;
+                updatedRow.productDescription = raw?.productDescription || "";
+
+                // Exact rule: read marginProduct from selected Product Master.
+                const marginProduct = isTrueValue(raw?.dynamicFields?.marginProduct);
+                updatedRow.marginProduct = marginProduct;
+
+                // Remove old conditional values when switching to a normal product.
+                if (!marginProduct) {
+                    updatedRow.nonTaxRate = "";
+                    updatedRow.taxGross = "";
+                    updatedRow.nonTaxGross = "";
+                }
+
                 if (num(updatedRow.igst) > 0) {
                     updatedRow.cgst = "";
                     updatedRow.sgst = "";
                     updatedRow.cgstAmount = 0;
                     updatedRow.sgstAmount = 0;
                 }
+
                 if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
                     updatedRow.igst = "";
                     updatedRow.igstAmount = 0;
                 }
             }
+
             updatedRow = normalizeRowKeys(updatedRow);
+
             if ((key === "cgst" || key === "sgst") && num(value) > 0) {
                 updatedRow.igst = "";
                 updatedRow.igstAmount = 0;
             }
+
             if (key === "igst" && num(value) > 0) {
                 updatedRow.cgst = "";
                 updatedRow.sgst = "";
                 updatedRow.cgstAmount = 0;
                 updatedRow.sgstAmount = 0;
             }
+
+            // Recalculates nonTaxGross whenever quantity/nonTaxRate changes.
             updatedRow = calculateRow(updatedRow);
             updatedProducts[index] = updatedRow;
-            return { ...prev, products: updatedProducts, };
+
+            return {
+                ...previous,
+                products: updatedProducts,
+            };
         });
 
-        setErrors((prev: any) => ({
-            ...prev,
+        setErrors((previous: any) => ({
+            ...previous,
             products: "",
             [`row_${index}_${key}`]: "",
             [`row_${index}_tax`]: "",
         }));
     };
+
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
-        return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
-            const value = row?.[key];
-            return value !== undefined && value !== null && value !== "";
-        }));
+        return (form.products || []).filter((row: any) => {
+            const visibleFields = (templateFields?.body || []).filter(
+                (field: any) => isBodyFieldVisibleForRow(field, row)
+            );
+
+            return visibleFields.some((field: any) => {
+                const value = row?.[field.key];
+                return value !== undefined && value !== null && value !== "";
+            });
+        });
     };
 
     const validateForm = () => {
         const err: any = {};
+
         (templateFields?.header || []).forEach((field: any) => {
-            if (field.isHidden) return;
-            if (!field.isRequired) return;
+            if (isTrueValue(field?.isHidden)) return;
+            if (!isTrueValue(field?.isRequired)) return;
+
             const value = form?.[field.key];
-            if (value === undefined || value === null || value === "") err[field.key] = `${field.label || field.title || field.key} is required`;
+            if (value === undefined || value === null || value === "") {
+                err[field.key] = `${field.label || field.title || field.key
+                    } is required`;
+            }
         });
+
         const filledRows = getFilledRows();
-        if (filledRows.length === 0) err.products = "Please add at least one product";
+        if (filledRows.length === 0) {
+            err.products = "Please add at least one product";
+        }
+
         (form.products || []).forEach((row: any, index: number) => {
-            const hasAnyValue = (templateFields?.body || []).some((field: any) => {
+            const visibleFields = (templateFields?.body || []).filter(
+                (field: any) => isBodyFieldVisibleForRow(field, row)
+            );
+
+            const hasAnyValue = visibleFields.some((field: any) => {
                 const value = row?.[field.key];
                 return value !== undefined && value !== null && value !== "";
             });
+
             if (!hasAnyValue) return;
-            (templateFields?.body || []).forEach((field: any) => {
-                if (field.isHidden) return;
-                if (!field.isRequired) return;
+
+            visibleFields.forEach((field: any) => {
+                if (!isTrueValue(field?.isRequired)) return;
+
                 const value = row?.[field.key];
-                if (value === undefined || value === null || value === "") err[`row_${index}_${field.key}`] = `${field.label || field.title || field.key} is required`;
+                if (value === undefined || value === null || value === "") {
+                    err[`row_${index}_${field.key}`] = `${field.label || field.title || field.key
+                        } is required`;
+                }
             });
+
             const cgst = num(row.cgstPercentage || row.cgst);
             const sgst = num(row.sgstPercentage || row.sgst);
             const igst = num(row.igstPercentage || row.igst);
+
             if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
-                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
+                err[`row_${index}_tax`] =
+                    "You can enter either IGST or CGST/SGST";
+                err[`row_${index}_igstPercentage`] =
+                    "Only one tax type allowed";
+                err[`row_${index}_cgstPercentage`] =
+                    "Only one tax type allowed";
+                err[`row_${index}_sgstPercentage`] =
+                    "Only one tax type allowed";
                 err[`row_${index}_igst`] = "Only one tax type allowed";
                 err[`row_${index}_cgst`] = "Only one tax type allowed";
                 err[`row_${index}_sgst`] = "Only one tax type allowed";
             }
         });
+
         setErrors(err);
         if (err.products) toast.error(err.products);
         return Object.keys(err).length === 0;
@@ -423,8 +829,10 @@ const SalesOrder = () => {
 
     const handleSubmit = async () => {
         if (!validateForm()) return;
+
         const products = cleanRows();
         const footer = calculateFooter(products);
+
         const payload: any = {
             sOrderVoucherDate: form.sOrderVoucherDate,
             sOrderQuotationVoucherNumber: form?.sOrderQuotationVoucherNumber,
@@ -436,21 +844,127 @@ const SalesOrder = () => {
             sOrderRemark: form.sOrderRemark || form.sOrderRemarks || "",
             sOrderRemarks: form.sOrderRemarks || form.sOrderRemark || "",
             isAutoPost: form.isAutoPost || false,
-            sOrderBody: products.map((item: any) => ({ productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, unitName: item.unitName, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) })),
-            sOrderFooter: { grossAmount: fmtMoney(footer.totalGrossAmount), discountAmount: fmtMoney(footer.totalDiscountAmount), cgstAmount: fmtMoney(footer.totalCgstAmount), sgstAmount: fmtMoney(footer.totalSgstAmount), igstAmount: fmtMoney(footer.totalIgstAmount), taxAmount: fmtMoney(footer.totalTaxAmount), otherAmount: fmtMoney(footer.totalOtherAmount), netAmount: fmtMoney(footer.totalNetAmount), adjustedAmount: "0", balanceAmount: fmtMoney(footer.totalNetAmount), totalQuantity: footer.totalQuantity, totalGrossAmount: fmtMoney(footer.totalGrossAmount), totalDiscountAmount: fmtMoney(footer.totalDiscountAmount), totalCgstAmount: fmtMoney(footer.totalCgstAmount), totalSgstAmount: fmtMoney(footer.totalSgstAmount), totalIgstAmount: fmtMoney(footer.totalIgstAmount), totalTaxAmount: fmtMoney(footer.totalTaxAmount), totalOtherAmount: fmtMoney(footer.totalOtherAmount), totalNetAmount: fmtMoney(footer.totalNetAmount) },
+
+            sOrderBody: products.map((item: any) => {
+                const marginProduct = isMarginProductRow(item);
+
+                return {
+                    productCode: item.productCode,
+                    productName: item.productName,
+                    productId: item.productId,
+                    productDescription:
+                        item.productDescription || item.description,
+                    description: item.description || item.productDescription,
+                    productHSNCode: item.productHSNCode,
+                    remarks: item.remarks,
+                    quantity: String(item.quantity),
+                    unit: item.unit || item.uom,
+                    uom: item.uom || item.unit,
+                    unitName: item.unitName,
+                    rate: String(item.rate),
+                    gross: fmtMoney(item.grossAmount),
+                    grossAmount: fmtMoney(item.grossAmount),
+                    discount: String(
+                        item.discountPercentage || item.discount || ""
+                    ),
+                    discountPercentage: String(
+                        item.discountPercentage || item.discount || ""
+                    ),
+                    discountAmount: fmtMoney(item.discountAmount),
+                    taxableAmount: fmtMoney(item.taxableAmount),
+                    cgst: String(item.cgstPercentage || item.cgst || ""),
+                    cgstPercentage: String(
+                        item.cgstPercentage || item.cgst || ""
+                    ),
+                    cgstAmount: fmtMoney(item.cgstAmount),
+                    sgst: String(item.sgstPercentage || item.sgst || ""),
+                    sgstPercentage: String(
+                        item.sgstPercentage || item.sgst || ""
+                    ),
+                    sgstAmount: fmtMoney(item.sgstAmount),
+                    igst: String(item.igstPercentage || item.igst || ""),
+                    igstPercentage: String(
+                        item.igstPercentage || item.igst || ""
+                    ),
+                    igstAmount: fmtMoney(item.igstAmount),
+                    taxAmount: fmtMoney(item.taxAmount),
+                    otherAmount: fmtMoney(item.otherAmount),
+                    netAmount: fmtMoney(item.netAmount || item.netTotal),
+                    netTotal: fmtMoney(item.netTotal || item.netAmount),
+
+                    // Margin-product fields are persisted only for margin products.
+                    marginProduct,
+                    nonTaxRate: marginProduct
+                        ? String(item.nonTaxRate ?? "")
+                        : "",
+                    taxGross: marginProduct
+                        ? fmtMoney(item.taxGross)
+                        : "",
+                    nonTaxGross: marginProduct
+                        ? fmtMoney(item.nonTaxGross)
+                        : "",
+                    dynamicBodyFields: {
+                        ...Object.fromEntries(
+                            Object.entries(item?.dynamicBodyFields || {}).filter(
+                                ([fieldKey]) =>
+                                    !CONDITIONAL_MARGIN_FIELD_KEYS.has(fieldKey)
+                            )
+                        ),
+                        ...(marginProduct
+                            ? {
+                                nonTaxRate: String(item.nonTaxRate ?? ""),
+                                taxGross: fmtMoney(item.taxGross),
+                                nonTaxGross: fmtMoney(item.nonTaxGross),
+                            }
+                            : {}),
+                    },
+                };
+            }),
+
+            sOrderFooter: {
+                grossAmount: fmtMoney(footer.totalGrossAmount),
+                discountAmount: fmtMoney(footer.totalDiscountAmount),
+                cgstAmount: fmtMoney(footer.totalCgstAmount),
+                sgstAmount: fmtMoney(footer.totalSgstAmount),
+                igstAmount: fmtMoney(footer.totalIgstAmount),
+                taxAmount: fmtMoney(footer.totalTaxAmount),
+                otherAmount: fmtMoney(footer.totalOtherAmount),
+                netAmount: fmtMoney(footer.totalNetAmount),
+                adjustedAmount: "0",
+                balanceAmount: fmtMoney(footer.totalNetAmount),
+                totalQuantity: footer.totalQuantity,
+                totalGrossAmount: fmtMoney(footer.totalGrossAmount),
+                totalDiscountAmount: fmtMoney(footer.totalDiscountAmount),
+                totalCgstAmount: fmtMoney(footer.totalCgstAmount),
+                totalSgstAmount: fmtMoney(footer.totalSgstAmount),
+                totalIgstAmount: fmtMoney(footer.totalIgstAmount),
+                totalTaxAmount: fmtMoney(footer.totalTaxAmount),
+                totalOtherAmount: fmtMoney(footer.totalOtherAmount),
+                totalNetAmount: fmtMoney(footer.totalNetAmount),
+            },
         };
+
         try {
             if (editingRecord) {
-                await dispatch(updateSalesOrder({ voucherNumber: form?.sOrderVoucherNumber, data: payload }) as any).unwrap();
+                await dispatch(
+                    updateSalesOrder({
+                        voucherNumber: form?.sOrderVoucherNumber,
+                        data: payload,
+                    }) as any
+                ).unwrap();
                 toast.success("Sales order updated successfully");
             } else {
                 await dispatch(createSalesOrder(payload) as any).unwrap();
+
                 if (form?.sOrderQuotationVoucherNumber) {
-                    syncQuotationStatusAfterSalesOrdr(form?.sOrderQuotationVoucherNumber);
-                    // if (poStatus === "close") toast.success("Sales order created successfully and Sales Quotation closed");
+                    syncQuotationStatusAfterSalesOrdr(
+                        form?.sOrderQuotationVoucherNumber
+                    );
                 }
+
                 toast.success("Sales order created successfully");
             }
+
             setShowModal(false);
             resetMainForm();
             fetchSalesOrders();
@@ -496,13 +1010,97 @@ const SalesOrder = () => {
             toast.error("Please select purchase order");
             return;
         }
-        const poBody = selectedPurchaseOrder?.sQuoteBody || [];
-        const products = poBody?.length > 0 ? poBody?.map((item: any) => calculateRow(normalizeRowKeys({ id: Date.now() + Math.random(), productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) }))) : [{ ...emptyProductRow, id: Date.now() }];
-        setForm({ ...getDefaultForm(), sOrderQuotationVoucherNumber: selectedPurchaseOrder?.sQuoteVoucherNumber, sOrderVoucherDate: selectedPurchaseOrder.sQuoteVoucherDate, sOrderCustomerCode: selectedPurchaseOrder.sQuoteCustomerCode, sOrderCustomerName: selectedPurchaseOrder.sQuoteCustomerName, sOrderSalesAccount: selectedPurchaseOrder.sQuoteSalesAccount || "SA021", sOrderStatus: selectedPurchaseOrder.sQuoteStatus || selectedPurchaseOrder.sOrderDocStatus || "open", sOrderDocStatus: selectedPurchaseOrder.sQuoteDocStatus || selectedPurchaseOrder.sOrderStatus || "open", sOrderRemark: selectedPurchaseOrder.sQuoteRemark || selectedPurchaseOrder.sOrderRemarks || "", sOrderRemarks: selectedPurchaseOrder.sQuoteRemarks || selectedPurchaseOrder.sOrderRemark || "", isAutoPost: selectedPurchaseOrder.isAutoPost || false, products });
+
+        const quotationBody = selectedPurchaseOrder?.sQuoteBody || [];
+        const products = quotationBody.length > 0
+            ? quotationBody.map((item: any) => {
+                const row = normalizeRowKeys({
+                    ...(item?.dynamicBodyFields || {}),
+                    ...item,
+                    id: Date.now() + Math.random(),
+                    productCode: item?.productCode || "",
+                    productName: item?.productName || "",
+                    productId: item?.productId || "",
+                    productDescription:
+                        item?.productDescription || item?.description || "",
+                    description:
+                        item?.description || item?.productDescription || "",
+                    productHSNCode: item?.productHSNCode || "",
+                    remarks: item?.remarks || "",
+                    quantity: String(item?.quantity ?? ""),
+                    unit: item?.unit || item?.uom,
+                    uom: item?.uom || item?.unit,
+                    rate: String(item?.rate ?? ""),
+                    gross: item?.grossAmount || item?.gross || 0,
+                    grossAmount: item?.grossAmount || item?.gross || 0,
+                    discount:
+                        item?.discountPercentage || item?.discount || "",
+                    discountPercentage:
+                        item?.discountPercentage || item?.discount || "",
+                    discountAmount: item?.discountAmount || 0,
+                    taxableAmount: item?.taxableAmount || 0,
+                    cgst: item?.cgstPercentage || item?.cgst || "",
+                    cgstPercentage:
+                        item?.cgstPercentage || item?.cgst || "",
+                    cgstAmount: item?.cgstAmount || 0,
+                    sgst: item?.sgstPercentage || item?.sgst || "",
+                    sgstPercentage:
+                        item?.sgstPercentage || item?.sgst || "",
+                    sgstAmount: item?.sgstAmount || 0,
+                    igst: item?.igstPercentage || item?.igst || "",
+                    igstPercentage:
+                        item?.igstPercentage || item?.igst || "",
+                    igstAmount: item?.igstAmount || 0,
+                    taxAmount: item?.taxAmount || 0,
+                    otherAmount: item?.otherAmount || 0,
+                    netAmount: item?.netAmount || item?.netTotal || 0,
+                    netTotal: item?.netTotal || item?.netAmount || 0,
+                    marginProduct: isTrueValue(item?.marginProduct),
+                    nonTaxRate:
+                        item?.nonTaxRate ?? item?.dynamicBodyFields?.nonTaxRate ?? "",
+                    taxGross:
+                        item?.taxGross ?? item?.dynamicBodyFields?.taxGross ?? "",
+                    nonTaxGross:
+                        item?.nonTaxGross ?? item?.dynamicBodyFields?.nonTaxGross ?? "",
+                });
+
+                return calculateRow(row);
+            })
+            : [{ ...emptyProductRow, id: Date.now() }];
+
+        setForm({
+            ...getDefaultForm(),
+            sOrderQuotationVoucherNumber:
+                selectedPurchaseOrder?.sQuoteVoucherNumber,
+            sOrderVoucherDate: selectedPurchaseOrder.sQuoteVoucherDate,
+            sOrderCustomerCode: selectedPurchaseOrder.sQuoteCustomerCode,
+            sOrderCustomerName: selectedPurchaseOrder.sQuoteCustomerName,
+            sOrderSalesAccount:
+                selectedPurchaseOrder.sQuoteSalesAccount || "SA021",
+            sOrderStatus:
+                selectedPurchaseOrder.sQuoteStatus ||
+                selectedPurchaseOrder.sOrderDocStatus ||
+                "open",
+            sOrderDocStatus:
+                selectedPurchaseOrder.sQuoteDocStatus ||
+                selectedPurchaseOrder.sOrderStatus ||
+                "open",
+            sOrderRemark:
+                selectedPurchaseOrder.sQuoteRemark ||
+                selectedPurchaseOrder.sOrderRemarks ||
+                "",
+            sOrderRemarks:
+                selectedPurchaseOrder.sQuoteRemarks ||
+                selectedPurchaseOrder.sOrderRemark ||
+                "",
+            isAutoPost: selectedPurchaseOrder.isAutoPost || false,
+            products,
+        });
+
         setErrors({});
         setEditingRecord(null);
         setShowPurchaseOrderModal(false);
-        setSelectedPurchaseOrder(null)
+        setSelectedPurchaseOrder(null);
         setShowModal(true);
     };
 
@@ -581,6 +1179,37 @@ const SalesOrder = () => {
             quotationVoucherNumber: record?.sOrderQuotationVoucherNumber,
         } as any);
     };
+
+    const isTrueValue = (value: any) =>
+        value === true ||
+        String(value ?? "").toLowerCase() === "true";
+
+    const isSalesOrderBodyCellDisabled = (
+        column: any,
+        row: any
+    ) => {
+        // User must enter these values.
+        if (
+            column?.key === "taxRate" ||
+            column?.key === "nonTaxRate"
+        ) {
+            return false;
+        }
+
+        // These values are calculated automatically.
+        if (
+            column?.key === "taxGross" ||
+            column?.key === "nonTaxGross"
+        ) {
+            return true;
+        }
+
+        // Normal Sales Order schema behavior.
+        return (
+            isTrueValue(column?.disabled) ||
+            isTrueValue(column?.isReadonly)
+        );
+    };
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-order-header" className="mb-3 flex items-center">
@@ -623,7 +1252,7 @@ const SalesOrder = () => {
                             <button
                                 id="sales-order-edit-button"
                                 onClick={() => handleEditSalesOrder(record)}
-                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 ${isClosedSalesOrder(record)  }`}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 ${isClosedSalesOrder(record)}`}
                             >
                                 <Edit size={16} />
                             </button>
@@ -634,7 +1263,7 @@ const SalesOrder = () => {
                                 id="sales-order-delete-button"
                                 disabled={deleteLoading}
                                 onClick={(e) => handleDeleteSalesOrderClick(e, record)}
-                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:text-danger hover:text-danger ${isClosedSalesOrder(record)                              }`}
+                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:text-danger hover:text-danger ${isClosedSalesOrder(record)}`}
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -694,6 +1323,9 @@ const SalesOrder = () => {
                         inputData: { ...templateFields, footer: dynamicFooterArray },
                         bodyKey: "products",
                         handleChange: handleMainChange,
+                        isBodyColumnVisible,
+                        isBodyCellVisible,
+                        isBodyCellDisabled: isSalesOrderBodyCellDisabled,
                     }}
                 />
             )}

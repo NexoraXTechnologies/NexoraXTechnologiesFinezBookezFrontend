@@ -83,6 +83,13 @@ const emptyProductRow = {
     otherAmount: "",
     netAmount: 0,
     netTotal: 0,
+
+    // Margin-product fields
+    marginProduct: false,
+    taxRate: "",
+    nonTaxRate: "",
+    taxGross: "",
+    nonTaxGross: "",
 };
 
 const getDefaultForm = () => ({
@@ -130,6 +137,17 @@ const getRecords = (res: any) => {
                                     ? res
                                     : [];
 };
+
+const isTrueValue = (value: any) =>
+    value === true ||
+    String(value ?? "").trim().toLowerCase() === "true";
+
+const CONDITIONAL_MARGIN_FIELD_KEYS = new Set([
+    "taxRate",
+    "nonTaxRate",
+    "taxGross",
+    "nonTaxGross",
+]);
 
 export const loadFieldOptions = async (fields: any[]) => {
     const updatedFields = await Promise.all(
@@ -249,6 +267,93 @@ const SalesInVoice = () => {
             (opt: any) => String(opt.value) === String(selectedValue)
         );
 
+    const getProductMasterFromRow = (row: any) => {
+        if (!row) return null;
+
+        const rowProductValues = [
+            row?.productCode,
+            row?.productId,
+            row?.productName,
+        ]
+            .filter(
+                (value) =>
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+            )
+            .map((value) => String(value));
+
+        if (!rowProductValues.length) return null;
+
+        const productFields = (templateFields?.body || []).filter(
+            (field: any) =>
+                ["productCode", "productId", "productName"].includes(
+                    field?.key
+                )
+        );
+
+        for (const field of productFields) {
+            const selectedOption = (field?.options || []).find(
+                (option: any) => {
+                    const optionValues = [
+                        option?.value,
+                        option?.raw?._id,
+                        option?.raw?.productId,
+                        option?.raw?.productCode,
+                        option?.raw?.productName,
+                    ]
+                        .filter(
+                            (value) =>
+                                value !== undefined &&
+                                value !== null &&
+                                value !== ""
+                        )
+                        .map((value) => String(value));
+
+                    return optionValues.some((value) =>
+                        rowProductValues.includes(value)
+                    );
+                }
+            );
+
+            if (selectedOption?.raw) return selectedOption.raw;
+        }
+
+        return null;
+    };
+
+    const isMarginProductRow = (row: any) => {
+        if (isTrueValue(row?.marginProduct)) return true;
+
+        const productMaster = getProductMasterFromRow(row);
+        return isTrueValue(productMaster?.marginProduct);
+    };
+
+    const isBodyFieldVisibleForRow = (field: any, row: any) => {
+        if (!field?.key) return false;
+
+        if (CONDITIONAL_MARGIN_FIELD_KEYS.has(field.key)) {
+            return isMarginProductRow(row);
+        }
+
+        return !isTrueValue(field?.isHidden);
+    };
+
+    const isBodyColumnVisible = (field: any, rows: any[]) => {
+        if (!field?.key) return false;
+
+        if (CONDITIONAL_MARGIN_FIELD_KEYS.has(field.key)) {
+            return (rows || []).some((row: any) =>
+                isMarginProductRow(row)
+            );
+        }
+
+        return !isTrueValue(field?.isHidden);
+    };
+
+    const isBodyCellVisible = (field: any, row: any) =>
+        isBodyFieldVisibleForRow(field, row);
+
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
         if (!field) return oldData;
 
@@ -316,10 +421,28 @@ const SalesInVoice = () => {
         const rate = num(row.rate);
         const gross = quantity * rate;
 
-        const discountPercent = safePercent(row.discount);
-        const cgstPercent = safePercent(row.cgst);
-        const sgstPercent = safePercent(row.sgst);
-        const igstPercent = safePercent(row.igst);
+        const marginProduct = isMarginProductRow(row);
+
+        const taxGross = marginProduct
+            ? num(row.taxRate) * quantity
+            : 0;
+
+        const nonTaxGross = marginProduct
+            ? num(row.nonTaxRate) * quantity
+            : 0;
+
+        const discountPercent = safePercent(
+            row.discountPercentage || row.discount
+        );
+        const cgstPercent = safePercent(
+            row.cgstPercentage || row.cgst
+        );
+        const sgstPercent = safePercent(
+            row.sgstPercentage || row.sgst
+        );
+        const igstPercent = safePercent(
+            row.igstPercentage || row.igst
+        );
 
         const discountAmount = (gross * discountPercent) / 100;
         const taxableAmount = gross - discountAmount;
@@ -337,9 +460,14 @@ const SalesInVoice = () => {
             quantity: row.quantity,
             rate: row.rate,
             discount: row.discount,
+            discountPercentage:
+                row.discountPercentage || row.discount,
             cgst: row.cgst,
+            cgstPercentage: row.cgstPercentage || row.cgst,
             sgst: row.sgst,
+            sgstPercentage: row.sgstPercentage || row.sgst,
             igst: row.igst,
+            igstPercentage: row.igstPercentage || row.igst,
             otherAmount: row.otherAmount,
             gross,
             grossAmount: gross,
@@ -351,6 +479,14 @@ const SalesInVoice = () => {
             taxAmount,
             netAmount,
             netTotal: netAmount,
+
+            marginProduct,
+            taxRate: marginProduct ? row.taxRate : "",
+            nonTaxRate: marginProduct ? row.nonTaxRate : "",
+            taxGross: marginProduct ? taxGross.toFixed(2) : "",
+            nonTaxGross: marginProduct
+                ? nonTaxGross.toFixed(2)
+                : "",
         };
     };
 
@@ -509,58 +645,76 @@ const SalesInVoice = () => {
         const footer = record?.sInvFooter || {};
 
         const products = record?.sInvBody?.length > 0
-                ? record.sInvBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
-                    return calculateRow(
-                        normalizeRowKeys({
-                            id: item?.id || Date.now() + Math.random(),
+            ? record.sInvBody.map((item: any) => {
+                const unitCode = item?.unit || item?.uom || "";
+                return calculateRow(
+                    normalizeRowKeys({
+                        id: item?.id || Date.now() + Math.random(),
 
-                            // ✅ Preserve Sales Order number from invoice body
-                            sOrderNumber: item?.sOrderNumber || record?.sInvSalesOrderVoucherNumber || "",
+                        // ✅ Preserve Sales Order number from invoice body
+                        sOrderNumber: item?.sOrderNumber || record?.sInvSalesOrderVoucherNumber || "",
 
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
-                            productDescription:
-                                item?.productDescription || item?.description || "",
-                            description:
-                                item?.description || item?.productDescription || "",
-                            productHSNCode: item?.productHSNCode || "",
-                            remarks: item?.remarks || "",
-                            quantity: item?.quantity || "",
-                            unit: unitCode,
-                            uom: unitCode,
-                            unitName:
-                                item?.unitName || getUnitLabelFromSchema(unitCode),
-                            rate: item?.rate || "",
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount: item?.grossAmount || item?.gross || 0,
-                            discount:
-                                item?.discount || item?.discountPercentage || "",
-                            discountPercentage:
-                                item?.discountPercentage || item?.discount || "",
-                            discountAmount: item?.discountAmount || 0,
-                            taxableAmount: item?.taxableAmount || 0,
-                            cgst: item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage:
-                                item?.cgstPercentage || item?.cgst || "",
-                            cgstAmount: item?.cgstAmount || 0,
-                            sgst: item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage:
-                                item?.sgstPercentage || item?.sgst || "",
-                            sgstAmount: item?.sgstAmount || 0,
-                            igst: item?.igst || item?.igstPercentage || "",
-                            igstPercentage:
-                                item?.igstPercentage || item?.igst || "",
-                            igstAmount: item?.igstAmount || 0,
-                            taxAmount: item?.taxAmount || 0,
-                            otherAmount: item?.otherAmount || 0,
-                            netAmount: item?.netAmount || item?.netTotal || 0,
-                            netTotal: item?.netTotal || item?.netAmount || 0,
-                        })
-                    );
-                })
-                : [{ ...emptyProductRow, id: Date.now() }];
+                        productCode: item?.productCode || "",
+                        productName: item?.productName || "",
+                        productId: item?.productId || "",
+                        productDescription:
+                            item?.productDescription || item?.description || "",
+                        description:
+                            item?.description || item?.productDescription || "",
+                        productHSNCode: item?.productHSNCode || "",
+                        remarks: item?.remarks || "",
+                        quantity: item?.quantity || "",
+                        unit: unitCode,
+                        uom: unitCode,
+                        unitName:
+                            item?.unitName || getUnitLabelFromSchema(unitCode),
+                        rate: item?.rate || "",
+                        gross: item?.gross || item?.grossAmount || 0,
+                        grossAmount: item?.grossAmount || item?.gross || 0,
+                        discount:
+                            item?.discount || item?.discountPercentage || "",
+                        discountPercentage:
+                            item?.discountPercentage || item?.discount || "",
+                        discountAmount: item?.discountAmount || 0,
+                        taxableAmount: item?.taxableAmount || 0,
+                        cgst: item?.cgst || item?.cgstPercentage || "",
+                        cgstPercentage:
+                            item?.cgstPercentage || item?.cgst || "",
+                        cgstAmount: item?.cgstAmount || 0,
+                        sgst: item?.sgst || item?.sgstPercentage || "",
+                        sgstPercentage:
+                            item?.sgstPercentage || item?.sgst || "",
+                        sgstAmount: item?.sgstAmount || 0,
+                        igst: item?.igst || item?.igstPercentage || "",
+                        igstPercentage:
+                            item?.igstPercentage || item?.igst || "",
+                        igstAmount: item?.igstAmount || 0,
+                        taxAmount: item?.taxAmount || 0,
+                        otherAmount: item?.otherAmount || 0,
+                        netAmount: item?.netAmount || item?.netTotal || 0,
+                        netTotal: item?.netTotal || item?.netAmount || 0,
+
+                        marginProduct: isTrueValue(item?.marginProduct),
+                        taxRate:
+                            item?.taxRate ??
+                            item?.dynamicBodyFields?.taxRate ??
+                            "",
+                        nonTaxRate:
+                            item?.nonTaxRate ??
+                            item?.dynamicBodyFields?.nonTaxRate ??
+                            "",
+                        taxGross:
+                            item?.taxGross ??
+                            item?.dynamicBodyFields?.taxGross ??
+                            "",
+                        nonTaxGross:
+                            item?.nonTaxGross ??
+                            item?.dynamicBodyFields?.nonTaxGross ??
+                            "",
+                    })
+                );
+            })
+            : [{ ...emptyProductRow, id: Date.now() }];
         setEditingRecord(true);
         setErrors({});
 
@@ -642,7 +796,17 @@ const SalesInVoice = () => {
     }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
+        const duplicate =
+            key === "productCode" &&
+            Boolean(
+                form?.products?.some(
+                    (item: any, rowIndex: number) =>
+                        rowIndex !== index &&
+                        String(item?.productCode || "") ===
+                        String(value || "")
+                )
+            );
+
         if (duplicate && !enableDuplicatePro) {
             setErrors((prev: any) => ({
                 ...prev,
@@ -674,6 +838,17 @@ const SalesInVoice = () => {
                 updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
                 updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
                 updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
+
+                const marginProduct = isTrueValue(raw?.dynamicFields?.marginProduct);
+
+                updatedRow.marginProduct = marginProduct;
+
+                if (!marginProduct) {
+                    updatedRow.taxRate = "";
+                    updatedRow.nonTaxRate = "";
+                    updatedRow.taxGross = "";
+                    updatedRow.nonTaxGross = "";
+                }
 
                 if (num(updatedRow.igst) > 0) {
                     updatedRow.cgst = "";
@@ -718,24 +893,29 @@ const SalesInVoice = () => {
     };
 
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
+        return (form.products || []).filter((row: any) => {
+            const visibleFields = (templateFields?.body || []).filter(
+                (field: any) =>
+                    isBodyFieldVisibleForRow(field, row)
+            );
 
-        return (form.products || []).filter((row: any) =>
-            bodyKeys.some((key: string) => {
-                const value = row?.[key];
-                return value !== undefined && value !== null && value !== "";
-            })
-        );
+            return visibleFields.some((field: any) => {
+                const value = row?.[field.key];
+                return (
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+                );
+            });
+        });
     };
 
     const validateForm = () => {
         const err: any = {};
 
         (templateFields?.header || []).forEach((field: any) => {
-            if (field.isHidden) return;
-            if (!field.isRequired) return;
+            if (isTrueValue(field?.isHidden)) return;
+            if (!isTrueValue(field?.isRequired)) return;
 
             const value = form?.[field.key];
 
@@ -751,16 +931,24 @@ const SalesInVoice = () => {
         }
 
         (form.products || []).forEach((row: any, index: number) => {
-            const hasAnyValue = (templateFields?.body || []).some((field: any) => {
+            const visibleFields = (templateFields?.body || []).filter(
+                (field: any) =>
+                    isBodyFieldVisibleForRow(field, row)
+            );
+
+            const hasAnyValue = visibleFields.some((field: any) => {
                 const value = row?.[field.key];
-                return value !== undefined && value !== null && value !== "";
+                return (
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+                );
             });
 
             if (!hasAnyValue) return;
 
-            (templateFields?.body || []).forEach((field: any) => {
-                if (field.isHidden) return;
-                if (!field.isRequired) return;
+            visibleFields.forEach((field: any) => {
+                if (!isTrueValue(field?.isRequired)) return;
 
                 const value = row?.[field.key];
 
@@ -820,43 +1008,117 @@ const SalesInVoice = () => {
             sInvSalesAccount: form.sInvSalesAccount || "SA021",
             // sInvDocStatus: form.sInvDocStatus || form.sInvStatus || "open",
             sOrderNumber: products?.[0]?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
-            sInvBody: products.map((item: any) => ({
-                // ✅ Store Sales Order voucher in invoice body also
-                sOrderNumber: item?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
-                productCode: item.productCode,
-                productName: item.productName,
-                productId: item.productId,
-                productDescription: item.productDescription || item.description,
-                description: item.description || item.productDescription,
-                productHSNCode: item.productHSNCode,
-                remarks: item.remarks,
-                quantity: String(item.quantity),
-                unit: item.unit || item.uom,
-                uom: item.uom || item.unit,
-                unitName: item.unitName,
-                rate: String(item.rate),
-                gross: fmtMoney(item.grossAmount),
-                grossAmount: fmtMoney(item.grossAmount),
-                discount: String(item.discountPercentage || item.discount || ""),
-                discountPercentage: String(
-                    item.discountPercentage || item.discount || ""
-                ),
-                discountAmount: fmtMoney(item.discountAmount),
-                taxableAmount: fmtMoney(item.taxableAmount),
-                cgst: String(item.cgstPercentage || item.cgst || ""),
-                cgstPercentage: String(item.cgstPercentage || item.cgst || ""),
-                cgstAmount: fmtMoney(item.cgstAmount),
-                sgst: String(item.sgstPercentage || item.sgst || ""),
-                sgstPercentage: String(item.sgstPercentage || item.sgst || ""),
-                sgstAmount: fmtMoney(item.sgstAmount),
-                igst: String(item.igstPercentage || item.igst || ""),
-                igstPercentage: String(item.igstPercentage || item.igst || ""),
-                igstAmount: fmtMoney(item.igstAmount),
-                taxAmount: fmtMoney(item.taxAmount),
-                otherAmount: fmtMoney(item.otherAmount),
-                netAmount: fmtMoney(item.netAmount || item.netTotal),
-                netTotal: fmtMoney(item.netTotal || item.netAmount),
-            })),
+            sInvBody: products.map((item: any) => {
+                const marginProduct = isMarginProductRow(item);
+
+                return {
+            // ✅ Store Sales Order voucher in invoice body also
+                    sOrderNumber:
+                        item?.sOrderNumber ||
+                        form?.sInvSalesOrderVoucherNumber ||
+                        "",
+                    productCode: item.productCode,
+                    productName: item.productName,
+                    productId: item.productId,
+                    productDescription:
+                        item.productDescription || item.description,
+                    description:
+                        item.description || item.productDescription,
+                    productHSNCode: item.productHSNCode,
+                    remarks: item.remarks,
+                    quantity: String(item.quantity),
+                    unit: item.unit || item.uom,
+                    uom: item.uom || item.unit,
+                    unitName: item.unitName,
+                    rate: String(item.rate),
+                    gross: fmtMoney(item.grossAmount),
+                    grossAmount: fmtMoney(item.grossAmount),
+                    discount: String(
+                        item.discountPercentage ||
+                        item.discount ||
+                        ""
+                    ),
+                    discountPercentage: String(
+                        item.discountPercentage ||
+                        item.discount ||
+                        ""
+                    ),
+                    discountAmount: fmtMoney(item.discountAmount),
+                    taxableAmount: fmtMoney(item.taxableAmount),
+                    cgst: String(
+                        item.cgstPercentage || item.cgst || ""
+                    ),
+                    cgstPercentage: String(
+                        item.cgstPercentage || item.cgst || ""
+                    ),
+                    cgstAmount: fmtMoney(item.cgstAmount),
+                    sgst: String(
+                        item.sgstPercentage || item.sgst || ""
+                    ),
+                    sgstPercentage: String(
+                        item.sgstPercentage || item.sgst || ""
+                    ),
+                    sgstAmount: fmtMoney(item.sgstAmount),
+                    igst: String(
+                        item.igstPercentage || item.igst || ""
+                    ),
+                    igstPercentage: String(
+                        item.igstPercentage || item.igst || ""
+                    ),
+                    igstAmount: fmtMoney(item.igstAmount),
+                    taxAmount: fmtMoney(item.taxAmount),
+                    otherAmount: fmtMoney(item.otherAmount),
+                    netAmount: fmtMoney(
+                        item.netAmount || item.netTotal
+                    ),
+                    netTotal: fmtMoney(
+                        item.netTotal || item.netAmount
+                    ),
+
+                    marginProduct,
+                    taxRate: marginProduct
+                        ? String(item.taxRate ?? "")
+                        : "",
+                    nonTaxRate: marginProduct
+                        ? String(item.nonTaxRate ?? "")
+                        : "",
+                    taxGross: marginProduct
+                        ? fmtMoney(item.taxGross)
+                        : "",
+                    nonTaxGross: marginProduct
+                        ? fmtMoney(item.nonTaxGross)
+                        : "",
+
+                    dynamicBodyFields: {
+                        ...Object.fromEntries(
+                            Object.entries(
+                                item?.dynamicBodyFields || {}
+                            ).filter(
+                                ([fieldKey]) =>
+                                    !CONDITIONAL_MARGIN_FIELD_KEYS.has(
+                                        fieldKey
+                                    )
+                            )
+                        ),
+                        ...(marginProduct
+                            ? {
+                                taxRate: String(
+                                    item.taxRate ?? ""
+                                ),
+                                nonTaxRate: String(
+                                    item.nonTaxRate ?? ""
+                                ),
+                                taxGross: fmtMoney(
+                                    item.taxGross
+                                ),
+                                nonTaxGross: fmtMoney(
+                                    item.nonTaxGross
+                                ),
+                            }
+                            : {}),
+                    },
+                };
+            }),
 
             sInvFooter: {
                 grossAmount: fmtMoney(footer.totalGrossAmount),
@@ -956,12 +1218,12 @@ const SalesInVoice = () => {
     const dynamicFooterArray = useMemo(() => {
         return (templateFields?.footer || []).filter((field: any) => !field.isHidden).map((field: any) => {
             const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
-                return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
-                };
-            });
+            return {
+                ...field,
+                value: money(rawValue),
+                rawValue,
+            };
+        });
     }, [templateFields?.footer, footerValues]);
 
     const handlePurchaseOrderConfirm = () => {
@@ -971,53 +1233,73 @@ const SalesInVoice = () => {
         }
         const poBody = selectedPurchaseOrder?.sOrderBody || [];
         const products = poBody?.length ? poBody?.map((item: any) =>
-                    calculateRow(
-                        normalizeRowKeys({
-                            id: Date.now() + Math.random(),
+            calculateRow(
+                normalizeRowKeys({
+                    id: Date.now() + Math.random(),
 
-                            // ✅ Store Sales Order voucher in each row
-                            sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
-                            productDescription: item?.productDescription || item?.description || "",
-                            description: item?.description || item?.productDescription || "",
-                            productHSNCode: item?.productHSNCode || "",
-                            remarks: item?.remarks || "",
-                            quantity: item?.quantity || "",
-                            unit: item?.unit,
-                            uom: item?.uom,
-                            unitName: item?.unitName || getUnitLabelFromSchema(item?.unitName),
-                            rate: item?.rate || "",
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount: item?.grossAmount || item?.gross || 0,
-                            discount: item?.discount || item?.discountPercentage || "",
-                            discountPercentage: item?.discountPercentage || item?.discount || "",
-                            discountAmount: item?.discountAmount || 0,
-                            taxableAmount: item?.taxableAmount || 0,
-                            cgst: item?.cgst || item?.cgstPercentage || "",
-                            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-                            cgstAmount: item?.cgstAmount || 0,
-                            sgst: item?.sgst || item?.sgstPercentage || "",
-                            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-                            sgstAmount: item?.sgstAmount || 0,
-                            igst: item?.igst || item?.igstPercentage || "",
-                            igstPercentage: item?.igstPercentage || item?.igst || "",
-                            igstAmount: item?.igstAmount || 0,
-                            taxAmount: item?.taxAmount || 0,
-                            otherAmount: item?.otherAmount || 0,
-                            netAmount: item?.netAmount || item?.netTotal || 0,
-                            netTotal: item?.netTotal || item?.netAmount || 0,
-                        })
-                    )
-                )
-                : [
-                    {
-                        ...emptyProductRow,
-                        id: Date.now(),
-                        sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
-                    },
-                ];
+                    // ✅ Store Sales Order voucher in each row
+                    sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
+                    productCode: item?.productCode || "",
+                    productName: item?.productName || "",
+                    productId: item?.productId || "",
+                    productDescription: item?.productDescription || item?.description || "",
+                    description: item?.description || item?.productDescription || "",
+                    productHSNCode: item?.productHSNCode || "",
+                    remarks: item?.remarks || "",
+                    quantity: item?.quantity || "",
+                    unit: item?.unit,
+                    uom: item?.uom,
+                    unitName: item?.unitName || getUnitLabelFromSchema(item?.unitName),
+                    rate: item?.rate || "",
+                    gross: item?.gross || item?.grossAmount || 0,
+                    grossAmount: item?.grossAmount || item?.gross || 0,
+                    discount: item?.discount || item?.discountPercentage || "",
+                    discountPercentage: item?.discountPercentage || item?.discount || "",
+                    discountAmount: item?.discountAmount || 0,
+                    taxableAmount: item?.taxableAmount || 0,
+                    cgst: item?.cgst || item?.cgstPercentage || "",
+                    cgstPercentage: item?.cgstPercentage || item?.cgst || "",
+                    cgstAmount: item?.cgstAmount || 0,
+                    sgst: item?.sgst || item?.sgstPercentage || "",
+                    sgstPercentage: item?.sgstPercentage || item?.sgst || "",
+                    sgstAmount: item?.sgstAmount || 0,
+                    igst: item?.igst || item?.igstPercentage || "",
+                    igstPercentage: item?.igstPercentage || item?.igst || "",
+                    igstAmount: item?.igstAmount || 0,
+                    taxAmount: item?.taxAmount || 0,
+                    otherAmount: item?.otherAmount || 0,
+                    netAmount: item?.netAmount || item?.netTotal || 0,
+                    netTotal: item?.netTotal || item?.netAmount || 0,
+
+                    marginProduct: isTrueValue(
+                        item?.marginProduct
+                    ),
+                    taxRate:
+                        item?.taxRate ??
+                        item?.dynamicBodyFields?.taxRate ??
+                        "",
+                    nonTaxRate:
+                        item?.nonTaxRate ??
+                        item?.dynamicBodyFields?.nonTaxRate ??
+                        "",
+                    taxGross:
+                        item?.taxGross ??
+                        item?.dynamicBodyFields?.taxGross ??
+                        "",
+                    nonTaxGross:
+                        item?.nonTaxGross ??
+                        item?.dynamicBodyFields?.nonTaxGross ??
+                        "",
+                })
+            )
+        )
+            : [
+                {
+                    ...emptyProductRow,
+                    id: Date.now(),
+                    sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
+                },
+            ];
 
         setForm({
             ...getDefaultForm(),
@@ -1033,7 +1315,7 @@ const SalesInVoice = () => {
             sInvRemarks: selectedPurchaseOrder?.sOrderRemark || "",
             isAutoPost: selectedPurchaseOrder?.isAutoPost || false,
             products,
-        }); 
+        });
 
         setErrors({});
         setEditingRecord(null);
@@ -1103,8 +1385,50 @@ const SalesInVoice = () => {
             try {
                 setFieldsLoading(true);
 
-                const updatedData = await loadAllTemplateOptions(transactionsSchema);
-                setTemplateFields(updatedData);
+                const updatedData = await loadAllTemplateOptions(
+                    transactionsSchema
+                );
+
+                /*
+                 * Sales Invoice-only read-only normalization.
+                 * Shared DynamicAddForm and EditableLineTable remain unchanged.
+                 *
+                 * Schema may return "false" as a string, which is truthy in
+                 * JavaScript. Convert the rate fields to actual editable fields
+                 * and keep only the calculated gross fields read-only.
+                 */
+                const normalizedBody = (
+                    updatedData?.body || []
+                ).map((field: any) => {
+                    if (
+                        field?.key === "taxRate" ||
+                        field?.key === "nonTaxRate"
+                    ) {
+                        return {
+                            ...field,
+                            isReadonly: false,
+                            disabled: false,
+                        };
+                    }
+
+                    if (
+                        field?.key === "taxGross" ||
+                        field?.key === "nonTaxGross"
+                    ) {
+                        return {
+                            ...field,
+                            isReadonly: true,
+                            disabled: true,
+                        };
+                    }
+
+                    return field;
+                });
+
+                setTemplateFields({
+                    ...updatedData,
+                    body: normalizedBody,
+                });
             } catch (error) {
                 console.log("Failed to prepare template fields", error);
             } finally {
@@ -1188,7 +1512,7 @@ const SalesInVoice = () => {
                                     voucherNumber: record?.sInvVoucherNumber,
                                 }));
                             }}
-                           className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
                             <Download size={16} />
                         </button>
@@ -1208,7 +1532,7 @@ const SalesInVoice = () => {
                                 id="sales-invoice-delete-button"
                                 disabled={deleteLoading}
                                 onClick={(e) => handleDeleteSalesInvoiceClick(e, record)}
-                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -1276,6 +1600,8 @@ const SalesInVoice = () => {
                         inputData: { ...templateFields, footer: dynamicFooterArray },
                         bodyKey: "products",
                         handleChange: handleMainChange,
+                        isBodyColumnVisible,
+                        isBodyCellVisible,
                     }}
                 />
             )}
