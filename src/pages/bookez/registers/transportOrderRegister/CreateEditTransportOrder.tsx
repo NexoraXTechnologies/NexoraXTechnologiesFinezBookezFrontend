@@ -3745,7 +3745,7 @@ const CreateEditTransportOrder = ({
             </header> */}
 
             <div className="min-h-0 flex-1 overflow-auto p-4 pb-28">
-                <div className="mx-auto w-full max-w-7xl">
+                <div className="mx-auto w-full">
                     <div className="mb-4 overflow-x-auto rounded-xl border border-border bg-card p-4 shadow-sm">
                         <div className="flex min-w-[760px] items-start">
                             {STEPS.map(
