@@ -30,6 +30,7 @@ import { getStates } from "../../../../redux/slices/professionalSlice/stateCityS
 import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { createTransportRouteCalculate } from "../../../../redux/slices/professionalSlice/transportation/transportRoutes";
+import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
 
 
 
@@ -805,15 +806,46 @@ const CreateTransportOrder = () => {
 					})
 				).unwrap();
 
+				
+				await dispatch(
+					sendWhatsAppMessage({
+						moduleType: "transportOrder",
+						voucherNumber:finalOrderNumber,
+					})
+				).unwrap();
+		
+
+
 				toast.success("Transport order updated");
 				navigate(-1);
 				return;
 			}
 
-			await dispatch(createTransportOrder(payload)).unwrap();
+			const response = await dispatch(
+				createTransportOrder(payload)
+			).unwrap();
+
+			const voucherNumber =
+				response?.data?.voucherNumber ||
+				response?.data?.transportOrderNumber ||
+				response?.voucherNumber ||
+				response?.transportOrderNumber;
+
+			if (voucherNumber) {
+				await dispatch(
+					sendWhatsAppMessage({
+						moduleType: "transportOrder",
+						voucherNumber,
+					})
+				).unwrap();
+			}
 
 			toast.success("Transport order created");
 			navigate(-1);
+			// await dispatch(createTransportOrder(payload)).unwrap();
+
+			// toast.success("Transport order created");
+			// navigate(-1);
 		} catch (error: any) {
 			toast.error(
 				error?.message ||

@@ -69,9 +69,9 @@ const getRecords = (res: any) => {
     return Array.isArray(res?.items) ? res.items : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
 };
 
-const isTrueValue = (value: any) => {
-    return value === true || String(value ?? "").trim().toLowerCase() === "true";
-};
+// const isTrueValue = (value: any) => {
+//     return value === true || String(value ?? "").trim().toLowerCase() === "true";
+// };
 
 const CONDITIONAL_MARGIN_FIELD_KEYS = new Set([
     "taxRate",
@@ -1186,7 +1186,7 @@ const SalesOrder = () => {
 
     const isSalesOrderBodyCellDisabled = (
         column: any,
-        row: any
+        // row: any
     ) => {
         // User must enter these values.
         if (

@@ -120,12 +120,14 @@ const LoadStep = ({ form, update, updateNested, units = [], products = [],isView
             label: "Quantity",
             type: "number",
             placeholder: "Enter quantity",
+            mandatory: true,
         },
         {
             key: "loadDetails.weight",
             label: "Weight",
             type: "number",
             placeholder: "Enter weight",
+            mandatory: true,
         },
         {
             key: "loadDetails.weightUnit",
@@ -133,6 +135,7 @@ const LoadStep = ({ form, update, updateNested, units = [], products = [],isView
             type: "select",
             placeholder: "KG / Ton / Quintal",
             options: unitOptions,
+            mandatory: true,
         },
         {
             key: "loadDetails.packagingType",

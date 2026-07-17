@@ -79,6 +79,7 @@ import tripExpenseRegisterReducer from "./slices/professionalSlice/bookEzRegiste
 import podRegisterReducer from "./slices/professionalSlice/bookEzRegister/podRegister"
 import driverSettlementRegisterReducer from "./slices/professionalSlice/bookEzRegister/driverSettlementRegister";
 import vehicleMaintenanceRegisterReducer from "./slices/professionalSlice/bookEzRegister/vehicleMaintenanceRegister";
+import whatsAppReducer from "./slices/professionalSlice/transportation/whatsappSlice";
 
 // bookEz register
 import salesRegisterReducer from "./slices/professionalSlice/bookEzRegister/salesRegisterSlice";
@@ -179,6 +180,7 @@ export const store = configureStore({
     podRegister: podRegisterReducer,
     driverSettlementRegister: driverSettlementRegisterReducer,
     vehicleMaintenanceRegister: vehicleMaintenanceRegisterReducer,
+    whatsApp:whatsAppReducer,
 
     // bookEz register
     salesRegister: salesRegisterReducer,

@@ -64,7 +64,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
         return bPath.length - aPath.length;
       })[0];
 
-  const currentTitle = activeMenu ? activeMenu.name : "Professional Dashboard";
+  const currentTitle = activeMenu ? activeMenu.name : "";
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);

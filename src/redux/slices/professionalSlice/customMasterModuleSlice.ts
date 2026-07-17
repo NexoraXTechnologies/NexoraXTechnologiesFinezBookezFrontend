@@ -4,6 +4,42 @@ import professionalAxios from "../../../services/professionalAxios";
 //  get custome master listing
 //  users/customMaster/data/getAll?moduleCode=CSTM-000003&offset=0&limit=50&serviceCode=&status=active
 
+
+// Add this thunk to customMasterModuleSlice.ts (or .js) and export it,
+// then import it in CustomMasterComp alongside the other thunks.
+//
+// TODO: swap `axiosInstance` below for whatever HTTP client the other thunks
+// in this slice already use (e.g. `import api from "../../../services/api"`),
+// so auth headers / base URL / interceptors stay consistent.
+
+
+export const fetchMasterOptions = createAsyncThunk(
+	"customMasterModule/fetchMasterOptions",
+	async ({ key, url }: { key: string; url: string }, { rejectWithValue }) => {
+		try {
+			const response = await professionalAxios.get(url);
+			// Return `key` too so a reducer could cache per-field if you ever want
+			// to move this out of component state and into the slice.
+			return { key, data: response?.data?.data ?? response?.data };
+		} catch (err: any) {
+			return rejectWithValue(err?.response?.data || err.message);
+		}
+	}
+);
+
+// Optional: if you'd rather cache these in the slice instead of component
+// state, add matching extraReducers cases, e.g.:
+//
+// builder
+//   .addCase(fetchMasterOptions.fulfilled, (state, action) => {
+//     state.masterOptions = {
+//       ...state.masterOptions,
+//       [action.payload.key]: action.payload.data,
+//     };
+//   });
+
+
+
 export const getCustomMasterListing = createAsyncThunk(
   "customMasterModule/listing",
   async (
