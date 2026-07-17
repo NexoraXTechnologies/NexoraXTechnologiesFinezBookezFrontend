@@ -9,65 +9,143 @@ type RejectValue = {
     message: string;
 };
 
+export type TransportOrderRegisterParams = {
+    fromDate?: string;
+    toDate?: string;
+    offset?: number;
+    limit?: number;
+    exportType?: "pdf" | "excel" | "";
+};
+
+type PaginationState = {
+    offset: number;
+    limit: number;
+    totalDocs: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+};
+
 type TransportOrderRegisterState = {
-    addLoader: boolean;
     listingLoader: boolean;
-    deleteLoader: boolean;
     exportLoader: boolean;
     transportOrderRegisterData: any[];
-    pagination: any;
+    pagination: PaginationState;
     error: string | null;
 };
 
 /* ===================================================
-   CREATE / GET TRASPORT ORDER REGISTER
+   HELPERS
 =================================================== */
 
-export const addTransportOrderRegister = createAsyncThunk<
+const createEmptyPagination = (): PaginationState => ({
+    offset: 0,
+    limit: 10,
+    totalDocs: 0,
+    totalPages: 0,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+});
+
+const extractRegisterResponse = (response: any) => {
+    const root =
+        response?.data?.data ??
+        response?.data ??
+        response ??
+        {};
+
+    const records =
+        root?.transportOrders ||
+        root?.transportOrderRegister ||
+        root?.orders ||
+        root?.records ||
+        root?.items ||
+        root?.invoices ||
+        [];
+
+    const pagination =
+        root?.pagination ||
+        response?.data?.pagination ||
+        response?.pagination ||
+        {};
+
+    return {
+        records: Array.isArray(records) ? records : [],
+
+        pagination: {
+            offset: Number(pagination?.offset ?? 0),
+            limit: Number(pagination?.limit ?? 10),
+            totalDocs: Number(
+                pagination?.totalDocs ??
+                (Array.isArray(records) ? records.length : 0)
+            ),
+            totalPages: Number(pagination?.totalPages ?? 0),
+            currentPage: Number(pagination?.currentPage ?? 1),
+            hasNextPage: Boolean(pagination?.hasNextPage),
+            hasPrevPage: Boolean(pagination?.hasPrevPage),
+        },
+    };
+};
+
+/* ===================================================
+   GET TRANSPORT ORDER REGISTER
+=================================================== */
+
+export const getTransportOrderRegister = createAsyncThunk<
     any,
-    any,
+    TransportOrderRegisterParams,
     { rejectValue: RejectValue }
 >(
-    "transportOrderRegister/addTransportOrderRegister",
-    async (payload, { rejectWithValue }) => {
+    "transportOrderRegister/getTransportOrderRegister",
+    async (
+        {
+            fromDate = "",
+            toDate = "",
+            offset = 0,
+            limit = 10,
+            exportType = "",
+        },
+        { rejectWithValue }
+    ) => {
         try {
-            const res = await professionalAxios.post(
+            const isExport =
+                exportType === "pdf" ||
+                exportType === "excel";
+
+            const response = await professionalAxios.post(
                 "/eTaxSolnMongoApiBackend/users/bookEZ/registers/transportOrderRegister",
                 {
-                    ...payload,
+                    fromDate,
+                    toDate,
+                    offset,
+                    limit,
+                    exportType,
                 },
-                payload?.exportType
+                isExport
                     ? {
-                          responseType: "blob",
-                      }
+                        responseType: "blob",
+                    }
                     : undefined
             );
 
-            /*
-               PDF / Excel response
-            */
-            if (payload?.exportType) {
+            if (isExport) {
                 return {
-                    blob: res.data,
-                    exportType: payload.exportType,
+                    blob: response.data,
+                    exportType,
                 };
             }
 
-            /*
-               Normal list response
-            */
-            if (!res.data?.success) {
+            if (response?.data?.success === false) {
                 return rejectWithValue({
                     message:
-                        res?.data?.message ||
+                        response?.data?.message ||
                         "Failed to fetch transport order register",
                 });
             }
 
-            return {
-                records: res.data?.data?.invoices || [],
-                pagination: res.data?.data?.pagination || {},
-            };
+            return extractRegisterResponse(response);
         } catch (error: any) {
             return rejectWithValue({
                 message:
@@ -79,17 +157,22 @@ export const addTransportOrderRegister = createAsyncThunk<
     }
 );
 
+/*
+ * Optional backward-compatible alias.
+ * Existing pages using addTransportOrderRegister will continue to work.
+ */
+export const addTransportOrderRegister =
+    getTransportOrderRegister;
+
 /* ===================================================
    INITIAL STATE
 =================================================== */
 
 const initialState: TransportOrderRegisterState = {
-    addLoader: false,
     listingLoader: false,
-    deleteLoader: false,
     exportLoader: false,
     transportOrderRegisterData: [],
-    pagination: {},
+    pagination: createEmptyPagination(),
     error: null,
 };
 
@@ -100,6 +183,7 @@ const initialState: TransportOrderRegisterState = {
 const transportOrderRegisterSlice = createSlice({
     name: "transportOrderRegister",
     initialState,
+
     reducers: {
         clearTransportOrderRegisterError: (state) => {
             state.error = null;
@@ -107,51 +191,72 @@ const transportOrderRegisterSlice = createSlice({
 
         clearTransportOrderRegisterData: (state) => {
             state.transportOrderRegisterData = [];
-            state.pagination = {};
+            state.pagination = createEmptyPagination();
         },
     },
+
     extraReducers: (builder) => {
         builder
-            .addCase(addTransportOrderRegister.pending, (state, action) => {
-                const isExport = Boolean(action.meta.arg?.exportType);
+            .addCase(
+                getTransportOrderRegister.pending,
+                (state, action) => {
+                    const isExport = Boolean(
+                        action.meta.arg?.exportType
+                    );
 
-                if (isExport) {
-                    state.exportLoader = true;
-                } else {
-                    state.addLoader = true;
+                    if (isExport) {
+                        state.exportLoader = true;
+                    } else {
+                        state.listingLoader = true;
+                    }
+
+                    state.error = null;
                 }
+            )
 
-                state.error = null;
-            })
+            .addCase(
+                getTransportOrderRegister.fulfilled,
+                (state, action) => {
+                    const isExport = Boolean(
+                        action.meta.arg?.exportType
+                    );
 
-            .addCase(addTransportOrderRegister.fulfilled, (state, action) => {
-                const isExport = Boolean(action.meta.arg?.exportType);
+                    if (isExport) {
+                        state.exportLoader = false;
+                        return;
+                    }
 
-                if (isExport) {
-                    state.exportLoader = false;
-                    return;
+                    state.listingLoader = false;
+                    state.transportOrderRegisterData = action.payload?.records || [];
+
+                    state.pagination =
+                        action.payload?.pagination ||
+                        createEmptyPagination();
+
+                    state.error = null;
                 }
+            )
 
-                state.addLoader = false;
-                state.transportOrderRegisterData =
-                    action.payload?.records || [];
-                state.pagination =
-                    action.payload?.pagination || {};
-            })
+            .addCase(
+                getTransportOrderRegister.rejected,
+                (state, action) => {
+                    const isExport = Boolean(
+                        action.meta.arg?.exportType
+                    );
 
-            .addCase(addTransportOrderRegister.rejected, (state, action) => {
-                const isExport = Boolean(action.meta.arg?.exportType);
+                    if (isExport) {
+                        state.exportLoader = false;
+                    } else {
+                        state.listingLoader = false;
+                        state.transportOrderRegisterData = [];
+                        state.pagination = createEmptyPagination();
+                    }
 
-                if (isExport) {
-                    state.exportLoader = false;
-                } else {
-                    state.addLoader = false;
+                    state.error =
+                        action.payload?.message ||
+                        "Failed to fetch transport order register";
                 }
-
-                state.error =
-                    action.payload?.message ||
-                    "Failed to fetch transport order register";
-            });
+            );
     },
 });
 

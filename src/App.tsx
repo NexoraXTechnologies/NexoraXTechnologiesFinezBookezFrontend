@@ -74,6 +74,11 @@ import LiveTripTracking from './pages/bookez/transportation/whereIsDriver/liveTr
 import CreateEditDriverSettlement from './pages/bookez/transportation/driverSettlement/CreateEditDriverSettlement';
 import DriverSettlementList from './pages/bookez/transportation/driverSettlement/DriverSettlementList';
 import PosPosting from './pages/setting/systemConfiguration/posPosting';
+import CreateEditTransportOrder from './pages/bookez/registers/transportOrderRegister/CreateEditTransportOrder';
+import TripAllocationRegister from './pages/bookez/registers/tripAllocationRegister';
+import CreateEditTripAllocationRegistration from './pages/bookez/registers/tripAllocationRegister/CreateEditTripAllocation';
+import TripExpenseRegister from './pages/bookez/registers/TripExpenseRegister';
+import CreateEditTripExpense from './pages/bookez/registers/TripExpenseRegister/CreateEditTripExpense';
 
 function App() {
   useAppearance();
@@ -220,6 +225,66 @@ function App() {
           <Route path="incometax/resetitrpassword" element={<ResetitrPassword />} />
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />
+
+          <Route
+            path="/bookez/transportation/transport-order/create"
+            element={<CreateEditTransportOrder />}
+          />
+
+          <Route
+            path="/bookez/transportation/transport-order/edit/:voucherNumber"
+            element={<CreateEditTransportOrder />}
+          />
+
+          <Route
+            path="/bookez/transportation/transport-order/view/:voucherNumber"
+            element={<CreateEditTransportOrder />}
+          />
+
+          <Route
+            path="/bookez/registers/trip-allocation-register"
+            element={<TripAllocationRegister />}
+          />
+
+          <Route
+            path="/bookez/transportation/trip-allocation-reg/create"
+            element={<CreateEditTripAllocationRegistration />}
+          />
+
+          <Route
+            path="/bookez/transportation/trip-allocation-reg/edit/:voucherNumber"
+            element={<CreateEditTripAllocationRegistration />}
+          />
+
+          <Route
+            path="/bookez/transportation/trip-allocation-reg/view/:voucherNumber"
+            element={<CreateEditTripAllocationRegistration />}
+          />
+
+          <Route
+            path="/bookez/registers/trip-expense-register"
+            element={<TripExpenseRegister />}
+          />
+
+          <Route
+            path="/bookez/registers/trip-expense-register"
+            element={<TripExpenseRegister />}
+          />
+
+          <Route
+            path="/bookez/transportation/trip-expense/create"
+            element={<CreateEditTripExpense />}
+          />
+
+          <Route
+            path="/bookez/transportation/trip-expense/edit/:voucherNumber"
+            element={<CreateEditTripExpense />}
+          />
+
+          <Route
+            path="/bookez/transportation/trip-expense/view/:voucherNumber"
+            element={<CreateEditTripExpense />}
+          />
 
           {/* incometax */}
           <Route path="incometax/form26as" element={<Form26AS />} />

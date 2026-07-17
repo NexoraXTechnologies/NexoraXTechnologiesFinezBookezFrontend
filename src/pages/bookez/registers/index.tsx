@@ -16,6 +16,9 @@ import SalesRegister from "./SalesRegister";
 import PurchaseRegister from "./PurchaseRegister";
 import ReceiptRegister from "./ReceiptRegister";
 import PaymentRegister from "./PaymentRegister";
+import TransportOrderRegister from "./transportOrderRegister";
+import TripAllocationRegister from "./tripAllocationRegister";
+import TripExpenseRegister from "./TripExpenseRegister";
 
 const cards: any[] = [
   {
@@ -49,21 +52,21 @@ const cards: any[] = [
   {
     title: "Transport Order Register",
     description: "Track and manage all transport orders including shipment details, routes, and order status.",
-    component: "",
+    component: TransportOrderRegister,
     icon: <Truck size={22} />,
     permissionKey: "registers.transportOrderRegister"
   },
   {
     title: "Trip Allocation Register",
     description: "Manage vehicle and driver assignments for planned trips and transportation activities.",
-    component: "",
+    component: TripAllocationRegister,
     icon: <Route size={22} />,
     permissionKey: "registers.tripRegister"
   },
   {
     title: "Trip Expense Register",
     description: "Monitor trip-related expenses including fuel, tolls, and other operational costs.",
-    component: "",
+    component: TripExpenseRegister,
     icon: <WalletCards size={22} />,
     permissionKey: "registers.tripExpenseRegister"
   },
