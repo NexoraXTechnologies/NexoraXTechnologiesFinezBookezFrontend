@@ -68,7 +68,7 @@ const TripAllocationList = () => {
 	const [localLimit, setLocalLimit] = useState(20);
 	const [activeStatus, setActiveStatus] =
 		useState<"open" | "close">("open");
-		// @ts-ignore
+	// @ts-ignore
 	const [checkingTripExpense, setCheckingTripExpense] = useState(false);
 
 
@@ -512,7 +512,7 @@ const TripAllocationList = () => {
 
 	return (
 		<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
-			<div id="trip-allocation-header" className="mb-3 flex items-center">
+			<div id="trip-allocation-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 				<div id="trip-allocation-summary" className="flex items-center">
 					<button
 						type="button"
@@ -532,7 +532,7 @@ const TripAllocationList = () => {
 					</div>
 				</div>
 
-				<div className="ml-auto flex items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
 					<Badge
 						{...{
 							count: openCount + closeCount,
@@ -572,6 +572,13 @@ const TripAllocationList = () => {
 						</button>
 					</div>
 
+					<DataREfreshButton
+						{...{
+							callBackFn: handleRefresh,
+							loading: refreshing,
+						}}
+					/>
+
 					<SearchInput
 						{...{
 							search,
@@ -579,12 +586,7 @@ const TripAllocationList = () => {
 						}}
 					/>
 
-					<DataREfreshButton
-						{...{
-							callBackFn: handleRefresh,
-							loading: refreshing,
-						}}
-					/>
+
 
 					<Permission
 						module="bookez"

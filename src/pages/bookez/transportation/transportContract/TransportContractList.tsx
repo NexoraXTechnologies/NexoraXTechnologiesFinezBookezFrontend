@@ -51,7 +51,7 @@ const TransportContractList = () => {
     });
 
     const pageTitle = location.state?.title || "Transport Contract";
-    
+
 
     const fetchTransportContracts = ({
         offset = localOffset,
@@ -312,7 +312,7 @@ const TransportContractList = () => {
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <div id="transport-contract-header" className="mb-3 flex items-center">
+            <div id="transport-contract-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div id="transport-contract-summary" className="flex items-center">
                     <button
                         type="button"
@@ -328,11 +328,11 @@ const TransportContractList = () => {
                             {pageTitle}
                         </h1>
 
-                      
+
                     </div>
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Badge
                         {...{
                             count:
@@ -369,17 +369,17 @@ const TransportContractList = () => {
                         </button>
                     </div>
 
-                    <SearchInput
-                        {...{
-                            search,
-                            setSearch,
-                        }}
-                    />
-
                     <DataREfreshButton
                         {...{
                             callBackFn: handleRefresh,
                             loading: refreshing,
+                        }}
+                    />
+
+                    <SearchInput
+                        {...{
+                            search,
+                            setSearch,
                         }}
                     />
 

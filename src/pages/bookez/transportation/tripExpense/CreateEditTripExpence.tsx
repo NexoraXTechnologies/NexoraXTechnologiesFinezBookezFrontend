@@ -41,6 +41,7 @@ import {
 import TripRoutePlannerCard from "./TripRoutePlannerCard";
 import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
 import { formatStatusLabel } from "../../../../utils/helperFunctions";
+import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
 
 
 
@@ -344,19 +345,19 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
             case "advanceReceived":
                 return (
                     <div className="grid grid-cols-3 gap-4 md:grid-cols-3 xl:grid-cols-3">
-                         <Field label="Date">
-                                <input
-                                    disabled={readOnly}
-                                    type="datetime-local"
-                                    className={inputClass}
-                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
-                                    onChange={(e) =>
-                                        patchEntry(index, {
-                                            date: dateTimeInputToIso(e.target.value),
-                                        })
-                                    }
-                                />
-                            </Field>
+                        <Field label="Date">
+                            <input
+                                disabled={readOnly}
+                                type="datetime-local"
+                                className={inputClass}
+                                value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+                                onChange={(e) =>
+                                    patchEntry(index, {
+                                        date: dateTimeInputToIso(e.target.value),
+                                    })
+                                }
+                            />
+                        </Field>
                         <Field label="Source">
                             <input
                                 disabled={readOnly}
@@ -395,19 +396,19 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                 return (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-                         <Field label="Date">
-                                <input
-                                    disabled={readOnly}
-                                    type="datetime-local"
-                                    className={inputClass}
-                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
-                                    onChange={(e) =>
-                                        patchEntry(index, {
-                                            date: dateTimeInputToIso(e.target.value),
-                                        })
-                                    }
-                                />
-                            </Field>
+                        <Field label="Date">
+                            <input
+                                disabled={readOnly}
+                                type="datetime-local"
+                                className={inputClass}
+                                value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+                                onChange={(e) =>
+                                    patchEntry(index, {
+                                        date: dateTimeInputToIso(e.target.value),
+                                    })
+                                }
+                            />
+                        </Field>
                         <Field label="Fuel Station">
                             <input
                                 disabled={readOnly}
@@ -474,19 +475,19 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                 return (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 
-                         <Field label="Date">
-                                <input
-                                    disabled={readOnly}
-                                    type="datetime-local"
-                                    className={inputClass}
-                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
-                                    onChange={(e) =>
-                                        patchEntry(index, {
-                                            date: dateTimeInputToIso(e.target.value),
-                                        })
-                                    }
-                                />
-                            </Field>
+                        <Field label="Date">
+                            <input
+                                disabled={readOnly}
+                                type="datetime-local"
+                                className={inputClass}
+                                value={toDateTimeInputValue(entry.date || entry.receivedDate)}
+                                onChange={(e) =>
+                                    patchEntry(index, {
+                                        date: dateTimeInputToIso(e.target.value),
+                                    })
+                                }
+                            />
+                        </Field>
                         <Field label={typeLabel}>
                             <input
                                 disabled={readOnly}
@@ -1493,6 +1494,8 @@ const CreateEditTripExpence = () => {
             }
         })();
     };
+
+
     const handleCompleteTrip = () => {
         const confirmComplete = window.confirm(
             "Mark this trip as completed? Your parent will be notified."
@@ -1544,6 +1547,20 @@ const CreateEditTripExpence = () => {
                         payload,
                     })
                 );
+
+                try {
+                    await dispatch(
+                        sendWhatsAppMessage({
+                            moduleType: "tripExpense",
+                            voucherNumber,
+                        })
+                    ).unwrap();
+                } catch (err) {
+                    console.error(
+                        "[TripExpense] WhatsApp notification failed",
+                        err
+                    );
+                }
 
                 if (form.allocationVoucherNumber) {
                     try {
