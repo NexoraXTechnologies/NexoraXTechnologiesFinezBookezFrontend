@@ -293,6 +293,15 @@ const normalizeVehicle = (vehicle: any = {}) => {
         vehicle?.rawRecord?.current_status ||
         "Available";
 
+
+    const linkedDriver =
+        vehicle?.customemployeemaster ||
+        vehicle?.customEmployeeMaster ||
+        vehicle?.driver ||
+        vehicle?.rawRecord?.customemployeemaster ||
+        vehicle?.rawRecord?.customEmployeeMaster ||
+        null;
+
     return {
         ...vehicle,
 
@@ -336,6 +345,25 @@ const normalizeVehicle = (vehicle: any = {}) => {
         fuelType: vehicle?.fuel_type || vehicle?.fuelType || "",
         chassisNumber: vehicle?.chasis_number || vehicle?.chassisNumber || "",
         engineNumber: vehicle?.engine_number || vehicle?.engineNumber || "",
+
+        // Linked driver from Vehicle Master
+        linkedDriver,
+
+        linkedDriverId: String(
+            linkedDriver?.userMobileNumberHash ||
+            linkedDriver?.mobileNumberHash ||
+            linkedDriver?.userMobileNumber ||
+            ""
+        ).trim(),
+
+        linkedDriverName: [
+            linkedDriver?.userFirstName,
+            linkedDriver?.userMiddleName,
+            linkedDriver?.userLastName,
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .trim(),
     };
 };
 
@@ -1079,18 +1107,48 @@ const CreateTripAllocation = () => {
         loadAllocation();
     }, [dispatch, isEdit, voucherNumber, navigate]);
 
-    const applyVehicle = (vehicle: any) => {
+
+    const applyVehicle = async (
+        vehicle: any,
+        options: {
+            autoSelectDriver?: boolean;
+            showDriverMessage?: boolean;
+        } = {}
+    ) => {
         if (!vehicle) return;
+
+        const {
+            autoSelectDriver = true,
+            showDriverMessage = false,
+        } = options;
 
         const normalized = normalizeVehicle(vehicle);
 
+        // Update vehicle immediately
         setForm((prev: any) => ({
             ...prev,
+
             vehicleSelection: {
                 ...prev.vehicleSelection,
                 ...normalized,
             },
+
+            // Always clear previous driver when vehicle changes
+            driverAllocation: {
+                ...createInitialTripAllocation().driverAllocation,
+            },
         }));
+
+        if (!autoSelectDriver) return;
+
+        // Wait for state update (optional but helps avoid race conditions)
+        await Promise.resolve();
+
+        // Auto-select linked driver if available
+        await autoSelectVehicleDriver(normalized, {
+            clearWhenMissing: true,
+            showMessage: showDriverMessage,
+        });
     };
 
     const handleRepickBestVehicle = () => {
@@ -1304,6 +1362,230 @@ const CreateTripAllocation = () => {
             }));
         } catch (error: any) {
             toast.error(error?.message || "Failed to load driver license details");
+        }
+    };
+
+
+    const autoSelectVehicleDriver = async (
+        vehicle: any,
+        options: {
+            clearWhenMissing?: boolean;
+            showMessage?: boolean;
+        } = {}
+    ) => {
+        const {
+            clearWhenMissing = false,
+            showMessage = false,
+        } = options;
+
+        const normalized = normalizeVehicle(vehicle);
+
+        const linkedDriver =
+            normalized?.linkedDriver ||
+            vehicle?.customemployeemaster ||
+            vehicle?.rawRecord?.customemployeemaster ||
+            null;
+
+        const driverId = String(
+            linkedDriver?.userMobileNumberHash ||
+            normalized?.linkedDriverId ||
+            ""
+        ).trim();
+
+        /*
+         * Vehicle does not have a linked driver.
+         * Keep manual selection unless clearWhenMissing=true.
+         */
+        if (!driverId) {
+            if (clearWhenMissing) {
+                setForm((prev: any) => ({
+                    ...prev,
+                    driverAllocation: {
+                        ...createInitialTripAllocation()
+                            .driverAllocation,
+                    },
+                }));
+            }
+
+            return;
+        }
+
+        /*
+         * Prevent auto-selecting a driver who is already
+         * assigned to another active trip.
+         */
+        const assignment =
+            driverAssignmentMap[driverId];
+
+        const isAssignedElsewhere =
+            assignment &&
+            (!isEdit ||
+                assignment.allocationVoucher !==
+                voucherNumber);
+
+        if (isAssignedElsewhere) {
+            toast.warn(
+                `${normalized?.linkedDriverName ||
+                "Vehicle's linked driver"
+                } is already assigned to trip ${assignment.allocationVoucher
+                }. Please select another driver.`
+            );
+
+            return;
+        }
+
+        /*
+         * If the linked driver exists in the loaded
+         * driver master, use the existing handler.
+         * This also fetches licence details.
+         */
+        const driverExists =
+            driverUsers.some(
+                (driver: any) =>
+                    String(driver?.driverId) === driverId
+            );
+
+        if (driverExists) {
+            await handleDriverSelect(driverId);
+
+            if (showMessage) {
+                toast.info(
+                    `${normalized?.linkedDriverName ||
+                    "Linked driver"
+                    } selected automatically`
+                );
+            }
+
+            return;
+        }
+
+        /*
+         * Fallback:
+         * Vehicle has an employee object, but the driver
+         * is not present in driverUsers yet.
+         * Populate the available information directly.
+         */
+        const driverName = [
+            linkedDriver?.userFirstName,
+            linkedDriver?.userMiddleName,
+            linkedDriver?.userLastName,
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+
+        setForm((prev: any) => ({
+            ...prev,
+            driverAllocation: {
+                ...prev.driverAllocation,
+
+                driverId,
+                driverName:
+                    driverName || driverId,
+                mobileNumber: driverId,
+
+                licenseNumber:
+                    linkedDriver?.licenseNumber ||
+                    linkedDriver
+                        ?.childUserCustomFields
+                        ?.licenseNumber ||
+                    "",
+
+                licenseExpiryDate:
+                    linkedDriver?.licenseExpiryDate ||
+                    linkedDriver
+                        ?.childUserCustomFields
+                        ?.licenseExpiry ||
+                    "",
+            },
+        }));
+
+        /*
+         * Try fetching full child-user details even when
+         * driverUsers has not finished loading.
+         */
+        try {
+            const response = await dispatch(
+                getChildUserByMobile(driverId)
+            ).unwrap();
+
+            const responseData =
+                response?.data || response;
+
+            const childUsersRaw =
+                responseData?.ChildUsers ||
+                responseData?.childUsers ||
+                responseData?.result ||
+                responseData?.users ||
+                [];
+
+            const childUsersArray =
+                Array.isArray(childUsersRaw)
+                    ? childUsersRaw
+                    : childUsersRaw &&
+                        typeof childUsersRaw === "object"
+                        ? [childUsersRaw]
+                        : [];
+
+            const child =
+                childUsersArray.find(
+                    (item: any) =>
+                        String(
+                            item?.userMobileNumberHash ||
+                            ""
+                        ) === driverId
+                ) ||
+                childUsersArray[0] ||
+                responseData;
+
+            const customFields =
+                child?.childUserCustomFields || {};
+
+            setForm((prev: any) => ({
+                ...prev,
+                driverAllocation: {
+                    ...prev.driverAllocation,
+
+                    driverId,
+
+                    driverName:
+                        getFullName(child) ||
+                        driverName ||
+                        driverId,
+
+                    mobileNumber:
+                        String(
+                            child?.userMobileNumberHash ||
+                            driverId
+                        ),
+
+                    licenseNumber:
+                        customFields?.licenseNumber ||
+                        child?.licenseNumber ||
+                        child?.drivingLicenseNumber ||
+                        prev.driverAllocation
+                            ?.licenseNumber ||
+                        "",
+
+                    licenseExpiryDate:
+                        customFields?.licenseExpiry ||
+                        child?.licenseExpiryDate ||
+                        child
+                            ?.drivingLicenseExpiryDate ||
+                        prev.driverAllocation
+                            ?.licenseExpiryDate ||
+                        "",
+                },
+            }));
+        } catch (error) {
+            /*
+             * Do not remove the basic linked-driver data.
+             * Only the additional details could not load.
+             */
+            console.error(
+                "Failed to load linked vehicle driver details",
+                error
+            );
         }
     };
 
