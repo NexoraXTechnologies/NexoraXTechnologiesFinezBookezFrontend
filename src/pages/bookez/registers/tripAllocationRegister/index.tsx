@@ -13,6 +13,7 @@ import {
     getTripAllocationByVoucherNumber,
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 import { getTripAllocationRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/tripAllocationRegister";
+import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
 
 
 
@@ -306,8 +307,13 @@ const TripAllocationRegister = () => {
 
     const today = getTodayDate();
 
-    const [fromDate, setFromDate] = useState(today);
-    const [toDate, setToDate] = useState(today);
+    const [fromDate, setFromDate] = useState(
+        toLocalStartOfDayUtc(today),
+    );
+
+    const [toDate, setToDate] = useState(
+        toLocalEndOfDayUtc(today),
+    );
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -393,8 +399,19 @@ const TripAllocationRegister = () => {
     const handleClear = () => {
         const currentDate = getTodayDate();
         setDateError("");
-        setFromDate(currentDate);
-        setToDate(currentDate);
+
+        setFromDate(
+            toLocalStartOfDayUtc(
+                currentDate,
+            ),
+        );
+
+        setToDate(
+            toLocalEndOfDayUtc(
+                currentDate,
+            ),
+        );
+
         setLocalOffset(0);
         setRefreshKey((previous) => previous + 1);
     };
@@ -496,9 +513,15 @@ const TripAllocationRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value: toDateInputValue(
+                            fromDate,
+                        ),
                         onChange: (value) => {
-                            setFromDate(value);
+                            setFromDate(
+                                toLocalStartOfDayUtc(
+                                    value,
+                                ),
+                            );
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -508,9 +531,15 @@ const TripAllocationRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value: toDateInputValue(
+                            toDate,
+                        ),
                         onChange: (value) => {
-                            setToDate(value);
+                            setToDate(
+                                toLocalEndOfDayUtc(
+                                    value,
+                                ),
+                            );
                             setLocalOffset(0);
                             setDateError("");
                         },

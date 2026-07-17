@@ -206,3 +206,62 @@ export const truncate = (text: string = "", maxLength = 18) =>
     text.length > maxLength
         ? `${text.slice(0, maxLength)}...`
         : text;
+
+
+export const toLocalStartOfDayUtc = (dateValue: string): string => {
+    if (!dateValue) return "";
+
+    const [year, month, day] = dateValue
+        .slice(0, 10)
+        .split("-")
+        .map(Number);
+
+    return new Date(
+        year,
+        month - 1,
+        day,
+        0,
+        0,
+        0,
+        0,
+    ).toISOString();
+};
+
+export const toLocalEndOfDayUtc = (dateValue: string): string => {
+    if (!dateValue) return "";
+
+    const [year, month, day] = dateValue
+        .slice(0, 10)
+        .split("-")
+        .map(Number);
+
+    return new Date(
+        year,
+        month - 1,
+        day,
+        23,
+        59,
+        59,
+        999,
+    ).toISOString();
+};
+
+export const toDateInputValue = (dateValue: string): string => {
+    if (!dateValue) return "";
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    const year = date.getFullYear();
+    const month = String(
+        date.getMonth() + 1,
+    ).padStart(2, "0");
+    const day = String(
+        date.getDate(),
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+};

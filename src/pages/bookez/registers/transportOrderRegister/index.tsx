@@ -13,6 +13,7 @@ import ReadMoreText from "../../../../components/common/ReadMoreText";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
 import CreateEditTransportOrder from "./CreateEditTransportOrder";
 import { getTransportOrderRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/transportOrderRegister";
+import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
 
 
 
@@ -389,10 +390,14 @@ const TransportOrderRegister = () => {
     const today = getTodayDate();
 
     const [fromDate, setFromDate] =
-        useState<string>(today);
+        useState<string>(
+            toLocalStartOfDayUtc(today)
+        );
 
     const [toDate, setToDate] =
-        useState<string>(today);
+        useState<string>(
+            toLocalEndOfDayUtc(today)
+        );
 
     const [localOffset, setLocalOffset] =
         useState<number>(0);
@@ -517,8 +522,18 @@ const TransportOrderRegister = () => {
     const handleClear = () => {
         const currentDate = getTodayDate();
 
-        setFromDate(currentDate);
-        setToDate(currentDate);
+        setFromDate(
+            toLocalStartOfDayUtc(
+                currentDate
+            )
+        );
+
+        setToDate(
+            toLocalEndOfDayUtc(
+                currentDate
+            )
+        );
+
         setLocalOffset(0);
 
         setRefreshKey((previousValue) =>
@@ -689,9 +704,15 @@ const TransportOrderRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value: toDateInputValue(
+                            fromDate
+                        ),
                         onChange: (value) => {
-                            setFromDate(value);
+                            setFromDate(
+                                toLocalStartOfDayUtc(
+                                    value
+                                )
+                            );
                             setLocalOffset(0);
                         },
                         required: true,
@@ -700,9 +721,15 @@ const TransportOrderRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value: toDateInputValue(
+                            toDate
+                        ),
                         onChange: (value) => {
-                            setToDate(value);
+                            setToDate(
+                                toLocalEndOfDayUtc(
+                                    value
+                                )
+                            );
                             setLocalOffset(0);
                         },
                         required: true,
@@ -781,7 +808,7 @@ const TransportOrderRegister = () => {
                                     className="animate-spin"
                                 />
                             ) : (
-                                    <Eye size={15} />
+                                <Eye size={15} />
                             )}
                         </button>
                     );
@@ -794,22 +821,22 @@ const TransportOrderRegister = () => {
                     <div className="mt-2">
                         <Pagination
                             localLimit={localLimit}
-                        selectCb={(event: any) => {
-                            setLocalLimit(
-                                Number(
-                                    event.target.value
-                                )
-                            );
+                            selectCb={(event: any) => {
+                                setLocalLimit(
+                                    Number(
+                                        event.target.value
+                                    )
+                                );
 
-                            setLocalOffset(0);
-                        }}
-                        preDisabled={
-                            !currentPagination?.hasPrevPage
-                        }
-                        nextDisabled={
-                            !currentPagination?.hasNextPage
-                        }
-                        setLocalOffset={setLocalOffset}
+                                setLocalOffset(0);
+                            }}
+                            preDisabled={
+                                !currentPagination?.hasPrevPage
+                            }
+                            nextDisabled={
+                                !currentPagination?.hasNextPage
+                            }
+                            setLocalOffset={setLocalOffset}
                             pagination={
                                 currentPagination
                             }

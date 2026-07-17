@@ -10,6 +10,7 @@ import Pagination from "../../../../components/pagination";
 import RegisterFilterCard from "../RegisterFilterCard";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
 import CreateEditTripExpense from "./CreateEditTripExpense";
+import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
 
 
 type ExportType = "pdf" | "excel" | "";
@@ -348,8 +349,13 @@ const TripExpenseRegister = () => {
     const dispatch = useDispatch<any>();
     const today = getTodayDate();
 
-    const [fromDate, setFromDate] = useState<string>(today);
-    const [toDate, setToDate] = useState<string>(today);
+    const [fromDate, setFromDate] = useState<string>(
+        toLocalStartOfDayUtc(today)
+    );
+
+    const [toDate, setToDate] = useState<string>(
+        toLocalEndOfDayUtc(today)
+    );
     const [localOffset, setLocalOffset] = useState<number>(0);
     const [localLimit, setLocalLimit] = useState<number>(10);
     const [refreshKey, setRefreshKey] = useState<number>(0);
@@ -447,8 +453,19 @@ const TripExpenseRegister = () => {
         const currentDate = getTodayDate();
 
         setDateError("");
-        setFromDate(currentDate);
-        setToDate(currentDate);
+
+        setFromDate(
+            toLocalStartOfDayUtc(
+                currentDate
+            )
+        );
+
+        setToDate(
+            toLocalEndOfDayUtc(
+                currentDate
+            )
+        );
+
         setLocalOffset(0);
         setRefreshKey((previous) => previous + 1);
     };
@@ -593,9 +610,15 @@ const TripExpenseRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value: toDateInputValue(
+                            fromDate
+                        ),
                         onChange: (value: string) => {
-                            setFromDate(value);
+                            setFromDate(
+                                toLocalStartOfDayUtc(
+                                    value
+                                )
+                            );
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -605,9 +628,15 @@ const TripExpenseRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value: toDateInputValue(
+                            toDate
+                        ),
                         onChange: (value: string) => {
-                            setToDate(value);
+                            setToDate(
+                                toLocalEndOfDayUtc(
+                                    value
+                                )
+                            );
                             setLocalOffset(0);
                             setDateError("");
                         },
