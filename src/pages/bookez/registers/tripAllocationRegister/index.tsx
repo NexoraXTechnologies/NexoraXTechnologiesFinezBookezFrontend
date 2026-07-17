@@ -83,10 +83,10 @@ const normalizeAllocationStatus = (status: any): string => {
     return key || "pending";
 };
 
-const isAllocationClosed = (row: any): boolean =>
-    normalizeAllocationStatus(
-        row?.tripStatus || row?.allocationStatus || row?.status,
-    ) === "completed";
+// const isAllocationClosed = (row: any): boolean =>
+//     normalizeAllocationStatus(
+//         row?.tripStatus || row?.allocationStatus || row?.status,
+//     ) === "completed";
 
 const getStatusLabel = (row: any): string => {
     const status = normalizeAllocationStatus(

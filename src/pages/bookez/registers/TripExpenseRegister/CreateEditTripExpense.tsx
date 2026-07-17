@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-    ArrowLeft,
+   
     CalendarDays,
     CheckCircle2,
     Coffee,
@@ -933,21 +933,21 @@ const CreateEditTripExpense = ({
 
 
 
-    const pageTitle =
-        routeState?.title ||
-        (isView
-            ? "View Trip Expense"
-            : isEdit
-                ? "Edit Trip Expense"
-                : "Create Trip Expense");
+    // const pageTitle =
+    //     routeState?.title ||
+    //     (isView
+    //         ? "View Trip Expense"
+    //         : isEdit
+    //             ? "Edit Trip Expense"
+    //             : "Create Trip Expense");
 
-    const pageDescription =
-        routeState?.description ||
-        (isView
-            ? "View trip expense details, POD, route planner, and route-wise trip records."
-            : isEdit
-                ? "Update trip expense details, POD, and route-wise trip records."
-                : "Create trip expense, start trips, record advance, diesel, food, running, breakdown, other costs, and POD.");
+    // const pageDescription =
+    //     routeState?.description ||
+    //     (isView
+    //         ? "View trip expense details, POD, route planner, and route-wise trip records."
+    //         : isEdit
+    //             ? "Update trip expense details, POD, and route-wise trip records."
+    //             : "Create trip expense, start trips, record advance, diesel, food, running, breakdown, other costs, and POD.");
 
     const summary = useMemo(() => computeTripExpenseSummary(form), [form]);
 

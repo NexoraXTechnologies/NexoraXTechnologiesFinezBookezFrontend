@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    ArrowLeft,
     CalendarDays,
     CheckCircle2,
     FileText,
@@ -564,7 +563,7 @@ const CreateEditTripAllocationRegistration = ({
 
     const {
         activeAllocations = [],
-        activeAllocationsLoader = false,
+        // activeAllocationsLoader = false,
         drivers = [],
         driversLoader = false,
         vehicles = [],
@@ -1268,24 +1267,24 @@ const CreateEditTripAllocationRegistration = ({
         }
     };
 
-    const handleRefresh = () => {
-        fetchBaseData();
+    // const handleRefresh = () => {
+    //     fetchBaseData();
 
-        if (form.transportOrder.transportOrderNumber) {
-            dispatch(
-                getVehicleMasterVehicles({
-                    requiredWeight: form.transportOrder.requiredWeightTon,
-                    transportOrder: form.transportOrder,
-                }),
-            );
-        }
-    };
+    //     if (form.transportOrder.transportOrderNumber) {
+    //         dispatch(
+    //             getVehicleMasterVehicles({
+    //                 requiredWeight: form.transportOrder.requiredWeightTon,
+    //                 transportOrder: form.transportOrder,
+    //             }),
+    //         );
+    //     }
+    // };
 
-    const title = isView
-        ? "View Trip Allocation"
-        : isEdit
-            ? "Edit Trip Allocation"
-            : "Create Trip Allocation";
+    // const title = isView
+    //     ? "View Trip Allocation"
+    //     : isEdit
+    //         ? "Edit Trip Allocation"
+    //         : "Create Trip Allocation";
 
     const ownershipType = normalizeOwnershipType(
         form.vehicleSelection.ownershipType,
