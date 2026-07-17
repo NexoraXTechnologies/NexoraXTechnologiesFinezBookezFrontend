@@ -459,7 +459,7 @@ const TransportOrderList = () => {
 
 	return (
 		<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
-			<div id="transport-order-header" className="mb-3 flex items-center">
+			<div id="transport-order-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 				<div id="transport-order-summary" className="flex items-center">
 					<button
 						type="button"
@@ -479,7 +479,7 @@ const TransportOrderList = () => {
 					</div>
 				</div>
 
-				<div className="ml-auto flex items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
 					<Badge
 						{...{
 							count:
@@ -517,6 +517,13 @@ const TransportOrderList = () => {
 						</button>
 					</div>
 
+					<DataREfreshButton
+						{...{
+							callBackFn: handleRefresh,
+							loading: refreshing,
+						}}
+					/>
+
 					<SearchInput
 						{...{
 							search,
@@ -524,12 +531,7 @@ const TransportOrderList = () => {
 						}}
 					/>
 
-					<DataREfreshButton
-						{...{
-							callBackFn: handleRefresh,
-							loading: refreshing,
-						}}
-					/>
+
 
 					{/* {activeStatus !== "close" && ( */}
 					<Permission
@@ -557,55 +559,6 @@ const TransportOrderList = () => {
 					emptyMessage="No transport order found"
 					{...(activeStatus !== "close"
 						? {
-							// actions: (record: any) => {
-							// 	const allocatedLR = getAllocatedLR(record);
-
-							// 	if (allocatedLR) {
-							// 		return (
-							// 			<span className="inline-flex items-center rounded-md border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
-							// 				Allocated
-							// 				{allocatedLR?.lrNumber
-							// 					? ` • ${allocatedLR.lrNumber}`
-							// 					: ""}
-							// 			</span>
-							// 		);
-							// 	}
-
-							// 	if (isClosedOrder(record)) return null;
-
-							// 	return (
-							// 		<div className="flex items-center gap-2">
-							// 			<Permission
-							// 				module="bookez"
-							// 				permissionKey="transportOrder"
-							// 				action="update"
-							// 			>
-							// 				<button
-							// 					type="button"
-							// 					onClick={() => handleEditOrder(record)}
-							// 					className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-							// 				>
-							// 					<Edit size={16} />
-							// 				</button>
-							// 			</Permission>
-
-							// 			<Permission
-							// 				module="bookez"
-							// 				permissionKey="transportOrder"
-							// 				action="delete"
-							// 			>
-							// 				<button
-							// 					type="button"
-							// 					disabled={deleteLoader || lrListingLoader}
-							// 					onClick={(e) => handleDeleteClick(e, record)}
-							// 					className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-							// 				>
-							// 					<Trash2 size={16} />
-							// 				</button>
-							// 			</Permission>
-							// 		</div>
-							// 	);
-							// },
 
 							actions: (record: any) => {
 								const allocatedLR = getAllocatedLR(record);

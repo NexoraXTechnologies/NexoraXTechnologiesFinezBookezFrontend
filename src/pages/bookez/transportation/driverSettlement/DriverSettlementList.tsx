@@ -131,7 +131,7 @@ const DriverSettlementList = () => {
     });
 
     const pageTitle = location.state?.title || "Driver Settlement";
-   
+
     const dispatch = useDispatch<any>();
     const { driverSettlement, pagination, listingLoader, } = useSelector((state: any) => state.driverSettlement)
     const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
@@ -389,7 +389,7 @@ const DriverSettlementList = () => {
                 return (
                     <div>
                         <div className="font-medium">
-                           {truncate(`${from} → ${to}`)} 
+                            {truncate(`${from} → ${to}`)}
                         </div>
                     </div>
                 );
@@ -453,7 +453,10 @@ const DriverSettlementList = () => {
 
     return (
         <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
-            <div id="driver-settlement-header" className="mb-3 flex items-center">
+            <div
+                id="driver-settlement-header"
+                className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+            >
                 <div
                     id="driver-settlement-summary"
                     className="flex items-center"
@@ -470,12 +473,10 @@ const DriverSettlementList = () => {
                         <h1 className="truncate text-lg font-bold text-card-foreground">
                             {pageTitle}
                         </h1>
-
-                       
                     </div>
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Badge
                         {...{
                             count:
@@ -487,7 +488,6 @@ const DriverSettlementList = () => {
                             varient: "primary",
                         }}
                     />
-
 
                     <div className="flex rounded-md border border-border bg-background p-1">
                         <button
@@ -513,6 +513,14 @@ const DriverSettlementList = () => {
                         </button>
                     </div>
 
+                    <DataREfreshButton
+                        {...{
+                            callBackFn: handleRefresh,
+                            loading: refreshing,
+                        }}
+                    />
+
+
                     <SearchInput
                         {...{
                             search,
@@ -520,12 +528,8 @@ const DriverSettlementList = () => {
                         }}
                     />
 
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
+
+
 
                     <Permission module="bookez" permissionKey="Pass" action="create">
                         {/* @ts-ignore */}

@@ -1117,7 +1117,7 @@ const TripExpenseList = () => {
 
     return (
         <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
-            <div id="trip-expense-header" className="mb-3 flex items-center">
+            <div id="trip-expense-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div id="trip-expense-summary" className="flex items-center">
                     <button
                         type="button"
@@ -1136,7 +1136,7 @@ const TripExpenseList = () => {
                     </div>
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Badge
                         {...{
                             count:
@@ -1174,6 +1174,12 @@ const TripExpenseList = () => {
                             Close ({closedCount})
                         </button>
                     </div>
+                    <DataREfreshButton
+                        {...{
+                            callBackFn: handleRefresh,
+                            loading: refreshing,
+                        }}
+                    />
 
                     <SearchInput
                         {...{
@@ -1182,12 +1188,7 @@ const TripExpenseList = () => {
                         }}
                     />
 
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
+                    
 
                     {!isChildUser && (
                         <>

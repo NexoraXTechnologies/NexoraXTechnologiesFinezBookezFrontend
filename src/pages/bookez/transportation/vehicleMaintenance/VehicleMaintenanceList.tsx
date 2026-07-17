@@ -146,7 +146,7 @@ const VehicleMaintenanceList = () => {
     const searchTimerRef = useRef<any>(null);
 
     const pageTitle = location.state?.title || "Vehicle Maintenance";
-   
+
 
     /* ===================================================
        FETCH DATA
@@ -450,11 +450,10 @@ const VehicleMaintenanceList = () => {
             title: "Status",
             render: (row: any) => (
                 <span
-                    className={`inline-flex rounded-md px-2 py-1 text-xs font-bold ${
-                        String(row?.status || "").toLowerCase() === "active"
+                    className={`inline-flex rounded-md px-2 py-1 text-xs font-bold ${String(row?.status || "").toLowerCase() === "active"
                             ? "bg-success/10 text-success"
                             : "bg-muted text-muted-foreground"
-                    }`}
+                        }`}
                 >
                     {formatStatus(row?.status)}
                 </span>
@@ -470,7 +469,7 @@ const VehicleMaintenanceList = () => {
         <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
             <div
                 id="vehicle-maintenance-header"
-                className="mb-3 flex items-center"
+                className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
             >
                 <div
                     id="vehicle-maintenance-summary"
@@ -490,11 +489,11 @@ const VehicleMaintenanceList = () => {
                             {pageTitle}
                         </h1>
 
-                   
+
                     </div>
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Badge
                         {...{
                             count:
@@ -507,6 +506,12 @@ const VehicleMaintenanceList = () => {
                         }}
                     />
 
+                    <DataREfreshButton
+                        {...{
+                            callBackFn: handleRefresh,
+                            loading: refreshing,
+                        }}
+                    />
                     <SearchInput
                         {...{
                             search,
@@ -514,12 +519,6 @@ const VehicleMaintenanceList = () => {
                         }}
                     />
 
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
 
                     <Permission
                         module="bookez"
@@ -598,9 +597,8 @@ const VehicleMaintenanceList = () => {
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message={`Are you sure you want to delete ${
-                        confirmTooltip?.voucherNumber || "this entry"
-                    }?`}
+                    message={`Are you sure you want to delete ${confirmTooltip?.voucherNumber || "this entry"
+                        }?`}
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteConfirm}

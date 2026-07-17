@@ -248,7 +248,7 @@ const TripLREntryList = () => {
     const searchTimerRef = useRef<any>(null);
 
     const pageTitle = location.state?.title || "Trip L/R Entry";
-  
+
     const totalLRCount = openCount + closedCount;
 
     /* ===================================================
@@ -695,7 +695,7 @@ const TripLREntryList = () => {
 
     return (
         <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
-            <div id="trip-lr-collection-header" className="mb-3 flex items-center">
+            <div id="trip-lr-collection-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div
                     id="trip-lr-collection-summary"
                     className="flex items-center"
@@ -713,11 +713,11 @@ const TripLREntryList = () => {
                             {pageTitle}
                         </h1>
 
-                     
+
                     </div>
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Badge
                         {...{
                             count:
@@ -761,6 +761,14 @@ const TripLREntryList = () => {
                         </button>
                     </div>
 
+                    <DataREfreshButton
+                        {...{
+                            callBackFn: handleRefresh,
+                            loading: refreshing,
+                        }}
+                    />
+
+
                     <SearchInput
                         {...{
                             search,
@@ -768,12 +776,6 @@ const TripLREntryList = () => {
                         }}
                     />
 
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
 
 
                     <Permission
@@ -803,48 +805,48 @@ const TripLREntryList = () => {
                             ? "No closed trip LR collection found"
                             : "No open trip LR collection found"
                     }
-                {...(activeStatus !== "close"
-                    ? {
-                          actions: (record: any) => {
-                              if (isLRClosed(record)) return null;
+                    {...(activeStatus !== "close"
+                        ? {
+                            actions: (record: any) => {
+                                if (isLRClosed(record)) return null;
 
-                              return (
-                                  <div className="flex items-center gap-2">
-                                      <Permission
-                                          module="bookez"
-                                          permissionKey="tripLrCollection"
-                                          action="update"
-                                      >
-                                          <button
-                                              type="button"
-                                              onClick={() => handleEdit(record)}
-                                              className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                                          >
-                                              <Edit size={16} />
-                                          </button>
-                                      </Permission>
+                                return (
+                                    <div className="flex items-center gap-2">
+                                        <Permission
+                                            module="bookez"
+                                            permissionKey="tripLrCollection"
+                                            action="update"
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => handleEdit(record)}
+                                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                        </Permission>
 
-                                      <Permission
-                                          module="bookez"
-                                          permissionKey="tripLrCollection"
-                                          action="delete"
-                                      >
-                                          <button
-                                              type="button"
-                                              disabled={deleteLoader}
-                                              onClick={(e) =>
-                                                  handleDeleteClick(e, record)
-                                              }
-                                              className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                                          >
-                                              <Trash2 size={16} />
-                                          </button>
-                                      </Permission>
-                                  </div>
-                              );
-                          },
-                      }
-                    : {})}
+                                        <Permission
+                                            module="bookez"
+                                            permissionKey="tripLrCollection"
+                                            action="delete"
+                                        >
+                                            <button
+                                                type="button"
+                                                disabled={deleteLoader}
+                                                onClick={(e) =>
+                                                    handleDeleteClick(e, record)
+                                                }
+                                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </Permission>
+                                    </div>
+                                );
+                            },
+                        }
+                        : {})}
                 />
             </div>
 
