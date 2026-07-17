@@ -40,6 +40,7 @@ import {
     formatStatusLabel,
     unwrapThunk,
 } from "../../../../utils/helperFunctions";
+import { applyExcelRowToTripExpenseForm, downloadTripExpenseExcel, pickAndParseTripExpenseExcel } from "./tripExpenseExcel";
 
 /* ===================================================
    COMMON HELPERS
@@ -338,7 +339,7 @@ const TripExpenseList = () => {
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
     const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
-
+    const [excelBusy, setExcelBusy] = useState(false);
     const [pagination, setPagination] = useState<any>({
         totalDocs: 0,
         totalRecords: 0,
@@ -347,6 +348,7 @@ const TripExpenseList = () => {
         offset: 0,
         limit: 20,
     });
+
 
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
@@ -359,7 +361,7 @@ const TripExpenseList = () => {
     const promptedAssignmentsRef = useRef(new Set<string>());
 
     const pageTitle = location.state?.title || "Trip Expenses";
-   
+
 
     const professionalHeaders = useMemo(() => {
         return safeJsonParse(localStorage.getItem("professionalHeaders")) || {};
@@ -618,6 +620,179 @@ const TripExpenseList = () => {
     /* ===================================================
        ACTIONS
     =================================================== */
+
+
+    const handleDownloadExcel = async () => {
+        try {
+            if (!filteredRows.length) {
+                toast.warn("No trip expenses available to export");
+                return;
+            }
+
+            setExcelBusy(true);
+
+            const result =
+                await downloadTripExpenseExcel(
+                    filteredRows
+                );
+
+            toast.success(
+                `Excel downloaded successfully with ${result.count} trip expense${result.count === 1 ? "" : "s"
+                }.`
+            );
+        } catch (error: any) {
+            console.error(
+                "[TripExpenseExcel] Download error:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Failed to download Excel"
+            );
+        } finally {
+            setExcelBusy(false);
+        }
+    };
+
+    const handleImportExcel = async () => {
+        try {
+            setExcelBusy(true);
+
+            const excelRows =
+                await pickAndParseTripExpenseExcel();
+
+            if (!Array.isArray(excelRows) || excelRows.length === 0) {
+                toast.warn("No valid rows found in Excel");
+                return;
+            }
+
+            let updated = 0;
+            let skipped = 0;
+            let failed = 0;
+
+            for (const row of excelRows) {
+                const voucherNumber = String(
+                    row?.["Voucher Number"] || ""
+                ).trim();
+
+                if (!voucherNumber) {
+                    skipped += 1;
+                    continue;
+                }
+
+                try {
+                    /*
+                     * Load the latest saved Trip Expense before applying
+                     * values from Excel.
+                     */
+                    const response = await unwrapThunk(
+                        dispatch,
+                        getTripExpensesByVoucherNumber(
+                            voucherNumber
+                        )
+                    );
+
+                    const existing =
+                        response?.data?.record ||
+                        response?.data?.data ||
+                        response?.data ||
+                        response?.record ||
+                        response;
+
+                    if (!existing) {
+                        skipped += 1;
+                        continue;
+                    }
+
+                    /*
+                     * Completed trips must not be changed through Excel.
+                     */
+                    if (isTripClosedSafe(existing)) {
+                        skipped += 1;
+                        continue;
+                    }
+
+                    /*
+                     * Convert the Excel row into the complete API payload.
+                     */
+                    const payload =
+                        applyExcelRowToTripExpenseForm(
+                            existing,
+                            row
+                        );
+
+                    await unwrapThunk(
+                        dispatch,
+                        updateTripExpenses({
+                            voucherNumber,
+                            payload,
+                        })
+                    );
+
+                    updated += 1;
+                } catch (rowError) {
+                    console.error(
+                        `[TripExpenseExcel] Failed to update ${voucherNumber}`,
+                        rowError
+                    );
+
+                    failed += 1;
+                }
+            }
+
+            await fetchExpenses({
+                offset: 0,
+                limit: localLimit,
+                showLoader: false,
+            });
+
+            setLocalOffset(0);
+
+            if (updated > 0) {
+                const details = [
+                    skipped > 0
+                        ? `${skipped} skipped`
+                        : "",
+                    failed > 0
+                        ? `${failed} failed`
+                        : "",
+                ]
+                    .filter(Boolean)
+                    .join(", ");
+
+                toast.success(
+                    `${updated} trip expense${updated === 1 ? "" : "s"
+                    } updated successfully${details ? ` (${details})` : ""
+                    }.`
+                );
+
+                return;
+            }
+
+            if (skipped > 0 || failed > 0) {
+                toast.warn(
+                    `No trip expenses updated. ${skipped} skipped, ${failed} failed.`
+                );
+
+                return;
+            }
+
+            toast.warn("No trip expenses were updated");
+        } catch (error: any) {
+            console.error(
+                "[TripExpenseExcel] Import error:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Failed to import Trip Expense Excel"
+            );
+        } finally {
+            setExcelBusy(false);
+        }
+    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -947,13 +1122,13 @@ const TripExpenseList = () => {
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
-                       className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
-						title="Go back"
-					>
+                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                        title="Go back"
+                    >
                         <ArrowLeft size={18} />
                     </button>
                     <div>
-						<h1 className="truncate text-lg font-bold text-card-foreground">
+                        <h1 className="truncate text-lg font-bold text-card-foreground">
 
                             {pageTitle}
                         </h1>
@@ -1013,77 +1188,44 @@ const TripExpenseList = () => {
                             loading: refreshing,
                         }}
                     />
+
+                    {!isChildUser && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={handleDownloadExcel}
+                                disabled={
+                                    excelBusy ||
+                                    listingLoader ||
+                                    filteredRows.length === 0
+                                }
+                                className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-xs font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {excelBusy
+                                    ? "Processing..."
+                                    : "Download Excel"}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleImportExcel}
+                                disabled={
+                                    excelBusy ||
+                                    listingLoader
+                                }
+                                className="inline-flex h-9 items-center justify-center rounded-md border border-primary bg-background px-3 text-xs font-bold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {excelBusy
+                                    ? "Processing..."
+                                    : "Import Excel"}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden">
-                {/* <DataTable
-                    columns={columns}
-                    data={filteredRows}
-                    loading={listingLoader}
-                    emptyMessage="No trip expenses found"
-                    actions={(record: any) => {
-                        const closed = isTripClosedSafe(record);
-                        const childCanAccept =
-                            isChildUser && !closed && canChildAcceptTripSafe(record);
-                        const childCanEdit = canChildEditTripSafe(record);
 
-                        return (
-                            <div className="flex items-center gap-2">
-                                {childCanAccept ? (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            showAcceptAssignmentModal(record, {
-                                                skipDedup: true,
-                                            })
-                                        }
-                                        className="rounded-md border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition hover:bg-success/20"
-                                    >
-                                        Accept
-                                    </button>
-                                ) : !closed ? (
-                                    <>
-                                        {(isChildUser ? childCanEdit : true) && (
-                                            <Permission
-                                                module="bookez"
-                                                permissionKey="tripExpense"
-                                                action="update"
-                                            >
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleEdit(record)}
-                                                    className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                            </Permission>
-                                        )}
-
-                                        {!isChildUser && (
-                                            <Permission
-                                                module="bookez"
-                                                permissionKey="tripExpense"
-                                                action="delete"
-                                            >
-                                                <button
-                                                    type="button"
-                                                    disabled={deleteLoader}
-                                                    onClick={(e) =>
-                                                        handleDeleteClick(e, record)
-                                                    }
-                                                    className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </Permission>
-                                        )}
-                                    </>
-                                ) : null}
-                            </div>
-                        );
-                    }}
-                /> */}
 
                 <DataTable
                     columns={columns}

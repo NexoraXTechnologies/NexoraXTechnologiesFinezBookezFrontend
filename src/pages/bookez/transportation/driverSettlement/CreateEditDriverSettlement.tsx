@@ -36,6 +36,7 @@ import { addSalesReceipt } from "../../../../redux/slices/professionalSlice/sale
 import { addPayment } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
+import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
 
 const REMARKS_MAX = 200;
 
@@ -1403,41 +1404,6 @@ const CreateEditDriverSettlement = () => {
         );
     }, [configurations]);
 
-    // const transportExpenseAccountMap = useMemo(() => {
-    //     const cfg =
-    //         activeSystemConfiguration?.transportationModuleConfiguration || {};
-
-    //     const withConfigCode = (
-    //         configCode: any,
-    //         fallback: { code: string; name: string }
-    //     ) => ({
-    //         code: cleanText(configCode) || fallback.code,
-    //         name: fallback.name,
-    //     });
-
-    //     return {
-    //         "Diesel": withConfigCode(
-    //             cfg?.dieselCost,
-    //             DEFAULT_EXPENSE_TYPE_ACCOUNT_MAP["Diesel"]
-    //         ),
-    //         "Driver Allowance / Food": withConfigCode(
-    //             cfg?.foodCost,
-    //             DEFAULT_EXPENSE_TYPE_ACCOUNT_MAP["Driver Allowance / Food"]
-    //         ),
-    //         "Running": withConfigCode(
-    //             cfg?.runningCost,
-    //             DEFAULT_EXPENSE_TYPE_ACCOUNT_MAP["Running"]
-    //         ),
-    //         "Breakdown": withConfigCode(
-    //             cfg?.breakdownCost,
-    //             DEFAULT_EXPENSE_TYPE_ACCOUNT_MAP["Breakdown"]
-    //         ),
-    //         "Other": withConfigCode(
-    //             cfg?.otherCost,
-    //             DEFAULT_EXPENSE_TYPE_ACCOUNT_MAP["Other"]
-    //         ),
-    //     } as Record<string, { code: string; name: string }>;
-    // }, [activeSystemConfiguration]);
 
 
     const transportExpenseAccountMap = useMemo(() => {
@@ -1528,7 +1494,7 @@ const CreateEditDriverSettlement = () => {
 
             const [
                 ordersRes,
-                // allocationsRes,
+                allocationsRes,
                 lrRes,
                 expenseRes,
             ] = await Promise.all([
@@ -1569,7 +1535,8 @@ const CreateEditDriverSettlement = () => {
             ]);
 
             const orders = getApiList(ordersRes);
-            // const allocations = getApiList(allocationsRes);
+            // @ts-ignore
+            const allocations = getApiList(allocationsRes);
             const expenses = getApiList(expenseRes);
             const lrList = getApiList(lrRes);
 
@@ -1751,12 +1718,12 @@ const CreateEditDriverSettlement = () => {
     );
 
 
-    console.log("selectedTripId", selectedTripId);
-    console.log("selectedOrderOption", selectedOrderOption);
-    console.log("selectedAllocation", selectedAllocation);
-    console.log("selectedTransportOrder", selectedTransportOrder);
-    console.log("selectedTripExpense", selectedTripExpense);
-    console.log("selectedLREntry", selectedLREntry);
+    // console.log("selectedTripId", selectedTripId);
+    // console.log("selectedOrderOption", selectedOrderOption);
+    // console.log("selectedAllocation", selectedAllocation);
+    // console.log("selectedTransportOrder", selectedTransportOrder);
+    // console.log("selectedTripExpense", selectedTripExpense);
+    // console.log("selectedLREntry", selectedLREntry);
 
     const liveSettlementData = useMemo(
         () =>
@@ -2192,15 +2159,51 @@ const CreateEditDriverSettlement = () => {
             ===================================================== */
 
             if (isEditMode) {
+                const settlementVoucherNumber = String(
+                    editRecord?.settlementNumber ||
+                    editRecord?.voucherNumber ||
+
+                    ""
+                ).trim();
+
+                if (!settlementVoucherNumber) {
+                    toast.error(
+                        "Driver settlement voucher number not found"
+                    );
+                    return;
+                }
+
                 await dispatch(
                     updateDriverSettlement({
                         voucherNumber:
-                            editRecord?.settlementNumber ||
-                            voucherNumber,
-
+                            settlementVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
+
+                /*
+                 * Do not fail the successful update only because
+                 * the WhatsApp notification failed.
+                 */
+                try {
+                    await dispatch(
+                        sendWhatsAppMessage({
+                            moduleType:
+                                "driverSettlement",
+                            voucherNumber:
+                                settlementVoucherNumber,
+                        }) as any
+                    ).unwrap();
+                } catch (whatsAppError) {
+                    console.error(
+                        "[DriverSettlement] WhatsApp notification failed:",
+                        whatsAppError
+                    );
+
+                    toast.warning(
+                        "Driver settlement updated, but WhatsApp notification could not be sent"
+                    );
+                }
 
                 toast.success(
                     "Driver Settlement Updated Successfully"
@@ -2220,6 +2223,22 @@ const CreateEditDriverSettlement = () => {
             const settlementResponse = await dispatch(
                 createDriverSettlement(payload) as any
             ).unwrap();
+
+            const voucherNumber =
+                settlementResponse?.data?.settlementNumber ||
+
+                settlementResponse?.settlementNumber
+
+
+            if (voucherNumber) {
+                await dispatch(
+                    sendWhatsAppMessage({
+                        moduleType: "driverSettlement",
+                        voucherNumber,
+                    })
+                ).unwrap();
+            }
+
 
             const settlementNumber =
                 getSettlementVoucherNumber(
