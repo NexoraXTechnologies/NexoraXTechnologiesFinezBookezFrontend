@@ -26,6 +26,7 @@ import {
 } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Permission from "../../../../components/PermissionGuard";
+import Badge from "../../../../components/badge";
 
 const emptyProductRow = {
     id: Date.now(),
@@ -290,16 +291,16 @@ const OpeningStock = () => {
 
             if (key === "productCode" || key === "productName" || key === "productId") {
                 const selectedProduct = productOptions.find((item: any) => {
-                        const raw = item?.raw || {};
+                    const raw = item?.raw || {};
 
-                        return (
-                            String(item?.value || "") === String(value || "") ||
-                            String(item?.label || "") === String(value || "") ||
-                            String(raw?._id || "") === String(value || "") ||
-                            String(raw?.productCode || "") === String(value || "") ||
-                            String(raw?.productName || "") === String(value || "")
-                        );
-                    }) || null;
+                    return (
+                        String(item?.value || "") === String(value || "") ||
+                        String(item?.label || "") === String(value || "") ||
+                        String(raw?._id || "") === String(value || "") ||
+                        String(raw?.productCode || "") === String(value || "") ||
+                        String(raw?.productName || "") === String(value || "")
+                    );
+                }) || null;
 
                 const product = selectedProduct?.raw || {};
                 updatedRow.productCode = product?.productCode || selectedProduct?.value || updatedRow.productCode || "";
@@ -774,40 +775,59 @@ const OpeningStock = () => {
             },
         ],
     };
-    console.log({ form })
+    // console.log({ form })
     return (
         <>
             <div className="flex h-full w-full flex-col border border-border bg-card text-card-foreground p-4 shadow-sm">
-                <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: setStatus,
-                        }}
-                    />
 
-                    <div className="me-2">
-                        <SearchInput {...{ search, setSearch }} />
-                    </div>
+                <div
+                    className="flex flex-wrap items-center gap-2 mb-3"
+                >
 
-                    <Permission
-                        module="bookez"
-                        permissionKey="openingStock"
-                        action="create"
-                    >
-                        <DataCreateButton
+                    <div id="account-summary" className="flex items-start gap-3">
+                        <Badge
                             {...{
-                                text: "Create Opening Stocks",
-                                icon: <Plus size={16} />,
-                                callBackFn: () => {
-                                    resetMainForm();
-                                    setShowModal(true);
-                                },
+                                count: pagination.totalDocs ?? 0,
+                                text: "Total Opening Stocks:",
                             }}
                         />
-                    </Permission>
+                    </div>
+                    <div className="ml-auto flex flex-wrap items-center gap-2">
+                        <Toggle
+                            arr={["open", "close"]}
+                            state={status}
+                            setState={setStatus}
+                        />
+
+                        <div className="me-2">
+                            <SearchInput
+                                search={search}
+                                setSearch={setSearch}
+                            />
+                        </div>
+
+                        <Permission
+                            module="bookez"
+                            permissionKey="openingStock"
+                            action="create"
+                        >
+                            <div className="w-full sm:w-auto">
+                                <DataCreateButton
+                                    text="Create Opening Stocks"
+                                    icon={<Plus size={16} />}
+                                    callBackFn={() => {
+                                        resetMainForm();
+                                        setShowModal(true);
+                                    }}
+                                />
+                            </div>
+                        </Permission>
+                    </div>
+
                 </div>
+
+
+
 
                 <DataTable
                     columns={mainColumns}

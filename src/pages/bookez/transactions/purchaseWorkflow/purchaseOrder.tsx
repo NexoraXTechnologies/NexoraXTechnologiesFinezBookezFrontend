@@ -1281,7 +1281,7 @@ const PurchaseOrder = () => {
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div
                 id="purchase-order-header"
-                className="mb-3 flex items-center"
+                className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
             >
                 <div
                     id="purchase-order-summary"
@@ -1296,7 +1296,7 @@ const PurchaseOrder = () => {
                     />
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Toggle
                         {...{
                             arr: ["open", "close"],

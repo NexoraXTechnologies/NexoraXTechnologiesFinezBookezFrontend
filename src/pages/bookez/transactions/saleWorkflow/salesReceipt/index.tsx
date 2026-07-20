@@ -784,10 +784,10 @@ const SalesReceipt = () => {
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <div className="mb-3 flex items-center">
+            <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <Badge count={pagination?.totalDocs ?? salesReceipt?.length ?? 0} text="Total Sales Receipts:" varient="primary" />
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Toggle arr={["open", "close"]} state={status} setState={(nextStatus: "open" | "close") => { setStatus(nextStatus); setLocalOffset(0); }} />
                     <SearchInput search={search} setSearch={setSearch} />
                     <DataREfreshButton callBackFn={handleRefresh} loading={refreshing} />
