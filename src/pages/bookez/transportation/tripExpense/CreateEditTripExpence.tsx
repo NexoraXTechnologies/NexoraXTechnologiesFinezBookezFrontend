@@ -118,6 +118,9 @@ const deliveryStatusOptions = [
    HELPERS
 =================================================== */
 
+const getEntryCountLabel = (count: number) =>
+    `${count} ${count === 1 ? "Entry" : "Entries"}`;
+
 const unwrapThunk = async (dispatch: any, action: any) => {
     const res = await dispatch(action);
 
@@ -1871,7 +1874,7 @@ const CreateEditTripExpence = () => {
                         </div>
                     </div>
 
-                    {visibleCategories.map((category: any, index: number) => (
+                    {/* {visibleCategories.map((category: any, index: number) => (
                         <SectionCard
                             key={category.key}
                             index={index + 4}
@@ -1887,10 +1890,85 @@ const CreateEditTripExpence = () => {
                                 readOnly={readOnly}
                             />
                         </SectionCard>
-                    ))}
+                    ))} */}
 
 
-                    <SectionCard
+                    {visibleCategories.map((category: any, index: number) => {
+                        const entries = form.expenses?.[category.key]?.entries || [];
+                        const entryCount = entries.length;
+                        const totalAmount = entries.reduce(
+                            (sum: number, e: any) => sum + Number(e.amount || 0),
+                            0
+                        );
+
+                        return (
+                            <SectionCard
+                                key={category.key}
+                                index={index + 4}
+                                title={category.title}
+                                subtitle={getEntryCountLabel(entryCount)}
+                                trailing={
+                                    <span
+                                        className={
+                                            totalAmount > 0 ? "text-primary" : "text-muted-foreground"
+                                        }
+                                    >
+                                        ₹{formatIndianNumber(totalAmount)}
+                                    </span>
+                                }
+                                icon={category.icon}
+                                expanded={expandedSections[category.key]}
+                                onToggle={() => toggleSection(category.key)}
+                            >
+                                <CategoryDetails
+                                    category={category}
+                                    form={form}
+                                    setForm={setForm}
+                                    readOnly={readOnly}
+                                />
+                            </SectionCard>
+                        );
+                    })}
+
+
+                    {(() => {
+                        const podFilledCount = [
+                            form.pod?.podDocument,
+                            form.pod?.deliveryPhoto,
+                            form.pod?.receiverName,
+                            form.pod?.receiverMobile,
+                        ].filter(Boolean).length;
+
+                        const podStatusRaw = String(form.pod?.deliveryStatus || "pending")
+                            .trim()
+                            .toLowerCase();
+                        const podStatusLabel =
+                            podStatusRaw.charAt(0).toUpperCase() + podStatusRaw.slice(1);
+
+                        const podStatusClass =
+                            podStatusRaw === "delivered"
+                                ? "text-success"
+                                : podStatusRaw === "partial"
+                                    ? "text-amber-600"
+                                    : "text-muted-foreground";
+
+                        return (
+                            <SectionCard
+                                index={visibleCategories.length + 4}
+                                title="POD Details"
+                                subtitle={getEntryCountLabel(podFilledCount)}
+                                trailing={<span className={podStatusClass}>{podStatusLabel}</span>}
+                                icon={<Paperclip size={18} />}
+                                expanded={expandedSections.pod}
+                                onToggle={() => toggleSection("pod")}
+                            >
+                                <PodDetails form={form} setForm={setForm} readOnly={readOnly} />
+                            </SectionCard>
+                        );
+                    })()}
+
+
+                    {/* <SectionCard
                         index={visibleCategories.length + 4}
                         title="POD Details"
                         icon={<Paperclip size={18} />}
@@ -1898,7 +1976,7 @@ const CreateEditTripExpence = () => {
                         onToggle={() => toggleSection("pod")}
                     >
                         <PodDetails form={form} setForm={setForm} readOnly={readOnly} />
-                    </SectionCard>
+                    </SectionCard> */}
 
 
 

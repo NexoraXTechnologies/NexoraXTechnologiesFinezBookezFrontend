@@ -38,6 +38,7 @@ import {
     formatDateTime,
     formatIndianNumber,
     formatStatusLabel,
+    money,
     unwrapThunk,
 } from "../../../../utils/helperFunctions";
 import { applyExcelRowToTripExpenseForm, downloadTripExpenseExcel, pickAndParseTripExpenseExcel } from "./tripExpenseExcel";
@@ -1095,7 +1096,7 @@ const TripExpenseList = () => {
             title: "Total Expense",
             type: "amount",
             render: (row: any) =>
-                `₹${formatIndianNumber(row?.summary?.totalTripExpense ?? 0)}`,
+                `${money(row?.summary?.totalTripExpense ?? 0)}`,
         },
         // {
         //     key: "summary.balanceAmount",

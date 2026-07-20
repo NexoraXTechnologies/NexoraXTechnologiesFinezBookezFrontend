@@ -99,7 +99,7 @@ const getStatusClass = (status: any) => {
     }
 
     if (value === "unsettled" || value === "pending" || value === "draft") {
-        return "border-warning/20 bg-warning/10 text-warning";
+       return "border-yellow-500/20 bg-yellow-500/10 text-yellow-600";
     }
 
     return "border-primary/20 bg-primary/10 text-primary";
