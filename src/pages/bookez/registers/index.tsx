@@ -19,6 +19,8 @@ import PaymentRegister from "./PaymentRegister";
 import TransportOrderRegister from "./transportOrderRegister";
 import TripAllocationRegister from "./tripAllocationRegister";
 import TripExpenseRegister from "./TripExpenseRegister";
+import PodRegister from "./podRegister";
+import VehicleMaintenanceRegister from "./vehiclemaintenanceregister";
 
 const cards: any[] = [
   {
@@ -73,14 +75,14 @@ const cards: any[] = [
   {
     title: "Vehicle Maintenance Register",
     description: "Maintain vehicle service records, repair history, and maintenance schedules.",
-    component: "",
+    component: VehicleMaintenanceRegister,
     icon: <Wrench size={22} />,
     permissionKey: "registers.vehicleMaintenanceRegister"
   },
   {
     title: "POD Register",
     description: "Manage proof of delivery records and track delivery completion status.",
-    component: "",
+    component: PodRegister,
     icon: <FileCheck size={22} />,
     permissionKey: "registers.podRegister"
   },

@@ -65,7 +65,7 @@ export const addVehicleMaintenanceRegister = createAsyncThunk<
             }
 
             return {
-                records: res.data?.data?.invoices || [],
+                records: res.data?.data?.maintenance || [],
                 pagination: res.data?.data?.pagination || {},
             };
         } catch (error: any) {
