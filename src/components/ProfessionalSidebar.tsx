@@ -235,6 +235,12 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/system-configuration",
 					icon: <MonitorCog size={19} />,
 				},
+				// ⭐ UPDATED: Added Master Configuration sidebar option
+				{
+					name: "Master Configuration",
+					path: "/master-configuration",
+					icon: <Sliders size={19} />,
+				},
 				...(localUser?.accountType == "SUPER_ADMIN" ? [{
 					name: "User Explorer",
 					path: "/user-explorer",
