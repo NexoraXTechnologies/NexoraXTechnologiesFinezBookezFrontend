@@ -63,9 +63,9 @@ export const addpodRegister = createAsyncThunk<
                         "Failed to fetch POD register",
                 });
             }
-
+            console.log({ res })
             return {
-                records: res.data?.data?.invoices || [],
+                records: res.data?.data?.pods || [],
                 pagination: res.data?.data?.pagination || {},
             };
         } catch (error: any) {

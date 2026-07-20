@@ -446,23 +446,54 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
     });
 };
 
-
-
 /* ===================================================
-   CREATE / EDIT VEHICLE MAINTENANCE
+   PROPS
 =================================================== */
 
-const CreateEditVehicleMaintenance = () => {
+type CreateEditVehicleMaintenanceProps = {
+    embedded?: boolean;
+    mode?: "add" | "edit" | "view";
+    voucherNumber?: string;
+    maintenanceData?: any;
+    onClose?: () => void;
+};
+
+/* ===================================================
+   CREATE / EDIT / VIEW VEHICLE MAINTENANCE
+=================================================== */
+
+const CreateEditVehicleMaintenance = ({
+    embedded = false,
+    mode: modeProp,
+    voucherNumber: voucherNumberProp,
+    maintenanceData: maintenanceDataProp,
+    onClose,
+}: CreateEditVehicleMaintenanceProps = {}) => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
 
-    const mode = location.state?.mode || (params?.voucherNumber ? "edit" : "add");
-    const isEdit = mode === "edit";
+    // Props take priority (embedded/modal usage); router state/params
+    // remain as fallback so the routed (non-embedded) usage still works.
+    const mode =
+        modeProp ||
+        location.state?.mode ||
+        (params?.voucherNumber ? "edit" : "add");
+
+    const isEdit = mode === "edit" || mode === "view";
+    const isView = mode === "view";
 
     const voucherNumber =
-        location.state?.voucherNumber || params?.voucherNumber || "";
+        voucherNumberProp ||
+        location.state?.voucherNumber ||
+        params?.voucherNumber ||
+        "";
+
+    const passedMaintenanceData =
+        maintenanceDataProp !== undefined
+            ? maintenanceDataProp
+            : location.state?.maintenanceData;
 
     const { users = [] } = useSelector((state: any) => state.professionalUser || {});
 
@@ -476,6 +507,17 @@ const CreateEditVehicleMaintenance = () => {
     const [expandedSections, setExpandedSections] = useState<any>(
         createExpandedSectionsState
     );
+
+    // Single place that decides how to "leave" the screen — closes the
+    // modal when embedded, otherwise falls back to router history.
+    const goBack = useCallback(() => {
+        if (embedded && onClose) {
+            onClose();
+            return;
+        }
+
+        navigate(-1);
+    }, [embedded, onClose, navigate]);
 
     const maintenanceNumber = useMemo(
         () => voucherNumber || getVehicleMaintenanceVoucher(form),
@@ -556,14 +598,16 @@ const CreateEditVehicleMaintenance = () => {
 
     const pageTitle =
         isEdit && maintenanceNumber
-            ? `Edit ${maintenanceNumber}`
+            ? `${isView ? "View" : "Edit"} ${maintenanceNumber}`
             : isEdit
-                ? "Edit Vehicle Maintenance"
+                ? `${isView ? "View" : "Edit"} Vehicle Maintenance`
                 : "Vehicle Maintenance";
 
-    const pageDescription = isEdit
-        ? "Update vehicle maintenance entry."
-        : "Record vehicle service, PUC, insurance, permit, tyre, battery and cost details.";
+    const pageDescription = isView
+        ? "View vehicle maintenance entry."
+        : isEdit
+            ? "Update vehicle maintenance entry."
+            : "Record vehicle service, PUC, insurance, permit, tyre, battery and cost details.";
 
     const toggleSection = (sectionKey: string) => {
         setExpandedSections((prev: any) => ({
@@ -670,16 +714,14 @@ const CreateEditVehicleMaintenance = () => {
     }, [dispatch]);
 
     /* ===================================================
-       LOAD EDIT DATA
+       LOAD EDIT / VIEW DATA
     =================================================== */
 
     const loadEntry = useCallback(async () => {
         if (!isEdit) return;
 
-        const passedData = location.state?.maintenanceData;
-
-        if (passedData) {
-            setForm(mergeVehicleMaintenanceForm(passedData));
+        if (passedMaintenanceData) {
+            setForm(mergeVehicleMaintenanceForm(passedMaintenanceData));
             return;
         }
 
@@ -699,23 +741,26 @@ const CreateEditVehicleMaintenance = () => {
             toast.error(
                 error?.message || "Failed to load vehicle maintenance entry"
             );
-            navigate(-1);
+            goBack();
         } finally {
             setLoading(false);
         }
-    }, [dispatch, isEdit, location.state?.maintenanceData, navigate, voucherNumber]);
+    }, [dispatch, isEdit, passedMaintenanceData, voucherNumber, goBack]);
 
     useEffect(() => {
         fetchVehicles();
         fetchDrivers();
         loadEntry();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetchVehicles, fetchDrivers, loadEntry]);
 
     /* ===================================================
-       UPDATE HELPERS
+       UPDATE HELPERS (guarded in view mode)
     =================================================== */
 
     const updateNested = (section: string, key: string, value: any) => {
+        if (isView) return;
+
         setForm((prev: any) => ({
             ...prev,
             [section]: {
@@ -726,6 +771,8 @@ const CreateEditVehicleMaintenance = () => {
     };
 
     const updateRoot = (key: string, value: any) => {
+        if (isView) return;
+
         setForm((prev: any) => ({
             ...prev,
             [key]: value,
@@ -733,6 +780,8 @@ const CreateEditVehicleMaintenance = () => {
     };
 
     const handleVehicleSelect = (input: any) => {
+        if (isView) return;
+
         const value = getInputValue(input);
 
         const selected = finalVehicleOptions.find(
@@ -751,6 +800,8 @@ const CreateEditVehicleMaintenance = () => {
     };
 
     const handleDriverSelect = (input: any) => {
+        if (isView) return;
+
         const value = getInputValue(input);
 
         const selected = finalDriverOptions.find(
@@ -776,6 +827,8 @@ const CreateEditVehicleMaintenance = () => {
     };
 
     const updateField = (key: string, input: any) => {
+        if (isView) return;
+
         const value = getInputValue(input);
 
         if (key === "vehicleCode") {
@@ -828,6 +881,8 @@ const CreateEditVehicleMaintenance = () => {
     };
 
     const updateBreakdown = (index: number, key: string, value: any) => {
+        if (isView) return;
+
         setForm((prev: any) => {
             const breakdownDetails = [...(prev.breakdownDetails || [])];
 
@@ -844,6 +899,8 @@ const CreateEditVehicleMaintenance = () => {
     };
 
     const addBreakdown = () => {
+        if (isView) return;
+
         setForm((prev: any) => ({
             ...prev,
             breakdownDetails: [
@@ -854,6 +911,8 @@ const CreateEditVehicleMaintenance = () => {
     };
 
     const removeBreakdown = (index: number) => {
+        if (isView) return;
+
         setForm((prev: any) => ({
             ...prev,
             breakdownDetails: (prev.breakdownDetails || []).filter(
@@ -867,6 +926,8 @@ const CreateEditVehicleMaintenance = () => {
     =================================================== */
 
     const handleSave = async () => {
+        if (isView) return;
+
         const errors = validateVehicleMaintenanceForm(form);
 
         if (errors.length) {
@@ -904,7 +965,7 @@ const CreateEditVehicleMaintenance = () => {
                     : "Vehicle maintenance saved"
             );
 
-            navigate(-1);
+            goBack();
         } catch (error: any) {
             toast.error(error?.message || "Save failed");
         } finally {
@@ -1036,8 +1097,6 @@ const CreateEditVehicleMaintenance = () => {
     =================================================== */
 
     const vehicleFields = [
-
-
         {
             key: "vehicleCode",
             label: "Vehicle",
@@ -1341,7 +1400,6 @@ const CreateEditVehicleMaintenance = () => {
     ];
 
     const statusFields = [
-
         {
             key: "remarks",
             label: "Remarks",
@@ -1358,21 +1416,20 @@ const CreateEditVehicleMaintenance = () => {
 
     const renderFields = (fields: any[]) =>
         fields.map((field: any) => {
-            const finalField =
-                field.key === "maintenanceNumber"
-                    ? {
-                        ...field,
-                        value: maintenanceNumber,
-                    }
-                    : field;
+            const isMaintenanceNumberField = field.key === "maintenanceNumber";
 
-            const finalForm =
-                field.key === "maintenanceNumber"
-                    ? {
-                        ...fieldForm,
-                        maintenanceNumber,
-                    }
-                    : fieldForm;
+            const finalField = {
+                ...field,
+                ...(isMaintenanceNumberField ? { value: maintenanceNumber } : {}),
+                disabled: isView || field.disabled,
+            };
+
+            const finalForm = isMaintenanceNumberField
+                ? {
+                    ...fieldForm,
+                    maintenanceNumber,
+                }
+                : fieldForm;
 
             return (
                 <Fragment key={field.key}>
@@ -1386,7 +1443,6 @@ const CreateEditVehicleMaintenance = () => {
                 </Fragment>
             );
         });
-
 
     const breakdownFields = [
         {
@@ -1460,7 +1516,7 @@ const CreateEditVehicleMaintenance = () => {
         return breakdownFields.map((field: any) => (
             <Fragment key={`breakdown-${index}-${field.key}`}>
                 {renderField({
-                    field,
+                    field: { ...field, disabled: isView },
                     form: breakdownForm,
                     handleInputChange: handleBreakdownInputChange,
                     handleSelectChange: handleBreakdownSelectChange,
@@ -1479,7 +1535,7 @@ const CreateEditVehicleMaintenance = () => {
                 >
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={goBack}
                         className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
                         title="Go back"
                     >
@@ -1513,27 +1569,21 @@ const CreateEditVehicleMaintenance = () => {
                         onToggle={() => toggleSection("vehicleDriver")}
                     >
                         <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-5 gap-4">
-
                             {renderFields(vehicleFields)}
                         </div>
                     </SectionCard>
 
                     <SectionCard
-
                         index={2}
                         title="PUC Details"
                         icon={<Award size={17} />}
                         expanded={expandedSections.pucDetails}
                         onToggle={() => toggleSection("pucDetails")}
                     >
-
-
                         {renderFields(pucFields)}
-
                     </SectionCard>
 
                     <SectionCard
-
                         index={3}
                         title="Insurance Details"
                         icon={<Shield size={17} />}
@@ -1541,13 +1591,11 @@ const CreateEditVehicleMaintenance = () => {
                         onToggle={() => toggleSection("insuranceDetails")}
                     >
                         <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
-
                             {renderFields(insuranceFields)}
                         </div>
                     </SectionCard>
 
                     <SectionCard
-
                         index={4}
                         title="Passing Details"
                         icon={<CheckCircle size={17} />}
@@ -1558,7 +1606,6 @@ const CreateEditVehicleMaintenance = () => {
                     </SectionCard>
 
                     <SectionCard
-
                         index={5}
                         title="Fitness Certificate"
                         icon={<FileText size={17} />}
@@ -1571,7 +1618,6 @@ const CreateEditVehicleMaintenance = () => {
                     </SectionCard>
 
                     <SectionCard
-
                         index={6}
                         title="Permit Details"
                         icon={<Clipboard size={17} />}
@@ -1579,14 +1625,11 @@ const CreateEditVehicleMaintenance = () => {
                         onToggle={() => toggleSection("permitDetails")}
                     >
                         <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
-
-
                             {renderFields(permitFields)}
                         </div>
                     </SectionCard>
 
                     <SectionCard
-
                         index={7}
                         title="Road Tax"
                         icon={<CreditCard size={17} />}
@@ -1597,7 +1640,6 @@ const CreateEditVehicleMaintenance = () => {
                     </SectionCard>
 
                     <SectionCard
-
                         index={8}
                         title="Battery Details"
                         icon={<BatteryCharging size={17} />}
@@ -1605,13 +1647,11 @@ const CreateEditVehicleMaintenance = () => {
                         onToggle={() => toggleSection("batteryDetails")}
                     >
                         <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
-
                             {renderFields(batteryFields)}
                         </div>
                     </SectionCard>
 
                     <SectionCard
-
                         index={9}
                         title="Tyre Details"
                         icon={<Disc size={17} />}
@@ -1619,13 +1659,11 @@ const CreateEditVehicleMaintenance = () => {
                         onToggle={() => toggleSection("tyreDetails")}
                     >
                         <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-5 gap-4">
-
                             {renderFields(tyreFields)}
                         </div>
                     </SectionCard>
 
                     <SectionCard
-
                         index={10}
                         title="Last Maintenance"
                         icon={<Wrench size={17} />}
@@ -1633,14 +1671,11 @@ const CreateEditVehicleMaintenance = () => {
                         onToggle={() => toggleSection("lastMaintenance")}
                     >
                         <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
-
-
                             {renderFields(lastMaintenanceFields)}
                         </div>
                     </SectionCard>
 
                     <SectionCard
-
                         index={11}
                         title="Breakdown Details"
                         icon={<AlertTriangle size={17} />}
@@ -1654,17 +1689,18 @@ const CreateEditVehicleMaintenance = () => {
                                         key={`breakdown-section-wrapper-${index}`}
                                         className="relative"
                                     >
-                                        {/* Delete button in title row end */}
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeBreakdown(index);
-                                            }}
-                                            className="absolute right-8 top-4  inline-flex h-8 w-8 items-center justify-center rounded-md border border-danger/30 bg-danger/10 text-danger transition hover:bg-danger/20"
-                                        >
-                                            <Trash2 size={15} />
-                                        </button>
+                                        {!isView && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeBreakdown(index);
+                                                }}
+                                                className="absolute right-8 top-4  inline-flex h-8 w-8 items-center justify-center rounded-md border border-danger/30 bg-danger/10 text-danger transition hover:bg-danger/20"
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        )}
 
                                         <FormSectionCard
                                             key={`breakdown-section-${index}`}
@@ -1683,25 +1719,23 @@ const CreateEditVehicleMaintenance = () => {
                                     </div>
                                 ))}
 
-                                {/* Add button at end */}
-                                <div className="flex justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={addBreakdown}
-                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-4 text-sm font-bold text-primary transition hover:bg-primary/20"
-                                    >
-                                        <Plus size={16} />
-                                        Add Breakdown
-                                    </button>
-                                </div>
+                                {!isView && (
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={addBreakdown}
+                                            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-4 text-sm font-bold text-primary transition hover:bg-primary/20"
+                                        >
+                                            <Plus size={16} />
+                                            Add Breakdown
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </SectionCard>
 
-
-
                     <SectionCard
-
                         index={12}
                         title="Documents"
                         icon={<FileText size={17} />}
@@ -1711,12 +1745,8 @@ const CreateEditVehicleMaintenance = () => {
                         {renderFields(documentFields)}
                     </SectionCard>
 
-
                     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-
-
                         <SectionCard
-
                             index={13}
                             title="Next Maintenance"
                             icon={<Calendar size={17} />}
@@ -1724,13 +1754,11 @@ const CreateEditVehicleMaintenance = () => {
                             onToggle={() => toggleSection("nextMaintenance")}
                         >
                             <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-2 gap-4">
-
                                 {renderFields(nextMaintenanceFields)}
                             </div>
                         </SectionCard>
 
                         <SectionCard
-
                             index={14}
                             title="Status & Remarks"
                             icon={<MessageSquare size={17} />}
@@ -1738,7 +1766,6 @@ const CreateEditVehicleMaintenance = () => {
                             onToggle={() => toggleSection("remarks")}
                         >
                             <div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-2 gap-4">
-
                                 {renderFields(statusFields)}
                             </div>
 
@@ -1753,21 +1780,23 @@ const CreateEditVehicleMaintenance = () => {
             <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 border-t border-border bg-card px-4 py-3">
                 <button
                     type="button"
-                    onClick={() => navigate(-1)}
+                    onClick={goBack}
                     disabled={loading}
                     className="rounded-md border border-border bg-background px-4 py-2 text-sm font-bold text-card-foreground transition hover:bg-muted disabled:opacity-60"
                 >
-                    Cancel
+                    {isView ? "Close" : "Cancel"}
                 </button>
 
-                <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={loading}
-                    className="rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-                >
-                    {loading ? "Saving..." : "Save"}
-                </button>
+                {!isView && (
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                    >
+                        {loading ? "Saving..." : "Save"}
+                    </button>
+                )}
             </div>
         </div>
     );

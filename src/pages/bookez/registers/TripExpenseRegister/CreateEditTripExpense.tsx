@@ -1,112 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import {
-   
-    CalendarDays,
-    CheckCircle2,
-    Coffee,
-    CreditCard,
-    Droplets,
-    Loader2,
-    MoreHorizontal,
-    Navigation,
-    Paperclip,
-    Plus,
-    Route,
-    Save,
-    Trash2,
-    Truck,
-    Upload,
-    User,
-    Wrench,
-    X,
-} from "lucide-react";
+import { CalendarDays, CheckCircle2, Coffee, CreditCard, Droplets, Loader2, MoreHorizontal, Navigation, Paperclip, Plus, Route, Save, Trash2, Truck, Upload, User, Wrench, X, } from "lucide-react";
 import { toast } from "react-toastify";
 
 import { SectionCard } from "../../../../components/SectionCards";
 import {  computeTripExpenseSummary, createEmptyAdvanceEntry, createEmptyBreakdownEntry, createEmptyDieselEntry, createEmptyFoodEntry, createEmptyOtherEntry, createEmptyRunningEntry, createInitialTripExpense, getAllocationVoucher, isTripInProgress, isTripPendingAccept, mapTripAllocationToExpenseForm, mergeTripExpenseForm, toTripExpensePayload} from "./tripExpenseInitialState";
 import { getTripExpensesByVoucherNumber, updateTripExpenses, uploadTripExpensePodFile } from "../../../../redux/slices/professionalSlice/transportation/tripExpensesSlice";
-import {
-    DRIVER_VEHICLE_STATUS_OPTIONS,
-    VEHICLE_STATUS,
-    getActiveTripAllocations,
-    getVehicleMasterByVoucher,
-    getVehicleVoucherFromTripExpense,
-    isDriverSelectableStatus,
-    readVehicleStatusFromRecord,
-    syncAllocationStatusOnComplete,
-    updateVehicleMasterStatus,
-} from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
+import { DRIVER_VEHICLE_STATUS_OPTIONS, VEHICLE_STATUS, getActiveTripAllocations, getVehicleMasterByVoucher, getVehicleVoucherFromTripExpense, isDriverSelectableStatus, readVehicleStatusFromRecord, syncAllocationStatusOnComplete, updateVehicleMasterStatus } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 
 import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
 import { formatStatusLabel } from "../../../../utils/helperFunctions";
 import TripRoutePlannerCard from "../../transportation/tripExpense/TripRoutePlannerCard";
 import { canChildEditTrip, toBool } from "../../transportation/tripExpense/tripExpenseInitialState";
 
-
-
-
-/* ===================================================
-   CONSTANTS
-=================================================== */
-
 const DRIVER_EDITABLE_CATEGORY_KEYS = ["breakdownCost", "pod"];
 
-const SECTION_KEYS = [
-    "tripSetup",
-    "tripSummary",
-    "routePlanner",
-    "vehicleStatus",
-    "advanceReceived",
-    "dieselCost",
-    "foodCost",
-    "runningCost",
-    "breakdownCost",
-    "otherCost",
-    "pod",
-];
+const SECTION_KEYS = ["tripSetup", "tripSummary", "routePlanner", "vehicleStatus", "advanceReceived", "dieselCost", "foodCost", "runningCost", "breakdownCost", "otherCost", "pod",];
 
 const createExpandedSectionsState = () =>
     Object.fromEntries(SECTION_KEYS.map((key) => [key, true]));
 
 const CATEGORIES = [
-    {
-        key: "advanceReceived",
-        title: "Advance Received",
-        icon: <CreditCard size={18} />,
-        factory: createEmptyAdvanceEntry,
-    },
-    {
-        key: "dieselCost",
-        title: "Diesel Cost",
-        icon: <Droplets size={18} />,
-        factory: createEmptyDieselEntry,
-    },
-    {
-        key: "foodCost",
-        title: "Food",
-        icon: <Coffee size={18} />,
-        factory: createEmptyFoodEntry,
-    },
-    {
-        key: "runningCost",
-        title: "Running Cost",
-        icon: <Navigation size={18} />,
-        factory: createEmptyRunningEntry,
-    },
-    {
-        key: "breakdownCost",
-        title: "Breakdown Cost",
-        icon: <Wrench size={18} />,
-        factory: createEmptyBreakdownEntry,
-    },
-    {
-        key: "otherCost",
-        title: "Other Cost",
-        icon: <MoreHorizontal size={18} />,
-        factory: createEmptyOtherEntry,
-    },
+    { key: "advanceReceived", title: "Advance Received", icon: <CreditCard size={18} />, factory: createEmptyAdvanceEntry },
+    { key: "dieselCost", title: "Diesel Cost", icon: <Droplets size={18} />, factory: createEmptyDieselEntry },
+    { key: "foodCost", title: "Food", icon: <Coffee size={18} />, factory: createEmptyFoodEntry },
+    { key: "runningCost", title: "Running Cost", icon: <Navigation size={18} />, factory: createEmptyRunningEntry },
+    { key: "breakdownCost", title: "Breakdown Cost", icon: <Wrench size={18} />, factory: createEmptyBreakdownEntry },
+    { key: "otherCost", title: "Other Cost", icon: <MoreHorizontal size={18} />, factory: createEmptyOtherEntry },
 ];
 
 const deliveryStatusOptions = [
@@ -114,10 +35,6 @@ const deliveryStatusOptions = [
     { label: "Delivered", value: "delivered" },
     { label: "Partial", value: "partial" },
 ];
-
-/* ===================================================
-   HELPERS
-=================================================== */
 
 const unwrapThunk = async (dispatch: any, action: any) => {
     const res = await dispatch(action);
@@ -190,13 +107,8 @@ const formatDateTime = (value: any) => {
     });
 };
 
-const inputClass =
-    "h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
-
-const textareaClass =
-    "min-h-[90px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
-
-
+const inputClass = "h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
+const textareaClass = "min-h-[90px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
 const safeJsonParse = (value: any) => {
     try {
         if (!value) return null;
@@ -213,17 +125,8 @@ const cleanMobile = (value: any) =>
         .trim();
 
 const getProfessionalUserFromLocalStorage = () => {
-    const localProfessionalUser =
-        safeJsonParse(localStorage.getItem("professionalUser")) || {};
-
-    return (
-        localProfessionalUser?.ChildUsers ||
-        localProfessionalUser?.data?.ChildUsers ||
-        localProfessionalUser?.data?.childUser ||
-        localProfessionalUser?.data?.user ||
-        localProfessionalUser?.user ||
-        localProfessionalUser
-    );
+    const localProfessionalUser = safeJsonParse(localStorage.getItem("professionalUser")) || {};
+    return (localProfessionalUser?.ChildUsers || localProfessionalUser?.data?.ChildUsers || localProfessionalUser?.data?.childUser || localProfessionalUser?.data?.user || localProfessionalUser?.user || localProfessionalUser);
 };
 
 const Field = ({ label, mandatory = false, children, className = "" }: any) => (
@@ -258,40 +161,26 @@ const SummaryBox = ({ title, value, danger = false }: any) => {
     const amount = Number(value || 0);
 
     return (
-        <div
-            className={`flex min-w-0 items-center justify-between gap-3 rounded-md border bg-muted/30 p-3 ${danger ? "border-success/30" : "border-border"
-                }`}
-        >
+        <div className={`flex min-w-0 items-center justify-between gap-3 rounded-md border bg-muted/30 p-3 ${danger ? "border-success/30" : "border-border"}`}        >
             <p className="truncate text-xs font-bold uppercase tracking-wide text-muted-foreground">
                 {title}
             </p>
 
-            <p
-                className={`whitespace-nowrap text-xl font-black ${danger ? "text-success" : "text-card-foreground"
-                    }`}
-            >
+            <p className={`whitespace-nowrap text-xl font-black ${danger ? "text-success" : "text-card-foreground"}`}            >
                 ₹{formatIndianNumber(amount)}
             </p>
         </div>
     );
 };
-/* ===================================================
-   CATEGORY DETAILS
-=================================================== */
 
 const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
     const entries = form.expenses?.[category.key]?.entries || [];
-
     const patchEntry = (index: number, patch: any) => {
         if (readOnly) return;
 
         setForm((prev: any) => {
             const nextEntries = [...(prev.expenses?.[category.key]?.entries || [])];
-
-            nextEntries[index] = {
-                ...nextEntries[index],
-                ...patch,
-            };
+            nextEntries[index] = { ...nextEntries[index], ...patch, };
 
             return {
                 ...prev,
@@ -347,110 +236,36 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                 return (
                     <div className="grid grid-cols-3 gap-4 md:grid-cols-3 xl:grid-cols-3">
                         <Field label="Date">
-                            <input
-                                disabled={readOnly}
-                                type="datetime-local"
-                                className={inputClass}
-                                value={toDateTimeInputValue(entry.date || entry.receivedDate)}
-                                onChange={(e) =>
-                                    patchEntry(index, {
-                                        date: dateTimeInputToIso(e.target.value),
-                                    })
-                                }
-                            />
+                            <input disabled={readOnly} type="datetime-local" className={inputClass} value={toDateTimeInputValue(entry.date || entry.receivedDate)} onChange={(e) => patchEntry(index, { date: dateTimeInputToIso(e.target.value) })} />
                         </Field>
+
                         <Field label="Source">
-                            <input
-                                disabled={readOnly}
-                                className={inputClass}
-                                value={entry.sourceName || ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { sourceName: e.target.value })
-                                }
-                            />
+                            <input disabled={readOnly} className={inputClass} value={entry.sourceName || ""} onChange={(e) => patchEntry(index, { sourceName: e.target.value })} />
                         </Field>
 
                         <Field label="Amount">
-                            <input
-                                disabled={readOnly}
-                                type="number"
-                                className={inputClass}
-                                value={entry.amount ?? ""}
-                                onChange={(e) => patchEntry(index, { amount: e.target.value })}
-                            />
+                            <input disabled={readOnly} type="number" className={inputClass} value={entry.amount ?? ""} onChange={(e) => patchEntry(index, { amount: e.target.value })} />
                         </Field>
-
-                        {/* <Field label="Payment Mode">
-                            <input
-                                disabled={readOnly}
-                                className={inputClass}
-                                value={entry.paymentMode || ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { paymentMode: e.target.value })
-                                }
-                            />
-                        </Field> */}
                     </div>
                 );
 
             case "dieselCost":
                 return (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-
                         <Field label="Date">
-                            <input
-                                disabled={readOnly}
-                                type="datetime-local"
-                                className={inputClass}
-                                value={toDateTimeInputValue(entry.date || entry.receivedDate)}
-                                onChange={(e) =>
-                                    patchEntry(index, {
-                                        date: dateTimeInputToIso(e.target.value),
-                                    })
-                                }
-                            />
+                            <input disabled={readOnly} type="datetime-local" className={inputClass} value={toDateTimeInputValue(entry.date || entry.receivedDate)} onChange={(e) => patchEntry(index, { date: dateTimeInputToIso(e.target.value) })} />
                         </Field>
+
                         <Field label="Fuel Station">
-                            <input
-                                disabled={readOnly}
-                                className={inputClass}
-                                value={entry.fuelStation || ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { fuelStation: e.target.value })
-                                }
-                            />
+                            <input disabled={readOnly} className={inputClass} value={entry.fuelStation || ""} onChange={(e) => patchEntry(index, { fuelStation: e.target.value })} />
                         </Field>
 
                         <Field label="Amount">
-                            <input
-                                disabled={readOnly}
-                                type="number"
-                                className={inputClass}
-                                value={entry.amount ?? ""}
-                                onChange={(e) => patchEntry(index, { amount: e.target.value })}
-                            />
+                            <input disabled={readOnly} type="number" className={inputClass} value={entry.amount ?? ""} onChange={(e) => patchEntry(index, { amount: e.target.value })} />
                         </Field>
 
-                        {/* <Field label="Liters">
-                            <input
-                                disabled={readOnly}
-                                type="number"
-                                className={inputClass}
-                                value={entry.liters ?? ""}
-                                onChange={(e) => patchEntry(index, { liters: e.target.value })}
-                            />
-                        </Field> */}
-
                         <Field label="Odometer">
-                            <input
-                                disabled={readOnly}
-                                type="number"
-                                className={inputClass}
-                                value={entry.odometerReading ?? ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { odometerReading: e.target.value })
-                                }
-                            />
+                            <input disabled={readOnly} type="number" className={inputClass} value={entry.odometerReading ?? ""} onChange={(e) => patchEntry(index, { odometerReading: e.target.value })} />
                         </Field>
                     </div>
                 );
@@ -459,72 +274,22 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
             case "runningCost":
             case "breakdownCost":
             case "otherCost": {
-                const typeKey =
-                    category.key === "foodCost"
-                        ? "mealType"
-                        : category.key === "breakdownCost"
-                            ? "issueType"
-                            : "expenseType";
-
-                const typeLabel =
-                    category.key === "foodCost"
-                        ? "Meal Type"
-                        : category.key === "breakdownCost"
-                            ? "Issue Type"
-                            : "Expense Type";
+                const typeKey = category.key === "foodCost" ? "mealType" : category.key === "breakdownCost" ? "issueType" : "expenseType";
+                const typeLabel = category.key === "foodCost" ? "Meal Type" : category.key === "breakdownCost" ? "Issue Type" : "Expense Type";
 
                 return (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-
                         <Field label="Date">
-                            <input
-                                disabled={readOnly}
-                                type="datetime-local"
-                                className={inputClass}
-                                value={toDateTimeInputValue(entry.date || entry.receivedDate)}
-                                onChange={(e) =>
-                                    patchEntry(index, {
-                                        date: dateTimeInputToIso(e.target.value),
-                                    })
-                                }
-                            />
+                            <input disabled={readOnly} type="datetime-local" className={inputClass} value={toDateTimeInputValue(entry.date || entry.receivedDate)} onChange={(e) => patchEntry(index, { date: dateTimeInputToIso(e.target.value) })} />
                         </Field>
+
                         <Field label={typeLabel}>
-                            <input
-                                disabled={readOnly}
-                                className={inputClass}
-                                value={entry[typeKey] || ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { [typeKey]: e.target.value })
-                                }
-                            />
+                            <input disabled={readOnly} className={inputClass} value={entry[typeKey] || ""} onChange={(e) => patchEntry(index, { [typeKey]: e.target.value })} />
                         </Field>
 
                         <Field label="Amount">
-                            <input
-                                disabled={readOnly}
-                                type="number"
-                                className={inputClass}
-                                value={entry.amount ?? ""}
-                                onChange={(e) => patchEntry(index, { amount: e.target.value })}
-                            />
+                            <input disabled={readOnly} type="number" className={inputClass} value={entry.amount ?? ""} onChange={(e) => patchEntry(index, { amount: e.target.value })} />
                         </Field>
-
-                        {/* <Field label="Location / Remarks">
-                            <input
-                                disabled={readOnly}
-                                className={inputClass}
-                                value={entry.location || entry.remarks || ""}
-                                onChange={(e) =>
-                                    patchEntry(
-                                        index,
-                                        category.key === "otherCost"
-                                            ? { remarks: e.target.value }
-                                            : { location: e.target.value }
-                                    )
-                                }
-                            />
-                        </Field> */}
                     </div>
                 );
             }
@@ -558,22 +323,6 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                             )}
                         </div>
 
-                        {/* <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <Field label="Date">
-                                <input
-                                    disabled={readOnly}
-                                    type="datetime-local"
-                                    className={inputClass}
-                                    value={toDateTimeInputValue(entry.date || entry.receivedDate)}
-                                    onChange={(e) =>
-                                        patchEntry(index, {
-                                            date: dateTimeInputToIso(e.target.value),
-                                        })
-                                    }
-                                />
-                            </Field>
-                        </div> */}
-
                         {renderShortFields(entry, index)}
                     </div>
                 ))}
@@ -595,10 +344,6 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
     );
 };
 
-/* ===================================================
-   POD DETAILS
-=================================================== */
-
 const PodDetails = ({ form, setForm, readOnly }: any) => {
     const dispatch = useDispatch<any>();
     const [uploadingField, setUploadingField] = useState("");
@@ -618,45 +363,17 @@ const PodDetails = ({ form, setForm, readOnly }: any) => {
     const uploadFile = async (field: string, file: File) => {
         try {
             setUploadingField(field);
-
             const formData = new FormData();
-
             formData.append("file", file);
             formData.append("field", field);
             formData.append("tripId", form.tripId || "trip");
-
-            const res = await unwrapThunk(
-                dispatch,
-                uploadTripExpensePodFile(formData)
-            );
-
-            const uploadedName =
-                res?.file ||
-                res?.filename ||
-                res?.url ||
-                res?.path ||
-                res?.filePath ||
-                res?.data?.fileName ||
-                res?.data?.filename ||
-                res?.data?.url ||
-                res?.data?.path ||
-                res?.data?.filePath ||
-                file.name;
-
-            const patch: any = {
-                [field]: uploadedName,
-            };
-
-            const deliveryStatus = String(form.pod?.deliveryStatus || "")
-                .trim()
-                .toLowerCase();
-
-            if (deliveryStatus === "delivered" || deliveryStatus === "partial") {
-                patch.submittedAt = form.pod?.submittedAt || new Date().toISOString();
-            }
+            const res = await unwrapThunk(dispatch, uploadTripExpensePodFile(formData));
+            const uploadedName = res?.file || res?.filename || res?.url || res?.path || res?.filePath || res?.data?.fileName || res?.data?.filename || res?.data?.url || res?.data?.path || res?.data?.filePath || file.name;
+            const patch: any = { [field]: uploadedName };
+            const deliveryStatus = String(form.pod?.deliveryStatus || "").trim().toLowerCase();
+            if (deliveryStatus === "delivered" || deliveryStatus === "partial") patch.submittedAt = form.pod?.submittedAt || new Date().toISOString();
 
             patchPod(patch);
-
             toast.success("POD file uploaded");
         } catch (e: any) {
             toast.error(e?.message || "Upload failed");
@@ -669,40 +386,21 @@ const PodDetails = ({ form, setForm, readOnly }: any) => {
         <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
                 <p className="text-sm font-bold text-card-foreground">{label}</p>
-
-                <p className="mt-1 truncate text-xs font-medium text-muted-foreground">
-                    {form.pod?.[field] || "Not attached"}
-                </p>
+                <p className="mt-1 truncate text-xs font-medium text-muted-foreground">{form.pod?.[field] || "Not attached"}</p>
             </div>
 
             {!readOnly && (
                 <div className="flex items-center gap-2">
                     {form.pod?.[field] && (
-                        <button
-                            type="button"
-                            onClick={() => patchPod({ [field]: "" })}
-                            className="rounded-md border border-border bg-card p-2 text-muted-foreground transition hover:bg-muted"
-                        >
+                        <button type="button" onClick={() => patchPod({ [field]: "" })} className="rounded-md border border-border bg-card p-2 text-muted-foreground transition hover:bg-muted">
                             <X size={15} />
                         </button>
                     )}
 
                     <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15">
-                        {uploadingField === field ? (
-                            <Loader2 className="animate-spin" size={14} />
-                        ) : (
-                            <Upload size={14} />
-                        )}
+                        {uploadingField === field ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
                         Attach
-                        <input
-                            hidden
-                            type="file"
-                            accept={accept}
-                            disabled={!!uploadingField}
-                            onChange={(e) =>
-                                e.target.files?.[0] && uploadFile(field, e.target.files[0])
-                            }
-                        />
+                        <input hidden type="file" accept={accept} disabled={!!uploadingField} onChange={(e) => e.target.files?.[0] && uploadFile(field, e.target.files[0])} />
                     </label>
                 </div>
             )}
@@ -786,7 +484,6 @@ const PodDetails = ({ form, setForm, readOnly }: any) => {
     );
 };
 
-
 type CreateEditTripExpenseProps = {
     embedded?: boolean;
     mode?: "add" | "edit" | "view";
@@ -795,10 +492,6 @@ type CreateEditTripExpenseProps = {
     onClose?: () => void;
     onSaved?: () => void;
 };
-
-/* ===================================================
-   CREATE / EDIT TRIP EXPENSE
-=================================================== */
 
 const CreateEditTripExpense = ({
     embedded = false,
@@ -930,24 +623,6 @@ const CreateEditTripExpense = ({
     }, [isChildUser]);
 
     const readOnly = isView || (isChildUser && !canChildEditTrip(form));
-
-
-
-    // const pageTitle =
-    //     routeState?.title ||
-    //     (isView
-    //         ? "View Trip Expense"
-    //         : isEdit
-    //             ? "Edit Trip Expense"
-    //             : "Create Trip Expense");
-
-    // const pageDescription =
-    //     routeState?.description ||
-    //     (isView
-    //         ? "View trip expense details, POD, route planner, and route-wise trip records."
-    //         : isEdit
-    //             ? "Update trip expense details, POD, and route-wise trip records."
-    //             : "Create trip expense, start trips, record advance, diesel, food, running, breakdown, other costs, and POD.");
 
     const summary = useMemo(() => computeTripExpenseSummary(form), [form]);
 
@@ -1656,28 +1331,7 @@ const CreateEditTripExpense = ({
         showVehicleStatusDropdown || isTripInProgress(form);
     return (
         <div className="flex h-full w-full flex-col bg-background text-foreground">
-            {/* <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-4">
-                <div className="flex items-center">
-                    <button
-                        type="button"
-                        onClick={closeScreen}
-                        className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
-                        title="Go back"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div >
-                        <h1 className="truncate text-lg font-bold text-card-foreground">
 
-                            {pageTitle}
-                        </h1>
-
-                        <p className="text-sm text-muted-foreground">
-                            {pageDescription}
-                        </p>
-                    </div>
-                </div>
-            </header> */}
 
             {(loading || statusUpdating) && (
                 <div className="fixed inset-0 z-50 grid place-items-center bg-black/20 backdrop-blur-sm">
