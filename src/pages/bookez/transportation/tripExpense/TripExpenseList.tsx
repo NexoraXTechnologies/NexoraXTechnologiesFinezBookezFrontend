@@ -36,7 +36,7 @@ import {
 
 import {
     formatDateTime,
-    formatIndianNumber,
+    
     formatStatusLabel,
     money,
     unwrapThunk,

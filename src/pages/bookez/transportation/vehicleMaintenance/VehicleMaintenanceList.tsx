@@ -65,14 +65,14 @@ const formatDateTime = (value: any) => {
     });
 };
 
-const formatIndianNumber = (value: any) => {
-    const number = Number(value || 0);
+// const formatIndianNumber = (value: any) => {
+//     const number = Number(value || 0);
 
-    return number.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-};
+//     return number.toLocaleString("en-IN", {
+//         minimumFractionDigits: 2,
+//         maximumFractionDigits: 2,
+//     });
+// };
 
 const formatStatus = (value: any) =>
     String(value || "draft")

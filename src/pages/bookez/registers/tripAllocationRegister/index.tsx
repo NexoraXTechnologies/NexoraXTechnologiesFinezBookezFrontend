@@ -5,7 +5,6 @@ import { Eye, LoaderCircle } from "lucide-react";
 import RegisterFilterCard from "../RegisterFilterCard";
 import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
-import ReadMoreText from "../../../../components/common/ReadMoreText";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
 import CreateEditTripAllocationRegistration from "./CreateEditTripAllocation";
 
@@ -35,36 +34,36 @@ const getTodayDate = (): string => {
     return localDate.toISOString().split("T")[0];
 };
 
-const toNumber = (value: any): number => {
-    if (value === null || value === undefined || value === "") return 0;
+// const toNumber = (value: any): number => {
+//     if (value === null || value === undefined || value === "") return 0;
 
-    const parsed = Number(
-        String(value).replace(/,/g, "").replace(/[₹\s]/g, "").trim(),
-    );
+//     const parsed = Number(
+//         String(value).replace(/,/g, "").replace(/[₹\s]/g, "").trim(),
+//     );
 
-    return Number.isFinite(parsed) ? parsed : 0;
-};
+//     return Number.isFinite(parsed) ? parsed : 0;
+// };
 
-const formatIndianNumber = (value: any): string =>
-    toNumber(value).toLocaleString("en-IN", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    });
+// const formatIndianNumber = (value: any): string =>
+//     toNumber(value).toLocaleString("en-IN", {
+//         minimumFractionDigits: 0,
+//         maximumFractionDigits: 2,
+//     });
 
-const formatDateTime = (value: any): string => {
-    if (!value) return "-";
+// const formatDateTime = (value: any): string => {
+//     if (!value) return "-";
 
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
+//     const date = new Date(value);
+//     if (Number.isNaN(date.getTime())) return "-";
 
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
+//     return date.toLocaleString("en-IN", {
+//         day: "2-digit",
+//         month: "2-digit",
+//         year: "numeric",
+//         hour: "2-digit",
+//         minute: "2-digit",
+//     });
+// };
 
 const getAllocationVoucher = (row: any): string =>
     row?.voucherNumber ||
