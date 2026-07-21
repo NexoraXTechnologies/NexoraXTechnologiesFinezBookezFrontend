@@ -11,7 +11,7 @@ import {
 
 import ReadMoreText from "../../../../components/common/ReadMoreText";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
-import CreateEditTransportOrder from "./CreateEditTransportOrder";
+// import CreateEditTransportOrder from "./CreateEditTransportOrder";
 import { getTransportOrderRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/transportOrderRegister";
 import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
 import CreateTransportOrder from "../../transportation/transportOrder/CreateTransportOrder";
