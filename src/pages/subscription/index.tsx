@@ -81,8 +81,8 @@ const Subscription = () => {
     }, []);
 
     return (
-        <div className="h-[100%] bg-background p-4 pb-10 text-foreground md:p-8">
-            <div className="mx-auto max-w-7xl">
+        <div className="min-h-screen bg-background p-4 pb-10 text-foreground md:p-4">
+           
                 {/* <div className="grid grid-cols-1 gap-8 lg:grid-cols-[270px_1fr]"> */}
                 {/* Sidebar */}
                 {/* <aside>
@@ -148,7 +148,7 @@ const Subscription = () => {
                     )}
                 </main>
                 {/* </div> */}
-            </div>
+           
 
             {selectedPlan && (
                 <PlanDetailsModal

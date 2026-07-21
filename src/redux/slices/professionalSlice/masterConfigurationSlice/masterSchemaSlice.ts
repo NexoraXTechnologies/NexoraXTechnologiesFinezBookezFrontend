@@ -28,6 +28,8 @@ export type MasterSchemaField = {
 
 type GetMasterSchemaPayload = {
   moduleCode: string;
+  offset?: number;
+  limit?: number;
 };
 
 type SaveMasterSchemaPayload = {
@@ -45,6 +47,8 @@ type UpdateMasterSchemaPayload = {
   updates: MasterSchemaUpdateItem[];
 };
 
+
+
 /* ===================================================
    ⭐ NEW: GET MASTER SCHEMA
    GET /users/customMaster/schema/getAll?moduleCode=...
@@ -53,7 +57,7 @@ type UpdateMasterSchemaPayload = {
 export const getMasterSchema = createAsyncThunk(
   "masterSchema/getMasterSchema",
   async (
-    { moduleCode }: GetMasterSchemaPayload,
+    { moduleCode, offset = 0, limit = 20 }: GetMasterSchemaPayload,
     { rejectWithValue }
   ) => {
     try {
@@ -68,9 +72,12 @@ export const getMasterSchema = createAsyncThunk(
         {
           params: {
             moduleCode: moduleCode.trim(),
+            offset,
+            limit,
           },
         }
       );
+
 
       if (!response.data?.success) {
         return rejectWithValue({
@@ -292,9 +299,9 @@ const masterSchemaSlice = createSlice({
       state.fields = state.fields.map((field) =>
         field.key === key
           ? {
-              ...field,
-              ...updateData,
-            }
+            ...field,
+            ...updateData,
+          }
           : field
       );
     },
@@ -452,9 +459,9 @@ const masterSchemaSlice = createSlice({
             state.fields = state.fields.map((field) =>
               field.key === updateItem.key
                 ? {
-                    ...field,
-                    ...updateItem.updateData,
-                  }
+                  ...field,
+                  ...updateItem.updateData,
+                }
                 : field
             );
           });

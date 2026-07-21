@@ -4,17 +4,12 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   ArrowLeft,
   Boxes,
-  ChevronLeft,
-  ChevronRight,
-  Edit3,
+  Edit,
   LayoutGrid,
-  Loader2,
   Package,
   Plus,
-  RefreshCcw,
   Ruler,
   Save,
-  Search,
   Settings2,
   ShieldCheck,
   Trash2,
@@ -22,61 +17,17 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "react-toastify";
-
-/* ===================================================
-   ⭐ EXISTING: CUSTOM MASTER MODULE CRUD
-=================================================== */
-
-import {
-  clearMasterConfigurationState,
-  clearSelectedMasterConfiguration,
-  createMasterConfiguration,
-  deleteMasterConfiguration,
-  getAllMasterConfigurations,
-  getMasterConfigurationByCode,
-  updateMasterConfiguration,
-} from "../../../redux/slices/professionalSlice/masterConfigurationSlice/masterConfigurationSlice";
-
-/* ===================================================
-   ⭐ EXISTING: CUSTOM MASTER SCHEMA
-   Used only for dynamically created custom masters.
-=================================================== */
-
-import {
-  clearMasterSchemaError,
-  clearMasterSchemaState,
-  getMasterSchema,
-  saveMasterSchema,
-  updateMasterSchema,
-} from "../../../redux/slices/professionalSlice/masterConfigurationSlice/masterSchemaSlice";
-
-/* ===================================================
-   ⭐ NEW: STANDARD MASTER SCHEMA SLICES
-=================================================== */
-
-import {
-  clearAccountMasterSchemaError,
-  clearAccountMasterSchemaState,
-  getAccountMasterSchema,
-  saveAccountMasterSchema,
-  updateAccountMasterSchema,
-} from "../../../redux/slices/professionalSlice/masterConfigurationSlice/accountMasterSchemaSlice";
-
-import {
-  clearProductMasterSchemaError,
-  clearProductMasterSchemaState,
-  getProductMasterSchema,
-  saveProductMasterSchema,
-  updateProductMasterSchema,
-} from "../../../redux/slices/professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
-
-import {
-  clearUnitMeasurementSchemaError,
-  clearUnitMeasurementSchemaState,
-  getUnitMeasurementSchema,
-  saveUnitMeasurementSchema,
-  updateUnitMeasurementSchema,
-} from "../../../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
+import { clearMasterConfigurationState, clearSelectedMasterConfiguration, createMasterConfiguration, deleteMasterConfiguration, getAllMasterConfigurations, getMasterConfigurationByCode, updateMasterConfiguration } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/masterConfigurationSlice";
+import { clearAccountMasterSchemaError, clearAccountMasterSchemaState, getAccountMasterSchema, saveAccountMasterSchema, updateAccountMasterSchema } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/accountmasterSchemaSlice";
+import { clearProductMasterSchemaError, clearProductMasterSchemaState, getProductMasterSchema, saveProductMasterSchema, updateProductMasterSchema } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
+import { clearUnitMeasurementSchemaError, clearUnitMeasurementSchemaState, getUnitMeasurementSchema, saveUnitMeasurementSchema, updateUnitMeasurementSchema } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
+import { clearMasterSchemaError, clearMasterSchemaState, getMasterSchema, saveMasterSchema, updateMasterSchema } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/masterSchemaSlice";
+import { DataCreateButton, DataREfreshButton } from "../../../components/buttons";
+import SearchInput from "../../../components/searchInput";
+import Badge from "../../../components/badge";
+import DataTable from "../../../components/DataTable";
+import Pagination from "../../../components/pagination";
+import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 
 /* ===================================================
    ⭐ TYPES
@@ -141,17 +92,17 @@ type SchemaFieldForm = {
 
 type SchemaContext =
   | {
-      kind: "standard";
-      standardKey: StandardMasterKey;
-      title: string;
-      moduleCode?: never;
-    }
+    kind: "standard";
+    standardKey: StandardMasterKey;
+    title: string;
+    moduleCode?: never;
+  }
   | {
-      kind: "custom";
-      standardKey?: never;
-      title: string;
-      moduleCode: string;
-    };
+    kind: "custom";
+    standardKey?: never;
+    title: string;
+    moduleCode: string;
+  };
 
 /* ===================================================
    ⭐ CONSTANTS
@@ -243,7 +194,7 @@ const Panel = ({
   <section className="overflow-hidden rounded border border-border bg-card shadow-sm">
     <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h2 className="text-base font-black text-card-foreground">{title}</h2>
+        <h2 className="text-base font-semibold text-card-foreground">{title}</h2>
         {description ? (
           <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
             {description}
@@ -255,16 +206,25 @@ const Panel = ({
     {children}
   </section>
 );
-
 const BooleanBadge = ({ value }: { value: boolean }) => (
   <span
-    className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ${
-      value
-        ? "bg-success/10 text-success"
-        : "bg-muted text-muted-foreground"
-    }`}
+    className={`inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-semibold ${value
+      ? "border-success/20 bg-success/10 text-success"
+      : "border-border bg-muted text-muted-foreground"
+      }`}
   >
     {value ? "Yes" : "No"}
+  </span>
+);
+
+const StatusPill = ({ status }: { status?: string }) => (
+  <span
+    className={`inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-semibold ${status === "active"
+      ? "border-success/20 bg-success/10 text-success"
+      : "border-border bg-muted text-muted-foreground"
+      }`}
+  >
+    {status === "active" ? "Active" : "Inactive"}
   </span>
 );
 
@@ -296,42 +256,34 @@ const MasterConfiguration = () => {
 
   const {
     fields: customSchemaFields = [],
+    pagination: customSchemaPagination = {},
     loading: customSchemaLoading,
     saveLoading: customSchemaSaveLoading,
     updateLoading: customSchemaUpdateLoading,
     error: customSchemaError,
   } = useSelector((state: any) => state.masterSchema || {});
 
-  /* ---------------------------------------------------
-     Account-master schema state
-  --------------------------------------------------- */
-
   const {
     fields: accountSchemaFields = [],
+    pagination: accountSchemaPagination = {},
     loading: accountSchemaLoading,
     saveLoading: accountSchemaSaveLoading,
     updateLoading: accountSchemaUpdateLoading,
     error: accountSchemaError,
   } = useSelector((state: any) => state.accountMasterSchema || {});
 
-  /* ---------------------------------------------------
-     Product-master schema state
-  --------------------------------------------------- */
-
   const {
     fields: productSchemaFields = [],
+    pagination: productSchemaPagination = {},
     loading: productSchemaLoading,
     saveLoading: productSchemaSaveLoading,
     updateLoading: productSchemaUpdateLoading,
     error: productSchemaError,
   } = useSelector((state: any) => state.productMasterSchema || {});
 
-  /* ---------------------------------------------------
-     Unit-measurement schema state
-  --------------------------------------------------- */
-
   const {
     fields: unitSchemaFields = [],
+    pagination: unitSchemaPagination = {},
     loading: unitSchemaLoading,
     saveLoading: unitSchemaSaveLoading,
     updateLoading: unitSchemaUpdateLoading,
@@ -347,13 +299,23 @@ const MasterConfiguration = () => {
     useState<MasterConfigurationItem | null>(null);
 
   /* ---------------------------------------------------
-     Custom-master list filters
+     Custom-master list filters / pagination
+     (mirrors the pattern used on the Trip Expense list)
   --------------------------------------------------- */
 
-  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [pageLimit, setPageLimit] = useState(10);
+  const [localOffset, setLocalOffset] = useState(0);
+  const [localLimit, setLocalLimit] = useState(10);
+  const [refreshing, setRefreshing] = useState(false);
+  const [schemaOffset, setSchemaOffset] = useState(0);
+  const [schemaLimit, setSchemaLimit] = useState(10);
+  /* ---------------------------------------------------
+     Schema-field list search (client side)
+  --------------------------------------------------- */
+
+  const [schemaSearch, setSchemaSearch] = useState("");
+  const [schemaRefreshing, setSchemaRefreshing] = useState(false);
 
   /* ---------------------------------------------------
      Custom-master create/edit modal
@@ -381,13 +343,24 @@ const MasterConfiguration = () => {
   >({});
 
   /* ---------------------------------------------------
+     Delete confirm tooltip (custom master)
+  --------------------------------------------------- */
+
+  const [confirmTooltip, setConfirmTooltip] = useState<any>({
+    show: false,
+    x: null,
+    y: null,
+    item: null,
+    moduleCode: null,
+  });
+
+  /* ---------------------------------------------------
      Derived pagination values
   --------------------------------------------------- */
 
   const currentPage = Number(pagination?.currentPage || 1);
   const totalPages = Math.max(1, Number(pagination?.totalPages || 1));
   const totalDocs = Number(pagination?.totalDocs || 0);
-  const offset = Number(pagination?.offset || 0);
 
   const isMasterSubmitting = createLoading || updateLoading;
 
@@ -426,21 +399,34 @@ const MasterConfiguration = () => {
      ⭐ CUSTOM-MASTER MODULE LIST FETCH
   =================================================== */
 
-  const fetchMasterConfigurations = (nextOffset = 0) => {
+  const fetchMasterConfigurations = (
+    nextOffset = localOffset,
+    { showLoader = true }: { showLoader?: boolean } = {}
+  ) => {
+    if (!showLoader) setRefreshing(true);
+
     dispatch(
       getAllMasterConfigurations({
         offset: nextOffset,
-        limit: pageLimit,
+        limit: localLimit,
         search,
         status: statusFilter,
       })
-    );
+    ).finally(() => {
+      if (!showLoader) setRefreshing(false);
+    });
   };
 
   useEffect(() => {
-    fetchMasterConfigurations(0);
+    fetchMasterConfigurations(localOffset);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, pageLimit]);
+  }, [search, statusFilter, localLimit, localOffset]);
+
+  const handleRefreshMasters = () => {
+    fetchMasterConfigurations(localOffset, { showLoader: false });
+  };
+
+
 
   /* ===================================================
      ⭐ LOAD STANDARD-MASTER SCHEMA BY ACTIVE TAB
@@ -453,8 +439,8 @@ const MasterConfiguration = () => {
       dispatch(clearAccountMasterSchemaState());
       dispatch(
         getAccountMasterSchema({
-          offset: 0,
-          limit: 20,
+          offset: schemaOffset,
+          limit: schemaLimit,
           isSearchable: "",
           isRequired: "",
           isFilterable: "",
@@ -467,8 +453,8 @@ const MasterConfiguration = () => {
       dispatch(clearProductMasterSchemaState());
       dispatch(
         getProductMasterSchema({
-          offset: 0,
-          limit: 20,
+          offset: schemaOffset,
+          limit: schemaLimit,
           isSearchable: "",
           isRequired: "",
         })
@@ -480,8 +466,8 @@ const MasterConfiguration = () => {
       dispatch(clearUnitMeasurementSchemaState());
       dispatch(
         getUnitMeasurementSchema({
-          offset: 0,
-          limit: 20,
+          offset: schemaOffset,
+          limit: schemaLimit,
           isSearchable: "",
           isRequired: "",
           type: "",
@@ -489,8 +475,7 @@ const MasterConfiguration = () => {
         })
       );
     }
-  }, [dispatch, selectedStandardMaster?.key, selectedStandardMaster?.schemaEnabled]);
-
+  }, [dispatch, selectedStandardMaster?.key, selectedStandardMaster?.schemaEnabled, schemaOffset, schemaLimit]);
   /* ===================================================
      ⭐ ERROR HANDLING
   =================================================== */
@@ -632,18 +617,40 @@ const MasterConfiguration = () => {
       }
 
       closeMasterForm();
-      fetchMasterConfigurations(offset);
+      fetchMasterConfigurations(localOffset, { showLoader: false });
     } catch {
       // Error is rendered inside modal.
     }
   };
 
-  const handleDeleteMaster = async (item: MasterConfigurationItem) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${item.moduleName} (${item.moduleCode})?`
-    );
+  /* ===================================================
+     ⭐ DELETE CUSTOM MASTER (via ConfirmTooltip)
+  =================================================== */
 
-    if (!confirmed) return;
+  const handleDeleteClick = (e: any, item: MasterConfigurationItem) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    let x = rect.left - 160;
+    if (x < 10) x = 10;
+
+    const y = rect.top + window.scrollY - 5;
+
+    setConfirmTooltip({
+      show: true,
+      x,
+      y,
+      item,
+      moduleCode: item.moduleCode,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    const item: MasterConfigurationItem | null = confirmTooltip?.item;
+
+    if (!item?.moduleCode) {
+      toast.warn("Module code not found");
+      return;
+    }
 
     try {
       await dispatch(deleteMasterConfiguration(item.moduleCode)).unwrap();
@@ -655,53 +662,29 @@ const MasterConfiguration = () => {
         setActiveTab("customMasters");
       }
 
+      setConfirmTooltip({
+        show: false,
+        x: null,
+        y: null,
+        item: null,
+        moduleCode: null,
+      });
+
       const remainingItems = masterConfigurations.length - 1;
       const nextOffset =
-        remainingItems === 0 && offset > 0
-          ? Math.max(0, offset - pageLimit)
-          : offset;
+        remainingItems === 0 && localOffset > 0
+          ? Math.max(0, localOffset - localLimit)
+          : localOffset;
 
-      fetchMasterConfigurations(nextOffset);
+      if (nextOffset !== localOffset) {
+        setLocalOffset(nextOffset);
+      } else {
+        fetchMasterConfigurations(nextOffset, { showLoader: false });
+      }
     } catch {
       // Slice error is handled by the page-level effect.
     }
   };
-
-  /* ===================================================
-     ⭐ CUSTOM-MASTER LIST FILTER HELPERS
-  =================================================== */
-
-  const handleSearch: FormEventHandler<HTMLFormElement> = (event) => {
-    event.preventDefault();
-    setSearch(searchInput.trim());
-  };
-
-  const handleResetFilters = () => {
-    setSearchInput("");
-    setSearch("");
-    setStatusFilter("");
-    setPageLimit(10);
-  };
-
-  const goToPreviousPage = () => {
-    if (!pagination?.hasPrevPage && currentPage <= 1) return;
-    fetchMasterConfigurations(Math.max(0, offset - pageLimit));
-  };
-
-  const goToNextPage = () => {
-    if (!pagination?.hasNextPage && currentPage >= totalPages) return;
-    fetchMasterConfigurations(offset + pageLimit);
-  };
-
-  const showingText = useMemo(() => {
-    if (!totalDocs || !masterConfigurations.length) {
-      return "Showing 0 records";
-    }
-
-    const from = offset + 1;
-    const to = Math.min(offset + masterConfigurations.length, totalDocs);
-    return `Showing ${from}-${to} of ${totalDocs}`;
-  }, [masterConfigurations.length, offset, totalDocs]);
 
   /* ===================================================
      ⭐ OPEN CUSTOM-MASTER SCHEMA
@@ -710,12 +693,16 @@ const MasterConfiguration = () => {
   const openCustomMasterSchema = async (item: MasterConfigurationItem) => {
     setSelectedCustomSchemaMaster(item);
     setActiveTab("customMasterSchema");
+    setSchemaSearch("");
+    setSchemaOffset(0);
     dispatch(clearMasterSchemaState());
 
     try {
       await dispatch(
         getMasterSchema({
           moduleCode: item.moduleCode,
+          offset: 0,
+          limit: schemaLimit,
         })
       ).unwrap();
     } catch {
@@ -729,9 +716,12 @@ const MasterConfiguration = () => {
     await dispatch(
       getMasterSchema({
         moduleCode: selectedCustomSchemaMaster.moduleCode,
+        offset: schemaOffset,
+        limit: schemaLimit,
       })
     ).unwrap();
   };
+
 
   /* ===================================================
      ⭐ CURRENT SCHEMA CONTEXT
@@ -761,6 +751,7 @@ const MasterConfiguration = () => {
     if (!schemaContext) {
       return {
         fields: [] as SchemaField[],
+        pagination: {} as any,
         loading: false,
         saveLoading: false,
         updateLoading: false,
@@ -770,6 +761,7 @@ const MasterConfiguration = () => {
     if (schemaContext.kind === "custom") {
       return {
         fields: customSchemaFields as SchemaField[],
+        pagination: customSchemaPagination,
         loading: !!customSchemaLoading,
         saveLoading: !!customSchemaSaveLoading,
         updateLoading: !!customSchemaUpdateLoading,
@@ -779,6 +771,7 @@ const MasterConfiguration = () => {
     if (schemaContext.standardKey === "accountMaster") {
       return {
         fields: accountSchemaFields as SchemaField[],
+        pagination: accountSchemaPagination,
         loading: !!accountSchemaLoading,
         saveLoading: !!accountSchemaSaveLoading,
         updateLoading: !!accountSchemaUpdateLoading,
@@ -788,6 +781,7 @@ const MasterConfiguration = () => {
     if (schemaContext.standardKey === "productMaster") {
       return {
         fields: productSchemaFields as SchemaField[],
+        pagination: productSchemaPagination,
         loading: !!productSchemaLoading,
         saveLoading: !!productSchemaSaveLoading,
         updateLoading: !!productSchemaUpdateLoading,
@@ -796,32 +790,59 @@ const MasterConfiguration = () => {
 
     return {
       fields: unitSchemaFields as SchemaField[],
+      pagination: unitSchemaPagination,
       loading: !!unitSchemaLoading,
       saveLoading: !!unitSchemaSaveLoading,
       updateLoading: !!unitSchemaUpdateLoading,
     };
   }, [
     schemaContext,
-    customSchemaFields,
-    customSchemaLoading,
-    customSchemaSaveLoading,
-    customSchemaUpdateLoading,
-    accountSchemaFields,
-    accountSchemaLoading,
-    accountSchemaSaveLoading,
-    accountSchemaUpdateLoading,
-    productSchemaFields,
-    productSchemaLoading,
-    productSchemaSaveLoading,
-    productSchemaUpdateLoading,
-    unitSchemaFields,
-    unitSchemaLoading,
-    unitSchemaSaveLoading,
-    unitSchemaUpdateLoading,
+    customSchemaFields, customSchemaPagination, customSchemaLoading, customSchemaSaveLoading, customSchemaUpdateLoading,
+    accountSchemaFields, accountSchemaPagination, accountSchemaLoading, accountSchemaSaveLoading, accountSchemaUpdateLoading,
+    productSchemaFields, productSchemaPagination, productSchemaLoading, productSchemaSaveLoading, productSchemaUpdateLoading,
+    unitSchemaFields, unitSchemaPagination, unitSchemaLoading, unitSchemaSaveLoading, unitSchemaUpdateLoading,
   ]);
 
   const isSchemaSubmitting =
     activeSchemaState.saveLoading || activeSchemaState.updateLoading;
+
+  const filteredSchemaFields = useMemo(() => {
+    if (!schemaSearch.trim()) return activeSchemaState.fields;
+
+    const q = schemaSearch.toLowerCase();
+
+    return activeSchemaState.fields.filter(
+      (field) =>
+        String(field.key || "").toLowerCase().includes(q) ||
+        String(field.label || "").toLowerCase().includes(q) ||
+        String(field.type || "").toLowerCase().includes(q) ||
+        String(field.customMasterName || "").toLowerCase().includes(q) ||
+        String(field.customMasterCode || "").toLowerCase().includes(q) ||
+        String(field.ref || "").toLowerCase().includes(q)
+    );
+  }, [activeSchemaState.fields, schemaSearch]);
+
+
+
+  useEffect(() => {
+    setSchemaOffset(0);
+  }, [schemaContext?.kind, schemaContext?.standardKey, schemaContext?.moduleCode]);
+
+  const handleRefreshSchema = async () => {
+    setSchemaRefreshing(true);
+
+    try {
+      if (schemaContext?.kind === "custom") {
+        await reloadCustomMasterSchema();
+      } else if (schemaContext?.kind === "standard") {
+        await reloadStandardSchema(schemaContext.standardKey);
+      }
+    } catch {
+      // Errors are surfaced through the slice-level effects.
+    } finally {
+      setSchemaRefreshing(false);
+    }
+  };
 
   /* ===================================================
      ⭐ SCHEMA-FIELD FORM HELPERS
@@ -870,9 +891,9 @@ const MasterConfiguration = () => {
       [field]: value,
       ...(field === "type" && value !== "custommaster"
         ? {
-            customMasterCode: "",
-            customMasterName: "",
-          }
+          customMasterCode: "",
+          customMasterName: "",
+        }
         : {}),
     }));
 
@@ -950,41 +971,15 @@ const MasterConfiguration = () => {
 
   const reloadStandardSchema = async (standardKey: StandardMasterKey) => {
     if (standardKey === "accountMaster") {
-      await dispatch(
-        getAccountMasterSchema({
-          offset: 0,
-          limit: 20,
-          isSearchable: "",
-          isRequired: "",
-          isFilterable: "",
-        })
-      ).unwrap();
+      await dispatch(getAccountMasterSchema({ offset: schemaOffset, limit: schemaLimit, isSearchable: "", isRequired: "", isFilterable: "" })).unwrap();
       return;
     }
-
     if (standardKey === "productMaster") {
-      await dispatch(
-        getProductMasterSchema({
-          offset: 0,
-          limit: 20,
-          isSearchable: "",
-          isRequired: "",
-        })
-      ).unwrap();
+      await dispatch(getProductMasterSchema({ offset: schemaOffset, limit: schemaLimit, isSearchable: "", isRequired: "" })).unwrap();
       return;
     }
-
     if (standardKey === "unitMeasurement") {
-      await dispatch(
-        getUnitMeasurementSchema({
-          offset: 0,
-          limit: 20,
-          isSearchable: "",
-          isRequired: "",
-          type: "",
-          isFilterable: "",
-        })
-      ).unwrap();
+      await dispatch(getUnitMeasurementSchema({ offset: schemaOffset, limit: schemaLimit, isSearchable: "", isRequired: "", type: "", isFilterable: "" })).unwrap();
     }
   };
 
@@ -1120,120 +1115,156 @@ const MasterConfiguration = () => {
   };
 
   /* ===================================================
-     ⭐ RENDER SCHEMA BUILDER
+     ⭐ SCHEMA TABLE COLUMNS
   =================================================== */
+
+  const schemaColumns = [
+    {
+      key: "key",
+      title: "Key",
+      render: (field: SchemaField) => (
+        <span className="">{field.key}</span>
+      ),
+    },
+    {
+      key: "label",
+      title: "Label",
+      render: (field: SchemaField) => field.label || "—",
+    },
+    {
+      key: "type",
+      title: "Type",
+      render: (field: SchemaField) => field.type || "—",
+    },
+    {
+      key: "reference",
+      title: "Reference",
+      render: (field: SchemaField) =>
+        field.customMasterName || field.customMasterCode || field.ref || "—",
+    },
+    {
+      key: "isRequired",
+      title: "Required",
+      render: (field: SchemaField) => <BooleanBadge value={!!field.isRequired} />,
+    },
+    {
+      key: "isSearchable",
+      title: "Searchable",
+      render: (field: SchemaField) => (
+        <BooleanBadge value={!!field.isSearchable} />
+      ),
+    },
+    {
+      key: "isFilterable",
+      title: "Filterable",
+      render: (field: SchemaField) => (
+        <BooleanBadge value={!!field.isFilterable} />
+      ),
+    },
+    {
+      key: "isHidden",
+      title: "Hidden",
+      render: (field: SchemaField) => <BooleanBadge value={!!field.isHidden} />,
+    },
+  ];
+
+  /* ===================================================
+     ⭐ RENDER SCHEMA BUILDER (DataTable-based)
+  =================================================== */
+  const schemaCurrentPage = Number(activeSchemaState.pagination?.currentPage || 1);
+  const schemaTotalPages = Math.max(1, Number(activeSchemaState.pagination?.totalPages || 1));
+  const schemaTotalDocs = Number(activeSchemaState.pagination?.totalDocs || 0);
 
   const renderSchemaBuilder = (
     title: string,
     description: string,
     badgeText?: string
   ) => (
-    <Panel
-      title={title}
-      description={description}
-      right={
-        <div className="flex flex-wrap items-center gap-2">
-          {badgeText ? (
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
-              {badgeText}
-            </span>
-          ) : null}
 
-          <button
-            type="button"
-            onClick={openAddSchemaForm}
-            disabled={activeSchemaState.loading}
-            className="inline-flex h-10 items-center gap-2 rounded bg-primary px-4 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Plus size={17} />
-            Add Field
-          </button>
-        </div>
-      }
-    >
-      {activeSchemaState.loading ? (
-        <div className="flex min-h-[280px] items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 size={20} className="animate-spin" />
-          Loading schema...
-        </div>
-      ) : activeSchemaState.fields.length === 0 ? (
-        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 px-5 text-center">
-          <Settings2 size={36} className="text-muted-foreground" />
-          <div>
-            <h3 className="text-sm font-black text-card-foreground">
-              No schema fields found
-            </h3>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              Click Add Field to create the first field.
-            </p>
+    <>
+      <Panel
+        title={title}
+        description={description}
+        right={
+          <div className="flex flex-wrap items-center gap-2">
+            {badgeText ? (
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {badgeText}
+              </span>
+            ) : null}
+
+            <DataREfreshButton
+              callBackFn={handleRefreshSchema}
+              loading={schemaRefreshing}
+            />
+
+
+            <DataCreateButton
+              {...{
+                callBackFn: openAddSchemaForm,
+                text: " Add Field",
+
+              }}
+            />
+
+            {/* <button
+              type="button"
+              onClick={openAddSchemaForm}
+              disabled={activeSchemaState.loading}
+              className="inline-flex h-10 items-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Plus size={17} />
+              Add Field
+            </button> */}
           </div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1120px] text-left text-sm">
-            <thead className="border-b border-border bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3.5 font-black">Key</th>
-                <th className="px-5 py-3.5 font-black">Label</th>
-                <th className="px-5 py-3.5 font-black">Type</th>
-                <th className="px-5 py-3.5 font-black">Reference</th>
-                <th className="px-5 py-3.5 font-black">Required</th>
-                <th className="px-5 py-3.5 font-black">Searchable</th>
-                <th className="px-5 py-3.5 font-black">Filterable</th>
-                <th className="px-5 py-3.5 font-black">Hidden</th>
-                <th className="px-5 py-3.5 text-right font-black">Action</th>
-              </tr>
-            </thead>
+        }
+      >
+        <div className="flex flex-col gap-3 border-b border-border py-3 px-4 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput search={schemaSearch} setSearch={setSchemaSearch} />
 
-            <tbody className="divide-y divide-border">
-              {activeSchemaState.fields.map((field: SchemaField) => (
-                <tr key={field.key} className="hover:bg-muted/30">
-                  <td className="px-5 py-4 font-black text-card-foreground">
-                    {field.key}
-                  </td>
-                  <td className="px-5 py-4 font-bold text-card-foreground">
-                    {field.label || "—"}
-                  </td>
-                  <td className="px-5 py-4 text-muted-foreground">
-                    {field.type || "—"}
-                  </td>
-                  <td className="px-5 py-4 text-muted-foreground">
-                    {field.customMasterName ||
-                      field.customMasterCode ||
-                      field.ref ||
-                      "—"}
-                  </td>
-                  <td className="px-5 py-4">
-                    <BooleanBadge value={!!field.isRequired} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <BooleanBadge value={!!field.isSearchable} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <BooleanBadge value={!!field.isFilterable} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <BooleanBadge value={!!field.isHidden} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => openEditSchemaForm(field)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-primary transition hover:bg-primary/10"
-                        title="Edit schema field"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Badge
+            count={schemaTotalDocs}
+            text="Total Fields:"
+            varient="primary"
+          />
         </div>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <DataTable
+            columns={schemaColumns}
+            data={filteredSchemaFields}
+            loading={activeSchemaState.loading}
+            emptyMessage="No schema fields found. Click Add Field to create the first field."
+            actions={(field: SchemaField) => (
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={() => openEditSchemaForm(field)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-primary transition hover:bg-primary/10"
+                  title="Edit schema field"
+                >
+                  <Edit size={16} />
+                </button>
+              </div>
+            )}
+          />
+
+        </div>
+
+      </Panel>
+      {schemaTotalDocs > 0 && (
+        <Pagination
+          localLimit={schemaLimit}
+          selectCb={(e: any) => {
+            setSchemaLimit(Number(e.target.value));
+            setSchemaOffset(0);
+          }}
+          preDisabled={!activeSchemaState.pagination?.hasPrevPage && schemaCurrentPage <= 1}
+          nextDisabled={!activeSchemaState.pagination?.hasNextPage && schemaCurrentPage >= schemaTotalPages}
+          setLocalOffset={setSchemaOffset}
+          pagination={activeSchemaState.pagination}
+        />
       )}
-    </Panel>
+    </>
   );
 
   /* ===================================================
@@ -1259,13 +1290,13 @@ const MasterConfiguration = () => {
               </span>
 
               <span className="min-w-0">
-                <span className="block text-sm font-black text-card-foreground">
+                <span className="block text-sm font-semibold text-card-foreground">
                   {master.name}
                 </span>
                 <span className="mt-1 block text-xs font-medium leading-5 text-muted-foreground">
                   {master.description}
                 </span>
-                <span className="mt-2 inline-flex rounded-full bg-muted px-2.5 py-1 text-[11px] font-black text-muted-foreground">
+                <span className="mt-2 inline-flex rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                   {master.schemaEnabled
                     ? "Schema configurable"
                     : "Schema API not configured"}
@@ -1280,7 +1311,7 @@ const MasterConfiguration = () => {
         title="Custom Masters"
         description="Create business-specific modules and configure a separate schema for every created custom master."
         right={
-          <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
             {totalDocs} Created
           </span>
         }
@@ -1295,7 +1326,7 @@ const MasterConfiguration = () => {
             <button
               type="button"
               onClick={() => setActiveTab("customMasters")}
-              className="h-10 rounded border border-border bg-background px-4 text-sm font-black text-card-foreground transition hover:bg-muted"
+              className="h-10 rounded border border-border bg-background px-4 text-sm font-semibold text-card-foreground transition hover:bg-muted"
             >
               View Custom Masters
             </button>
@@ -1303,7 +1334,7 @@ const MasterConfiguration = () => {
             <button
               type="button"
               onClick={openCreateMasterForm}
-              className="inline-flex h-10 items-center gap-2 rounded bg-primary px-4 text-sm font-black text-primary-foreground transition hover:bg-primary/90"
+              className="inline-flex h-10 items-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
               <Plus size={17} />
               Add Custom Master
@@ -1325,7 +1356,7 @@ const MasterConfiguration = () => {
           title={master.name}
           description={master.description}
           right={
-            <span className="rounded-full bg-warning/10 px-3 py-1 text-xs font-black text-warning">
+            <span className="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
               API Required
             </span>
           }
@@ -1333,7 +1364,7 @@ const MasterConfiguration = () => {
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 p-5 text-center">
             <Users size={36} className="text-muted-foreground" />
             <div>
-              <h3 className="text-sm font-black text-card-foreground">
+              <h3 className="text-sm font-semibold text-card-foreground">
                 Team/Employee schema API is not configured
               </h3>
               <p className="mt-1 max-w-xl text-xs font-medium leading-5 text-muted-foreground">
@@ -1354,211 +1385,152 @@ const MasterConfiguration = () => {
   };
 
   /* ===================================================
-     ⭐ CUSTOM MASTER LIST
+     ⭐ CUSTOM MASTER LIST TABLE COLUMNS
+  =================================================== */
+
+  const masterColumns = [
+    {
+      key: "moduleCode",
+      title: "Module Code",
+      render: (row: MasterConfigurationItem) => (
+        <span className="font-bold text-card-foreground">
+          {row.moduleCode}
+        </span>
+      ),
+    },
+    {
+      key: "moduleName",
+      title: "Module Name",
+      render: (row: MasterConfigurationItem) => (
+        <span className="">
+          {row.moduleName}
+        </span>
+      ),
+    },
+    {
+      key: "description",
+      title: "Description",
+      render: (row: MasterConfigurationItem) => (
+        <span className="">
+          {row.description || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      title: "Status",
+      render: (row: MasterConfigurationItem) => (
+        <StatusPill status={row.status} />
+      ),
+    },
+  ];
+
+  /* ===================================================
+     ⭐ CUSTOM MASTER LIST (DataTable-based)
   =================================================== */
 
   const renderCustomMasters = () => (
-    <Panel
-      title="Custom Masters"
-      description="Create modules, edit module information, delete unused modules and configure fields for each module."
-      right={
-        <button
-          type="button"
-          onClick={openCreateMasterForm}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-black text-primary-foreground transition hover:bg-primary/90"
-        >
-          <Plus size={17} />
-          Add Custom Master
-        </button>
-      }
-    >
-      <div className="border-b border-border p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <form onSubmit={handleSearch} className="flex flex-1 gap-2">
-            <div className="relative flex-1">
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search module name, code or description"
-                className="h-10 w-full rounded border border-input bg-background pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
+
+    <>
+      <Panel
+        title="Custom Masters"
+        description="Create modules, edit module information, delete unused modules and configure fields for each module."
+        right={
+          <div className="flex items-center gap-2">
+            <DataREfreshButton
+              callBackFn={handleRefreshMasters}
+              loading={refreshing}
+            />
 
             <button
-              type="submit"
-              className="h-10 rounded bg-primary px-4 text-sm font-black text-primary-foreground transition hover:bg-primary/90"
+              type="button"
+              onClick={openCreateMasterForm}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
-              Search
+              <Plus size={17} />
+              Add Custom Master
             </button>
-          </form>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <SearchInput search={search} setSearch={setSearch} />
 
-          <div className="grid grid-cols-2 gap-2 sm:flex">
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="h-10 rounded border border-input bg-background px-3 text-sm font-semibold outline-none focus:border-primary"
+              onChange={(event) => {
+                setStatusFilter(event.target.value);
+                setLocalOffset(0);
+              }}
+              className="h-10 rounded border border-input bg-background px-3 text-sm  outline-none focus:border-primary"
             >
               <option value="">All Statuses</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
 
-            <select
-              value={pageLimit}
-              onChange={(event) => setPageLimit(Number(event.target.value))}
-              className="h-10 rounded border border-input bg-background px-3 text-sm font-semibold outline-none focus:border-primary"
-            >
-              <option value={10}>10 rows</option>
-              <option value={20}>20 rows</option>
-              <option value={50}>50 rows</option>
-            </select>
 
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded border border-border bg-background px-4 text-sm font-black transition hover:bg-muted sm:col-span-1"
-            >
-              <RefreshCcw size={16} />
-              Reset
-            </button>
           </div>
+
+          <Badge count={totalDocs} text="Total Custom Masters:" varient="primary" />
         </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[940px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/50 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3.5 font-black">Module Code</th>
-              <th className="px-5 py-3.5 font-black">Module Name</th>
-              <th className="px-5 py-3.5 font-black">Description</th>
-              <th className="px-5 py-3.5 font-black">Status</th>
-              <th className="px-5 py-3.5 text-right font-black">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-border">
-            {moduleLoading ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-14 text-center">
-                  <span className="inline-flex items-center gap-2 text-muted-foreground">
-                    <Loader2 size={19} className="animate-spin" />
-                    Loading custom masters...
-                  </span>
-                </td>
-              </tr>
-            ) : masterConfigurations.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-5 py-14 text-center text-muted-foreground"
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <DataTable
+            columns={masterColumns}
+            data={masterConfigurations}
+            loading={moduleLoading}
+            emptyMessage="No custom masters found."
+            actions={(item: MasterConfigurationItem) => (
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => openCustomMasterSchema(item)}
+                  className="inline-flex h-9 items-center gap-2 rounded border border-border px-3 text-primary transition hover:bg-primary/10"
+                  title="Configure fields"
                 >
-                  No custom masters found.
-                </td>
-              </tr>
-            ) : (
-              masterConfigurations.map((item: MasterConfigurationItem) => (
-                <tr key={item.moduleCode} className="hover:bg-muted/30">
-                  <td className="whitespace-nowrap px-5 py-4 font-black text-card-foreground">
-                    {item.moduleCode}
-                  </td>
-                  <td className="px-5 py-4 font-bold text-card-foreground">
-                    {item.moduleName}
-                  </td>
-                  <td className="max-w-md px-5 py-4 text-muted-foreground">
-                    <span className="line-clamp-2">
-                      {item.description || "—"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
-                        item.status === "active"
-                          ? "bg-success/10 text-success"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {item.status === "active" ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openCustomMasterSchema(item)}
-                        className="inline-flex h-9 items-center gap-2 rounded border border-border px-3 text-primary transition hover:bg-primary/10"
-                        title="Configure fields"
-                      >
-                        <Settings2 size={16} />
-                        Fields
-                      </button>
+                  <Settings2 size={16} />
+                  Fields
+                </button>
 
-                      <button
-                        type="button"
-                        onClick={() => openEditMasterForm(item.moduleCode)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-primary transition hover:bg-primary/10"
-                        title="Edit custom master"
-                      >
-                        <Edit3 size={16} />
-                      </button>
+                <button
+                  type="button"
+                  onClick={() => openEditMasterForm(item.moduleCode)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-primary transition hover:bg-primary/10"
+                  title="Edit custom master"
+                >
+                  <Edit size={16} />
+                </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMaster(item)}
-                        disabled={deleteLoading}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-danger transition hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Delete custom master"
-                      >
-                        {deleteLoading ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                <button
+                  type="button"
+                  disabled={deleteLoading}
+                  onClick={(e) => handleDeleteClick(e, item)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-danger transition hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Delete custom master"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex flex-col gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-medium text-muted-foreground">
-          {showingText}
-        </p>
-
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </span>
-
-          <button
-            type="button"
-            onClick={goToPreviousPage}
-            disabled={moduleLoading || currentPage <= 1}
-            className="inline-flex h-9 w-9 items-center justify-center rounded border border-border transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <ChevronLeft size={17} />
-          </button>
-
-          <button
-            type="button"
-            onClick={goToNextPage}
-            disabled={moduleLoading || currentPage >= totalPages}
-            className="inline-flex h-9 w-9 items-center justify-center rounded border border-border transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <ChevronRight size={17} />
-          </button>
+          />
         </div>
-      </div>
-    </Panel>
+
+      </Panel>
+      {totalDocs > 0 && (
+        <Pagination
+          localLimit={localLimit}
+          selectCb={(e: any) => {
+            setLocalLimit(Number(e.target.value));
+            setLocalOffset(0);
+          }}
+          preDisabled={!pagination?.hasPrevPage && currentPage <= 1}
+          nextDisabled={!pagination?.hasNextPage && currentPage >= totalPages}
+          setLocalOffset={setLocalOffset}
+          pagination={pagination}
+        />
+      )}
+    </>
   );
 
   /* ===================================================
@@ -1582,7 +1554,7 @@ const MasterConfiguration = () => {
               setSelectedCustomSchemaMaster(null);
               dispatch(clearMasterSchemaState());
             }}
-            className="inline-flex h-9 items-center gap-2 rounded border border-border bg-card px-3 text-sm font-black text-card-foreground transition hover:bg-muted"
+            className="inline-flex h-9 items-center gap-2 rounded border border-border bg-card px-3 text-sm font-semibold text-card-foreground transition hover:bg-muted"
           >
             <ArrowLeft size={16} />
             Back to Custom Masters
@@ -1604,13 +1576,25 @@ const MasterConfiguration = () => {
     return renderOverview();
   };
 
+
+  useEffect(() => {
+    if (activeTab !== "customMasterSchema" || !selectedCustomSchemaMaster?.moduleCode) return;
+
+    dispatch(
+      getMasterSchema({
+        moduleCode: selectedCustomSchemaMaster.moduleCode,
+        offset: schemaOffset,
+        limit: schemaLimit,
+      })
+    );
+  }, [schemaOffset, schemaLimit]); // eslint-disable-line react-hooks/exhaustive-deps
   /* ===================================================
      ⭐ PAGE
   =================================================== */
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-5">
-      <div className="mx-auto max-w-[1500px] space-y-4">
+    <div className="min-h-screen bg-background p-4 md:p-4">
+      <div className=" space-y-4">
         <header className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -1622,7 +1606,7 @@ const MasterConfiguration = () => {
             </button>
 
             <div>
-              <h1 className="text-xl font-black text-card-foreground">
+              <h1 className="text-xl font-semibold text-card-foreground">
                 Master Configuration
               </h1>
               <p className="mt-1 text-xs font-semibold text-muted-foreground">
@@ -1633,19 +1617,19 @@ const MasterConfiguration = () => {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
+            <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               {STANDARD_MASTERS.length} Standard Masters
             </span>
-            <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">
+            <span className="rounded-md bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
               {totalDocs} Custom Masters
             </span>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[270px_1fr]">
-          <aside className="max-h-max rounded border border-border bg-card p-2 shadow-sm">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
+          <aside className="max-h-max rounded border border-border bg-card p-2 shadow-sm lg:sticky lg:top-4 lg:self-start">
             <div className="mb-2 px-3 py-2">
-              <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Master Menu
               </p>
             </div>
@@ -1669,18 +1653,16 @@ const MasterConfiguration = () => {
                         dispatch(clearMasterSchemaState());
                       }
                     }}
-                    className={`flex w-full items-center gap-3 rounded px-3 py-2.5 text-left text-sm font-bold transition ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-card-foreground"
-                    }`}
+                    className={`flex w-full items-center gap-3 rounded px-3 py-2.5 text-left text-sm font-bold transition ${isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-card-foreground"
+                      }`}
                   >
                     <span
-                      className={`flex h-8 w-8 items-center justify-center rounded ${
-                        isActive
-                          ? "bg-white/15"
-                          : "bg-background text-primary"
-                      }`}
+                      className={`flex h-8 w-8 items-center justify-center rounded ${isActive
+                        ? "bg-white/15"
+                        : "bg-background text-primary"
+                        }`}
                     >
                       {tab.icon}
                     </span>
@@ -1707,7 +1689,7 @@ const MasterConfiguration = () => {
           <div className="w-full max-w-xl overflow-hidden rounded border border-border bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
-                <h2 className="text-lg font-black text-card-foreground">
+                <h2 className="text-lg font-semibold text-card-foreground">
                   {editingModuleCode
                     ? "Edit Custom Master"
                     : "Add Custom Master"}
@@ -1730,10 +1712,9 @@ const MasterConfiguration = () => {
             </div>
 
             {editingModuleCode &&
-            moduleLoading &&
-            !selectedMasterConfiguration ? (
+              moduleLoading &&
+              !selectedMasterConfiguration ? (
               <div className="flex items-center justify-center gap-2 px-5 py-16 text-muted-foreground">
-                <Loader2 size={20} className="animate-spin" />
                 Loading custom master...
               </div>
             ) : (
@@ -1756,11 +1737,10 @@ const MasterConfiguration = () => {
                     }
                     placeholder="Example: Department Master"
                     maxLength={100}
-                    className={`h-10 w-full rounded border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${
-                      masterFormErrors.moduleName
-                        ? "border-danger"
-                        : "border-input"
-                    }`}
+                    className={`h-10 w-full rounded border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${masterFormErrors.moduleName
+                      ? "border-danger"
+                      : "border-input"
+                      }`}
                   />
                   {masterFormErrors.moduleName ? (
                     <p className="mt-1 text-xs font-semibold text-danger">
@@ -1784,11 +1764,10 @@ const MasterConfiguration = () => {
                     placeholder="Describe where this master will be used"
                     rows={4}
                     maxLength={500}
-                    className={`w-full resize-none rounded border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${
-                      masterFormErrors.description
-                        ? "border-danger"
-                        : "border-input"
-                    }`}
+                    className={`w-full resize-none rounded border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${masterFormErrors.description
+                      ? "border-danger"
+                      : "border-input"
+                      }`}
                   />
                   <div className="mt-1 flex items-center justify-between">
                     <span className="text-xs font-semibold text-danger">
@@ -1830,7 +1809,7 @@ const MasterConfiguration = () => {
                     type="button"
                     onClick={closeMasterForm}
                     disabled={isMasterSubmitting}
-                    className="h-10 rounded border border-border px-4 text-sm font-black transition hover:bg-muted disabled:opacity-50"
+                    className="h-10 rounded border border-border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1838,11 +1817,8 @@ const MasterConfiguration = () => {
                   <button
                     type="submit"
                     disabled={isMasterSubmitting}
-                    className="inline-flex h-10 min-w-28 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-10 min-w-28 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isMasterSubmitting ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : null}
                     {editingModuleCode ? "Update" : "Create"}
                   </button>
                 </div>
@@ -1861,7 +1837,7 @@ const MasterConfiguration = () => {
           <div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded border border-border bg-card shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-4">
               <div>
-                <h2 className="text-lg font-black text-card-foreground">
+                <h2 className="text-lg font-semibold text-card-foreground">
                   {editingSchemaFieldKey
                     ? "Update Schema Field"
                     : "Add Schema Field"}
@@ -1900,11 +1876,10 @@ const MasterConfiguration = () => {
                     }
                     disabled={!!editingSchemaFieldKey}
                     placeholder="Example: departmentCode"
-                    className={`h-10 w-full rounded border bg-background px-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
-                      schemaFormErrors.key
-                        ? "border-danger"
-                        : "border-input"
-                    }`}
+                    className={`h-10 w-full rounded border bg-background px-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60 ${schemaFormErrors.key
+                      ? "border-danger"
+                      : "border-input"
+                      }`}
                   />
                   {schemaFormErrors.key ? (
                     <p className="mt-1 text-xs font-semibold text-danger">
@@ -1926,11 +1901,10 @@ const MasterConfiguration = () => {
                       )
                     }
                     placeholder="Example: Department"
-                    className={`h-10 w-full rounded border bg-background px-3 text-sm outline-none ${
-                      schemaFormErrors.label
-                        ? "border-danger"
-                        : "border-input"
-                    }`}
+                    className={`h-10 w-full rounded border bg-background px-3 text-sm outline-none ${schemaFormErrors.label
+                      ? "border-danger"
+                      : "border-input"
+                      }`}
                   />
                   {schemaFormErrors.label ? (
                     <p className="mt-1 text-xs font-semibold text-danger">
@@ -1993,11 +1967,10 @@ const MasterConfiguration = () => {
                         event.target.value
                       )
                     }
-                    className={`h-10 w-full rounded border bg-background px-3 text-sm font-semibold outline-none ${
-                      schemaFormErrors.customMasterCode
-                        ? "border-danger"
-                        : "border-input"
-                    }`}
+                    className={`h-10 w-full rounded border bg-background px-3 text-sm font-semibold outline-none ${schemaFormErrors.customMasterCode
+                      ? "border-danger"
+                      : "border-input"
+                      }`}
                   >
                     <option value="">Select Custom Master</option>
                     {masterConfigurations
@@ -2037,7 +2010,7 @@ const MasterConfiguration = () => {
                       type="checkbox"
                       checked={
                         !!schemaForm[
-                          option.key as keyof SchemaFieldForm
+                        option.key as keyof SchemaFieldForm
                         ]
                       }
                       onChange={(event) =>
@@ -2057,7 +2030,7 @@ const MasterConfiguration = () => {
                   type="button"
                   onClick={closeSchemaForm}
                   disabled={isSchemaSubmitting}
-                  className="h-10 rounded border border-border px-4 text-sm font-black transition hover:bg-muted disabled:opacity-50"
+                  className="h-10 rounded border border-border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -2065,13 +2038,9 @@ const MasterConfiguration = () => {
                 <button
                   type="submit"
                   disabled={isSchemaSubmitting}
-                  className="inline-flex h-10 min-w-36 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 min-w-36 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSchemaSubmitting ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Save size={16} />
-                  )}
+                  <Save size={16} />
                   {editingSchemaFieldKey
                     ? "Update Field"
                     : "Add Field"}
@@ -2081,6 +2050,31 @@ const MasterConfiguration = () => {
           </div>
         </div>
       ) : null}
+
+      {/* ===================================================
+          ⭐ DELETE CONFIRM TOOLTIP (Custom Master)
+      =================================================== */}
+
+      {confirmTooltip.show && (
+        <ConfirmTooltip
+          x={confirmTooltip.x}
+          y={confirmTooltip.y}
+          message={`Are you sure you want to delete ${confirmTooltip?.item?.moduleName || "this custom master"
+            } (${confirmTooltip?.moduleCode || ""})?`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() =>
+            setConfirmTooltip({
+              show: false,
+              x: null,
+              y: null,
+              item: null,
+              moduleCode: null,
+            })
+          }
+        />
+      )}
     </div>
   );
 };
