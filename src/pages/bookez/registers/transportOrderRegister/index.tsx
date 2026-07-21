@@ -14,6 +14,7 @@ import PageComponentModal from "../../../../components/mainPage/PageComponentMod
 import CreateEditTransportOrder from "./CreateEditTransportOrder";
 import { getTransportOrderRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/transportOrderRegister";
 import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
+import CreateTransportOrder from "../../transportation/transportOrder/CreateTransportOrder";
 
 
 
@@ -872,7 +873,7 @@ const TransportOrderRegister = () => {
                         {viewError}
                     </div>
                 ) : viewOrder ? (
-                    <CreateEditTransportOrder
+                            <CreateTransportOrder
                         embedded
                         mode="view"
                         voucherNumber={

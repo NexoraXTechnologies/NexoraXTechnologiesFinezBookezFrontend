@@ -65,7 +65,7 @@ export const addDriverSettlementRegister = createAsyncThunk<
             }
 
             return {
-                records: res.data?.data?.invoices || [],
+                records: res.data?.data?.driverSettlements || [],
                 pagination: res.data?.data?.pagination || {},
             };
         } catch (error: any) {

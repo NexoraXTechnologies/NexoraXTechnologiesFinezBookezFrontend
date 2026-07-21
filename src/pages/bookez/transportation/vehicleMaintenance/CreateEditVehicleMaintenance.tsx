@@ -577,44 +577,19 @@ const CreateEditVehicleMaintenance = ({
 
     const finalDriverOptions = useMemo(() => {
         const currentValue = form.driverCode || "";
-
-        const exists = driverOptions.some(
-            (item: any) => String(item.value) === String(currentValue)
-        );
-
+        const exists = driverOptions.some((item: any) => String(item.value) === String(currentValue));
         if (!currentValue || exists) return driverOptions;
 
         return [
-            {
-                label: `${form.driverName || currentValue} - ${currentValue}`,
-                value: currentValue,
-                driverCode: currentValue,
-                driverName: form.driverName || "",
-                rawData: form,
-            },
+            { label: `${form.driverName || currentValue} - ${currentValue}`, value: currentValue, driverCode: currentValue, driverName: form.driverName || "", rawData: form, },
             ...driverOptions,
         ];
     }, [driverOptions, form.driverCode, form.driverName]);
 
-    const pageTitle =
-        isEdit && maintenanceNumber
-            ? `${isView ? "View" : "Edit"} ${maintenanceNumber}`
-            : isEdit
-                ? `${isView ? "View" : "Edit"} Vehicle Maintenance`
-                : "Vehicle Maintenance";
+    const pageTitle = isEdit && maintenanceNumber ? `${isView ? "View" : "Edit"} ${maintenanceNumber}` : isEdit ? `${isView ? "View" : "Edit"} Vehicle Maintenance` : "Vehicle Maintenance";
 
-    const pageDescription = isView
-        ? "View vehicle maintenance entry."
-        : isEdit
-            ? "Update vehicle maintenance entry."
-            : "Record vehicle service, PUC, insurance, permit, tyre, battery and cost details.";
-
-    const toggleSection = (sectionKey: string) => {
-        setExpandedSections((prev: any) => ({
-            ...prev,
-            [sectionKey]: !prev[sectionKey],
-        }));
-    };
+    const pageDescription = isView ? "View vehicle maintenance entry." : isEdit ? "Update vehicle maintenance entry." : "Record vehicle service, PUC, insurance, permit, tyre, battery and cost details.";
+    const toggleSection = (sectionKey: string) => { setExpandedSections((prev: any) => ({ ...prev, [sectionKey]: !prev[sectionKey], })); };
 
     /* ===================================================
        FETCH VEHICLES

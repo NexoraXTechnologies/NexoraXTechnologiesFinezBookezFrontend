@@ -125,7 +125,25 @@ const getOrderFromResponse = (response: any) => {
 	);
 };
 
-const CreateTransportOrder = () => {
+/* ===================================================
+   PROPS
+=================================================== */
+
+type CreateTransportOrderProps = {
+	embedded?: boolean;
+	mode?: "add" | "edit" | "view";
+	voucherNumber?: string;
+	orderData?: any;
+	onClose?: () => void;
+};
+
+const CreateTransportOrder = ({
+	embedded = false,
+	mode: modeProp,
+	voucherNumber: voucherNumberProp,
+	orderData: orderDataProp,
+	onClose,
+}: CreateTransportOrderProps = {}) => {
 	const dispatch = useDispatch<any>();
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -144,18 +162,23 @@ const CreateTransportOrder = () => {
 		location.state?.orderData?.transportOrderNumber ||
 		"";
 
-	const orderNumber = routeOrderNumber || stateOrderNumber;
+	// Props take priority (embedded/modal usage); router param/state
+	// remain as fallback so the routed (non-embedded) usage still works.
+	const orderNumber =
+		voucherNumberProp || routeOrderNumber || stateOrderNumber;
 
-	// const isEditMode =
-	// 	location.state?.mode === "edit" ||
-	// 	Boolean(orderNumber);
+	const passedOrderData =
+		orderDataProp !== undefined
+			? orderDataProp
+			: location.state?.orderData;
 
-	const mode = location.state?.mode;
+	const mode = modeProp || location.state?.mode;
 
 	const isView = mode === "view";
 
 	const isEditMode =
 		mode === "edit" ||
+		mode === "view" ||
 		(!mode && Boolean(orderNumber));
 
 	const [form, setForm] = useState<any>(createInitialTransportOrder());
@@ -165,15 +188,30 @@ const CreateTransportOrder = () => {
 
 	const pageTitle =
 		location.state?.title ||
-		(isEditMode ? "Edit Transport Order" : "Create Transport Order");
+		(isView
+			? "View Transport Order"
+			: isEditMode
+				? "Edit Transport Order"
+				: "Create Transport Order");
 
 	const pageDescription =
 		location.state?.description ||
-		(isEditMode
-			? "Update transport order details."
-			: "Create and manage transport orders for customer goods movement.");
+		(isView
+			? "View transport order details."
+			: isEditMode
+				? "Update transport order details."
+				: "Create and manage transport orders for customer goods movement.");
 
+	// Single place that decides how to "leave" the screen — closes the
+	// modal when embedded, otherwise falls back to router history.
+	const goBack = () => {
+		if (embedded && onClose) {
+			onClose();
+			return;
+		}
 
+		navigate(-1);
+	};
 
 
 	const { accounts = [] } = useSelector((state: any) => state.accountMaster);
@@ -686,6 +724,13 @@ const CreateTransportOrder = () => {
 	useEffect(() => {
 		if (!isEditMode && !isView) return;
 
+		// If the caller already handed us the order record (embedded/modal
+		// usage from the register), skip the fetch and prefill directly.
+		if (passedOrderData) {
+			setForm(mergeTransportOrderWithInitial(passedOrderData));
+			return;
+		}
+
 		if (!orderNumber) {
 			toast.warn("Transport order number not found");
 			return;
@@ -719,7 +764,7 @@ const CreateTransportOrder = () => {
 		};
 
 		fetchOrder();
-	}, [dispatch, isEditMode, orderNumber]);
+	}, [dispatch, isEditMode, isView, orderNumber, passedOrderData]);
 
 	const update = (section: string, key: string, value: any) => {
 		setForm((prev: any) => ({
@@ -783,7 +828,7 @@ const CreateTransportOrder = () => {
 			};
 
 			if (isView) {
-				navigate(-1);
+				goBack();
 				return;
 			}
 
@@ -806,18 +851,18 @@ const CreateTransportOrder = () => {
 					})
 				).unwrap();
 
-				
+
 				await dispatch(
 					sendWhatsAppMessage({
 						moduleType: "transportOrder",
-						voucherNumber:finalOrderNumber,
+						voucherNumber: finalOrderNumber,
 					})
 				).unwrap();
-		
+
 
 
 				toast.success("Transport order updated");
-				navigate(-1);
+				goBack();
 				return;
 			}
 
@@ -841,7 +886,7 @@ const CreateTransportOrder = () => {
 			}
 
 			toast.success("Transport order created");
-			navigate(-1);
+			goBack();
 			// await dispatch(createTransportOrder(payload)).unwrap();
 
 			// toast.success("Transport order created");
@@ -960,7 +1005,7 @@ const CreateTransportOrder = () => {
 				<div className="flex items-center">
 					<button
 						type="button"
-						onClick={() => navigate(-1)}
+						onClick={goBack}
 						className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
 						title="Go back"
 					>

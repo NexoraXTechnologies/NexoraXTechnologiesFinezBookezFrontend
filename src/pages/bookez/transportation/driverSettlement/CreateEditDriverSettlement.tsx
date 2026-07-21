@@ -62,18 +62,6 @@ const paymentModeOptions = [
 const CASH_IN_HAND_ACCOUNT_CODE = "ACT-4";
 const CASH_IN_HAND_ACCOUNT_NAME = "Cash In Hand";
 
-// Fallback account codes/names used only if the matching field is
-// missing from transportationModuleConfiguration in System
-// Configuration. The live mapping is built from that configuration
-// inside the component (see transportExpenseAccountMap below).
-// const DEFAULT_EXPENSE_TYPE_ACCOUNT_MAP: Record<string, { code: string; name: string }> = {
-//     "Diesel": { code: "ACT-33", name: "Diesel Refilling" },
-//     "Driver Allowance / Food": { code: "ACT-43", name: "Food Expenses" },
-//     "Running": { code: "ACT-44", name: "Vehicle Running Cost" },
-//     "Breakdown": { code: "ACT-45", name: "Breakdown Expenses" },
-//     "Other": { code: "ACT-46", name: "Other Expenses" },
-// };
-
 /* ===================================================
    COMMON HELPERS
 =================================================== */
@@ -523,52 +511,6 @@ const buildOrderOptionsForDriver = ({
 const sumAmounts = (entries: any[] = []) =>
     entries.reduce((acc, row) => acc + Number(row?.amount || 0), 0);
 
-// const computeTripExpenseSummary = (tripExpense: any = {}) => {
-//     const expenses = tripExpense?.expenses || {};
-
-//     const totalAdvanceReceived =
-//         Number(expenses?.advanceReceived?.totalAdvance || 0) ||
-//         sumAmounts(expenses?.advanceReceived?.entries || []);
-
-//     const totalDieselCost =
-//         Number(expenses?.dieselCost?.totalDieselCost || 0) ||
-//         sumAmounts(expenses?.dieselCost?.entries || []);
-
-//     const totalFoodCost =
-//         Number(expenses?.foodCost?.totalFoodCost || 0) ||
-//         sumAmounts(expenses?.foodCost?.entries || []);
-
-//     const totalRunningCost =
-//         Number(expenses?.runningCost?.totalRunningCost || 0) ||
-//         sumAmounts(expenses?.runningCost?.entries || []);
-
-//     const totalBreakdownCost =
-//         Number(expenses?.breakdownCost?.totalBreakdownCost || 0) ||
-//         sumAmounts(expenses?.breakdownCost?.entries || []);
-
-//     const totalOtherCost =
-//         Number(expenses?.otherCost?.totalOtherCost || 0) ||
-//         sumAmounts(expenses?.otherCost?.entries || []);
-
-//     const totalTripExpense =
-//         Number(tripExpense?.summary?.totalTripExpense || 0) ||
-//         totalDieselCost +
-//         totalFoodCost +
-//         totalRunningCost +
-//         totalBreakdownCost +
-//         totalOtherCost;
-
-//     const balanceAmount =
-//         Number(tripExpense?.summary?.balanceAmount || 0) ||
-//         Math.max(totalTripExpense - totalAdvanceReceived, 0);
-
-//     return {
-//         totalAdvanceReceived,
-//         totalTripExpense,
-//         balanceAmount,
-//     };
-// };
-
 const computeTripExpenseSummary = (
     tripExpense: any = {}
 ) => {
@@ -609,93 +551,6 @@ const computeTripExpenseSummary = (
         balanceAmount,
     };
 };
-
-// const buildExpenseRowsFromTripExpense = (tripExpense: any) => {
-//     if (!tripExpense) return [];
-
-//     const expenses = tripExpense?.expenses || {};
-//     const rows: any[] = [];
-
-//     const pushRows = (entries: any[] = [], type: string, descriptionFn: any) => {
-//         entries.forEach((entry: any, index: number) => {
-//             const amount = Number(entry?.amount || 0);
-
-//             if (!amount && !entry?.fuelStation && !entry?.expenseType) return;
-
-//             rows.push({
-//                 id: `${type}-${index}`,
-//                 date:
-//                     entry?.date ||
-//                     entry?.receivedDate ||
-//                     entry?.billDate ||
-//                     tripExpense?.tripDate ||
-//                     tripExpense?.enteredDate ||
-//                     "",
-//                 type,
-//                 description: descriptionFn(entry),
-//                 amount,
-//             });
-//         });
-//     };
-
-//     pushRows(
-//         expenses?.dieselCost?.entries,
-//         "Diesel",
-//         (entry: any) =>
-//             [entry?.fuelStation, entry?.billNumber].filter(Boolean).join(" • ") ||
-//             "Diesel Refilling"
-//     );
-
-//     pushRows(
-//         expenses?.foodCost?.entries,
-//         "Driver Allowance / Food",
-//         (entry: any) =>
-//             [entry?.mealType, entry?.location].filter(Boolean).join(" • ") ||
-//             "Food / allowance"
-//     );
-
-//     pushRows(
-//         expenses?.runningCost?.entries,
-//         "Running",
-//         (entry: any) =>
-//             [entry?.expenseType, entry?.location].filter(Boolean).join(" • ") ||
-//             "Running expense"
-//     );
-
-//     pushRows(
-//         expenses?.breakdownCost?.entries,
-//         "Breakdown",
-//         (entry: any) =>
-//             [entry?.issueType, entry?.serviceCenter].filter(Boolean).join(" • ") ||
-//             "Breakdown expense"
-//     );
-
-//     pushRows(
-//         expenses?.otherCost?.entries,
-//         "Other",
-//         (entry: any) =>
-//             [entry?.expenseType, entry?.remarks].filter(Boolean).join(" • ") ||
-//             "Other expense"
-//     );
-
-//     const pod = tripExpense?.pod || {};
-//     const podStatus = cleanText(pod?.deliveryStatus);
-
-//     if (podStatus && normalizeText(podStatus) !== "pending") {
-//         rows.push({
-//             id: "pod-summary",
-//             date: pod?.deliveryDateTime || tripExpense?.tripDate || "",
-//             type: "POD",
-//             description: [podStatus, pod?.receiverName, pod?.deliveryLocation]
-//                 .filter(Boolean)
-//                 .join(" • "),
-//             amount: 0,
-//         });
-//     }
-
-//     return rows;
-// };
-
 
 const EXPENSE_TYPE_LABELS: Record<string, string> = {
     dieselCost: "Diesel",
@@ -766,39 +621,7 @@ const getExpenseDescription = (
         if (description) return description;
     }
 
-    // Generic fallback for future expense categories.
-    // const ignoredFields = new Set([
-    //     "amount",
-    //     "date",
-    //     "receivedDate",
-    //     "billDate",
-    //     "billImage",
-    //     "document",
-    //     "attachment",
-    //     "_id",
-    // ]);
-
-    // const genericDescription = Object.entries(entry || {})
-    //     .filter(([key, value]) => {
-    //         return (
-    //             !ignoredFields.has(key) &&
-    //             value !== null &&
-    //             value !== undefined &&
-    //             value !== ""
-    //         );
-    //     })
-    //     .map(([key, value]) => {
-    //         const label = key
-    //             .replace(/([a-z])([A-Z])/g, "$1 $2")
-    //             .replace(/[_-]+/g, " ")
-    //             .replace(/\b\w/g, (char) => char.toUpperCase());
-
-    //         return `${label}: ${String(value)}`;
-    //     })
-    //     .join(" • ");
-
     return (
-        // genericDescription ||
         `${formatExpenseTypeLabel(expenseKey)} expense`
     );
 };
@@ -879,16 +702,6 @@ const mapSelectionToTripDetails = ({
 
 }: any = {}) => {
     const summaryMeta = tripExpense ? computeTripExpenseSummary(tripExpense) : null;
-
-    // const tripStatus = cleanText(
-    //     tripExpense?.tripStatus ||
-    //     allocation?.tripStatus ||
-    //     transportOrder?.tripStatus ||
-    //     transportOrder?.status ||
-    //     "-"
-    // )
-    //     .replace(/_/g, " ")
-    //     .replace(/\b\w/g, (c) => c.toUpperCase());
 
     if (!allocation && !transportOrder && !tripExpense && !lrEntry) return null;
 
@@ -1245,15 +1058,39 @@ const EmptyHint = ({ children }: any) => (
 );
 
 /* ===================================================
+   PROPS
+=================================================== */
+
+type CreateEditDriverSettlementProps = {
+    embedded?: boolean;
+    mode?: "add" | "edit" | "view";
+    voucherNumber?: string;
+    onClose?: () => void;
+};
+
+/* ===================================================
    COMPONENT
 =================================================== */
 
-const CreateEditDriverSettlement = () => {
+const CreateEditDriverSettlement = ({
+    embedded = false,
+    mode: modeProp,
+    voucherNumber: voucherNumberProp,
+    onClose,
+}: CreateEditDriverSettlementProps = {}) => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
 
-    const { voucherNumber } = useParams<{ voucherNumber: string }>();
-    const isEditMode = Boolean(voucherNumber);
+    const params = useParams<{ voucherNumber: string }>();
+
+    // Props take priority (embedded/modal usage); router param remains
+    // as fallback so the routed (non-embedded) "/edit/:voucherNumber"
+    // usage still works untouched.
+    const voucherNumber = voucherNumberProp || params?.voucherNumber || "";
+
+    const mode = modeProp || (voucherNumber ? "edit" : "add");
+    const isEditMode = mode === "edit" || mode === "view";
+    const isView = mode === "view";
 
     const { users = [] } = useSelector((s: any) => s.professionalUser || {});
 
@@ -1296,6 +1133,26 @@ const CreateEditDriverSettlement = () => {
     const [fetchingEdit, setFetchingEdit] = useState(false);
 
     const loading = pageLoading || driversLoader || fetchingEdit;
+
+    // Single place that decides how to "leave" the screen — closes the
+    // modal when embedded, otherwise falls back to router navigation.
+    const goBack = useCallback(() => {
+        if (embedded && onClose) {
+            onClose();
+            return;
+        }
+
+        navigate(-1);
+    }, [embedded, onClose, navigate]);
+
+    const goToList = useCallback(() => {
+        if (embedded && onClose) {
+            onClose();
+            return;
+        }
+
+        navigate("/bookEz/transportation/driver-settlement");
+    }, [embedded, onClose, navigate]);
 
     const loginUser = useMemo(() => getLoginUser(), []);
 
@@ -1455,13 +1312,6 @@ const CreateEditDriverSettlement = () => {
         activeSystemConfiguration,
         accountMasterByCode,
     ]);
-    // const getExpenseAccountForType = useCallback(
-    //     (type: string) =>
-    //         transportExpenseAccountMap[type] ||
-    //         DEFAULT_EXPENSE_TYPE_ACCOUNT_MAP["Other"],
-    //     [transportExpenseAccountMap]
-    // );
-
 
     const getExpenseAccount = useCallback(
         (expenseKey: string, expenseType: string) => {
@@ -1561,12 +1411,12 @@ const CreateEditDriverSettlement = () => {
     }, [loadSettlementSources]);
 
     /* ---------------------------------------------------
-       EDIT MODE: fetch settlement by voucher number and
-       prefill the simple fields (salary, incentives,
+       EDIT / VIEW MODE: fetch settlement by voucher number
+       and prefill the simple fields (salary, incentives,
        payment mode/date, remarks, linked trip id).
     --------------------------------------------------- */
     useEffect(() => {
-        if (!isEditMode) return;
+        if (!isEditMode || !voucherNumber) return;
 
         const fetchSettlement = async () => {
             try {
@@ -1574,7 +1424,7 @@ const CreateEditDriverSettlement = () => {
 
                 const response = await unwrapThunk(
                     dispatch,
-                    getDriverSettlementByVoucherNumber(voucherNumber as string) as any
+                    getDriverSettlementByVoucherNumber(voucherNumber) as any
                 );
 
                 const record = response?.data || response;
@@ -1606,9 +1456,9 @@ const CreateEditDriverSettlement = () => {
     }, [isEditMode, voucherNumber, dispatch]);
 
     /* ---------------------------------------------------
-       EDIT MODE: once driver list is loaded, match the
-       settlement's driver (by driverCode, falling back to
-       driver name from lrDetails) and prefill driver fields.
+       EDIT / VIEW MODE: once driver list is loaded, match
+       the settlement's driver (by driverCode, falling back
+       to driver name from lrDetails) and prefill driver fields.
     --------------------------------------------------- */
     useEffect(() => {
         if (!isEditMode || !editRecord || !driverUsers.length || selectedDriverId) {
@@ -1717,14 +1567,6 @@ const CreateEditDriverSettlement = () => {
         [selectedOrderOption, lrEntries, selectedTripId]
     );
 
-
-    // console.log("selectedTripId", selectedTripId);
-    // console.log("selectedOrderOption", selectedOrderOption);
-    // console.log("selectedAllocation", selectedAllocation);
-    // console.log("selectedTransportOrder", selectedTransportOrder);
-    // console.log("selectedTripExpense", selectedTripExpense);
-    // console.log("selectedLREntry", selectedLREntry);
-
     const liveSettlementData = useMemo(
         () =>
             buildSettlementFromSelections({
@@ -1747,8 +1589,9 @@ const CreateEditDriverSettlement = () => {
         ]
     );
 
-    // In edit mode, trip/LR/expense/advance details come straight from the
-    // GET-by-voucher response instead of the live open-trip selections.
+    // In edit/view mode, trip/LR/expense/advance details come straight
+    // from the GET-by-voucher response instead of the live open-trip
+    // selections.
     const settlementData = useMemo(() => {
         if (isEditMode && editRecord) {
             const totalAllowedExpenses = Number(editRecord?.lessAllowedExpenses || 0);
@@ -1783,6 +1626,8 @@ const CreateEditDriverSettlement = () => {
     );
 
     const handleDriverSelect = async (driverId: string) => {
+        if (isView) return;
+
         const selected = driverUsers.find(
             (driver: any) => driver.driverId === driverId
         );
@@ -1864,6 +1709,8 @@ const CreateEditDriverSettlement = () => {
     };
 
     const handleOrderSelect = (orderNumber: string) => {
+        if (isView) return;
+
         setSelectedTripId(orderNumber || "");
     };
 
@@ -1878,6 +1725,8 @@ const CreateEditDriverSettlement = () => {
     };
 
     const updateField = (key: string, input: any) => {
+        if (isView) return;
+
         const value = getInputValue(input);
 
         if (key === "salary") {
@@ -1927,7 +1776,7 @@ const CreateEditDriverSettlement = () => {
         fields.map((field) => (
             <Fragment key={field.key}>
                 {renderField({
-                    field,
+                    field: { ...field, disabled: isView || field.disabled },
                     form: fieldForm,
                     handleInputChange,
                     handleSelectChange,
@@ -2014,12 +1863,9 @@ const CreateEditDriverSettlement = () => {
         );
     };
 
-
-
-
-
-
     const handleSave = async () => {
+        if (isView) return;
+
         if (!selectedDriverId) {
             toast.warn("Please select a driver");
             return;
@@ -2068,12 +1914,6 @@ const CreateEditDriverSettlement = () => {
                 selectedDriver?.driverId ||
                 selectedDriverId ||
                 "";
-
-            // const driverAccountName =
-            //     driverDetail?.driverName ||
-            //     selectedDriver?.driverName ||
-            //     tripDetails?.driverName ||
-            //     driverAccountCode;
 
             const customerAccountCode =
                 selectedAllocation?.transportOrder?.customerCode ||
@@ -2209,9 +2049,7 @@ const CreateEditDriverSettlement = () => {
                     "Driver Settlement Updated Successfully"
                 );
 
-                navigate(
-                    "/bookEz/transportation/driver-settlement"
-                );
+                goToList();
 
                 return;
             }
@@ -2224,17 +2062,17 @@ const CreateEditDriverSettlement = () => {
                 createDriverSettlement(payload) as any
             ).unwrap();
 
-            const voucherNumber =
+            const voucherNumberResult =
                 settlementResponse?.data?.settlementNumber ||
 
                 settlementResponse?.settlementNumber
 
 
-            if (voucherNumber) {
+            if (voucherNumberResult) {
                 await dispatch(
                     sendWhatsAppMessage({
                         moduleType: "driverSettlement",
-                        voucherNumber,
+                        voucherNumber: voucherNumberResult,
                     })
                 ).unwrap();
             }
@@ -2278,33 +2116,6 @@ const CreateEditDriverSettlement = () => {
                     );
                 }
 
-                // const payBody = expenseLineItems.map((row: any, index: number) => {
-                //     const account = getExpenseAccountForType(row.type);
-                //     const amountStr = String(row.amount);
-
-                //     return {
-                //         id: Date.now() + index,
-
-                //         accountCode: account.code,
-                //         accountName: account.name,
-
-                //         amount: amountStr,
-                //         netAmount: amountStr,
-
-                //         references: [
-                //             {
-                //                 referenceType: "NEW",
-                //                 newReference: "ADV",
-                //                 billDueDate: paymentDate,
-                //                 billAmount: amountStr,
-                //             },
-                //         ],
-
-                //         remarks: `${row.type} - Trip ${transportOrderNumber}`,
-                //     };
-                // });
-
-
                 const payBody = expenseLineItems.map(
                     (row: any, index: number) => {
                         const account = getExpenseAccount(
@@ -2346,8 +2157,6 @@ const CreateEditDriverSettlement = () => {
 
                     payAccountCode: CASH_IN_HAND_ACCOUNT_CODE,
                     payAccountName: CASH_IN_HAND_ACCOUNT_NAME,
-
-                    // payStatus: "close",
 
                     payRemark:
                         remarks ||
@@ -2417,8 +2226,6 @@ const CreateEditDriverSettlement = () => {
 
                     recAccountCode: "Act-4",
                     recAccountName: "Cash In Hand",
-
-                    // recStatus: "close",
 
                     recRemark:
                         remarks ||
@@ -2612,9 +2419,7 @@ const CreateEditDriverSettlement = () => {
                 );
             }
 
-            navigate(
-                "/bookEz/transportation/driver-settlement"
-            );
+            goToList();
         } catch (error: any) {
             console.error(
                 "Driver settlement accounting error:",
@@ -2642,7 +2447,7 @@ const CreateEditDriverSettlement = () => {
                 >
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={goBack}
                         className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
                         title="Go back"
                     >
@@ -2651,7 +2456,13 @@ const CreateEditDriverSettlement = () => {
                     <div>
 
                         <h1 className="truncate text-lg font-bold text-card-foreground">
-                            <span>{isEditMode ? "Edit Driver Settlement" : "Driver Settlement"}</span>
+                            <span>
+                                {isView
+                                    ? "View Driver Settlement"
+                                    : isEditMode
+                                        ? "Edit Driver Settlement"
+                                        : "Driver Settlement"}
+                            </span>
                         </h1>
 
                         <p className=" text-sm text-muted-foreground">
@@ -2936,7 +2747,6 @@ const CreateEditDriverSettlement = () => {
                                     <div className="grid grid-cols-12 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
                                         <div className="col-span-4">Date</div>
                                         <div className="col-span-4">Source</div>
-                                        {/* <div className="col-span-3">Mode</div> */}
                                         <div className="col-span-4 text-right">
                                             Amount
                                         </div>
@@ -2954,10 +2764,6 @@ const CreateEditDriverSettlement = () => {
                                             <div className="col-span-4">
                                                 {item.source}
                                             </div>
-
-                                            {/* <div className="col-span-3">
-                                                {item.paymentMode}
-                                            </div> */}
 
                                             <div className="col-span-4 text-right">
                                                 {formatMoney(item.amount)}
@@ -3034,22 +2840,24 @@ const CreateEditDriverSettlement = () => {
             <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 border-t border-border bg-card px-4 py-3">
                 <button
                     type="button"
-                    onClick={() => navigate(-1)}
+                    onClick={goBack}
                     disabled={loading}
                     className="rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
                 >
-                    Cancel
+                    {isView ? "Close" : "Cancel"}
                 </button>
 
-                <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-                >
-                    <Save size={16} />
-                    {loading ? "Loading..." : isEditMode ? "Update & Proceed" : "Save & Proceed"}
-                </button>
+                {!isView && (
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                    >
+                        <Save size={16} />
+                        {loading ? "Loading..." : isEditMode ? "Update & Proceed" : "Save & Proceed"}
+                    </button>
+                )}
             </div>
         </div>
     );

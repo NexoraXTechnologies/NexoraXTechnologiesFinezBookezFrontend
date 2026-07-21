@@ -21,6 +21,7 @@ import TripAllocationRegister from "./tripAllocationRegister";
 import TripExpenseRegister from "./TripExpenseRegister";
 import PodRegister from "./podRegister";
 import VehicleMaintenanceRegister from "./vehiclemaintenanceregister";
+import DriverSettlementRegister from "./driversettlementregister";
 
 const cards: any[] = [
   {
@@ -89,7 +90,7 @@ const cards: any[] = [
   {
     title: "Driver Settlement Register",
     description: "Manage driver payments, settlements, allowances, and trip-wise expenses.",
-    component: "",
+    component: DriverSettlementRegister,
     icon: <UserRoundCheck size={22} />,
     permissionKey: "registers.driverSettlementRegister"
   },
