@@ -204,7 +204,7 @@ export const unwrapThunk = async (dispatch: any, action: any) => {
 
 export const truncate = (text: string = "", maxLength = 18) =>
     text.length > maxLength
-        ? `${text.slice(0, maxLength)}...`
+        ? `${text.slice(0, maxLength)}..`
         : text;
 
 

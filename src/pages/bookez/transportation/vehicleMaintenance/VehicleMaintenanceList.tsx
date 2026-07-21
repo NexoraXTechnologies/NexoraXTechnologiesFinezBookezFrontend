@@ -16,6 +16,7 @@ import {
 } from "../../../../components/buttons";
 import { deleteVehicleMaintenance, getAllVehicleMaintenanceEntry, getVehicleMaintenanceByVoucherNumber } from "../../../../redux/slices/professionalSlice/transportation/vehicleMaintenanceEntrySlice";
 import { getVehicleMaintenanceVoucher } from "./vehicleMaintenanceInitialState";
+import { money } from "../../../../utils/helperFunctions";
 
 
 /* ===================================================
@@ -64,14 +65,14 @@ const formatDateTime = (value: any) => {
     });
 };
 
-const formatIndianNumber = (value: any) => {
-    const number = Number(value || 0);
+// const formatIndianNumber = (value: any) => {
+//     const number = Number(value || 0);
 
-    return number.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-};
+//     return number.toLocaleString("en-IN", {
+//         minimumFractionDigits: 2,
+//         maximumFractionDigits: 2,
+//     });
+// };
 
 const formatStatus = (value: any) =>
     String(value || "draft")
@@ -443,7 +444,7 @@ const VehicleMaintenanceList = () => {
             key: "lastMaintenance.amount",
             title: "Amount",
             type: "amount",
-            render: (row: any) => `₹${formatIndianNumber(getAmount(row))}`,
+            render: (row: any) => `${money(getAmount(row))}`,
         },
         {
             key: "status",

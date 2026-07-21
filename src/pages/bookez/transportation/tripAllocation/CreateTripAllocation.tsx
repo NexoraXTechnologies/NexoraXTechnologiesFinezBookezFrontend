@@ -542,6 +542,7 @@ const CreateTripAllocation = () => {
     const [locationFilter, setLocationFilter] = useState("");
     const [vehicleSearch, setVehicleSearch] = useState("");
     const [showDocuments, setShowDocuments] = useState(false);
+    const [showAssignConfirm, setShowAssignConfirm] = useState(false);
 
     const loading =
         pageLoading ||
@@ -1716,7 +1717,7 @@ const CreateTripAllocation = () => {
         return payload;
     };
 
- 
+
     const handleSave = async () => {
         if (!validate()) return;
 
@@ -1845,10 +1846,29 @@ const CreateTripAllocation = () => {
                     </div>
                 </div>
 
-                <button
+                {/* <button
                     type="button"
                     disabled={loading}
                     onClick={handleSave}
+                    className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                    {loading ? "Saving..." : isEdit ? "Update Allocation" : "Allocate Trip"}
+                </button> */}
+
+                <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => {
+                        if (isEdit) {
+                            // Edit flow is unchanged — saves directly, no confirmation popup
+                            handleSave();
+                            return;
+                        }
+
+                        // Create flow — validate first, then show the confirmation popup
+                        if (!validate()) return;
+                        setShowAssignConfirm(true);
+                    }}
                     className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                     {loading ? "Saving..." : isEdit ? "Update Allocation" : "Allocate Trip"}
@@ -2360,6 +2380,68 @@ const CreateTripAllocation = () => {
                     </div>
                 </div>
             </main>
+
+            {showAssignConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-sm rounded-xl bg-card p-6 text-center shadow-xl">
+                        <h2 className="text-lg font-bold text-card-foreground">
+                            Assign Trip to Team Member
+                        </h2>
+
+                        <p className="mt-3 text-sm text-muted-foreground">
+                            Send trip assignment notification to{" "}
+                            <span className="font-semibold text-card-foreground">
+                                {form.driverAllocation?.driverName ||
+                                    form.driverAllocation?.mobileNumber ||
+                                    "the driver"}
+                            </span>
+                            ?
+                        </p>
+
+                        <div className="mt-4 space-y-1 text-sm text-muted-foreground">
+                            <p>
+                                Trip:{" "}
+                                <span className="font-semibold text-card-foreground">
+                                    {form.transportOrder?.transportOrderNumber || "-"}
+                                </span>
+                            </p>
+                            <p>
+                                Vehicle:{" "}
+                                <span className="font-semibold text-card-foreground">
+                                    {form.vehicleSelection?.vehicleNumber || "-"}
+                                </span>
+                            </p>
+                        </div>
+
+                        <p className="mt-4 text-sm text-muted-foreground">
+                            They will get a popup to Accept and start expense entry.
+                        </p>
+
+                        <div className="mt-6 grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => setShowAssignConfirm(false)}
+                                className="h-11 rounded-md border border-border bg-background text-sm font-bold text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={async () => {
+                                    setShowAssignConfirm(false);
+                                    await handleSave();
+                                }}
+                                className="h-11 rounded-md bg-primary text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                Assign & Notify
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

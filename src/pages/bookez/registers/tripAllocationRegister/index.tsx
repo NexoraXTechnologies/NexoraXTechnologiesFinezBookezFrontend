@@ -5,7 +5,6 @@ import { Eye, LoaderCircle } from "lucide-react";
 import RegisterFilterCard from "../RegisterFilterCard";
 import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
-import ReadMoreText from "../../../../components/common/ReadMoreText";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
 import CreateEditTripAllocationRegistration from "./CreateEditTripAllocation";
 
@@ -13,7 +12,7 @@ import {
     getTripAllocationByVoucherNumber,
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 import { getTripAllocationRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/tripAllocationRegister";
-import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
+import { formatDateForInput, money, toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc, truncate } from "../../../../utils/helperFunctions";
 
 
 
@@ -35,36 +34,36 @@ const getTodayDate = (): string => {
     return localDate.toISOString().split("T")[0];
 };
 
-const toNumber = (value: any): number => {
-    if (value === null || value === undefined || value === "") return 0;
+// const toNumber = (value: any): number => {
+//     if (value === null || value === undefined || value === "") return 0;
 
-    const parsed = Number(
-        String(value).replace(/,/g, "").replace(/[₹\s]/g, "").trim(),
-    );
+//     const parsed = Number(
+//         String(value).replace(/,/g, "").replace(/[₹\s]/g, "").trim(),
+//     );
 
-    return Number.isFinite(parsed) ? parsed : 0;
-};
+//     return Number.isFinite(parsed) ? parsed : 0;
+// };
 
-const formatIndianNumber = (value: any): string =>
-    toNumber(value).toLocaleString("en-IN", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    });
+// const formatIndianNumber = (value: any): string =>
+//     toNumber(value).toLocaleString("en-IN", {
+//         minimumFractionDigits: 0,
+//         maximumFractionDigits: 2,
+//     });
 
-const formatDateTime = (value: any): string => {
-    if (!value) return "-";
+// const formatDateTime = (value: any): string => {
+//     if (!value) return "-";
 
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
+//     const date = new Date(value);
+//     if (Number.isNaN(date.getTime())) return "-";
 
-    return date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
+//     return date.toLocaleString("en-IN", {
+//         day: "2-digit",
+//         month: "2-digit",
+//         year: "numeric",
+//         hour: "2-digit",
+//         minute: "2-digit",
+//     });
+// };
 
 const getAllocationVoucher = (row: any): string =>
     row?.voucherNumber ||
@@ -114,7 +113,7 @@ const getStatusClassName = (status: string): string => {
         return "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400";
     }
 
-    return "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400";
+    return "bg-amber-100 text-amber-700 dark:bg-amber-300/15 dark:text-amber-400";
 };
 
 const getAllocationFromResponse = (
@@ -184,27 +183,23 @@ const downloadBlobFile = (blob: Blob, fileName: string) => {
 const mainColumns = [
     {
         key: "tripAllocationVoucherNumber",
-        title: "Allocation Number",
+        title: "Allocation No.",
         render: (row: any) => (
-            <span className="font-semibold text-card-foreground">
+            <span className="font-medium text-card-foreground">
                 {getAllocationVoucher(row) || "-"}
             </span>
         ),
     },
     {
         key: "allocationDate",
-        title: "Allocation Date",
-        render: (row: any) => (
-            <span className="whitespace-nowrap font-medium text-card-foreground">
-                {formatDateTime(row?.allocationDate || row?.createdAt)}
-            </span>
-        ),
+        title: "Date",
+        render: (row: any) => formatDateForInput(row?.allocationDate || row?.createdAt),
     },
     {
         key: "transportOrderNumber",
         title: "Transport Order",
         render: (row: any) => (
-            <span className="font-semibold text-card-foreground">
+            <span className="font-medium text-card-foreground">
                 {row?.transportOrder?.transportOrderNumber ||
                     row?.transportOrderNumber ||
                     "-"}
@@ -216,71 +211,50 @@ const mainColumns = [
         title: "Customer",
         render: (row: any) => (
             <div>
-                <div className="font-semibold text-card-foreground">
+                <div className="font-medium text-card-foreground">
                     {row?.transportOrder?.customerName || row?.customerName || "-"}
                 </div>
-                {(row?.transportOrder?.customerCode || row?.customerCode) && (
-                    <div className="text-xs text-muted-foreground">
-                        {row?.transportOrder?.customerCode || row?.customerCode}
-                    </div>
-                )}
+
+                <div className="text-xs text-muted-foreground">
+                    {row?.transportOrder?.customerCode || row?.customerCode || "-"}
+                </div>
             </div>
         ),
     },
     {
-        key: "source",
-        title: "Source",
-        render: (row: any) => (
-            <ReadMoreText
-                text={row?.transportOrder?.source || row?.source || "-"}
-                charLimit={22}
-            />
-        ),
-    },
-    {
-        key: "destination",
-        title: "Destination",
-        render: (row: any) => (
-            <ReadMoreText
-                text={row?.transportOrder?.destination || row?.destination || "-"}
-                charLimit={22}
-            />
-        ),
+        key: "route",
+        title: "Route",
+        render: (row: any) => {
+            const source = row?.transportOrder?.source || row?.source || "-";
+            const destination =
+                row?.transportOrder?.destination || row?.destination || "-";
+
+            return `${truncate(source, 18)} → ${truncate(destination, 18)}`;
+        },
     },
     {
         key: "vehicleNumber",
         title: "Vehicle",
         render: (row: any) => (
             <div>
-                <div className="font-semibold text-card-foreground">
+                <div className="font-medium text-card-foreground">
                     {row?.vehicleSelection?.vehicleNumber || "-"}
                 </div>
+
                 <div className="text-xs text-muted-foreground">
-                    {row?.vehicleSelection?.vehicleType || "-"}
+                  {row?.driverAllocation?.driverName || "-"}
                 </div>
             </div>
         ),
     },
-    {
-        key: "driverName",
-        title: "Driver",
-        render: (row: any) => (
-            <div>
-                <div className="font-semibold text-card-foreground">
-                    {row?.driverAllocation?.driverName || "-"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                    {row?.driverAllocation?.mobileNumber || "-"}
-                </div>
-            </div>
-        ),
-    },
+  
     {
         key: "expectedFreight",
         title: "Expected Freight",
+         type: "amount",
         render: (row: any) => (
-            <span className="whitespace-nowrap font-bold text-foreground">
-                ₹ {formatIndianNumber(row?.transportOrder?.expectedFreight || 0)}
+            <span className="whitespace-nowrap font-medium text-card-foreground">
+                {money(row?.transportOrder?.expectedFreight || 0)}
             </span>
         ),
     },
@@ -289,9 +263,10 @@ const mainColumns = [
         title: "Status",
         render: (row: any) => {
             const label = getStatusLabel(row);
+
             return (
                 <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusClassName(
+                    className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium capitalize ${getStatusClassName(
                         label,
                     )}`}
                 >

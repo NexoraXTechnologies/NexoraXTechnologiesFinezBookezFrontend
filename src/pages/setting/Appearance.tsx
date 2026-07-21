@@ -111,7 +111,7 @@ const Appearance = () => {
     const { mode, setMode, themeName, setThemeName } = useAppearance();
     console.log({ mode })
     return (
-        <div className="min-h-full bg-background p-4 text-foreground">
+        <div className="min-h-screen bg-background p-4 text-foreground">
             <div className="mx-auto">
                 {/* Header */}
                 <div className="mb-6 rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm">

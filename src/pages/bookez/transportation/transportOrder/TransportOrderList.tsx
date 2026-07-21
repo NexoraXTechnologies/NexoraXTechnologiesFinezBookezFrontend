@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit, Eye, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { formatDateForList, money, truncate } from "../../../../utils/helperFunctions";
+import { formatDateTime, money, truncate } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
@@ -352,7 +352,7 @@ const TransportOrderList = () => {
 			key: "orderDate",
 			title: "Date",
 			render: (row: any) =>
-				row?.orderDate ? formatDateForList(row.orderDate) : "-",
+				row?.orderDate ? formatDateTime(row.orderDate) : "-",
 		},
 		{
 			key: "customer",
@@ -412,7 +412,7 @@ const TransportOrderList = () => {
 			render: (row: any) => {
 				const value = row?.freightDetails?.expectedFreight;
 
-				return value ? money(value) : "-";
+				return value ? money(value) :money("0");
 			},
 			type: "amount",
 		},

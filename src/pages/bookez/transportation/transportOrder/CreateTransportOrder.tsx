@@ -806,8 +806,39 @@ const CreateTransportOrder = ({
 		]
 	);
 
+	const getCapacityValue = (capacity: string) => {
+		if (!capacity) return 0;
+
+		const match = String(capacity).match(/[\d.]+/);
+
+		return match ? Number(match[0]) : 0;
+	};
+
+	// const next = () => {
+	// 	if (!validateCurrentStep(step, form)) return;
+
+	// 	setStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+	// };
+
 	const next = () => {
+		// Vehicle Step
+		if (step === 4) {
+			const loadWeight = Number(form.loadDetails?.weight || 0);
+
+			const vehicleCapacity = getCapacityValue(
+				form.vehicleRequirement?.vehicleCapacity
+			);
+
+			if (vehicleCapacity < loadWeight) {
+				toast.error(
+					"Vehicle capacity must be greater than or equal to load weight."
+				);
+				return;
+			}
+		}
+
 		if (!validateCurrentStep(step, form)) return;
+
 		setStep((prev) => Math.min(prev + 1, STEPS.length - 1));
 	};
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { formatDateForList } from "../../../../utils/helperFunctions";
+import { formatDateForList, formatDateTime } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import SearchInput from "../../../../components/searchInput";
@@ -249,7 +249,7 @@ const TransportContractList = () => {
             key: "contractDate",
             title: "Date",
             render: (row: any) =>
-                row?.contractDate ? formatDateForList(row.contractDate) : "-",
+                row?.contractDate ? formatDateTime(row.contractDate) : "-",
         },
         {
             key: "customer",

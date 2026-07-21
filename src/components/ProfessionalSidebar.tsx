@@ -235,6 +235,12 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/system-configuration",
 					icon: <MonitorCog size={19} />,
 				},
+				// ⭐ UPDATED: Added Master Configuration sidebar option
+				{
+					name: "Master Configuration",
+					path: "/master-configuration",
+					icon: <Sliders size={19} />,
+				},
 				...(localUser?.accountType == "SUPER_ADMIN" ? [{
 					name: "User Explorer",
 					path: "/user-explorer",
@@ -282,10 +288,20 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		}
 	};
 
+	// const isItemActive = (item: any, pathname: string) => {
+	// 	if (item.path && pathname === item.path) return true;
+	// 	if (item.matchPaths?.includes(pathname)) return true;
+	// 	return false;
+	// };
+
 	const isItemActive = (item: any, pathname: string) => {
-		if (item.path && pathname === item.path) return true;
-		if (item.matchPaths?.includes(pathname)) return true;
-		return false;
+		if (!item.path) return false;
+
+		// Dashboard should only match exactly
+		if (item.path === "/") {
+			return pathname === "/";
+		}
+		return pathname.startsWith(item.path);
 	};
 
 	const hasActiveChild = (item: any, pathname: string): boolean => {

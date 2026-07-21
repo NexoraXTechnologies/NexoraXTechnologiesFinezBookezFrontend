@@ -98,6 +98,17 @@ import areaDashboardReducer from "../redux/slices/professionalSlice/dashboard/re
 import systemConfigurationReducer from "../redux/slices/systemConf";
 import importBankStatementReducer from "../redux/slices/professionalSlice/openingBalancesStocks/bankImpStatement"
 
+
+// masterConfiguration
+import masterConfigurationReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/masterConfigurationSlice"
+// ⭐ NEW: Master Schema
+import masterSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/masterSchemaSlice";
+// ⭐ NEW: Standard master schema reducers
+import accountMasterSchema from "../redux/slices/professionalSlice/masterConfigurationSlice/accountmasterSchemaSlice"
+import productMasterSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
+import unitMeasurementSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
+
+
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -198,6 +209,16 @@ export const store = configureStore({
     registerDashboard: areaDashboardReducer,
     systemConfiguration: systemConfigurationReducer,
     importBankStatement: importBankStatementReducer,
+
+    // master configuration
+
+   masterConfiguration: masterConfigurationReducer,
+   // ⭐ NEW: Master Schema reducer
+masterSchema: masterSchemaReducer,
+// ⭐ NEW: Standard master schema reducers
+accountMasterSchema: accountMasterSchema,
+productMasterSchema: productMasterSchemaReducer,
+unitMeasurementSchema: unitMeasurementSchemaReducer,
   },
 });
 

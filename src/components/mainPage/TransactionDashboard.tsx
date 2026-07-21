@@ -125,8 +125,8 @@ const TransactionDashboard = ({
 
   return (
     <>
-      <main className="h-full bg-background p-4 text-foreground sm:p-6">
-        <section className="mb-6 rounded-md border border-border bg-card p-5 shadow-sm">
+      <main className="h-full bg-background p-4 text-foreground sm:p-4">
+        <section className="mb-4 rounded-md border border-border bg-card p-5 shadow-sm">
           <header className="flex items-center gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
               {icon}

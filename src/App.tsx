@@ -61,6 +61,7 @@ import CreateTransportOrder from './pages/bookez/transportation/transportOrder/C
 import TripAllocationList from './pages/bookez/transportation/tripAllocation/TripAllocationList';
 import CreateTripAllocation from './pages/bookez/transportation/tripAllocation/CreateTripAllocation';
 import SystemConfiguration from './pages/setting/systemConfiguration';
+import MasterConfiguration from './pages/setting/masterConfiguration/MasterConfiguration';
 import UserExplorer from './pages/setting/userExplorer';
 import TripExpenseList from './pages/bookez/transportation/tripExpense/TripExpenseList';
 import CreateEditTripExpence from './pages/bookez/transportation/tripExpense/CreateEditTripExpence';
@@ -209,6 +210,7 @@ function App() {
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />
           <Route path="system-configuration" element={<SystemConfiguration />} />
+          <Route path="master-configuration" element={<MasterConfiguration />}  />
           <Route path="/bookEz/pos-posting" element={<PosPosting />} />
           <Route path="user-explorer" element={<UserExplorer />} />
           {/* incometax */}
