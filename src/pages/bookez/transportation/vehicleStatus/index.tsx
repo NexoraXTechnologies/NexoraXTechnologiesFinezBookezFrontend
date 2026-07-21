@@ -658,7 +658,7 @@ const VehicleStatus = () => {
             animate="show"
             className="min-h-screen bg-background p-3"
         >
-            <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3">
+            <div className="mx-auto flex w-full  flex-col gap-3">
                 {/* ACTION BAR */}
                 <motion.div
                     variants={sectionVariants}
