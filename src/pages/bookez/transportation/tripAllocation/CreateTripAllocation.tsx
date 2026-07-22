@@ -502,20 +502,53 @@ const pickBestVehicle = (args: any) => {
     )[0];
 };
 
-const CreateTripAllocation = () => {
+/* ===================================================
+   PROPS
+=================================================== */
+
+type CreateTripAllocationProps = {
+    embedded?: boolean;
+    mode?: "add" | "edit" | "view";
+    voucherNumber?: string;
+    allocationData?: any;
+    onClose?: () => void;
+};
+
+const CreateTripAllocation = ({
+    embedded = false,
+    mode: modeProp,
+    voucherNumber: voucherNumberProp,
+    allocationData: allocationDataProp,
+    onClose,
+}: CreateTripAllocationProps = {}) => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
 
+    // Props take priority (embedded/modal usage); router param/state
+    // remain as fallback so the routed (non-embedded) usage still works.
     const voucherNumber =
+        voucherNumberProp ||
         params?.voucherNumber ||
         params?.tripAllocationNumber ||
         location.state?.voucherNumber ||
         location.state?.tripAllocationNumber ||
         "";
 
-    const isEdit = location.state?.mode === "edit" || Boolean(voucherNumber);
+    const passedAllocationData =
+        allocationDataProp !== undefined
+            ? allocationDataProp
+            : location.state?.allocationData;
+
+    const mode = modeProp || location.state?.mode;
+
+    const isView = mode === "view";
+
+    const isEdit =
+        mode === "edit" ||
+        mode === "view" ||
+        (!mode && Boolean(voucherNumber));
 
     const { transportOrders = [] } = useSelector(
         (state: any) => state.transportOrder
@@ -542,7 +575,6 @@ const CreateTripAllocation = () => {
     const [locationFilter, setLocationFilter] = useState("");
     const [vehicleSearch, setVehicleSearch] = useState("");
     const [showDocuments, setShowDocuments] = useState(false);
-    const [showAssignConfirm, setShowAssignConfirm] = useState(false);
 
     const loading =
         pageLoading ||
@@ -554,11 +586,26 @@ const CreateTripAllocation = () => {
 
     const pageTitle =
         location.state?.title ||
-        (isEdit ? "Edit Trip Allocation" : "Create Trip Allocation");
+        (isView
+            ? "View Trip Allocation"
+            : isEdit
+                ? "Edit Trip Allocation"
+                : "Create Trip Allocation");
 
     const pageDescription =
         location.state?.description ||
         "Assign vehicle, driver, route, and trip details for a transport order.";
+
+    // Single place that decides how to "leave" the screen — closes the
+    // modal when embedded, otherwise falls back to router history.
+    const goBack = () => {
+        if (embedded && onClose) {
+            onClose();
+            return;
+        }
+
+        navigate(-1);
+    };
 
     const driverUsers = useMemo(() => {
         const list = Array.isArray(users)
@@ -822,6 +869,8 @@ const CreateTripAllocation = () => {
     ).length;
 
     const update = (section: string, key: string, value: any) => {
+        if (isView) return;
+
         setForm((prev: any) => ({
             ...prev,
             [section]: { ...prev[section], [key]: value },
@@ -829,10 +878,14 @@ const CreateTripAllocation = () => {
     };
 
     const updateRoot = (key: string, value: any) => {
+        if (isView) return;
+
         setForm((prev: any) => ({ ...prev, [key]: value }));
     };
 
     const updateField = (key: string, value: any) => {
+        if (isView) return;
+
         if (key.startsWith("tripPlan.")) {
             update("tripPlan", key.replace("tripPlan.", ""), value);
             return;
@@ -973,7 +1026,7 @@ const CreateTripAllocation = () => {
     const renderFields = (fields: any[]) =>
         fields.map((field: any) =>
             renderField({
-                field,
+                field: { ...field, disabled: isView || field.disabled },
                 form: fieldForm,
                 handleInputChange,
                 handleSelectChange,
@@ -1035,27 +1088,35 @@ const CreateTripAllocation = () => {
             try {
                 setPageLoading(true);
 
-                const response = await dispatch(
-                    getTripAllocationByVoucherNumber(voucherNumber)
-                ).unwrap();
+                // If the caller already handed us the allocation record
+                // (embedded/modal usage from the register), skip the fetch
+                // and prefill directly.
+                const data = passedAllocationData
+                    ? passedAllocationData
+                    : await (async () => {
+                        const response = await dispatch(
+                            getTripAllocationByVoucherNumber(voucherNumber)
+                        ).unwrap();
 
-                const data =
-                    response?.data?.record ||
-                    response?.data ||
-                    response?.record ||
-                    response;
+                        return (
+                            response?.data?.record ||
+                            response?.data ||
+                            response?.record ||
+                            response
+                        );
+                    })();
 
                 if (!data) {
                     toast.warn("Trip allocation not found");
-                    navigate(-1);
+                    goBack();
                     return;
                 }
 
                 const merged = mergeTripAllocationForm(data);
 
-                if (isAllocationClosed(merged)) {
+                if (!isView && isAllocationClosed(merged)) {
                     toast.warn("Completed trip allocation cannot be edited");
-                    navigate(-1);
+                    goBack();
                     return;
                 }
 
@@ -1106,7 +1167,7 @@ const CreateTripAllocation = () => {
         };
 
         loadAllocation();
-    }, [dispatch, isEdit, voucherNumber, navigate]);
+    }, [dispatch, isEdit, isView, voucherNumber, passedAllocationData]);
 
 
     const applyVehicle = async (
@@ -1116,6 +1177,7 @@ const CreateTripAllocation = () => {
             showDriverMessage?: boolean;
         } = {}
     ) => {
+        if (isView) return;
         if (!vehicle) return;
 
         const {
@@ -1153,6 +1215,8 @@ const CreateTripAllocation = () => {
     };
 
     const handleRepickBestVehicle = () => {
+        if (isView) return;
+
         const picked = pickBestVehicle({
             vehicles: normalizedVehicles,
             transportOrder: form.transportOrder,
@@ -1176,6 +1240,8 @@ const CreateTripAllocation = () => {
     };
 
     const handleTransportOrderSelect = async (selectedVoucher: string) => {
+        if (isView) return;
+
         if (!selectedVoucher) {
             setForm((prev: any) => ({
                 ...prev,
@@ -1275,6 +1341,8 @@ const CreateTripAllocation = () => {
     };
 
     const handleDriverSelect = async (driverId: string) => {
+        if (isView) return;
+
         const selected = driverUsers.find(
             (driver: any) => driver.driverId === driverId
         );
@@ -1374,6 +1442,8 @@ const CreateTripAllocation = () => {
             showMessage?: boolean;
         } = {}
     ) => {
+        if (isView) return;
+
         const {
             clearWhenMissing = false,
             showMessage = false,
@@ -1591,6 +1661,8 @@ const CreateTripAllocation = () => {
     };
 
     const handleHelperSelect = (helperId: string) => {
+        if (isView) return;
+
         const selected = driverUsers.find(
             (driver: any) => driver.driverId === helperId
         );
@@ -1719,6 +1791,11 @@ const CreateTripAllocation = () => {
 
 
     const handleSave = async () => {
+        if (isView) {
+            goBack();
+            return;
+        }
+
         if (!validate()) return;
 
         try {
@@ -1756,7 +1833,7 @@ const CreateTripAllocation = () => {
                 }
 
                 toast.success("Trip allocation updated");
-                navigate(-1);
+                goBack();
                 return;
             }
 
@@ -1813,7 +1890,7 @@ const CreateTripAllocation = () => {
             }
 
             toast.success("Trip allocated successfully. Request sent to driver.");
-            navigate(-1);
+            goBack();
         } catch (error: any) {
             toast.error(error?.message || "Trip allocation failed");
         } finally {
@@ -1828,7 +1905,7 @@ const CreateTripAllocation = () => {
                 <div className="flex items-center">
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={goBack}
                         className="me-3 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
                         title="Go back"
                     >
@@ -1846,32 +1923,19 @@ const CreateTripAllocation = () => {
                     </div>
                 </div>
 
-                {/* <button
-                    type="button"
-                    disabled={loading}
-                    onClick={handleSave}
-                    className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                    {loading ? "Saving..." : isEdit ? "Update Allocation" : "Allocate Trip"}
-                </button> */}
-
                 <button
                     type="button"
                     disabled={loading}
-                    onClick={() => {
-                        if (isEdit) {
-                            // Edit flow is unchanged — saves directly, no confirmation popup
-                            handleSave();
-                            return;
-                        }
-
-                        // Create flow — validate first, then show the confirmation popup
-                        if (!validate()) return;
-                        setShowAssignConfirm(true);
-                    }}
+                    onClick={isView ? goBack : handleSave}
                     className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                    {loading ? "Saving..." : isEdit ? "Update Allocation" : "Allocate Trip"}
+                    {loading
+                        ? "Saving..."
+                        : isView
+                            ? "Close"
+                            : isEdit
+                                ? "Update Allocation"
+                                : "Allocate Trip"}
                 </button>
             </header>
 
@@ -1891,6 +1955,7 @@ const CreateTripAllocation = () => {
                                     value={selectedOrderOption}
                                     options={transportOrderOptions}
                                     placeholder="Select Transport Order"
+                                    isDisabled={isView}
                                     isSearchable
                                     onChange={(option: any) =>
                                         handleTransportOrderSelect(option?.value || "")
@@ -1950,6 +2015,7 @@ const CreateTripAllocation = () => {
 
                                         <select
                                             value={vehicleTypeFilter}
+                                            disabled={isView}
                                             onChange={(e) => setVehicleTypeFilter(e.target.value)}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
@@ -1968,6 +2034,7 @@ const CreateTripAllocation = () => {
 
                                         <select
                                             value={capacityFilter}
+                                            disabled={isView}
                                             onChange={(e) => setCapacityFilter(e.target.value)}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
@@ -1986,6 +2053,7 @@ const CreateTripAllocation = () => {
 
                                         <select
                                             value={locationFilter}
+                                            disabled={isView}
                                             onChange={(e) => setLocationFilter(e.target.value)}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
@@ -2004,6 +2072,7 @@ const CreateTripAllocation = () => {
 
                                         <select
                                             value={vehicleOwnershipFilter}
+                                            disabled={isView}
                                             onChange={(e) => setVehicleOwnershipFilter(e.target.value)}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
@@ -2025,7 +2094,7 @@ const CreateTripAllocation = () => {
                         </FormSectionCard>
                     </div>
 
-                    {transportOrderSelected && (
+                    {transportOrderSelected && !isView && (
                         <div className="rounded-md border border-border bg-card p-4">
                             {vehiclesLoader ? (
                                 <div className="rounded-md border border-border bg-background p-6 text-center text-sm text-muted-foreground">
@@ -2216,7 +2285,7 @@ const CreateTripAllocation = () => {
                                 placeholder={
                                     driversLoader ? "Loading drivers..." : "Select Driver"
                                 }
-                                isDisabled={driversLoader}
+                                isDisabled={driversLoader || isView}
                                 isSearchable
                                 onChange={(option: any) =>
                                     handleDriverSelect(option?.value || "")
@@ -2304,7 +2373,7 @@ const CreateTripAllocation = () => {
                                                     ? "Loading team members..."
                                                     : "Helper / Cleaner"
                                             }
-                                            isDisabled={driversLoader}
+                                            isDisabled={driversLoader || isView}
                                             isSearchable
                                             isClearable
                                             onChange={(option: any) =>
@@ -2358,6 +2427,7 @@ const CreateTripAllocation = () => {
                                         value={form.remarks || ""}
                                         placeholder="Enter remarks (optional)"
                                         maxLength={REMARKS_MAX}
+                                        disabled={isView}
                                         onChange={(e: any) =>
                                             updateRoot(
                                                 "remarks",
@@ -2380,68 +2450,6 @@ const CreateTripAllocation = () => {
                     </div>
                 </div>
             </main>
-
-            {showAssignConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-sm rounded-xl bg-card p-6 text-center shadow-xl">
-                        <h2 className="text-lg font-bold text-card-foreground">
-                            Assign Trip to Team Member
-                        </h2>
-
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            Send trip assignment notification to{" "}
-                            <span className="font-semibold text-card-foreground">
-                                {form.driverAllocation?.driverName ||
-                                    form.driverAllocation?.mobileNumber ||
-                                    "the driver"}
-                            </span>
-                            ?
-                        </p>
-
-                        <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                            <p>
-                                Trip:{" "}
-                                <span className="font-semibold text-card-foreground">
-                                    {form.transportOrder?.transportOrderNumber || "-"}
-                                </span>
-                            </p>
-                            <p>
-                                Vehicle:{" "}
-                                <span className="font-semibold text-card-foreground">
-                                    {form.vehicleSelection?.vehicleNumber || "-"}
-                                </span>
-                            </p>
-                        </div>
-
-                        <p className="mt-4 text-sm text-muted-foreground">
-                            They will get a popup to Accept and start expense entry.
-                        </p>
-
-                        <div className="mt-6 grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                disabled={loading}
-                                onClick={() => setShowAssignConfirm(false)}
-                                className="h-11 rounded-md border border-border bg-background text-sm font-bold text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="button"
-                                disabled={loading}
-                                onClick={async () => {
-                                    setShowAssignConfirm(false);
-                                    await handleSave();
-                                }}
-                                className="h-11 rounded-md bg-primary text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                                Assign & Notify
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div >
     );
 };

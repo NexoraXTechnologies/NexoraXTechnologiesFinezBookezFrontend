@@ -13,6 +13,7 @@ import {
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 import { getTripAllocationRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/tripAllocationRegister";
 import { formatDateForInput, money, toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc, truncate } from "../../../../utils/helperFunctions";
+import CreateTripAllocation from "../../transportation/tripAllocation/CreateTripAllocation";
 
 
 
@@ -624,7 +625,7 @@ const TripAllocationRegister = () => {
                         {viewError}
                     </div>
                 ) : viewAllocation ? (
-                    <CreateEditTripAllocationRegistration
+                            <CreateTripAllocation
                         embedded
                         mode="view"
                         voucherNumber={viewVoucherNumber}
