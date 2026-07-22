@@ -80,6 +80,7 @@ import TripAllocationRegister from './pages/bookez/registers/tripAllocationRegis
 import CreateEditTripAllocationRegistration from './pages/bookez/registers/tripAllocationRegister/CreateEditTripAllocation';
 import TripExpenseRegister from './pages/bookez/registers/TripExpenseRegister';
 import CreateEditTripExpense from './pages/bookez/registers/TripExpenseRegister/CreateEditTripExpense';
+import TransactionConfiguration from './pages/setting/transactionConfiguration';
 
 function App() {
   useAppearance();
@@ -208,9 +209,10 @@ function App() {
           <Route path="/bookEz/transportation/live-trip-tracking" element={<LiveTripTracking />} />
 
           {/* configuration */}
-          <Route path="configuration" element={<Configuration />} />
-          <Route path="system-configuration" element={<SystemConfiguration />} />
-          <Route path="master-configuration" element={<MasterConfiguration />}  />
+          <Route path="/configuration" element={<Configuration />} />
+          <Route path="/system-configuration" element={<SystemConfiguration />} />
+          <Route path="/master-configuration" element={<MasterConfiguration />}  />
+          <Route path="/transaction-configuration" element={<TransactionConfiguration />}  />
           <Route path="/bookEz/pos-posting" element={<PosPosting />} />
           <Route path="user-explorer" element={<UserExplorer />} />
           {/* incometax */}

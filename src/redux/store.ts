@@ -53,6 +53,7 @@ import grnReducer from "./slices/professionalSlice//purchaseWorkflow/grnSlice";
 import purchaseReturnReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 import purchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import getAllTransactionSchema from "./slices/professionalSlice/transactionSchema";
+import transactionsSchemaReducer from "./slices/professionalSlice/transactionSchema/index";
 
 // ledger report
 import accountReceivableReducer from "./slices/professionalSlice/ledgerReports/accountsReceivableSlice"
@@ -107,7 +108,7 @@ import masterSchemaReducer from "../redux/slices/professionalSlice/masterConfigu
 import accountMasterSchema from "../redux/slices/professionalSlice/masterConfigurationSlice/accountmasterSchemaSlice"
 import productMasterSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
 import unitMeasurementSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
-
+import transactionModuleReducer from "./slices/professionalSlice/transactionConfiguration/transactionModuleSlice"
 
 export const store = configureStore({
   reducer: {
@@ -165,6 +166,7 @@ export const store = configureStore({
     purchaseInvoice: purchaseInvoiceReducer,
     payment: paymentReducer,
     getAllTransactionSchema,
+    transactionsSchema:transactionsSchemaReducer,
 
     // ledger report 
     accountPayable: accountPayableReducer,
@@ -182,7 +184,7 @@ export const store = configureStore({
     whereIsMyDriver: whereIsMyDriverReducer,
     transportContract: transportContractReducer,
     driverSettlement: driverSettlementReducer,
-    transportRoute:transportRouteReducer,
+    transportRoute: transportRouteReducer,
 
     // transport register
     transportOrderRegister: transportOrderRegisterReducer,
@@ -191,7 +193,7 @@ export const store = configureStore({
     podRegister: podRegisterReducer,
     driverSettlementRegister: driverSettlementRegisterReducer,
     vehicleMaintenanceRegister: vehicleMaintenanceRegisterReducer,
-    whatsApp:whatsAppReducer,
+    whatsApp: whatsAppReducer,
 
     // bookEz register
     salesRegister: salesRegisterReducer,
@@ -212,13 +214,14 @@ export const store = configureStore({
 
     // master configuration
 
-   masterConfiguration: masterConfigurationReducer,
-   // ⭐ NEW: Master Schema reducer
-masterSchema: masterSchemaReducer,
-// ⭐ NEW: Standard master schema reducers
-accountMasterSchema: accountMasterSchema,
-productMasterSchema: productMasterSchemaReducer,
-unitMeasurementSchema: unitMeasurementSchemaReducer,
+    masterConfiguration: masterConfigurationReducer,
+    // ⭐ NEW: Master Schema reducer
+    masterSchema: masterSchemaReducer,
+    // ⭐ NEW: Standard master schema reducers
+    accountMasterSchema: accountMasterSchema,
+    productMasterSchema: productMasterSchemaReducer,
+    unitMeasurementSchema: unitMeasurementSchemaReducer,
+    transactionModule: transactionModuleReducer
   },
 });
 

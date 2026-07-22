@@ -25,6 +25,7 @@ import {
 	Wrench,
 	Truck,
 	MonitorCog,
+	Settings2,
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
@@ -240,6 +241,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					name: "Master Configuration",
 					path: "/master-configuration",
 					icon: <Sliders size={19} />,
+				},
+				{
+					name: "Transaction Configuration",
+					path: "/transaction-configuration",
+					icon: <Settings2 size={19} />,
 				},
 				...(localUser?.accountType == "SUPER_ADMIN" ? [{
 					name: "User Explorer",
