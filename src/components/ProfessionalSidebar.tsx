@@ -247,6 +247,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/transaction-configuration",
 					icon: <Settings2 size={19} />,
 				},
+				{
+					name: "Document Series",
+					path: "/document-series",
+					icon: <Sliders size={19} />,
+				},
 				...(localUser?.accountType == "SUPER_ADMIN" ? [{
 					name: "User Explorer",
 					path: "/user-explorer",

@@ -109,6 +109,7 @@ import accountMasterSchema from "../redux/slices/professionalSlice/masterConfigu
 import productMasterSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
 import unitMeasurementSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
 import transactionModuleReducer from "./slices/professionalSlice/transactionConfiguration/transactionModuleSlice"
+import voucherConfigurationReducer from "../redux/slices/professionalSlice/documentSeries"
 
 export const store = configureStore({
   reducer: {
@@ -211,7 +212,7 @@ export const store = configureStore({
     registerDashboard: areaDashboardReducer,
     systemConfiguration: systemConfigurationReducer,
     importBankStatement: importBankStatementReducer,
-
+    voucherConfiguration: voucherConfigurationReducer,
     // master configuration
 
     masterConfiguration: masterConfigurationReducer,
