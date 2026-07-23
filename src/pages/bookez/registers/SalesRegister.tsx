@@ -1,23 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-
 import RegisterFilterCard from "./RegisterFilterCard";
-
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
-
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllProducts } from "../../../redux/slices/professionalSlice/productMasterSlice";
-
-import {
-    addSalesRegister,
-} from "../../../redux/slices/professionalSlice/bookEzRegister/salesRegisterSlice";
-
+import { addSalesRegister } from "../../../redux/slices/professionalSlice/bookEzRegister/salesRegisterSlice";
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
 import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
-
 import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
 
 /* ===================================================

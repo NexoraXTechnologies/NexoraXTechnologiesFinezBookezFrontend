@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getVoucherConfiguration, getVoucherConfigurationByModule, saveVoucherConfiguration } from "../../../redux/slices/professionalSlice/documentSeries";
-import { SelectInput, TextInput, ToggleInput } from "../../../components/inputs";
+import { SelectInput, TextInput } from "../../../components/inputs";
 
 
 const MODULE_LABELS: Record<string, string> = {
@@ -43,7 +43,7 @@ export default function DocumentSeries() {
 
     const {
         voucherConfiguration,
-        loading,
+        // loading,
         saveLoader,
     } = useSelector((state: any) => state.voucherConfiguration);
     console.log({ voucherConfiguration })

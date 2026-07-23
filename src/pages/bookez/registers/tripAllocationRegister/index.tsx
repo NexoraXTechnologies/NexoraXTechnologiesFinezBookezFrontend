@@ -6,7 +6,7 @@ import RegisterFilterCard from "../RegisterFilterCard";
 import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
-import CreateEditTripAllocationRegistration from "./CreateEditTripAllocation";
+// import CreateEditTripAllocationRegistration from "./CreateEditTripAllocation";
 
 import {
     getTripAllocationByVoucherNumber,

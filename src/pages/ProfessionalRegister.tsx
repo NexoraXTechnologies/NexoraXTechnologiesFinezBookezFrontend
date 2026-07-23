@@ -107,6 +107,7 @@ const ProfessionalRegister = () => {
 
     // @ts-ignore
     const response: any = await dispatch(
+      // @ts-ignore 
       checkProfessionalParentUser(parentNumber),
     );
 
@@ -196,6 +197,7 @@ const ProfessionalRegister = () => {
 
       // @ts-ignore
       const response: any = await dispatch(
+        // @ts-ignore
         registerChildProfessional({
           parentMobile: parentNumber,
           childData,
