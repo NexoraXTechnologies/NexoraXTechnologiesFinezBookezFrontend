@@ -42,7 +42,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
 	const dispatch = useDispatch();
 	const { configurations } = useSelector((state: any) => state.systemConfiguration);
-
+	const isParentUser = localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash
 	const navigate = useNavigate();
 	const [confirm, setConfirm] = useState<{
 		show: boolean;
@@ -231,22 +231,22 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/appearance",
 					icon: <Palette size={19} />,
 				},
-				{
+				...(isParentUser ? [{
 					name: "System Configuration",
 					path: "/system-configuration",
 					icon: <MonitorCog size={19} />,
-				},
+				}] : []),
 				// ⭐ UPDATED: Added Master Configuration sidebar option
-				{
+				...(isParentUser ? [{
 					name: "Master Configuration",
 					path: "/master-configuration",
 					icon: <Sliders size={19} />,
-				},
-				{
+				}] : []),
+				...(isParentUser ? [{
 					name: "Transaction Configuration",
 					path: "/transaction-configuration",
 					icon: <Settings2 size={19} />,
-				},
+				}] : []),
 				{
 					name: "Document Series",
 					path: "/document-series",
@@ -257,7 +257,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					path: "/user-explorer",
 					icon: <MonitorCog size={19} />,
 				}] : []),
-				...(localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash
+				...(isParentUser
 					? [
 						{
 							name: "Permission",

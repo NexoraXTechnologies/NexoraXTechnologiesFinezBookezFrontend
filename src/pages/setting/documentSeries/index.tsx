@@ -353,16 +353,7 @@ export default function DocumentSeries() {
 
 
             {/* Footer */}
-            <div className="
-        flex
-        justify-end
-        border-t
-        border-border
-        px-6
-        py-4
-        bg-card
-    ">
-
+            <div className="flex justify-end border-t border-border px-6 py-4 bg-card">
                 <button
                     disabled={saveLoader}
                     onClick={handleSave}
