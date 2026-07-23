@@ -2,12 +2,69 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../../services/professionalAxios";
 
 
-interface SaveTransactionSchemaPayload {
-    fields: any[];
+export interface TransactionSchemaField {
+    key: string;
+    label: string;
+    type: string;
+
+    reference?: string;
+
+    customMasterCode?: string;
+    customMasterName?: string;
+
+    isRequired: boolean;
+    isSearchable: boolean;
+    isFilterable: boolean;
+    isReadonly?: boolean;
+    isHidden?: boolean;
+}
+export interface SaveTransactionSchemaPayload {
+    module: string;
+    section: string;
+    fields: TransactionSchemaField[];
 }
 
-interface UpdateTransactionSchemaPayload {
-    updates: any[];
+export interface TransactionSchemaFieldUpdateData {
+    label?: string;
+    type?: string;
+    reference?: string;
+
+    customMasterCode?: string;
+    customMasterName?: string;
+
+    options?: string[];
+
+    isRequired?: boolean;
+    isSearchable?: boolean;
+    isFilterable?: boolean;
+    isReadonly?: boolean;
+    isHidden?: boolean;
+}
+
+export interface TransactionSchemaUpdatePayload {
+    module: string;
+    section: string;
+    key: string;
+    updates: {
+        label?: string;
+        type?: string;
+        reference?: string;
+        customMasterCode?: string;
+        customMasterName?: string;
+        options?: string[];
+        isRequired?: boolean;
+        isSearchable?: boolean;
+        isFilterable?: boolean;
+        isReadonly?: boolean;
+        isHidden?: boolean;
+    };
+}
+
+export interface UpdateTransactionSchemaPayload {
+    module: string;
+    section: string;
+    key: string;
+    updates: TransactionSchemaFieldUpdateData;
 }
 
 const initialState = {
@@ -61,22 +118,47 @@ export const getAllTransactionSchema = createAsyncThunk(
    ⭐ NEW: SAVE ACCOUNT MASTER SCHEMA
 =================================================== */
 
+
+
 export const saveTransactionSchema = createAsyncThunk(
     "transaction/saveTransactionSchema",
     async (
-        { fields }: SaveTransactionSchemaPayload,
+        {
+            module,
+            section,
+            fields,
+        }: SaveTransactionSchemaPayload,
         { rejectWithValue }
     ) => {
         try {
-            if (!Array.isArray(fields) || fields.length === 0) {
+            if (!module?.trim()) {
                 return rejectWithValue({
-                    message: "At least one transaction schema field is required.",
+                    message: "Transaction module is required.",
                 });
             }
 
+            if (!section?.trim()) {
+                return rejectWithValue({
+                    message: "Transaction schema section is required.",
+                });
+            }
+
+            if (!Array.isArray(fields) || fields.length === 0) {
+                return rejectWithValue({
+                    message:
+                        "At least one transaction schema field is required.",
+                });
+            }
+
+            const payload: SaveTransactionSchemaPayload = {
+                module: module.trim(),
+                section: section.trim(),
+                fields,
+            };
+
             const response = await professionalAxios.post(
                 "/eTaxSolnMongoApiBackend/users/bookez/transactionSchema/addField",
-                { fields }
+                payload
             );
 
             if (!response.data?.success) {
@@ -87,7 +169,13 @@ export const saveTransactionSchema = createAsyncThunk(
                 });
             }
 
-            return response.data?.data ?? { fields };
+            return (
+                response.data?.data ?? {
+                    module: payload.module,
+                    section: payload.section,
+                    fields: payload.fields,
+                }
+            );
         } catch (error: any) {
             return rejectWithValue({
                 message:
@@ -104,21 +192,15 @@ export const saveTransactionSchema = createAsyncThunk(
 =================================================== */
 
 export const updateTransactionSchema = createAsyncThunk(
-    "transaction/updateTransactionSchema",
+    "transactionSchema/updateTransactionSchema",
     async (
-        { updates }: UpdateTransactionSchemaPayload,
+        payload: TransactionSchemaUpdatePayload,
         { rejectWithValue }
     ) => {
         try {
-            if (!Array.isArray(updates) || updates.length === 0) {
-                return rejectWithValue({
-                    message: "At least one transaction schema update is required.",
-                });
-            }
-
             const response = await professionalAxios.put(
                 "/eTaxSolnMongoApiBackend/users/bookez/transactionSchema/updateField",
-                { updates }
+                payload
             );
 
             if (!response.data?.success) {
@@ -129,7 +211,7 @@ export const updateTransactionSchema = createAsyncThunk(
                 });
             }
 
-            return response.data?.data ?? { updates };
+            return response.data?.data;
         } catch (error: any) {
             return rejectWithValue({
                 message:

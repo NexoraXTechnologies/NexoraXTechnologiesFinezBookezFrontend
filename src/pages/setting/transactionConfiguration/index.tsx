@@ -81,14 +81,14 @@ const SCHEMA_SECTIONS: { key: SchemaSection; label: string }[] = [
 
 type SchemaField = {
     key: string;
-    label?: string;
+    label: string;
     type: string;
     ref?: string;
-    isRequired?: boolean;
-    isSearchable?: boolean;
-    isFilterable?: boolean;
-    isReadonly?: boolean;
-    isHidden?: boolean;
+    isRequired: boolean;
+    isSearchable: boolean;
+    isFilterable: boolean;
+    isReadonly: boolean;
+    isHidden: boolean;
     isSystemGenerated?: boolean;
     defaultValue?: any;
     isDefault?: boolean;
@@ -734,11 +734,11 @@ const TransactionConfiguration = () => {
             label: field.label || "",
             type: field.type || "text",
             ref: field.ref || "",
-            isRequired: !!field.isRequired,
-            isSearchable: !!field.isSearchable,
-            isFilterable: !!field.isFilterable,
-            isReadonly: !!field.isReadonly,
-            isHidden: !!field.isHidden,
+            isRequired: isTruthyFlag(field.isRequired),
+            isSearchable: isTruthyFlag(field.isSearchable),
+            isFilterable: isTruthyFlag(field.isFilterable),
+            isReadonly: isTruthyFlag(field.isReadonly),
+            isHidden: isTruthyFlag(field.isHidden),
         });
         setSchemaFormErrors({});
         setShowSchemaForm(true);
@@ -780,53 +780,73 @@ const TransactionConfiguration = () => {
 
         return payload;
     };
-
     const handleSchemaSubmit: FormEventHandler<HTMLFormElement> = async (
         event
     ) => {
         event.preventDefault();
 
-        if (!schemaContext || !validateSchemaForm()) return;
+        if (!schemaContext || !validateSchemaForm()) {
+            return;
+        }
 
         const fieldPayload = buildSchemaFieldPayload();
 
+        const moduleCode = schemaContext.moduleKey?.trim();
+        const section = schemaSection?.trim();
+
+        if (!moduleCode) {
+            toast.error("Module is required.");
+            return;
+        }
+
+        if (!section) {
+            toast.error("Section is required.");
+            return;
+        }
+
         try {
             if (editingSchemaFieldKey) {
-                const { key: _ignoredKey, ...updateData } = fieldPayload;
+                const { key: _ignoredKey, ...updates } = fieldPayload;
 
                 await dispatch(
                     updateTransactionSchema({
-                        updates: [
-                            {
-                                key: editingSchemaFieldKey,
-                                section: schemaSection,
-                                updateData: { ...updateData, module: schemaContext.moduleKey },
-                            },
-                        ],
-                    }) as any
+                        module: moduleCode,
+                        section,
+                        key: editingSchemaFieldKey,
+                        updates,
+                    })
                 ).unwrap();
 
-                toast.success(`${schemaContext.title} schema field updated successfully.`);
+                toast.success(
+                    `${schemaContext.title} schema field updated successfully.`
+                );
             } else {
                 await dispatch(
                     saveTransactionSchema({
-                        fields: [{ ...fieldPayload, module: schemaContext.moduleKey }],
-                    }) as any
+                        module: moduleCode,
+                        section,
+                        fields: [fieldPayload],
+                    })
                 ).unwrap();
 
-                toast.success(`${schemaContext.title} schema field added successfully.`);
+                toast.success(
+                    `${schemaContext.title} schema field added successfully.`
+                );
             }
 
             closeSchemaForm();
             await reloadSchema();
         } catch {
-            // Slice-level error effect handles the toast.
+            // Redux slice error effect handles the error toast.
         }
     };
-
     /* ===================================================
        ⭐ SCHEMA TABLE COLUMNS
     =================================================== */
+    // add near the top of the file, with other helpers
+    const isTruthyFlag = (value: unknown): boolean =>
+        value === true || value === "true";
+
 
     const schemaColumns = [
         { key: "key", title: "Key", render: (f: SchemaField) => <span>{f.key}</span> },
@@ -836,27 +856,27 @@ const TransactionConfiguration = () => {
         {
             key: "isRequired",
             title: "Required",
-            render: (f: SchemaField) => <BooleanBadge value={!!f.isRequired} />,
+            render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isRequired)} />,
         },
         {
             key: "isSearchable",
             title: "Searchable",
-            render: (f: SchemaField) => <BooleanBadge value={!!f.isSearchable} />,
+            render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isSearchable)} />,
         },
         {
             key: "isFilterable",
             title: "Filterable",
-            render: (f: SchemaField) => <BooleanBadge value={!!f.isFilterable} />,
+            render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isFilterable)} />,
         },
         {
             key: "isReadonly",
             title: "Readonly",
-            render: (f: SchemaField) => <BooleanBadge value={!!f.isReadonly} />,
+            render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isReadonly)} />,
         },
         {
             key: "isHidden",
             title: "Hidden",
-            render: (f: SchemaField) => <BooleanBadge value={!!f.isHidden} />,
+            render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isHidden)} />,
         },
     ];
 
@@ -978,7 +998,7 @@ const TransactionConfiguration = () => {
                             <button
                                 type="button"
                                 onClick={() => openEditSchemaForm(field)}
-                                disabled={!!field.isSystemGenerated}
+                                disabled={isTruthyFlag(field.isDefault)}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
                                 title={field.isSystemGenerated ? "System-generated field" : "Edit schema field"}
                             >
