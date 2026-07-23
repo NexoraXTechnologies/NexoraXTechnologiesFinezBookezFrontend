@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type KeyboardEvent,
+  type ClipboardEvent,
+} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -13,6 +20,8 @@ import {
 import { motion } from "framer-motion";
 import { AuthButton } from "../components/buttons";
 import { getAllPermissions } from "../redux/slices/permissionSlice";
+
+const OTP_LENGTH = 4;
 
 const Section = ({ title, text }: any) => (
   <div className="space-y-1">
@@ -99,131 +108,281 @@ const Login = () => {
   const [showOtpPopup, setShowOtpPopup] = useState(false);
 
   // OTP digits
-  const [otp, setOtp] = useState(["", "", "", ""]);
-  const otpRefs: any = useRef([]);
-  const { professionalRequestID } = useSelector((state: any) => state.professionalAuth);
+  const [otp, setOtp] = useState<string[]>(
+    Array(OTP_LENGTH).fill("")
+  );
+  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const verifyInProgressRef = useRef(false);
 
-  useEffect(() => {
-    const finalOtp = otp.join("");
-    if (finalOtp.length === 4) {
-      handleVerifyOtp();
+  const { professionalRequestID } = useSelector(
+    (state: any) => state.professionalAuth
+  );
+
+  const focusOtpInput = (index: number) => {
+    requestAnimationFrame(() => {
+      otpRefs.current[index]?.focus();
+      otpRefs.current[index]?.select();
+    });
+  };
+
+  const handleOtpInput = (
+    event: ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const value = event.target.value.replace(/\D/g, "").slice(-1);
+
+    setOtp((currentOtp) => {
+      const updatedOtp = [...currentOtp];
+      updatedOtp[index] = value;
+      return updatedOtp;
+    });
+
+    // Move to the next box only after entering a digit.
+    if (value && index < OTP_LENGTH - 1) {
+      focusOtpInput(index + 1);
     }
-  }, [otp]);
+  };
 
-  const handleOtpInput = (e: any, index: any) => {
-    let value = e.target.value.replace(/\D/g, "");
-    const newOtp = [...otp];
+  const handleOtpKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    if (event.key === "Backspace") {
+      event.preventDefault();
 
-    // BACKSPACE
-    if (!value) {
-      newOtp[index] = "";
-      setOtp(newOtp);
-      if (index > 0) otpRefs.current[index - 1].focus();
+      setOtp((currentOtp) => {
+        const updatedOtp = [...currentOtp];
+
+        // First Backspace clears the current box.
+        if (updatedOtp[index]) {
+          updatedOtp[index] = "";
+          focusOtpInput(index);
+          return updatedOtp;
+        }
+
+        // If the current box is empty, move back and clear the previous box.
+        if (index > 0) {
+          updatedOtp[index - 1] = "";
+          focusOtpInput(index - 1);
+        }
+
+        return updatedOtp;
+      });
+
       return;
     }
 
-    // NORMAL DIGIT
-    newOtp[index] = value;
-    setOtp(newOtp);
+    if (event.key === "ArrowLeft" && index > 0) {
+      event.preventDefault();
+      focusOtpInput(index - 1);
+      return;
+    }
 
-    // Move to next box
-    if (index < 3) otpRefs.current[index + 1].focus();
+    if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
+      event.preventDefault();
+      focusOtpInput(index + 1);
+    }
   };
 
-  const handleVerifyOtp = () => {
-    if (isVerifying) return;
+  const handleOtpPaste = (
+    event: ClipboardEvent<HTMLInputElement>,
+    startIndex: number
+  ) => {
+    event.preventDefault();
 
-    const finalOtp = otp.join("");
-    if (finalOtp.length !== 4) return toast.error("Enter all 4 digits");
+    const pastedDigits = event.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, OTP_LENGTH - startIndex);
 
+    if (!pastedDigits) return;
+
+    setOtp((currentOtp) => {
+      const updatedOtp = [...currentOtp];
+
+      pastedDigits.split("").forEach((digit, offset) => {
+        updatedOtp[startIndex + offset] = digit;
+      });
+
+      return updatedOtp;
+    });
+
+    const nextFocusIndex = Math.min(
+      startIndex + pastedDigits.length,
+      OTP_LENGTH - 1
+    );
+    focusOtpInput(nextFocusIndex);
+  };
+
+  const handleVerifyOtp = async (otpValue?: string) => {
+    if (verifyInProgressRef.current) return;
+
+    const finalOtp = otpValue ?? otp.join("");
+
+    if (finalOtp.length !== OTP_LENGTH) {
+      toast.error("Enter all 4 digits");
+
+      const firstEmptyIndex = otp.findIndex((digit) => !digit);
+      focusOtpInput(firstEmptyIndex === -1 ? 0 : firstEmptyIndex);
+      return;
+    }
+
+    verifyInProgressRef.current = true;
     setIsVerifying(true);
 
-    // @ts-ignore
-    dispatchP(verifyProfessionalOtp({ mobile, requestID: professionalRequestID, otp: finalOtp, })).unwrap().then(async (res: any) => {
+    try {
+      const res: any = await dispatchP(
+        verifyProfessionalOtp({
+          mobile,
+          requestID: professionalRequestID,
+          otp: finalOtp,
+        })
+      ).unwrap();
+
       toast.success("OTP Verified!");
 
-        // ✅ If user already exists
-        if (res.existingUser && res.userData) {
-          const user = res.userData;
+      // If user already exists
+      if (res.existingUser && res.userData) {
+        const user = res.userData;
 
-          const loginuser = user?.userMobileNumberHash;
-          const authtoken = user?.authTokenDigest;
-          const dbName = user?.parentUserMobileNumber;
+        const loginuser = user?.userMobileNumberHash;
+        const authtoken = user?.authTokenDigest;
+        const dbName = user?.parentUserMobileNumber;
 
-          localStorage.setItem(
-            "professionalHeaders",
-            JSON.stringify({
-              "x-db-name": dbName,
-              authtoken,
-              loginuser,
-            })
-          );
+        localStorage.setItem(
+          "professionalHeaders",
+          JSON.stringify({
+            "x-db-name": dbName,
+            authtoken,
+            loginuser,
+          })
+        );
 
-          const fullName = `${user.userFirstName || ""}  ${user.userLastName || ""
-            }`.trim();
-          localStorage.setItem(
-            "professionalUser",
-            JSON.stringify({
-              name: fullName || "Professional User",
-              type: user.userType || "Tax Expert",
-              profilePic:
-                user.profilePic ||
-                "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-              userMobileNumberHash: user?.userMobileNumberHash,
-              userEmail: user.userEmail,
-              ...user,
-            })
-          );
+        const fullName = `${user.userFirstName || ""} ${user.userLastName || ""
+          }`.trim();
 
-          try {
-            if (user?.parentUserMobileNumber && user?.userMobileNumberHash) {
-              dispatch(
-                getAllPermissions({
-                  offset: 0,
-                  limit: 100,
-                  parentMobile: user?.parentUserMobileNumber,
-                  childMobile: user?.userMobileNumberHash,
-                }) as any
-              );
-            }
+        localStorage.setItem(
+          "professionalUser",
+          JSON.stringify({
+            name: fullName || "Professional User",
+            type: user.userType || "Tax Expert",
+            profilePic:
+              user.profilePic ||
+              "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+            userMobileNumberHash: user?.userMobileNumberHash,
+            userEmail: user.userEmail,
+            ...user,
+          })
+        );
 
-            if (user.userEmail) {
-              // await OneSignal.login(user.userEmail);
-              console.log(
-                "📲 OneSignal logged in (PROFESSIONAL):",
-                user.userEmail
-              );
-            } else {
-              console.warn(
-                "⚠️ No professional userEmail found for OneSignal login"
-              );
-            }
-          } catch (err) {
-            console.error("❌ OneSignal PRO login error:", err);
+        try {
+          if (user?.parentUserMobileNumber && user?.userMobileNumberHash) {
+            dispatch(
+              getAllPermissions({
+                offset: 0,
+                limit: 100,
+                parentMobile: user.parentUserMobileNumber,
+                childMobile: user.userMobileNumberHash,
+              }) as any
+            );
           }
 
-          navigate("/");
-        } else {
-          navigate("/professionalRegister");
+          if (user.userEmail) {
+            // await OneSignal.login(user.userEmail);
+            console.log(
+              "📲 OneSignal logged in (PROFESSIONAL):",
+              user.userEmail
+            );
+          } else {
+            console.warn(
+              "⚠️ No professional userEmail found for OneSignal login"
+            );
+          }
+        } catch (error) {
+          console.error("❌ OneSignal PRO login error:", error);
         }
-      })
-      .catch((err: any) => {
-        toast.error(err.message);
-        setIsVerifying(false);
-      });
+
+        navigate("/");
+      } else {
+        navigate("/professionalRegister");
+      }
+    } catch (error: any) {
+      toast.error(
+        typeof error === "string"
+          ? error
+          : error?.message || "OTP verification failed"
+      );
+
+      // Keep the entered OTP so the user can correct only the wrong digit.
+      focusOtpInput(OTP_LENGTH - 1);
+    } finally {
+      verifyInProgressRef.current = false;
+      setIsVerifying(false);
+    }
   };
 
-  const handleResendOtp = () => {
-    // @ts-ignore
-    dispatchP(sendProfessionalOtp(mobile))
-      .unwrap()
-      .then(() => toast.success("OTP Re-sent!"))
-      .catch((err: any) => {
-        toast.error(err.message);
-        setOtp(["", "", "", ""]);
-        otpRefs.current[0]?.focus();
-      });
+  const handleSendOtp = async () => {
+    if (!/^\d{10}$/.test(mobile)) {
+      toast.error("Enter valid mobile");
+      return;
+    }
+
+    try {
+      await dispatchP(sendProfessionalOtp(mobile)).unwrap();
+
+      setOtp(Array(OTP_LENGTH).fill(""));
+      verifyInProgressRef.current = false;
+      setIsVerifying(false);
+      setShowOtpPopup(true);
+      toast.success("OTP Sent!");
+    } catch (error: any) {
+      toast.error(
+        typeof error === "string"
+          ? error
+          : error?.message || "Failed to send OTP"
+      );
+    }
   };
+
+  const handleResendOtp = async () => {
+    try {
+      await dispatchP(sendProfessionalOtp(mobile)).unwrap();
+
+      setOtp(Array(OTP_LENGTH).fill(""));
+      verifyInProgressRef.current = false;
+      setIsVerifying(false);
+      toast.success("OTP Re-sent!");
+      focusOtpInput(0);
+    } catch (error: any) {
+      toast.error(
+        typeof error === "string"
+          ? error
+          : error?.message || "Failed to resend OTP"
+      );
+    }
+  };
+
+  // Focus the first OTP box after the OTP section has rendered.
+  useEffect(() => {
+    if (!showOtpPopup) return;
+
+    const timer = window.setTimeout(() => {
+      focusOtpInput(0);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [showOtpPopup]);
+
+  // Automatically verify after all four digits are entered.
+  useEffect(() => {
+    if (!showOtpPopup) return;
+
+    const finalOtp = otp.join("");
+
+    if (finalOtp.length === OTP_LENGTH) {
+      void handleVerifyOtp(finalOtp);
+    }
+  }, [otp, showOtpPopup]);
 
   return (
     <div className="relative overflow-hidden bg-background text-foreground">
@@ -384,12 +543,22 @@ const Login = () => {
                   {otp.map((digit, index) => (
                     <input
                       key={index}
-                      ref={(el: any) => (otpRefs.current[index] = el)}
+                      ref={(element) => {
+                        otpRefs.current[index] = element;
+                      }}
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      aria-label={`OTP digit ${index + 1}`}
                       maxLength={1}
                       value={digit}
-                      onChange={(e) => handleOtpInput(e, index)}
-                      className="h-12 w-12 rounded-xl border border-border bg-input text-center text-xl font-semibold text-foreground outline-none transition-all duration-200 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"
+                      onChange={(event) => handleOtpInput(event, index)}
+                      onKeyDown={(event) => handleOtpKeyDown(event, index)}
+                      onPaste={(event) => handleOtpPaste(event, index)}
+                      onFocus={(event) => event.currentTarget.select()}
+                      disabled={isVerifying}
+                      className="h-12 w-12 rounded-xl border border-border bg-input text-center text-xl font-semibold text-foreground outline-none transition-all duration-200 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                     />
                   ))}
                 </motion.div>
@@ -424,25 +593,20 @@ const Login = () => {
 
                     <input
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       maxLength={10}
                       value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-
-                          if (mobile.length !== 10) {
-                            return toast.error("Enter valid mobile");
-                          }
-
-                          // @ts-ignore
-                          dispatch(sendProfessionalOtp(mobile))
-                            .unwrap()
-                            .then(() => {
-                              toast.success("OTP Sent!");
-                              setShowOtpPopup(true);
-                            })
-                            .catch((err: any) => toast.error(err.message));
+                      onChange={(event) => {
+                        const numericValue = event.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 10);
+                        setMobile(numericValue);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void handleSendOtp();
                         }
                       }}
                       className="w-full bg-transparent px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none"
@@ -454,19 +618,7 @@ const Login = () => {
                 <AuthButton
                   {...{
                     loader: professionalLoading,
-                    clickCb: () => {
-                      if (mobile.length !== 10)
-                        return toast.error("Enter valid mobile");
-
-                      // @ts-ignore
-                      dispatch(sendProfessionalOtp(mobile))
-                        .unwrap()
-                        .then(() => {
-                          toast.success("OTP Sent!");
-                          setShowOtpPopup(true);
-                        })
-                        .catch((err: any) => toast.error(err.message));
-                    },
+                    clickCb: handleSendOtp,
                     btnName: "Send OTP",
                   }}
                 />
