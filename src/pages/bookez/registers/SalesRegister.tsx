@@ -390,10 +390,10 @@ const SalesRegister = () => {
         addLoader = false,
         pagination = {},
     } = useSelector((state: any) => state.salesRegister);
-
+    // @ts-ignore
     const { filters: registerFilterDropdowns = [], loading: registerFilterDropdownLoading = false, error: egisterFilterDropdownError = null, } = useSelector((state: any) => state.registerFilterDropdown || {});
 
-    const customFilters = useMemo<CustomFilterDefinition[]>(() => {
+    const customFilters: any = useMemo<CustomFilterDefinition[]>(() => {
         return Array.isArray(registerFilterDropdowns) ? registerFilterDropdowns : [];
     }, [registerFilterDropdowns]);
 
@@ -407,7 +407,7 @@ const SalesRegister = () => {
 
     const selectedCustomCodes = useMemo(() => {
         return customFilters
-            .map((filter) => selectedCustomFilters[filter.key] || "")
+            .map((filter:any) => selectedCustomFilters[filter.key] || "")
             .filter(Boolean);
     }, [customFilters, selectedCustomFilters]);
 
@@ -572,7 +572,7 @@ const SalesRegister = () => {
             setSelectedCustomFilters((previous) => {
                 const nextSelected: Record<string, string> = {};
 
-                customFilters.forEach((filter) => {
+                customFilters.forEach((filter:any) => {
                     if (filter?.key && previous[filter.key]) {
                         nextSelected[filter.key] = previous[filter.key];
                     }
@@ -910,7 +910,7 @@ const SalesRegister = () => {
                             setLocalOffset(0);
                         },
                     },
-                    ...customFilters.map((filter) => ({
+                    ...customFilters.map((filter: any) => ({
                         key: filter.key,
                         type: "select",
                         label: filter.label || filter.key,

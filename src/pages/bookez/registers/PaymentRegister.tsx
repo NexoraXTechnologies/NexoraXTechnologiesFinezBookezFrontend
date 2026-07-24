@@ -374,7 +374,7 @@ const PaymentRegister = () => {
             state.registerFilterDropdown || {}
     );
 
-    const customFilters = useMemo<
+    const customFilters:any = useMemo<
         CustomFilterDefinition[]
     >(() => {
         return Array.isArray(registerFilterDropdowns)
@@ -393,7 +393,7 @@ const PaymentRegister = () => {
     const selectedCustomCodes = useMemo(() => {
         return customFilters
             .map(
-                (filter) =>
+                (filter:any) =>
                     selectedCustomFilters[filter.key] || ""
             )
             .filter(Boolean);
@@ -606,7 +606,7 @@ const PaymentRegister = () => {
                     string
                 > = {};
 
-                customFilters.forEach((filter) => {
+                customFilters.forEach((filter:any) => {
                     if (
                         filter?.key &&
                         previous[filter.key]
@@ -1031,7 +1031,7 @@ const PaymentRegister = () => {
                         },
                     },
 
-                    ...customFilters.map((filter) => ({
+                    ...customFilters.map((filter:any) => ({
                         key: filter.key,
                         type: "select",
                         label:

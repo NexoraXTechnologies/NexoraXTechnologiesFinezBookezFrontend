@@ -54,7 +54,7 @@ import purchaseReturnReducer from "./slices/professionalSlice/purchaseWorkflow/p
 import purchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import getAllTransactionSchema from "./slices/professionalSlice/transactionSchema";
 import transactionsSchemaReducer from "./slices/professionalSlice/transactionSchema/index";
-
+import customTransactionDataReducer from "./slices/professionalSlice/customTransaction/customTransactionSlice";
 // ledger report
 import accountReceivableReducer from "./slices/professionalSlice/ledgerReports/accountsReceivableSlice"
 import accountPayableReducer from "./slices/professionalSlice/ledgerReports/accountsPayableSlice"
@@ -167,7 +167,7 @@ export const store = configureStore({
     purchaseInvoice: purchaseInvoiceReducer,
     payment: paymentReducer,
     getAllTransactionSchema,
-    transactionsSchema:transactionsSchemaReducer,
+    transactionsSchema: transactionsSchemaReducer,
 
     // ledger report 
     accountPayable: accountPayableReducer,
@@ -223,7 +223,8 @@ export const store = configureStore({
     accountMasterSchema: accountMasterSchema,
     productMasterSchema: productMasterSchemaReducer,
     unitMeasurementSchema: unitMeasurementSchemaReducer,
-    transactionModule: transactionModuleReducer
+    transactionModule: transactionModuleReducer,
+    customTransaction: customTransactionDataReducer,
   },
 });
 

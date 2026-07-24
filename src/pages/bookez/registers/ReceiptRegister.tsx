@@ -383,7 +383,7 @@ const ReceiptRegister = () => {
             state.registerFilterDropdown || {}
     );
 
-    const customFilters = useMemo<
+    const customFilters:any = useMemo<
         CustomFilterDefinition[]
     >(() => {
         return Array.isArray(registerFilterDropdowns)
@@ -402,7 +402,7 @@ const ReceiptRegister = () => {
     const selectedCustomCodes = useMemo(() => {
         return customFilters
             .map(
-                (filter) =>
+                (filter:any) =>
                     selectedCustomFilters[filter.key] || ""
             )
             .filter(Boolean);
@@ -615,7 +615,7 @@ const ReceiptRegister = () => {
                     string
                 > = {};
 
-                customFilters.forEach((filter) => {
+                customFilters.forEach((filter:any) => {
                     if (
                         filter?.key &&
                         previous[filter.key]
@@ -1068,7 +1068,7 @@ const ReceiptRegister = () => {
                         },
                     },
 
-                    ...customFilters.map((filter) => ({
+                    ...customFilters.map((filter:any) => ({
                         key: filter.key,
                         type: "select",
                         label:
