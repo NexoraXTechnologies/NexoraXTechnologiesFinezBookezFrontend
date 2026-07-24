@@ -26,6 +26,7 @@ import {
 	Truck,
 	MonitorCog,
 	Settings2,
+	Workflow,
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
@@ -154,6 +155,16 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "purchaseInvoice",
 							action: "view",
 						},
+						{
+							name: "Custom Transactions",
+							path: "/bookEz/transaction/custom",
+							icon: <Workflow size={19} />,
+							module: "bookez",
+							permissionKey: "Pass",
+							action: "view",
+						},
+
+
 
 
 						{
