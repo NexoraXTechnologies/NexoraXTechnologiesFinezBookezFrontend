@@ -2,6 +2,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ImagePlus, Paperclip, X } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import Select, { components } from "react-select";
+import type { ReactNode } from "react";
+import { CheckSquare, Square } from "lucide-react";
+
+type CheckboxProps = {
+    checked: boolean;
+    label?: ReactNode;
+    onChange: (checked: boolean) => void;
+    disabled?: boolean;
+    name?: string;
+    value?: string;
+    className?: string;
+    labelClassName?: string;
+    iconSize?: number;
+};
 
 const ToggleInput = ({
     label = "",
@@ -1112,5 +1126,60 @@ export const renderField = ({
             onChange={field.disabled ? () => { } : handleInputChange(field.key)}
             disabled={isView}
         />
+    );
+};
+
+
+export const Checkbox = ({
+    checked,
+    label,
+    onChange,
+    disabled = false,
+    name,
+    value,
+    className = "",
+    labelClassName = "",
+    iconSize = 20,
+}: CheckboxProps) => {
+    return (
+        <label
+            className={`
+                flex w-full items-center gap-3 text-left text-sm font-medium
+                text-card-foreground transition
+                ${disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                }
+                ${className}
+            `}
+        >
+            <input
+                type="checkbox"
+                name={name}
+                value={value}
+                checked={checked}
+                disabled={disabled}
+                onChange={(event) => onChange(event.target.checked)}
+                className="sr-only"
+            />
+
+            {checked ? (
+                <CheckSquare
+                    size={iconSize}
+                    aria-hidden="true"
+                    className="shrink-0 text-primary"
+                />
+            ) : (
+                <Square
+                    size={iconSize}
+                    aria-hidden="true"
+                    className="shrink-0 text-muted-foreground"
+                />
+            )}
+
+            {label !== undefined && label !== null ? (
+                <span className={labelClassName}>{label}</span>
+            ) : null}
+        </label>
     );
 };

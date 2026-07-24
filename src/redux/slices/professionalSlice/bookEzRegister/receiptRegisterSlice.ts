@@ -9,6 +9,20 @@ type RejectValue = {
     message: string;
 };
 
+export type ReceiptRegisterPayload = {
+    fromDate?: string;
+    toDate?: string;
+    accountCode?: string;
+
+    customCodes?: string[];
+
+    offset?: number;
+    limit?: number;
+
+    exportType?: "pdf" | "excel" | "";
+    selectedColumns?: string[];
+};
+
 type ReceiptRegisterState = {
     addLoader: boolean;
     listingLoader: boolean;
@@ -25,21 +39,39 @@ type ReceiptRegisterState = {
 
 export const addReceiptRegister = createAsyncThunk<
     any,
-    any,
+    ReceiptRegisterPayload,
     { rejectValue: RejectValue }
 >(
     "receiptRegister/addReceiptRegister",
     async (payload, { rejectWithValue }) => {
         try {
+            const requestPayload = {
+                ...payload,
+
+                customCodes:
+                    Array.isArray(payload?.customCodes) &&
+                        payload.customCodes.length > 0
+                        ? payload.customCodes
+                        : [""],
+
+                ...(payload?.exportType
+                    ? {
+                        selectedColumns: Array.isArray(
+                            payload?.selectedColumns
+                        )
+                            ? payload.selectedColumns
+                            : [],
+                    }
+                    : {}),
+            };
+
             const res = await professionalAxios.post(
                 "/eTaxSolnMongoApiBackend/users/bookEZ/registers/receiptRegister",
-                {
-                    ...payload,
-                },
+                requestPayload,
                 payload?.exportType
                     ? {
-                          responseType: "blob",
-                      }
+                        responseType: "blob",
+                    }
                     : undefined
             );
 
@@ -71,12 +103,31 @@ export const addReceiptRegister = createAsyncThunk<
                 pagination: res?.data?.data?.pagination || {},
             };
         } catch (error: any) {
+            let errorMessage =
+                error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.message ||
+                "Failed to fetch receipt register";
+
+            /*
+             * Export errors can arrive as Blob because responseType is "blob".
+             */
+            if (error?.response?.data instanceof Blob) {
+                try {
+                    const errorText = await error.response.data.text();
+                    const parsedError = JSON.parse(errorText);
+
+                    errorMessage =
+                        parsedError?.message ||
+                        parsedError?.error ||
+                        errorMessage;
+                } catch {
+                    // Keep existing fallback error message.
+                }
+            }
+
             return rejectWithValue({
-                message:
-                    error?.response?.data?.message ||
-                    error?.response?.data?.error ||
-                    error?.message ||
-                    "Failed to fetch receipt register",
+                message: errorMessage,
             });
         }
     }
@@ -102,7 +153,9 @@ const initialState: ReceiptRegisterState = {
 
 const receiptRegisterSlice = createSlice({
     name: "receiptRegister",
+
     initialState,
+
     reducers: {
         clearReceiptRegisterError: (state) => {
             state.error = null;
@@ -111,6 +164,7 @@ const receiptRegisterSlice = createSlice({
         clearReceiptRegisterData: (state) => {
             state.receiptRegisterData = [];
             state.pagination = {};
+            state.error = null;
         },
     },
 
@@ -123,6 +177,7 @@ const receiptRegisterSlice = createSlice({
                     state.exportLoader = true;
                 } else {
                     state.addLoader = true;
+                    state.listingLoader = true;
                 }
 
                 state.error = null;
@@ -137,6 +192,7 @@ const receiptRegisterSlice = createSlice({
                 }
 
                 state.addLoader = false;
+                state.listingLoader = false;
                 state.receiptRegisterData =
                     action.payload?.records || [];
                 state.pagination =
@@ -151,6 +207,7 @@ const receiptRegisterSlice = createSlice({
                     state.exportLoader = false;
                 } else {
                     state.addLoader = false;
+                    state.listingLoader = false;
                 }
 
                 state.error =

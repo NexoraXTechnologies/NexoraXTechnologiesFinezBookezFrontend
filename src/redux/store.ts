@@ -110,7 +110,7 @@ import productMasterSchemaReducer from "../redux/slices/professionalSlice/master
 import unitMeasurementSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
 import transactionModuleReducer from "./slices/professionalSlice/transactionConfiguration/transactionModuleSlice"
 import voucherConfigurationReducer from "../redux/slices/professionalSlice/documentSeries"
-
+import registerFilterDropdownReducer from "../redux/slices/professionalSlice/registerModule"
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -213,6 +213,7 @@ export const store = configureStore({
     systemConfiguration: systemConfigurationReducer,
     importBankStatement: importBankStatementReducer,
     voucherConfiguration: voucherConfigurationReducer,
+    registerFilterDropdown: registerFilterDropdownReducer,
     // master configuration
 
     masterConfiguration: masterConfigurationReducer,

@@ -18,6 +18,8 @@ type SalesRegisterPayload = {
   toDate: string;
   customerCode?: string;
   productCode?: string;
+  customCodes?: string[];
+  selectedColumns?: string[];
   offset?: number;
   limit?: number;
   exportType?: "pdf" | "excel" | "";
@@ -51,8 +53,8 @@ export const addSalesRegister = createAsyncThunk<
         { ...payload },
         payload?.exportType
           ? {
-              responseType: "blob",
-            }
+            responseType: "blob",
+          }
           : undefined
       );
 
@@ -117,8 +119,6 @@ const salesRegisterSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-
-      /* GET SALES REGISTER */
       .addCase(addSalesRegister.pending, (state, action) => {
         if (action.meta.arg?.exportType) {
           state.exportLoader = true;
