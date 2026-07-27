@@ -83,6 +83,7 @@ import CreateEditTripExpense from './pages/bookez/registers/TripExpenseRegister/
 import TransactionConfiguration from './pages/setting/transactionConfiguration';
 import DocumentSeries from './pages/setting/documentSeries';
 import CustomTransactionDashboard from './pages/bookez/transactions/customTransactions';
+import CustomTransaction from './pages/bookez/transactions/customTransactions/CustomTransaction';
 
 function App() {
   useAppearance();
@@ -153,6 +154,10 @@ function App() {
           <Route
             path="/bookEz/transaction/custom"
             element={<CustomTransactionDashboard />}
+          />
+          <Route
+           path="/bookEz/transaction/custom-list/:moduleCode"
+            element={<CustomTransaction />}
           />
 
           <Route

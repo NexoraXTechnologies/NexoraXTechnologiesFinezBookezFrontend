@@ -38,7 +38,7 @@ const CustomTransactionDashboard = () => {
             title: item.moduleName || "Custom Transaction",
             description:item.description ||`Manage ${item.moduleName || "custom transaction"}.`,
             icon: <ShieldCheck size={22} />,
-            path: `/professional/transaction/custom/${item.moduleCode}`,
+            path: `/bookEz/transaction/custom-list/${item.moduleCode}`,
             permissionKey: "Pass"
         }));
     }, [transactionModules]);
