@@ -252,9 +252,7 @@ const transportOrderRegisterSlice = createSlice({
                         state.pagination = createEmptyPagination();
                     }
 
-                    state.error =
-                        action.payload?.message ||
-                        "Failed to fetch transport order register";
+                    state.error = action.payload?.message || "Failed to fetch transport order register";
                 }
             );
     },
