@@ -71,35 +71,35 @@ const cards: any[] = [
     description: "View quotations, customer estimates, validity dates, amounts, and quotation status.",
     component: QuotationRegister,
     icon: <FileText size={22} />,
-    permissionKey: "registers.paymentRegister"
+    permissionKey: "registers.quotationRegister"
   },
   {
     title: "Sales Return Register",
     description: "View returned sales invoices, customer returns, quantities, taxes, and refund values.",
     component: SalesReturnRegister,
     icon: <ArchiveRestore size={22} />,
-    permissionKey: "registers.paymentRegister"
+    permissionKey: "registers.salesReturnRegister"
   },
   {
     title: "Purchase Return Register",
     description: "View goods returned to vendors, returned quantities, taxes, and payable adjustments.",
     component: PurchaseReturnRegister,
     icon: <Combine size={22} />,
-    permissionKey: "registers.paymentRegister"
+    permissionKey: "registers.purchaseReturnRegister"
   },
   {
     title: "Openining Balance Register",
     description: "View account opening balances, debit and credit amounts, and ledger-wise values.",
     component: OpeningBalanceRegister,
     icon: <Scale size={22} />,
-    permissionKey: "registers.paymentRegister"
+    permissionKey: "registers.openingBalanceRegister"
   },
   {
     title: "Openining Stock Register",
     description: "View opening product quantities, valuation rates, warehouses, and total stock value.",
     component: OpeningStockRegister,
     icon: <PackageOpen size={22} />,
-    permissionKey: "registers.paymentRegister"
+    permissionKey: "registers.openingStockRegister"
   },
   {
     title: "Transport Order Register",
