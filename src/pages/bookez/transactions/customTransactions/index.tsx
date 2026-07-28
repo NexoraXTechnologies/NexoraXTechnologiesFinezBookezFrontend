@@ -4,8 +4,8 @@ import {
     PackageSearch,
     ShieldCheck,
 } from "lucide-react";
-
 import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
+import CustomTransaction from "./CustomTransaction";
 import { getAllTransactionModules } from "../../../../redux/slices/professionalSlice/transactionConfiguration/transactionModuleSlice";
 
 const CustomTransactionDashboard = () => {
@@ -15,11 +15,7 @@ const CustomTransactionDashboard = () => {
         (state: any) => state.transactionModule
     );
 
-   
-    const transactionModules =
-        transactionModuleState?.items ||
-        transactionModuleState?.data?.items ||
-        [];
+    const transactionModules = transactionModuleState?.items || transactionModuleState?.data?.items || [];
 
     useEffect(() => {
         dispatch(
@@ -31,16 +27,24 @@ const CustomTransactionDashboard = () => {
         );
     }, [dispatch]);
 
-    // console.log("Transaction modules:", transactionModules);
-
     const cards = useMemo(() => {
-        return transactionModules.map((item: any) => ({
-            title: item.moduleName || "Custom Transaction",
-            description:item.description ||`Manage ${item.moduleName || "custom transaction"}.`,
-            icon: <ShieldCheck size={22} />,
-            path: `/bookEz/transaction/custom-list/${item.moduleCode}`,
-            permissionKey: "Pass"
-        }));
+        return transactionModules.map((item: any) => {
+            const DynamicCustomTransaction = () => (
+                <CustomTransaction
+                    moduleCode={item.moduleCode}
+                    moduleName={item.moduleName}
+                />
+            );
+
+            return {
+                title: item.moduleName || "Custom Transaction",
+                description: item.description || `Manage ${item.moduleName || "custom transaction"}.`,
+                icon: (<ShieldCheck size={22} />),
+                component: DynamicCustomTransaction,
+                permissionKey: "Pass",
+                moduleCode: item.moduleCode,
+            };
+        });
     }, [transactionModules]);
 
     return (

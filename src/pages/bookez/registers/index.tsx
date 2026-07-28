@@ -9,6 +9,15 @@ import {
   Wrench,
   FileCheck,
   UserRoundCheck,
+  BadgeIndianRupee,
+  FileText,
+  RotateCcw,
+  LibraryBig,
+  Combine,
+  Scale,
+  PackageOpen,
+  HandCoins,
+  ArchiveRestore,
 } from "lucide-react";
 
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
@@ -22,6 +31,11 @@ import TripExpenseRegister from "./TripExpenseRegister";
 import PodRegister from "./podRegister";
 import VehicleMaintenanceRegister from "./vehiclemaintenanceregister";
 import DriverSettlementRegister from "./driversettlementregister";
+import QuotationRegister from "./quotationRegister";
+import SalesReturnRegister from "./SalesReturnRegister";
+import PurchaseReturnRegister from "./PurchaseReturnRegister";
+import OpeningBalanceRegister from "./OpeningBalanceRegister";
+import OpeningStockRegister from "./OpeningStockRegister";
 
 const cards: any[] = [
   {
@@ -49,7 +63,42 @@ const cards: any[] = [
     title: "Payment Register",
     description: "View vendor payments, paid amounts, adjusted values, and payable balance records.",
     component: PaymentRegister,
-    icon: <CreditCard size={22} />,
+    icon: <HandCoins size={22} />,
+    permissionKey: "registers.paymentRegister"
+  },
+  {
+    title: "Quotation Register",
+    description: "View quotations, customer estimates, validity dates, amounts, and quotation status.",
+    component: QuotationRegister,
+    icon: <FileText size={22} />,
+    permissionKey: "registers.paymentRegister"
+  },
+  {
+    title: "Sales Return Register",
+    description: "View returned sales invoices, customer returns, quantities, taxes, and refund values.",
+    component: SalesReturnRegister,
+    icon: <ArchiveRestore size={22} />,
+    permissionKey: "registers.paymentRegister"
+  },
+  {
+    title: "Purchase Return Register",
+    description: "View goods returned to vendors, returned quantities, taxes, and payable adjustments.",
+    component: PurchaseReturnRegister,
+    icon: <Combine size={22} />,
+    permissionKey: "registers.paymentRegister"
+  },
+  {
+    title: "Openining Balance Register",
+    description: "View account opening balances, debit and credit amounts, and ledger-wise values.",
+    component: OpeningBalanceRegister,
+    icon: <Scale size={22} />,
+    permissionKey: "registers.paymentRegister"
+  },
+  {
+    title: "Openining Stock Register",
+    description: "View opening product quantities, valuation rates, warehouses, and total stock value.",
+    component: OpeningStockRegister,
+    icon: <PackageOpen size={22} />,
     permissionKey: "registers.paymentRegister"
   },
   {
@@ -94,13 +143,6 @@ const cards: any[] = [
     icon: <UserRoundCheck size={22} />,
     permissionKey: "registers.driverSettlementRegister"
   },
-
-
-
-
-
-
-
 ];
 
 const RegistersDashboard = () => {

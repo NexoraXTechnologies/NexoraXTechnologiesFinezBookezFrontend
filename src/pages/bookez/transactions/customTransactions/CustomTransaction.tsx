@@ -1,22 +1,66 @@
-import { useEffect, useMemo, useState } from "react";
-import { Download, Edit, Trash2 } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
+import {
+    Edit,
+    Trash2,
+} from "lucide-react";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
+import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
-import { addPurchaseOrder, deletePurchaseOrder, getPurchaseOrderList, updatePurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
+
+import {
+    formatDateForInput,
+    formatDateForList,
+    loadAllTemplateOptions,
+    money,
+    num,
+    safePercent,
+    todayYMD,
+} from "../../../../utils/helperFunctions";
+
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
+
 import Badge from "../../../../components/badge";
-import Toggle from "../../../../components/toggle";
 import SearchInput from "../../../../components/searchInput";
-import { DataCreateButton, DataREfreshButton } from "../../../../components/buttons";
+
+import {
+    DataCreateButton,
+    DataREfreshButton,
+} from "../../../../components/buttons";
+
 import DataTable from "../../../../components/DataTable";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
-import Permission from "../../../../components/PermissionGuard";
-import { ListingModel } from "../../../../components/modal";
-import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
-import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
+
+import {
+    deleteCustomTransactionData,
+    getAllCustomTransactionData,
+    saveCustomTransactionData,
+    updateCustomTransactionData,
+} from "../../../../redux/slices/professionalSlice/customTransaction/customTransactionSlice";
+
+/* ===================================================
+   TYPES
+=================================================== */
+
+type CustomTransactionProps = {
+    moduleCode?: string;
+    moduleName?: string;
+};
+
+/* ===================================================
+   CONSTANTS
+=================================================== */
 
 const defaultPagination = {
     offset: 0,
@@ -28,148 +72,158 @@ const defaultPagination = {
     hasPrevPage: false,
 };
 
-const emptyProductRow = {
-    id: Date.now(),
-
-    productCode: "",
-    productName: "",
-    productId: "",
-
-    productDescription: "",
-    description: "",
-    productHSNCode: "",
-
-    remarks: "",
-
-    quantity: "",
-
-    uom: "",
-    unit: "",
-    unitName: "",
-
-    rate: "",
-
-    gross: 0,
-    grossAmount: 0,
-
-    discount: "",
-    discountPercentage: "",
-    discountAmount: 0,
-
-    taxableAmount: 0,
-
-    cgst: "",
-    cgstPercentage: "",
-    cgstAmount: 0,
-
-    sgst: "",
-    sgstPercentage: "",
-    sgstAmount: 0,
-
-    igst: "",
-    igstPercentage: "",
-    igstAmount: 0,
-
-    taxAmount: 0,
-
-    otherAmount: "",
-
-    netAmount: 0,
-    netTotal: 0,
+const EMPTY_TEMPLATE_FIELDS = {
+    header: [],
+    body: [],
+    footer: [],
 };
 
-const getDefaultForm = () => ({
-    pOrdVoucherNumber: "AUTO",
-    pOrdVoucherDate: todayYMD(),
+const hasValue = (value: any) =>
+    value !== undefined &&
+    value !== null &&
+    value !== "";
 
-    pOrdPurchaseAccount: "",
+const cloneValue = (value: any) => {
+    if (Array.isArray(value)) {
+        return [...value];
+    }
 
-    pOrdVendorCode: "",
-    pOrdVendorName: "",
+    if (
+        value &&
+        typeof value === "object"
+    ) {
+        return {
+            ...value,
+        };
+    }
 
-    pOrdStatus: "open",
+    return value;
+};
 
-    pOrdRemark: "",
-    pOrdStatusRemark: "",
-    pOrdStatusHistory: [],
-    isAutoPost: false,
+const CustomTransaction = ({
+    moduleCode: moduleCodeFromProps = "",
+    moduleName: moduleNameFromProps = "",
+}: CustomTransactionProps) => {
+    const dispatch = useDispatch<any>();
 
-    products: [{ ...emptyProductRow, id: Date.now() }],
+    const {
+        moduleCode: moduleCodeFromRoute = "",
+    } = useParams<{
+        moduleCode: string;
+    }>();
 
-    grossAmount: "0.00",
-    discountAmount: "0.00",
-    cgstAmount: "0.00",
-    sgstAmount: "0.00",
-    igstAmount: "0.00",
-    taxAmount: "0.00",
-    otherAmount: "0.00",
-    netAmount: "0.00",
-});
+    const moduleCode =
+        moduleCodeFromProps ||
+        moduleCodeFromRoute;
 
-/* ===================================================
-   PURCHASE ORDER
-=================================================== */
+    const customTransactionState =
+        useSelector(
+            (state: any) =>
+                state.customTransaction ||
+                state.customTransactionData ||
+                {}
+        );
 
-const CustomTransaction = () => {
-    const dispatch = useDispatch();
-
-    const purchaseOrderState = useSelector(
-        (state: any) => state.purchaseOrder
+    const {
+        transactionsSchema,
+    } = useSelector(
+        (state: any) =>
+            state.getAllTransactionSchema ||
+            {}
     );
-    const { report } = useSelector((s: any) => s.reportMapping);
-    const { transactionsSchema } = useSelector(
-        (state: any) => state.getAllTransactionSchema
-    );
 
-    const purchaseOrders =
-        purchaseOrderState?.purchaseOrders ||
-        purchaseOrderState?.purchaseOrderList ||
+    const transactionItems =
+        customTransactionState?.customTransactiondata ||
+        customTransactionState?.customTransactionData ||
         [];
 
     const pagination =
-        purchaseOrderState?.pagination || defaultPagination;
+        customTransactionState?.pagination ||
+        defaultPagination;
 
     const loading =
-        purchaseOrderState?.loading ||
-        purchaseOrderState?.listingLoader ||
+        customTransactionState?.loading ||
         false;
 
     const createLoading =
-        purchaseOrderState?.createLoading ||
-        purchaseOrderState?.addLoader ||
+        customTransactionState?.createLoading ||
         false;
 
     const updateLoading =
-        purchaseOrderState?.updateLoading || false;
-
-    const deleteLoading =
-        purchaseOrderState?.deleteLoading ||
-        purchaseOrderState?.deleteLoader ||
+        customTransactionState?.updateLoading ||
         false;
 
-    const [localOffset, setLocalOffset] = useState(0);
-    const [localLimit, setLocalLimit] = useState(10);
+    const deleteLoading =
+        customTransactionState?.deleteLoading ||
+        false;
 
-    const [search, setSearch] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [refreshing, setRefreshing] = useState(false);
-    const [status, setStatus] = useState("open");
-    const [showModal, setShowModal] = useState(false);
-    const [editingRecord, setEditingRecord] = useState<any>(false);
-    const [form, setForm] = useState<any>(getDefaultForm());
-    const [errors, setErrors] = useState<any>({});
-    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
-    const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const [
+        localOffset,
+        setLocalOffset,
+    ] = useState(0);
 
-    const [templateFields, setTemplateFields] = useState<any>({
-        header: [],
+    const [
+        localLimit,
+        setLocalLimit,
+    ] = useState(10);
+
+    const [
+        search,
+        setSearch,
+    ] = useState("");
+
+    const [
+        debouncedSearch,
+        setDebouncedSearch,
+    ] = useState("");
+
+    const [
+        refreshing,
+        setRefreshing,
+    ] = useState(false);
+
+    const [
+        showModal,
+        setShowModal,
+    ] = useState(false);
+
+    const [
+        editingVoucherNumber,
+        setEditingVoucherNumber,
+    ] = useState<string | null>(
+        null
+    );
+
+    const [
+        form,
+        setForm,
+    ] = useState<any>({
         body: [],
-        footer: [],
     });
 
-    const [fieldsLoading, setFieldsLoading] = useState(false);
+    const [
+        errors,
+        setErrors,
+    ] = useState<
+        Record<string, string>
+    >({});
 
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({
+    const [
+        templateFields,
+        setTemplateFields,
+    ] = useState<any>(
+        EMPTY_TEMPLATE_FIELDS
+    );
+
+    const [
+        fieldsLoading,
+        setFieldsLoading,
+    ] = useState(false);
+
+    const [
+        confirmTooltip,
+        setConfirmTooltip,
+    ] = useState<any>({
         show: false,
         x: null,
         y: null,
@@ -177,24 +231,150 @@ const CustomTransaction = () => {
     });
 
     /* ===================================================
+       FIELD DEFAULTS
+    =================================================== */
+
+    const getFieldDefaultValue = (
+        field: any
+    ) => {
+        if (
+            field?.defaultValue !==
+            undefined
+        ) {
+            return cloneValue(
+                field.defaultValue
+            );
+        }
+
+        const fieldType = String(
+            field?.type || ""
+        ).toLowerCase();
+
+        const fieldKey = String(
+            field?.key || ""
+        ).toLowerCase();
+
+        if (
+            fieldType === "checkbox" ||
+            fieldType === "boolean" ||
+            fieldType === "switch"
+        ) {
+            return false;
+        }
+
+        if (
+            fieldType === "multiselect" ||
+            fieldType === "multi-select"
+        ) {
+            return [];
+        }
+
+        if (
+            fieldType === "date" &&
+            fieldKey.includes("date")
+        ) {
+            return todayYMD();
+        }
+
+        return "";
+    };
+
+    const buildSectionDefaults = (
+        fields: any[] = []
+    ) => {
+        return fields.reduce(
+            (
+                accumulator: any,
+                field: any
+            ) => {
+                if (!field?.key) {
+                    return accumulator;
+                }
+
+                accumulator[field.key] =
+                    getFieldDefaultValue(
+                        field
+                    );
+
+                return accumulator;
+            },
+            {}
+        );
+    };
+
+    const buildEmptyBodyRow = (
+        fields =
+            templateFields?.body ||
+            []
+    ) => ({
+        id: `${Date.now()}-${Math.random()}`,
+
+        ...buildSectionDefaults(
+            fields
+        ),
+    });
+
+    const buildBlankForm = (
+        fields = templateFields
+    ) => {
+        const headerDefaults =
+            buildSectionDefaults(
+                fields?.header || []
+            );
+
+        const footerDefaults =
+            buildSectionDefaults(
+                fields?.footer || []
+            );
+
+        return {
+            ...headerDefaults,
+            ...footerDefaults,
+
+            body:
+                (
+                    fields?.body ||
+                    []
+                ).length > 0
+                    ? [
+                        buildEmptyBodyRow(
+                            fields.body
+                        ),
+                    ]
+                    : [],
+        };
+    };
+
+    /* ===================================================
        FIELD HELPERS
     =================================================== */
 
-    const getHeaderFieldByKey = (key: string) => {
+    const getHeaderFieldByKey = (
+        key: string
+    ) => {
         return templateFields?.header?.find(
-            (field: any) => field.key === key
+            (field: any) =>
+                field?.key === key
         );
     };
 
-    const getBodyFieldByKey = (key: string) => {
+    const getBodyFieldByKey = (
+        key: string
+    ) => {
         return templateFields?.body?.find(
-            (field: any) => field.key === key
+            (field: any) =>
+                field?.key === key
         );
     };
 
-    const getOptionByValue = (field: any, selectedValue: any) => {
+    const getOptionByValue = (
+        field: any,
+        selectedValue: any
+    ) => {
         return field?.options?.find(
-            (opt: any) => String(opt.value) === String(selectedValue)
+            (option: any) =>
+                String(option?.value) ===
+                String(selectedValue)
         );
     };
 
@@ -203,20 +383,39 @@ const CustomTransaction = () => {
         selectedValue: any,
         oldData: any
     ) => {
-        if (!field) return oldData;
+        if (!field) {
+            return oldData;
+        }
 
-        const selectedOption = getOptionByValue(field, selectedValue);
+        const selectedOption =
+            getOptionByValue(
+                field,
+                selectedValue
+            );
 
         const updated = {
             ...oldData,
-            [field.key]: selectedValue,
+
+            [field.key]:
+                selectedValue,
         };
 
-        if (field?.mapFields && selectedOption?.raw) {
-            Object.entries(field.mapFields).forEach(
-                ([targetKey, sourceKey]) => {
+        if (
+            field?.mapFields &&
+            selectedOption?.raw
+        ) {
+            Object.entries(
+                field.mapFields
+            ).forEach(
+                ([
+                    targetKey,
+                    sourceKey,
+                ]) => {
                     updated[targetKey] =
-                        selectedOption.raw?.[sourceKey as string] ?? "";
+                        selectedOption
+                            .raw?.[
+                        sourceKey as string
+                        ] ?? "";
                 }
             );
         }
@@ -224,1250 +423,2035 @@ const CustomTransaction = () => {
         return updated;
     };
 
-    const hasValue = (value: any) => value !== undefined && value !== null && value !== "";
+    const normalizeDateValue = (
+        field: any,
+        value: any
+    ) => {
+        const fieldType = String(
+            field?.type || ""
+        ).toLowerCase();
 
-    const fillProductDetailsFromSelectedOption = (row: any, selectedOption: any) => {
-        const product = selectedOption?.raw;
-        if (!product) return row;
-
-        const unitCode = product?.unit || row.unit || row.uom || "";
-        const csgst = hasValue(product?.csgst) ? String(product.csgst) : "";
-        const igst = hasValue(product?.igst) ? String(product.igst) : "";
-
-        return {
-            ...row,
-
-            productId: product?._id || row.productId || "",
-            productCode: product?.productCode || row.productCode || "",
-            productName: product?.productName || row.productName || "",
-
-            productDescription:
-                product?.productDescription || row.productDescription || "",
-
-            description:
-                product?.productDescription || row.description || "",
-
-            productHSNCode:
-                product?.productHSNCode || row.productHSNCode || "",
-
-            unit: unitCode,
-            uom: unitCode,
-            unitName: getUnitLabelFromSchema(unitCode),
-
-            rate: hasValue(product?.purchasePrice)
-                ? String(product.purchasePrice)
-                : row.rate || "",
-
-            cgst: csgst || row.cgst || "",
-            cgstPercentage: csgst || row.cgstPercentage || "",
-
-            igst: igst || row.igst || "",
-            igstPercentage: igst || row.igstPercentage || "",
-        };
-    };
-
-    const getUnitLabelFromSchema = (unitCode: string) => {
-        const unitField = templateFields?.body?.find(
-            (field: any) => field.key === "uom" || field.key === "unit"
-        );
-
-        const selectedUnit = unitField?.options?.find(
-            (item: any) => String(item.value) === String(unitCode)
-        );
-
-        return selectedUnit?.label || unitCode || "";
-    };
-
-    const normalizeRowKeys = (row: any) => {
-        const updated = { ...row };
-
-        if (updated.uom && !updated.unit) {
-            updated.unit = updated.uom;
+        if (
+            fieldType === "date" &&
+            value
+        ) {
+            return formatDateForInput(
+                value
+            );
         }
 
-        if (updated.unit && !updated.uom) {
-            updated.uom = updated.unit;
-        }
-
-        if (updated.productDescription && !updated.description) {
-            updated.description = updated.productDescription;
-        }
-
-        if (updated.description && !updated.productDescription) {
-            updated.productDescription = updated.description;
-        }
-
-        if (updated.netAmount && !updated.netTotal) {
-            updated.netTotal = updated.netAmount;
-        }
-
-        if (updated.netTotal && !updated.netAmount) {
-            updated.netAmount = updated.netTotal;
-        }
-
-        if (updated.gross && !updated.grossAmount) {
-            updated.grossAmount = updated.gross;
-        }
-
-        if (updated.grossAmount && !updated.gross) {
-            updated.gross = updated.grossAmount;
-        }
-
-        updated.unitName = getUnitLabelFromSchema(
-            updated.unit || updated.uom
-        );
-
-        return updated;
+        return value;
     };
 
     /* ===================================================
-       CALCULATIONS
+       GENERIC BODY CALCULATION
     =================================================== */
 
-    const calculateRow = (row: any) => {
-        const quantity = num(row.quantity);
-        const rate = num(row.rate);
-
-        const gross = quantity * rate;
-
-        const discountPercent = safePercent(
-            row.discount !== undefined && row.discount !== null && row.discount !== ""
-                ? row.discount
-                : row.discountPercentage
+    const calculateRow = (
+        row: any
+    ) => {
+        const bodyKeys = new Set(
+            (
+                templateFields?.body ||
+                []
+            ).map(
+                (field: any) =>
+                    field?.key
+            )
         );
 
-        const cgstPercent = safePercent(
-            row.cgst !== undefined && row.cgst !== null && row.cgst !== ""
-                ? row.cgst
-                : row.cgstPercentage
+        const canCalculateGross =
+            bodyKeys.has("quantity") &&
+            bodyKeys.has("rate");
+
+        if (!canCalculateGross) {
+            return row;
+        }
+
+        const quantity = num(
+            row?.quantity
         );
 
-        const sgstPercent = safePercent(
-            row.sgst !== undefined && row.sgst !== null && row.sgst !== ""
-                ? row.sgst
-                : row.sgstPercentage
+        const rate = num(
+            row?.rate
         );
 
-        const igstPercent = safePercent(
-            row.igst !== undefined && row.igst !== null && row.igst !== ""
-                ? row.igst
-                : row.igstPercentage
+        const grossAmount =
+            quantity * rate;
+
+        const discountPercentage =
+            safePercent(
+                hasValue(
+                    row?.discountPercentage
+                )
+                    ? row
+                        .discountPercentage
+                    : row?.discount
+            );
+
+        const cgstPercentage =
+            safePercent(
+                hasValue(
+                    row?.cgstPercentage
+                )
+                    ? row
+                        .cgstPercentage
+                    : row?.cgst
+            );
+
+        const sgstPercentage =
+            safePercent(
+                hasValue(
+                    row?.sgstPercentage
+                )
+                    ? row
+                        .sgstPercentage
+                    : row?.sgst
+            );
+
+        const igstPercentage =
+            safePercent(
+                hasValue(
+                    row?.igstPercentage
+                )
+                    ? row
+                        .igstPercentage
+                    : row?.igst
+            );
+
+        const discountAmount =
+            (grossAmount *
+                discountPercentage) /
+            100;
+
+        const taxableAmount =
+            grossAmount -
+            discountAmount;
+
+        const cgstAmount =
+            (taxableAmount *
+                cgstPercentage) /
+            100;
+
+        const sgstAmount =
+            (taxableAmount *
+                sgstPercentage) /
+            100;
+
+        const igstAmount =
+            (taxableAmount *
+                igstPercentage) /
+            100;
+
+        const taxAmount =
+            cgstAmount +
+            sgstAmount +
+            igstAmount;
+
+        const otherAmount = num(
+            row?.otherAmount
         );
 
-        const discountAmount = (gross * discountPercent) / 100;
-        const taxableAmount = gross - discountAmount;
-
-        const cgstAmount = (taxableAmount * cgstPercent) / 100;
-        const sgstAmount = (taxableAmount * sgstPercent) / 100;
-        const igstAmount = (taxableAmount * igstPercent) / 100;
-
-        const otherAmount = num(row.otherAmount);
-
-        const taxAmount = cgstAmount + sgstAmount + igstAmount;
-        const netAmount = taxableAmount + taxAmount + otherAmount;
+        const netAmount =
+            taxableAmount +
+            taxAmount +
+            otherAmount;
 
         return {
             ...row,
 
-            // ✅ keep typed/input values as it is
-            quantity: row.quantity,
-            rate: row.rate,
+            gross:
+                grossAmount,
 
-            discount: row.discount,
-            discountPercentage: row.discountPercentage,
-
-            cgst: row.cgst,
-            cgstPercentage: row.cgstPercentage,
-
-            sgst: row.sgst,
-            sgstPercentage: row.sgstPercentage,
-
-            igst: row.igst,
-            igstPercentage: row.igstPercentage,
-
-            otherAmount: row.otherAmount,
-
-            // ✅ calculated values
-            gross,
-            grossAmount: gross,
+            grossAmount,
 
             discountAmount,
+
             taxableAmount,
 
             cgstAmount,
+
             sgstAmount,
+
             igstAmount,
 
             taxAmount,
 
             netAmount,
-            netTotal: netAmount,
 
-            unit: row.unit || row.uom || "",
-            uom: row.uom || row.unit || "",
-
-            description: row.description || row.productDescription || "",
-            productDescription: row.productDescription || row.description || "",
+            netTotal:
+                netAmount,
         };
     };
 
-    const calculateFooter = (products: any[]) => {
-        return (products || []).reduce(
-            (acc: any, item: any) => {
-                acc.totalQuantity += num(item.quantity);
+    /* ===================================================
+       FOOTER CALCULATION
+    =================================================== */
 
-                acc.totalGrossAmount += num(item.grossAmount || item.gross);
-                acc.totalDiscountAmount += num(item.discountAmount);
+    const calculatedFooterValues =
+        useMemo(() => {
+            const rows =
+                form?.body || [];
 
-                acc.totalCgstAmount += num(item.cgstAmount);
-                acc.totalSgstAmount += num(item.sgstAmount);
-                acc.totalIgstAmount += num(item.igstAmount);
+            const standardTotals =
+                rows.reduce(
+                    (
+                        accumulator: any,
+                        row: any
+                    ) => {
+                        accumulator.totalQuantity +=
+                            num(
+                                row?.quantity
+                            );
 
-                acc.totalTaxAmount += num(item.taxAmount);
-                acc.totalOtherAmount += num(item.otherAmount);
+                        accumulator.grossAmount +=
+                            num(
+                                row?.grossAmount ??
+                                row?.gross
+                            );
 
-                acc.totalNetAmount += num(item.netAmount || item.netTotal);
+                        accumulator.discountAmount +=
+                            num(
+                                row?.discountAmount
+                            );
 
-                return acc;
-            },
-            {
-                totalQuantity: 0,
-                totalGrossAmount: 0,
-                totalDiscountAmount: 0,
-                totalCgstAmount: 0,
-                totalSgstAmount: 0,
-                totalIgstAmount: 0,
-                totalTaxAmount: 0,
-                totalOtherAmount: 0,
-                totalNetAmount: 0,
-            }
-        );
-    };
+                        accumulator.taxableAmount +=
+                            num(
+                                row?.taxableAmount
+                            );
 
-    const footerTotals = useMemo(() => {
-        return calculateFooter(form.products || []);
-    }, [form.products]);
+                        accumulator.cgstAmount +=
+                            num(
+                                row?.cgstAmount
+                            );
 
-    const grossAmount = footerTotals.totalGrossAmount;
-    const discountAmount = footerTotals.totalDiscountAmount;
-    const cgstAmount = footerTotals.totalCgstAmount;
-    const sgstAmount = footerTotals.totalSgstAmount;
-    const igstAmount = footerTotals.totalIgstAmount;
-    const netAmount = footerTotals.totalNetAmount;
+                        accumulator.sgstAmount +=
+                            num(
+                                row?.sgstAmount
+                            );
+
+                        accumulator.igstAmount +=
+                            num(
+                                row?.igstAmount
+                            );
+
+                        accumulator.taxAmount +=
+                            num(
+                                row?.taxAmount
+                            );
+
+                        accumulator.otherAmount +=
+                            num(
+                                row?.otherAmount
+                            );
+
+                        accumulator.netAmount +=
+                            num(
+                                row?.netAmount ??
+                                row?.netTotal
+                            );
+
+                        return accumulator;
+                    },
+                    {
+                        totalQuantity:
+                            0,
+
+                        grossAmount:
+                            0,
+
+                        discountAmount:
+                            0,
+
+                        taxableAmount:
+                            0,
+
+                        cgstAmount:
+                            0,
+
+                        sgstAmount:
+                            0,
+
+                        igstAmount:
+                            0,
+
+                        taxAmount:
+                            0,
+
+                        otherAmount:
+                            0,
+
+                        netAmount:
+                            0,
+                    }
+                );
+
+            const footer: Record<
+                string,
+                any
+            > = {};
+
+            (
+                templateFields?.footer ||
+                []
+            ).forEach(
+                (field: any) => {
+                    const key =
+                        field?.key;
+
+                    if (!key) {
+                        return;
+                    }
+
+                    const standardMap: Record<
+                        string,
+                        any
+                    > = {
+                        totalQuantity:
+                            standardTotals.totalQuantity,
+
+                        grossAmount:
+                            standardTotals.grossAmount,
+
+                        totalGrossAmount:
+                            standardTotals.grossAmount,
+
+                        discountAmount:
+                            standardTotals.discountAmount,
+
+                        totalDiscountAmount:
+                            standardTotals.discountAmount,
+
+                        taxableAmount:
+                            standardTotals.taxableAmount,
+
+                        totalTaxableAmount:
+                            standardTotals.taxableAmount,
+
+                        cgstAmount:
+                            standardTotals.cgstAmount,
+
+                        totalCgstAmount:
+                            standardTotals.cgstAmount,
+
+                        sgstAmount:
+                            standardTotals.sgstAmount,
+
+                        totalSgstAmount:
+                            standardTotals.sgstAmount,
+
+                        igstAmount:
+                            standardTotals.igstAmount,
+
+                        totalIgstAmount:
+                            standardTotals.igstAmount,
+
+                        taxAmount:
+                            standardTotals.taxAmount,
+
+                        totalTaxAmount:
+                            standardTotals.taxAmount,
+
+                        otherAmount:
+                            standardTotals.otherAmount,
+
+                        totalOtherAmount:
+                            standardTotals.otherAmount,
+
+                        netAmount:
+                            standardTotals.netAmount,
+
+                        totalNetAmount:
+                            standardTotals.netAmount,
+                    };
+
+                    if (
+                        standardMap[
+                        key
+                        ] !== undefined
+                    ) {
+                        footer[key] =
+                            standardMap[
+                            key
+                            ];
+
+                        return;
+                    }
+
+                    if (
+                        key ===
+                        "adjustedAmount"
+                    ) {
+                        footer[key] =
+                            num(
+                                form?.[
+                                key
+                                ]
+                            );
+
+                        return;
+                    }
+
+                    if (
+                        key ===
+                        "balanceAmount"
+                    ) {
+                        footer[key] =
+                            standardTotals.netAmount -
+                            num(
+                                form?.adjustedAmount
+                            );
+
+                        return;
+                    }
+
+                    const bodyHasSameField =
+                        (
+                            templateFields?.body ||
+                            []
+                        ).some(
+                            (
+                                bodyField: any
+                            ) =>
+                                bodyField?.key ===
+                                key
+                        );
+
+                    if (
+                        bodyHasSameField
+                    ) {
+                        footer[key] =
+                            rows.reduce(
+                                (
+                                    sum: number,
+                                    row: any
+                                ) =>
+                                    sum +
+                                    num(
+                                        row?.[
+                                        key
+                                        ]
+                                    ),
+                                0
+                            );
+
+                        return;
+                    }
+
+                    footer[key] =
+                        form?.[key] ??
+                        getFieldDefaultValue(
+                            field
+                        );
+                }
+            );
+
+            return footer;
+        }, [
+            form,
+            templateFields,
+        ]);
+
+    const footerTotals =
+        useMemo(() => {
+            return {
+                ...calculatedFooterValues,
+
+                totalGrossAmount:
+                    calculatedFooterValues
+                        ?.totalGrossAmount ??
+                    calculatedFooterValues
+                        ?.grossAmount ??
+                    0,
+
+                totalDiscountAmount:
+                    calculatedFooterValues
+                        ?.totalDiscountAmount ??
+                    calculatedFooterValues
+                        ?.discountAmount ??
+                    0,
+
+                totalCgstAmount:
+                    calculatedFooterValues
+                        ?.totalCgstAmount ??
+                    calculatedFooterValues
+                        ?.cgstAmount ??
+                    0,
+
+                totalSgstAmount:
+                    calculatedFooterValues
+                        ?.totalSgstAmount ??
+                    calculatedFooterValues
+                        ?.sgstAmount ??
+                    0,
+
+                totalIgstAmount:
+                    calculatedFooterValues
+                        ?.totalIgstAmount ??
+                    calculatedFooterValues
+                        ?.igstAmount ??
+                    0,
+
+                totalTaxAmount:
+                    calculatedFooterValues
+                        ?.totalTaxAmount ??
+                    calculatedFooterValues
+                        ?.taxAmount ??
+                    0,
+
+                totalOtherAmount:
+                    calculatedFooterValues
+                        ?.totalOtherAmount ??
+                    calculatedFooterValues
+                        ?.otherAmount ??
+                    0,
+
+                totalNetAmount:
+                    calculatedFooterValues
+                        ?.totalNetAmount ??
+                    calculatedFooterValues
+                        ?.netAmount ??
+                    0,
+            };
+        }, [
+            calculatedFooterValues,
+        ]);
+
+    const dynamicFooterArray =
+        useMemo(() => {
+            return (
+                templateFields?.footer ||
+                []
+            )
+                .filter(
+                    (field: any) =>
+                        !field?.isHidden
+                )
+                .map(
+                    (field: any) => {
+                        const rawValue =
+                            calculatedFooterValues?.[
+                            field
+                                .key
+                            ] ?? "";
+
+                        const fieldType =
+                            String(
+                                field?.type ||
+                                ""
+                            ).toLowerCase();
+
+                        const isMoneyField =
+                            fieldType ===
+                            "currency" ||
+                            fieldType ===
+                            "amount" ||
+                            String(
+                                field?.key ||
+                                ""
+                            )
+                                .toLowerCase()
+                                .includes(
+                                    "amount"
+                                );
+
+                        return {
+                            ...field,
+
+                            rawValue,
+
+                            value:
+                                isMoneyField
+                                    ? money(
+                                        rawValue ||
+                                        0
+                                    )
+                                    : rawValue,
+                        };
+                    }
+                );
+        }, [
+            templateFields?.footer,
+            calculatedFooterValues,
+        ]);
 
     /* ===================================================
        API CALLS
     =================================================== */
 
-    const fetchPurchaseOrders = async () => {
-        await dispatch(
-            getPurchaseOrderList({
-                offset: localOffset,
-                limit: localLimit,
-                search: debouncedSearch,
-                status: status,
-            }) as any
+    const fetchTransactions =
+        async () => {
+            if (!moduleCode) {
+                return;
+            }
+
+            await dispatch(
+                getAllCustomTransactionData(
+                    {
+                        offset:
+                            localOffset,
+
+                        limit:
+                            localLimit,
+
+                        search:
+                            debouncedSearch,
+
+                        status:
+                            "active",
+
+                        moduleCode,
+                    }
+                )
+            );
+        };
+
+    useEffect(() => {
+        if (!moduleCode) {
+            return;
+        }
+
+        /*
+         * When module changes, reset listing state.
+         */
+        setLocalOffset(0);
+        setSearch("");
+        setDebouncedSearch("");
+        setShowModal(false);
+        setEditingVoucherNumber(
+            null
         );
-    };
+
+        dispatch(
+            getAllTransactionSchema(
+                moduleCode
+            )
+        );
+    }, [
+        dispatch,
+        moduleCode,
+    ]);
 
     useEffect(() => {
-        dispatch(getAllTransactionSchema("purchaseOrder") as any);
-    }, [dispatch]);
+        fetchTransactions();
+    }, [
+        moduleCode,
+        localOffset,
+        localLimit,
+        debouncedSearch,
+    ]);
 
     useEffect(() => {
-        fetchPurchaseOrders();
-    }, [localOffset, localLimit, debouncedSearch, status]);
+        const timer = setTimeout(
+            () => {
+                setDebouncedSearch(
+                    search.trim()
+                );
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search.trim());
-            setLocalOffset(0);
-        }, 400);
+                setLocalOffset(0);
+            },
+            400
+        );
 
-        return () => clearTimeout(timer);
+        return () =>
+            clearTimeout(timer);
     }, [search]);
 
-    useEffect(() => {
-        /* @ts-ignore  */
-        dispatch(getAllReportMapping({ moduleType: "purchaseOrder" }));
-        dispatch(
-            getAllSystemConfigurations({
-                offset: 0,
-                limit: 100000,
-                status: "",
-            }) as any
-        );
-    }, []);
-
     /* ===================================================
-       LOAD TRANSACTION SCHEMA WITH API OPTIONS
+       LOAD SCHEMA OPTIONS
     =================================================== */
 
     useEffect(() => {
-        const prepareFields = async () => {
-            if (!transactionsSchema) return;
-            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
-            if (!hasSchema) return;
-            try {
-                setFieldsLoading(true);
-                const updatedData = await loadAllTemplateOptions(transactionsSchema);
-                setTemplateFields(updatedData);
-            } catch (error) {
-                console.log("Failed to prepare template fields", error);
-            } finally {
-                setFieldsLoading(false);
-            }
-        };
+        const prepareFields =
+            async () => {
+                if (
+                    !transactionsSchema
+                ) {
+                    return;
+                }
+
+                const hasSchema =
+                    Array.isArray(
+                        transactionsSchema?.header
+                    ) ||
+                    Array.isArray(
+                        transactionsSchema?.body
+                    ) ||
+                    Array.isArray(
+                        transactionsSchema?.footer
+                    );
+
+                if (!hasSchema) {
+                    return;
+                }
+
+                try {
+                    setFieldsLoading(
+                        true
+                    );
+
+                    const updatedFields =
+                        await loadAllTemplateOptions(
+                            transactionsSchema
+                        );
+
+                    setTemplateFields(
+                        updatedFields
+                    );
+
+                    setForm(
+                        buildBlankForm(
+                            updatedFields
+                        )
+                    );
+
+                    setErrors({});
+
+                    setEditingVoucherNumber(
+                        null
+                    );
+                } catch (error) {
+                    console.error(
+                        "Failed to prepare custom transaction fields",
+                        error
+                    );
+
+                    toast.error(
+                        "Failed to load custom transaction fields"
+                    );
+                } finally {
+                    setFieldsLoading(
+                        false
+                    );
+                }
+            };
 
         prepareFields();
-    }, [transactionsSchema]);
+    }, [
+        transactionsSchema,
+        moduleCode,
+    ]);
+
+    /* ===================================================
+       MODULE NAME
+    =================================================== */
+
+    const resolvedModuleName =
+        useMemo(() => {
+            const moduleNameField =
+                templateFields?.header?.find(
+                    (field: any) =>
+                        field?.key ===
+                        "moduleName"
+                );
+
+            return (
+                moduleNameFromProps ||
+                transactionsSchema?.moduleName ||
+                moduleNameField?.defaultValue ||
+                moduleCode ||
+                "Custom Transaction"
+            );
+        }, [
+            moduleNameFromProps,
+            templateFields,
+            transactionsSchema,
+            moduleCode,
+        ]);
 
     /* ===================================================
        LIST COLUMNS
     =================================================== */
 
-    const columns = [
-        {
-            key: "pOrdVoucherNumber",
-            title: "Voucher No",
-        },
-        {
-            key: "pOrdVoucherDate",
-            title: "Date",
-            render: (row: any) =>
-                row?.pOrdVoucherDate
-                    ? formatDateForList(row.pOrdVoucherDate)
-                    : "-",
-        },
-        {
-            key: "pOrdVendorName",
-            title: "Vendor",
-            render: (row: any) => (
-                <div>
-                    <div className="font-medium text-card-foreground">
-                        {row?.pOrdVendorName || "-"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                        {row?.pOrdVendorCode || "-"}
-                    </div>
-                </div>
-            ),
-        },
-        {
-            key: "pOrdBody",
-            title: "Items",
-            render: (row: any) => row?.pOrdBody?.length || 0,
-        },
+    const displayFieldValue = (
+        field: any,
+        value: any
+    ) => {
+        if (!hasValue(value)) {
+            return "-";
+        }
 
-        {
-            key: "pOrdFooter",
-            title: "Net Amount",
-            render: (row: any) => (
-                <span className="font-semibold text-primary">
-                    {money(row?.pOrdFooter?.netAmount || 0)}
-                </span>
-            ),
-        },
+        if (Array.isArray(value)) {
+            return value.join(", ");
+        }
 
-        {
-            key: "pOrdStatus",
-            title: "Order Status",
-            render: (row: any) => (
-                <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
-                    {row?.pOrdStatus || "-"}
-                </span>
-            ),
-        },
-    ];
+        if (
+            typeof value ===
+            "boolean"
+        ) {
+            return value
+                ? "Yes"
+                : "No";
+        }
+
+        const fieldType = String(
+            field?.type || ""
+        ).toLowerCase();
+
+        if (fieldType === "date") {
+            return formatDateForList(
+                value
+            );
+        }
+
+        const option =
+            getOptionByValue(
+                field,
+                value
+            );
+
+        if (option?.label) {
+            return option.label;
+        }
+
+        return String(value);
+    };
+
+    const columns = useMemo(() => {
+        const excludedHeaderKeys =
+            new Set([
+                "moduleCode",
+                "moduleName",
+                "voucherNumber",
+                "status",
+                "ownerUser",
+            ]);
+
+        const dynamicColumns = (
+            templateFields?.header ||
+            []
+        )
+            .filter(
+                (field: any) =>
+                    !field?.isHidden &&
+                    !excludedHeaderKeys.has(
+                        field?.key
+                    )
+            )
+            .slice(0, 4)
+            .map(
+                (field: any) => ({
+                    key:
+                        field.key,
+
+                    title:
+                        field.label ||
+                        field.key,
+
+                    render: (
+                        record: any
+                    ) =>
+                        displayFieldValue(
+                            field,
+
+                            record
+                                ?.data
+                                ?.header?.[
+                            field
+                                .key
+                            ] ??
+                            record
+                                ?.header?.[
+                            field
+                                .key
+                            ] ??
+                            record?.[
+                            field
+                                .key
+                            ]
+                        ),
+                })
+            );
+
+        return [
+            {
+                key:
+                    "voucherNumber",
+
+                title:
+                    "Voucher No",
+
+                render: (
+                    record: any
+                ) => (
+                    <span className="font-medium text-card-foreground">
+                        {record?.voucherNumber ||
+                            "-"}
+                    </span>
+                ),
+            },
+
+            ...dynamicColumns,
+
+            {
+                key: "body",
+
+                title: "Items",
+
+                render: (
+                    record: any
+                ) =>
+                    record?.data
+                        ?.body
+                        ?.length ||
+                    record?.body
+                        ?.length ||
+                    0,
+            },
+
+            {
+                key: "status",
+
+                title: "Status",
+
+                render: (
+                    record: any
+                ) => (
+                    <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
+                        {record?.status ||
+                            "active"}
+                    </span>
+                ),
+            },
+        ];
+    }, [
+        templateFields,
+    ]);
 
     /* ===================================================
-       ACTIONS
+       FORM RESET / OPEN
     =================================================== */
 
-    const handleStatusChange = (nextStatus: string) => {
-        setStatus(nextStatus);
-        setLocalOffset(0);
-    };
+    const resetForm = () => {
+        setEditingVoucherNumber(
+            null
+        );
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-
-        try {
-            await fetchPurchaseOrders();
-            toast.success("Purchase order list refreshed");
-        } finally {
-            setRefreshing(false);
-        }
-    };
-
-    const resetMainForm = () => {
-        setEditingRecord(null);
         setErrors({});
-        setForm(getDefaultForm());
+
+        setForm(
+            buildBlankForm()
+        );
     };
 
     const openAddModal = () => {
-        resetMainForm();
+        resetForm();
+
         setShowModal(true);
     };
 
-    const openEditModal = (record: any) => {
-        const footer = record?.pOrdFooter || {};
+    const openEditModal = (
+        record: any
+    ) => {
+        /*
+         * The complete selected record from the listing
+         * is passed directly into this function.
+         *
+         * No get-single API is called.
+         */
+        const transactionData =
+            record?.data ||
+            record?.transactionData ||
+            record ||
+            {};
 
-        const products =
-            record?.pOrdBody?.length > 0
-                ? record.pOrdBody.map((item: any) => {
-                    const unitCode = item?.unit || item?.uom || "";
+        const headerData =
+            transactionData?.header ||
+            record?.header ||
+            {};
 
-                    return calculateRow(
-                        normalizeRowKeys({
-                            id: item?.id || Date.now() + Math.random(),
+        const footerData =
+            transactionData?.footer ||
+            record?.footer ||
+            {};
 
-                            productCode: item?.productCode || "",
-                            productName: item?.productName || "",
-                            productId: item?.productId || "",
+        const bodyData =
+            Array.isArray(
+                transactionData?.body
+            )
+                ? transactionData.body
+                : Array.isArray(
+                    record?.body
+                )
+                    ? record.body
+                    : [];
 
-                            productDescription:
-                                item?.productDescription ||
-                                item?.description ||
-                                "",
+        const normalizedHeader =
+            (
+                templateFields?.header ||
+                []
+            ).reduce(
+                (
+                    accumulator: any,
+                    field: any
+                ) => {
+                    const value =
+                        headerData?.[
+                        field
+                            .key
+                        ] ??
+                        getFieldDefaultValue(
+                            field
+                        );
 
-                            description:
-                                item?.description ||
-                                item?.productDescription ||
-                                "",
+                    accumulator[
+                        field.key
+                    ] =
+                        normalizeDateValue(
+                            field,
+                            value
+                        );
 
-                            productHSNCode: item?.productHSNCode || "",
+                    return accumulator;
+                },
+                {}
+            );
 
-                            remarks: item?.remarks || "",
+        const normalizedFooter =
+            (
+                templateFields?.footer ||
+                []
+            ).reduce(
+                (
+                    accumulator: any,
+                    field: any
+                ) => {
+                    accumulator[
+                        field.key
+                    ] =
+                        footerData?.[
+                        field
+                            .key
+                        ] ??
+                        getFieldDefaultValue(
+                            field
+                        );
 
-                            quantity: item?.quantity || "",
+                    return accumulator;
+                },
+                {}
+            );
 
-                            unit: unitCode,
-                            uom: unitCode,
-                            unitName:
-                                item?.unitName ||
-                                getUnitLabelFromSchema(unitCode),
+        const normalizedBody =
+            bodyData.length > 0
+                ? bodyData.map(
+                    (
+                        row: any
+                    ) => {
+                        const normalizedRow =
+                            (
+                                templateFields?.body ||
+                                []
+                            ).reduce(
+                                (
+                                    accumulator: any,
+                                    field: any
+                                ) => {
+                                    const value =
+                                        row?.[
+                                        field
+                                            .key
+                                        ] ??
+                                        getFieldDefaultValue(
+                                            field
+                                        );
 
-                            rate: item?.rate || "",
+                                    accumulator[
+                                        field.key
+                                    ] =
+                                        normalizeDateValue(
+                                            field,
+                                            value
+                                        );
 
-                            gross: item?.gross || item?.grossAmount || 0,
-                            grossAmount:
-                                item?.grossAmount || item?.gross || 0,
+                                    return accumulator;
+                                },
+                                {}
+                            );
 
-                            discount:
-                                item?.discount ||
-                                item?.discountPercentage ||
-                                "",
+                        /*
+                         * Support direct API field names.
+                         */
+                        if (
+                            normalizedRow.grossAmount ===
+                            undefined ||
+                            normalizedRow.grossAmount ===
+                            ""
+                        ) {
+                            normalizedRow.grossAmount =
+                                row?.grossAmount ??
+                                row?.gross ??
+                                "";
+                        }
 
-                            discountPercentage:
-                                item?.discountPercentage ||
-                                item?.discount ||
-                                "",
+                        if (
+                            normalizedRow.gross ===
+                            undefined ||
+                            normalizedRow.gross ===
+                            ""
+                        ) {
+                            normalizedRow.gross =
+                                row?.gross ??
+                                row?.grossAmount ??
+                                "";
+                        }
 
-                            discountAmount: item?.discountAmount || 0,
+                        if (
+                            normalizedRow.netAmount ===
+                            undefined ||
+                            normalizedRow.netAmount ===
+                            ""
+                        ) {
+                            normalizedRow.netAmount =
+                                row?.netAmount ??
+                                row?.netTotal ??
+                                "";
+                        }
 
-                            taxableAmount: item?.taxableAmount || 0,
+                        if (
+                            normalizedRow.netTotal ===
+                            undefined ||
+                            normalizedRow.netTotal ===
+                            ""
+                        ) {
+                            normalizedRow.netTotal =
+                                row?.netTotal ??
+                                row?.netAmount ??
+                                "";
+                        }
 
-                            cgst:
-                                item?.csgst ||
-                                item?.cgstPercentage ||
-                                "",
+                        return calculateRow(
+                            {
+                                id: `${Date.now()}-${Math.random()}`,
 
-                            cgstPercentage:
-                                item?.cgstPercentage ||
-                                item?.cgst ||
-                                "",
+                                ...normalizedRow,
+                            }
+                        );
+                    }
+                )
+                : (
+                    templateFields?.body ||
+                    []
+                ).length > 0
+                    ? [
+                        buildEmptyBodyRow(),
+                    ]
+                    : [];
 
-                            cgstAmount: item?.cgstAmount || 0,
+        setEditingVoucherNumber(
+            record?.voucherNumber ||
+            transactionData?.voucherNumber ||
+            null
+        );
 
-                            sgst:
-                                item?.sgst ||
-                                item?.sgstPercentage ||
-                                "",
-
-                            sgstPercentage:
-                                item?.sgstPercentage ||
-                                item?.sgst ||
-                                "",
-
-                            sgstAmount: item?.sgstAmount || 0,
-
-                            igst:
-                                item?.igst ||
-                                item?.igstPercentage ||
-                                "",
-
-                            igstPercentage:
-                                item?.igstPercentage ||
-                                item?.igst ||
-                                "",
-
-                            igstAmount: item?.igstAmount || 0,
-
-                            taxAmount: item?.taxAmount || 0,
-
-                            otherAmount: item?.otherAmount || 0,
-
-                            netAmount:
-                                item?.netAmount ||
-                                item?.netTotal ||
-                                0,
-
-                            netTotal:
-                                item?.netTotal ||
-                                item?.netAmount ||
-                                0,
-                        })
-                    );
-                })
-                : [{ ...emptyProductRow, id: Date.now() }];
-
-        setEditingRecord(true);
         setErrors({});
 
         setForm({
-            pOrdVoucherNumber: record?.pOrdVoucherNumber || "AUTO",
+            ...normalizedHeader,
 
-            pOrdVoucherDate: formatDateForInput(
-                record?.pOrdVoucherDate
-            ),
+            ...normalizedFooter,
 
-            pOrdVendorCode: record?.pOrdVendorCode || "",
-            pOrdVendorName: record?.pOrdVendorName || "",
-
-            pOrdPurchaseAccount: record?.pOrdPurchaseAccount || "",
-
-            pOrdStatus: record?.pOrdStatus || "open",
-
-            pOrdRemark: record?.pOrdRemark || "",
-            pOrdStatusRemark: record?.pOrdStatusRemark || "",
-            pOrdStatusHistory: record?.pOrdStatusHistory || [],
-
-            isAutoPost: record?.isAutoPost || false,
-
-            products,
-
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-
-            discountAmount:
-                footer?.discountAmount ||
-                footer?.totalDiscountAmount ||
-                "0.00",
-
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-
-            otherAmount:
-                footer?.otherAmount ||
-                footer?.totalOtherAmount ||
-                "0.00",
-
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            body:
+                normalizedBody,
         });
 
         setShowModal(true);
     };
 
     /* ===================================================
-       DYNAMIC HEADER CHANGE
+       HEADER CHANGE
     =================================================== */
 
-    const handleMainChange = (key: string, value: any) => {
-        setForm((prev: any) => {
-            const currentField = getHeaderFieldByKey(key);
+    const handleMainChange = (
+        key: string,
+        value: any
+    ) => {
+        setForm(
+            (
+                previous: any
+            ) => {
+                const field =
+                    getHeaderFieldByKey(
+                        key
+                    );
 
-            let updated = {
-                ...prev,
-                [key]: value,
-            };
+                if (
+                    field?.mapFields
+                ) {
+                    return applyMappedFields(
+                        field,
+                        value,
+                        previous
+                    );
+                }
 
-            if (currentField?.mapFields) {
-                updated = applyMappedFields(currentField, value, updated);
+                return {
+                    ...previous,
+
+                    [key]:
+                        value,
+                };
             }
+        );
 
-            return updated;
-        });
+        setErrors(
+            (previous) => ({
+                ...previous,
 
-        setErrors((prev: any) => ({
-            ...prev,
-            [key]: "",
-        }));
+                [key]: "",
+            })
+        );
     };
 
     /* ===================================================
-       DYNAMIC BODY ROW CHANGE
+       BODY CHANGE
     =================================================== */
 
     const handleAddRow = () => {
-        setForm((prev: any) => ({
-            ...prev,
-            products: [
-                ...(prev.products || []),
-                {
-                    ...emptyProductRow,
-                    id: Date.now(),
-                },
-            ],
-        }));
+        setForm(
+            (
+                previous: any
+            ) => ({
+                ...previous,
+
+                body: [
+                    ...(previous?.body ||
+                        []),
+
+                    buildEmptyBodyRow(),
+                ],
+            })
+        );
     };
 
-    const handleDeleteRow = (index: number) => {
-        setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter(
-                (_: any, i: number) => i !== index
-            );
+    const handleDeleteRow = (
+        index: number
+    ) => {
+        setForm(
+            (
+                previous: any
+            ) => {
+                const rows = (
+                    previous?.body ||
+                    []
+                ).filter(
+                    (
+                        _row: any,
+                        rowIndex: number
+                    ) =>
+                        rowIndex !==
+                        index
+                );
 
-            return {
-                ...prev,
-                products:
-                    updatedProducts.length > 0
-                        ? updatedProducts
-                        : [{ ...emptyProductRow, id: Date.now() }],
-            };
-        });
-    };
-    const enableDuplicatePro = useMemo(() => {
-        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
-        return locationConfig === true || locationConfig === "true";
-    }, [configurations]);
+                return {
+                    ...previous,
 
-    const handleRowChange = (index: number, key: string, value: any) => {
-        const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
-        if (duplicate && !enableDuplicatePro) {
-            setErrors((prev: any) => ({
-                ...prev,
-                products: "",
-                [`row_${index}_${key}`]: "This product already added",
-                [`row_${index}_tax`]: "",
-            }));
-            return;
-        }
-        setForm((prev: any) => {
-            const updatedProducts = [...(prev.products || [])];
-            const currentRow = updatedProducts[index] || {};
-            const currentField = getBodyFieldByKey(key);
-
-            let updatedRow = {
-                ...currentRow,
-                [key]: value,
-            };
-
-            if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(currentField, value, updatedRow);
+                    body:
+                        rows.length >
+                            0
+                            ? rows
+                            : (
+                                templateFields?.body ||
+                                []
+                            ).length >
+                                0
+                                ? [
+                                    buildEmptyBodyRow(),
+                                ]
+                                : [],
+                };
             }
+        );
+    };
 
-            const selectedOption = getOptionByValue(currentField, value);
-            const raw = selectedOption?.raw || {};
-            const lowerKey = String(key).toLowerCase();
-            const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
-            if (isProductField && selectedOption?.raw) {
-                updatedRow = fillProductDetailsFromSelectedOption(updatedRow, selectedOption);
-                updatedRow.productCode = raw?.productCode || raw?.code || updatedRow.productCode || "";
-                updatedRow.productName = raw?.productName || raw?.name || selectedOption?.label || updatedRow.productName || "";
-                updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
-                const cgstValue = raw?.cgstPercentage ?? raw?.cgst ?? raw?.csgst ?? raw?.cgstRate ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
-                const sgstValue = raw?.sgstPercentage ?? raw?.sgst ?? raw?.csgst ?? raw?.sgstRate ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
-                const igstValue = raw?.igstPercentage ?? raw?.igst ?? raw?.igstRate ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
-                updatedRow.cgst = cgstValue;
-                updatedRow.sgst = sgstValue;
-                updatedRow.igst = igstValue;
-                updatedRow.cgstPercentage = cgstValue;
-                updatedRow.sgstPercentage = sgstValue;
-                updatedRow.igstPercentage = igstValue;
+    const handleRowChange = (
+        index: number,
+        key: string,
+        value: any
+    ) => {
+        setForm(
+            (
+                previous: any
+            ) => {
+                const rows = [
+                    ...(previous?.body ||
+                        []),
+                ];
 
-                if (num(igstValue) > 0) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstPercentage = "";
-                    updatedRow.sgstPercentage = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
+                const currentRow =
+                    rows[index] ||
+                    {};
+
+                const field =
+                    getBodyFieldByKey(
+                        key
+                    );
+
+                let updatedRow = {
+                    ...currentRow,
+
+                    [key]:
+                        value,
+                };
+
+                if (
+                    field?.mapFields
+                ) {
+                    updatedRow =
+                        applyMappedFields(
+                            field,
+                            value,
+                            updatedRow
+                        );
                 }
 
-                if (num(cgstValue) > 0 || num(sgstValue) > 0) {
+                const lowerKey =
+                    String(
+                        key
+                    ).toLowerCase();
+
+                if (
+                    (lowerKey === "cgst" || lowerKey === "cgstpercentage" || lowerKey === "sgst" || lowerKey === "sgstpercentage") && num(value) > 0) {
                     updatedRow.igst = "";
                     updatedRow.igstPercentage = "";
                     updatedRow.igstAmount = 0;
                 }
-            }
-            updatedRow = normalizeRowKeys(updatedRow);
-            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
-            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
-            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
-            if ((isCgst || isSgst) && num(value) > 0) {
-                updatedRow.igst = "";
-                updatedRow.igstPercentage = "";
-                updatedRow.igstAmount = 0;
-            }
 
-            if (isIgst && num(value) > 0) {
-                updatedRow.cgst = "";
-                updatedRow.sgst = "";
-                updatedRow.cgstPercentage = "";
-                updatedRow.sgstPercentage = "";
-                updatedRow.cgstAmount = 0;
-                updatedRow.sgstAmount = 0;
-            }
+                if (
+                    (
+                        lowerKey ===
+                        "igst" ||
+                        lowerKey ===
+                        "igstpercentage"
+                    ) &&
+                    num(value) > 0
+                ) {
+                    updatedRow.cgst =
+                        "";
 
-            updatedRow = calculateRow(updatedRow);
-            updatedProducts[index] = updatedRow;
+                    updatedRow.cgstPercentage =
+                        "";
 
-            return {
-                ...prev,
-                products: updatedProducts,
-            };
-        });
+                    updatedRow.cgstAmount =
+                        0;
 
-        setErrors((prev: any) => ({
-            ...prev,
-            products: "",
-            [`row_${index}_${key}`]: "",
-            [`row_${index}_tax`]: "",
-            [`row_${index}_igstPercentage`]: "",
-            [`row_${index}_cgstPercentage`]: "",
-            [`row_${index}_sgstPercentage`]: "",
-            [`row_${index}_igst`]: "",
-            [`row_${index}_cgst`]: "",
-            [`row_${index}_sgst`]: "",
-        }));
-    };
+                    updatedRow.sgst =
+                        "";
 
-    /* ===================================================
-       DYNAMIC VALIDATION
-    =================================================== */
+                    updatedRow.sgstPercentage =
+                        "";
 
-    const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => field.key);
+                    updatedRow.sgstAmount =
+                        0;
+                }
 
-        return (form.products || []).filter((row: any) => {
-            return bodyKeys.some((key: string) => {
-                const value = row?.[key];
-                return value !== undefined && value !== null && value !== "";
-            });
-        });
-    };
-
-    const validateForm = () => {
-        const err: any = {};
-        (templateFields?.header || []).forEach((field: any) => {
-            if (field.isHidden) return;
-            if (!field.isRequired) return;
-            const value = form?.[field.key];
-            if (value === undefined || value === null || value === "") {
-                err[field.key] = `${field.label || field.key} is required`;
-            }
-        });
-
-        const filledRows = getFilledRows();
-        if (filledRows.length === 0) { err.products = "Please add at least one product"; }
-
-        (form.products || []).forEach((row: any, index: number) => {
-            const hasAnyValue = (templateFields?.body || []).some(
-                (field: any) => {
-                    const value = row?.[field.key];
-
-                    return (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
+                rows[index] =
+                    calculateRow(
+                        updatedRow
                     );
-                }
-            );
-
-            if (!hasAnyValue) return;
-            (templateFields?.body || []).forEach((field: any) => {
-                if (field.isHidden) return;
-                if (!field.isRequired) return;
-                const value = row?.[field.key];
-                if (value === undefined || value === null || value === "") {
-                    err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
-                }
-            });
-            const cgst = num(row.cgstPercentage || row.cgst);
-            const sgst = num(row.sgstPercentage || row.sgst);
-            const igst = num(row.igstPercentage || row.igst);
-            if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
-                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_igst`] = "Only one tax type allowed";
-                err[`row_${index}_cgst`] = "Only one tax type allowed";
-                err[`row_${index}_sgst`] = "Only one tax type allowed";
-            }
-        });
-
-        setErrors(err);
-        if (err.products) { toast.error(err.products); }
-        return Object.keys(err).length === 0;
-    };
-
-    const cleanRows = () => {
-        const bodyKeys = (templateFields?.body || []).map((field: any) => field.key);
-        return (form.products || [])
-            .filter((row: any) => {
-                return bodyKeys.some((key: string) => {
-                    const value = row?.[key];
-                    return (value !== undefined && value !== null && value !== "");
-                });
-            })
-            .map((row: any) => calculateRow(normalizeRowKeys(row)));
-    };
-
-    /* ===================================================
-       SUBMIT
-    =================================================== */
-
-    const getTaxValue = (primary: any, fallback: any) => {
-        return primary !== undefined && primary !== null && primary !== ""
-            ? primary
-            : fallback !== undefined && fallback !== null
-                ? fallback
-                : "";
-    };
-
-    const handleSubmit = async () => {
-        if (!validateForm()) return;
-
-        const products = cleanRows();
-        const footer = calculateFooter(products);
-
-        const payload: any = {
-            pOrdVoucherDate: form.pOrdVoucherDate,
-
-            pOrdVendorCode: form.pOrdVendorCode,
-            pOrdVendorName: form.pOrdVendorName,
-
-            pOrdPurchaseAccount: form.pOrdPurchaseAccount,
-
-            pOrdStatus: form.pOrdStatus || "open",
-
-            pOrdRemark: form.pOrdRemark,
-
-            pOrdBody: products.map((item: any) => ({
-                productCode: item.productCode,
-                productName: item.productName,
-                productId: item.productId,
-
-                productDescription:
-                    item.productDescription || item.description,
-
-                description:
-                    item.description || item.productDescription,
-
-                productHSNCode: item.productHSNCode,
-
-                remarks: item.remarks,
-
-                quantity: String(item.quantity),
-
-                unit: item.unit || item.uom,
-                uom: item.uom || item.unit,
-
-                rate: String(item.rate),
-
-                gross: fmtMoney(item.grossAmount),
-                grossAmount: fmtMoney(item.grossAmount),
-
-                discount: String(
-                    item.discountPercentage || item.discount || ""
-                ),
-
-                discountPercentage: String(
-                    item.discountPercentage || item.discount || ""
-                ),
-
-                discountAmount: fmtMoney(item.discountAmount),
-
-                taxableAmount: fmtMoney(item.taxableAmount),
-
-                cgst: String(getTaxValue(item.cgst, item.cgstPercentage)),
-                cgstPercentage: String(getTaxValue(item.cgstPercentage, item.cgst)),
-
-                sgst: String(getTaxValue(item.sgst, item.sgstPercentage)),
-                sgstPercentage: String(getTaxValue(item.sgstPercentage, item.sgst)),
-
-                igst: String(getTaxValue(item.igst, item.igstPercentage)),
-                igstPercentage: String(getTaxValue(item.igstPercentage, item.igst)),
-                igstAmount: fmtMoney(item.igstAmount),
-
-                taxAmount: fmtMoney(item.taxAmount),
-
-                otherAmount: fmtMoney(item.otherAmount),
-
-                netAmount: fmtMoney(item.netAmount || item.netTotal),
-                netTotal: fmtMoney(item.netTotal || item.netAmount),
-            })),
-
-            pOrdFooter: {
-                grossAmount: fmtMoney(footer.totalGrossAmount),
-                discountAmount: fmtMoney(footer.totalDiscountAmount),
-                cgstAmount: fmtMoney(footer.totalCgstAmount),
-                sgstAmount: fmtMoney(footer.totalSgstAmount),
-                igstAmount: fmtMoney(footer.totalIgstAmount),
-                taxAmount: fmtMoney(footer.totalTaxAmount),
-                otherAmount: fmtMoney(footer.totalOtherAmount),
-                netAmount: fmtMoney(footer.totalNetAmount),
-
-                adjustedAmount: "0",
-                balanceAmount: fmtMoney(footer.totalNetAmount),
-
-                totalQuantity: footer.totalQuantity,
-                totalGrossAmount: fmtMoney(footer.totalGrossAmount),
-                totalDiscountAmount: fmtMoney(
-                    footer.totalDiscountAmount
-                ),
-                totalCgstAmount: fmtMoney(footer.totalCgstAmount),
-                totalSgstAmount: fmtMoney(footer.totalSgstAmount),
-                totalIgstAmount: fmtMoney(footer.totalIgstAmount),
-                totalTaxAmount: fmtMoney(footer.totalTaxAmount),
-                totalOtherAmount: fmtMoney(footer.totalOtherAmount),
-                totalNetAmount: fmtMoney(footer.totalNetAmount),
-            },
-        };
-
-        try {
-            if (editingRecord) {
-                await dispatch(
-                    updatePurchaseOrder({
-                        pOrdVoucherNumber: form?.pOrdVoucherNumber,
-                        payload,
-                    }) as any
-                ).unwrap();
-
-                toast.success("Purchase order updated successfully");
-            } else {
-                await dispatch(addPurchaseOrder({ payload }) as any).unwrap();
-
-                toast.success("Purchase order created successfully");
-            }
-
-            setShowModal(false);
-            resetMainForm();
-
-            fetchPurchaseOrders();
-        } catch (err: any) {
-            toast.error(err?.message || "Operation failed");
-        }
-    };
-
-    const handleDeleteConfirm = async () => {
-        try {
-            const voucherNumber = confirmTooltip?.voucherNumber;
-
-            if (!voucherNumber) {
-                toast.error("Purchase order voucher number not found");
-                return;
-            }
-
-            await dispatch(
-                deletePurchaseOrder({
-                    pOrdVoucherNumber: voucherNumber,
-                }) as any
-            ).unwrap();
-
-            toast.success("Purchase order deleted successfully");
-
-            await fetchPurchaseOrders();
-        } catch (err: any) {
-            toast.error(
-                err?.message ||
-                err?.payload?.message ||
-                "Failed to delete purchase order"
-            );
-        } finally {
-            setConfirmTooltip({
-                show: false,
-                x: null,
-                y: null,
-                voucherNumber: null,
-            });
-        }
-    };
-
-    /* ===================================================
-       DYNAMIC FOOTER
-    =================================================== */
-
-    const footerValues = useMemo(() => {
-        return {
-            grossAmount,
-            discountAmount,
-            cgstAmount,
-            sgstAmount,
-            igstAmount,
-            netAmount,
-            adjustedAmount: 0,
-            balanceAmount: netAmount,
-        };
-    }, [
-        grossAmount,
-        discountAmount,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-        netAmount,
-    ]);
-
-    const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
-            .map((field: any) => {
-                const rawValue =
-                    footerValues[field.key as keyof typeof footerValues] ?? 0;
 
                 return {
-                    ...field,
-                    value: money(rawValue),
-                    rawValue,
+                    ...previous,
+
+                    body:
+                        rows,
                 };
-            });
-    }, [templateFields?.footer, footerValues]);
+            }
+        );
 
+        setErrors(
+            (previous) => ({
+                ...previous,
 
-    const isClosedPurchaseOrder = (record: any) => {
-        const pOrdStatus = String(
-            record?.pOrdStatus || ""
-        ).toLowerCase();
+                [`row_${index}_${key}`]:
+                    "",
 
-        return pOrdStatus === "close" || pOrdStatus === "closed";
+                [`row_${index}_tax`]:
+                    "",
+
+                body: "",
+            })
+        );
     };
 
-    const handleEditPurOrder = (record: any) => {
-        if (isClosedPurchaseOrder(record)) {
-            toast.error("You can't edit closed Order");
+    const fieldIsEmpty = (
+        value: any
+    ) => {
+        if (Array.isArray(value)) {
+            return (
+                value.length === 0
+            );
+        }
+
+        return !hasValue(value);
+    };
+
+    const getFilledBodyRows =
+        () => {
+            const bodyKeys = (
+                templateFields?.body ||
+                []
+            )
+                .filter(
+                    (field: any) =>
+                        !field?.isHidden
+                )
+                .map(
+                    (field: any) =>
+                        field?.key
+                );
+
+            return (
+                form?.body ||
+                []
+            ).filter(
+                (row: any) =>
+                    bodyKeys.some(
+                        (
+                            key: string
+                        ) =>
+                            hasValue(
+                                row?.[
+                                key
+                                ]
+                            )
+                    )
+            );
+        };
+
+    const validateForm = () => {
+        const nextErrors: Record<
+            string,
+            string
+        > = {};
+
+        (
+            templateFields?.header ||
+            []
+        ).forEach(
+            (field: any) => {
+                if (
+                    field?.isHidden ||
+                    !field?.isRequired
+                ) {
+                    return;
+                }
+
+                if (
+                    fieldIsEmpty(
+                        form?.[
+                        field.key
+                        ]
+                    )
+                ) {
+                    nextErrors[
+                        field.key
+                    ] = `${field.label ||
+                    field.key
+                    } is required`;
+                }
+            }
+        );
+
+        const filledRows =
+            getFilledBodyRows();
+
+        if (
+            (
+                templateFields?.body ||
+                []
+            ).length > 0 &&
+            filledRows.length === 0
+        ) {
+            nextErrors.body =
+                "Please add at least one item";
+        }
+
+        (
+            form?.body ||
+            []
+        ).forEach(
+            (
+                row: any,
+                index: number
+            ) => {
+                const hasAnyValue =
+                    (
+                        templateFields?.body ||
+                        []
+                    ).some(
+                        (
+                            field: any
+                        ) =>
+                            hasValue(
+                                row?.[
+                                field
+                                    .key
+                                ]
+                            )
+                    );
+
+                if (!hasAnyValue) {
+                    return;
+                }
+
+                (
+                    templateFields?.body ||
+                    []
+                ).forEach(
+                    (
+                        field: any
+                    ) => {
+                        if (
+                            field?.isHidden ||
+                            !field?.isRequired
+                        ) {
+                            return;
+                        }
+
+                        if (
+                            fieldIsEmpty(
+                                row?.[
+                                field
+                                    .key
+                                ]
+                            )
+                        ) {
+                            nextErrors[
+                                `row_${index}_${field.key}`
+                            ] = `${field.label ||
+                            field.key
+                            } is required`;
+                        }
+                    }
+                );
+
+                const cgst = num(
+                    row?.cgstPercentage ??
+                    row?.cgst
+                );
+
+                const sgst = num(
+                    row?.sgstPercentage ??
+                    row?.sgst
+                );
+
+                const igst = num(
+                    row?.igstPercentage ??
+                    row?.igst
+                );
+
+                if (
+                    igst > 0 &&
+                    (
+                        cgst > 0 ||
+                        sgst > 0
+                    )
+                ) {
+                    nextErrors[
+                        `row_${index}_tax`
+                    ] =
+                        "You can enter either IGST or CGST/SGST";
+                }
+            }
+        );
+
+        setErrors(
+            nextErrors
+        );
+
+        if (
+            nextErrors.body
+        ) {
+            toast.error(
+                nextErrors.body
+            );
+        }
+
+        return (
+            Object.keys(
+                nextErrors
+            ).length === 0
+        );
+    };
+
+    const pickSchemaFields = (
+        fields: any[] = [],
+        source: any = {}
+    ) => {
+        return fields.reduce(
+            (
+                accumulator: any,
+                field: any
+            ) => {
+                if (!field?.key) {
+                    return accumulator;
+                }
+
+                accumulator[field.key] =
+                    source?.[
+                    field.key
+                    ];
+
+                return accumulator;
+            },
+            {}
+        );
+    };
+
+    const cleanBodyRows = () => {
+        const bodyFields = templateFields?.body || [];
+        const bodyKeys = bodyFields.map((field: any) => field?.key);
+
+        return (form?.body || []).filter((row: any) => bodyKeys.some((key: string) =>
+            hasValue(
+                row?.[
+                key
+                ]
+            )
+        )
+        )
+            .map(
+                (row: any) =>
+                    pickSchemaFields(
+                        bodyFields,
+
+                        calculateRow(
+                            row
+                        )
+                    )
+            );
+    };
+
+    const buildTransactionData =
+        () => {
+            return {
+                header:
+                    pickSchemaFields(
+                        templateFields?.header ||
+                        [],
+
+                        form
+                    ),
+
+                body:
+                    cleanBodyRows(),
+
+                footer:
+                    pickSchemaFields(
+                        templateFields?.footer ||
+                        [],
+
+                        calculatedFooterValues
+                    ),
+            };
+        };
+
+    const handleSubmit = async () => {
+        if (!moduleCode || !validateForm()) {
+            return;
+        }
+        const data = buildTransactionData();
+        try {
+            if (editingVoucherNumber) {
+                await dispatch(
+                    updateCustomTransactionData(
+                        {
+                            voucherNumber:
+                                editingVoucherNumber,
+
+                            payload: {
+                                data,
+
+                                status:
+                                    "active",
+                            },
+                        }
+                    )
+                ).unwrap();
+
+                toast.success(
+                    "Custom transaction updated successfully"
+                );
+            } else {
+                await dispatch(
+                    saveCustomTransactionData(
+                        {
+                            moduleCode,
+                            status: "active",
+                            data,
+                        }
+                    )
+                ).unwrap();
+
+                toast.success(
+                    "Custom transaction created successfully"
+                );
+            }
+
+            setShowModal(
+                false
+            );
+
+            resetForm();
+
+            await fetchTransactions();
+        } catch (
+        error: any
+        ) {
+            toast.error(
+                error?.message ||
+                "Custom transaction operation failed"
+            );
+        }
+        };
+
+    /* ===================================================
+       DELETE
+    =================================================== */
+
+    const handleDeleteClick = (
+        event: any,
+        record: any
+    ) => {
+        const voucherNumber =
+            record?.voucherNumber;
+
+        if (!voucherNumber) {
+            toast.error(
+                "Voucher number not found"
+            );
+
             return;
         }
 
-        openEditModal(record);
-    };
+        const rect =
+            event.currentTarget.getBoundingClientRect();
 
-    const handleDeletePurOrderClick = (e: any, record: any) => {
-        if (isClosedPurchaseOrder(record)) {
-            toast.error("You can't delete closed Order");
-            return;
+        let x =
+            rect.left -
+            150;
+
+        if (x < 10) {
+            x = 10;
         }
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        let x = rect.left - 150;
-
-        if (x < 10) x = 10;
-
-        const y = rect.top + window.scrollY - 5;
+        const y =
+            rect.top +
+            window.scrollY -
+            5;
 
         setConfirmTooltip({
             show: true,
+
             x,
+
             y,
-            voucherNumber: record?.pOrdVoucherNumber,
+
+            voucherNumber,
         });
     };
 
+    const handleDeleteConfirm =
+        async () => {
+            const voucherNumber =
+                confirmTooltip?.voucherNumber;
+
+            if (!voucherNumber) {
+                toast.error(
+                    "Voucher number not found"
+                );
+
+                return;
+            }
+
+            try {
+                await dispatch(
+                    deleteCustomTransactionData(
+                        voucherNumber
+                    )
+                ).unwrap();
+
+                toast.success(
+                    "Custom transaction deleted successfully"
+                );
+
+                await fetchTransactions();
+            } catch (
+            error: any
+            ) {
+                toast.error(
+                    error?.message ||
+                    "Failed to delete custom transaction"
+                );
+            } finally {
+                setConfirmTooltip({
+                    show: false,
+
+                    x: null,
+
+                    y: null,
+
+                    voucherNumber:
+                        null,
+                });
+            }
+        };
+
+    /* ===================================================
+       REFRESH
+    =================================================== */
+
+    const handleRefresh =
+        async () => {
+            setRefreshing(
+                true
+            );
+
+            try {
+                await fetchTransactions();
+
+                toast.success(
+                    "Custom transaction list refreshed"
+                );
+            } finally {
+                setRefreshing(
+                    false
+                );
+            }
+        };
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <div
-                id="purchase-order-header"
-                className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
-            >
-                <div
-                    id="purchase-order-summary"
-                    className="flex items-start gap-3"
-                >
+            <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-3">
                     <Badge
-                        {...{
-                            count: pagination?.totalDocs ?? 0,
-                            text: "Total Purchase Orders:",
-                            varient: "primary",
-                        }}
+                        count={
+                            pagination?.totalDocs ??
+                            0
+                        }
+                        text={`Total ${resolvedModuleName}:`}
+                        varient="primary"
                     />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
-                    <Toggle
-                        {...{
-                            arr: ["open", "close"],
-                            state: status,
-                            setState: handleStatusChange,
-                        }}
+                    <SearchInput
+                        search={
+                            search
+                        }
+                        setSearch={
+                            setSearch
+                        }
                     />
-
-                    <SearchInput {...{ search, setSearch }} />
 
                     <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
+                        callBackFn={
+                            handleRefresh
+                        }
+                        loading={
+                            refreshing
+                        }
                     />
 
-                    <Permission module="bookez" permissionKey="purchaseOrder" action="create">
-                        {/* @ts-ignore */}
-                        <DataCreateButton
-                            {...{
-                                callBackFn: openAddModal,
-                                text: "Add Purchase Order",
-                            }}
-                        />
-                    </Permission>
+                    <DataCreateButton
+                        callBackFn={
+                            openAddModal
+                        }
+                        text={`Add ${resolvedModuleName}`}
+                    />
                 </div>
             </div>
 
             <DataTable
-                columns={columns}
-                data={purchaseOrders}
-                loading={loading}
-                emptyMessage={`No ${status} purchase order found`}
-                actions={(record: any) => (
+                columns={
+                    columns
+                }
+                data={
+                    transactionItems
+                }
+                loading={
+                    loading ||
+                    fieldsLoading
+                }
+                emptyMessage={`No ${resolvedModuleName} transaction found`}
+                actions={(
+                    record: any
+                ) => (
                     <div className="flex items-center gap-2">
                         <button
-                            id="sales-quotation-edit-button"
-                            onClick={() => {
-                                setDownlaodPDF((pre: any) => ({
-                                    ...pre,
-                                    show: true,
-                                    moduleType: "purchaseOrder",
-                                    record,
-                                    CustomerCode: record?.pOrdVendorCode,
-                                    voucherNumber: record?.pOrdVoucherNumber,
-                                }));
-                            }}
+                            type="button"
+
+                            /*
+                             * Sends the selected list row
+                             * directly to the edit modal.
+                             */
+                            onClick={() =>
+                                openEditModal(
+                                    record
+                                )
+                            }
                             className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
-                            <Download size={16} />
+                            <Edit
+                                size={
+                                    16
+                                }
+                            />
                         </button>
-                        <Permission module="bookez" permissionKey="purchaseOrder" action="update">
-                            {/* <button
-                                id="purchase-order-edit-button"
-                                onClick={() => openEditModal(record)}
-                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                            >
-                                <Edit size={16} />
-                            </button> */}
 
-                            <button id="purchase-order-edit-button"
-                                onClick={() => handleEditPurOrder(record)}
-                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 cursor-pointer text-primary hover:bg-primary/10 hover:text-primary ${isClosedPurchaseOrder(record)
+                        <button
+                            type="button"
+                            disabled={
+                                deleteLoading
+                            }
+                            onClick={(
+                                event
+                            ) =>
+                                handleDeleteClick(
+                                    event,
 
-                                    }`}
-                            >                            <Edit size={16} />
-                            </button>
-                        </Permission>
-
-                        <Permission module="bookez" permissionKey="purchaseOrder" action="delete">
-                            <button
-                                id="purchase-order-delete-button"
-                                disabled={deleteLoading}
-                                onClick={(e) => handleDeletePurOrderClick(e, record)}
-                                className={`rounded-md p-2 hover:bg-primary/10 transition-all duration-200 disabled:opacity-50 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger ${isClosedPurchaseOrder
-                                    (record)
-                                    }`}
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </Permission>
+                                    record
+                                )
+                            }
+                            className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                        >
+                            <Trash2
+                                size={
+                                    16
+                                }
+                            />
+                        </button>
                     </div>
                 )}
             />
 
-            {pagination?.totalDocs > 0 && (
-                <Pagination
-                    {...{
-                        localLimit,
-                        selectCb: (e: any) => {
-                            setLocalLimit(Number(e.target.value));
-                            setLocalOffset(0);
-                        },
-                        preDisabled: !pagination?.hasPrevPage,
-                        nextDisabled: !pagination?.hasNextPage,
-                        setLocalOffset,
-                        pagination,
+            {pagination?.totalDocs >
+                0 && (
+                    <Pagination
+                    localLimit={
+                        localLimit
+                    }
+                    selectCb={(
+                        event: any
+                    ) => {
+                        setLocalLimit(
+                            Number(
+                                event
+                                    .target
+                                    .value
+                            )
+                        );
+
+                        setLocalOffset(
+                            0
+                        );
                     }}
-                />
-            )}
+                    preDisabled={
+                        !pagination?.hasPrevPage
+                    }
+                    nextDisabled={
+                        !pagination?.hasNextPage
+                    }
+                    setLocalOffset={
+                        setLocalOffset
+                    }
+                    pagination={
+                        pagination
+                    }
+                    />
+                )}
 
             {confirmTooltip.show && (
                 <ConfirmTooltip
-                    x={confirmTooltip.x}
-                    y={confirmTooltip.y}
-                    message="Are you sure you want to delete this purchase order?"
+                    x={
+                        confirmTooltip.x
+                    }
+                    y={
+                        confirmTooltip.y
+                    }
+                    message="Are you sure you want to delete this custom transaction?"
                     confirmText="Delete"
                     cancelText="Cancel"
-                    onConfirm={handleDeleteConfirm}
+                    onConfirm={
+                        handleDeleteConfirm
+                    }
                     onCancel={() =>
-                        setConfirmTooltip({
-                            show: false,
-                            x: null,
-                            y: null,
-                            voucherNumber: null,
-                        })
+                        setConfirmTooltip(
+                            {
+                                show: false,
+
+                                x: null,
+
+                                y: null,
+
+                                voucherNumber:
+                                    null,
+                            }
+                        )
                     }
                 />
             )}
 
             {!fieldsLoading && (
                 <DynamicAddForm
-                    {...{
-                        show: showModal,
-                        setShow: setShowModal,
-                        edit: Boolean(editingRecord),
-                        title: "Purchase Order",
-                        subtitle: "Fill in the purchase order details below",
-                        loading: createLoading || updateLoading,
-                        onClose: () => {
-                            setShowModal(false);
-                            resetMainForm();
-                        },
-                        onSubmit: handleSubmit,
-                        form,
-                        errors,
-                        handleAddRow,
-                        handleDeleteRow,
-                        handleRowChange,
-                        footerTotals,
+                    show={
+                        showModal
+                    }
+                    setShow={
+                        setShowModal
+                    }
+                    edit={Boolean(
+                        editingVoucherNumber
+                    )}
+                    title={
+                        resolvedModuleName
+                    }
+                    subtitle={`Fill in the ${resolvedModuleName} details below`}
+                    loading={
+                        createLoading ||
+                        updateLoading
+                    }
+                    onClose={() => {
+                        setShowModal(
+                            false
+                        );
 
-                        // dynamic schema with options
-                        inputData: {
-                            ...templateFields,
-                            footer: dynamicFooterArray,
-                        },
-
-                        bodyKey: "products",
-                        handleChange: handleMainChange,
+                        resetForm();
                     }}
+                    onSubmit={
+                        handleSubmit
+                    }
+                    form={
+                        form
+                    }
+                    errors={
+                        errors
+                    }
+                    handleAddRow={
+                        handleAddRow
+                    }
+                    handleDeleteRow={
+                        handleDeleteRow
+                    }
+                    handleRowChange={
+                        handleRowChange
+                    }
+                    footerTotals={
+                        footerTotals
+                    }
+                    inputData={{
+                        ...templateFields,
+
+                        footer:
+                            dynamicFooterArray,
+                    }}
+                    bodyKey="body"
+                    handleChange={
+                        handleMainChange
+                    }
                 />
             )}
-
-            {/* @ts-ignore  */}
-            <ListingModel
-                {...{
-                    show: downlaodPDF?.show,
-                    downlaodPDF,
-                    entryType: "purchase-order",
-                    setShow: () =>
-                        setDownlaodPDF(() => ({
-                            show: !downlaodPDF?.show,
-                        })),
-                    rowData: downlaodPDF?.record,
-                    report,
-                    title: "Download Purchase Order PDF",
-                    cancelText: "Cancel",
-                    confirmText: "Confirm",
-                }}
-            />
         </div>
     );
 };
