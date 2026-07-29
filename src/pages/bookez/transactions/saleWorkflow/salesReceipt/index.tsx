@@ -20,6 +20,7 @@ import { ListingModel } from "../../../../../components/modal";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
 import { getByVoucherNumberSalesInvoiceReturn, updateSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
+import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 
@@ -35,6 +36,9 @@ const SalesReceipt = () => {
     const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
     const { salesReceipt = [], pagination = defaultPagination, listingLoader = false, addLoader = false, deleteLoader = false, referenceLoader = false } = salesReceiptState;
     const { report } = useSelector((s: any) => s.reportMapping);
+    const { accounts = [] } = useSelector(
+        (state: any) => state.accountMaster || {}
+    );
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
@@ -43,6 +47,13 @@ const SalesReceipt = () => {
     const [status, setStatus] = useState<"open" | "close">("open");
     const [refreshing, setRefreshing] = useState(false);
     const [showModal, setShowModal] = useState(false);
+
+    // ★ ADDED: Shared Account Master modal state
+    const [checkAccount, setCheckAccount] = useState(false);
+
+    // ★ ADDED: Prevent modal check before Account Master API completes
+    const [accountListLoaded, setAccountListLoaded] = useState(false);
+
     const [editingRecord, setEditingRecord] = useState<any>(null);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
@@ -56,6 +67,25 @@ const SalesReceipt = () => {
     const [newReferenceAmount, setNewReferenceAmount] = useState("");
     const [downlaodPDF, setDownlaodPDF] = useState<any>({ show: false, x: null, y: null, type: "" });
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
+
+    // ★ ADDED: Receipt needs cash/bank in header and customer in body
+    const customerAccounts = useMemo(() => {
+        return (accounts || []).filter(
+            (account: any) =>
+                String(account?.accountType || "").toLowerCase() ===
+                "customer"
+        );
+    }, [accounts]);
+
+    const cashBankAccounts = useMemo(() => {
+        return (accounts || []).filter((account: any) => {
+            const accountType = String(
+                account?.accountType || ""
+            ).toLowerCase();
+
+            return accountType === "cash" || accountType === "bank";
+        });
+    }, [accounts]);
 
     const toNumber = (value: any) => Number(value || 0);
 
@@ -166,6 +196,7 @@ const SalesReceipt = () => {
         setReferenceError("");
         setSelectedReferenceRowIndex(null);
         setNewReferenceAmount("");
+        setCheckAccount(false);
         setForm(getDefaultForm());
         dispatch(clearSalesReceiptReferences());
     };
@@ -189,6 +220,183 @@ const SalesReceipt = () => {
             return updated;
         });
         setErrors((prev: any) => ({ ...prev, [key]: "" }));
+    };
+
+    // ★ ADDED: Refresh Account Master, report mapping and receipt dropdowns
+    const handleAccountSaved = async (savedResponse: any) => {
+        try {
+            const accountResponse = await dispatch(
+                getAllAccounts({
+                    offset: 0,
+                    limit: 100,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            setAccountListLoaded(true);
+
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "receipt",
+                }) as any
+            );
+
+            if (transactionsSchema) {
+                const updatedData = await loadAllTemplateOptions(
+                    transactionsSchema,
+                    {
+                        header: {
+                            accountType: "bank,cash",
+                        },
+                        body: {
+                            accountType: "customer",
+                        },
+                    }
+                );
+
+                const header = (updatedData?.header || []).filter(
+                    (field: any) => field?.key !== "isPosPosting"
+                );
+
+                setTemplateFields({
+                    ...updatedData,
+                    header,
+                });
+            }
+
+            const savedAccount =
+                savedResponse?.data?.account ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.account ||
+                savedResponse;
+
+            const refreshedAccounts =
+                accountResponse?.data?.accounts ||
+                accountResponse?.data?.data?.accounts ||
+                accountResponse?.accounts ||
+                accountResponse?.data?.items ||
+                accountResponse?.items ||
+                accountResponse?.data ||
+                [];
+
+            const accountList = Array.isArray(refreshedAccounts)
+                ? refreshedAccounts
+                : [];
+
+            const savedCode =
+                savedAccount?.accountCode ||
+                savedAccount?.code ||
+                "";
+
+            const savedName =
+                savedAccount?.accountName ||
+                savedAccount?.name ||
+                "";
+
+            const createdAccount =
+                accountList.find(
+                    (account: any) =>
+                        (savedCode &&
+                            String(account?.accountCode || "") ===
+                            String(savedCode)) ||
+                        (savedName &&
+                            String(account?.accountName || "") ===
+                            String(savedName))
+                ) ||
+                (savedCode || savedName
+                    ? savedAccount
+                    : accountList[accountList.length - 1]) ||
+                null;
+
+            if (createdAccount) {
+                const accountType = String(
+                    createdAccount?.accountType || ""
+                ).toLowerCase();
+
+                if (
+                    accountType === "cash" ||
+                    accountType === "bank"
+                ) {
+                    setForm((prev: any) => ({
+                        ...prev,
+                        recAccountCode:
+                            createdAccount?.accountCode ||
+                            prev?.recAccountCode ||
+                            "",
+                        recAccountName:
+                            createdAccount?.accountName ||
+                            prev?.recAccountName ||
+                            "",
+                    }));
+
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        recAccountCode: "",
+                        recAccountName: "",
+                    }));
+                }
+
+                if (accountType === "customer") {
+                    setForm((prev: any) => {
+                        const rows = [...(prev?.recBody || [])];
+
+                        if (rows.length === 0) {
+                            rows.push({
+                                ...emptyReceiptRow,
+                                id: Date.now(),
+                            });
+                        }
+
+                        const targetIndex = rows.findIndex(
+                            (row: any) =>
+                                !row?.accountCode &&
+                                !row?.accountName
+                        );
+
+                        const rowIndex =
+                            targetIndex >= 0 ? targetIndex : 0;
+
+                        rows[rowIndex] = {
+                            ...rows[rowIndex],
+                            accountCode:
+                                createdAccount?.accountCode ||
+                                rows[rowIndex]?.accountCode ||
+                                "",
+                            accountName:
+                                createdAccount?.accountName ||
+                                rows[rowIndex]?.accountName ||
+                                "",
+                            references: [],
+                        };
+
+                        return {
+                            ...prev,
+                            recBody: rows,
+                        };
+                    });
+
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        recBody: "",
+                        row_0_accountCode: "",
+                        row_0_accountName: "",
+                    }));
+                }
+            }
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Sales Receipt account options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Account created, but receipt account dropdown refresh failed"
+            );
+        } finally {
+            setCheckAccount(false);
+        }
     };
 
     const handleAddRow = () => setForm((prev: any) => ({ ...prev, recBody: [...(prev.recBody || []), { ...emptyReceiptRow, id: Date.now() }] }));
@@ -777,7 +985,60 @@ const SalesReceipt = () => {
         prepareFields();
     }, [transactionsSchema]);
 
-    useEffect(() => { dispatch(getAllReportMapping({ moduleType: "receipt" }) as any); }, [dispatch]);
+    useEffect(() => {
+        dispatch(
+            getAllReportMapping({
+                moduleType: "receipt",
+            }) as any
+        );
+    }, [dispatch]);
+
+    // ★ ADDED: Load Account Master records for modal availability check
+    useEffect(() => {
+        const loadAccounts = async () => {
+            try {
+                await dispatch(
+                    getAllAccounts({
+                        offset: 0,
+                        limit: 100,
+                        search: "",
+                    }) as any
+                ).unwrap();
+            } catch (error) {
+                console.log(
+                    "Failed to load Account Master records",
+                    error
+                );
+            } finally {
+                setAccountListLoaded(true);
+            }
+        };
+
+        loadAccounts();
+    }, [dispatch]);
+
+    // ★ ADDED: Open Account Master when a required receipt account is missing
+    useEffect(() => {
+        if (!showModal) return;
+        if (editingRecord) return;
+        if (!accountListLoaded) return;
+
+        const customerMissing =
+            customerAccounts.length === 0;
+
+        const cashBankMissing =
+            cashBankAccounts.length === 0;
+
+        if (customerMissing || cashBankMissing) {
+            setCheckAccount(true);
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        customerAccounts.length,
+        cashBankAccounts.length,
+    ]);
 
     const showInitialSkeleton = !refreshing && salesReceipt.length === 0 && (listingLoader || fieldsLoading);
     if (showInitialSkeleton) return <ModulePageSkeleton rows={8} columns={5} />;
@@ -851,7 +1112,11 @@ const SalesReceipt = () => {
                         bodyTitle: "Accounts",
                         subtitle: "Fill in the receipt details below",
                         loading: addLoader,
-                        onClose: () => { setShowModal(false); resetMainForm(); },
+                        onClose: () => {
+                            setShowModal(false);
+                            setCheckAccount(false);
+                            resetMainForm();
+                        },
                         onSubmit: handleSubmit,
                         RefrenceBtnText: getReferenceActionText,
                         isRefrenceAction: true,
@@ -867,6 +1132,11 @@ const SalesReceipt = () => {
                         inputData: { ...templateFields, body: bodyFieldsWithoutReference, footer: dynamicFooterArray },
                         bodyKey: "recBody",
                         handleChange: handleMainChange,
+
+                        // ★ ADDED: Common Account Master modal props
+                        checkAccount,
+                        setCheckAccount,
+                        onAccountSaved: handleAccountSaved,
                     }}
                 />
             )}

@@ -17,6 +17,7 @@ import Permission from "../../../../components/PermissionGuard";
 import { ListingModel } from "../../../../components/modal";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -111,7 +112,7 @@ const getDefaultForm = () => ({
 =================================================== */
 
 const PurchaseOrder = () => {
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<any>();
 
     const purchaseOrderState = useSelector(
         (state: any) => state.purchaseOrder
@@ -155,11 +156,31 @@ const PurchaseOrder = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
     const [showModal, setShowModal] = useState(false);
+
+    // ★ ADDED: Common Account Master modal state
+    const [checkAccount, setCheckAccount] = useState(false);
+
+    // ★ ADDED: Prevent modal check before Account Master API completes
+    const [accountListLoaded, setAccountListLoaded] = useState(false);
+
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    // ★ ADDED: Account Master data
+    const { accounts = [] } = useSelector(
+        (state: any) => state.accountMaster || {}
+    );
+
+    // ★ ADDED: Purchase Order needs vendor accounts
+    const filterVendorAccount = useMemo(() => {
+        return (accounts || []).filter(
+            (account: any) =>
+                String(account?.accountType || "").toLowerCase() === "vendor"
+        );
+    }, [accounts]);
 
     const [templateFields, setTemplateFields] = useState<any>({
         header: [],
@@ -499,6 +520,46 @@ const PurchaseOrder = () => {
         );
     }, []);
 
+    // ★ ADDED: Load Account Master data for vendor availability check
+    useEffect(() => {
+        const loadAccounts = async () => {
+            try {
+                await dispatch(
+                    getAllAccounts({
+                        offset: 0,
+                        limit: 100,
+                        search: "",
+                    }) as any
+                ).unwrap();
+            } catch (error) {
+                console.log(
+                    "Failed to load Account Master records",
+                    error
+                );
+            } finally {
+                setAccountListLoaded(true);
+            }
+        };
+
+        loadAccounts();
+    }, [dispatch]);
+
+    // ★ ADDED: Open Account Master modal when no vendor account exists
+    useEffect(() => {
+        if (!showModal) return;
+        if (editingRecord) return;
+        if (!accountListLoaded) return;
+
+        if (filterVendorAccount.length === 0) {
+            setCheckAccount(true);
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        filterVendorAccount.length,
+    ]);
+
     /* ===================================================
        LOAD TRANSACTION SCHEMA WITH API OPTIONS
     =================================================== */
@@ -603,6 +664,7 @@ const PurchaseOrder = () => {
     const resetMainForm = () => {
         setEditingRecord(null);
         setErrors({});
+        setCheckAccount(false);
         setForm(getDefaultForm());
     };
 
@@ -804,6 +866,132 @@ const PurchaseOrder = () => {
             ...prev,
             [key]: "",
         }));
+    };
+
+    // ★ ADDED: Refresh Purchase Order vendor dropdown after account creation
+    const handleAccountSaved = async (savedResponse: any) => {
+        try {
+            const accountResponse = await dispatch(
+                getAllAccounts({
+                    offset: 0,
+                    limit: 100,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            setAccountListLoaded(true);
+
+            // ★ ADDED: Refresh Purchase Order report mapping
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "purchaseOrder",
+                }) as any
+            ).unwrap();
+
+            // ★ ADDED: Reload all dynamic dropdown options
+            if (transactionsSchema) {
+                const updatedData = await loadAllTemplateOptions(
+                    transactionsSchema
+                );
+
+                setTemplateFields(updatedData);
+            }
+
+            const savedAccount =
+                savedResponse?.data?.account ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.account ||
+                savedResponse;
+
+            const refreshedAccounts =
+                accountResponse?.data?.accounts ||
+                accountResponse?.data?.data?.accounts ||
+                accountResponse?.accounts ||
+                accountResponse?.data?.items ||
+                accountResponse?.items ||
+                accountResponse?.data ||
+                [];
+
+            const vendorAccounts = Array.isArray(refreshedAccounts)
+                ? refreshedAccounts.filter(
+                    (account: any) =>
+                        String(
+                            account?.accountType || ""
+                        ).toLowerCase() === "vendor"
+                )
+                : [];
+
+            const savedCode =
+                savedAccount?.accountCode ||
+                savedAccount?.code ||
+                "";
+
+            const savedName =
+                savedAccount?.accountName ||
+                savedAccount?.name ||
+                "";
+
+            const createdVendor =
+                vendorAccounts.find(
+                    (account: any) =>
+                        (
+                            savedCode &&
+                            String(account?.accountCode || "") ===
+                            String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(account?.accountName || "") ===
+                            String(savedName)
+                        )
+                ) ||
+                (
+                    savedCode ||
+                        savedName
+                        ? savedAccount
+                        : null
+                ) ||
+                vendorAccounts[vendorAccounts.length - 1] ||
+                null;
+
+            // ★ ADDED: Automatically select the newly created vendor
+            if (createdVendor) {
+                setForm((prev: any) => ({
+                    ...prev,
+
+                    pOrdVendorCode:
+                        createdVendor?.accountCode ||
+                        createdVendor?.code ||
+                        prev?.pOrdVendorCode ||
+                        "",
+
+                    pOrdVendorName:
+                        createdVendor?.accountName ||
+                        createdVendor?.name ||
+                        prev?.pOrdVendorName ||
+                        "",
+                }));
+
+                setErrors((prev: any) => ({
+                    ...prev,
+                    pOrdVendorCode: "",
+                    pOrdVendorName: "",
+                }));
+            }
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Purchase Order vendor options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Account created, but Purchase Order vendor dropdown refresh failed"
+            );
+        } finally {
+            setCheckAccount(false);
+        }
     };
 
     /* ===================================================
@@ -1157,6 +1345,7 @@ const PurchaseOrder = () => {
             }
 
             setShowModal(false);
+            setCheckAccount(false);
             resetMainForm();
 
             fetchPurchaseOrders();
@@ -1429,6 +1618,7 @@ const PurchaseOrder = () => {
                         loading: createLoading || updateLoading,
                         onClose: () => {
                             setShowModal(false);
+                            setCheckAccount(false);
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -1447,6 +1637,11 @@ const PurchaseOrder = () => {
 
                         bodyKey: "products",
                         handleChange: handleMainChange,
+
+                        // ★ ADDED: Shared Account Master modal props
+                        checkAccount,
+                        setCheckAccount,
+                        onAccountSaved: handleAccountSaved,
                     }}
                 />
             )}

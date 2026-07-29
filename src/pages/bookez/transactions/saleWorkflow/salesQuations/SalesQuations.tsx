@@ -21,456 +21,2675 @@ import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/ac
 import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
-const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
+const defaultPagination = {
+    offset: 0,
+    limit: 10,
+    totalDocs: 0,
+    totalPages: 1,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+};
 
-const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
+const emptyProductRow = {
+    id: Date.now(),
+    productCode: "",
+    productName: "",
+    productId: "",
+    productDescription: "",
+    description: "",
+    productHSNCode: "",
+    remarks: "",
+    quantity: "",
+    uom: "",
+    unit: "",
+    unitName: "",
+    rate: "",
+    gross: 0,
+    grossAmount: 0,
+    discount: "",
+    discountPercentage: "",
+    discountAmount: 0,
+    taxableAmount: 0,
+    cgst: "",
+    cgstPercentage: "",
+    cgstAmount: 0,
+    sgst: "",
+    sgstPercentage: "",
+    sgstAmount: 0,
+    igst: "",
+    igstPercentage: "",
+    igstAmount: 0,
+    taxAmount: 0,
+    otherAmount: "",
+    netAmount: 0,
+    netTotal: 0,
+};
 
-const getDefaultForm = () => ({ sQuoteVoucherNumber: "AUTO", sQuoteVoucherDate: todayYMD(), sQuoteSalesAccount: "SA021", sQuoteCustomerCode: "", sQuoteCustomerName: "", sQuoteStatus: "draft", sQuoteDocStatus: "open", sQuoteRemark: "", sQuoteStatusRemark: "", sQuoteStatusHistory: [], isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
+const getDefaultForm = () => ({
+    sQuoteVoucherNumber: "AUTO",
+    sQuoteVoucherDate: todayYMD(),
+    sQuoteSalesAccount: "SA021",
+    sQuoteCustomerCode: "",
+    sQuoteCustomerName: "",
+    sQuoteStatus: "draft",
+    sQuoteDocStatus: "open",
+    sQuoteRemark: "",
+    sQuoteStatusRemark: "",
+    sQuoteStatusHistory: [],
+    isAutoPost: false,
+    products: [
+        {
+            ...emptyProductRow,
+            id: Date.now(),
+        },
+    ],
+    grossAmount: "0.00",
+    discountAmount: "0.00",
+    cgstAmount: "0.00",
+    sgstAmount: "0.00",
+    igstAmount: "0.00",
+    taxAmount: "0.00",
+    otherAmount: "0.00",
+    netAmount: "0.00",
+});
 
 const SalesQuotations = () => {
-    const dispatch = useDispatch();
-    const { salesQuotations = [], pagination = defaultPagination, loading = false, createLoading = false, updateLoading = false, deleteLoading = false } = useSelector((state: any) => state.salesQuotation);
-    const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
+    const dispatch = useDispatch<any>();
 
-    const [localOffset, setLocalOffset] = useState(0);
-    const [localLimit, setLocalLimit] = useState(10);
-    const [search, setSearch] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [refreshing, setRefreshing] = useState(false);
-    const [status, setStatus] = useState("open");
-    const [showModal, setShowModal] = useState(false);
-    const [editingRecord, setEditingRecord] = useState<any>(false);
-    const [form, setForm] = useState<any>(getDefaultForm());
-    const [errors, setErrors] = useState<any>({});
-    const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
-    const [fieldsLoading, setFieldsLoading] = useState(false);
-    const [confirmTooltip, setConfirmTooltip]: any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
-    const [tooltip, setTooltip]: any = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
-    const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
+    const {
+        salesQuotations = [],
+        pagination = defaultPagination,
+        loading = false,
+        createLoading = false,
+        updateLoading = false,
+        deleteLoading = false,
+    } = useSelector(
+        (state: any) =>
+            state.salesQuotation
+    );
 
-    const lastSalesQuotationFetchKeyRef = useRef("");
-    const schemaCalledRef = useRef(false);
-    const reportMappingCalledRef = useRef(false);
-    const preparedSchemaRef = useRef<any>(null);
+    const {
+        transactionsSchema,
+    } = useSelector(
+        (state: any) =>
+            state.getAllTransactionSchema
+    );
 
-    const { report } = useSelector((s: any) => s.reportMapping);
-    const { accounts } = useSelector((s: any) => s.accountMaster);
-    const { company } = useSelector((s: any) => s.professionalCompanyMaster);
-    const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
-    const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
-    const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
-    const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const [localOffset, setLocalOffset] =
+        useState(0);
 
-    const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
+    const [localLimit, setLocalLimit] =
+        useState(10);
+
+    const [search, setSearch] =
+        useState("");
+
+    const [
+        debouncedSearch,
+        setDebouncedSearch,
+    ] = useState("");
+
+    const [
+        refreshing,
+        setRefreshing,
+    ] = useState(false);
+
+    const [status, setStatus] =
+        useState("open");
+
+    const [
+        showModal,
+        setShowModal,
+    ] = useState(false);
+
+    const [
+        checkAccount,
+        setCheckAccount,
+    ] = useState(false);
+
+    const [
+        accountListLoaded,
+        setAccountListLoaded,
+    ] = useState(false);
+
+    const [
+        editingRecord,
+        setEditingRecord,
+    ] = useState<any>(false);
+
+    const [form, setForm] =
+        useState<any>(
+            getDefaultForm()
+        );
+
+    const [errors, setErrors] =
+        useState<any>({});
+
+    const [
+        templateFields,
+        setTemplateFields,
+    ] = useState<any>({
+        header: [],
+        body: [],
+        footer: [],
+    });
+
+    const [
+        fieldsLoading,
+        setFieldsLoading,
+    ] = useState(false);
+
+    const [
+        confirmTooltip,
+        setConfirmTooltip,
+    ]: any =
+        useState<ConfirmTooltipState>({
+            show: false,
+            x: null,
+            y: null,
+            voucherNumber: null,
+        });
+
+    const [
+        tooltip,
+        setTooltip,
+    ]: any =
+        useState<ConfirmTooltipState>({
+            show: false,
+            x: null,
+            y: null,
+            voucherNumber: null,
+        });
+
+    const [
+        downlaodPDF,
+        setDownlaodPDF,
+    ]: any = useState({
+        show: false,
+        type: "",
+    });
+
+    const lastSalesQuotationFetchKeyRef =
+        useRef("");
+
+    const schemaCalledRef =
+        useRef(false);
+
+    const reportMappingCalledRef =
+        useRef(false);
+
+    const preparedSchemaRef =
+        useRef<any>(null);
+
+    const { report } = useSelector(
+        (state: any) =>
+            state.reportMapping
+    );
+
+    const { company } = useSelector(
+        (state: any) =>
+            state.professionalCompanyMaster
+    );
+
+    const { configurations } =
+        useSelector(
+            (state: any) =>
+                state.systemConfiguration
+        );
+
+    const {
+        accounts = [],
+    } = useSelector(
+        (state: any) =>
+            state.accountMaster || {}
+    );
+
+    const filterAccount =
+        useMemo(() => {
+            return (
+                accounts || []
+            ).filter(
+                (account: any) =>
+                    String(
+                        account?.accountType ||
+                        ""
+                    ).toLowerCase() ===
+                    "customer"
+            );
+        }, [accounts]);
+
+    const getHeaderFieldByKey = (
+        key: string
+    ) =>
+        templateFields?.header?.find(
+            (field: any) =>
+                field.key === key
+        );
+
+    const getBodyFieldByKey = (
+        key: string
+    ) =>
+        templateFields?.body?.find(
+            (field: any) =>
+                field.key === key
+        );
+
+    const getOptionByValue = (
+        field: any,
+        selectedValue: any
+    ) =>
+        field?.options?.find(
+            (option: any) =>
+                String(option.value) ===
+                String(selectedValue)
+        );
+
+    const applyMappedFields = (
+        field: any,
+        selectedValue: any,
+        oldData: any
+    ) => {
         if (!field) return oldData;
-        const selectedOption = getOptionByValue(field, selectedValue);
-        const updated = { ...oldData, [field.key]: selectedValue };
-        if (field?.mapFields && selectedOption?.raw) Object.entries(field.mapFields).forEach(([targetKey, sourceKey]) => { updated[targetKey] = selectedOption.raw?.[sourceKey as string] ?? ""; });
+
+        const selectedOption =
+            getOptionByValue(
+                field,
+                selectedValue
+            );
+
+        const updated = {
+            ...oldData,
+            [field.key]:
+                selectedValue,
+        };
+
+        if (
+            field?.mapFields &&
+            selectedOption?.raw
+        ) {
+            Object.entries(
+                field.mapFields
+            ).forEach(
+                ([
+                    targetKey,
+                    sourceKey,
+                ]) => {
+                    updated[targetKey] =
+                        selectedOption.raw?.[
+                        sourceKey as string
+                        ] ?? "";
+                }
+            );
+        }
+
         return updated;
     };
 
-    const getUnitLabelFromSchema = (unitCode: string) => {
-        const unitField = templateFields?.body?.find((field: any) => field.key === "uom" || field.key === "unit");
-        const selectedUnit = unitField?.options?.find((item: any) => String(item.value) === String(unitCode));
-        return selectedUnit?.label || unitCode || "";
+    const getUnitLabelFromSchema = (
+        unitCode: string
+    ) => {
+        const unitField =
+            templateFields?.body?.find(
+                (field: any) =>
+                    field.key ===
+                    "uom" ||
+                    field.key ===
+                    "unit"
+            );
+
+        const selectedUnit =
+            unitField?.options?.find(
+                (item: any) =>
+                    String(
+                        item.value
+                    ) ===
+                    String(unitCode)
+            );
+
+        return (
+            selectedUnit?.label ||
+            unitCode ||
+            ""
+        );
     };
 
-    const normalizeRowKeys = (row: any) => {
-        const updated = { ...row };
-        if (updated.uom && !updated.unit) updated.unit = updated.uom;
-        if (updated.unit && !updated.uom) updated.uom = updated.unit;
-        if (updated.productDescription && !updated.description) updated.description = updated.productDescription;
-        if (updated.description && !updated.productDescription) updated.productDescription = updated.description;
-        if (updated.netAmount && !updated.netTotal) updated.netTotal = updated.netAmount;
-        if (updated.netTotal && !updated.netAmount) updated.netAmount = updated.netTotal;
-        if (updated.gross && !updated.grossAmount) updated.grossAmount = updated.gross;
-        if (updated.grossAmount && !updated.gross) updated.gross = updated.grossAmount;
-        updated.unitName = getUnitLabelFromSchema(updated.unit || updated.uom);
+    const normalizeRowKeys = (
+        row: any
+    ) => {
+        const updated = {
+            ...row,
+        };
+
+        if (
+            updated.uom &&
+            !updated.unit
+        ) {
+            updated.unit =
+                updated.uom;
+        }
+
+        if (
+            updated.unit &&
+            !updated.uom
+        ) {
+            updated.uom =
+                updated.unit;
+        }
+
+        if (
+            updated.productDescription &&
+            !updated.description
+        ) {
+            updated.description =
+                updated.productDescription;
+        }
+
+        if (
+            updated.description &&
+            !updated.productDescription
+        ) {
+            updated.productDescription =
+                updated.description;
+        }
+
+        if (
+            updated.netAmount &&
+            !updated.netTotal
+        ) {
+            updated.netTotal =
+                updated.netAmount;
+        }
+
+        if (
+            updated.netTotal &&
+            !updated.netAmount
+        ) {
+            updated.netAmount =
+                updated.netTotal;
+        }
+
+        if (
+            updated.gross &&
+            !updated.grossAmount
+        ) {
+            updated.grossAmount =
+                updated.gross;
+        }
+
+        if (
+            updated.grossAmount &&
+            !updated.gross
+        ) {
+            updated.gross =
+                updated.grossAmount;
+        }
+
+        updated.unitName =
+            getUnitLabelFromSchema(
+                updated.unit ||
+                updated.uom
+            );
+
         return updated;
     };
 
-    const calculateRow = (row: any) => {
-        const quantity = num(row.quantity);
-        const rate = num(row.rate);
-        const gross = quantity * rate;
-        const discountPercent = safePercent(row.discount);
-        const cgstPercent = safePercent(row.cgst);
-        const sgstPercent = safePercent(row.sgst);
-        const igstPercent = safePercent(row.igst);
-        const discountAmount = (gross * discountPercent) / 100;
-        const taxableAmount = gross - discountAmount;
-        const cgstAmount = (taxableAmount * cgstPercent) / 100;
-        const sgstAmount = (taxableAmount * sgstPercent) / 100;
-        const igstAmount = (taxableAmount * igstPercent) / 100;
-        const otherAmount = num(row.otherAmount);
-        const taxAmount = cgstAmount + sgstAmount + igstAmount;
-        const netAmount = taxableAmount + taxAmount + otherAmount;
-        return { ...row, quantity: row.quantity, rate: row.rate, discount: row.discount, cgst: row.cgst, sgst: row.sgst, igst: row.igst, otherAmount: row.otherAmount, gross, grossAmount: gross, discountAmount, taxableAmount, cgstAmount, sgstAmount, igstAmount, taxAmount, netAmount, netTotal: netAmount };
+    const calculateRow = (
+        row: any
+    ) => {
+        const quantity =
+            num(row.quantity);
+
+        const rate =
+            num(row.rate);
+
+        const gross =
+            quantity * rate;
+
+        const discountPercent =
+            safePercent(
+                row.discount
+            );
+
+        const cgstPercent =
+            safePercent(row.cgst);
+
+        const sgstPercent =
+            safePercent(row.sgst);
+
+        const igstPercent =
+            safePercent(row.igst);
+
+        const discountAmount =
+            (
+                gross *
+                discountPercent
+            ) / 100;
+
+        const taxableAmount =
+            gross -
+            discountAmount;
+
+        const cgstAmount =
+            (
+                taxableAmount *
+                cgstPercent
+            ) / 100;
+
+        const sgstAmount =
+            (
+                taxableAmount *
+                sgstPercent
+            ) / 100;
+
+        const igstAmount =
+            (
+                taxableAmount *
+                igstPercent
+            ) / 100;
+
+        const otherAmount =
+            num(row.otherAmount);
+
+        const taxAmount =
+            cgstAmount +
+            sgstAmount +
+            igstAmount;
+
+        const netAmount =
+            taxableAmount +
+            taxAmount +
+            otherAmount;
+
+        return {
+            ...row,
+            quantity:
+                row.quantity,
+            rate: row.rate,
+            discount:
+                row.discount,
+            cgst: row.cgst,
+            sgst: row.sgst,
+            igst: row.igst,
+            otherAmount:
+                row.otherAmount,
+            gross,
+            grossAmount:
+                gross,
+            discountAmount,
+            taxableAmount,
+            cgstAmount,
+            sgstAmount,
+            igstAmount,
+            taxAmount,
+            netAmount,
+            netTotal:
+                netAmount,
+        };
     };
 
-    const calculateFooter = (products: any[]) => {
-        return (products || []).reduce((acc: any, item: any) => {
-            acc.totalQuantity += num(item.quantity);
-            acc.totalGrossAmount += num(item.gross);
-            acc.totalDiscountAmount += num(item.discountAmount);
-            acc.totalCgstAmount += num(item.cgstAmount);
-            acc.totalSgstAmount += num(item.sgstAmount);
-            acc.totalIgstAmount += num(item.igstAmount);
-            acc.totalTaxAmount += num(item.taxAmount);
-            acc.totalOtherAmount += num(item.otherAmount);
-            acc.totalNetAmount += num(item.netAmount);
-            return acc;
-        }, { totalQuantity: 0, totalGrossAmount: 0, totalDiscountAmount: 0, totalCgstAmount: 0, totalSgstAmount: 0, totalIgstAmount: 0, totalTaxAmount: 0, totalOtherAmount: 0, totalNetAmount: 0 });
+    const calculateFooter = (
+        products: any[]
+    ) => {
+        return (
+            products || []
+        ).reduce(
+            (
+                acc: any,
+                item: any
+            ) => {
+                acc.totalQuantity +=
+                    num(
+                        item.quantity
+                    );
+
+                acc.totalGrossAmount +=
+                    num(
+                        item.gross
+                    );
+
+                acc.totalDiscountAmount +=
+                    num(
+                        item.discountAmount
+                    );
+
+                acc.totalCgstAmount +=
+                    num(
+                        item.cgstAmount
+                    );
+
+                acc.totalSgstAmount +=
+                    num(
+                        item.sgstAmount
+                    );
+
+                acc.totalIgstAmount +=
+                    num(
+                        item.igstAmount
+                    );
+
+                acc.totalTaxAmount +=
+                    num(
+                        item.taxAmount
+                    );
+
+                acc.totalOtherAmount +=
+                    num(
+                        item.otherAmount
+                    );
+
+                acc.totalNetAmount +=
+                    num(
+                        item.netAmount
+                    );
+
+                return acc;
+            },
+            {
+                totalQuantity: 0,
+                totalGrossAmount: 0,
+                totalDiscountAmount: 0,
+                totalCgstAmount: 0,
+                totalSgstAmount: 0,
+                totalIgstAmount: 0,
+                totalTaxAmount: 0,
+                totalOtherAmount: 0,
+                totalNetAmount: 0,
+            }
+        );
     };
 
-    const footerTotals = useMemo(() => calculateFooter(form.products || []), [form.products]);
-    const grossAmount = footerTotals.totalGrossAmount;
-    const discountAmount = footerTotals.totalDiscountAmount;
-    const cgstAmount = footerTotals.totalCgstAmount;
-    const sgstAmount = footerTotals.totalSgstAmount;
-    const igstAmount = footerTotals.totalIgstAmount;
-    const netAmount = footerTotals.totalNetAmount;
+    const footerTotals =
+        useMemo(
+            () =>
+                calculateFooter(
+                    form.products ||
+                    []
+                ),
+            [form.products]
+        );
 
-    const fetchSalesQuotations = async (force = false) => {
-        const fetchKey = `${localOffset}-${localLimit}-${debouncedSearch}-${status}`;
-        if (!force && lastSalesQuotationFetchKeyRef.current === fetchKey) return;
-        lastSalesQuotationFetchKeyRef.current = fetchKey;
-        await dispatch(getSalesQuotationList({ offset: localOffset, limit: localLimit, search: debouncedSearch, docStatus: status }) as any);
-    };
+    const grossAmount =
+        footerTotals
+            .totalGrossAmount;
+
+    const discountAmount =
+        footerTotals
+            .totalDiscountAmount;
+
+    const cgstAmount =
+        footerTotals
+            .totalCgstAmount;
+
+    const sgstAmount =
+        footerTotals
+            .totalSgstAmount;
+
+    const igstAmount =
+        footerTotals
+            .totalIgstAmount;
+
+    const netAmount =
+        footerTotals
+            .totalNetAmount;
+
+    const fetchSalesQuotations =
+        async (
+            force = false
+        ) => {
+            const fetchKey =
+                `${localOffset}-${localLimit}-${debouncedSearch}-${status}`;
+
+            if (
+                !force &&
+                lastSalesQuotationFetchKeyRef.current ===
+                fetchKey
+            ) {
+                return;
+            }
+
+            lastSalesQuotationFetchKeyRef.current =
+                fetchKey;
+
+            await dispatch(
+                getSalesQuotationList({
+                    offset:
+                        localOffset,
+                    limit:
+                        localLimit,
+                    search:
+                        debouncedSearch,
+                    docStatus:
+                        status,
+                }) as any
+            );
+        };
 
     const columns = [
-        { key: "sQuoteVoucherNumber", title: "Voucher No" },
-        { key: "sQuoteVoucherDate", title: "Date", render: (row: any) => row?.sQuoteVoucherDate ? formatDateForList(row.sQuoteVoucherDate) : "-" },
-        { key: "sQuoteCustomerName", title: "Customer", render: (row: any) => (<div><div className="font-medium text-card-foreground">{row?.sQuoteCustomerName || "-"}</div><div className="text-xs text-muted-foreground">{row?.sQuoteCustomerCode || "-"}</div></div>) },
-        { key: "sQuoteBody", title: "Items", render: (row: any) => row?.sQuoteBody?.length || 0 },
-        { key: "sQuoteFooter", title: "Net Amount", render: (row: any) => (<span className="font-semibold text-primary">{money(row?.sQuoteFooter?.netAmount || 0)}</span>), type: "amount" },
-        { key: "sQuoteDocStatus", title: "Doc Status", render: (row: any) => (<span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.sQuoteDocStatus === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>{row?.sQuoteDocStatus || "-"}</span>) },
-        { key: "sQuoteStatus", title: "Quote Status", render: (row: any) => (<span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">{row?.sQuoteStatus || "-"}</span>) },
+        {
+            key:
+                "sQuoteVoucherNumber",
+            title:
+                "Voucher No",
+        },
+        {
+            key:
+                "sQuoteVoucherDate",
+            title: "Date",
+            render: (
+                row: any
+            ) =>
+                row?.sQuoteVoucherDate
+                    ? formatDateForList(
+                        row.sQuoteVoucherDate
+                    )
+                    : "-",
+        },
+        {
+            key:
+                "sQuoteCustomerName",
+            title:
+                "Customer",
+            render: (
+                row: any
+            ) => (
+                <div>
+                    <div className="font-medium text-card-foreground">
+                        {row?.sQuoteCustomerName ||
+                            "-"}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                        {row?.sQuoteCustomerCode ||
+                            "-"}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key:
+                "sQuoteBody",
+            title: "Items",
+            render: (
+                row: any
+            ) =>
+                row
+                    ?.sQuoteBody
+                    ?.length ||
+                0,
+        },
+        {
+            key:
+                "sQuoteFooter",
+            title:
+                "Net Amount",
+            type: "amount",
+            render: (
+                row: any
+            ) => (
+                <span className="font-semibold text-primary">
+                    {money(
+                        row
+                            ?.sQuoteFooter
+                            ?.netAmount ||
+                        0
+                    )}
+                </span>
+            ),
+        },
+        {
+            key:
+                "sQuoteDocStatus",
+            title:
+                "Doc Status",
+            render: (
+                row: any
+            ) => (
+                <span
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.sQuoteDocStatus ===
+                        "open"
+                        ? "border-success/20 bg-success/10 text-success"
+                        : "border-danger/20 bg-danger/10 text-danger"
+                        }`}
+                >
+                    {row?.sQuoteDocStatus ||
+                        "-"}
+                </span>
+            ),
+        },
+        {
+            key:
+                "sQuoteStatus",
+            title:
+                "Quote Status",
+            render: (
+                row: any
+            ) => (
+                <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
+                    {row?.sQuoteStatus ||
+                        "-"}
+                </span>
+            ),
+        },
     ];
 
-    const enableLocation = useMemo(() => {
-        const locationConfig = configurations?.[0]?.systemConfiguration?.salesQuotation?.enableLocation
-        return locationConfig === true || locationConfig === "true";
-    }, [configurations]);
+    const enableLocation =
+        useMemo(() => {
+            const locationConfig =
+                configurations?.[0]
+                    ?.systemConfiguration
+                    ?.salesQuotation
+                    ?.enableLocation;
 
-    const enableDuplicatePro = useMemo(() => {
-        const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
-        return locationConfig === true || locationConfig === "true";
-    }, [configurations]);
+            return (
+                locationConfig ===
+                true ||
+                locationConfig ===
+                "true"
+            );
+        }, [configurations]);
 
-    const handleStatusChange = (nextStatus: string) => { setStatus(nextStatus); setLocalOffset(0); };
+    const enableDuplicatePro =
+        useMemo(() => {
+            const duplicateConfig =
+                configurations?.[0]
+                    ?.systemConfiguration
+                    ?.allowDuplicateProduct;
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        try {
-            await fetchSalesQuotations(true);
-            toast.success("Sales quotation list refreshed");
-        } finally {
-            setRefreshing(false);
-        }
+            return (
+                duplicateConfig ===
+                true ||
+                duplicateConfig ===
+                "true"
+            );
+        }, [configurations]);
+
+    const handleStatusChange = (
+        nextStatus: string
+    ) => {
+        setStatus(nextStatus);
+        setLocalOffset(0);
     };
 
-    const resetMainForm = () => { setEditingRecord(null); setErrors({}); setForm(getDefaultForm()); };
-    const openAddModal = () => { resetMainForm(); setShowModal(true); };
+    const handleRefresh =
+        async () => {
+            setRefreshing(true);
 
-    const openEditModal = (record: any) => {
-        const footer = record?.sQuoteFooter || {};
-        const products = record?.sQuoteBody?.length > 0 ? record.sQuoteBody.map((item: any) => {
-            const unitCode = item?.unit || item?.uom || "";
-            return calculateRow(normalizeRowKeys({ id: item?.id || Date.now() + Math.random(), productCode: item?.productCode || "", productName: item?.productName || "", productId: item?.productId || "", productDescription: item?.productDescription || item?.description || "", description: item?.description || item?.productDescription || "", productHSNCode: item?.productHSNCode || "", remarks: item?.remarks || "", quantity: item?.quantity || "", unit: unitCode, uom: unitCode, unitName: item?.unitName || getUnitLabelFromSchema(unitCode), rate: item?.rate || "", gross: item?.gross || item?.grossAmount || 0, grossAmount: item?.grossAmount || item?.gross || 0, discount: item?.discount || item?.discountPercentage || "", discountPercentage: item?.discountPercentage || item?.discount || "", discountAmount: item?.discountAmount || 0, taxableAmount: item?.taxableAmount || 0, cgst: item?.cgst || item?.cgstPercentage || "", cgstPercentage: item?.cgstPercentage || item?.cgst || "", cgstAmount: item?.cgstAmount || 0, sgst: item?.sgst || item?.sgstPercentage || "", sgstPercentage: item?.sgstPercentage || item?.sgst || "", sgstAmount: item?.sgstAmount || 0, igst: item?.igst || item?.igstPercentage || "", igstPercentage: item?.igstPercentage || item?.igst || "", igstAmount: item?.igstAmount || 0, taxAmount: item?.taxAmount || 0, otherAmount: item?.otherAmount || 0, netAmount: item?.netAmount || item?.netTotal || 0, netTotal: item?.netTotal || item?.netAmount || 0 }));
-        }) : [{ ...emptyProductRow, id: Date.now() }];
+            try {
+                await fetchSalesQuotations(
+                    true
+                );
+
+                toast.success(
+                    "Sales quotation list refreshed"
+                );
+            } finally {
+                setRefreshing(
+                    false
+                );
+            }
+        };
+
+    const resetMainForm = () => {
+        setEditingRecord(null);
+        setErrors({});
+        setForm(
+            getDefaultForm()
+        );
+        setCheckAccount(false);
+    };
+
+    const openAddModal = () => {
+        resetMainForm();
+        setShowModal(true);
+    };
+
+    const openEditModal = (
+        record: any
+    ) => {
+        const footer =
+            record?.sQuoteFooter ||
+            {};
+
+        const products =
+            record?.sQuoteBody
+                ?.length > 0
+                ? record.sQuoteBody.map(
+                    (
+                        item: any
+                    ) => {
+                        const unitCode =
+                            item?.unit ||
+                            item?.uom ||
+                            "";
+
+                        return calculateRow(
+                            normalizeRowKeys(
+                                {
+                                    id:
+                                        item?.id ||
+                                        Date.now() +
+                                        Math.random(),
+
+                                    productCode:
+                                        item?.productCode ||
+                                        "",
+
+                                    productName:
+                                        item?.productName ||
+                                        "",
+
+                                    productId:
+                                        item?.productId ||
+                                        "",
+
+                                    productDescription:
+                                        item?.productDescription ||
+                                        item?.description ||
+                                        "",
+
+                                    description:
+                                        item?.description ||
+                                        item?.productDescription ||
+                                        "",
+
+                                    productHSNCode:
+                                        item?.productHSNCode ||
+                                        "",
+
+                                    remarks:
+                                        item?.remarks ||
+                                        "",
+
+                                    quantity:
+                                        item?.quantity ||
+                                        "",
+
+                                    unit:
+                                        unitCode,
+
+                                    uom:
+                                        unitCode,
+
+                                    unitName:
+                                        item?.unitName ||
+                                        getUnitLabelFromSchema(
+                                            unitCode
+                                        ),
+
+                                    rate:
+                                        item?.rate ||
+                                        "",
+
+                                    gross:
+                                        item?.gross ||
+                                        item?.grossAmount ||
+                                        0,
+
+                                    grossAmount:
+                                        item?.grossAmount ||
+                                        item?.gross ||
+                                        0,
+
+                                    discount:
+                                        item?.discount ||
+                                        item?.discountPercentage ||
+                                        "",
+
+                                    discountPercentage:
+                                        item?.discountPercentage ||
+                                        item?.discount ||
+                                        "",
+
+                                    discountAmount:
+                                        item?.discountAmount ||
+                                        0,
+
+                                    taxableAmount:
+                                        item?.taxableAmount ||
+                                        0,
+
+                                    cgst:
+                                        item?.cgst ||
+                                        item?.cgstPercentage ||
+                                        "",
+
+                                    cgstPercentage:
+                                        item?.cgstPercentage ||
+                                        item?.cgst ||
+                                        "",
+
+                                    cgstAmount:
+                                        item?.cgstAmount ||
+                                        0,
+
+                                    sgst:
+                                        item?.sgst ||
+                                        item?.sgstPercentage ||
+                                        "",
+
+                                    sgstPercentage:
+                                        item?.sgstPercentage ||
+                                        item?.sgst ||
+                                        "",
+
+                                    sgstAmount:
+                                        item?.sgstAmount ||
+                                        0,
+
+                                    igst:
+                                        item?.igst ||
+                                        item?.igstPercentage ||
+                                        "",
+
+                                    igstPercentage:
+                                        item?.igstPercentage ||
+                                        item?.igst ||
+                                        "",
+
+                                    igstAmount:
+                                        item?.igstAmount ||
+                                        0,
+
+                                    taxAmount:
+                                        item?.taxAmount ||
+                                        0,
+
+                                    otherAmount:
+                                        item?.otherAmount ||
+                                        0,
+
+                                    netAmount:
+                                        item?.netAmount ||
+                                        item?.netTotal ||
+                                        0,
+
+                                    netTotal:
+                                        item?.netTotal ||
+                                        item?.netAmount ||
+                                        0,
+                                }
+                            )
+                        );
+                    }
+                )
+                : [
+                    {
+                        ...emptyProductRow,
+                        id:
+                            Date.now(),
+                    },
+                ];
 
         setEditingRecord(true);
         setErrors({});
+
         setForm({
-            sQuoteVoucherNumber: record?.sQuoteVoucherNumber || "AUTO", sQuoteVoucherDate: formatDateForInput(record?.sQuoteVoucherDate), sQuoteCustomerCode: record?.sQuoteCustomerCode || "", sQuoteCustomerName: record?.sQuoteCustomerName || "", sQuoteSalesAccount: record?.sQuoteSalesAccount || "SA021", sQuoteDocStatus: record?.sQuoteDocStatus || "open", sQuoteStatus: record?.sQuoteStatus || "draft", sQuoteRemark: record?.sQuoteRemark || "", sQuoteStatusRemark: record?.sQuoteStatusRemark || "", sQuoteStatusHistory: record?.sQuoteStatusHistory || [], isAutoPost: record?.isAutoPost || false, products, grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00", discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00", cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00", sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00", igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00", taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00", otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00", netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00", latitude: record?.sQuoteLocation?.lat, locationAddress: record?.sQuoteLocation?.address, longitude: record?.sQuoteLocation?.lng
+            sQuoteVoucherNumber:
+                record?.sQuoteVoucherNumber ||
+                "AUTO",
+
+            sQuoteVoucherDate:
+                formatDateForInput(
+                    record?.sQuoteVoucherDate
+                ),
+
+            sQuoteCustomerCode:
+                record?.sQuoteCustomerCode ||
+                "",
+
+            sQuoteCustomerName:
+                record?.sQuoteCustomerName ||
+                "",
+
+            sQuoteSalesAccount:
+                record?.sQuoteSalesAccount ||
+                "SA021",
+
+            sQuoteDocStatus:
+                record?.sQuoteDocStatus ||
+                "open",
+
+            sQuoteStatus:
+                record?.sQuoteStatus ||
+                "draft",
+
+            sQuoteRemark:
+                record?.sQuoteRemark ||
+                "",
+
+            sQuoteStatusRemark:
+                record?.sQuoteStatusRemark ||
+                "",
+
+            sQuoteStatusHistory:
+                record?.sQuoteStatusHistory ||
+                [],
+
+            isAutoPost:
+                record?.isAutoPost ||
+                false,
+
+            products,
+
+            grossAmount:
+                footer?.grossAmount ||
+                footer?.totalGrossAmount ||
+                "0.00",
+
+            discountAmount:
+                footer?.discountAmount ||
+                footer?.totalDiscountAmount ||
+                "0.00",
+
+            cgstAmount:
+                footer?.cgstAmount ||
+                footer?.totalCgstAmount ||
+                "0.00",
+
+            sgstAmount:
+                footer?.sgstAmount ||
+                footer?.totalSgstAmount ||
+                "0.00",
+
+            igstAmount:
+                footer?.igstAmount ||
+                footer?.totalIgstAmount ||
+                "0.00",
+
+            taxAmount:
+                footer?.taxAmount ||
+                footer?.totalTaxAmount ||
+                "0.00",
+
+            otherAmount:
+                footer?.otherAmount ||
+                footer?.totalOtherAmount ||
+                "0.00",
+
+            netAmount:
+                footer?.netAmount ||
+                footer?.totalNetAmount ||
+                "0.00",
+
+            latitude:
+                record
+                    ?.sQuoteLocation
+                    ?.lat,
+
+            locationAddress:
+                record
+                    ?.sQuoteLocation
+                    ?.address,
+
+            longitude:
+                record
+                    ?.sQuoteLocation
+                    ?.lng,
         });
+
         setShowModal(true);
     };
-    const handleMainChange = (key: string, value: any) => {
-        setForm((prev: any) => {
-            const currentField = getHeaderFieldByKey(key);
-            let updated = { ...prev, [key]: value };
-            if (currentField?.mapFields) updated = applyMappedFields(currentField, value, updated);
-            return updated;
-        });
-        setErrors((prev: any) => ({ ...prev, [key]: "" }));
+
+    const handleMainChange = (
+        key: string,
+        value: any
+    ) => {
+        setForm(
+            (prev: any) => {
+                const currentField =
+                    getHeaderFieldByKey(
+                        key
+                    );
+
+                let updated = {
+                    ...prev,
+                    [key]: value,
+                };
+
+                if (
+                    currentField?.mapFields
+                ) {
+                    updated =
+                        applyMappedFields(
+                            currentField,
+                            value,
+                            updated
+                        );
+                }
+
+                return updated;
+            }
+        );
+
+        setErrors(
+            (prev: any) => ({
+                ...prev,
+                [key]: "",
+            })
+        );
     };
 
-    const handleAddRow = () => setForm((prev: any) => ({ ...prev, products: [...(prev.products || []), { ...emptyProductRow, id: Date.now() }] }));
+    const handleAccountSaved =
+        async (
+            savedResponse: any
+        ) => {
+            try {
+                const accountResponse =
+                    await dispatch(
+                        getAllAccounts({
+                            offset: 0,
+                            limit: 100,
+                            search: "",
+                        }) as any
+                    ).unwrap();
 
-    const handleDeleteRow = (index: number) => {
-        setForm((prev: any) => {
-            const updatedProducts = (prev.products || []).filter((_: any, i: number) => i !== index);
-            return { ...prev, products: updatedProducts.length > 0 ? updatedProducts : [{ ...emptyProductRow, id: Date.now() }] };
-        });
+                setAccountListLoaded(
+                    true
+                );
+
+                await dispatch(
+                    getAllReportMapping({
+                        moduleType:
+                            "salesQuotation",
+                    }) as any
+                ).unwrap();
+
+                if (
+                    transactionsSchema
+                ) {
+                    const updatedData =
+                        await loadAllTemplateOptions(
+                            transactionsSchema
+                        );
+
+                    setTemplateFields(
+                        updatedData
+                    );
+                }
+
+                const savedAccount =
+                    savedResponse
+                        ?.data
+                        ?.account ||
+                    savedResponse
+                        ?.data
+                        ?.data ||
+                    savedResponse
+                        ?.data ||
+                    savedResponse
+                        ?.account ||
+                    savedResponse;
+
+                const refreshedAccounts =
+                    accountResponse
+                        ?.data
+                        ?.accounts ||
+                    accountResponse
+                        ?.data
+                        ?.data
+                        ?.accounts ||
+                    accountResponse
+                        ?.accounts ||
+                    accountResponse
+                        ?.data
+                        ?.items ||
+                    accountResponse
+                        ?.items ||
+                    [];
+
+                const customerAccounts =
+                    Array.isArray(
+                        refreshedAccounts
+                    )
+                        ? refreshedAccounts.filter(
+                            (
+                                account: any
+                            ) =>
+                                String(
+                                    account?.accountType ||
+                                    ""
+                                ).toLowerCase() ===
+                                "customer"
+                        )
+                        : [];
+
+                const savedCode =
+                    savedAccount
+                        ?.accountCode ||
+                    "";
+
+                const savedName =
+                    savedAccount
+                        ?.accountName ||
+                    "";
+
+                const createdCustomer =
+                    customerAccounts.find(
+                        (
+                            account: any
+                        ) =>
+                            (
+                                savedCode &&
+                                account
+                                    ?.accountCode ===
+                                savedCode
+                            ) ||
+                            (
+                                savedName &&
+                                account
+                                    ?.accountName ===
+                                savedName
+                            )
+                    ) ||
+                    (
+                        savedCode ||
+                            savedName
+                            ? savedAccount
+                            : null
+                    );
+
+                if (
+                    createdCustomer
+                ) {
+                    setForm(
+                        (
+                            prev: any
+                        ) => ({
+                            ...prev,
+
+                            sQuoteCustomerCode:
+                                createdCustomer
+                                    ?.accountCode ||
+                                prev
+                                    ?.sQuoteCustomerCode ||
+                                "",
+
+                            sQuoteCustomerName:
+                                createdCustomer
+                                    ?.accountName ||
+                                prev
+                                    ?.sQuoteCustomerName ||
+                                "",
+                        })
+                    );
+
+                    setErrors(
+                        (
+                            prev: any
+                        ) => ({
+                            ...prev,
+                            sQuoteCustomerCode:
+                                "",
+                            sQuoteCustomerName:
+                                "",
+                        })
+                    );
+                }
+            } catch (
+            error: any
+            ) {
+                console.log(
+                    "Failed to refresh account options:",
+                    error
+                );
+
+                toast.error(
+                    error?.message ||
+                    "Account created, but customer dropdown refresh failed"
+                );
+            } finally {
+                setCheckAccount(
+                    false
+                );
+            }
+        };
+
+    const handleAddRow = () =>
+        setForm(
+            (prev: any) => ({
+                ...prev,
+                products: [
+                    ...(
+                        prev.products ||
+                        []
+                    ),
+                    {
+                        ...emptyProductRow,
+                        id:
+                            Date.now(),
+                    },
+                ],
+            })
+        );
+
+    const handleDeleteRow = (
+        index: number
+    ) => {
+        setForm(
+            (prev: any) => {
+                const updatedProducts =
+                    (
+                        prev.products ||
+                        []
+                    ).filter(
+                        (
+                            _: any,
+                            i: number
+                        ) =>
+                            i !==
+                            index
+                    );
+
+                return {
+                    ...prev,
+                    products:
+                        updatedProducts.length >
+                            0
+                            ? updatedProducts
+                            : [
+                                {
+                                    ...emptyProductRow,
+                                    id:
+                                        Date.now(),
+                                },
+                            ],
+                };
+            }
+        );
     };
 
-    const handleRowChange = (index: number, key: string, value: any) => {
-        if (!form?.sQuoteCustomerName) return toast.error("Please select customer first");
-        const lowerKey = String(key || "").toLowerCase();
-        const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
+    const handleRowChange = (
+        index: number,
+        key: string,
+        value: any
+    ) => {
+        if (
+            !form
+                ?.sQuoteCustomerName
+        ) {
+            return toast.error(
+                "Please select customer first"
+            );
+        }
 
-        const duplicate = isProductField && Boolean(form?.products?.filter((e: any, i: number) => i !== index && String(e?.productCode || e?.productName || e?.productId || "") === String(value || ""))?.length);
-        if (key === "productCode" && duplicate && !enableDuplicatePro) {
-            setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
+        const lowerKey =
+            String(
+                key || ""
+            ).toLowerCase();
+
+        const isProductField =
+            lowerKey ===
+            "productcode" ||
+            lowerKey ===
+            "productname" ||
+            lowerKey ===
+            "productid" ||
+            lowerKey ===
+            "product";
+
+        const duplicate =
+            isProductField &&
+            Boolean(
+                form
+                    ?.products
+                    ?.filter(
+                        (
+                            e: any,
+                            i: number
+                        ) =>
+                            i !==
+                            index &&
+                            String(
+                                e?.productCode ||
+                                e?.productName ||
+                                e?.productId ||
+                                ""
+                            ) ===
+                            String(
+                                value ||
+                                ""
+                            )
+                    )?.length
+            );
+
+        if (
+            key ===
+            "productCode" &&
+            duplicate &&
+            !enableDuplicatePro
+        ) {
+            setErrors(
+                (prev: any) => ({
+                    ...prev,
+                    products: "",
+                    [`row_${index}_${key}`]:
+                        "This product already added",
+                    [`row_${index}_tax`]:
+                        "",
+                })
+            );
+
             return;
         }
 
-        setForm((prev: any) => {
-            const updatedProducts = [...(prev.products || [])];
-            const currentRow = updatedProducts[index] || {};
-            const currentField = getBodyFieldByKey(key);
-            let updatedRow = { ...currentRow, [key]: value };
-            if (currentField?.mapFields) updatedRow = applyMappedFields(currentField, value, updatedRow);
-            const selectedOption = getOptionByValue(currentField, value);
-            const raw = selectedOption?.raw || {};
-            if (raw?._id && !updatedRow.productId) updatedRow.productId = raw._id;
-            updatedRow = normalizeRowKeys(updatedRow);
+        setForm(
+            (prev: any) => {
+                const updatedProducts =
+                    [
+                        ...(
+                            prev.products ||
+                            []
+                        ),
+                    ];
 
-            if (key === "productCode" || key === "productName" || key === "productId") {
-                const getCustomer = accounts?.filter((e: any) => e?.accountType == "customer")?.find((e: any) => e.accountName == form?.sQuoteCustomerName)
-                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
-                    updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
-                    updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
-                } else {
-                    updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
+                const currentRow =
+                    updatedProducts[
+                    index
+                    ] || {};
+
+                const currentField =
+                    getBodyFieldByKey(
+                        key
+                    );
+
+                let updatedRow = {
+                    ...currentRow,
+                    [key]: value,
+                };
+
+                if (
+                    currentField?.mapFields
+                ) {
+                    updatedRow =
+                        applyMappedFields(
+                            currentField,
+                            value,
+                            updatedRow
+                        );
                 }
-                if (num(updatedRow.igst) > 0) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
+
+                const selectedOption =
+                    getOptionByValue(
+                        currentField,
+                        value
+                    );
+
+                const raw =
+                    selectedOption
+                        ?.raw || {};
+
+                if (
+                    raw?._id &&
+                    !updatedRow.productId
+                ) {
+                    updatedRow.productId =
+                        raw._id;
                 }
 
-                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
-                    updatedRow.igst = "";
-                    updatedRow.igstAmount = 0;
+                updatedRow =
+                    normalizeRowKeys(
+                        updatedRow
+                    );
+
+                if (
+                    key ===
+                    "productCode" ||
+                    key ===
+                    "productName" ||
+                    key ===
+                    "productId"
+                ) {
+                    const getCustomer =
+                        filterAccount?.find(
+                            (
+                                e: any
+                            ) =>
+                                e.accountName ==
+                                form
+                                    ?.sQuoteCustomerName
+                        );
+
+                    if (
+                        company
+                            ?.state
+                            ?.isoCode ==
+                        getCustomer
+                            ?.state
+                            ?.isoCode
+                    ) {
+                        updatedRow.cgst =
+                            raw?.csgst ??
+                            raw?.CGST ??
+                            raw?.cgstRate ??
+                            raw?.cgstPercentage ??
+                            raw?.tax
+                                ?.cgst ??
+                            updatedRow.cgst ??
+                            "";
+
+                        updatedRow.sgst =
+                            raw?.csgst ??
+                            raw?.SGST ??
+                            raw?.sgstRate ??
+                            raw?.sgstPercentage ??
+                            raw?.tax
+                                ?.sgst ??
+                            updatedRow.sgst ??
+                            "";
+                    } else {
+                        updatedRow.igst =
+                            raw?.igst ??
+                            raw?.IGST ??
+                            raw?.igstRate ??
+                            raw?.igstPercentage ??
+                            raw?.tax
+                                ?.igst ??
+                            updatedRow.igst ??
+                            "";
+                    }
+
+                    if (
+                        num(
+                            updatedRow.igst
+                        ) > 0
+                    ) {
+                        updatedRow.cgst =
+                            "";
+
+                        updatedRow.sgst =
+                            "";
+
+                        updatedRow.cgstAmount =
+                            0;
+
+                        updatedRow.sgstAmount =
+                            0;
+                    }
+
+                    if (
+                        num(
+                            updatedRow.cgst
+                        ) > 0 ||
+                        num(
+                            updatedRow.sgst
+                        ) > 0
+                    ) {
+                        updatedRow.igst =
+                            "";
+
+                        updatedRow.igstAmount =
+                            0;
+                    }
                 }
+
+                if (
+                    (
+                        key ===
+                        "cgst" ||
+                        key ===
+                        "sgst"
+                    ) &&
+                    num(value) > 0
+                ) {
+                    updatedRow.igst =
+                        "";
+
+                    updatedRow.igstAmount =
+                        0;
+                }
+
+                if (
+                    key ===
+                    "igst" &&
+                    num(value) > 0
+                ) {
+                    updatedRow.cgst =
+                        "";
+
+                    updatedRow.sgst =
+                        "";
+
+                    updatedRow.cgstAmount =
+                        0;
+
+                    updatedRow.sgstAmount =
+                        0;
+                }
+
+                updatedRow =
+                    calculateRow(
+                        updatedRow
+                    );
+
+                updatedProducts[
+                    index
+                ] = updatedRow;
+
+                return {
+                    ...prev,
+                    products:
+                        updatedProducts,
+                };
             }
+        );
 
-            if ((key === "cgst" || key === "sgst") && num(value) > 0) {
-                updatedRow.igst = "";
-                updatedRow.igstAmount = 0;
-            }
-
-            if (key === "igst" && num(value) > 0) {
-                updatedRow.cgst = "";
-                updatedRow.sgst = "";
-                updatedRow.cgstAmount = 0;
-                updatedRow.sgstAmount = 0;
-            }
-
-            updatedRow = calculateRow(updatedRow);
-            updatedProducts[index] = updatedRow;
-            return { ...prev, products: updatedProducts };
-        });
-
-        setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "", [`row_${index}_tax`]: "" }));
+        setErrors(
+            (prev: any) => ({
+                ...prev,
+                products: "",
+                [`row_${index}_${key}`]:
+                    "",
+                [`row_${index}_tax`]:
+                    "",
+            })
+        );
     };
 
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
-        return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
-            const value = row?.[key];
-            return value !== undefined && value !== null && value !== "";
-        }));
+        const bodyKeys =
+            (
+                templateFields?.body ||
+                []
+            )
+                .filter(
+                    (
+                        field: any
+                    ) =>
+                        !field.isHidden
+                )
+                .map(
+                    (
+                        field: any
+                    ) =>
+                        field.key
+                );
+
+        return (
+            form.products ||
+            []
+        ).filter(
+            (row: any) =>
+                bodyKeys.some(
+                    (
+                        key: string
+                    ) => {
+                        const value =
+                            row?.[
+                            key
+                            ];
+
+                        return (
+                            value !==
+                            undefined &&
+                            value !==
+                            null &&
+                            value !==
+                            ""
+                        );
+                    }
+                )
+        );
     };
 
     const validateForm = () => {
         const err: any = {};
 
-        (templateFields?.header || []).forEach((field: any) => {
-            if (field.isHidden) return;
-            if (!field.isRequired) return;
-            const value = form?.[field.key];
-            if (value === undefined || value === null || value === "") err[field.key] = `${field.label || field.key} is required`;
-        });
+        (
+            templateFields?.header ||
+            []
+        ).forEach(
+            (field: any) => {
+                if (
+                    field.isHidden
+                ) {
+                    return;
+                }
 
-        const filledRows = getFilledRows();
-        if (filledRows.length === 0) err.products = "Please add at least one product";
+                if (
+                    !field.isRequired
+                ) {
+                    return;
+                }
 
-        (form.products || []).forEach((row: any, index: number) => {
-            const hasAnyValue = (templateFields?.body || []).some((field: any) => {
-                const value = row?.[field.key];
-                return value !== undefined && value !== null && value !== "";
-            });
+                const value =
+                    form?.[
+                    field.key
+                    ];
 
-            if (!hasAnyValue) return;
-
-            (templateFields?.body || []).forEach((field: any) => {
-                if (field.isHidden) return;
-                if (!field.isRequired) return;
-                const value = row?.[field.key];
-                if (value === undefined || value === null || value === "") err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
-            });
-
-            const cgst = num(row.cgstPercentage || row.cgst);
-            const sgst = num(row.sgstPercentage || row.sgst);
-            const igst = num(row.igstPercentage || row.igst);
-
-            if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                err[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
-                err[`row_${index}_igstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
-                err[`row_${index}_igst`] = "Only one tax type allowed";
-                err[`row_${index}_cgst`] = "Only one tax type allowed";
-                err[`row_${index}_sgst`] = "Only one tax type allowed";
+                if (
+                    value ===
+                    undefined ||
+                    value === null ||
+                    value === ""
+                ) {
+                    err[
+                        field.key
+                    ] =
+                        `${field.label || field.key} is required`;
+                }
             }
-        });
+        );
+
+        const filledRows =
+            getFilledRows();
+
+        if (
+            filledRows.length ===
+            0
+        ) {
+            err.products =
+                "Please add at least one product";
+        }
+
+        (
+            form.products ||
+            []
+        ).forEach(
+            (
+                row: any,
+                index: number
+            ) => {
+                const hasAnyValue =
+                    (
+                        templateFields?.body ||
+                        []
+                    ).some(
+                        (
+                            field: any
+                        ) => {
+                            const value =
+                                row?.[
+                                field.key
+                                ];
+
+                            return (
+                                value !==
+                                undefined &&
+                                value !==
+                                null &&
+                                value !==
+                                ""
+                            );
+                        }
+                    );
+
+                if (
+                    !hasAnyValue
+                ) {
+                    return;
+                }
+
+                (
+                    templateFields?.body ||
+                    []
+                ).forEach(
+                    (
+                        field: any
+                    ) => {
+                        if (
+                            field.isHidden
+                        ) {
+                            return;
+                        }
+
+                        if (
+                            !field.isRequired
+                        ) {
+                            return;
+                        }
+
+                        const value =
+                            row?.[
+                            field.key
+                            ];
+
+                        if (
+                            value ===
+                            undefined ||
+                            value ===
+                            null ||
+                            value ===
+                            ""
+                        ) {
+                            err[
+                                `row_${index}_${field.key}`
+                            ] =
+                                `${field.label || field.key} is required`;
+                        }
+                    }
+                );
+
+                const cgst =
+                    num(
+                        row.cgstPercentage ||
+                        row.cgst
+                    );
+
+                const sgst =
+                    num(
+                        row.sgstPercentage ||
+                        row.sgst
+                    );
+
+                const igst =
+                    num(
+                        row.igstPercentage ||
+                        row.igst
+                    );
+
+                if (
+                    igst > 0 &&
+                    (
+                        cgst > 0 ||
+                        sgst > 0
+                    )
+                ) {
+                    err[
+                        `row_${index}_tax`
+                    ] =
+                        "You can enter either IGST or CGST/SGST";
+
+                    err[
+                        `row_${index}_igstPercentage`
+                    ] =
+                        "Only one tax type allowed";
+
+                    err[
+                        `row_${index}_cgstPercentage`
+                    ] =
+                        "Only one tax type allowed";
+
+                    err[
+                        `row_${index}_sgstPercentage`
+                    ] =
+                        "Only one tax type allowed";
+
+                    err[
+                        `row_${index}_igst`
+                    ] =
+                        "Only one tax type allowed";
+
+                    err[
+                        `row_${index}_cgst`
+                    ] =
+                        "Only one tax type allowed";
+
+                    err[
+                        `row_${index}_sgst`
+                    ] =
+                        "Only one tax type allowed";
+                }
+            }
+        );
 
         setErrors(err);
-        if (err.products) toast.error(err.products);
-        return Object.keys(err).length === 0;
+
+        if (err.products) {
+            toast.error(
+                err.products
+            );
+        }
+
+        return (
+            Object.keys(err)
+                .length === 0
+        );
     };
 
     const cleanRows = () => {
-        const bodyKeys = (templateFields?.body || []).map((field: any) => field.key);
-        return (form.products || []).filter((row: any) => bodyKeys.some((key: string) => {
-            const value = row?.[key];
-            return value !== undefined && value !== null && value !== "";
-        })).map((row: any) => calculateRow(normalizeRowKeys(row)));
+        const bodyKeys =
+            (
+                templateFields?.body ||
+                []
+            ).map(
+                (
+                    field: any
+                ) =>
+                    field.key
+            );
+
+        return (
+            form.products ||
+            []
+        )
+            .filter(
+                (row: any) =>
+                    bodyKeys.some(
+                        (
+                            key: string
+                        ) => {
+                            const value =
+                                row?.[
+                                key
+                                ];
+
+                            return (
+                                value !==
+                                undefined &&
+                                value !==
+                                null &&
+                                value !==
+                                ""
+                            );
+                        }
+                    )
+            )
+            .map(
+                (row: any) =>
+                    calculateRow(
+                        normalizeRowKeys(
+                            row
+                        )
+                    )
+            );
     };
 
-    const handleSubmit = async () => {
-        if (!validateForm()) return;
+    const handleSubmit =
+        async () => {
+            if (
+                !validateForm()
+            ) {
+                return;
+            }
 
-        const products = cleanRows();
-        const footer = calculateFooter(products);
-        const payload: any = {
-            sQuoteVoucherDate: form.sQuoteVoucherDate,
-            sQuoteCustomerCode: form.sQuoteCustomerCode,
-            sQuoteCustomerName: form.sQuoteCustomerName,
-            sQuoteSalesAccount: form.sQuoteSalesAccount || "SA021",
-            sQuoteStatus: form.sQuoteStatus || "draft",
-            sQuoteDocStatus: form.sQuoteDocStatus || "open",
-            sQuoteRemark: form.sQuoteRemark,
-            sQuoteBody: products.map((item: any) => ({ productCode: item.productCode, productName: item.productName, productId: item.productId, productDescription: item.productDescription || item.description, description: item.description || item.productDescription, productHSNCode: item.productHSNCode, remarks: item.remarks, quantity: String(item.quantity), unit: item.unit || item.uom, uom: item.uom || item.unit, rate: String(item.rate), gross: fmtMoney(item.grossAmount), grossAmount: fmtMoney(item.grossAmount), discount: String(item.discountPercentage || item.discount || ""), discountPercentage: String(item.discountPercentage || item.discount || ""), discountAmount: fmtMoney(item.discountAmount), taxableAmount: fmtMoney(item.taxableAmount), cgst: String(item.cgstPercentage || item.cgst || ""), cgstPercentage: String(item.cgstPercentage || item.cgst || ""), cgstAmount: fmtMoney(item.cgstAmount), sgst: String(item.sgstPercentage || item.sgst || ""), sgstPercentage: String(item.sgstPercentage || item.sgst || ""), sgstAmount: fmtMoney(item.sgstAmount), igst: String(item.igstPercentage || item.igst || ""), igstPercentage: String(item.igstPercentage || item.igst || ""), igstAmount: fmtMoney(item.igstAmount), taxAmount: fmtMoney(item.taxAmount), otherAmount: fmtMoney(item.otherAmount), netAmount: fmtMoney(item.netAmount || item.netTotal), netTotal: fmtMoney(item.netTotal || item.netAmount) })),
-            sQuoteFooter: { grossAmount: fmtMoney(footer.totalGrossAmount), discountAmount: fmtMoney(footer.totalDiscountAmount), cgstAmount: fmtMoney(footer.totalCgstAmount), sgstAmount: fmtMoney(footer.totalSgstAmount), igstAmount: fmtMoney(footer.totalIgstAmount), taxAmount: fmtMoney(footer.totalTaxAmount), otherAmount: fmtMoney(footer.totalOtherAmount), netAmount: fmtMoney(footer.totalNetAmount), adjustedAmount: "0", balanceAmount: fmtMoney(footer.totalNetAmount), totalQuantity: footer.totalQuantity, totalGrossAmount: fmtMoney(footer.totalGrossAmount), totalDiscountAmount: fmtMoney(footer.totalDiscountAmount), totalCgstAmount: fmtMoney(footer.totalCgstAmount), totalSgstAmount: fmtMoney(footer.totalSgstAmount), totalIgstAmount: fmtMoney(footer.totalIgstAmount), totalTaxAmount: fmtMoney(footer.totalTaxAmount), totalOtherAmount: fmtMoney(footer.totalOtherAmount), totalNetAmount: fmtMoney(footer.totalNetAmount) },
-            sQuoteLocation: {
-                lat: form?.latitude,
-                lng: form?.longitude,
-                address: form?.locationAddress
+            const products =
+                cleanRows();
+
+            const footer =
+                calculateFooter(
+                    products
+                );
+
+            const payload: any = {
+                sQuoteVoucherDate:
+                    form
+                        .sQuoteVoucherDate,
+
+                sQuoteCustomerCode:
+                    form
+                        .sQuoteCustomerCode,
+
+                sQuoteCustomerName:
+                    form
+                        .sQuoteCustomerName,
+
+                sQuoteSalesAccount:
+                    form
+                        .sQuoteSalesAccount ||
+                    "SA021",
+
+                sQuoteStatus:
+                    form
+                        .sQuoteStatus ||
+                    "draft",
+
+                sQuoteDocStatus:
+                    form
+                        .sQuoteDocStatus ||
+                    "open",
+
+                sQuoteRemark:
+                    form
+                        .sQuoteRemark,
+
+                sQuoteBody:
+                    products.map(
+                        (
+                            item: any
+                        ) => ({
+                            productCode:
+                                item.productCode,
+
+                            productName:
+                                item.productName,
+
+                            productId:
+                                item.productId,
+
+                            productDescription:
+                                item.productDescription ||
+                                item.description,
+
+                            description:
+                                item.description ||
+                                item.productDescription,
+
+                            productHSNCode:
+                                item.productHSNCode,
+
+                            remarks:
+                                item.remarks,
+
+                            quantity:
+                                String(
+                                    item.quantity
+                                ),
+
+                            unit:
+                                item.unit ||
+                                item.uom,
+
+                            uom:
+                                item.uom ||
+                                item.unit,
+
+                            rate:
+                                String(
+                                    item.rate
+                                ),
+
+                            gross:
+                                fmtMoney(
+                                    item.grossAmount
+                                ),
+
+                            grossAmount:
+                                fmtMoney(
+                                    item.grossAmount
+                                ),
+
+                            discount:
+                                String(
+                                    item.discountPercentage ||
+                                    item.discount ||
+                                    ""
+                                ),
+
+                            discountPercentage:
+                                String(
+                                    item.discountPercentage ||
+                                    item.discount ||
+                                    ""
+                                ),
+
+                            discountAmount:
+                                fmtMoney(
+                                    item.discountAmount
+                                ),
+
+                            taxableAmount:
+                                fmtMoney(
+                                    item.taxableAmount
+                                ),
+
+                            cgst:
+                                String(
+                                    item.cgstPercentage ||
+                                    item.cgst ||
+                                    ""
+                                ),
+
+                            cgstPercentage:
+                                String(
+                                    item.cgstPercentage ||
+                                    item.cgst ||
+                                    ""
+                                ),
+
+                            cgstAmount:
+                                fmtMoney(
+                                    item.cgstAmount
+                                ),
+
+                            sgst:
+                                String(
+                                    item.sgstPercentage ||
+                                    item.sgst ||
+                                    ""
+                                ),
+
+                            sgstPercentage:
+                                String(
+                                    item.sgstPercentage ||
+                                    item.sgst ||
+                                    ""
+                                ),
+
+                            sgstAmount:
+                                fmtMoney(
+                                    item.sgstAmount
+                                ),
+
+                            igst:
+                                String(
+                                    item.igstPercentage ||
+                                    item.igst ||
+                                    ""
+                                ),
+
+                            igstPercentage:
+                                String(
+                                    item.igstPercentage ||
+                                    item.igst ||
+                                    ""
+                                ),
+
+                            igstAmount:
+                                fmtMoney(
+                                    item.igstAmount
+                                ),
+
+                            taxAmount:
+                                fmtMoney(
+                                    item.taxAmount
+                                ),
+
+                            otherAmount:
+                                fmtMoney(
+                                    item.otherAmount
+                                ),
+
+                            netAmount:
+                                fmtMoney(
+                                    item.netAmount ||
+                                    item.netTotal
+                                ),
+
+                            netTotal:
+                                fmtMoney(
+                                    item.netTotal ||
+                                    item.netAmount
+                                ),
+                        })
+                    ),
+
+                sQuoteFooter: {
+                    grossAmount:
+                        fmtMoney(
+                            footer
+                                .totalGrossAmount
+                        ),
+
+                    discountAmount:
+                        fmtMoney(
+                            footer
+                                .totalDiscountAmount
+                        ),
+
+                    cgstAmount:
+                        fmtMoney(
+                            footer
+                                .totalCgstAmount
+                        ),
+
+                    sgstAmount:
+                        fmtMoney(
+                            footer
+                                .totalSgstAmount
+                        ),
+
+                    igstAmount:
+                        fmtMoney(
+                            footer
+                                .totalIgstAmount
+                        ),
+
+                    taxAmount:
+                        fmtMoney(
+                            footer
+                                .totalTaxAmount
+                        ),
+
+                    otherAmount:
+                        fmtMoney(
+                            footer
+                                .totalOtherAmount
+                        ),
+
+                    netAmount:
+                        fmtMoney(
+                            footer
+                                .totalNetAmount
+                        ),
+
+                    adjustedAmount:
+                        "0",
+
+                    balanceAmount:
+                        fmtMoney(
+                            footer
+                                .totalNetAmount
+                        ),
+
+                    totalQuantity:
+                        footer
+                            .totalQuantity,
+
+                    totalGrossAmount:
+                        fmtMoney(
+                            footer
+                                .totalGrossAmount
+                        ),
+
+                    totalDiscountAmount:
+                        fmtMoney(
+                            footer
+                                .totalDiscountAmount
+                        ),
+
+                    totalCgstAmount:
+                        fmtMoney(
+                            footer
+                                .totalCgstAmount
+                        ),
+
+                    totalSgstAmount:
+                        fmtMoney(
+                            footer
+                                .totalSgstAmount
+                        ),
+
+                    totalIgstAmount:
+                        fmtMoney(
+                            footer
+                                .totalIgstAmount
+                        ),
+
+                    totalTaxAmount:
+                        fmtMoney(
+                            footer
+                                .totalTaxAmount
+                        ),
+
+                    totalOtherAmount:
+                        fmtMoney(
+                            footer
+                                .totalOtherAmount
+                        ),
+
+                    totalNetAmount:
+                        fmtMoney(
+                            footer
+                                .totalNetAmount
+                        ),
+                },
+
+                sQuoteLocation: {
+                    lat:
+                        form?.latitude,
+
+                    lng:
+                        form?.longitude,
+
+                    address:
+                        form
+                            ?.locationAddress,
+                },
+            };
+
+            try {
+                if (
+                    editingRecord
+                ) {
+                    await dispatch(
+                        updateSalesQuotation(
+                            {
+                                sQuoteVoucherNumber:
+                                    form
+                                        ?.sQuoteVoucherNumber,
+
+                                payload,
+                            }
+                        ) as any
+                    ).unwrap();
+
+                    toast.success(
+                        "Sales quotation updated successfully"
+                    );
+                } else {
+                    await dispatch(
+                        addSalesQuotation(
+                            {
+                                payload,
+                            }
+                        ) as any
+                    ).unwrap();
+
+                    toast.success(
+                        "Sales quotation created successfully"
+                    );
+                }
+
+                setShowModal(false);
+                setCheckAccount(
+                    false
+                );
+
+                resetMainForm();
+
+                fetchSalesQuotations(
+                    true
+                );
+            } catch (
+            error: any
+            ) {
+                toast.error(
+                    error?.message ||
+                    "Operation failed"
+                );
             }
         };
 
-        try {
-            if (editingRecord) {
-                await dispatch(updateSalesQuotation({ sQuoteVoucherNumber: form?.sQuoteVoucherNumber, payload }) as any).unwrap();
-                toast.success("Sales quotation updated successfully");
-            } else {
-                await dispatch(addSalesQuotation({ payload }) as any).unwrap();
-                toast.success("Sales quotation created successfully");
+    const handleDeleteConfirm =
+        async () => {
+            try {
+                if (
+                    !confirmTooltip
+                        .voucherNumber
+                ) {
+                    return;
+                }
+
+                await dispatch(
+                    deleteSalesQuotation({
+                        sQuoteVoucherNumber:
+                            confirmTooltip
+                                .voucherNumber,
+                    }) as any
+                ).unwrap();
+
+                toast.success(
+                    "Sales quotation deleted"
+                );
+
+                fetchSalesQuotations(
+                    true
+                );
+            } catch (
+            error: any
+            ) {
+                toast.error(
+                    error?.message ||
+                    "Failed to delete sales quotation"
+                );
+            } finally {
+                setConfirmTooltip({
+                    show: false,
+                    x: null,
+                    y: null,
+                    voucherNumber:
+                        null,
+                });
             }
+        };
 
-            setShowModal(false);
-            resetMainForm();
-            fetchSalesQuotations(true);
-        } catch (err: any) {
-            toast.error(err?.message || "Operation failed");
-        }
-    };
+    const footerValues =
+        useMemo(
+            () => ({
+                grossAmount,
+                discountAmount,
+                cgstAmount,
+                sgstAmount,
+                igstAmount,
+                netAmount,
+                adjustedAmount:
+                    0,
+                balanceAmount:
+                    netAmount,
+            }),
+            [
+                grossAmount,
+                discountAmount,
+                cgstAmount,
+                sgstAmount,
+                igstAmount,
+                netAmount,
+            ]
+        );
 
-    const handleDeleteConfirm = async () => {
-        try {
-            if (!confirmTooltip.voucherNumber) return;
-            await dispatch(deleteSalesQuotation({ sQuoteVoucherNumber: confirmTooltip.voucherNumber }) as any).unwrap();
-            toast.success("Sales quotation deleted");
-            fetchSalesQuotations(true);
-        } catch (err: any) {
-            toast.error(err?.message || "Failed to delete sales quotation");
-        } finally {
-            setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
-        }
-    };
+    const dynamicFooterArray =
+        useMemo(() => {
+            return (
+                templateFields?.footer ||
+                []
+            )
+                .filter(
+                    (
+                        field: any
+                    ) =>
+                        !field.isHidden
+                )
+                .map(
+                    (
+                        field: any
+                    ) => {
+                        const rawValue =
+                            footerValues[
+                            field.key as keyof typeof footerValues
+                            ] ?? 0;
 
-    const footerValues = useMemo(() => ({ grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount, adjustedAmount: 0, balanceAmount: netAmount }), [grossAmount, discountAmount, cgstAmount, sgstAmount, igstAmount, netAmount]);
-
-    const dynamicFooterArray = useMemo(() => {
-        return (templateFields?.footer || []).filter((field: any) => !field.isHidden).map((field: any) => {
-            const rawValue = footerValues[field.key as keyof typeof footerValues] ?? 0;
-            return { ...field, value: money(rawValue), rawValue };
-        });
-    }, [templateFields?.footer, footerValues]);
+                        return {
+                            ...field,
+                            value:
+                                money(
+                                    rawValue
+                                ),
+                            rawValue,
+                        };
+                    }
+                );
+        }, [
+            templateFields?.footer,
+            footerValues,
+        ]);
 
     useEffect(() => {
-        if (schemaCalledRef.current) return;
-        schemaCalledRef.current = true;
-        dispatch(getAllTransactionSchema("salesQuotation") as any);
+        if (
+            schemaCalledRef.current
+        ) {
+            return;
+        }
+
+        schemaCalledRef.current =
+            true;
+
+        dispatch(
+            getAllTransactionSchema(
+                "salesQuotation"
+            ) as any
+        );
     }, [dispatch]);
 
     useEffect(() => {
         fetchSalesQuotations();
-    }, [localOffset, localLimit, debouncedSearch, status]);
+    }, [
+        localOffset,
+        localLimit,
+        debouncedSearch,
+        status,
+    ]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search.trim());
-            setLocalOffset(0);
-        }, 400);
-        return () => clearTimeout(timer);
+        const timer =
+            setTimeout(
+                () => {
+                    setDebouncedSearch(
+                        search.trim()
+                    );
+
+                    setLocalOffset(
+                        0
+                    );
+                },
+                400
+            );
+
+        return () =>
+            clearTimeout(
+                timer
+            );
     }, [search]);
 
     useEffect(() => {
-        const prepareFields = async () => {
-            if (!transactionsSchema) return;
+        const prepareFields =
+            async () => {
+                if (
+                    !transactionsSchema
+                ) {
+                    return;
+                }
 
-            const schemaKey = JSON.stringify(transactionsSchema);
-            if (preparedSchemaRef.current === schemaKey) return;
-            preparedSchemaRef.current = schemaKey;
+                const schemaKey =
+                    JSON.stringify(
+                        transactionsSchema
+                    );
 
-            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
-            if (!hasSchema) return;
+                if (
+                    preparedSchemaRef.current ===
+                    schemaKey
+                ) {
+                    return;
+                }
 
-            try {
-                setFieldsLoading(true);
-                const updatedData = await loadAllTemplateOptions(transactionsSchema);
-                setTemplateFields(updatedData);
-            } catch (error) {
-                console.log("Failed to prepare template fields", error);
-            } finally {
-                setFieldsLoading(false);
-            }
-        };
+                preparedSchemaRef.current =
+                    schemaKey;
+
+                const hasSchema =
+                    Array.isArray(
+                        transactionsSchema
+                            ?.header
+                    ) ||
+                    Array.isArray(
+                        transactionsSchema
+                            ?.body
+                    ) ||
+                    Array.isArray(
+                        transactionsSchema
+                            ?.footer
+                    );
+
+                if (
+                    !hasSchema
+                ) {
+                    return;
+                }
+
+                try {
+                    setFieldsLoading(
+                        true
+                    );
+
+                    const updatedData =
+                        await loadAllTemplateOptions(
+                            transactionsSchema
+                        );
+
+                    setTemplateFields(
+                        updatedData
+                    );
+                } catch (
+                error
+                ) {
+                    console.log(
+                        "Failed to prepare template fields",
+                        error
+                    );
+                } finally {
+                    setFieldsLoading(
+                        false
+                    );
+                }
+            };
 
         prepareFields();
     }, [transactionsSchema]);
 
     useEffect(() => {
-        if (reportMappingCalledRef.current) return;
-        reportMappingCalledRef.current = true;
-        /* @ts-ignore */
-        dispatch(getAllReportMapping({ moduleType: "salesQuotation" }));
+        if (
+            reportMappingCalledRef.current
+        ) {
+            return;
+        }
+
+        reportMappingCalledRef.current =
+            true;
+
+        dispatch(
+            getAllReportMapping({
+                moduleType:
+                    "salesQuotation",
+            }) as any
+        );
     }, [dispatch]);
 
-    const isClosedSalesQuations = (record: any) => {
-        const quationsStatus = String(record?.sQuoteDocStatus || "").toLowerCase();
-        return quationsStatus === "close" || quationsStatus === "closed";
+    const isClosedSalesQuations = (
+        record: any
+    ) => {
+        const quotationStatus =
+            String(
+                record?.sQuoteDocStatus ||
+                ""
+            ).toLowerCase();
+
+        return (
+            quotationStatus ===
+            "close" ||
+            quotationStatus ===
+            "closed"
+        );
     };
 
-    const handleEditSalesQuations = (record: any) => {
-        if (isClosedSalesQuations(record)) {
-            toast.error("You can't edit closed Quatations");
+    const handleEditSalesQuations = (
+        record: any
+    ) => {
+        if (
+            isClosedSalesQuations(
+                record
+            )
+        ) {
+            toast.error(
+                "You can't edit closed Quatations"
+            );
+
             return;
         }
 
         openEditModal(record);
     };
 
-    const handleDeleteSalesQuationsClick = (e: any, record: any) => {
-        if (isClosedSalesQuations(record)) {
-            toast.error("You can't delete closed Quatations");
-            return;
-        }
+    const handleDeleteSalesQuationsClick =
+        (
+            event: any,
+            record: any
+        ) => {
+            if (
+                isClosedSalesQuations(
+                    record
+                )
+            ) {
+                toast.error(
+                    "You can't delete closed Quatations"
+                );
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        let x = rect.left - 150;
-        if (x < 10) x = 10;
-        const y = rect.top + window.scrollY - 5;
+                return;
+            }
 
-        setConfirmTooltip({ show: true, x, y, voucherNumber: record?.sQuoteVoucherNumber });
-    };
+            const rect =
+                event.currentTarget
+                    .getBoundingClientRect();
+
+            let x =
+                rect.left - 150;
+
+            if (x < 10) {
+                x = 10;
+            }
+
+            const y =
+                rect.top +
+                window.scrollY -
+                5;
+
+            setConfirmTooltip({
+                show: true,
+                x,
+                y,
+                voucherNumber:
+                    record
+                        ?.sQuoteVoucherNumber,
+            });
+        };
 
     useEffect(() => {
         dispatch(
@@ -480,72 +2699,419 @@ const SalesQuotations = () => {
                 status: "",
             }) as any
         );
-        if (!accounts?.length) {
-            dispatch(getAllAccounts({ limit: 100 }) as any);
+
+        const loadAccounts =
+            async () => {
+                try {
+                    await dispatch(
+                        getAllAccounts({
+                            offset: 0,
+                            limit: 100,
+                            search: "",
+                        }) as any
+                    ).unwrap();
+                } catch (
+                error
+                ) {
+                    console.log(
+                        "Failed to load accounts",
+                        error
+                    );
+                } finally {
+                    setAccountListLoaded(
+                        true
+                    );
+                }
+            };
+
+        loadAccounts();
+
+        if (
+            !Object.keys(
+                company ?? {}
+            )?.length
+        ) {
+            dispatch(
+                getCompany({
+                    withParent:
+                        true,
+                    limit: 100,
+                }) as any
+            );
         }
-        if (!Object.keys(company ?? {})?.length) {
-            dispatch(getCompany({ withParent: true, limit: 100 }) as any);
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (!showModal) {
+            return;
         }
-    }, []);
+
+        if (editingRecord) {
+            return;
+        }
+
+        if (
+            !accountListLoaded
+        ) {
+            return;
+        }
+
+        if (
+            filterAccount.length ===
+            0
+        ) {
+            setCheckAccount(
+                true
+            );
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        filterAccount.length,
+    ]);
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <div id="sales-quotation-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div id="sales-quotation-summary" className="flex items-start gap-3">
-                    <Badge {...{ count: pagination?.totalDocs ?? 0, text: "Total Sales Quotations:", varient: "primary" }} />
+            <div
+                id="sales-quotation-header"
+                className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+            >
+                <div
+                    id="sales-quotation-summary"
+                    className="flex items-start gap-3"
+                >
+                    <Badge
+                        {...{
+                            count:
+                                pagination?.totalDocs ??
+                                0,
+
+                            text:
+                                "Total Sales Quotations:",
+
+                            varient:
+                                "primary",
+                        }}
+                    />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
-                    <Toggle {...{ arr: ["open", "close"], state: status, setState: handleStatusChange }} />
-                    <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
-                    <SearchInput {...{ search, setSearch }} />
-                    <Permission module="bookez" permissionKey="salesQuotation" action="create">
-                        {/* @ts-ignore */}
-                        <DataCreateButton {...{ callBackFn: openAddModal, text: "Add Sales Quotation" }} />
+                    <Toggle
+                        {...{
+                            arr: [
+                                "open",
+                                "close",
+                            ],
+
+                            state:
+                                status,
+
+                            setState:
+                                handleStatusChange,
+                        }}
+                    />
+
+                    <DataREfreshButton
+                        {...{
+                            callBackFn:
+                                handleRefresh,
+
+                            loading:
+                                refreshing,
+                        }}
+                    />
+
+                    <SearchInput
+                        {...{
+                            search,
+                            setSearch,
+                        }}
+                    />
+
+                    <Permission
+                        module="bookez"
+                        permissionKey="salesQuotation"
+                        action="create"
+                    >
+                        <DataCreateButton
+                            {...{
+                                callBackFn:
+                                    openAddModal,
+
+                                text:
+                                    "Add Sales Quotation",
+                            }}
+                        />
                     </Permission>
                 </div>
             </div>
 
             <DataTable
                 columns={columns}
-                data={salesQuotations}
+                data={
+                    salesQuotations
+                }
                 loading={loading}
                 emptyMessage={`No ${status} sales quotation found`}
-                actions={(record: any) => (
+                actions={(
+                    record: any
+                ) => (
                     <div className="flex items-center gap-2">
                         <button
                             id="sales-quotation-download-button"
-                            onClick={() => setDownlaodPDF((pre: any) => ({ ...pre, show: true, moduleType: "salesQuotation", record, CustomerCode: record?.sQuoteCustomerCode, voucherNumber: record?.sQuoteVoucherNumber }))}
+                            type="button"
+                            onClick={() =>
+                                setDownlaodPDF(
+                                    (
+                                        prev: any
+                                    ) => ({
+                                        ...prev,
+                                        show:
+                                            true,
+                                        moduleType:
+                                            "salesQuotation",
+                                        record,
+                                        CustomerCode:
+                                            record
+                                                ?.sQuoteCustomerCode,
+                                        voucherNumber:
+                                            record
+                                                ?.sQuoteVoucherNumber,
+                                    })
+                                )
+                            }
                             className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                         >
-                            <Download size={16} />
+                            <Download
+                                size={16}
+                            />
                         </button>
 
-                        <Permission module="bookez" permissionKey="salesQuotation" action="update">
-                            <button id="sales-quotation-edit-button" onClick={() => handleEditSalesQuations(record)} className={`cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary`}>
-                                <Edit size={16} />
+                        <Permission
+                            module="bookez"
+                            permissionKey="salesQuotation"
+                            action="update"
+                        >
+                            <button
+                                id="sales-quotation-edit-button"
+                                type="button"
+                                onClick={() =>
+                                    handleEditSalesQuations(
+                                        record
+                                    )
+                                }
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            >
+                                <Edit
+                                    size={
+                                        16
+                                    }
+                                />
                             </button>
                         </Permission>
 
-                        <Permission module="bookez" permissionKey="salesQuotation" action="delete">
-                            <button id="sales-quotation-delete-button" disabled={deleteLoading} onClick={(e) => handleDeleteSalesQuationsClick(e, record)} className={`cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50`}>
-                                <Trash2 size={16} />
+                        <Permission
+                            module="bookez"
+                            permissionKey="salesQuotation"
+                            action="delete"
+                        >
+                            <button
+                                id="sales-quotation-delete-button"
+                                type="button"
+                                disabled={
+                                    deleteLoading
+                                }
+                                onClick={(
+                                    event
+                                ) =>
+                                    handleDeleteSalesQuationsClick(
+                                        event,
+                                        record
+                                    )
+                                }
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                            >
+                                <Trash2
+                                    size={
+                                        16
+                                    }
+                                />
                             </button>
                         </Permission>
                     </div>
                 )}
             />
 
-            {pagination?.totalDocs > 0 && <Pagination {...{ localLimit, selectCb: (e: any) => { setLocalLimit(Number(e.target.value)); setLocalOffset(0); }, preDisabled: !pagination?.hasPrevPage, nextDisabled: !pagination?.hasNextPage, setLocalOffset, pagination }} />}
+            {pagination?.totalDocs >
+                0 && (
+                    <Pagination
+                        {...{
+                            localLimit,
 
-            {confirmTooltip.show && <ConfirmTooltip x={confirmTooltip.x} y={confirmTooltip.y} message="Are you sure you want to delete this sales quotation?" confirmText="Delete" cancelText="Cancel" onConfirm={handleDeleteConfirm} onCancel={() => setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null })} />}
+                            selectCb: (
+                                event: any
+                            ) => {
+                                setLocalLimit(
+                                    Number(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                );
 
-            <ListTooltip x={tooltip.x} y={tooltip.y} onClose={() => setTooltip({ x: null, y: null })} items={[{ label: "Auto Posting", onClick: () => console.log("Duplicate") }]} />
+                                setLocalOffset(
+                                    0
+                                );
+                            },
 
-            {/* @ts-ignore */}
-            <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-quotation", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Quotation PDF", cancelText: "Cancel", confirmText: "Confirm" }} />
+                            preDisabled:
+                                !pagination
+                                    ?.hasPrevPage,
 
-            {!fieldsLoading && <DynamicAddForm {...{ show: showModal, setShow: setShowModal, edit: Boolean(editingRecord), title: "Sales Quotation", subtitle: "Fill in the sales quotation details below", loading: createLoading || updateLoading, onClose: () => { setShowModal(false); resetMainForm(); }, onSubmit: handleSubmit, form, errors, handleAddRow, handleDeleteRow, handleRowChange, footerTotals, inputData: { ...templateFields, footer: dynamicFooterArray }, bodyKey: "products", handleChange: handleMainChange, enableLocation }} />}
+                            nextDisabled:
+                                !pagination
+                                    ?.hasNextPage,
+
+                            setLocalOffset,
+
+                            pagination,
+                        }}
+                    />
+                )}
+
+            {confirmTooltip.show && (
+                <ConfirmTooltip
+                    x={
+                        confirmTooltip.x
+                    }
+                    y={
+                        confirmTooltip.y
+                    }
+                    message="Are you sure you want to delete this sales quotation?"
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    onConfirm={
+                        handleDeleteConfirm
+                    }
+                    onCancel={() =>
+                        setConfirmTooltip({
+                            show:
+                                false,
+                            x: null,
+                            y: null,
+                            voucherNumber:
+                                null,
+                        })
+                    }
+                />
+            )}
+
+            <ListTooltip
+                x={tooltip.x}
+                y={tooltip.y}
+                onClose={() =>
+                    setTooltip({
+                        x: null,
+                        y: null,
+                    })
+                }
+                items={[
+                    {
+                        label:
+                            "Auto Posting",
+
+                        onClick:
+                            () =>
+                                console.log(
+                                    "Duplicate"
+                                ),
+                    },
+                ]}
+            />
+
+            <ListingModel
+                {...{
+                    show:
+                        downlaodPDF
+                            ?.show,
+
+                    downlaodPDF,
+
+                    entryType:
+                        "sales-quotation",
+
+                    setShow: () =>
+                        setDownlaodPDF(
+                            () => ({
+                                show:
+                                    !downlaodPDF
+                                        ?.show,
+                            })
+                        ),
+
+                    rowData:
+                        downlaodPDF
+                            ?.record,
+
+                    report,
+
+                    title:
+                        "Download Sales Quotation PDF",
+
+                    cancelText:
+                        "Cancel",
+
+                    confirmText:
+                        "Confirm",
+                }}
+            />
+
+            {!fieldsLoading && (
+                <DynamicAddForm
+                    {...{
+                        show: showModal,
+                        setShow: setShowModal,
+                        edit: Boolean(editingRecord),
+                        title: "Sales Quotation",
+                        subtitle: "Fill in the sales quotation details below",
+                        loading: createLoading || updateLoading,
+                        onClose: () => {
+                            setShowModal(
+                                false
+                            );
+
+                            setCheckAccount(
+                                false
+                            );
+
+                            resetMainForm();
+                        },
+
+                        onSubmit: handleSubmit,
+                        form,
+                        errors,
+                        handleAddRow,
+                        handleDeleteRow,
+                        handleRowChange,
+                        footerTotals,
+
+                        inputData: {
+                            ...templateFields,
+
+                            footer:
+                                dynamicFooterArray,
+                        },
+
+                        bodyKey: "products",
+                        handleChange: handleMainChange,
+                        enableLocation,
+                        checkAccount,
+                        setCheckAccount,
+                        onAccountSaved: handleAccountSaved,
+                    }}
+                />
+            )}
         </div>
     );
 };

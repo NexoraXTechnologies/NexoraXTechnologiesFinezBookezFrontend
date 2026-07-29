@@ -45,6 +45,7 @@ import Permission from "../../../../components/PermissionGuard";
 import professionalAxios from "../../../../services/professionalAxios";
 import { ListingModel } from "../../../../components/modal";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -117,10 +118,15 @@ const Payment = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
     const [showModal, setShowModal] = useState(false);
+    const [checkAccount, setCheckAccount] = useState(false);
+    const [accountListLoaded, setAccountListLoaded] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(null);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
     const { report } = useSelector((s: any) => s.reportMapping);
+    const { accounts = [] } = useSelector(
+        (state: any) => state.accountMaster || {}
+    );
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
@@ -150,6 +156,32 @@ const Payment = () => {
                                         ? res
                                         : [];
     };
+
+    const cashBankAccounts = useMemo(() => {
+        return (accounts || []).filter((account: any) => {
+            const accountType = String(
+                account?.accountType || ""
+            ).toLowerCase();
+
+            return (
+                accountType === "cash" ||
+                accountType === "bank"
+            );
+        });
+    }, [accounts]);
+
+    const vendorExpenseAccounts = useMemo(() => {
+        return (accounts || []).filter((account: any) => {
+            const accountType = String(
+                account?.accountType || ""
+            ).toLowerCase();
+
+            return (
+                accountType === "vendor" ||
+                accountType === "expense"
+            );
+        });
+    }, [accounts]);
 
     /* ===================================================
        FIELD HELPERS
@@ -511,7 +543,7 @@ const Payment = () => {
 
                 const updatedData = await loadAllTemplateOptions(transactionsSchema, {
                     header: { accountType: "bank , cash" },
-                    body: { accountType: "vendor , expense" ,limit:1000 },
+                    body: { accountType: "vendor , expense", limit: 1000 },
                 });
 
                 setTemplateFields(updatedData);
@@ -600,6 +632,7 @@ const Payment = () => {
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
+        setCheckAccount(false);
     };
 
     const openAddModal = () => {
@@ -685,6 +718,203 @@ const Payment = () => {
             ...prev,
             [key]: "",
         }));
+    };
+
+    const handleAccountSaved = async (savedResponse: any) => {
+        try {
+            const accountResponse: any = await dispatch(
+                getAllAccounts({
+                    offset: 0,
+                    limit: 1000,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            setAccountListLoaded(true);
+
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "purchasePayment",
+                }) as any
+            );
+
+            if (transactionsSchema) {
+                const updatedData = await loadAllTemplateOptions(
+                    transactionsSchema,
+                    {
+                        header: {
+                            accountType: "bank , cash",
+                        },
+                        body: {
+                            accountType: "vendor , expense",
+                            limit: 1000,
+                        },
+                    }
+                );
+
+                setTemplateFields(updatedData);
+            }
+
+            const savedAccount =
+                savedResponse?.data?.account ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.account ||
+                savedResponse;
+
+            const refreshedAccounts =
+                accountResponse?.data?.accounts ||
+                accountResponse?.data?.data?.accounts ||
+                accountResponse?.accounts ||
+                accountResponse?.data?.items ||
+                accountResponse?.items ||
+                accountResponse?.data ||
+                [];
+
+            const savedCode =
+                savedAccount?.accountCode ||
+                savedAccount?.code ||
+                "";
+
+            const savedName =
+                savedAccount?.accountName ||
+                savedAccount?.name ||
+                "";
+
+            const matchedAccount = Array.isArray(refreshedAccounts)
+                ? refreshedAccounts.find((account: any) => {
+                    return (
+                        (
+                            savedCode &&
+                            String(account?.accountCode || "") ===
+                            String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(account?.accountName || "") ===
+                            String(savedName)
+                        )
+                    );
+                })
+                : null;
+
+            const createdAccount =
+                matchedAccount ||
+                (
+                    savedCode ||
+                        savedName
+                        ? savedAccount
+                        : null
+                );
+
+            if (createdAccount) {
+                const accountType = String(
+                    createdAccount?.accountType || ""
+                ).toLowerCase();
+
+                const accountCode =
+                    createdAccount?.accountCode ||
+                    createdAccount?.code ||
+                    "";
+
+                const accountName =
+                    createdAccount?.accountName ||
+                    createdAccount?.name ||
+                    "";
+
+                if (
+                    accountType === "cash" ||
+                    accountType === "bank"
+                ) {
+                    setForm((prev: any) => ({
+                        ...prev,
+                        payAccountCode:
+                            accountCode ||
+                            prev?.payAccountCode ||
+                            "",
+                        payAccountName:
+                            accountName ||
+                            prev?.payAccountName ||
+                            "",
+                    }));
+
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        payAccountCode: "",
+                        payAccountName: "",
+                    }));
+                }
+
+                if (
+                    accountType === "vendor" ||
+                    accountType === "expense"
+                ) {
+                    setForm((prev: any) => {
+                        const updatedRows = [
+                            ...(prev?.payBody || []),
+                        ];
+
+                        if (updatedRows.length === 0) {
+                            updatedRows.push({
+                                ...emptyPaymentRow,
+                                id: Date.now(),
+                            });
+                        }
+
+                        const emptyRowIndex =
+                            updatedRows.findIndex(
+                                (row: any) =>
+                                    !row?.accountCode &&
+                                    !row?.accountName
+                            );
+
+                        const targetIndex =
+                            emptyRowIndex >= 0
+                                ? emptyRowIndex
+                                : 0;
+
+                        updatedRows[targetIndex] = {
+                            ...updatedRows[targetIndex],
+                            accountCode:
+                                accountCode ||
+                                updatedRows[targetIndex]
+                                    ?.accountCode ||
+                                "",
+                            accountName:
+                                accountName ||
+                                updatedRows[targetIndex]
+                                    ?.accountName ||
+                                "",
+                            references: [],
+                        };
+
+                        return {
+                            ...prev,
+                            payBody: updatedRows,
+                        };
+                    });
+
+                    setErrors((prev: any) => ({
+                        ...prev,
+                        payBody: "",
+                        [`row_0_accountCode`]: "",
+                        [`row_0_accountName`]: "",
+                    }));
+                }
+            }
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Payment account options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Account created, but Payment account dropdown refresh failed"
+            );
+        } finally {
+            setCheckAccount(false);
+        }
     };
 
     /* ===================================================
@@ -1422,6 +1652,7 @@ const Payment = () => {
             }
 
             setShowModal(false);
+            setCheckAccount(false);
             resetMainForm();
 
             await fetchPayments();
@@ -1510,6 +1741,54 @@ const Payment = () => {
         /* @ts-ignore  */
         dispatch(getAllReportMapping({ moduleType: "purchasePayment" }));
     }, []);
+
+    useEffect(() => {
+        const loadAccounts = async () => {
+            try {
+                await dispatch(
+                    getAllAccounts({
+                        offset: 0,
+                        limit: 1000,
+                        search: "",
+                    }) as any
+                ).unwrap();
+            } catch (error) {
+                console.log(
+                    "Failed to load Account Master records",
+                    error
+                );
+            } finally {
+                setAccountListLoaded(true);
+            }
+        };
+
+        loadAccounts();
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (!showModal) return;
+        if (editingRecord) return;
+        if (!accountListLoaded) return;
+
+        const cashBankMissing =
+            cashBankAccounts.length === 0;
+
+        const vendorExpenseMissing =
+            vendorExpenseAccounts.length === 0;
+
+        if (
+            cashBankMissing ||
+            vendorExpenseMissing
+        ) {
+            setCheckAccount(true);
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        cashBankAccounts.length,
+        vendorExpenseAccounts.length,
+    ]);
 
     if (showInitialSkeleton) { return <ModulePageSkeleton rows={8} columns={5} /> }
 
@@ -1668,6 +1947,7 @@ const Payment = () => {
                         loading: createLoading || updateLoading,
                         onClose: () => {
                             setShowModal(false);
+                            setCheckAccount(false);
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -1690,6 +1970,10 @@ const Payment = () => {
                         },
                         bodyKey: "payBody",
                         handleChange: handleMainChange,
+
+                        checkAccount,
+                        setCheckAccount,
+                        onAccountSaved: handleAccountSaved,
                     }}
                 />
             )}
@@ -1745,7 +2029,7 @@ const Payment = () => {
                 {...{
                     show: downlaodPDF?.show,
                     downlaodPDF,
-                    GstToggle: true, 
+                    GstToggle: true,
                     entryType: "purchasePayment",
                     setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
                     rowData: downlaodPDF?.record,

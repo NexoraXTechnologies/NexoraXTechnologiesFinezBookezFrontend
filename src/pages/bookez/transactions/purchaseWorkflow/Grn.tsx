@@ -43,6 +43,7 @@ import ModulePageSkeleton, {
 } from "../../../../components/skeleton/SkeletonLoader";
 import Permission from "../../../../components/PermissionGuard";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 
 const defaultPagination = {
@@ -290,7 +291,7 @@ const removeEmptyValues = (obj: any) => {
 };
 
 const Grn = () => {
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<any>();
 
     const grnState = useSelector((state: any) => state.grn);
     const purchaseOrderState = useSelector((state: any) => state.purchaseOrder);
@@ -341,6 +342,13 @@ const Grn = () => {
     const [status, setStatus] = useState("open");
 
     const [showModal, setShowModal] = useState(false);
+
+    // ★ ADDED: Account Master modal state
+    const [checkAccount, setCheckAccount] = useState(false);
+
+    // ★ ADDED: Wait until Account Master list API is completed
+    const [accountListLoaded, setAccountListLoaded] = useState(false);
+
     const [editingRecord, setEditingRecord] = useState<any>(false);
 
     const [form, setForm] = useState<any>(getDefaultForm());
@@ -356,6 +364,20 @@ const Grn = () => {
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    // ★ ADDED: Account Master records
+    const { accounts = [] } = useSelector(
+        (state: any) => state.accountMaster || {}
+    );
+
+    // ★ ADDED: Vendor accounts required for GRN
+    const filterAccount = useMemo(() => {
+        return (accounts || []).filter(
+            (account: any) =>
+                String(account?.accountType || "").toLowerCase() === "vendor"
+        );
+    }, [accounts]);
+
     const [showReturnConfirmModal, setShowReturnConfirmModal] = useState(false);
     const [returnConfirmLoading, setReturnConfirmLoading] = useState(false);
     const [pendingReturnData, setPendingReturnData] = useState<any>(null);
@@ -768,6 +790,7 @@ const Grn = () => {
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
+        setCheckAccount(false);
     };
 
     const handleStatusChange = (nextStatus: string) => {
@@ -991,6 +1014,112 @@ const Grn = () => {
             ...prev,
             [key]: "",
         }));
+    };
+
+    // ★ ADDED: Refresh vendor dropdown after Account Master save
+    const handleAccountSaved = async (savedResponse: any) => {
+        try {
+            const accountResponse = await dispatch(
+                getAllAccounts({
+                    offset: 0,
+                    limit: 100,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            setAccountListLoaded(true);
+
+            // ★ REFRESH GRN REPORT MAPPING
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "grn",
+                }) as any
+            );
+
+            // ★ RELOAD DYNAMIC FIELD OPTIONS
+            if (transactionsSchema) {
+                const updatedData = await loadAllTemplateOptions(
+                    transactionsSchema
+                );
+
+                setTemplateFields(updatedData);
+            }
+
+            const savedAccount =
+                savedResponse?.data?.account ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.account ||
+                savedResponse;
+
+            const refreshedAccounts =
+                accountResponse?.data?.accounts ||
+                accountResponse?.data?.data?.accounts ||
+                accountResponse?.accounts ||
+                accountResponse?.data?.items ||
+                accountResponse?.items ||
+                accountResponse?.data ||
+                [];
+
+            const vendorAccounts = Array.isArray(refreshedAccounts)
+                ? refreshedAccounts.filter(
+                    (account: any) =>
+                        String(account?.accountType || "").toLowerCase() ===
+                        "vendor"
+                )
+                : [];
+
+            const savedCode = savedAccount?.accountCode || "";
+            const savedName = savedAccount?.accountName || "";
+
+            const createdVendor =
+                vendorAccounts.find(
+                    (account: any) =>
+                        (savedCode &&
+                            String(account?.accountCode) ===
+                            String(savedCode)) ||
+                        (savedName &&
+                            String(account?.accountName) ===
+                            String(savedName))
+                ) ||
+                (savedCode || savedName ? savedAccount : null) ||
+                vendorAccounts[vendorAccounts.length - 1] ||
+                null;
+
+            if (createdVendor) {
+                setForm((prev: any) => ({
+                    ...prev,
+
+                    grnVendorCode:
+                        createdVendor?.accountCode ||
+                        prev?.grnVendorCode ||
+                        "",
+
+                    grnVendorName:
+                        createdVendor?.accountName ||
+                        prev?.grnVendorName ||
+                        "",
+                }));
+
+                setErrors((prev: any) => ({
+                    ...prev,
+                    grnVendorCode: "",
+                    grnVendorName: "",
+                }));
+            }
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh GRN vendor options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Account created, but GRN vendor dropdown refresh failed"
+            );
+        } finally {
+            setCheckAccount(false);
+        }
     };
 
     const handleAddRow = () => {
@@ -1957,6 +2086,30 @@ const Grn = () => {
         );
     }, []);
 
+    // ★ ADDED: Initial Account Master loading
+    useEffect(() => {
+        const loadAccounts = async () => {
+            try {
+                await dispatch(
+                    getAllAccounts({
+                        offset: 0,
+                        limit: 100,
+                        search: "",
+                    }) as any
+                ).unwrap();
+            } catch (error) {
+                console.log(
+                    "Failed to load Account Master records",
+                    error
+                );
+            } finally {
+                setAccountListLoaded(true);
+            }
+        };
+
+        loadAccounts();
+    }, [dispatch]);
+
     useEffect(() => {
         dispatch(getAllTransactionSchema("grn") as any);
     }, [dispatch]);
@@ -2011,6 +2164,23 @@ const Grn = () => {
 
         prepareFields();
     }, [transactionsSchema]);
+
+    // ★ ADDED: Open Account Master when GRN form opens
+    // and no vendor account exists.
+    useEffect(() => {
+        if (!showModal) return;
+        if (editingRecord) return;
+        if (!accountListLoaded) return;
+
+        if (filterAccount.length === 0) {
+            setCheckAccount(true);
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        filterAccount.length,
+    ]);
 
     const showInitialSkeleton =
         !refreshing &&
@@ -2288,6 +2458,7 @@ const Grn = () => {
                     loading={createLoading || updateLoading}
                     onClose={() => {
                         setShowModal(false);
+                        setCheckAccount(false);
                         resetMainForm();
                     }}
                     onSubmit={handleSubmit}
@@ -2303,6 +2474,11 @@ const Grn = () => {
                     }}
                     bodyKey="products"
                     handleChange={handleMainChange}
+
+                    // ★ ADDED: Common Account Master modal props
+                    checkAccount={checkAccount}
+                    setCheckAccount={setCheckAccount}
+                    onAccountSaved={handleAccountSaved}
                 />
             )}
 

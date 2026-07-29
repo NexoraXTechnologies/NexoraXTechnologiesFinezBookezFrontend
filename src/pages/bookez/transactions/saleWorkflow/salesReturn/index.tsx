@@ -19,6 +19,7 @@ import { getAllSalesInvoice, getSalesReturnAnalysisByInvoiceVoucher, updateSales
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
+import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
@@ -34,6 +35,13 @@ const SalesReturn = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<"open" | "close">("open");
     const [showModal, setShowModal] = useState(false);
+
+    // ★ ADDED: Account Master modal state
+    const [checkAccount, setCheckAccount] = useState(false);
+
+    // ★ ADDED: Wait until Account Master list finishes loading
+    const [accountListLoaded, setAccountListLoaded] = useState(false);
+
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
@@ -47,6 +55,20 @@ const SalesReturn = () => {
     const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const { accounts = [] } = useSelector(
+        (state: any) => state.accountMaster || {}
+    );
+
+    // ★ ADDED: Keep only customer accounts
+    const filterAccount = useMemo(() => {
+        return (accounts || []).filter(
+            (account: any) =>
+                String(account?.accountType || "").toLowerCase() ===
+                "customer"
+        );
+    }, [accounts]);
+
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
@@ -200,6 +222,7 @@ const SalesReturn = () => {
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
+        setCheckAccount(false);
     };
 
     const openAddModal = () => {
@@ -228,6 +251,136 @@ const SalesReturn = () => {
             return updated;
         });
         setErrors((prev: any) => ({ ...prev, [key]: "" }));
+    };
+
+    // ★ ADDED: Refresh customer options after Account Master save
+    const handleAccountSaved = async (savedResponse: any) => {
+        try {
+            const accountResponse = await dispatch(
+                getAllAccounts({
+                    offset: 0,
+                    limit: 100,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            setAccountListLoaded(true);
+
+            // ★ REFRESH SALES RETURN REPORT MAPPING
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "salesInvoiceReturn",
+                }) as any
+            );
+
+            // ★ RELOAD ALL DYNAMIC FIELD OPTIONS
+            if (transactionsSchema) {
+                const updatedData = await loadAllTemplateOptions(
+                    transactionsSchema
+                );
+
+                setTemplateFields(updatedData);
+            }
+
+            const savedAccount =
+                savedResponse?.data?.account ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.account ||
+                savedResponse;
+
+            const refreshedAccounts =
+                accountResponse?.data?.accounts ||
+                accountResponse?.data?.data?.accounts ||
+                accountResponse?.accounts ||
+                accountResponse?.data?.items ||
+                accountResponse?.items ||
+                accountResponse?.data ||
+                [];
+
+            const customerAccounts = Array.isArray(refreshedAccounts)
+                ? refreshedAccounts.filter(
+                    (account: any) =>
+                        String(account?.accountType || "").toLowerCase() ===
+                        "customer"
+                )
+                : [];
+
+            const savedCode =
+                savedAccount?.accountCode ||
+                savedAccount?.sInvReturnCustomerCode ||
+                "";
+
+            const savedName =
+                savedAccount?.accountName ||
+                savedAccount?.sInvReturnCustomerName ||
+                "";
+
+            const createdCustomer =
+                customerAccounts.find(
+                    (account: any) =>
+                        (
+                            savedCode &&
+                            String(account?.accountCode) ===
+                            String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(account?.accountName) ===
+                            String(savedName)
+                        )
+                ) ||
+                (
+                    savedCode ||
+                        savedName
+                        ? savedAccount
+                        : null
+                ) ||
+                customerAccounts[
+                customerAccounts.length - 1
+                ] ||
+                null;
+
+            if (createdCustomer) {
+                setForm((prev: any) => ({
+                    ...prev,
+
+                    sInvReturnCustomerCode:
+                        createdCustomer?.accountCode ||
+                        prev?.sInvReturnCustomerCode ||
+                        "",
+
+                    sInvCustomerCode:
+                        createdCustomer?.accountCode ||
+                        prev?.sInvCustomerCode ||
+                        "",
+
+                    sInvReturnCustomerName:
+                        createdCustomer?.accountName ||
+                        prev?.sInvReturnCustomerName ||
+                        "",
+                }));
+
+                setErrors((prev: any) => ({
+                    ...prev,
+                    sInvReturnCustomerCode: "",
+                    sInvCustomerCode: "",
+                    sInvReturnCustomerName: "",
+                }));
+            }
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Sales Return customer options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Account created, but Sales Return customer dropdown refresh failed"
+            );
+        } finally {
+            setCheckAccount(false);
+        }
     };
 
     const handleAddRow = () => {
@@ -493,6 +646,47 @@ const SalesReturn = () => {
         );
     }, []);
 
+    // ★ ADDED: Initial Account Master loading
+    useEffect(() => {
+        const loadAccounts = async () => {
+            try {
+                await dispatch(
+                    getAllAccounts({
+                        offset: 0,
+                        limit: 100,
+                        search: "",
+                    }) as any
+                ).unwrap();
+            } catch (error) {
+                console.log(
+                    "Failed to load Account Master records",
+                    error
+                );
+            } finally {
+                setAccountListLoaded(true);
+            }
+        };
+
+        loadAccounts();
+    }, [dispatch]);
+
+    // ★ ADDED: Open Account Master when a new Sales Return form opens
+    // and no customer account exists.
+    useEffect(() => {
+        if (!showModal) return;
+        if (editingRecord) return;
+        if (!accountListLoaded) return;
+
+        if (filterAccount.length === 0) {
+            setCheckAccount(true);
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        filterAccount.length,
+    ]);
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -592,6 +786,7 @@ const SalesReturn = () => {
                         loading: createLoading || updateLoading,
                         onClose: () => {
                             setShowModal(false);
+                            setCheckAccount(false);
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -604,6 +799,11 @@ const SalesReturn = () => {
                         inputData: { ...templateFields, footer: dynamicFooterArray },
                         bodyKey: "products",
                         handleChange: handleMainChange,
+
+                        // ★ ADDED: Common Account Master modal props
+                        checkAccount,
+                        setCheckAccount,
+                        onAccountSaved: handleAccountSaved,
                     }}
                 />
             )}

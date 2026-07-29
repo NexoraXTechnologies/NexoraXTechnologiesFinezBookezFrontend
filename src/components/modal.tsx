@@ -5,12 +5,14 @@ import { LogOut, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { reportGeneratePdf } from "../redux/slices/professionalSlice/reportMappingSlice";
 import { getCompany } from "../redux/slices/professionalSlice/professionalCompanyMaster.slice";
-import { getAccountByCode } from "../redux/slices/professionalSlice/accountMasterSlice";
+import { createAccount, getAccountByCode, getAllAccountMasterSchema, updateAccount } from "../redux/slices/professionalSlice/accountMasterSlice";
 import { downloadBlobPdf, printHtmlUsingIframe } from "../utils/pdf/pdfPrint";
 import { buildPdfHtml } from "../utils/pdf/pdfTemplate";
 import { toast } from "react-toastify";
 import { buildUpiLink, generateQrDataUrl } from "../utils/pdf/upiQr";
 import { normalizeDoc } from "../utils/pdf/pdfNormalizer";
+import { getCitiesByState, getStates } from "../redux/slices/professionalSlice/stateCitySlice";
+import { SelectInput, TextArea, TextInput } from "./inputs";
 
 type ModalProps = {
     show: boolean;
@@ -500,4 +502,732 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
     );
 };
 
-export { WarningModel, ListingModel, LogoutModal };
+type AccountMasterModalProps = {
+    show: boolean;
+    setShow: (show: boolean) => void;
+    editingAccount?: any;
+    onSaved?: (account?: any) => void;
+    title?: string;
+};
+
+export const getDisplayName = (name: any) => {
+    if (!name) return "";
+
+    if (typeof name === "string") return name;
+
+    if (typeof name === "object") {
+        return (
+            name.en ||
+            name.mr ||
+            name.hi ||
+            name.gu ||
+            name.ta ||
+            name.te ||
+            name.kn ||
+            name.ml ||
+            name.pa ||
+            ""
+        );
+    }
+
+    return String(name);
+};
+
+export const buildEmptyAccountForm = (fields: any[] = []) => {
+    return fields.reduce((acc: any, field: any) => {
+        acc[field.key] = "";
+        return acc;
+    }, {});
+};
+
+const AccountMasterModal = ({
+    show,
+    setShow,
+    editingAccount = null,
+    onSaved,
+    title,
+}: AccountMasterModalProps) => {
+    const dispatch = useDispatch<any>();
+
+    const {
+        accountMasterSchemaFields = [],
+        schemaLoading,
+    } = useSelector((state: any) => state.accountMaster || {});
+
+    const {
+        states = [],
+        cities = [],
+    } = useSelector((state: any) => state.stateCity || {});
+
+    const [form, setForm] = useState<any>({});
+    const [errors, setErrors] = useState<any>({});
+    const [pendingCity, setPendingCity] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    /* ============================================
+       FETCH ACCOUNT SCHEMA AND STATES
+    ============================================= */
+
+    useEffect(() => {
+        dispatch(
+            getAllAccountMasterSchema({
+                offset: 0,
+                limit: 50,
+            }) as any
+        );
+
+        dispatch(getStates() as any);
+    }, [dispatch]);
+
+    /* ============================================
+       INITIALIZE ADD / EDIT FORM
+    ============================================= */
+
+    useEffect(() => {
+        if (!show || accountMasterSchemaFields.length === 0) return;
+
+        setErrors({});
+        setPendingCity("");
+
+        if (!editingAccount) {
+            setForm(buildEmptyAccountForm(accountMasterSchemaFields));
+            return;
+        }
+
+        const nextForm = buildEmptyAccountForm(
+            accountMasterSchemaFields
+        );
+
+        let existingCity = "";
+
+        accountMasterSchemaFields.forEach((field: any) => {
+            const key = field.key;
+
+            if (key === "state") {
+                nextForm.state =
+                    typeof editingAccount.state === "object"
+                        ? editingAccount.state?.isoCode ||
+                        editingAccount.state?.stateCode ||
+                        editingAccount.state?.code ||
+                        ""
+                        : editingAccount.state || "";
+
+                return;
+            }
+
+            if (key === "city") {
+                existingCity =
+                    typeof editingAccount.city === "object"
+                        ? getDisplayName(
+                            editingAccount.city?.name ||
+                            editingAccount.city?.cityName
+                        )
+                        : editingAccount.city || "";
+
+                nextForm.city = "";
+                return;
+            }
+
+            if (key === "accountType") {
+                nextForm.accountType = editingAccount?.accountType
+                    ? String(
+                        editingAccount.accountType
+                    ).toLowerCase()
+                    : "";
+
+                return;
+            }
+
+            nextForm[key] = editingAccount?.[key] ?? "";
+        });
+
+        setForm(nextForm);
+        setPendingCity(existingCity);
+
+        if (nextForm.state) {
+            dispatch(
+                getCitiesByState({
+                    stateCode: nextForm.state,
+                    searchText: "",
+                }) as any
+            );
+        }
+    }, [
+        show,
+        editingAccount,
+        accountMasterSchemaFields,
+        dispatch,
+    ]);
+
+    /* ============================================
+       FETCH CITIES WHEN STATE CHANGES
+    ============================================= */
+
+    useEffect(() => {
+        if (!show || !form.state) return;
+
+        dispatch(
+            getCitiesByState({
+                stateCode: form.state,
+                searchText: "",
+            }) as any
+        );
+    }, [dispatch, show, form.state]);
+
+    /* ============================================
+       SET EDIT CITY AFTER CITY API RESPONSE
+    ============================================= */
+
+    useEffect(() => {
+        if (!pendingCity || !cities?.length) return;
+
+        const matchedCity = cities.find((item: any) => {
+            const cityName = getDisplayName(
+                item.name || item.cityName
+            );
+
+            return cityName === pendingCity;
+        });
+
+        if (!matchedCity) return;
+
+        setForm((previous: any) => ({
+            ...previous,
+            city: pendingCity,
+        }));
+
+        setPendingCity("");
+    }, [cities, pendingCity]);
+
+    /* ============================================
+       FIELD OPTIONS
+    ============================================= */
+
+    const getFieldOptions = (field: any) => {
+        if (field.key === "state") {
+            return states.map((item: any) => {
+                const stateCode =
+                    item.isoCode ||
+                    item.stateCode ||
+                    item.code ||
+                    "";
+
+                const stateName = getDisplayName(
+                    item.name || item.stateName
+                );
+
+                return {
+                    value: stateCode,
+                    label: stateName || stateCode,
+                };
+            });
+        }
+
+        if (field.key === "city") {
+            return cities.map((item: any) => {
+                const cityName = getDisplayName(
+                    item.name || item.cityName
+                );
+
+                return {
+                    value: cityName,
+                    label: cityName,
+                };
+            });
+        }
+
+        if (field.key === "accountType") {
+            return (field.options || []).map((option: any) => {
+                const label =
+                    typeof option === "object"
+                        ? option.label ||
+                        option.name ||
+                        option.value ||
+                        ""
+                        : option;
+
+                const value =
+                    typeof option === "object"
+                        ? option.value ||
+                        option.code ||
+                        option.name ||
+                        label
+                        : option;
+
+                return {
+                    label,
+                    value: String(value).toLowerCase(),
+                };
+            });
+        }
+
+        return (field.options || []).map((option: any) => {
+            if (typeof option === "object") {
+                return {
+                    value:
+                        option.value ||
+                        option.code ||
+                        option.name ||
+                        "",
+                    label:
+                        option.label ||
+                        option.name ||
+                        option.value ||
+                        "",
+                };
+            }
+
+            return {
+                value: option,
+                label: option,
+            };
+        });
+    };
+
+    /* ============================================
+       FIELD CHANGE
+    ============================================= */
+
+    const handleFieldChange = (
+        field: any,
+        value: any
+    ) => {
+        setForm((previous: any) => ({
+            ...previous,
+            [field.key]: value,
+            ...(field.key === "state"
+                ? {
+                    city: "",
+                }
+                : {}),
+        }));
+
+        setErrors((previous: any) => ({
+            ...previous,
+            [field.key]: "",
+            ...(field.key === "state"
+                ? {
+                    city: "",
+                }
+                : {}),
+        }));
+
+        if (field.key === "state") {
+            setPendingCity("");
+        }
+    };
+
+    /* ============================================
+       RENDER SCHEMA FIELD
+    ============================================= */
+
+    const renderSchemaField = (field: any) => {
+        const value = form?.[field.key] ?? "";
+
+        const commonProps = {
+            label: field.label,
+            mandatory: field.isRequired,
+            value,
+            placeholder: `Enter ${field.label}`,
+            error: errors?.[field.key],
+            disabled:
+                field.disabled ||
+                field.isReadonly ||
+                submitting,
+        };
+
+        if (field.type === "select") {
+            const options = getFieldOptions(field);
+
+            return (
+                <SelectInput
+                    key={field.key}
+                    label={field.label}
+                    mandatory={field.isRequired}
+                    value={value}
+                    placeholder={`Select ${field.label}`}
+                    error={errors?.[field.key]}
+                    disabled={
+                        field.disabled ||
+                        field.isReadonly ||
+                        submitting ||
+                        (field.key === "city" && !form.state)
+                    }
+                    onChange={(event: any) =>
+                        handleFieldChange(
+                            field,
+                            event?.target?.value ?? ""
+                        )
+                    }
+                    options={[
+                        {
+                            value: "",
+                            label:
+                                field.key === "city" &&
+                                    !form.state
+                                    ? "Select state first"
+                                    : `Select ${field.label}`,
+                        },
+                        ...options,
+                    ]}
+                />
+            );
+        }
+
+        if (field.type === "number") {
+            return (
+                <TextInput
+                    key={field.key}
+                    {...commonProps}
+                    type="number"
+                    onChange={(event: any) =>
+                        handleFieldChange(
+                            field,
+                            event.target.value
+                        )
+                    }
+                />
+            );
+        }
+
+        if (field.type === "textarea") {
+            return (
+                <TextArea
+                    key={field.key}
+                    {...commonProps}
+                    onChange={(event: any) =>
+                        handleFieldChange(
+                            field,
+                            event.target.value
+                        )
+                    }
+                />
+            );
+        }
+
+        if (field.key === "accountMobile") {
+            return (
+                <TextInput
+                    key={field.key}
+                    {...commonProps}
+                    type="text"
+                    onChange={(event: any) =>
+                        handleFieldChange(
+                            field,
+                            event.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 10)
+                        )
+                    }
+                />
+            );
+        }
+
+        if (field.key === "accountEmail") {
+            return (
+                <TextInput
+                    key={field.key}
+                    {...commonProps}
+                    type="email"
+                    onChange={(event: any) =>
+                        handleFieldChange(
+                            field,
+                            event.target.value
+                        )
+                    }
+                />
+            );
+        }
+
+        return (
+            <TextInput
+                key={field.key}
+                {...commonProps}
+                type="text"
+                onChange={(event: any) =>
+                    handleFieldChange(
+                        field,
+                        event.target.value
+                    )
+                }
+            />
+        );
+    };
+
+    /* ============================================
+       VALIDATE FORM
+    ============================================= */
+
+    const validateForm = () => {
+        const validationErrors: any = {};
+
+        accountMasterSchemaFields.forEach((field: any) => {
+            const value = form?.[field.key];
+
+            if (
+                field.isRequired &&
+                String(value ?? "").trim() === ""
+            ) {
+                validationErrors[field.key] =
+                    `${field.label} required`;
+            }
+
+            if (
+                field.key === "accountMobile" &&
+                value &&
+                !/^\d{10}$/.test(String(value))
+            ) {
+                validationErrors[field.key] =
+                    "Mobile must be 10 digits";
+            }
+
+            if (
+                field.key === "accountEmail" &&
+                value &&
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                    String(value)
+                )
+            ) {
+                validationErrors[field.key] =
+                    "Invalid email address";
+            }
+
+            if (
+                field.key === "accountCreditLimit" &&
+                value !== "" &&
+                value !== null &&
+                value !== undefined &&
+                Number(value) < 0
+            ) {
+                validationErrors[field.key] =
+                    "Credit limit cannot be negative";
+            }
+        });
+
+        setErrors(validationErrors);
+
+        return Object.keys(validationErrors).length === 0;
+    };
+
+    /* ============================================
+       SELECTED STATE / CITY
+    ============================================= */
+
+    const findSelectedState = () => {
+        return states.find((item: any) => {
+            const stateCode =
+                item.isoCode ||
+                item.stateCode ||
+                item.code ||
+                "";
+
+            return stateCode === form.state;
+        });
+    };
+
+    const findSelectedCity = () => {
+        return cities.find((item: any) => {
+            const cityName = getDisplayName(
+                item.name || item.cityName
+            );
+
+            return cityName === form.city;
+        });
+    };
+
+    /* ============================================
+       CREATE / UPDATE ACCOUNT
+    ============================================= */
+
+    const handleSubmit = async () => {
+        if (submitting || !validateForm()) return;
+
+        const selectedState = findSelectedState();
+        const selectedCity = findSelectedCity();
+
+        setSubmitting(true);
+
+        try {
+            let savedAccount: any;
+
+            if (editingAccount) {
+                const updatePayload: any = {};
+
+                accountMasterSchemaFields.forEach(
+                    (field: any) => {
+                        const key = field.key;
+
+                        if (key === "state") {
+                            const oldStateCode =
+                                typeof editingAccount.state ===
+                                    "object"
+                                    ? editingAccount.state
+                                        ?.isoCode ||
+                                    editingAccount.state
+                                        ?.stateCode ||
+                                    editingAccount.state
+                                        ?.code ||
+                                    ""
+                                    : editingAccount.state ||
+                                    "";
+
+                            if (
+                                form.state !== oldStateCode
+                            ) {
+                                updatePayload.state =
+                                    selectedState ||
+                                    form.state;
+                            }
+
+                            return;
+                        }
+
+                        if (key === "city") {
+                            const oldCityName =
+                                typeof editingAccount.city ===
+                                    "object"
+                                    ? getDisplayName(
+                                        editingAccount.city
+                                            ?.name ||
+                                        editingAccount
+                                            .city
+                                            ?.cityName
+                                    )
+                                    : editingAccount.city ||
+                                    "";
+
+                            if (
+                                form.city !== oldCityName
+                            ) {
+                                updatePayload.city =
+                                    selectedCity ||
+                                    form.city;
+                            }
+
+                            return;
+                        }
+
+                        const oldValue =
+                            key === "accountType"
+                                ? String(
+                                    editingAccount?.[
+                                    key
+                                    ] ?? ""
+                                ).toLowerCase()
+                                : editingAccount?.[
+                                key
+                                ] ?? "";
+
+                        if (form[key] !== oldValue) {
+                            updatePayload[key] =
+                                form[key];
+                        }
+                    }
+                );
+
+                if (
+                    Object.keys(updatePayload).length === 0
+                ) {
+                    toast.info("No changes found");
+                    return;
+                }
+
+                savedAccount = await dispatch(
+                    updateAccount({
+                        accountCode:
+                            editingAccount.accountCode,
+                        data: updatePayload,
+                    }) as any
+                ).unwrap();
+
+                toast.success(
+                    "Account updated successfully"
+                );
+            } else {
+                const payload = {
+                    ...form,
+                    state: selectedState || form.state,
+                    city: selectedCity || form.city,
+                };
+
+                savedAccount = await dispatch(
+                    createAccount(payload) as any
+                ).unwrap();
+
+                toast.success(
+                    "Account created successfully"
+                );
+            }
+
+            setShow(false);
+            setForm(
+                buildEmptyAccountForm(
+                    accountMasterSchemaFields
+                )
+            );
+            setErrors({});
+            setPendingCity("");
+
+            if (onSaved) {
+                onSaved(savedAccount);
+            }
+        } catch (error: any) {
+            toast.error(
+                error?.message ||
+                error ||
+                "Account operation failed"
+            );
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleModalVisibility = (value: boolean) => {
+        if (submitting) return;
+
+        setShow(value);
+
+        if (!value) {
+            setErrors({});
+            setPendingCity("");
+        }
+    };
+
+    return (
+        <Modal
+            {...{
+                show,
+                setShow: handleModalVisibility,
+                handleSubmit,
+                state: editingAccount,
+                title:
+                    title ||
+                    (editingAccount
+                        ? "Update Account"
+                        : "Add New Account"),
+                body: (
+                    <>
+                        {schemaLoading ? (
+                            <div className="py-6 text-sm text-muted-foreground">
+                                Loading account fields...
+                            </div>
+                        ) : accountMasterSchemaFields.length ===
+                            0 ? (
+                            <div className="py-6 text-sm text-muted-foreground">
+                                Account Master schema fields
+                                not found.
+                            </div>
+                        ) : (
+                            accountMasterSchemaFields.map(
+                                (field: any) =>
+                                    renderSchemaField(field)
+                            )
+                        )}
+                    </>
+                ),
+            }}
+        />
+    );
+};
+
+export { WarningModel, ListingModel, LogoutModal, AccountMasterModal };

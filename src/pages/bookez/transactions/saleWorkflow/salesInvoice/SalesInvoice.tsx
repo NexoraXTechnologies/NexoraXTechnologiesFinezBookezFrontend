@@ -35,6 +35,7 @@ import {
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
 import Permission from "../../../../../components/PermissionGuard";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
+import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -220,6 +221,13 @@ const SalesInVoice = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<"open" | "close">("open");
     const [showModal, setShowModal] = useState(false);
+
+    // ★ ADDED: Shared Account Master modal state
+    const [checkAccount, setCheckAccount] = useState(false);
+
+    // ★ ADDED: Prevent account modal check before Account Master API finishes
+    const [accountListLoaded, setAccountListLoaded] = useState(false);
+
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [showPurchaseOrderModal, setShowPurchaseOrderModal] = useState(false);
     const [purchaseOrderSearch, setPurchaseOrderSearch] = useState("");
@@ -232,6 +240,18 @@ const SalesInVoice = () => {
         footer: [],
     });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const { accounts = [] } = useSelector(
+        (state: any) => state.accountMaster || {}
+    );
+
+    // ★ ADDED: Keep only customer accounts
+    const filterAccount = useMemo(() => {
+        return (accounts || []).filter(
+            (account: any) =>
+                String(account?.accountType || "").toLowerCase() === "customer"
+        );
+    }, [accounts]);
 
     const { salesOrders, loading: orderLoader } = useSelector(
         (state: any) => state.salesOrder
@@ -266,6 +286,53 @@ const SalesInVoice = () => {
         field?.options?.find(
             (opt: any) => String(opt.value) === String(selectedValue)
         );
+
+    // ★ ADDED: Sales Invoice field normalization used on initial load
+    // and again after creating a new Account Master record.
+    const normalizeSalesInvoiceTemplateFields = (updatedData: any) => {
+        const normalizedBody = (updatedData?.body || []).map((field: any) => {
+            if (
+                field?.key === "taxRate" ||
+                field?.key === "nonTaxRate"
+            ) {
+                return {
+                    ...field,
+                    isReadonly: false,
+                    disabled: false,
+                };
+            }
+
+            if (
+                field?.key === "taxGross" ||
+                field?.key === "nonTaxGross"
+            ) {
+                return {
+                    ...field,
+                    isReadonly: true,
+                    disabled: true,
+                };
+            }
+
+            return field;
+        });
+
+        return {
+            ...updatedData,
+            body: normalizedBody,
+        };
+    };
+
+    const reloadTemplateFields = async () => {
+        if (!transactionsSchema) return;
+
+        const updatedData = await loadAllTemplateOptions(
+            transactionsSchema
+        );
+
+        setTemplateFields(
+            normalizeSalesInvoiceTemplateFields(updatedData)
+        );
+    };
 
     const getProductMasterFromRow = (row: any) => {
         if (!row) return null;
@@ -634,6 +701,7 @@ const SalesInVoice = () => {
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
+        setCheckAccount(false);
     };
 
     const openAddModal = () => {
@@ -757,6 +825,114 @@ const SalesInVoice = () => {
         });
 
         setErrors((prev: any) => ({ ...prev, [key]: "" }));
+    };
+
+    // ★ ADDED: Refresh Sales Invoice customer options after
+    // creating a customer from the shared Account Master modal.
+    const handleAccountSaved = async (savedResponse: any) => {
+        try {
+            const accountResponse = await dispatch(
+                getAllAccounts({
+                    offset: 0,
+                    limit: 100,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            setAccountListLoaded(true);
+
+            // ★ Refresh module-specific report mapping
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "salesInvoice",
+                }) as any
+            );
+
+            // ★ Reload all schema API options, including Account Master
+            await reloadTemplateFields();
+
+            const savedAccount =
+                savedResponse?.data?.account ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.account ||
+                savedResponse;
+
+            const refreshedAccounts =
+                accountResponse?.data?.accounts ||
+                accountResponse?.data?.data?.accounts ||
+                accountResponse?.accounts ||
+                accountResponse?.data?.items ||
+                accountResponse?.items ||
+                accountResponse?.data ||
+                [];
+
+            const customerAccounts = Array.isArray(refreshedAccounts)
+                ? refreshedAccounts.filter(
+                    (account: any) =>
+                        String(
+                            account?.accountType || ""
+                        ).toLowerCase() === "customer"
+                )
+                : [];
+
+            const savedCode = savedAccount?.accountCode || "";
+            const savedName = savedAccount?.accountName || "";
+
+            const createdCustomer =
+                customerAccounts.find(
+                    (account: any) =>
+                        (
+                            savedCode &&
+                            String(account?.accountCode) ===
+                            String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(account?.accountName) ===
+                            String(savedName)
+                        )
+                ) ||
+                (
+                    savedCode || savedName
+                        ? savedAccount
+                        : null
+                ) ||
+                customerAccounts[customerAccounts.length - 1] ||
+                null;
+
+            if (createdCustomer) {
+                setForm((prev: any) => ({
+                    ...prev,
+                    sInvCustomerCode:
+                        createdCustomer?.accountCode ||
+                        prev?.sInvCustomerCode ||
+                        "",
+                    sInvCustomerName:
+                        createdCustomer?.accountName ||
+                        prev?.sInvCustomerName ||
+                        "",
+                }));
+
+                setErrors((prev: any) => ({
+                    ...prev,
+                    sInvCustomerCode: "",
+                    sInvCustomerName: "",
+                }));
+            }
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Sales Invoice customer options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Account created, but Sales Invoice customer dropdown refresh failed"
+            );
+        } finally {
+            setCheckAccount(false);
+        }
     };
 
     const handleAddRow = () => {
@@ -1012,7 +1188,7 @@ const SalesInVoice = () => {
                 const marginProduct = isMarginProductRow(item);
 
                 return {
-            // ✅ Store Sales Order voucher in invoice body also
+                    // ✅ Store Sales Order voucher in invoice body also
                     sOrderNumber:
                         item?.sOrderNumber ||
                         form?.sInvSalesOrderVoucherNumber ||
@@ -1160,6 +1336,7 @@ const SalesInVoice = () => {
                 toast.success("Sales invoice created successfully");
             }
             setShowModal(false);
+            setCheckAccount(false);
             resetMainForm();
             fetchSalesInvoices();
         } catch (err: any) {
@@ -1334,6 +1511,7 @@ const SalesInVoice = () => {
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
+        setCheckAccount(false);
         setShowModal(true);
     };
 
@@ -1385,50 +1563,7 @@ const SalesInVoice = () => {
             try {
                 setFieldsLoading(true);
 
-                const updatedData = await loadAllTemplateOptions(
-                    transactionsSchema
-                );
-
-                /*
-                 * Sales Invoice-only read-only normalization.
-                 * Shared DynamicAddForm and EditableLineTable remain unchanged.
-                 *
-                 * Schema may return "false" as a string, which is truthy in
-                 * JavaScript. Convert the rate fields to actual editable fields
-                 * and keep only the calculated gross fields read-only.
-                 */
-                const normalizedBody = (
-                    updatedData?.body || []
-                ).map((field: any) => {
-                    if (
-                        field?.key === "taxRate" ||
-                        field?.key === "nonTaxRate"
-                    ) {
-                        return {
-                            ...field,
-                            isReadonly: false,
-                            disabled: false,
-                        };
-                    }
-
-                    if (
-                        field?.key === "taxGross" ||
-                        field?.key === "nonTaxGross"
-                    ) {
-                        return {
-                            ...field,
-                            isReadonly: true,
-                            disabled: true,
-                        };
-                    }
-
-                    return field;
-                });
-
-                setTemplateFields({
-                    ...updatedData,
-                    body: normalizedBody,
-                });
+                await reloadTemplateFields();
             } catch (error) {
                 console.log("Failed to prepare template fields", error);
             } finally {
@@ -1440,7 +1575,12 @@ const SalesInVoice = () => {
     }, [transactionsSchema]);
 
     useEffect(() => {
-        dispatch(getAllReportMapping({ moduleType: "salesInvoice" }));
+        dispatch(
+            getAllReportMapping({
+                moduleType: "salesInvoice",
+            }) as any
+        );
+
         dispatch(
             getAllSystemConfigurations({
                 offset: 0,
@@ -1448,7 +1588,46 @@ const SalesInVoice = () => {
                 status: "",
             }) as any
         );
-    }, []);
+
+        const loadAccounts = async () => {
+            try {
+                await dispatch(
+                    getAllAccounts({
+                        offset: 0,
+                        limit: 100,
+                        search: "",
+                    }) as any
+                ).unwrap();
+            } catch (error) {
+                console.log(
+                    "Failed to load Account Master records",
+                    error
+                );
+            } finally {
+                setAccountListLoaded(true);
+            }
+        };
+
+        loadAccounts();
+    }, [dispatch]);
+
+    // ★ ADDED: Open Account Master only after the Sales Invoice form
+    // is visible, the Account Master request has completed, and there
+    // is no customer account.
+    useEffect(() => {
+        if (!showModal) return;
+        if (editingRecord) return;
+        if (!accountListLoaded) return;
+
+        if (filterAccount.length === 0) {
+            setCheckAccount(true);
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        filterAccount.length,
+    ]);
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
@@ -1588,6 +1767,7 @@ const SalesInVoice = () => {
                         loading: createLoading || updateLoading,
                         onClose: () => {
                             setShowModal(false);
+                            setCheckAccount(false);
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -1602,6 +1782,11 @@ const SalesInVoice = () => {
                         handleChange: handleMainChange,
                         isBodyColumnVisible,
                         isBodyCellVisible,
+
+                        // ★ ADDED: Shared Account Master modal props
+                        checkAccount,
+                        setCheckAccount,
+                        onAccountSaved: handleAccountSaved,
                     }}
                 />
             )}
@@ -1636,9 +1821,9 @@ const SalesInVoice = () => {
                                     Loading Sales Order...
                                 </div>
                             ) : !salesOrders?.length ? (
-                                    <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
-                                        No Sales Order found
-                                    </div>
+                                <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
+                                    No Sales Order found
+                                </div>
                             ) : (
                                 <div className="space-y-3">
                                     {salesOrders?.map((e: any, index: number) => {

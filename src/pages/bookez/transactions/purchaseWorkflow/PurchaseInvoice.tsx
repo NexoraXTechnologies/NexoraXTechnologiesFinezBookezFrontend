@@ -46,6 +46,7 @@ import ModulePageSkeleton, {
 import Permission from "../../../../components/PermissionGuard";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 const defaultPagination = {
     offset: 0,
@@ -199,6 +200,13 @@ const PurchaseInvoice = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState("open");
     const [showModal, setShowModal] = useState(false);
+
+    // ★ ADDED: Account Master modal state
+    const [checkAccount, setCheckAccount] = useState(false);
+
+    // ★ ADDED: Wait until Account Master API completes
+    const [accountListLoaded, setAccountListLoaded] = useState(false);
+
     const [editingRecord, setEditingRecord] = useState<any>(false);
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
@@ -212,9 +220,21 @@ const PurchaseInvoice = () => {
     const [grnLoaded, setGrnLoaded] = useState(false);
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null,record: null, });
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null, record: null, });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
-    
+
+    const { accounts = [] } = useSelector(
+        (state: any) => state.accountMaster || {}
+    );
+
+    // ★ ADDED: Purchase Invoice requires vendor accounts
+    const vendorAccounts = useMemo(() => {
+        return (accounts || []).filter(
+            (account: any) =>
+                String(account?.accountType || "").toLowerCase() === "vendor"
+        );
+    }, [accounts]);
+
     const getHeaderFieldByKey = (key: string) => {
         return templateFields?.header?.find((field: any) => field.key === key);
     };
@@ -716,6 +736,7 @@ const PurchaseInvoice = () => {
         setEditingRecord(null);
         setErrors({});
         setForm(getDefaultForm());
+        setCheckAccount(false);
     };
 
     const openAddModal = async () => {
@@ -992,6 +1013,129 @@ const PurchaseInvoice = () => {
             ...prev,
             [key]: "",
         }));
+    };
+
+    // ★ ADDED: Refresh Purchase Invoice vendor options after Account Master save
+    const handleAccountSaved = async (savedResponse: any) => {
+        try {
+            const accountResponse: any = await dispatch(
+                getAllAccounts({
+                    offset: 0,
+                    limit: 100,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            setAccountListLoaded(true);
+
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "purchaseInvoice",
+                }) as any
+            );
+
+            if (transactionsSchema) {
+                const updatedData = await loadAllTemplateOptions(
+                    transactionsSchema
+                );
+
+                setTemplateFields(updatedData);
+            }
+
+            const savedAccount =
+                savedResponse?.data?.account ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.account ||
+                savedResponse;
+
+            const refreshedAccounts =
+                accountResponse?.data?.accounts ||
+                accountResponse?.data?.data?.accounts ||
+                accountResponse?.accounts ||
+                accountResponse?.data?.items ||
+                accountResponse?.items ||
+                accountResponse?.data ||
+                [];
+
+            const refreshedVendors = Array.isArray(refreshedAccounts)
+                ? refreshedAccounts.filter(
+                    (account: any) =>
+                        String(
+                            account?.accountType || ""
+                        ).toLowerCase() === "vendor"
+                )
+                : [];
+
+            const savedCode =
+                savedAccount?.accountCode ||
+                savedAccount?.code ||
+                "";
+
+            const savedName =
+                savedAccount?.accountName ||
+                savedAccount?.name ||
+                "";
+
+            const createdVendor =
+                refreshedVendors.find(
+                    (account: any) =>
+                        (
+                            savedCode &&
+                            String(account?.accountCode || "") ===
+                            String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(account?.accountName || "") ===
+                            String(savedName)
+                        )
+                ) ||
+                (
+                    savedCode ||
+                        savedName
+                        ? savedAccount
+                        : null
+                ) ||
+                refreshedVendors[
+                refreshedVendors.length - 1
+                ] ||
+                null;
+
+            if (createdVendor) {
+                setForm((prev: any) => ({
+                    ...prev,
+
+                    pInvVendorCode:
+                        createdVendor?.accountCode ||
+                        prev?.pInvVendorCode ||
+                        "",
+
+                    pInvVendorName:
+                        createdVendor?.accountName ||
+                        prev?.pInvVendorName ||
+                        "",
+                }));
+
+                setErrors((prev: any) => ({
+                    ...prev,
+                    pInvVendorCode: "",
+                    pInvVendorName: "",
+                }));
+            }
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Purchase Invoice vendor options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Account created, but Purchase Invoice vendor dropdown refresh failed"
+            );
+        } finally {
+            setCheckAccount(false);
+        }
     };
 
     /* ===================================================
@@ -1410,6 +1554,7 @@ const PurchaseInvoice = () => {
             }
 
             setShowModal(false);
+            setCheckAccount(false);
             resetMainForm();
 
             setSelectedGrn(null);
@@ -1616,6 +1761,47 @@ const PurchaseInvoice = () => {
         );
     }, []);
 
+    // ★ ADDED: Initial Account Master loading
+    useEffect(() => {
+        const loadAccounts = async () => {
+            try {
+                await dispatch(
+                    getAllAccounts({
+                        offset: 0,
+                        limit: 100,
+                        search: "",
+                    }) as any
+                ).unwrap();
+            } catch (error) {
+                console.log(
+                    "Failed to load Account Master records",
+                    error
+                );
+            } finally {
+                setAccountListLoaded(true);
+            }
+        };
+
+        loadAccounts();
+    }, [dispatch]);
+
+    // ★ ADDED: Open Account Master when Purchase Invoice opens
+    // and no vendor account exists.
+    useEffect(() => {
+        if (!showModal) return;
+        if (editingRecord) return;
+        if (!accountListLoaded) return;
+
+        if (vendorAccounts.length === 0) {
+            setCheckAccount(true);
+        }
+    }, [
+        showModal,
+        editingRecord,
+        accountListLoaded,
+        vendorAccounts.length,
+    ]);
+
     if (showInitialSkeleton) {
         return <ModulePageSkeleton rows={8} columns={7} />;
     }
@@ -1624,7 +1810,7 @@ const PurchaseInvoice = () => {
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div
                 id="purchase-invoice-header"
-               className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+                className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
             >
                 <div
                     id="purchase-invoice-summary"
@@ -1747,7 +1933,7 @@ const PurchaseInvoice = () => {
                             y: null,
                             voucherNumber: null,
                             grnVoucherNumber: null,
-                             record: null,
+                            record: null,
                         })
                     }
                 />
@@ -1863,6 +2049,7 @@ const PurchaseInvoice = () => {
                         loading: createLoading || updateLoading,
                         onClose: () => {
                             setShowModal(false);
+                            setCheckAccount(false);
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -1879,6 +2066,11 @@ const PurchaseInvoice = () => {
                         },
                         bodyKey: "products",
                         handleChange: handleMainChange,
+
+                        // ★ ADDED: Common Account Master modal props
+                        checkAccount,
+                        setCheckAccount,
+                        onAccountSaved: handleAccountSaved,
                     }}
                 />
             )}
