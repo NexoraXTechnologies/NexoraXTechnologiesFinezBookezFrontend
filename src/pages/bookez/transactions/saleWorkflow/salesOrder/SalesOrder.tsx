@@ -281,7 +281,7 @@ const SalesOrder = () => {
         voucherNumber: null,
     });
 
-    const [downlaodPDF, setDownlaodPDF] = useState({
+    const [downlaodPDF, setDownlaodPDF]: any = useState({
         show: false,
         x: null,
         y: null,
@@ -3614,9 +3614,7 @@ const SalesOrder = () => {
                             })
                         ),
 
-                    rowData:
-                        downlaodPDF
-                            ?.record,
+                    rowData: downlaodPDF?.record,
 
                     report,
 

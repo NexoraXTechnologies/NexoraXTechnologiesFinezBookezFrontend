@@ -575,7 +575,7 @@ const AccountMasterModal = ({
                 limit: 50,
             }) as any
         );
-
+        // @ts-ignore
         dispatch(getStates() as any);
     }, [dispatch]);
 

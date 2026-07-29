@@ -915,7 +915,7 @@ const SalesReturnRegister = () => {
        CUSTOM FILTERS
     =================================================== */
 
-    const customFilters = useMemo<
+    const customFilters:any = useMemo<
         CustomFilterDefinition[]
     >(() => {
         return Array.isArray(registerFilterDropdowns)
