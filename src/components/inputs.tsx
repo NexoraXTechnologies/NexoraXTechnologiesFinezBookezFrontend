@@ -1183,3 +1183,647 @@ export const Checkbox = ({
         </label>
     );
 };
+
+const CREATE_OPTION_VALUE =
+    "__CREATE_NEW_SELECT_OPTION__";
+
+type CreateOptionLabel =
+    | string
+    | ((searchValue: string) => string);
+
+type CreatableSelectInputProps = {
+    label?: string;
+    value?: any;
+    onChange: (event: any) => void;
+    options?: any[];
+    mandatory?: boolean;
+    error?: string;
+    name?: string;
+    placeholder?: string;
+    disabled?: boolean;
+    defaultValue?: any;
+    styles?: any;
+    largeData?: boolean;
+    batchSize?: number;
+    onCreateOption?: (
+        searchValue: string
+    ) => void | Promise<void>;
+    createOptionLabel?: CreateOptionLabel;
+    showCreateOnEmpty?: boolean;
+    useMenuPortal?: boolean;
+};
+
+export const CreatableSelectInput = ({
+    label = "",
+    value,
+    onChange,
+    options = [],
+    mandatory = false,
+    error = "",
+    name = "",
+    placeholder = "Select",
+    disabled = false,
+    defaultValue = null,
+    styles: customStyles = {},
+    largeData = false,
+    batchSize = 100,
+    onCreateOption,
+    createOptionLabel = "+ Add New",
+    showCreateOnEmpty = true,
+    useMenuPortal = true,
+}: CreatableSelectInputProps) => {
+    const [
+        inputValue,
+        setInputValue,
+    ] = useState("");
+
+    const [
+        visibleCount,
+        setVisibleCount,
+    ] = useState(batchSize);
+
+    const normalizedOptions =
+        useMemo(() => {
+            return (options || [])
+                .map((option: any) => {
+                    if (
+                        option &&
+                        typeof option ===
+                        "object" &&
+                        "label" in option &&
+                        "value" in option
+                    ) {
+                        return {
+                            ...option,
+
+                            label:
+                                String(
+                                    option.label ??
+                                    ""
+                                ),
+
+                            value:
+                                option.value,
+
+                            searchLabel:
+                                String(
+                                    option.label ??
+                                    ""
+                                ).toLowerCase(),
+                        };
+                    }
+
+                    return {
+                        label:
+                            String(
+                                option ?? ""
+                            ),
+
+                        value:
+                            option,
+
+                        searchLabel:
+                            String(
+                                option ?? ""
+                            ).toLowerCase(),
+                    };
+                })
+                .filter(
+                    (option: any) =>
+                        option.value !==
+                        "" &&
+                        option.value !==
+                        null &&
+                        option.value !==
+                        undefined
+                );
+        }, [options]);
+
+    const selectedOption =
+        useMemo(() => {
+            return (
+                normalizedOptions.find(
+                    (option: any) =>
+                        String(
+                            option.value
+                        ) ===
+                        String(
+                            value ?? ""
+                        )
+                ) || null
+            );
+        }, [
+            normalizedOptions,
+            value,
+        ]);
+
+    const matchedOptions =
+        useMemo(() => {
+            const searchValue =
+                inputValue
+                    .trim()
+                    .toLowerCase();
+
+            if (!searchValue) {
+                return normalizedOptions;
+            }
+
+            return normalizedOptions.filter(
+                (option: any) =>
+                    option.searchLabel.includes(
+                        searchValue
+                    )
+            );
+        }, [
+            normalizedOptions,
+            inputValue,
+        ]);
+
+    const visibleOptions =
+        useMemo(() => {
+            if (!largeData) {
+                return matchedOptions;
+            }
+
+            return matchedOptions.slice(
+                0,
+                visibleCount
+            );
+        }, [
+            matchedOptions,
+            visibleCount,
+            largeData,
+        ]);
+
+    const shouldShowCreateOption =
+        typeof onCreateOption ===
+        "function" &&
+        matchedOptions.length === 0 &&
+        (
+            showCreateOnEmpty ||
+            inputValue.trim().length > 0
+        );
+
+    const createActionOption =
+        useMemo(() => {
+            if (
+                !shouldShowCreateOption
+            ) {
+                return null;
+            }
+
+            const searchValue =
+                inputValue.trim();
+
+            const createLabel =
+                typeof createOptionLabel ===
+                    "function"
+                    ? createOptionLabel(
+                        searchValue
+                    )
+                    : searchValue
+                        ? `${createOptionLabel} "${searchValue}"`
+                        : createOptionLabel;
+
+            return {
+                label:
+                    createLabel,
+
+                value:
+                    CREATE_OPTION_VALUE,
+
+                __isCreateOption:
+                    true,
+            };
+        }, [
+            shouldShowCreateOption,
+            inputValue,
+            createOptionLabel,
+        ]);
+
+    const selectOptions =
+        useMemo(() => {
+            if (
+                createActionOption
+            ) {
+                return [
+                    createActionOption,
+                ];
+            }
+
+            return visibleOptions;
+        }, [
+            createActionOption,
+            visibleOptions,
+        ]);
+
+    const defaultStyles =
+        useMemo(
+            () => ({
+                control: (
+                    base: any,
+                    state: any
+                ) => ({
+                    ...base,
+
+                    minHeight:
+                        "32px",
+
+                    height:
+                        "32px",
+
+                    borderRadius:
+                        "0.2rem",
+
+                    borderColor:
+                        state.isFocused
+                            ? "var(--primary)"
+                            : "var(--border)",
+
+                    boxShadow:
+                        state.isFocused
+                            ? "0 0 0 1px var(--primary)"
+                            : "none",
+
+                    backgroundColor:
+                        disabled
+                            ? "var(--muted)"
+                            : "var(--input)",
+
+                    cursor:
+                        disabled
+                            ? "not-allowed"
+                            : "pointer",
+
+                    opacity:
+                        disabled
+                            ? 0.7
+                            : 1,
+
+                    transition:
+                        "all 200ms",
+
+                    "&:hover": {
+                        borderColor:
+                            "var(--primary)",
+                    },
+                }),
+
+                valueContainer: (
+                    base: any
+                ) => ({
+                    ...base,
+                    height: "30px",
+                    padding: "0 12px",
+                }),
+
+                input: (
+                    base: any
+                ) => ({
+                    ...base,
+                    margin: 0,
+                    padding: 0,
+                    color:
+                        "var(--foreground)",
+                    fontSize:
+                        "14px",
+                }),
+
+                singleValue: (
+                    base: any
+                ) => ({
+                    ...base,
+                    color:
+                        "var(--foreground)",
+                    fontSize:
+                        "14px",
+                }),
+
+                placeholder: (
+                    base: any
+                ) => ({
+                    ...base,
+                    color:
+                        "var(--muted-foreground)",
+                    fontSize:
+                        "14px",
+                }),
+
+                indicatorsContainer: (
+                    base: any
+                ) => ({
+                    ...base,
+                    height: "30px",
+                }),
+
+                dropdownIndicator: (
+                    base: any
+                ) => ({
+                    ...base,
+                    padding: "4px",
+                    color:
+                        "var(--muted-foreground)",
+
+                    "&:hover": {
+                        color:
+                            "var(--primary)",
+                    },
+                }),
+
+                indicatorSeparator:
+                    () => ({
+                        display:
+                            "none",
+                    }),
+
+                menu: (
+                    base: any
+                ) => ({
+                    ...base,
+                    zIndex:
+                        2147483647,
+                    fontSize:
+                        "14px",
+                    backgroundColor:
+                        "var(--card)",
+                    border:
+                        "1px solid var(--border)",
+                    boxShadow:
+                        "0 12px 28px rgba(0,0,0,0.18)",
+                    overflow:
+                        "hidden",
+                }),
+
+                menuList: (
+                    base: any
+                ) => ({
+                    ...base,
+                    backgroundColor:
+                        "var(--card)",
+                    padding: "4px",
+                    maxHeight:
+                        "280px",
+                    overflowY:
+                        "auto",
+                }),
+
+                menuPortal: (
+                    base: any
+                ) => ({
+                    ...base,
+                    zIndex:
+                        2147483647,
+                }),
+
+                option: (
+                    base: any,
+                    state: any
+                ) => {
+                    const isCreateOption =
+                        Boolean(
+                            state?.data
+                                ?.__isCreateOption
+                        );
+
+                    return {
+                        ...base,
+
+                        minHeight:
+                            "34px",
+
+                        display:
+                            "flex",
+
+                        alignItems:
+                            "center",
+
+                        borderRadius:
+                            "0.25rem",
+
+                        cursor:
+                            "pointer",
+
+                        fontSize:
+                            "14px",
+
+                        fontWeight:
+                            isCreateOption
+                                ? 700
+                                : 400,
+
+                        backgroundColor:
+                            state.isSelected
+                                ? "var(--primary)"
+                                : state.isFocused
+                                    ? "var(--muted)"
+                                    : "var(--card)",
+
+                        color:
+                            state.isSelected
+                                ? "var(--primary-foreground)"
+                                : isCreateOption
+                                    ? "var(--primary)"
+                                    : "var(--card-foreground)",
+
+                        "&:active": {
+                            backgroundColor:
+                                "var(--primary)",
+
+                            color:
+                                "var(--primary-foreground)",
+                        },
+                    };
+                },
+
+                noOptionsMessage: (
+                    base: any
+                ) => ({
+                    ...base,
+                    color:
+                        "var(--muted-foreground)",
+                    fontSize:
+                        "14px",
+                }),
+            }),
+            [disabled]
+        );
+
+    const mergedStyles =
+        useMemo(
+            () => ({
+                ...defaultStyles,
+                ...customStyles,
+            }),
+            [
+                defaultStyles,
+                customStyles,
+            ]
+        );
+
+    const resetSearch = () => {
+        setInputValue("");
+        setVisibleCount(
+            batchSize
+        );
+    };
+
+    return (
+        <div className="flex w-full flex-col gap-1">
+            {!!label?.length && (
+                <label className="text-sm font-medium text-card-foreground">
+                    {label}
+
+                    {mandatory && (
+                        <span className="text-danger">
+                            *
+                        </span>
+                    )}
+                </label>
+            )}
+
+            <Select
+                name={name}
+                value={selectedOption}
+                defaultValue={
+                    defaultValue
+                }
+                options={
+                    selectOptions
+                }
+                placeholder={
+                    placeholder
+                }
+                isDisabled={
+                    disabled
+                }
+                isSearchable
+                isClearable={
+                    false
+                }
+                menuPortalTarget={
+                    useMenuPortal &&
+                        typeof document !==
+                        "undefined"
+                        ? document.body
+                        : undefined
+                }
+                menuPosition={
+                    useMenuPortal
+                        ? "fixed"
+                        : "absolute"
+                }
+                styles={
+                    mergedStyles
+                }
+                inputValue={
+                    inputValue
+                }
+                filterOption={() =>
+                    true
+                }
+                captureMenuScroll={
+                    false
+                }
+                menuShouldScrollIntoView={
+                    false
+                }
+                maxMenuHeight={
+                    280
+                }
+                onMenuOpen={() => {
+                    setVisibleCount(
+                        batchSize
+                    );
+                }}
+                onMenuScrollToBottom={() => {
+                    if (
+                        largeData &&
+                        visibleCount <
+                        matchedOptions.length
+                    ) {
+                        setVisibleCount(
+                            (
+                                previous
+                            ) =>
+                                Math.min(
+                                    previous +
+                                    batchSize,
+
+                                    matchedOptions.length
+                                )
+                        );
+                    }
+                }}
+                onInputChange={(
+                    nextValue,
+                    actionMeta
+                ) => {
+                    if (
+                        actionMeta.action ===
+                        "input-change"
+                    ) {
+                        setInputValue(
+                            nextValue
+                        );
+
+                        setVisibleCount(
+                            batchSize
+                        );
+                    }
+
+                    return nextValue;
+                }}
+                onChange={(
+                    selected: any
+                ) => {
+                    // ⭐ YELLOW STAR: FIXED — REACT-SELECT CREATE OPTION CLICK
+                    if (
+                        selected
+                            ?.__isCreateOption ||
+                        selected?.value ===
+                        CREATE_OPTION_VALUE
+                    ) {
+                        const searchValue =
+                            inputValue.trim();
+
+                        resetSearch();
+
+                        // Allow React Select menu to close first.
+                        window.setTimeout(
+                            () => {
+                                onCreateOption?.(
+                                    searchValue
+                                );
+                            },
+                            0
+                        );
+
+                        return;
+                    }
+
+                    onChange({
+                        target: {
+                            name,
+
+                            value:
+                                selected
+                                    ?.value ??
+                                "",
+                        },
+                    });
+
+                    resetSearch();
+                }}
+                noOptionsMessage={() =>
+                    "No options found"
+                }
+            />
+
+            {!!error?.length && (
+                <p className="text-xs text-danger">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+};

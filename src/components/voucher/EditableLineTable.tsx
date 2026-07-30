@@ -1,7 +1,7 @@
 import { Edit, Plus, Trash2 } from "lucide-react";
-import { SelectInput, TextInput } from "../inputs";
+import { CreatableSelectInput, SelectInput, TextInput } from "../inputs";
+
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
-import { AnimatePresence, motion } from "framer-motion";
 
 type ColumnType = "select" | "text" | "number" | "date";
 
@@ -19,6 +19,16 @@ export type EditableColumn = {
     isReadonly?: boolean;
     isHidden?: boolean | string;
     align?: "left" | "right" | "center";
+    largeData?: boolean;
+    showCreateOnEmpty?: boolean;
+    createOptionLabel?:
+    | string
+    | ((searchValue: string) => string);
+    onCreateOption?: (
+        searchValue: string,
+        rowIndex: number,
+        row: any
+    ) => void | Promise<void>;
 };
 
 type EditableLineTableProps = {
@@ -31,12 +41,17 @@ type EditableLineTableProps = {
     errors?: any;
     onAddRow: () => void;
     onDeleteRow: (index: number) => void;
-    onRefrenceRow: (index: number, row?: any) => void;
-    RefrenceBtnText?: string | ((row: any, index: number) => string);
+    onRefrenceRow?: (index: number, row?: any) => void;
+    RefrenceBtnText?:
+    | string
+    | ((row: any, index: number) => string);
     onChange: (index: number, key: string, value: any) => void;
     emptyText?: string;
     isRefrenceAction: boolean;
-    isColumnVisible?: (column: EditableColumn, rows: any[]) => boolean;
+    isColumnVisible?: (
+        column: EditableColumn,
+        rows: any[]
+    ) => boolean;
     isCellVisible?: (
         column: EditableColumn,
         row: any,
@@ -67,56 +82,72 @@ const EditableLineTable = ({
     onChange,
     isAddButton,
     isRefrenceAction,
-    // RefrenceBtnText,
+    RefrenceBtnText,
     emptyText = "No data found",
     isColumnVisible,
     isCellVisible,
-    isCellDisabled
+    isCellDisabled,
 }: EditableLineTableProps) => {
-    // const getReferenceButtonText = (row: any, rowIndex: number) => {
-    //     if (typeof RefrenceBtnText === "function") {
-    //         return RefrenceBtnText(row, rowIndex);
-    //     }
+    const getReferenceButtonText = (
+        row: any,
+        rowIndex: number
+    ) => {
+        if (typeof RefrenceBtnText === "function") {
+            return RefrenceBtnText(row, rowIndex);
+        }
 
-    //     if (RefrenceBtnText) {
-    //         return RefrenceBtnText;
-    //     }
+        if (RefrenceBtnText) {
+            return RefrenceBtnText;
+        }
 
-    //     return Array.isArray(row?.references) && row.references.length > 0
-    //         ? "Edit Reference"
-    //         : "Add Reference";
-    // };
+        return Array.isArray(row?.references) &&
+            row.references.length > 0
+            ? "Edit Reference"
+            : "Add Reference";
+    };
 
     const getReferenceIcon = (row: any) => {
-        return Array.isArray(row?.references) && row.references.length > 0 ? (
+        return Array.isArray(row?.references) &&
+            row.references.length > 0 ? (
             <Edit size={16} />
         ) : (
             <Plus size={16} />
         );
     };
 
-    const getColumnLabel = (col: EditableColumn) => {
-        return col?.label || col?.title || capitalizeFirstLttr(col?.key);
+    const getColumnLabel = (column: EditableColumn) => {
+        return (
+            column?.label ||
+            column?.title ||
+            capitalizeFirstLttr(column?.key)
+        );
     };
 
-    const getColumnMinWidth = (col: EditableColumn) => {
-        return col?.width || "220px";
+    const getColumnMinWidth = (column: EditableColumn) => {
+        return column?.width || "220px";
     };
 
-    const getTextAlignClass = (align?: "left" | "right" | "center") => {
+    const getTextAlignClass = (
+        align?: "left" | "right" | "center"
+    ) => {
         if (align === "right") return "text-right";
         if (align === "center") return "text-center";
         return "text-left";
     };
 
-    const getHeaderJustifyClass = (align?: "left" | "right" | "center") => {
+    const getHeaderJustifyClass = (
+        align?: "left" | "right" | "center"
+    ) => {
         if (align === "right") return "justify-end";
         if (align === "center") return "justify-center";
         return "justify-start";
     };
 
     const isTrueValue = (value: any) => {
-        return value === true || String(value ?? "").trim().toLowerCase() === "true";
+        return (
+            value === true ||
+            String(value ?? "").trim().toLowerCase() === "true"
+        );
     };
 
     const visibleColumns = columns.filter((column) => {
@@ -138,15 +169,7 @@ const EditableLineTable = ({
                     <button
                         type="button"
                         onClick={onAddRow}
-                        className="
-                            flex items-center gap-2
-                            rounded border border-primary
-                            px-4 py-2
-                            text-sm font-semibold text-primary
-                            transition
-                            hover:bg-primary/10
-                            active:scale-[0.98]
-                        "
+                        className="flex items-center gap-2 rounded border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10 active:scale-[0.98]"
                     >
                         <Plus size={16} />
                         {addButtonText}
@@ -163,14 +186,9 @@ const EditableLineTable = ({
                             : `${LEFT_WIDTH} minmax(0, 1fr) ${ACTION_WIDTH}`,
                     }}
                 >
-                    {/* LEFT FIXED INDEX COLUMN */}
                     <div className="relative z-[30] border-r border-border bg-card">
                         <div
-                            className="
-                                flex items-center justify-center
-                                border-b border-border bg-secondary
-                                px-3 text-center text-xs font-bold uppercase tracking-wide text-secondary-foreground
-                            "
+                            className="flex items-center justify-center border-b border-border bg-secondary px-3 text-center text-xs font-bold uppercase tracking-wide text-secondary-foreground"
                             style={{ height: HEADER_HEIGHT }}
                         >
                             #
@@ -182,35 +200,18 @@ const EditableLineTable = ({
                                 style={{ minHeight: "120px" }}
                             />
                         ) : (
-                            <AnimatePresence initial={false}>
-                                {rows.map((row, rowIndex) => (
-                                    <motion.div
-                                        key={row.id || rowIndex}
-                                        layout
-                                        initial={{ opacity: 0, y: 4 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -4 }}
-                                        transition={{
-                                            duration: 0.16,
-                                            ease: "easeOut",
-                                        }}
-                                        className="
-                                            flex items-center justify-center
-                                            border-b border-border bg-card
-                                            px-3 text-center text-sm font-semibold text-muted-foreground
-                                            transition-colors
-                                            hover:bg-muted
-                                        "
-                                        style={{ minHeight: ROW_HEIGHT }}
-                                    >
-                                        {rowIndex + 1}
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
+                            rows.map((row, rowIndex) => (
+                                <div
+                                    key={row.id || rowIndex}
+                                    className="flex items-center justify-center border-b border-border bg-card px-3 text-center text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
+                                    style={{ minHeight: ROW_HEIGHT }}
+                                >
+                                    {rowIndex + 1}
+                                </div>
+                            ))
                         )}
                     </div>
 
-                    {/* CENTER SCROLLABLE TABLE */}
                     <div className="min-w-0 overflow-x-auto overflow-y-hidden">
                         <table
                             className="w-max min-w-full border-separate border-spacing-0 text-sm"
@@ -218,32 +219,37 @@ const EditableLineTable = ({
                         >
                             <thead>
                                 <tr>
-                                    {visibleColumns.map((col) => (
+                                    {visibleColumns.map((column) => (
                                         <th
-                                            key={col.key}
-                                            className={`
-                                                bg-secondary
-                                                border-b border-r border-border
-                                                px-4 py-3
-                                                text-xs font-bold uppercase tracking-wide text-secondary-foreground
-                                                ${getTextAlignClass(col.align)}
-                                            `}
+                                            key={column.key}
+                                            className={`border-b border-r border-border bg-secondary px-4 py-3 text-xs font-bold uppercase tracking-wide text-secondary-foreground ${getTextAlignClass(
+                                                column.align
+                                            )}`}
                                             style={{
-                                                minWidth: getColumnMinWidth(col),
+                                                minWidth:
+                                                    getColumnMinWidth(
+                                                        column
+                                                    ),
                                                 height: HEADER_HEIGHT,
                                             }}
                                         >
                                             <div
-                                                className={`
-                                                    flex items-center gap-1
-                                                    ${getHeaderJustifyClass(col.align)}
-                                                `}
+                                                className={`flex items-center gap-1 ${getHeaderJustifyClass(
+                                                    column.align
+                                                )}`}
                                             >
-                                                <span>{getColumnLabel(col)}</span>
+                                                <span>
+                                                    {getColumnLabel(
+                                                        column
+                                                    )}
+                                                </span>
 
-                                                {(col.isRequired || col.required) && (
-                                                    <span className="text-danger">*</span>
-                                                )}
+                                                {(column.isRequired ||
+                                                    column.required) && (
+                                                        <span className="text-danger">
+                                                            *
+                                                        </span>
+                                                    )}
                                             </div>
                                         </th>
                                     ))}
@@ -254,7 +260,10 @@ const EditableLineTable = ({
                                 {!rows.length ? (
                                     <tr>
                                         <td
-                                            colSpan={Math.max(visibleColumns.length, 1)}
+                                            colSpan={Math.max(
+                                                visibleColumns.length,
+                                                1
+                                            )}
                                             className="bg-card px-6 py-12 text-center"
                                         >
                                             <div className="flex flex-col items-center justify-center gap-2">
@@ -273,375 +282,297 @@ const EditableLineTable = ({
                                         </td>
                                     </tr>
                                 ) : (
-                                    <AnimatePresence initial={false}>
-                                        {rows.map((row, rowIndex) => (
-                                            <motion.tr
-                                                key={row.id || rowIndex}
-                                                layout
-                                                initial={{ opacity: 0, y: 4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -4 }}
-                                                transition={{
-                                                    duration: 0.16,
-                                                    ease: "easeOut",
-                                                }}
-                                                className="group transition-colors hover:bg-muted"
-                                            >
-                                                {visibleColumns.map((col) => {
-                                                    const disabledByModule = isCellDisabled ? isCellDisabled(col, row, rowIndex) : Boolean(col.disabled);
-                                                    const showCell = isCellVisible
-                                                        ? isCellVisible(
-                                                            col,
+                                    rows.map((row, rowIndex) => (
+                                        <tr
+                                            key={row.id || rowIndex}
+                                            className="group transition-colors hover:bg-muted"
+                                        >
+                                            {visibleColumns.map((column) => {
+                                                const showCell = isCellVisible
+                                                    ? isCellVisible(
+                                                        column,
+                                                        row,
+                                                        rowIndex
+                                                    )
+                                                    : true;
+
+                                                const calculatedField =
+                                                    column.key ===
+                                                    "taxGross" ||
+                                                    column.key ===
+                                                    "nonTaxGross";
+
+                                                const disabledCell =
+                                                    isView ||
+                                                    Boolean(
+                                                        isCellDisabled?.(
+                                                            column,
                                                             row,
                                                             rowIndex
                                                         )
-                                                        : true;
+                                                    ) ||
+                                                    Boolean(
+                                                        column.disabled ||
+                                                        column.isReadonly
+                                                    ) ||
+                                                    calculatedField;
 
-                                                    // const isCalculatedGross =
-                                                    //     col.key === "taxGross" ||
-                                                    //     col.key === "nonTaxGross";
-
-                                                    return (
-                                                        <motion.td
-                                                            layout
-                                                            key={col.key}
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                            transition={{
-                                                                duration: 0.14,
-                                                                ease: "easeOut",
-                                                            }}
-                                                            className="
-                                                                bg-card
-                                                                border-b border-r border-border
-                                                                px-3 py-3
-                                                                transition-colors
-                                                                group-hover:bg-muted
-                                                            "
-                                                            style={{
-                                                                minWidth:
-                                                                    getColumnMinWidth(
-                                                                        col
-                                                                    ),
-                                                                height: ROW_HEIGHT,
-                                                            }}
-                                                        >
-                                                            {!showCell ? (
-                                                                <div className="flex min-h-[42px] items-center justify-center text-muted-foreground">
-                                                                    —
-                                                                </div>
-                                                            ) : (
-                                                                    <div className="min-w-0">
-                                                                        {col.type ===
-                                                                            "select" ? (
-                                                                            <SelectInput
-                                                                                label=""
-                                                                                    mandatory={
-                                                                                        false
-                                                                                    }
-                                                                                    value={
-                                                                                        row?.[
-                                                                                        col
-                                                                                            .key
-                                                                                        ] ??
-                                                                                        ""
-                                                                                    }
-                                                                                    placeholder={
-                                                                                        col.placeholder ||
+                                                return (
+                                                    <td
+                                                        key={column.key}
+                                                        className="border-b border-r border-border bg-card px-3 py-3 transition-colors group-hover:bg-muted"
+                                                        style={{
+                                                            minWidth:
+                                                                getColumnMinWidth(
+                                                                    column
+                                                                ),
+                                                            height: ROW_HEIGHT,
+                                                        }}
+                                                    >
+                                                        {!showCell ? (
+                                                            <div className="flex min-h-[42px] items-center justify-center text-muted-foreground">
+                                                                —
+                                                            </div>
+                                                        ) : (
+                                                            <div className="min-w-0">
+                                                                {column.type ===
+                                                                    "select" ? (
+                                                                    typeof column.onCreateOption ===
+                                                                        "function" ? (
+                                                                        <CreatableSelectInput
+                                                                            label=""
+                                                                            value={
+                                                                                row?.[
+                                                                                column
+                                                                                    .key
+                                                                                ] ??
+                                                                                ""
+                                                                            }
+                                                                            placeholder={
+                                                                                column.placeholder ||
+                                                                                `Select ${getColumnLabel(
+                                                                                    column
+                                                                                )}`
+                                                                            }
+                                                                            error={
+                                                                                errors?.[
+                                                                                `row_${rowIndex}_${column.key}`
+                                                                                ]
+                                                                            }
+                                                                            disabled={
+                                                                                disabledCell
+                                                                            }
+                                                                            largeData={
+                                                                                column.largeData ??
+                                                                                true
+                                                                            }
+                                                                            showCreateOnEmpty={
+                                                                                column.showCreateOnEmpty ??
+                                                                                true
+                                                                            }
+                                                                            createOptionLabel={
+                                                                                column.createOptionLabel
+                                                                            }
+                                                                            onCreateOption={(
+                                                                                searchValue
+                                                                            ) =>
+                                                                                column.onCreateOption?.(
+                                                                                    searchValue,
+                                                                                    rowIndex,
+                                                                                    row
+                                                                                )
+                                                                            }
+                                                                            onChange={(
+                                                                                event: any
+                                                                            ) =>
+                                                                                onChange(
+                                                                                    rowIndex,
+                                                                                    column.key,
+                                                                                    event
+                                                                                        ?.target
+                                                                                        ?.value
+                                                                                )
+                                                                            }
+                                                                            options={
+                                                                                column.options ||
+                                                                                []
+                                                                            }
+                                                                        />
+                                                                    ) : (
+                                                                        <SelectInput
+                                                                            label=""
+                                                                            mandatory={
+                                                                                false
+                                                                            }
+                                                                            value={
+                                                                                row?.[
+                                                                                column
+                                                                                    .key
+                                                                                ] ??
+                                                                                ""
+                                                                            }
+                                                                            placeholder={
+                                                                                column.placeholder ||
+                                                                                `Select ${getColumnLabel(
+                                                                                    column
+                                                                                )}`
+                                                                            }
+                                                                            error={
+                                                                                errors?.[
+                                                                                `row_${rowIndex}_${column.key}`
+                                                                                ]
+                                                                            }
+                                                                            disabled={
+                                                                                disabledCell
+                                                                            }
+                                                                            onChange={(
+                                                                                event: any
+                                                                            ) =>
+                                                                                onChange(
+                                                                                    rowIndex,
+                                                                                    column.key,
+                                                                                    event
+                                                                                        ?.target
+                                                                                        ?.value
+                                                                                )
+                                                                            }
+                                                                            options={[
+                                                                                {
+                                                                                    label:
+                                                                                        column.placeholder ||
                                                                                         `Select ${getColumnLabel(
-                                                                                            col
-                                                                                        )}`
-                                                                                    }
-                                                                                    error={
-                                                                                        errors?.[
-                                                                                        `row_${rowIndex}_${col.key}`
-                                                                                        ]
-                                                                                    }
-                                                                                    disabled={
-                                                                                        isView ||
-                                                                                        col.disabled ||
-                                                                                        col.isReadonly
-                                                                                    }
-                                                                                    onChange={(
-                                                                                        event: any
-                                                                                    ) =>
-                                                                                        onChange(
-                                                                                            rowIndex,
-                                                                                            col.key,
-                                                                                            event
-                                                                                                ?.target
-                                                                                                ?.value
-                                                                                        )
-                                                                                    }
-                                                                                    options={[
-                                                                                        {
-                                                                                            label:
-                                                                                                col.placeholder ||
-                                                                                                `Select ${getColumnLabel(
-                                                                                                    col
-                                                                                                )}`,
-                                                                                            value: "",
-                                                                                        },
-                                                                                    ...(col.options ||
-                                                                                        []),
-                                                                                ]}
-                                                                            />
-                                                                        ) : (
-                                                                            <TextInput
-                                                                                label=""
-                                                                                mandatory={false}
-                                                                                    type={col.type === "number" ? "number" : "text"}
-                                                                                    value={row?.[col.key] ?? ""}
-                                                                                    placeholder={
-                                                                                        col.placeholder || getColumnLabel(col)
-                                                                                    }
-                                                                                    error={
-                                                                                        errors?.[`row_${rowIndex}_${col.key}`]
-                                                                                    }
-                                                                                    disabled={
-                                                                                        isView ||
-                                                                                        isTrueValue(col.disabled) ||
-                                                                                        isTrueValue(col.isReadonly) ||
-                                                                                        disabledByModule
-                                                                                    }
-                                                                                    onChange={(event: any) =>
-                                                                                        onChange(
-                                                                                            rowIndex,
-                                                                                            col.key,
-                                                                                            event.target.value
-                                                                                        )
-                                                                                }
-                                                                            />
-                                                                        )}
-                                                                    </div>
-                                                            )}
-                                                        </motion.td>
-                                                    );
-                                                })}
-                                            </motion.tr>
-                                        ))}
-                                    </AnimatePresence>
+                                                                                            column
+                                                                                        )}`,
+                                                                                    value: "",
+                                                                                },
+                                                                                ...(column.options ||
+                                                                                    []),
+                                                                            ]}
+                                                                        />
+                                                                    )
+                                                                ) : (
+                                                                    <TextInput
+                                                                        label=""
+                                                                        mandatory={
+                                                                            false
+                                                                        }
+                                                                        type={
+                                                                            column.type ===
+                                                                                "number" ||
+                                                                                column.key ===
+                                                                                "nonTaxRate" ||
+                                                                                calculatedField
+                                                                                ? "number"
+                                                                                : column.type ===
+                                                                                    "date"
+                                                                                    ? "date"
+                                                                                    : "text"
+                                                                        }
+                                                                        value={
+                                                                            row?.[
+                                                                            column
+                                                                                .key
+                                                                            ] ??
+                                                                            ""
+                                                                        }
+                                                                        placeholder={
+                                                                            column.placeholder ||
+                                                                            getColumnLabel(
+                                                                                column
+                                                                            )
+                                                                        }
+                                                                        error={
+                                                                            errors?.[
+                                                                            `row_${rowIndex}_${column.key}`
+                                                                            ]
+                                                                        }
+                                                                        disabled={
+                                                                            disabledCell
+                                                                        }
+                                                                        onChange={(
+                                                                            event: any
+                                                                        ) =>
+                                                                            onChange(
+                                                                                rowIndex,
+                                                                                column.key,
+                                                                                event
+                                                                                    .target
+                                                                                    .value
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>
                     </div>
 
-                    {/* RIGHT FIXED ACTION COLUMN */}
                     {!isView && (
-                        // <div className="relative z-[30] border-l border-border bg-card">
-                        //     <div
-                        //         className="
-                        //             flex items-center justify-center
-                        //             border-b border-border bg-secondary
-                        //             px-3 text-center text-xs font-bold uppercase tracking-wide text-secondary-foreground
-                        //         "
-                        //         style={{ height: HEADER_HEIGHT }}
-                        //     >
-                        //         Action
-                        //     </div>
-
-                        //     {!rows.length ? (
-                        //         <div
-                        //             className="border-b border-border bg-card"
-                        //             style={{ minHeight: "120px" }}
-                        //         />
-                        //     ) : (
-                        //         <AnimatePresence initial={false}>
-                        //             {rows.map((row, rowIndex) => (
-                        //                 <motion.div
-                        //                     key={row.id || rowIndex}
-                        //                     layout
-                        //                     initial={{ opacity: 0, y: 4 }}
-                        //                     animate={{ opacity: 1, y: 0 }}
-                        //                     exit={{ opacity: 0, y: -4 }}
-                        //                     transition={{
-                        //                         duration: 0.16,
-                        //                         ease: "easeOut",
-                        //                     }}
-                        //                     className="
-                        //                         flex items-center justify-center
-                        //                         border-b border-border bg-card
-                        //                         px-3 py-3
-                        //                         transition-colors
-                        //                         hover:bg-muted
-                        //                     "
-                        //                     style={{ minHeight: ROW_HEIGHT }}
-                        //                 >
-                        //                     <div className="flex w-full items-center justify-center gap-2">
-                        //                         {isRefrenceAction && (
-                        //                             <button
-                        //                                 type="button"
-                        //                                 onClick={() =>
-                        //                                     onRefrenceRow(rowIndex, row)
-                        //                                 }
-                        //                                 className="
-                        //                                     inline-flex items-center justify-center gap-1.5
-                        //                                     rounded-lg
-                        //                                     border border-primary/20
-                        //                                     bg-primary/10
-                        //                                     px-3 py-1.5
-                        //                                     text-xs font-semibold text-primary
-                        //                                     transition
-                        //                                     hover:border-primary/30 hover:bg-primary/20 hover:text-primary
-                        //                                     active:scale-[0.98]
-                        //                                 "
-                        //                             >
-                        //                                 <Plus size={14} />
-
-                        //                                 <span className="whitespace-nowrap">
-                        //                                     {getReferenceButtonText(
-                        //                                         row,
-                        //                                         rowIndex
-                        //                                     )}
-                        //                                 </span>
-                        //                             </button>
-                        //                         )}
-
-                        //                         <button
-                        //                             type="button"
-                        //                             onClick={() => onDeleteRow(rowIndex)}
-                        //                             className="
-                        //                                 inline-flex h-8 w-8 items-center justify-center
-                        //                                 rounded-lg
-                        //                                 border border-danger/20
-                        //                                 bg-danger/10
-                        //                                 text-danger
-                        //                                 transition
-                        //                                 hover:border-danger/30 hover:bg-danger/20 hover:text-danger
-                        //                                 active:scale-[0.96]
-                        //                             "
-                        //                             title="Delete"
-                        //                         >
-                        //                             <Trash2 size={16} />
-                        //                         </button>
-                        //                     </div>
-                        //                 </motion.div>
-                        //             ))}
-                        //         </AnimatePresence>
-                        //     )}
-                        // </div>
-
-                        <div
-                            className="
-                                relative z-[30]
-                                min-w-fit
-                                border-l border-border
-                                bg-card
-                            "
-                        >
-                            {/* Header */}
+                        <div className="relative z-[30] border-l border-border bg-card">
                             <div
-                                className="
-                                    flex items-center justify-center
-                                    border-b border-border
-                                    bg-secondary
-                                    px-2 sm:px-3
-                                    text-center
-                                    text-[10px] sm:text-xs
-                                    font-bold uppercase tracking-wide
-                                    text-secondary-foreground
-                                    whitespace-nowrap
-                                "
+                                className="flex items-center justify-center border-b border-border bg-secondary px-3 text-center text-xs font-bold uppercase tracking-wide text-secondary-foreground"
                                 style={{ height: HEADER_HEIGHT }}
                             >
                                 Action
                             </div>
 
-                            {/* Empty state */}
                             {!rows.length ? (
                                 <div
                                     className="border-b border-border bg-card"
                                     style={{ minHeight: "120px" }}
                                 />
                             ) : (
-                                <AnimatePresence initial={false}>
-                                    {rows.map((row, rowIndex) => (
-                                        <motion.div
-                                            key={row.id || rowIndex}
-                                            layout
-                                            initial={{ opacity: 0, y: 4 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -4 }}
-                                            transition={{
-                                                duration: 0.16,
-                                                ease: "easeOut",
-                                            }}
-                                            className="
-                                                flex items-center justify-center
-                                                border-b border-border
-                                                bg-card
-                                                px-1.5 py-2
-                                                sm:px-2 sm:py-3
-                                                transition-colors
-                                                hover:bg-muted
-                                            "
-                                            style={{ minHeight: ROW_HEIGHT }}
-                                        >
-                                            <div
-                                                className="
-                                                    flex w-full
-                                                    flex-wrap
-                                                    items-center justify-center
-                                                    gap-1.5 sm:gap-2
-                                                "
-                                            >
-                                                {isRefrenceAction && (
+                                rows.map((row, rowIndex) => (
+                                    <div
+                                        key={row.id || rowIndex}
+                                        className="flex items-center justify-center border-b border-border bg-card px-3 py-3 transition-colors hover:bg-muted"
+                                        style={{ minHeight: ROW_HEIGHT }}
+                                    >
+                                        <div className="flex w-full items-center justify-center gap-2">
+                                            {isRefrenceAction &&
+                                                onRefrenceRow && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => onRefrenceRow(rowIndex, row)}
-                                                        className="
-                                                            inline-flex
-                                                            h-8 w-8
-                                                            items-center
-                                                            justify-center
-                                                            rounded-lg
-                                                            border border-primary/20
-                                                            bg-primary/10
-                                                            text-primary
-                                                            transition
-                                                            hover:border-primary/30
-                                                            hover:bg-primary/20
-                                                            active:scale-[0.98]
-                                                        "
-                                                        title={
-                                                            Array.isArray(row?.references) && row.references.length > 0
-                                                                ? "Edit Reference"
-                                                                : "Add Reference"
+                                                        onClick={() =>
+                                                            onRefrenceRow(
+                                                                rowIndex,
+                                                                row
+                                                            )
                                                         }
+                                                        className="flex h-8 items-center justify-center gap-1 rounded-lg border border-primary/20 bg-primary/10 px-2 text-xs font-semibold text-primary transition hover:bg-primary/20"
+                                                        title={getReferenceButtonText(
+                                                            row,
+                                                            rowIndex
+                                                        )}
                                                     >
-                                                        {getReferenceIcon(row)}
+                                                        {getReferenceIcon(
+                                                            row
+                                                        )}
                                                     </button>
                                                 )}
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        onDeleteRow(rowIndex)
-                                                    }
-                                                    className="
-                                                            inline-flex
-                                                            h-7 w-7
-                                                            shrink-0
-                                                            items-center justify-center
-                                                            rounded-lg
-                                                            border border-danger/20
-                                                            bg-danger/10
-                                                            text-danger
-                                                            transition
-                                                            sm:h-8 sm:w-8
-                                                            hover:border-danger/30
-                                                            hover:bg-danger/20
-                                                            active:scale-[0.96]
-                                                        "
-                                                    title="Delete"
-                                                    aria-label={`Delete row ${rowIndex + 1}`}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    onDeleteRow(rowIndex)
+                                                }
+                                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-danger/20 bg-danger/10 text-danger transition hover:border-danger/30 hover:bg-danger/20 active:scale-[0.96]"
+                                                title="Delete"
+                                                aria-label={`Delete row ${rowIndex + 1
+                                                    }`}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
                             )}
                         </div>
                     )}

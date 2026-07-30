@@ -20,6 +20,20 @@ import { getAllReportMapping } from "../../../../../redux/slices/professionalSli
 import Permission from "../../../../../components/PermissionGuard";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
+import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
+
+const CUSTOMER_FIELD_KEYS = new Set([
+    "sInvReturnCustomerCode",
+    "sInvCustomerCode",
+    "sInvReturnCustomerName",
+]);
+
+const PRODUCT_FIELD_KEYS = new Set([
+    "productCode",
+    "productName",
+    "productId",
+    "product",
+]);
 
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0 };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
@@ -38,6 +52,17 @@ const SalesReturn = () => {
 
     // ★ ADDED: Account Master modal state
     const [checkAccount, setCheckAccount] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — PRODUCT MASTER MODAL STATE
+    const [checkProduct, setCheckProduct] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — PRODUCT ROW THAT OPENED MODAL
+    const [productTargetRowIndex, setProductTargetRowIndex] =
+        useState<number | null>(null);
+
+    // ⭐ YELLOW STAR: ADDED — PRODUCT SEARCH VALUE
+    const [productSearchValue, setProductSearchValue] =
+        useState("");
 
     // ★ ADDED: Wait until Account Master list finishes loading
     const [accountListLoaded, setAccountListLoaded] = useState(false);
@@ -68,6 +93,74 @@ const SalesReturn = () => {
                 "customer"
         );
     }, [accounts]);
+
+    // ⭐ YELLOW STAR: ADDED — ACCOUNT AND PRODUCT CREATE ACTIONS
+    const templateFieldsWithCreateActions = useMemo(() => {
+        return {
+            ...templateFields,
+
+            header: (templateFields?.header || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!CUSTOMER_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            _searchValue: string
+                        ) => {
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Customer`
+                                : "+ Add New Customer",
+                    };
+                }
+            ),
+
+            body: (templateFields?.body || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!PRODUCT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            searchValue: string,
+                            rowIndex: number
+                        ) => {
+                            setProductTargetRowIndex(rowIndex);
+                            setProductSearchValue(searchValue);
+                            setCheckProduct(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Product`
+                                : "+ Add New Product",
+                    };
+                }
+            ),
+        };
+    }, [templateFields]);
 
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
@@ -223,6 +316,9 @@ const SalesReturn = () => {
         setErrors({});
         setForm(getDefaultForm());
         setCheckAccount(false);
+        setCheckProduct(false);
+        setProductTargetRowIndex(null);
+        setProductSearchValue("");
     };
 
     const openAddModal = () => {
@@ -380,6 +476,258 @@ const SalesReturn = () => {
             );
         } finally {
             setCheckAccount(false);
+        }
+    };
+
+    // ⭐ YELLOW STAR: ADDED — REFRESH PRODUCT OPTIONS AND SELECT NEW PRODUCT
+    const handleProductSaved = async (
+        savedResponse: any
+    ) => {
+        try {
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "salesInvoiceReturn",
+                }) as any
+            ).unwrap();
+
+            let updatedData = templateFields;
+
+            if (transactionsSchema) {
+                updatedData =
+                    await loadAllTemplateOptions(
+                        transactionsSchema
+                    );
+
+                setTemplateFields(
+                    updatedData
+                );
+            }
+
+            const savedProduct =
+                savedResponse?.data?.product ||
+                savedResponse?.data?.data?.product ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.product ||
+                savedResponse;
+
+            const savedCode =
+                savedProduct?.productCode || "";
+
+            const savedName =
+                savedProduct?.productName || "";
+
+            const productFields = (
+                updatedData?.body || []
+            ).filter((field: any) =>
+                PRODUCT_FIELD_KEYS.has(
+                    String(field?.key || "")
+                )
+            );
+
+            let selectedField: any = null;
+            let selectedOption: any = null;
+
+            for (const field of productFields) {
+                const option = (
+                    field?.options || []
+                ).find((item: any) => {
+                    const raw = item?.raw || {};
+
+                    return (
+                        (
+                            savedCode &&
+                            String(
+                                raw?.productCode ||
+                                item?.value ||
+                                ""
+                            ) === String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(
+                                raw?.productName ||
+                                item?.label ||
+                                ""
+                            ) === String(savedName)
+                        )
+                    );
+                });
+
+                if (option) {
+                    selectedField = field;
+                    selectedOption = option;
+                    break;
+                }
+            }
+
+            const createdProduct =
+                selectedOption?.raw ||
+                savedProduct ||
+                {};
+
+            setForm((prev: any) => {
+                const updatedProducts = [
+                    ...(prev.products || []),
+                ];
+
+                let rowIndex =
+                    productTargetRowIndex !== null &&
+                        productTargetRowIndex >= 0 &&
+                        productTargetRowIndex <
+                        updatedProducts.length
+                        ? productTargetRowIndex
+                        : updatedProducts.findIndex(
+                            (row: any) =>
+                                !row?.productCode &&
+                                !row?.productName &&
+                                !row?.productId
+                        );
+
+                if (rowIndex < 0) {
+                    rowIndex = updatedProducts.length;
+
+                    updatedProducts.push({
+                        ...emptyProductRow,
+                        id: Date.now(),
+                    });
+                }
+
+                let updatedRow = {
+                    ...(
+                        updatedProducts[rowIndex] ||
+                        emptyProductRow
+                    ),
+                };
+
+                if (
+                    selectedField &&
+                    selectedOption
+                ) {
+                    updatedRow =
+                        applyMappedFields(
+                            selectedField,
+                            selectedOption.value,
+                            updatedRow
+                        );
+                }
+
+                updatedRow = {
+                    ...updatedRow,
+
+                    productCode:
+                        createdProduct?.productCode ||
+                        savedCode ||
+                        updatedRow?.productCode ||
+                        "",
+
+                    productName:
+                        createdProduct?.productName ||
+                        savedName ||
+                        updatedRow?.productName ||
+                        "",
+
+                    productId:
+                        createdProduct?._id ||
+                        createdProduct?.productId ||
+                        updatedRow?.productId ||
+                        "",
+
+                    productDescription:
+                        createdProduct?.productDescription ||
+                        updatedRow?.productDescription ||
+                        "",
+
+                    description:
+                        createdProduct?.productDescription ||
+                        createdProduct?.description ||
+                        updatedRow?.description ||
+                        "",
+
+                    productHSNCode:
+                        createdProduct?.productHSNCode ||
+                        updatedRow?.productHSNCode ||
+                        "",
+
+                    unit:
+                        createdProduct?.unit ||
+                        updatedRow?.unit ||
+                        "",
+
+                    uom:
+                        createdProduct?.unit ||
+                        createdProduct?.uom ||
+                        updatedRow?.uom ||
+                        "",
+
+                    rate:
+                        createdProduct?.sellingPrice ??
+                        createdProduct?.rate ??
+                        updatedRow?.rate ??
+                        "",
+
+                    cgst:
+                        createdProduct?.csgst ??
+                        createdProduct?.cgst ??
+                        updatedRow?.cgst ??
+                        "",
+
+                    sgst:
+                        createdProduct?.csgst ??
+                        createdProduct?.sgst ??
+                        updatedRow?.sgst ??
+                        "",
+
+                    igst:
+                        createdProduct?.igst ??
+                        updatedRow?.igst ??
+                        "",
+                };
+
+                if (num(updatedRow.igst) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                } else if (
+                    num(updatedRow.cgst) > 0 ||
+                    num(updatedRow.sgst) > 0
+                ) {
+                    updatedRow.igst = "";
+                }
+
+                updatedRow =
+                    calculateRow(
+                        normalizeRowKeys(
+                            updatedRow
+                        )
+                    );
+
+                updatedProducts[rowIndex] =
+                    updatedRow;
+
+                return {
+                    ...prev,
+                    products: updatedProducts,
+                };
+            });
+
+            setErrors((prev: any) => ({
+                ...prev,
+                products: "",
+            }));
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Sales Return product options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Product created, but Sales Return product dropdown refresh failed"
+            );
+        } finally {
+            setCheckProduct(false);
+            setProductTargetRowIndex(null);
+            setProductSearchValue("");
         }
     };
 
@@ -787,6 +1135,8 @@ const SalesReturn = () => {
                         onClose: () => {
                             setShowModal(false);
                             setCheckAccount(false);
+                            setCheckProduct(false);
+                            setProductSearchValue("");
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -796,7 +1146,10 @@ const SalesReturn = () => {
                         handleDeleteRow,
                         handleRowChange,
                         footerTotals,
-                        inputData: { ...templateFields, footer: dynamicFooterArray },
+                        inputData: {
+                            ...templateFieldsWithCreateActions,
+                            footer: dynamicFooterArray,
+                        },
                         bodyKey: "products",
                         handleChange: handleMainChange,
 
@@ -881,6 +1234,21 @@ const SalesReturn = () => {
                     </div>
                 }
             />
+            <ProductMasterModal
+                show={checkProduct}
+                setShow={(value: boolean) => {
+                    setCheckProduct(value);
+
+                    if (!value) {
+                        setProductTargetRowIndex(null);
+                        setProductSearchValue("");
+                    }
+                }}
+                onSaved={handleProductSaved}
+                title="Add New Product"
+                initialProductName={productSearchValue}
+            />
+
             {/* @ts-ignore  */}
             <ListingModel {...{ show: downlaodPDF?.show, downlaodPDF, entryType: "sales-return", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Return PDF" }} />
         </div>

@@ -20,6 +20,19 @@ import Permission from "../../../../../components/PermissionGuard";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
+import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
+
+const CUSTOMER_FIELD_KEYS = new Set([
+    "sQuoteCustomerCode",
+    "sQuoteCustomerName",
+]);
+
+const PRODUCT_FIELD_KEYS = new Set([
+    "productCode",
+    "productName",
+    "productId",
+    "product",
+]);
 
 const defaultPagination = {
     offset: 0,
@@ -148,6 +161,24 @@ const SalesQuotations = () => {
         setCheckAccount,
     ] = useState(false);
 
+    // ⭐ ADDED: Product Master modal state
+    const [
+        checkProduct,
+        setCheckProduct,
+    ] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — REMEMBER PRODUCT ROW THAT OPENED MODAL
+    const [
+        productTargetRowIndex,
+        setProductTargetRowIndex,
+    ] = useState<number | null>(null);
+
+    // ⭐ YELLOW STAR: ADDED — SEARCH TEXT FOR PRODUCT MODAL
+    const [
+        productSearchValue,
+        setProductSearchValue,
+    ] = useState("");
+
     const [
         accountListLoaded,
         setAccountListLoaded,
@@ -222,6 +253,7 @@ const SalesQuotations = () => {
     const preparedSchemaRef =
         useRef<any>(null);
 
+
     const { report } = useSelector(
         (state: any) =>
             state.reportMapping
@@ -258,6 +290,75 @@ const SalesQuotations = () => {
                     "customer"
             );
         }, [accounts]);
+
+
+    // ⭐ YELLOW STAR: ADDED — ACCOUNT AND PRODUCT CREATE ACTIONS
+    const templateFieldsWithCreateActions = useMemo(() => {
+        return {
+            ...templateFields,
+
+            header: (templateFields?.header || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!CUSTOMER_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            _searchValue: string
+                        ) => {
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Customer`
+                                : "+ Add New Customer",
+                    };
+                }
+            ),
+
+            body: (templateFields?.body || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!PRODUCT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            searchValue: string,
+                            rowIndex: number
+                        ) => {
+                            setProductTargetRowIndex(rowIndex);
+                            setProductSearchValue(searchValue);
+                            setCheckProduct(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Product`
+                                : "+ Add New Product",
+                    };
+                }
+            ),
+        };
+    }, [templateFields]);
 
     const getHeaderFieldByKey = (
         key: string
@@ -837,6 +938,8 @@ const SalesQuotations = () => {
             getDefaultForm()
         );
         setCheckAccount(false);
+        setCheckProduct(false);
+        setProductTargetRowIndex(null);
     };
 
     const openAddModal = () => {
@@ -1345,6 +1448,339 @@ const SalesQuotations = () => {
             }
         };
 
+    // ⭐ ADDED: Refresh Product Master and auto-select newly created product
+    const handleProductSaved =
+        async (
+            savedResponse: any
+        ) => {
+            try {
+                await dispatch(
+                    getAllReportMapping({
+                        moduleType:
+                            "salesQuotation",
+                    }) as any
+                ).unwrap();
+
+                let updatedData =
+                    templateFields;
+
+                if (transactionsSchema) {
+                    updatedData =
+                        await loadAllTemplateOptions(
+                            transactionsSchema
+                        );
+
+                    setTemplateFields(
+                        updatedData
+                    );
+                }
+
+                const savedProduct =
+                    savedResponse
+                        ?.data
+                        ?.product ||
+                    savedResponse
+                        ?.data
+                        ?.data
+                        ?.product ||
+                    savedResponse
+                        ?.data
+                        ?.data ||
+                    savedResponse
+                        ?.data ||
+                    savedResponse
+                        ?.product ||
+                    savedResponse;
+
+                const savedCode =
+                    savedProduct
+                        ?.productCode ||
+                    "";
+
+                const savedName =
+                    savedProduct
+                        ?.productName ||
+                    "";
+
+                const productFields = (
+                    updatedData?.body || []
+                ).filter((field: any) =>
+                    [
+                        "productCode",
+                        "productName",
+                        "productId",
+                        "product",
+                    ].includes(
+                        String(
+                            field?.key ||
+                            ""
+                        )
+                    )
+                );
+
+                let selectedField: any =
+                    null;
+
+                let selectedOption: any =
+                    null;
+
+                for (
+                    const field of productFields
+                ) {
+                    const option = (
+                        field?.options || []
+                    ).find((item: any) => {
+                        const raw =
+                            item?.raw || {};
+
+                        return (
+                            (
+                                savedCode &&
+                                String(
+                                    raw?.productCode ||
+                                    item?.value ||
+                                    ""
+                                ) ===
+                                String(savedCode)
+                            ) ||
+                            (
+                                savedName &&
+                                String(
+                                    raw?.productName ||
+                                    item?.label ||
+                                    ""
+                                ) ===
+                                String(savedName)
+                            )
+                        );
+                    });
+
+                    if (option) {
+                        selectedField = field;
+                        selectedOption = option;
+                        break;
+                    }
+                }
+
+                const createdProduct =
+                    selectedOption?.raw ||
+                    savedProduct ||
+                    {};
+
+                setForm(
+                    (prev: any) => {
+                        const updatedProducts = [
+                            ...(
+                                prev.products ||
+                                []
+                            ),
+                        ];
+
+                        let rowIndex =
+                            productTargetRowIndex !== null &&
+                                productTargetRowIndex >= 0 &&
+                                productTargetRowIndex <
+                                updatedProducts.length
+                                ? productTargetRowIndex
+                                : updatedProducts.findIndex(
+                                    (row: any) =>
+                                        !row?.productCode &&
+                                        !row?.productName &&
+                                        !row?.productId
+                                );
+
+                        if (rowIndex < 0) {
+                            rowIndex =
+                                updatedProducts.length;
+
+                            updatedProducts.push({
+                                ...emptyProductRow,
+                                id: Date.now(),
+                            });
+                        }
+
+                        let updatedRow = {
+                            ...(
+                                updatedProducts[
+                                rowIndex
+                                ] ||
+                                emptyProductRow
+                            ),
+                        };
+
+                        if (
+                            selectedField &&
+                            selectedOption
+                        ) {
+                            updatedRow =
+                                applyMappedFields(
+                                    selectedField,
+                                    selectedOption.value,
+                                    updatedRow
+                                );
+                        }
+
+                        updatedRow = {
+                            ...updatedRow,
+
+                            productCode:
+                                createdProduct
+                                    ?.productCode ||
+                                savedCode ||
+                                updatedRow
+                                    ?.productCode ||
+                                "",
+
+                            productName:
+                                createdProduct
+                                    ?.productName ||
+                                savedName ||
+                                updatedRow
+                                    ?.productName ||
+                                "",
+
+                            productId:
+                                createdProduct
+                                    ?._id ||
+                                createdProduct
+                                    ?.productId ||
+                                updatedRow
+                                    ?.productId ||
+                                "",
+
+                            productDescription:
+                                createdProduct
+                                    ?.productDescription ||
+                                updatedRow
+                                    ?.productDescription ||
+                                "",
+
+                            description:
+                                createdProduct
+                                    ?.productDescription ||
+                                createdProduct
+                                    ?.description ||
+                                updatedRow
+                                    ?.description ||
+                                "",
+
+                            productHSNCode:
+                                createdProduct
+                                    ?.productHSNCode ||
+                                updatedRow
+                                    ?.productHSNCode ||
+                                "",
+
+                            unit:
+                                createdProduct
+                                    ?.unit ||
+                                updatedRow
+                                    ?.unit ||
+                                "",
+
+                            uom:
+                                createdProduct
+                                    ?.unit ||
+                                createdProduct
+                                    ?.uom ||
+                                updatedRow
+                                    ?.uom ||
+                                "",
+
+                            rate:
+                                createdProduct
+                                    ?.sellingPrice ??
+                                createdProduct
+                                    ?.rate ??
+                                updatedRow
+                                    ?.rate ??
+                                "",
+                        };
+
+                        const selectedCustomer =
+                            filterAccount?.find(
+                                (account: any) =>
+                                    account
+                                        ?.accountName ==
+                                    prev
+                                        ?.sQuoteCustomerName
+                            );
+
+                        if (
+                            company
+                                ?.state
+                                ?.isoCode ==
+                            selectedCustomer
+                                ?.state
+                                ?.isoCode
+                        ) {
+                            const csgst =
+                                createdProduct
+                                    ?.csgst ??
+                                createdProduct
+                                    ?.cgst ??
+                                "";
+
+                            updatedRow.cgst =
+                                csgst;
+                            updatedRow.sgst =
+                                csgst;
+                            updatedRow.igst =
+                                "";
+                        } else {
+                            updatedRow.igst =
+                                createdProduct
+                                    ?.igst ??
+                                "";
+                            updatedRow.cgst =
+                                "";
+                            updatedRow.sgst =
+                                "";
+                        }
+
+                        updatedRow =
+                            calculateRow(
+                                normalizeRowKeys(
+                                    updatedRow
+                                )
+                            );
+
+                        updatedProducts[
+                            rowIndex
+                        ] = updatedRow;
+
+                        return {
+                            ...prev,
+                            products:
+                                updatedProducts,
+                        };
+                    }
+                );
+
+                setErrors(
+                    (prev: any) => ({
+                        ...prev,
+                        products: "",
+                    })
+                );
+            } catch (
+            error: any
+            ) {
+                console.log(
+                    "Failed to refresh product options:",
+                    error
+                );
+
+                toast.error(
+                    error?.message ||
+                    "Product created, but product dropdown refresh failed"
+                );
+            } finally {
+                setCheckProduct(false);
+                setProductTargetRowIndex(null);
+            }
+        };
+
     const handleAddRow = () =>
         setForm(
             (prev: any) => ({
@@ -1427,6 +1863,7 @@ const SalesQuotations = () => {
             "productid" ||
             lowerKey ===
             "product";
+
 
         const duplicate =
             isProductField &&
@@ -2743,6 +3180,7 @@ const SalesQuotations = () => {
 
     useEffect(() => {
         if (!showModal) {
+            setCheckProduct(false);
             return;
         }
 
@@ -2770,6 +3208,7 @@ const SalesQuotations = () => {
         accountListLoaded,
         filterAccount.length,
     ]);
+
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
@@ -3085,6 +3524,14 @@ const SalesQuotations = () => {
                                 false
                             );
 
+                            setCheckProduct(
+                                false
+                            );
+
+                            setProductSearchValue(
+                                ""
+                            );
+
                             resetMainForm();
                         },
 
@@ -3097,7 +3544,7 @@ const SalesQuotations = () => {
                         footerTotals,
 
                         inputData: {
-                            ...templateFields,
+                            ...templateFieldsWithCreateActions,
 
                             footer:
                                 dynamicFooterArray,
@@ -3112,6 +3559,25 @@ const SalesQuotations = () => {
                     }}
                 />
             )}
+
+            <ProductMasterModal
+                show={checkProduct}
+                setShow={(value: boolean) => {
+                    setCheckProduct(value);
+
+                    if (!value) {
+                        setProductTargetRowIndex(
+                            null
+                        );
+                        setProductSearchValue(
+                            ""
+                        );
+                    }
+                }}
+                onSaved={handleProductSaved}
+                title="Add New Product"
+                initialProductName={productSearchValue}
+            />
         </div>
     );
 };

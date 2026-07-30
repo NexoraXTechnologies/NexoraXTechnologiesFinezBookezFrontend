@@ -1,4 +1,5 @@
 import {
+    CreatableSelectInput,
     SelectInput,
     TextArea,
     TextInput,
@@ -12,7 +13,43 @@ import { DynamicFormContentSkeleton } from "../skeleton/SkeletonLoader";
 import LocationSection from "./LocationSection";
 import { AccountMasterModal } from "../modal";
 
-const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleRefRow, handleDeleteRow, handleRowChange, inputData, bodyKey, addButtonText, handleChange, headerChildTitle, isAddButton = true, isRefrenceAction = false, RefrenceBtnText, bodyTitle, isView = false, contentLoading = false, contentSkeleton, isSummaryFooter, manualselected, enableLocation, isBodyColumnVisible, isBodyCellVisible, isBodyCellDisabled, checkAccount, setCheckAccount, onAccountSaved }: any) => {
+const DynamicAddForm = ({
+    show,
+    setShow,
+    edit,
+    title,
+    subtitle,
+    loading,
+    onClose,
+    onSubmit,
+    form,
+    errors,
+    handleAddRow,
+    handleRefRow,
+    handleDeleteRow,
+    handleRowChange,
+    inputData,
+    bodyKey,
+    addButtonText,
+    handleChange,
+    headerChildTitle,
+    isAddButton = true,
+    isRefrenceAction = false,
+    RefrenceBtnText,
+    bodyTitle,
+    isView = false,
+    contentLoading = false,
+    contentSkeleton,
+    isSummaryFooter,
+    manualselected,
+    enableLocation,
+    isBodyColumnVisible,
+    isBodyCellVisible,
+    isBodyCellDisabled,
+    checkAccount,
+    setCheckAccount,
+    onAccountSaved,
+}: any) => {
     const renderInput = (field: any) => {
         if (field?.type === "date") {
             return (
@@ -115,6 +152,38 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                 }
             );
 
+            if (typeof field?.onCreateOption === "function") {
+                return (
+                    <CreatableSelectInput
+                        label={field?.label}
+                        value={form?.[field?.key] ?? ""}
+                        mandatory={field?.isRequired}
+                        placeholder={
+                            field?.placeholder ||
+                            `Select ${field?.label}`
+                        }
+                        disabled={
+                            field?.disabled ||
+                            field?.isReadonly
+                        }
+                        error={errors?.[field?.key]}
+                        largeData={field?.largeData ?? true}
+                        onCreateOption={field?.onCreateOption}
+                        createOptionLabel={field?.createOptionLabel}
+                        showCreateOnEmpty={
+                            field?.showCreateOnEmpty ?? true
+                        }
+                        onChange={(event: any) =>
+                            handleChange(
+                                field?.key,
+                                event.target.value
+                            )
+                        }
+                        options={options}
+                    />
+                );
+            }
+
             return (
                 <SelectInput
                     label={field?.label}
@@ -163,19 +232,6 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                 }
             />
         );
-    };
-
-    const handleAccountModalSaved = async (
-        savedAccount: any
-    ) => {
-        if (
-            typeof onAccountSaved ===
-            "function"
-        ) {
-            await onAccountSaved(
-                savedAccount
-            );
-        }
     };
 
     return (
@@ -380,9 +436,16 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                         setCheckAccount(value);
                     }
                 }}
-                onSaved={
-                    handleAccountModalSaved
-                }
+                onSaved={(savedAccount: any) => {
+                    if (
+                        typeof onAccountSaved ===
+                        "function"
+                    ) {
+                        onAccountSaved(
+                            savedAccount
+                        );
+                    }
+                }}
             />
         </VoucherFormModal>
     );

@@ -21,6 +21,19 @@ import { getAllReportMapping } from "../../../../../redux/slices/professionalSli
 import Permission from "../../../../../components/PermissionGuard";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
+import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
+
+const CUSTOMER_FIELD_KEYS = new Set([
+    "sOrderCustomerCode",
+    "sOrderCustomerName",
+]);
+
+const PRODUCT_FIELD_KEYS = new Set([
+    "productCode",
+    "productName",
+    "productId",
+    "product",
+]);
 
 const defaultPagination = {
     offset: 0,
@@ -224,6 +237,21 @@ const SalesOrder = () => {
     // ★ ADDED: Account Master modal state
     const [checkAccount, setCheckAccount] = useState(false);
 
+    // ⭐ YELLOW STAR: ADDED — PRODUCT MASTER MODAL STATE
+    const [checkProduct, setCheckProduct] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — PRODUCT ROW THAT OPENED MODAL
+    const [
+        productTargetRowIndex,
+        setProductTargetRowIndex,
+    ] = useState<number | null>(null);
+
+    // ⭐ YELLOW STAR: ADDED — SEARCH VALUE FOR PRODUCT MODAL
+    const [
+        productSearchValue,
+        setProductSearchValue,
+    ] = useState("");
+
     // ★ ADDED: Account Master list loading guard
     const [accountListLoaded, setAccountListLoaded] =
         useState(false);
@@ -309,6 +337,74 @@ const SalesOrder = () => {
                 ).toLowerCase() === "customer"
         );
     }, [accounts]);
+
+    // ⭐ YELLOW STAR: ADDED — ACCOUNT AND PRODUCT CREATE ACTIONS
+    const templateFieldsWithCreateActions = useMemo(() => {
+        return {
+            ...templateFields,
+
+            header: (templateFields?.header || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!CUSTOMER_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            _searchValue: string
+                        ) => {
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Customer`
+                                : "+ Add New Customer",
+                    };
+                }
+            ),
+
+            body: (templateFields?.body || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!PRODUCT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            searchValue: string,
+                            rowIndex: number
+                        ) => {
+                            setProductTargetRowIndex(rowIndex);
+                            setProductSearchValue(searchValue);
+                            setCheckProduct(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Product`
+                                : "+ Add New Product",
+                    };
+                }
+            ),
+        };
+    }, [templateFields]);
 
     const isTrueValue = (value: any) =>
         value === true ||
@@ -967,11 +1063,11 @@ const SalesOrder = () => {
             render: (row: any) => (
                 <span
                     className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${(
-                            row?.sOrderDocStatus ||
-                            row?.sOrderStatus
-                        ) === "open"
-                            ? "border-success/20 bg-success/10 text-success"
-                            : "border-danger/20 bg-danger/10 text-danger"
+                        row?.sOrderDocStatus ||
+                        row?.sOrderStatus
+                    ) === "open"
+                        ? "border-success/20 bg-success/10 text-success"
+                        : "border-danger/20 bg-danger/10 text-danger"
                         }`}
                 >
                     {row?.sOrderDocStatus ||
@@ -1011,6 +1107,9 @@ const SalesOrder = () => {
         setErrors({});
         setForm(getDefaultForm());
         setCheckAccount(false);
+        setCheckProduct(false);
+        setProductTargetRowIndex(null);
+        setProductSearchValue("");
     };
 
     const openAddModal = () => {
@@ -1509,6 +1608,369 @@ const SalesOrder = () => {
         }
     };
 
+    // ⭐ YELLOW STAR: ADDED — REFRESH PRODUCT OPTIONS AND AUTO-SELECT CREATED PRODUCT
+    const handleProductSaved = async (
+        savedResponse: any
+    ) => {
+        try {
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "salesOrder",
+                }) as any
+            ).unwrap();
+
+            let updatedData = templateFields;
+
+            if (transactionsSchema) {
+                updatedData =
+                    await loadAllTemplateOptions(
+                        transactionsSchema
+                    );
+
+                setTemplateFields(
+                    updatedData
+                );
+            }
+
+            const savedProduct =
+                savedResponse?.data?.product ||
+                savedResponse?.data?.data?.product ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.product ||
+                savedResponse;
+
+            const savedCode =
+                savedProduct?.productCode ||
+                "";
+
+            const savedName =
+                savedProduct?.productName ||
+                "";
+
+            const productFields = (
+                updatedData?.body || []
+            ).filter((field: any) =>
+                PRODUCT_FIELD_KEYS.has(
+                    String(field?.key || "")
+                )
+            );
+
+            let selectedField: any = null;
+            let selectedOption: any = null;
+
+            for (const field of productFields) {
+                const option = (
+                    field?.options || []
+                ).find((item: any) => {
+                    const raw =
+                        item?.raw || {};
+
+                    return (
+                        (
+                            savedCode &&
+                            String(
+                                raw?.productCode ||
+                                item?.value ||
+                                ""
+                            ) ===
+                            String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(
+                                raw?.productName ||
+                                item?.label ||
+                                ""
+                            ) ===
+                            String(savedName)
+                        )
+                    );
+                });
+
+                if (option) {
+                    selectedField = field;
+                    selectedOption = option;
+                    break;
+                }
+            }
+
+            const createdProduct =
+                selectedOption?.raw ||
+                savedProduct ||
+                {};
+
+            setForm((previous: any) => {
+                const updatedProducts = [
+                    ...(previous.products || []),
+                ];
+
+                let rowIndex =
+                    productTargetRowIndex !== null &&
+                        productTargetRowIndex >= 0 &&
+                        productTargetRowIndex <
+                        updatedProducts.length
+                        ? productTargetRowIndex
+                        : updatedProducts.findIndex(
+                            (row: any) =>
+                                !row?.productCode &&
+                                !row?.productName &&
+                                !row?.productId
+                        );
+
+                if (rowIndex < 0) {
+                    rowIndex =
+                        updatedProducts.length;
+
+                    updatedProducts.push({
+                        ...emptyProductRow,
+                        id: Date.now(),
+                    });
+                }
+
+                let updatedRow = {
+                    ...(
+                        updatedProducts[
+                        rowIndex
+                        ] ||
+                        emptyProductRow
+                    ),
+                };
+
+                if (
+                    selectedField &&
+                    selectedOption
+                ) {
+                    updatedRow =
+                        applyMappedFields(
+                            selectedField,
+                            selectedOption.value,
+                            updatedRow
+                        );
+                }
+
+                const marginProduct =
+                    isTrueValue(
+                        createdProduct
+                            ?.dynamicFields
+                            ?.marginProduct ??
+                        createdProduct
+                            ?.marginProduct
+                    );
+
+                updatedRow = {
+                    ...updatedRow,
+
+                    productCode:
+                        createdProduct
+                            ?.productCode ||
+                        savedCode ||
+                        updatedRow
+                            ?.productCode ||
+                        "",
+
+                    productName:
+                        createdProduct
+                            ?.productName ||
+                        savedName ||
+                        updatedRow
+                            ?.productName ||
+                        "",
+
+                    productId:
+                        createdProduct
+                            ?._id ||
+                        createdProduct
+                            ?.productId ||
+                        updatedRow
+                            ?.productId ||
+                        "",
+
+                    productDescription:
+                        createdProduct
+                            ?.productDescription ||
+                        updatedRow
+                            ?.productDescription ||
+                        "",
+
+                    description:
+                        createdProduct
+                            ?.productDescription ||
+                        createdProduct
+                            ?.description ||
+                        updatedRow
+                            ?.description ||
+                        "",
+
+                    productHSNCode:
+                        createdProduct
+                            ?.productHSNCode ||
+                        updatedRow
+                            ?.productHSNCode ||
+                        "",
+
+                    unit:
+                        createdProduct
+                            ?.unit ||
+                        updatedRow
+                            ?.unit ||
+                        "",
+
+                    uom:
+                        createdProduct
+                            ?.unit ||
+                        createdProduct
+                            ?.uom ||
+                        updatedRow
+                            ?.uom ||
+                        "",
+
+                    unitName:
+                        getUnitLabelFromSchema(
+                            createdProduct
+                                ?.unit ||
+                            createdProduct
+                                ?.uom ||
+                            updatedRow
+                                ?.unit ||
+                            updatedRow
+                                ?.uom ||
+                            ""
+                        ),
+
+                    rate:
+                        createdProduct
+                            ?.sellingPrice ??
+                        createdProduct
+                            ?.rate ??
+                        updatedRow
+                            ?.rate ??
+                        "",
+
+                    marginProduct,
+
+                    nonTaxRate:
+                        marginProduct
+                            ? (
+                                createdProduct
+                                    ?.nonTaxRate ??
+                                createdProduct
+                                    ?.dynamicFields
+                                    ?.nonTaxRate ??
+                                updatedRow
+                                    ?.nonTaxRate ??
+                                ""
+                            )
+                            : "",
+
+                    taxGross:
+                        marginProduct
+                            ? (
+                                createdProduct
+                                    ?.taxGross ??
+                                createdProduct
+                                    ?.dynamicFields
+                                    ?.taxGross ??
+                                updatedRow
+                                    ?.taxGross ??
+                                ""
+                            )
+                            : "",
+
+                    nonTaxGross:
+                        marginProduct
+                            ? (
+                                createdProduct
+                                    ?.nonTaxGross ??
+                                createdProduct
+                                    ?.dynamicFields
+                                    ?.nonTaxGross ??
+                                updatedRow
+                                    ?.nonTaxGross ??
+                                ""
+                            )
+                            : "",
+                };
+
+                updatedRow.cgst =
+                    createdProduct?.csgst ??
+                    createdProduct?.cgst ??
+                    updatedRow?.cgst ??
+                    "";
+
+                updatedRow.sgst =
+                    createdProduct?.csgst ??
+                    createdProduct?.sgst ??
+                    updatedRow?.sgst ??
+                    "";
+
+                updatedRow.igst =
+                    createdProduct?.igst ??
+                    updatedRow?.igst ??
+                    "";
+
+                if (
+                    num(updatedRow.igst) >
+                    0
+                ) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstAmount =
+                        0;
+                    updatedRow.sgstAmount =
+                        0;
+                }
+
+                if (
+                    num(updatedRow.cgst) >
+                    0 ||
+                    num(updatedRow.sgst) >
+                    0
+                ) {
+                    updatedRow.igst = "";
+                    updatedRow.igstAmount =
+                        0;
+                }
+
+                updatedRow =
+                    calculateRow(
+                        normalizeRowKeys(
+                            updatedRow
+                        )
+                    );
+
+                updatedProducts[
+                    rowIndex
+                ] = updatedRow;
+
+                return {
+                    ...previous,
+                    products:
+                        updatedProducts,
+                };
+            });
+
+            setErrors((previous: any) => ({
+                ...previous,
+                products: "",
+            }));
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh Sales Order product options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Product created, but Sales Order product dropdown refresh failed"
+            );
+        } finally {
+            setCheckProduct(false);
+            setProductTargetRowIndex(null);
+            setProductSearchValue("");
+        }
+    };
+
     const handleAddRow = () => {
         setForm((previous: any) => ({
             ...previous,
@@ -1860,9 +2322,9 @@ const SalesOrder = () => {
                 validationErrors[
                     field.key
                 ] = `${field.label ||
-                    field.title ||
-                    field.key
-                    } is required`;
+                field.title ||
+                field.key
+                } is required`;
             }
         });
 
@@ -1941,9 +2403,9 @@ const SalesOrder = () => {
                             validationErrors[
                                 `row_${index}_${field.key}`
                             ] = `${field.label ||
-                                field.title ||
-                                field.key
-                                } is required`;
+                            field.title ||
+                            field.key
+                            } is required`;
                         }
                     }
                 );
@@ -2921,6 +3383,9 @@ const SalesOrder = () => {
         setErrors({});
         setForm(getDefaultForm());
         setCheckAccount(false);
+        setCheckProduct(false);
+        setProductTargetRowIndex(null);
+        setProductSearchValue("");
         setShowModal(isModalFalse);
     };
 
@@ -3426,6 +3891,18 @@ const SalesOrder = () => {
                                 false
                             );
 
+                            setCheckProduct(
+                                false
+                            );
+
+                            setProductTargetRowIndex(
+                                null
+                            );
+
+                            setProductSearchValue(
+                                ""
+                            );
+
                             resetMainForm();
                         },
 
@@ -3442,7 +3919,7 @@ const SalesOrder = () => {
                         footerTotals,
 
                         inputData: {
-                            ...templateFields,
+                            ...templateFieldsWithCreateActions,
 
                             footer:
                                 dynamicFooterArray,
@@ -3469,6 +3946,28 @@ const SalesOrder = () => {
                     }}
                 />
             )}
+
+            <ProductMasterModal
+                show={checkProduct}
+                setShow={(value: boolean) => {
+                    setCheckProduct(value);
+
+                    if (!value) {
+                        setProductTargetRowIndex(
+                            null
+                        );
+
+                        setProductSearchValue(
+                            ""
+                        );
+                    }
+                }}
+                onSaved={handleProductSaved}
+                title="Add New Product"
+                initialProductName={
+                    productSearchValue
+                }
+            />
 
             <Modal
                 show={
@@ -3553,8 +4052,8 @@ const SalesOrder = () => {
                                                         )
                                                     }
                                                     className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
-                                                            ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                                                            : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
                                                         }`}
                                                 >
                                                     <div className="flex items-center justify-between gap-3">

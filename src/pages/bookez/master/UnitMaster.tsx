@@ -5,460 +5,317 @@ import { toast } from "react-toastify";
 
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 
+
 import SearchInput from "../../../components/searchInput";
-import { DataCreateButton, DataREfreshButton } from "../../../components/buttons";
+import {
+	DataCreateButton,
+	DataREfreshButton,
+} from "../../../components/buttons";
+
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import Badge from "../../../components/badge";
-import { SelectInput, TextInput } from "../../../components/inputs";
-import Modal from "../../../components/modal";
-import {
-	createUnit,
+
+import {       
 	deleteUnit,
-	getAllUnitMasterSchema,
 	getAllUnits,
-	updateUnit,
 } from "../../../redux/slices/professionalSlice/unitMasterSlice";
+
 import Permission from "../../../components/PermissionGuard";
+import UnitMasterModal from "./UnitMasterModal";
+
+const defaultPagination = {
+	offset: 0,
+	limit: 10,
+	totalDocs: 0,
+	totalPages: 1,
+	currentPage: 1,
+	hasNextPage: false,
+	hasPrevPage: false,
+};
 
 const UnitMaster = () => {
 	const dispatch = useDispatch<any>();
 
 	const {
-		units,
-		pagination,
-		loading,
-		unitMasterSchemaFields = [],
-		schemaLoading,
-	} = useSelector((s: any) => s.unitMaster);
+		units = [],
+		pagination = defaultPagination,
+		loading = false,
+	} = useSelector(
+		(state: any) =>
+			state.unitMaster || {}
+	);
 
-	const [localOffset, setLocalOffset] = useState(0);
-	const [localLimit, setLocalLimit] = useState(10);
-	const [search, setSearch] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [
+		localOffset,
+		setLocalOffset,
+	] = useState(0);
 
-	// const [refreshing, setRefreshing] = useState(false);
-	const [showModal, setShowModal] = useState(false);
+	const [
+		localLimit,
+		setLocalLimit,
+	] = useState(10);
 
-	const [editingUnit, setEditingUnit]: any = useState(null);
+	const [
+		search,
+		setSearch,
+	] = useState("");
 
-	const [errors, setErrors]: any = useState({});
+	const [
+		debouncedSearch,
+		setDebouncedSearch,
+	] = useState("");
 
-	useEffect(() => {
-		dispatch(
-			getAllUnitMasterSchema({
-				offset: 0,
-				limit: 50,
-			}) as any
-		);
-	}, [dispatch]);
+	const [
+		refreshing,
+		setRefreshing,
+	] = useState(false);
 
-	const [confirmTooltip, setConfirmTooltip] = useState({
+	// ⭐ YELLOW STAR: UPDATED — COMMON UNIT MASTER MODAL STATE
+	const [
+		showModal,
+		setShowModal,
+	] = useState(false);
+
+	const [
+		editingUnit,
+		setEditingUnit,
+	] = useState<any>(null);
+
+	const [
+		confirmTooltip,
+		setConfirmTooltip,
+	] = useState<any>({
 		show: false,
 		x: null,
 		y: null,
 		unitId: null,
 	});
 
-	const [form, setForm] = useState<any>({});
-
-	const buildEmptyForm = (fields: any[] = []) => {
-		return fields.reduce((acc: any, field: any) => {
-			acc[field.key] = "";
-			return acc;
-		}, {});
-	};
-
-	useEffect(() => {
-		if (unitMasterSchemaFields.length > 0) {
-			setForm((prev: any) => ({
-				...buildEmptyForm(unitMasterSchemaFields),
-				...prev,
-			}));
-		}
-	}, [unitMasterSchemaFields]);
-
-	const validateForm = () => {
-		const e: any = {};
-
-		unitMasterSchemaFields.forEach((field: any) => {
-			const value = form?.[field.key];
-
-			if (field.isRequired && String(value || "").trim() === "") {
-				e[field.key] = `${field.label} required`;
-			}
-
-			if (
-				field.type === "number" &&
-				value !== "" &&
-				value !== null &&
-				Number(value) < 0
-			) {
-				e[field.key] = `${field.label} cannot be negative`;
-			}
-		});
-
-		setErrors(e);
-		return Object.keys(e).length === 0;
-	};
-
-	const getTextValue = (value: any) => {
-		if (!value) return "";
-
-		if (typeof value === "string" || typeof value === "number") {
-			return String(value);
-		}
-
-		if (typeof value === "object") {
-			return (
-				value.en ||
-				value.name ||
-				value.label ||
-				value.unitName ||
-				value.code ||
-				Object.values(value).find((v) => typeof v === "string") ||
-				""
-			);
-		}
-
-		return "";
-	};
-
-	const normalizeUnit = (value: any) => {
-		if (typeof value === "object" && value !== null) {
-			return (
-				value.unitCode ??
-				value.code ??
-				value.value ??
-				value.name ??
-				value.unitName ??
-				""
-			);
-		}
-
-		return value ?? "";
-	};
-
-	const getFieldOptions = (field: any) => {
-		if (field.ref === "unitMeasurement") {
-			return (
-				units?.map((item: any) => {
-					const value =
-						item?.[field.valueField] || item?.unitCode || item?.code || "";
-					const label =
-						item?.[field.labelField] || item?.unitName || item?.name || value;
-
-					return {
-						value,
-						label: getTextValue(label),
-					};
-				}) || []
-			);
-		}
-
-		if (field.key === "productType") {
-			return (field.options || []).map((opt: any) => {
-				const label =
-					typeof opt === "object" ? opt.label || opt.name || opt.value : opt;
-
-				return {
-					value: label,
-					label,
-				};
-			});
-		}
-
-		return (field.options || []).map((opt: any) => {
-			if (typeof opt === "object") {
-				return {
-					value: opt.value || opt.code || opt.name || "",
-					label: opt.label || opt.name || opt.value || "",
-				};
-			}
-
-			return {
-				value: opt,
-				label: opt,
-			};
-		});
-	};
-
-	const renderSchemaField = (field: any) => {
-		const value = form?.[field.key] ?? "";
-
-		const commonProps = {
-			label: field.label,
-			mandatory: field.isRequired,
-			value,
-			placeholder: `Enter ${field.label}`,
-			error: errors?.[field.key],
-		};
-
-		if (field.type === "select") {
-			const options = getFieldOptions(field);
-
-			return (
-				<SelectInput
-					key={field.key}
-					label={field.label}
-					mandatory={field.isRequired}
-					value={value}
-					placeholder={`Select ${field.label}`}
-					error={errors?.[field.key]}
-					onChange={(e: any) => {
-						const selectedValue = e?.target?.value ?? "";
-
-						setForm((prev: any) => ({
-							...prev,
-							[field.key]: selectedValue,
-						}));
-
-						setErrors((prev: any) => ({
-							...prev,
-							[field.key]: "",
-						}));
-					}}
-					options={[
-						{ value: "", label: `Select ${field.label}` },
-						...options,
-					]}
-				/>
-			);
-		}
-
-		if (field.type === "number") {
-			return (
-				<TextInput
-					key={field.key}
-					{...commonProps}
-					type="number"
-					onChange={(e: any) => {
-						setForm((prev: any) => ({
-							...prev,
-							[field.key]: e.target.value,
-						}));
-
-						setErrors((prev: any) => ({
-							...prev,
-							[field.key]: "",
-						}));
-					}}
-				/>
-			);
-		}
-
-		return (
-			<TextInput
-				key={field.key}
-				{...commonProps}
-				type="text"
-				onChange={(e: any) => {
-					setForm((prev: any) => ({
-						...prev,
-						[field.key]: e.target.value,
-					}));
-
-					setErrors((prev: any) => ({
-						...prev,
-						[field.key]: "",
-					}));
-				}}
-			/>
-		);
-	};
+	/* ============================================
+	   TABLE COLUMNS
+	============================================= */
 
 	const columns = [
-		{ key: "unitId", title: "Unit ID" },
-		{ key: "unitCode", title: "Unit Code" },
-		{ key: "unitName", title: "Name" },
-		{ key: "unitStatus", title: "Status" },
+		{
+			key: "unitId",
+			title: "Unit ID",
+		},
+		{
+			key: "unitCode",
+			title: "Unit Code",
+		},
+		{
+			key: "unitName",
+			title: "Name",
+		},
+		{
+			key: "unitStatus",
+			title: "Status",
+		},
 	];
 
 	/* ============================================
-		  FETCH UNITS
+	   FETCH UNITS
 	============================================= */
+
 	const fetchUnits = () => {
-		// @ts-ignore
-		dispatch(
+		return dispatch(
 			getAllUnits({
 				offset: localOffset,
 				limit: localLimit,
 				search: debouncedSearch,
-			})
+			}) as any
 		);
 	};
 
 	useEffect(() => {
 		fetchUnits();
-	}, [localOffset, localLimit, debouncedSearch]);
+	}, [
+		dispatch,
+		localOffset,
+		localLimit,
+		debouncedSearch,
+	]);
 
 	/* ============================================
-		  DEBOUNCE SEARCH
+	   DEBOUNCE SEARCH
 	============================================= */
 	useEffect(() => {
-		const t = setTimeout(() => {
-			setDebouncedSearch(search.trim());
+		const timer = setTimeout(() => {
+			setDebouncedSearch(
+				search.trim()
+			);
+
 			setLocalOffset(0);
 		}, 400);
 
-		return () => clearTimeout(t);
+		return () =>
+			clearTimeout(timer);
 	}, [search]);
 
 	/* ============================================
-		  REFRESH
+	   REFRESH
 	============================================= */
 	const handleRefresh = async () => {
-		// setRefreshing(true);
-		await fetchUnits();
-		toast.success("Unit list refreshed");
-		// setRefreshing(false);
+		setRefreshing(true);
+
+		try {
+			await fetchUnits();
+
+			toast.success(
+				"Unit list refreshed"
+			);
+		} catch (error: any) {
+			toast.error(
+				error?.message ||
+				"Failed to refresh unit list"
+			);
+		} finally {
+			setRefreshing(false);
+		}
 	};
 
 	/* ============================================
-		  OPEN ADD MODAL
+	   OPEN ADD MODAL
 	============================================= */
 	const openAddModal = () => {
 		setEditingUnit(null);
-		setErrors({});
-		setForm(buildEmptyForm(unitMasterSchemaFields));
 		setShowModal(true);
 	};
 
 	/* ============================================
-		  OPEN EDIT MODAL
+	   OPEN EDIT MODAL
 	============================================= */
-	const openEditModal = (p: any) => {
-		setEditingUnit(p);
-		setErrors({});
 
-		const nextForm = buildEmptyForm(unitMasterSchemaFields);
+	const openEditModal = (
+		unit: any
+	) => {
+		setEditingUnit(unit);
+		setShowModal(true);
+	};
 
-		unitMasterSchemaFields.forEach((field: any) => {
-			const key = field.key;
+	/* ============================================
+	   UNIT SAVED
+	============================================= */
 
-			if (key === "unit") {
-				if (typeof p?.unit === "object") {
-					nextForm.unit =
-						p.unit?.unitCode ||
-						p.unit?.code ||
-						p.unit?.value ||
-						"";
-				} else {
-					nextForm.unit = p?.unit || "";
+	// ⭐ YELLOW STAR: ADDED — REFRESH PAGE AFTER COMMON MODAL SAVE
+	const handleUnitSaved = async () => {
+		await fetchUnits();
+
+		setEditingUnit(null);
+		setShowModal(false);
+	};
+
+	/* ============================================
+	   DELETE UNIT
+	============================================= */
+
+	const handleDeleteConfirm =
+		async () => {
+			try {
+				if (
+					!confirmTooltip.unitId
+				) {
+					toast.error(
+						"Unit ID not found"
+					);
+
+					return;
 				}
 
-				return;
-			}
-
-			nextForm[key] = p?.[key] ?? "";
-		});
-
-		setForm(nextForm);
-		setShowModal(true);
-	};
-
-	/* ============================================
-		  SAVE / UPDATE PRODUCT
-	============================================= */
-	const handleSubmit = async () => {
-		if (!validateForm()) return;
-
-		const payload: any = { ...form };
-
-		unitMasterSchemaFields.forEach((field: any) => {
-			if (field.type === "number" && payload[field.key] !== "") {
-				payload[field.key] = Number(payload[field.key]);
-			}
-		});
-
-		try {
-			if (editingUnit) {
-				const updatePayload: any = {};
-
-				unitMasterSchemaFields.forEach((field: any) => {
-					const key = field.key;
-
-					{/* @ts-ignore */ }
-					const oldValue =
-						key === "unit"
-							? normalizeUnit(editingUnit?.[key] || "")
-							: editingUnit?.[key];
-
-					if (form[key] !== oldValue) {
-						updatePayload[key] = payload[key];
-					}
-				});
-
 				await dispatch(
-					updateUnit({
-						unitId: editingUnit.unitId,
-						data: updatePayload,
-					}) as any
+					deleteUnit(
+						confirmTooltip.unitId
+					) as any
 				).unwrap();
 
-				toast.success("Unit updated successfully");
-			} else {
-				await dispatch(createUnit(payload) as any).unwrap();
-				toast.success("Unit created");
+				toast.success(
+					"Unit deleted"
+				);
+
+				await fetchUnits();
+			} catch (error: any) {
+				toast.error(
+					error?.message ||
+					"Failed to delete unit"
+				);
+			} finally {
+				setConfirmTooltip({
+					show: false,
+					x: null,
+					y: null,
+					unitId: null,
+				});
 			}
-
-			setShowModal(false);
-			fetchUnits();
-		} catch (err: any) {
-			toast.error(err.message || "Operation failed");
-		}
-	};
-
-	/* ============================================
-		  DELETE UNIT
-	============================================= */
-	const handleDeleteConfirm = async () => {
-		try {
-			{/* @ts-ignore */ }
-			await dispatch(deleteUnit(confirmTooltip.unitId)).unwrap();
-			toast.success("Unit deleted");
-			fetchUnits();
-		} finally {
-			setConfirmTooltip({
-				show: false,
-				x: null,
-				y: null,
-				unitId: null,
-			});
-		}
-	};
+		};
 
 	return (
 		<div className="w-full bg-card border border-border text-card-foreground rounded-lg shadow-sm p-4 flex flex-col h-[100%]">
 			{/* ================= HEADER ================= */}
+
 			<div
 				id="unit-header"
 				className="flex flex-wrap items-center gap-2 mb-3"
 			>
-				<div id="unit-summary" className="flex items-start gap-3">
+				<div
+					id="unit-summary"
+					className="flex items-start gap-3"
+				>
 					<Badge
 						{...{
-							count: pagination.totalDocs ?? 0,
-							text: "Total Units:",
-							varient: "primary",
+							count:
+								pagination.totalDocs ??
+								0,
+
+							text:
+								"Total Units:",
+
+							varient:
+								"primary",
 						}}
 					/>
 				</div>
 
 				<div className="ml-auto flex flex-wrap items-center gap-2">
-					<SearchInput {...{ search, setSearch }} />
-					<DataREfreshButton {...{ callBackFn: handleRefresh }} />
+					<SearchInput
+						{...{
+							search,
+							setSearch,
+						}}
+					/>
 
-					<Permission module="bookez" permissionKey="unitMaster" action="create">
+					<DataREfreshButton
+						{...{
+							callBackFn:
+								handleRefresh,
+
+							loading:
+								refreshing,
+						}}
+					/>
+
+					<Permission
+						module="bookez"
+						permissionKey="unitMaster"
+						action="create"
+					>
 						{/* @ts-ignore */}
 						<DataCreateButton
-							{...{ callBackFn: openAddModal, text: "Add Unit" }}
+							{...{
+								callBackFn:
+									openAddModal,
+
+								text:
+									"Add Unit",
+							}}
 						/>
 					</Permission>
 				</div>
 			</div>
 
 			{/* ================= TABLE ================= */}
+
 			<DataTable
 				columns={columns}
 				data={units}
@@ -473,10 +330,17 @@ const UnitMaster = () => {
 						>
 							<button
 								id="unit-edit-button"
-								onClick={() => openEditModal(unit)}
+								type="button"
+								onClick={() =>
+									openEditModal(
+										unit
+									)
+								}
 								className="p-2 rounded-lg text-primary hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer"
 							>
-								<Edit size={16} />
+								<Edit
+									size={16}
+								/>
 							</button>
 						</Permission>
 
@@ -487,24 +351,41 @@ const UnitMaster = () => {
 						>
 							<button
 								id="unit-delete-button"
-								onClick={(e) => {
-									const rect = e.currentTarget.getBoundingClientRect();
+								type="button"
+								onClick={(
+									event
+								) => {
+									const rect =
+										event.currentTarget.getBoundingClientRect();
 
-									let x: any = rect.left - 150;
-									if (x < 10) x = 10;
+									let x: any =
+										rect.left -
+										150;
 
-									const y: any = rect.top + window.scrollY - 5;
+									if (x < 10) {
+										x = 10;
+									}
 
-									setConfirmTooltip({
-										show: true,
-										x,
-										y,
-										unitId: unit.unitId,
-									});
+									const y: any =
+										rect.top +
+										window.scrollY -
+										5;
+
+									setConfirmTooltip(
+										{
+											show: true,
+											x,
+											y,
+											unitId:
+												unit.unitId,
+										}
+									);
 								}}
 								className="p-2 rounded-lg text-danger hover:bg-danger/10 hover:text-danger transition-all duration-200 cursor-pointer"
 							>
-								<Trash2 size={16} />
+								<Trash2
+									size={16}
+								/>
 							</button>
 						</Permission>
 					</div>
@@ -512,31 +393,57 @@ const UnitMaster = () => {
 			/>
 
 			{/* ================= PAGINATION ================= */}
-			{pagination.totalDocs > 0 && (
-				<Pagination
-					{...{
-						localLimit,
-						selectCb: (e: any) => {
-							setLocalLimit(Number(e.target.value));
-							setLocalOffset(0);
-						},
-						preDisabled: !pagination.hasPrevPage,
-						nextDisabled: !pagination.hasNextPage,
-						setLocalOffset,
-						pagination,
-					}}
-				/>
-			)}
+
+			{pagination.totalDocs >
+				0 && (
+					<Pagination
+						{...{
+							localLimit,
+
+							selectCb: (
+								event: any
+							) => {
+								setLocalLimit(
+									Number(
+										event.target
+											.value
+									)
+								);
+
+								setLocalOffset(
+									0
+								);
+							},
+
+							preDisabled:
+								!pagination.hasPrevPage,
+
+							nextDisabled:
+								!pagination.hasNextPage,
+
+							setLocalOffset,
+
+							pagination,
+						}}
+					/>
+				)}
 
 			{/* ================= DELETE TOOLTIP ================= */}
+
 			{confirmTooltip.show && (
 				<ConfirmTooltip
-					x={confirmTooltip.x}
-					y={confirmTooltip.y}
+					x={
+						confirmTooltip.x
+					}
+					y={
+						confirmTooltip.y
+					}
 					message="Are you sure you want to delete this unit?"
 					confirmText="Delete"
 					cancelText="Cancel"
-					onConfirm={handleDeleteConfirm}
+					onConfirm={
+						handleDeleteConfirm
+					}
 					onCancel={() =>
 						setConfirmTooltip({
 							show: false,
@@ -548,29 +455,32 @@ const UnitMaster = () => {
 				/>
 			)}
 
-			{/* ================= MODAL ================= */}
-			{/* @ts-ignore */}
-			<Modal
-				{...{
-					show: showModal,
-					setShow: setShowModal,
-					handleSubmit,
-					state: editingUnit,
-					title: "Add New Unit",
-					body: (
-						<>
-							{schemaLoading ? (
-								<div className="py-6 text-sm text-muted-foreground">
-									Loading unit fields...
-								</div>
-							) : (
-								unitMasterSchemaFields.map((field: any) =>
-									renderSchemaField(field)
-								)
-							)}
-						</>
-					),
+			{/* ================= COMMON UNIT MODAL ================= */}
+
+			<UnitMasterModal
+				show={showModal}
+				setShow={(
+					value: boolean
+				) => {
+					setShowModal(value);
+
+					if (!value) {
+						setEditingUnit(
+							null
+						);
+					}
 				}}
+				editingUnit={
+					editingUnit
+				}
+				onSaved={
+					handleUnitSaved
+				}
+				title={
+					editingUnit
+						? "Update Unit"
+						: "Add New Unit"
+				}
 			/>
 		</div>
 	);
