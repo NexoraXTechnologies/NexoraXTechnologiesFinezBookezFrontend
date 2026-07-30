@@ -576,6 +576,7 @@ const AccountMasterModal = ({
             }) as any
         );
 // @ts-ignore
+        
         dispatch(getStates() as any);
     }, [dispatch]);
 

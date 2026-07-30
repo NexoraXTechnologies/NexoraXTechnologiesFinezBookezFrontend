@@ -1037,7 +1037,7 @@ const QuotationRegister = () => {
        CUSTOM FILTERS
     =================================================== */
 
-    const customFilters =
+    const customFilters:any =
         useMemo<
             CustomFilterDefinition[]
         >(() => {
