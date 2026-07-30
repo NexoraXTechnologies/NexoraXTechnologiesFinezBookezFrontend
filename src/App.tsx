@@ -84,6 +84,8 @@ import TransactionConfiguration from './pages/setting/transactionConfiguration';
 import DocumentSeries from './pages/setting/documentSeries';
 import CustomTransactionDashboard from './pages/bookez/transactions/customTransactions';
 import CustomTransaction from './pages/bookez/transactions/customTransactions/CustomTransaction';
+import EWayBillList from './pages/bookez/transportation/eWayBill/EwayBillList';
+import CreateEditEWayBill from './pages/bookez/transportation/eWayBill/Createeditewaybill';
 
 function App() {
   useAppearance();
@@ -206,6 +208,11 @@ function App() {
           <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
           <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
           <Route path='/bookEz/transportation/trip-lr-entry/edit/:voucherNumber' element={<CreateEditTripLREntry />} />
+
+
+          <Route path='/bookEz/transportation/e-way-bill' element={<EWayBillList/>} />
+          <Route path='bookEz/transportation/e-way-bill/view/:eWayBillBumber' element={<CreateEditEWayBill/>} />
+
 
           <Route path="/bookEz/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
           <Route path="/bookEz/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>

@@ -2051,7 +2051,7 @@ const QuotationRegister = () => {
                             key:
                                 filter.key,
 
-                            type: "select",
+                            type: "select" as const,
 
                             label:
                                 filter.label ||

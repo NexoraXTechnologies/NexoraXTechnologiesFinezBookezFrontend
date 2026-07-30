@@ -374,22 +374,22 @@ const getReturnStatusClass = (value: any): string => {
     return "bg-muted text-muted-foreground";
 };
 
-const getDocumentStatusClass = (value: any): string => {
-    const status = normalizeStatus(value);
+// const getDocumentStatusClass = (value: any): string => {
+//     const status = normalizeStatus(value);
 
-    if (status === "open") {
-        return "bg-success/10 text-success";
-    }
+//     if (status === "open") {
+//         return "bg-success/10 text-success";
+//     }
 
-    if (
-        status === "close" ||
-        status === "closed"
-    ) {
-        return "bg-muted text-muted-foreground";
-    }
+//     if (
+//         status === "close" ||
+//         status === "closed"
+//     ) {
+//         return "bg-muted text-muted-foreground";
+//     }
 
-    return "bg-primary/10 text-primary";
-};
+//     return "bg-primary/10 text-primary";
+// };
 
 /* ===================================================
    TABLE COLUMNS
@@ -1785,7 +1785,7 @@ const PurchaseReturnRegister = () => {
                             filter: CustomFilterDefinition
                         ) => ({
                             key: filter.key,
-                            type: "select",
+                            type: "select" as const,
 
                             label:
                                 filter.label ||

@@ -3,16 +3,15 @@ import {
   ShoppingCart,
   ReceiptText,
   WalletCards,
-  CreditCard,
   Truck,
   Route,
   Wrench,
   FileCheck,
   UserRoundCheck,
-  BadgeIndianRupee,
+ 
   FileText,
-  RotateCcw,
-  LibraryBig,
+  
+  
   Combine,
   Scale,
   PackageOpen,

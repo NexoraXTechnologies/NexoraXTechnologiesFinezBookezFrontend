@@ -8,6 +8,7 @@ import {
   HandCoins,
   PackagePlus,
   MapPinned,
+  ReceiptText,
 } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 
@@ -47,6 +48,13 @@ const cards: any[] = [
     path: "/bookEz/transportation/trip-lr-entry",
     icon: <FileText size={22} />,
     permissionKey: "tripLrCollection",
+  },
+  {
+    title: "E-Way Bill",
+    description: "Create, update, and monitor e-way bills for seamless goods transportation.",
+    path: "/bookEz/transportation/e-way-bill",
+    icon: <ReceiptText size={22} />,
+    permissionKey: "Pass",
   },
   {
     title: "Vehicle Maintenance",

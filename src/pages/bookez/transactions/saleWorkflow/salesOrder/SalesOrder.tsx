@@ -3607,18 +3607,15 @@ const SalesOrder = () => {
 
                     setShow: () =>
                         setDownlaodPDF(
+                            // @ts-ignore
                             () => ({
                                 show:
                                     !downlaodPDF
                                         ?.show,
                             })
                         ),
-
-                    rowData:
-                        downlaodPDF
-                            ?.record,
-
-                    report,
+// @ts-ignore
+                    rowData:downlaodPDF?.record,report,
 
                     title:
                         "Download Sales Order PDF",

@@ -444,15 +444,15 @@ const getStockValue = (row: any): number => {
     return getQuantity(row) * getRate(row);
 };
 
-const getBatchNumber = (row: any): string => {
-    return String(
-        row?.batchNumber ||
-        row?.batchNo ||
-        getBodyRows(row)?.[0]?.batchNumber ||
-        getBodyRows(row)?.[0]?.batchNo ||
-        "-"
-    ).trim();
-};
+// const getBatchNumber = (row: any): string => {
+//     return String(
+//         row?.batchNumber ||
+//         row?.batchNo ||
+//         getBodyRows(row)?.[0]?.batchNumber ||
+//         getBodyRows(row)?.[0]?.batchNo ||
+//         "-"
+//     ).trim();
+// };
 
 const getStatus = (row: any): string => {
     return String(
@@ -1875,7 +1875,7 @@ const OpeningStockRegister = () => {
                             filter: CustomFilterDefinition
                         ) => ({
                             key: filter.key,
-                            type: "select",
+                            type: "select" as const ,
 
                             label:
                                 filter.label ||

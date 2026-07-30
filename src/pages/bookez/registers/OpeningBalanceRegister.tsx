@@ -411,46 +411,46 @@ const getStatusClass = (value: any): string => {
     return "bg-muted text-muted-foreground";
 };
 
-const getDocumentStatusClass = (
-    value: any
-): string => {
-    const status = normalizeStatus(value);
+// const getDocumentStatusClass = (
+//     value: any
+// ): string => {
+//     const status = normalizeStatus(value);
 
-    if (status === "open") {
-        return "bg-success/10 text-success";
-    }
+//     if (status === "open") {
+//         return "bg-success/10 text-success";
+//     }
 
-    if (
-        status === "close" ||
-        status === "closed"
-    ) {
-        return "bg-muted text-muted-foreground";
-    }
+//     if (
+//         status === "close" ||
+//         status === "closed"
+//     ) {
+//         return "bg-muted text-muted-foreground";
+//     }
 
-    return "bg-primary/10 text-primary";
-};
+//     return "bg-primary/10 text-primary";
+// };
 
-const getBalanceTypeClass = (
-    value: any
-): string => {
-    const type = normalizeStatus(value);
+// const getBalanceTypeClass = (
+//     value: any
+// ): string => {
+//     const type = normalizeStatus(value);
 
-    if (
-        type === "debit" ||
-        type === "dr"
-    ) {
-        return "bg-primary/10 text-primary";
-    }
+//     if (
+//         type === "debit" ||
+//         type === "dr"
+//     ) {
+//         return "bg-primary/10 text-primary";
+//     }
 
-    if (
-        type === "credit" ||
-        type === "cr"
-    ) {
-        return "bg-success/10 text-success";
-    }
+//     if (
+//         type === "credit" ||
+//         type === "cr"
+//     ) {
+//         return "bg-success/10 text-success";
+//     }
 
-    return "bg-muted text-muted-foreground";
-};
+//     return "bg-muted text-muted-foreground";
+// };
 
 /* ===================================================
    TABLE COLUMNS
@@ -1686,7 +1686,7 @@ const OpeningBalanceRegister = () => {
                             filter: CustomFilterDefinition
                         ) => ({
                             key: filter.key,
-                            type: "select",
+                            type: "select" as const,
 
                             label:
                                 filter.label ||
