@@ -846,91 +846,90 @@ const CreateTransportOrder = ({
 		setStep((prev) => Math.max(prev - 1, 0));
 	};
 
+	
 	const handleSave = async () => {
-		try {
-			setLoading(true);
+	try {
+		setLoading(true);
 
-			const payload = {
-				...form,
-				freightDetails: {
-					...form.freightDetails,
-					balanceAmount,
-				},
-			};
+		const payload = {
+			...form,
+			freightDetails: {
+				...form.freightDetails,
+				balanceAmount,
+			},
+		};
 
-			if (isView) {
-				goBack();
-				return;
-			}
+		if (isView) {
+			goBack();
+			return;
+		}
 
-			if (isEditMode) {
-				const finalOrderNumber =
-					orderNumber ||
-					payload?.transportOrderNumber ||
-					payload?.orderNumber ||
-					payload?.voucherNumber;
-
-				if (!finalOrderNumber) {
-					toast.warn("Transport order number not found");
-					return;
-				}
-
-				await dispatch(
-					updateTransportOrderByVoucherNumber({
-						voucherNumber: finalOrderNumber,
-						payload,
-					})
-				).unwrap();
-
-
-				await dispatch(
-					sendWhatsAppMessage({
-						moduleType: "transportOrder",
-						voucherNumber: finalOrderNumber,
-					})
-				).unwrap();
-
-
-
-				toast.success("Transport order updated");
-				goBack();
-				return;
-			}
-
-			const response = await dispatch(
-				createTransportOrder(payload)
-			).unwrap();
-
-			const voucherNumber =
-				response?.data?.voucherNumber ||
-				response?.data?.transportOrderNumber ||
-				response?.voucherNumber ||
-				response?.transportOrderNumber;
-
-			if (voucherNumber) {
+		// Silently isolate WhatsApp send — never let it block save/navigation
+		// or surface an error to the user.
+		const safeSendWhatsApp = async (voucherNumber: string) => {
+			try {
 				await dispatch(
 					sendWhatsAppMessage({
 						moduleType: "transportOrder",
 						voucherNumber,
 					})
 				).unwrap();
+			} catch (waError: any) {
+				console.error("WhatsApp send failed (ignored):", waError);
+			}
+		};
+
+		if (isEditMode) {
+			const finalOrderNumber =
+				orderNumber ||
+				payload?.transportOrderNumber ||
+				payload?.orderNumber ||
+				payload?.voucherNumber;
+
+			if (!finalOrderNumber) {
+				toast.warn("Transport order number not found");
+				return;
 			}
 
-			toast.success("Transport order created");
-			goBack();
-			// await dispatch(createTransportOrder(payload)).unwrap();
+			await dispatch(
+				updateTransportOrderByVoucherNumber({
+					voucherNumber: finalOrderNumber,
+					payload,
+				})
+			).unwrap();
 
-			// toast.success("Transport order created");
-			// navigate(-1);
-		} catch (error: any) {
-			toast.error(
-				error?.message ||
-				`Failed to ${isEditMode ? "update" : "create"} transport order`
-			);
-		} finally {
-			setLoading(false);
+			await safeSendWhatsApp(finalOrderNumber);
+
+			toast.success("Transport order updated");
+			goBack();
+			return;
 		}
-	};
+
+		const response = await dispatch(
+			createTransportOrder(payload)
+		).unwrap();
+
+		const voucherNumber =
+			response?.data?.voucherNumber ||
+			response?.data?.transportOrderNumber ||
+			response?.voucherNumber ||
+			response?.transportOrderNumber;
+
+		if (voucherNumber) {
+			await safeSendWhatsApp(voucherNumber);
+		}
+
+		toast.success("Transport order created");
+		goBack();
+	} catch (error: any) {
+		toast.error(
+			error?.message ||
+			`Failed to ${isEditMode ? "update" : "create"} transport order`
+		);
+	} finally {
+		setLoading(false);
+	}
+};
 
 	const renderStep = () => {
 		switch (step) {

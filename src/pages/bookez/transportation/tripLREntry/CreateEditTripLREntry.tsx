@@ -1839,7 +1839,18 @@ import {
 
 import { getTransportOrders } from "../../../../redux/slices/professionalSlice/transportation/transportOrderSlice";
 import { getAllTripAllocation } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
-import { triggerEWayBillGeneration } from "../eWayBill/ewaybillservice";
+
+
+import {
+    generateEWayBill,
+    getEWayBillAccessToken,
+    saveEWayBill,
+} from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
+
+import {
+    buildEWayBillPayload,
+    buildSaveEWayBillPayload,
+} from "../eWayBill/ewaybillservice";
 
 // E-Way Bill: fire-and-forget background generation. This must NEVER block or
 // affect the existing "Save & Start Trip" -> Create LR -> Navigate Back flow.
@@ -1887,6 +1898,16 @@ const REMARKS_MAX = 200;
 /* ===================================================
    HELPERS
 =================================================== */
+
+const getThunkErrorMessage = (
+    error: any,
+    fallbackMessage: string
+) =>
+    error?.message ||
+    error?.data?.message ||
+    error?.payload?.message ||
+    error?.response?.data?.message ||
+    fallbackMessage;
 
 const toDateTimeLocalValue = (value: any) => {
     if (!value) return "";
@@ -2949,59 +2970,338 @@ const CreateEditTripLREntry = () => {
         return true;
     };
 
-    const persistEntry = async (overrides: any = {}, successMessage = "") => {
-        if (!validateForm()) return;
+   
 
-        try {
-            setLoading(true);
+    // const persistEntry = async (
+    //     overrides: any = {},
+    //     successMessage = ""
+    // ) => {
+    //     if (!validateForm()) return;
 
-            const payload = toTripLRCollectionPayload(form, overrides);
+    //     try {
+    //         setLoading(true);
 
-            if (isEdit) {
-                const editVoucher = voucherNumber || getLRVoucher(form);
+    //         const payload = toTripLRCollectionPayload(
+    //             form,
+    //             overrides
+    //         );
 
-                if (!editVoucher) {
-                    toast.warn("LR number not found");
-                    return;
-                }
+    //         /* ===================================================
+    //            EDIT LR
+    //         =================================================== */
 
-                await dispatch(
-                    updateTripLRCollection({
-                        voucherNumber: editVoucher,
-                        payload,
-                    }) as any
-                ).unwrap();
+    //         if (isEdit) {
+    //             const editVoucher =
+    //                 voucherNumber || getLRVoucher(form);
 
-                toast.success(successMessage);
-                navigate(-1);
-            } else {
-                // Existing behavior — unchanged. LR creation remains the
-                // primary process and its success/failure path is untouched.
-                const createdResult = await dispatch(
-                    createLRCollection(payload) as any
-                ).unwrap();
+    //             if (!editVoucher) {
+    //                 toast.warn("LR number not found");
+    //                 return;
+    //             }
 
-                // Per the integration doc's flow: LR success -> navigate
-                // back immediately -> THEN kick off the background E-Way
-                // Bill process. Navigation happens first, on purpose, so it
-                // can never be delayed or blocked by anything that follows.
-                toast.success(successMessage);
-                navigate(-1);
+    //             await dispatch(
+    //                 updateTripLRCollection({
+    //                     voucherNumber: editVoucher,
+    //                     payload,
+    //                 }) as any
+    //             ).unwrap();
 
-                // E-Way Bill generation: secondary background process.
-                // Deliberately NOT awaited — it must never delay the UI,
-                // and any failure inside it is swallowed internally (never
-                // surfaced to the user). This line runs strictly after
-                // navigation has already been triggered above.
-                triggerEWayBillGeneration(dispatch, createdResult, payload);
+    //             toast.success(successMessage);
+    //             navigate(-1);
+
+    //             return;
+    //         }
+
+    //         /* ===================================================
+    //            STEP 1: CREATE LR
+    //         =================================================== */
+
+    //         const createdResult = await dispatch(
+    //             createLRCollection(payload) as any
+    //         ).unwrap();
+
+    //         /* ===================================================
+    //            STEP 2: GET E-WAY BILL ACCESS TOKEN
+    //         =================================================== */
+
+    //         const tokenResult = await dispatch(
+    //             getEWayBillAccessToken() as any
+    //         ).unwrap();
+
+    //         const tokenData =
+    //             tokenResult?.data?.data ||
+    //             tokenResult?.data ||
+    //             tokenResult ||
+    //             {};
+
+    //         const authToken = String(
+    //             tokenData?.authtoken ||
+    //             tokenData?.authToken ||
+    //             ""
+    //         ).trim();
+
+    //         const sek = String(
+    //             tokenData?.sek || ""
+    //         ).trim();
+
+    //         if (!authToken) {
+    //             throw new Error(
+    //                 tokenResult?.message ||
+    //                 "E-Way Bill access token was not received"
+    //             );
+    //         }
+
+    //         /* ===================================================
+    //            STEP 3: BUILD E-WAY BILL PAYLOAD
+    //         =================================================== */
+
+    //         const eWayBillPayload = buildEWayBillPayload(
+    //             createdResult,
+    //             payload
+    //         );
+
+    //         if (!eWayBillPayload?.docNo) {
+    //             throw new Error(
+    //                 "E-Way Bill document number was not generated"
+    //             );
+    //         }
+
+    //         /* ===================================================
+    //            STEP 4: GENERATE E-WAY BILL
+    //         =================================================== */
+
+    //         const generatedResult = await dispatch(
+    //             generateEWayBill({
+    //                 payload: eWayBillPayload,
+    //                 authtoken: authToken,
+    //             }) as any
+    //         ).unwrap();
+
+    //         const generatedData =
+    //             generatedResult?.data?.data ||
+    //             generatedResult?.data ||
+    //             generatedResult ||
+    //             {};
+
+    //         // const ewayBillNo = String(
+    //         //     generatedData?.ewayBillNo ||
+    //         //     generatedData?.ewbNo ||
+    //         //     generatedData?.EwbNo ||
+    //         //     ""
+    //         // ).trim();
+
+    //         // if (!ewayBillNo) {
+    //         //     throw new Error(
+    //         //         generatedData?.message ||
+    //         //         generatedData?.errorMessage ||
+    //         //         generatedData?.errorDesc ||
+    //         //         "E-Way Bill number was not received"
+    //         //     );
+    //         // }
+
+    //         /* ===================================================
+    //            STEP 5: SAVE E-WAY BILL
+    //         =================================================== */
+
+    //         const savePayload = buildSaveEWayBillPayload({
+    //             createdResult,
+    //             lrPayload: payload,
+
+    //             // ⭐ SAME PAYLOAD SENT TO GENERATE API
+    //             requestPayload: eWayBillPayload,
+
+    //             responsePayload: generatedData,
+    //             authToken,
+    //             sek,
+    //         });
+
+    //         await dispatch(
+    //             saveEWayBill(savePayload) as any
+    //         ).unwrap();
+    //         /* ===================================================
+    //            ALL APIS SUCCESS
+    //         =================================================== */
+
+    //         toast.success(successMessage);
+    //         navigate(-1);
+    //     } catch (error: any) {
+    //         console.error(
+    //             "[TRIP LR / E-WAY BILL] Save failed:",
+    //             error
+    //         );
+
+    //         toast.error(
+    //             getThunkErrorMessage(
+    //                 error,
+    //                 "Trip LR or E-Way Bill process failed"
+    //             )
+    //         );
+
+    //         // Do not navigate here.
+    //         // User remains on the current form.
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+   
+const persistEntry = async (
+    overrides: any = {},
+    successMessage = ""
+) => {
+    if (!validateForm()) return;
+
+    try {
+        setLoading(true);
+
+        const payload = toTripLRCollectionPayload(
+            form,
+            overrides
+        );
+
+        /* ===================================================
+           EDIT LR
+        =================================================== */
+
+        if (isEdit) {
+            const editVoucher =
+                voucherNumber || getLRVoucher(form);
+
+            if (!editVoucher) {
+                toast.warn("LR number not found");
+                return;
             }
-        } catch (error: any) {
-            toast.error(error?.message || "Trip LR collection save failed");
-        } finally {
-            setLoading(false);
-        }
-    };
 
+            await dispatch(
+                updateTripLRCollection({
+                    voucherNumber: editVoucher,
+                    payload,
+                }) as any
+            ).unwrap();
+
+            toast.success(successMessage);
+            navigate(-1);
+
+            return;
+        }
+
+        /* ===================================================
+           STEP 1: GET E-WAY BILL ACCESS TOKEN
+        =================================================== */
+
+        const tokenResult = await dispatch(
+            getEWayBillAccessToken() as any
+        ).unwrap();
+
+        const tokenData =
+            tokenResult?.data?.data ||
+            tokenResult?.data ||
+            tokenResult ||
+            {};
+
+        const authToken = String(
+            tokenData?.authtoken ||
+            tokenData?.authToken ||
+            ""
+        ).trim();
+
+        const sek = String(
+            tokenData?.sek || ""
+        ).trim();
+
+        if (!authToken) {
+            throw new Error(
+                tokenResult?.message ||
+                "E-Way Bill access token was not received"
+            );
+        }
+
+        /* ===================================================
+           STEP 2: BUILD E-WAY BILL PAYLOAD
+           NOTE: built directly from the form payload now,
+           since LR has not been created yet.
+        =================================================== */
+
+        const eWayBillPayload = buildEWayBillPayload(
+            payload,
+            payload
+        );
+
+        if (!eWayBillPayload?.docNo) {
+            throw new Error(
+                "E-Way Bill document number was not generated"
+            );
+        }
+
+        /* ===================================================
+           STEP 3: GENERATE E-WAY BILL
+        =================================================== */
+
+        const generatedResult = await dispatch(
+            generateEWayBill({
+                payload: eWayBillPayload,
+                authtoken: authToken,
+            }) as any
+        ).unwrap();
+
+        const generatedData =
+            generatedResult?.data?.data ||
+            generatedResult?.data ||
+            generatedResult ||
+            {};
+
+        /* ===================================================
+           STEP 4: SAVE E-WAY BILL
+        =================================================== */
+// @ts-ignore
+        const savePayload = buildSaveEWayBillPayload({
+            lrPayload: payload,
+            requestPayload: eWayBillPayload,
+            responsePayload: generatedData,
+            authToken,
+            sek,
+        });
+
+        await dispatch(
+            saveEWayBill(savePayload) as any
+        ).unwrap();
+
+        /* ===================================================
+           STEP 5: CREATE LR (LAST — only if everything above
+           succeeded)
+        =================================================== */
+
+        await dispatch(
+            createLRCollection(payload) as any
+        ).unwrap();
+
+        /* ===================================================
+           ALL APIS SUCCESS
+        =================================================== */
+
+        toast.success(successMessage);
+        navigate(-1);
+    } catch (error: any) {
+        console.error(
+            "[TRIP LR / E-WAY BILL] Save failed:",
+            error
+        );
+
+        toast.error(
+            getThunkErrorMessage(
+                error,
+                "Trip LR or E-Way Bill process failed"
+            )
+        );
+
+        // Do not navigate here.
+        // User remains on the current form.
+    } finally {
+        setLoading(false);
+    }
+};
+   
+   
+   
     const handleSaveAndStart = () =>
         persistEntry(
             { tripStatus: form.tripStatus || "in_transit" },

@@ -158,7 +158,7 @@ function App() {
             element={<CustomTransactionDashboard />}
           />
           <Route
-           path="/bookEz/transaction/custom-list/:moduleCode"
+            path="/bookEz/transaction/custom-list/:moduleCode"
             element={<CustomTransaction />}
           />
 
@@ -210,17 +210,18 @@ function App() {
           <Route path='/bookEz/transportation/trip-lr-entry/edit/:voucherNumber' element={<CreateEditTripLREntry />} />
 
 
-          <Route path='/bookEz/transportation/e-way-bill' element={<EWayBillList/>} />
-          <Route path='bookEz/transportation/e-way-bill/view/:eWayBillBumber' element={<CreateEditEWayBill/>} />
+          <Route path='/bookEz/transportation/e-way-bill' element={<EWayBillList />} />
+          <Route path='bookEz/transportation/e-way-bill/view/:ewayBillNo' element={<CreateEditEWayBill />} />
+          <Route path="/bookEz/transportation/e-way-bill/edit/:ewayBillNo"element={<CreateEditEWayBill />}/>
 
 
           <Route path="/bookEz/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
-          <Route path="/bookEz/transportation/vehicle-maintenance/create"element={<CreateEditVehicleMaintenance />}/>
-          <Route path="/bookEz/transportation/vehicle-maintenance/edit/:voucherNumber" element={<CreateEditVehicleMaintenance />}/>
-          
-          <Route path="/bookEz/transportation/driver-settlement" element={<DriverSettlementList/>}/>
-          <Route path="/bookEz/transportation/driver-settlement/create"element={<CreateEditDriverSettlement/>}/>
-          <Route path="/bookEz/transportation/driver-settlement/edit/:voucherNumber" element={<CreateEditDriverSettlement />}/>
+          <Route path="/bookEz/transportation/vehicle-maintenance/create" element={<CreateEditVehicleMaintenance />} />
+          <Route path="/bookEz/transportation/vehicle-maintenance/edit/:voucherNumber" element={<CreateEditVehicleMaintenance />} />
+
+          <Route path="/bookEz/transportation/driver-settlement" element={<DriverSettlementList />} />
+          <Route path="/bookEz/transportation/driver-settlement/create" element={<CreateEditDriverSettlement />} />
+          <Route path="/bookEz/transportation/driver-settlement/edit/:voucherNumber" element={<CreateEditDriverSettlement />} />
 
           <Route path="/bookEz/transportation/vehicle-status" element={<VehicleStatus />} />
           <Route path="/bookEz/transportation/where-is-driver" element={<WhereIsMyDriver />} />
@@ -229,12 +230,12 @@ function App() {
           {/* configuration */}
           <Route path="/configuration" element={<Configuration />} />
           <Route path="/system-configuration" element={<SystemConfiguration />} />
-          <Route path="/master-configuration" element={<MasterConfiguration />}  />
-          <Route path="/transaction-configuration" element={<TransactionConfiguration />}  />
+          <Route path="/master-configuration" element={<MasterConfiguration />} />
+          <Route path="/transaction-configuration" element={<TransactionConfiguration />} />
           <Route path="configuration" element={<Configuration />} />
           <Route path="system-configuration" element={<SystemConfiguration />} />
-          <Route path="master-configuration" element={<MasterConfiguration />}  />
-          <Route path="document-series" element={<DocumentSeries />}  />
+          <Route path="master-configuration" element={<MasterConfiguration />} />
+          <Route path="document-series" element={<DocumentSeries />} />
           <Route path="/bookEz/pos-posting" element={<PosPosting />} />
           <Route path="user-explorer" element={<UserExplorer />} />
           {/* incometax */}

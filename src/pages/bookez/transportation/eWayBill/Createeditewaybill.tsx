@@ -15,12 +15,8 @@ import { toast } from "react-toastify";
 
 import { FormSectionCard } from "../../../../components/SectionCards";
 import { renderField } from "../../../../components/inputs";
+import { generateEWayBill, getEWayBillAccessToken, multiVehicleUpdate, saveEWayBill } from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
 
-import {
-    getEWayBillAccessToken,
-    generateEWayBill,
-    saveEWayBill,
-} from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
 
 /* ===================================================
    OPTIONS
@@ -85,6 +81,14 @@ const qtyUnitOptions = [
     { label: "SET", value: "SET" },
     { label: "TON", value: "TON" },
     { label: "OTH", value: "OTH" },
+];
+
+// GST vehicle-update reason codes (used by the VEHEWB action).
+const reasonCodeOptions = [
+    { label: "Due to Break Down", value: "1" },
+    { label: "Due to Transhipment", value: "2" },
+    { label: "Others", value: "3" },
+    { label: "First Time (initial vehicle entry)", value: "4" },
 ];
 
 // GST state codes (01–38 covers all states / UTs).
@@ -233,8 +237,8 @@ const createInitialEWayBillForm = () => ({
 
 /**
  * Maps a saved record (as returned by getAllEWayBill / passed via
- * location.state.ewayBillData) back into editable form shape, for the
- * read-only Edit/View screen.
+ * location.state.ewayBillData) back into display form shape, for the
+ * read-only View/Edit screens.
  */
 const mergeEWayBillRecordToForm = (record: any = {}) => {
     const base = createInitialEWayBillForm();
@@ -255,8 +259,65 @@ const mergeEWayBillRecordToForm = (record: any = {}) => {
     };
 };
 
+/**
+ * The ONLY fields GST's vehicle-update (VEHEWB) action allows changing on
+ * an already-generated e-way bill — mirrors the mobile app's editable
+ * "Vehicle Details" + "Update Details" cards exactly.
+ */
+const createVehicleUpdateForm = (
+    payload: any = {},
+    record: any = {}
+) => ({
+    groupNo:
+        record?.multiVehicleUpdatePayload?.groupNo ||
+        record?.groupNo ||
+        1,
+
+    oldVehicleNo:
+        record?.multiVehicleUpdatePayload?.oldvehicleNo ||
+        record?.multiVehicleUpdatePayload?.oldVehicleNo ||
+        payload?.vehicleNo ||
+        "",
+
+    newVehicleNo:
+        record?.multiVehicleUpdatePayload?.newVehicleNo ||
+        "",
+
+    oldTranNo:
+        record?.multiVehicleUpdatePayload?.oldTranNo ||
+        payload?.transDocNo ||
+        "",
+
+    newTranNo:
+        record?.multiVehicleUpdatePayload?.newTranNo ||
+        "",
+
+    fromPlace:
+        record?.multiVehicleUpdatePayload?.fromPlace ||
+        payload?.fromPlace ||
+        "",
+
+    fromState:
+        String(
+            record?.multiVehicleUpdatePayload?.fromState ||
+            payload?.fromStateCode ||
+            payload?.actFromStateCode ||
+            ""
+        ),
+
+    reasonCode:
+        String(
+            record?.multiVehicleUpdatePayload?.reasonCode ||
+            "1"
+        ),
+
+    reasonRem:
+        record?.multiVehicleUpdatePayload?.reasonRem ||
+        "Vehicle broke down",
+});
+
 /* ===================================================
-   CREATE / EDIT FORM
+   CREATE / EDIT / VIEW FORM
 =================================================== */
 
 const CreateEditEWayBill = () => {
@@ -273,10 +334,14 @@ const CreateEditEWayBill = () => {
         accessTokenLoader = false,
         generateLoader = false,
         saveLoader = false,
+        multiVehicleUpdateLoader = false,
     } = useSelector((state: any) => state.eWayBill || {});
 
     const mode = location.state?.mode || (params?.ewayBillNo ? "edit" : "add");
+
+    const isAdd = mode === "add";
     const isEdit = mode === "edit";
+    const isView = mode === "view";
 
     const ewayBillNo =
         location.state?.ewayBillNumber ||
@@ -285,49 +350,60 @@ const CreateEditEWayBill = () => {
         "";
 
     const [form, setForm] = useState<any>(createInitialEWayBillForm());
+    const [vehicleUpdateForm, setVehicleUpdateForm] = useState<any>(
+        createVehicleUpdateForm()
+    );
     const [savedRecord, setSavedRecord] = useState<any>(null);
 
-    const pageTitle = isEdit ? "E-Way Bill Details" : "Create E-Way Bill";
-    const pageDescription = isEdit
-        ? "E-Way Bills cannot be edited after generation — showing generated details only."
+    const pageTitle = isView
+        ? "View E-Way Bill"
+        : isEdit
+        ? "Update Vehicle Details"
+        : "Create E-Way Bill";
+
+    const pageDescription = isView
+        ? "Generated E-Way Bill details (read-only)."
+        : isEdit
+        ? "Update the vehicle using the Multi Vehicle Update API."
         : "Fill in shipment details to generate a new E-Way Bill via GST.";
 
-    const isBusy = accessTokenLoader || generateLoader || saveLoader;
+    const isBusy =
+        accessTokenLoader ||
+        generateLoader ||
+        saveLoader ||
+        multiVehicleUpdateLoader;
 
     /* ===================================================
-       LOAD RECORD (EDIT MODE)
+       LOAD RECORD (EDIT / VIEW MODE)
     =================================================== */
 
     useEffect(() => {
-        if (!isEdit) return;
+        if (isAdd) return;
 
         const passedData = location.state?.ewayBillData;
+        const record =
+            passedData ||
+            eWayBillList.find((item: any) => item?.ewayBillNo === ewayBillNo);
 
-        if (passedData) {
-            setSavedRecord(passedData);
-            setForm(mergeEWayBillRecordToForm(passedData));
+        if (!record) {
+            toast.warn("E-Way Bill details not found. Open it from the list.");
+            navigate(-1);
             return;
         }
 
-        // Fallback: look it up in whatever's already loaded in the list slice
-        // (no dedicated "get by number" endpoint exists yet).
-        const found = eWayBillList.find(
-            (item: any) => item?.ewayBillNo === ewayBillNo
+        setSavedRecord(record);
+        setForm(mergeEWayBillRecordToForm(record));
+        setVehicleUpdateForm(
+            createVehicleUpdateForm(
+                record?.ewayPayload,
+                record
+            )
         );
-
-        if (found) {
-            setSavedRecord(found);
-            setForm(mergeEWayBillRecordToForm(found));
-            return;
-        }
-
-        toast.warn("E-Way Bill details not found. Open it from the list.");
-        navigate(-1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isEdit, ewayBillNo]);
+    }, [isAdd, ewayBillNo]);
 
     /* ===================================================
-       COMPUTED TOTALS
+       COMPUTED TOTALS (ADD MODE ONLY)
     =================================================== */
 
     const totals = useMemo(() => {
@@ -376,7 +452,7 @@ const CreateEditEWayBill = () => {
     }, [form.itemList, form.otherValue]);
 
     /* ===================================================
-       FIELD HANDLERS
+       FIELD HANDLERS (ADD MODE — full form)
     =================================================== */
 
     const updateField = (key: string, value: any) => {
@@ -440,7 +516,23 @@ const CreateEditEWayBill = () => {
     };
 
     /* ===================================================
-       ITEM LIST HANDLERS
+       VEHICLE UPDATE FIELD HANDLERS (EDIT MODE ONLY)
+    =================================================== */
+
+    const updateVehicleField = (key: string, value: any) => {
+        setVehicleUpdateForm((prev: any) => ({ ...prev, [key]: value }));
+    };
+
+    const handleVehicleInputChange = (key: string) => (e: any) => {
+        updateVehicleField(key, e?.target?.value ?? "");
+    };
+
+    const handleVehicleSelectChange = (key: string) => (e: any) => {
+        updateVehicleField(key, e?.target?.value ?? e ?? "");
+    };
+
+    /* ===================================================
+       ITEM LIST HANDLERS (ADD MODE ONLY)
     =================================================== */
 
     const updateItem = (id: string, key: string, value: any) => {
@@ -473,7 +565,7 @@ const CreateEditEWayBill = () => {
     };
 
     /* ===================================================
-       PAYLOAD BUILD + VALIDATION
+       PAYLOAD BUILD + VALIDATION (ADD MODE)
     =================================================== */
 
     const buildGSTPayload = () => ({
@@ -603,6 +695,95 @@ const CreateEditEWayBill = () => {
         return true;
     };
 
+    const validateVehicleUpdateForm = () => {
+        const groupNo = Number(
+            vehicleUpdateForm.groupNo
+        );
+
+        const oldvehicleNo = String(
+            vehicleUpdateForm.oldVehicleNo || ""
+        ).trim();
+
+        const newVehicleNo = String(
+            vehicleUpdateForm.newVehicleNo || ""
+        ).trim();
+
+        const fromPlace = String(
+            vehicleUpdateForm.fromPlace || ""
+        ).trim();
+
+        const fromState = Number(
+            vehicleUpdateForm.fromState
+        );
+
+        const reasonCode = String(
+            vehicleUpdateForm.reasonCode || ""
+        ).trim();
+
+        const reasonRem = String(
+            vehicleUpdateForm.reasonRem || ""
+        ).trim();
+
+        if (!groupNo) {
+            toast.warn(
+                "Multi Vehicle group number is required"
+            );
+            return false;
+        }
+
+        if (!oldvehicleNo) {
+            toast.warn(
+                "Old vehicle number is required"
+            );
+            return false;
+        }
+
+        if (!newVehicleNo) {
+            toast.warn(
+                "New vehicle number is required"
+            );
+            return false;
+        }
+
+        if (
+            oldvehicleNo.toUpperCase() ===
+            newVehicleNo.toUpperCase()
+        ) {
+            toast.warn(
+                "Old and new vehicle numbers cannot be the same"
+            );
+            return false;
+        }
+
+        if (!fromPlace) {
+            toast.warn("From place is required");
+            return false;
+        }
+
+        if (!fromState) {
+            toast.warn(
+                "From state code is required"
+            );
+            return false;
+        }
+
+        if (!reasonCode) {
+            toast.warn(
+                "Vehicle update reason is required"
+            );
+            return false;
+        }
+
+        if (!reasonRem) {
+            toast.warn(
+                "Vehicle update reason remark is required"
+            );
+            return false;
+        }
+
+        return true;
+    };
+
     /* ===================================================
        GENERATE + SAVE (ADD MODE)
     =================================================== */
@@ -648,9 +829,9 @@ const CreateEditEWayBill = () => {
             toast.success(`E-Way Bill ${genResponse.ewayBillNo} generated successfully`);
             navigate(-1);
         } catch (error: any) {
-            // Unlike the background LR-triggered flow, this screen is a
-            // deliberate, user-initiated action — failures here SHOULD be
-            // shown, not swallowed.
+            // This screen is a deliberate, user-initiated action — failures
+            // here SHOULD be shown, not swallowed (unlike the background
+            // LR-triggered flow).
             if (error?.error_cd === "604") {
                 toast.error(
                     "An E-Way Bill already exists for this document number. Use a different Invoice/Document No."
@@ -663,7 +844,122 @@ const CreateEditEWayBill = () => {
     };
 
     /* ===================================================
-       FIELD CONFIGS
+       UPDATE VEHICLE (EDIT MODE)
+    =================================================== */
+
+    const handleUpdateVehicle = async () => {
+        if (!validateVehicleUpdateForm()) return;
+
+        if (!savedRecord?.ewayBillNo) {
+            toast.warn("E-Way Bill number not found");
+            return;
+        }
+
+        try {
+            // Step 1 — get a fresh GST E-Way Bill access token.
+            const tokenResult = await dispatch(
+                getEWayBillAccessToken()
+            ).unwrap();
+
+            const authtoken = String(
+                tokenResult?.authtoken ||
+                tokenResult?.data?.authtoken ||
+                tokenResult?.data?.data?.authtoken ||
+                ""
+            ).trim();
+
+            if (!authtoken) {
+                toast.error(
+                    "Could not obtain E-Way Bill access token"
+                );
+                return;
+            }
+
+            // Step 2 — send exact MULTIVEHUPD request body.
+            const requestPayload = {
+                ewbNo: Number(
+                    savedRecord.ewayBillNo
+                ),
+
+                groupNo: Number(
+                    vehicleUpdateForm.groupNo
+                ),
+
+                // External API requires exact key casing.
+                oldvehicleNo: String(
+                    vehicleUpdateForm.oldVehicleNo || ""
+                )
+                    .trim()
+                    .toUpperCase(),
+
+                newVehicleNo: String(
+                    vehicleUpdateForm.newVehicleNo || ""
+                )
+                    .trim()
+                    .toUpperCase(),
+
+                oldTranNo: String(
+                    vehicleUpdateForm.oldTranNo || ""
+                ).trim(),
+
+                newTranNo: String(
+                    vehicleUpdateForm.newTranNo || ""
+                ).trim(),
+
+                fromPlace: String(
+                    vehicleUpdateForm.fromPlace || ""
+                ).trim(),
+
+                fromState: Number(
+                    vehicleUpdateForm.fromState
+                ),
+
+                reasonCode: String(
+                    vehicleUpdateForm.reasonCode || ""
+                ).trim(),
+
+                reasonRem: String(
+                    vehicleUpdateForm.reasonRem || ""
+                ).trim(),
+            };
+
+            const result = await dispatch(
+                multiVehicleUpdate({
+                    authtoken,
+                    payload: requestPayload,
+                })
+            ).unwrap();
+
+            toast.success(
+                result?.message ||
+                result?.status_desc ||
+                result?.statusDesc ||
+                "E-Way Bill vehicle updated successfully."
+            );
+
+            navigate(-1);
+        } catch (error: any) {
+            const apiErrorMessage =
+                error?.error?.error?.message ||
+                error?.error?.message ||
+                error?.response?.data?.error?.error?.message ||
+                error?.response?.data?.error?.message ||
+                error?.response?.data?.message ||
+                error?.data?.error?.error?.message ||
+                error?.data?.error?.message ||
+                error?.data?.message ||
+                error?.payload?.error?.error?.message ||
+                error?.payload?.error?.message ||
+                error?.payload?.message ||
+                error?.message ||
+                "Failed to update E-Way Bill vehicle";
+
+            toast.error(apiErrorMessage);
+        }
+    };
+
+    /* ===================================================
+       FIELD CONFIGS (ADD MODE — always disabled outside add)
     =================================================== */
 
     const basicFields = [
@@ -673,7 +969,7 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: docTypeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "docNo",
@@ -681,14 +977,14 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "e.g. INV-1024",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "docDate",
             label: "Document Date",
             type: "date",
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "supplyType",
@@ -696,7 +992,7 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: supplyTypeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "subSupplyType",
@@ -704,7 +1000,7 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: subSupplyTypeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "transactionType",
@@ -712,7 +1008,7 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: transactionTypeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
     ];
 
@@ -723,7 +1019,7 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "Enter GSTIN",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "fromTrdName",
@@ -731,21 +1027,21 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "Enter trade name",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "fromAddr1",
             label: "Address Line 1",
             type: "text",
             placeholder: "Enter address",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "fromAddr2",
             label: "Address Line 2",
             type: "text",
             placeholder: "Enter address",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "fromPlace",
@@ -753,7 +1049,7 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "Enter place",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "fromPincode",
@@ -761,7 +1057,7 @@ const CreateEditEWayBill = () => {
             type: "number",
             mandatory: true,
             placeholder: "Enter pincode",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "fromStateCode",
@@ -769,7 +1065,7 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: stateCodeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
     ];
 
@@ -780,7 +1076,7 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "Enter GSTIN",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "toTrdName",
@@ -788,21 +1084,21 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "Enter trade name",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "toAddr1",
             label: "Address Line 1",
             type: "text",
             placeholder: "Enter address",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "toAddr2",
             label: "Address Line 2",
             type: "text",
             placeholder: "Enter address",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "toPlace",
@@ -810,7 +1106,7 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "Enter place",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "toPincode",
@@ -818,7 +1114,7 @@ const CreateEditEWayBill = () => {
             type: "number",
             mandatory: true,
             placeholder: "Enter pincode",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "toStateCode",
@@ -826,24 +1122,27 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: stateCodeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
     ];
 
+    // Read-only display of the ORIGINAL transport/vehicle details the bill
+    // was generated with. Always disabled — the editable copy for Edit
+    // mode lives in the separate "Update Vehicle Details" section below.
     const transportFields = [
         {
             key: "transporterId",
             label: "Transporter ID",
             type: "text",
             placeholder: "Enter transporter GSTIN/ID",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "transporterName",
             label: "Transporter Name",
             type: "text",
             placeholder: "Enter transporter name",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "transMode",
@@ -851,7 +1150,7 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: transModeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "transDistance",
@@ -859,7 +1158,7 @@ const CreateEditEWayBill = () => {
             type: "number",
             mandatory: true,
             placeholder: "Enter distance",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "vehicleNo",
@@ -867,7 +1166,7 @@ const CreateEditEWayBill = () => {
             type: "text",
             mandatory: true,
             placeholder: "e.g. MH31AS9806",
-            disabled: isEdit,
+            disabled: !isAdd,
         },
         {
             key: "vehicleType",
@@ -875,7 +1174,7 @@ const CreateEditEWayBill = () => {
             type: "select",
             options: vehicleTypeOptions,
             mandatory: true,
-            disabled: isEdit,
+            disabled: !isAdd,
         },
     ];
 
@@ -885,7 +1184,96 @@ const CreateEditEWayBill = () => {
             label: "Other Charges (₹)",
             type: "number",
             placeholder: "0",
-            disabled: isEdit,
+            disabled: !isAdd,
+        },
+    ];
+
+    /* ===================================================
+       FIELD CONFIGS (EDIT MODE — vehicle update only)
+    =================================================== */
+
+    const vehicleUpdateFieldForm = {
+        groupNo: vehicleUpdateForm.groupNo,
+        oldVehicleNo:
+            vehicleUpdateForm.oldVehicleNo,
+        newVehicleNo:
+            vehicleUpdateForm.newVehicleNo,
+        oldTranNo:
+            vehicleUpdateForm.oldTranNo,
+        newTranNo:
+            vehicleUpdateForm.newTranNo,
+        fromPlace:
+            vehicleUpdateForm.fromPlace,
+        fromState:
+            vehicleUpdateForm.fromState,
+        reasonCode:
+            vehicleUpdateForm.reasonCode,
+        reasonRem:
+            vehicleUpdateForm.reasonRem,
+    };
+
+    const vehicleUpdateFields = [
+        {
+            key: "groupNo",
+            label: "Group Number",
+            type: "number",
+            mandatory: true,
+            placeholder: "e.g. 1",
+        },
+        {
+            key: "oldVehicleNo",
+            label: "Old Vehicle Number",
+            type: "text",
+            mandatory: true,
+            placeholder: "e.g. PQR1235",
+        },
+        {
+            key: "newVehicleNo",
+            label: "New Vehicle Number",
+            type: "text",
+            mandatory: true,
+            placeholder: "e.g. PQR1234",
+        },
+        {
+            key: "oldTranNo",
+            label: "Old Transporter Number",
+            type: "text",
+            placeholder: "e.g. ABC123",
+        },
+        {
+            key: "newTranNo",
+            label: "New Transporter Number",
+            type: "text",
+            placeholder: "e.g. PQR123",
+        },
+        {
+            key: "fromPlace",
+            label: "From Place",
+            type: "text",
+            mandatory: true,
+            placeholder: "e.g. Lucknow",
+        },
+        {
+            key: "fromState",
+            label: "From State",
+            type: "select",
+            options: stateCodeOptions,
+            mandatory: true,
+        },
+        {
+            key: "reasonCode",
+            label: "Reason for Change",
+            type: "select",
+            options: reasonCodeOptions,
+            mandatory: true,
+        },
+        {
+            key: "reasonRem",
+            label: "Reason Remark",
+            type: "textarea",
+            mandatory: true,
+            placeholder: "e.g. Vehicle broke down",
+            className: "md:col-span-2",
         },
     ];
 
@@ -898,6 +1286,19 @@ const CreateEditEWayBill = () => {
                     handleInputChange,
                     handleSelectChange,
                     updateField,
+                })}
+            </Fragment>
+        ));
+
+    const renderVehicleUpdateFields = (fields: any[]) =>
+        fields.map((field: any) => (
+            <Fragment key={field.key}>
+                {renderField({
+                    field,
+                    form: vehicleUpdateFieldForm,
+                    handleInputChange: handleVehicleInputChange,
+                    handleSelectChange: handleVehicleSelectChange,
+                    updateField: updateVehicleField,
                 })}
             </Fragment>
         ));
@@ -929,6 +1330,8 @@ const CreateEditEWayBill = () => {
                             ? "Getting access token..."
                             : generateLoader
                             ? "Generating..."
+                            : multiVehicleUpdateLoader
+                            ? "Updating vehicle..."
                             : "Saving..."}
                     </span>
                 )}
@@ -936,7 +1339,7 @@ const CreateEditEWayBill = () => {
 
             <div className="flex-1 overflow-auto p-2">
                 <div className="space-y-4">
-                    {isEdit && savedRecord && (
+                    {!isAdd && savedRecord && (
                         <FormSectionCard
                             title="Generated E-Way Bill"
                             icon={<FileText size={18} />}
@@ -972,6 +1375,17 @@ const CreateEditEWayBill = () => {
                         </FormSectionCard>
                     )}
 
+                    {isEdit && (
+                        <FormSectionCard
+                            title="Update Vehicle Details"
+                            icon={<Truck size={18} />}
+                        >
+                            <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+                                {renderVehicleUpdateFields(vehicleUpdateFields)}
+                            </div>
+                        </FormSectionCard>
+                    )}
+
                     <FormSectionCard
                         title="1. Basic Information"
                         icon={<FileText size={18} />}
@@ -1002,7 +1416,7 @@ const CreateEditEWayBill = () => {
                     </div>
 
                     <FormSectionCard
-                        title="4. Transport & Vehicle"
+                        title={isAdd ? "4. Transport & Vehicle" : "4. Transport & Vehicle (as generated)"}
                         icon={<Truck size={18} />}
                     >
                         <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-2 gap-4 sm:grid-cols-3">
@@ -1024,7 +1438,7 @@ const CreateEditEWayBill = () => {
                                         <th className="py-2 pr-2">SGST %</th>
                                         <th className="py-2 pr-2">IGST %</th>
                                         <th className="py-2 pr-2">Cess %</th>
-                                        {!isEdit && <th className="py-2 pr-2" />}
+                                        {isAdd && <th className="py-2 pr-2" />}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1034,7 +1448,7 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="text"
                                                     value={item.productName}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "productName", e.target.value)
                                                     }
@@ -1046,7 +1460,7 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="text"
                                                     value={item.hsnCode}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "hsnCode", e.target.value)
                                                     }
@@ -1058,7 +1472,7 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="number"
                                                     value={item.quantity}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "quantity", e.target.value)
                                                     }
@@ -1068,7 +1482,7 @@ const CreateEditEWayBill = () => {
                                             <td className="py-2 pr-2">
                                                 <select
                                                     value={item.qtyUnit}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "qtyUnit", e.target.value)
                                                     }
@@ -1085,7 +1499,7 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="number"
                                                     value={item.taxableAmount}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "taxableAmount", e.target.value)
                                                     }
@@ -1096,7 +1510,7 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="number"
                                                     value={item.cgstRate}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "cgstRate", e.target.value)
                                                     }
@@ -1107,7 +1521,7 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="number"
                                                     value={item.sgstRate}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "sgstRate", e.target.value)
                                                     }
@@ -1118,7 +1532,7 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="number"
                                                     value={item.igstRate}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "igstRate", e.target.value)
                                                     }
@@ -1129,14 +1543,14 @@ const CreateEditEWayBill = () => {
                                                 <input
                                                     type="number"
                                                     value={item.cessRate}
-                                                    disabled={isEdit}
+                                                    disabled={!isAdd}
                                                     onChange={(e) =>
                                                         updateItem(item.id, "cessRate", e.target.value)
                                                     }
                                                     className="h-9 w-16 rounded-md border border-border bg-background px-2 text-sm disabled:opacity-60"
                                                 />
                                             </td>
-                                            {!isEdit && (
+                                            {isAdd && (
                                                 <td className="py-2 pr-2">
                                                     <button
                                                         type="button"
@@ -1153,7 +1567,7 @@ const CreateEditEWayBill = () => {
                                 </tbody>
                             </table>
 
-                            {!isEdit && (
+                            {isAdd && (
                                 <button
                                     type="button"
                                     onClick={addItem}
@@ -1238,10 +1652,31 @@ const CreateEditEWayBill = () => {
                     disabled={isBusy}
                     className="rounded-md border border-border bg-background px-4 py-2 text-sm font-bold text-card-foreground transition hover:bg-muted disabled:opacity-60"
                 >
-                    {isEdit ? "Close" : "Cancel"}
+                    {isAdd ? "Cancel" : "Close"}
                 </button>
 
-                {!isEdit && (
+                {isView && (
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate(
+                                `/bookEz/transportation/e-way-bill/edit/${savedRecord?.ewayBillNo || ewayBillNo}`,
+                                {
+                                    state: {
+                                        mode: "edit",
+                                        ewayBillNo: savedRecord?.ewayBillNo || ewayBillNo,
+                                        ewayBillData: savedRecord,
+                                    },
+                                }
+                            )
+                        }
+                        className="rounded-md bg-amber-500 px-5 py-2 text-sm font-bold text-white transition hover:bg-amber-600"
+                    >
+                        Edit Vehicle
+                    </button>
+                )}
+
+                {isAdd && (
                     <button
                         type="button"
                         onClick={handleGenerate}
@@ -1249,6 +1684,17 @@ const CreateEditEWayBill = () => {
                         className="rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
                     >
                         {isBusy ? "Please wait..." : "Generate E-Way Bill"}
+                    </button>
+                )}
+
+                {isEdit && (
+                    <button
+                        type="button"
+                        onClick={handleUpdateVehicle}
+                        disabled={isBusy}
+                        className="rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                    >
+                        {isBusy ? "Please wait..." : "Update Vehicle"}
                     </button>
                 )}
             </div>
