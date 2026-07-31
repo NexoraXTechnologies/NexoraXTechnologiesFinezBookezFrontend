@@ -62,6 +62,12 @@ export const createInitialTripExpense = () => ({
   tripDate: new Date().toISOString(),
   lrNumber: "",
   lrDate: "",
+  ewayBillNo: "",
+  ewayBillDate: "",
+  ewayBillValidUpto: "",
+  ewayBillStatus: "",
+  ewayBillPdfUrl: "",
+
 
   vehicle: {
     vehicleId: "",
@@ -101,6 +107,7 @@ export const createInitialTripExpense = () => ({
     totalTripExpense: 0,
     balanceAmount: 0,
   },
+
 
   tripStatus: "draft",
   enteredBy: "driver",
@@ -227,11 +234,11 @@ export const getAllocationVoucher = (item: AnyObj = {}) =>
 export const getAssignedDriverMobile = (item: AnyObj = {}) =>
   String(
     item?.assignedDriverMobile ||
-      item?.tripAssignedToMobile ||
-      item?.sendNotificationTo ||
-      item?.driver?.driverId ||
-      item?.driver?.mobileNumber ||
-      ""
+    item?.tripAssignedToMobile ||
+    item?.sendNotificationTo ||
+    item?.driver?.driverId ||
+    item?.driver?.mobileNumber ||
+    ""
   ).trim();
 
 export const isTripClosed = (item: AnyObj = {}) =>
@@ -246,39 +253,39 @@ export const isTripInProgress = (item: AnyObj = {}) =>
 
 
 export const isTripPendingAccept = (item: AnyObj = {}) => {
-	const status = normalizeTripStatus(item?.tripStatus);
-	const driverAccepted = toBool(item?.driverAccepted);
+  const status = normalizeTripStatus(item?.tripStatus);
+  const driverAccepted = toBool(item?.driverAccepted);
 
-	return (status === "pending" || status === "assigned") && !driverAccepted;
+  return (status === "pending" || status === "assigned") && !driverAccepted;
 };
 
 export const isParentStartedTrip = (item: AnyObj = {}) => {
-	const driverAccepted = toBool(item?.driverAccepted);
+  const driverAccepted = toBool(item?.driverAccepted);
 
-	return (
-		!driverAccepted &&
-		String(item?.notificationType || "") === "trip_started_by_parent" &&
-		!isTripClosed(item)
-	);
+  return (
+    !driverAccepted &&
+    String(item?.notificationType || "") === "trip_started_by_parent" &&
+    !isTripClosed(item)
+  );
 };
 
 export const canChildAcceptTrip = (item: AnyObj = {}) => {
-	const driverAccepted = toBool(item?.driverAccepted);
+  const driverAccepted = toBool(item?.driverAccepted);
 
-	return (
-		!isTripClosed(item) &&
-		!driverAccepted &&
-		(isTripPendingAccept(item) || isParentStartedTrip(item))
-	);
+  return (
+    !isTripClosed(item) &&
+    !driverAccepted &&
+    (isTripPendingAccept(item) || isParentStartedTrip(item))
+  );
 };
 
 export const canChildEditTrip = (item: AnyObj = {}) => {
-	const driverAccepted = toBool(item?.driverAccepted);
+  const driverAccepted = toBool(item?.driverAccepted);
 
-	if (isTripClosed(item)) return false;
-	if (!driverAccepted) return false;
+  if (isTripClosed(item)) return false;
+  if (!driverAccepted) return false;
 
-	return isTripInProgress(item) || driverAccepted;
+  return isTripInProgress(item) || driverAccepted;
 };
 
 export const isAssignedToDriver = (item: AnyObj = {}, driverMobile: any, user: AnyObj = {}) => {
@@ -513,18 +520,18 @@ export const toTripExpensePayload = (form: AnyObj = {}, overrides: AnyObj = {}) 
 
 
 export const toBool = (value: any) => {
-	if (typeof value === "boolean") return value;
+  if (typeof value === "boolean") return value;
 
-	if (typeof value === "string") {
-		const clean = value.trim().toLowerCase();
+  if (typeof value === "string") {
+    const clean = value.trim().toLowerCase();
 
-		if (clean === "true" || clean === "yes" || clean === "1") return true;
-		if (clean === "false" || clean === "no" || clean === "0" || clean === "") {
-			return false;
-		}
-	}
+    if (clean === "true" || clean === "yes" || clean === "1") return true;
+    if (clean === "false" || clean === "no" || clean === "0" || clean === "") {
+      return false;
+    }
+  }
 
-	if (typeof value === "number") return value === 1;
+  if (typeof value === "number") return value === 1;
 
-	return Boolean(value);
+  return Boolean(value);
 };

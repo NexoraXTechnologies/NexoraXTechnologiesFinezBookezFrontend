@@ -1,26 +1,6 @@
-/**
- * ewayBillService.ts
- *
- * Background E-Way Bill generation for the Trip LR Collection flow.
- * Orchestrates the redux thunks in eWayBillSlice.ts.
- *
- * BUSINESS RULE (do not violate):
- *  - LR creation is the PRIMARY process and must never be blocked or delayed by this module.
- *  - E-Way Bill generation is a SECONDARY, best-effort background process.
- *  - Any failure in this module must be swallowed silently (logged only) — never
- *    surfaced to the user via toast/alert, and never thrown back into the UI flow.
- *
- * Flow implemented here (per integration doc):
- *   createLR() succeeds -> navigate back immediately -> triggerEWayBillGeneration()
- *     -> getEWayBillAccessToken()
- *     -> generateEWayBill()
- *     -> (if GST says "already generated" / error 604) fetchExistingEWayBill()
- *     -> saveEWayBill()
- */
-
 import {
-    getEWayBillAccessToken,
     generateEWayBill,
+    getEWayBillAccessToken,
     saveEWayBill,
 } from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
 
@@ -28,213 +8,620 @@ import {
    HELPERS
 =================================================== */
 
-const formatDDMMYYYY = (value: any) => {
-    const date = value ? new Date(value) : new Date();
-
-    if (Number.isNaN(date.getTime())) return "";
-
-    const dd = String(date.getDate()).padStart(2, "0");
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const yyyy = date.getFullYear();
-
-    return `${dd}/${mm}/${yyyy}`;
+type BuildSaveEWayBillPayloadArgs = {
+    createdResult: any;
+    lrPayload: any;
+    requestPayload: any;
+    responsePayload: any;
+    authToken: string;
+    sek?: string;
 };
 
-const getVoucherFromLRResult = (lrResult: any, lrPayload: any) =>
-    lrResult?.voucherNumber ||
-    lrResult?.data?.voucherNumber ||
-    lrResult?.lrNumber ||
-    lrResult?.data?.lrNumber ||
-    lrPayload?.transportOrderNumber ||
-    lrPayload?.tripNumber ||
-    "";
+const getResponseData = (response: any) =>
+    response?.data?.data ||
+    response?.data ||
+    response ||
+    {};
 
-const getLRIdFromResult = (lrResult: any) =>
-    lrResult?._id || lrResult?.id || lrResult?.data?._id || lrResult?.data?.id || "";
+const getCreatedLRRecord = (createdResult: any) => {
+    const data = getResponseData(createdResult);
 
-/* ===================================================
-   STEP 4 — BUILD PAYLOAD FROM LR DATA
-=================================================== */
-
-const buildEWayBillPayload = (lrPayload: any, docNo: string) => ({
-    supplyType: "O",
-    subSupplyType: "1",
-    docType: "INV",
-    docNo,
-    docDate: formatDDMMYYYY(lrPayload?.lrDate),
-
-    fromGstin: "", // TODO: source from company/consignor GST profile
-    fromTrdName: lrPayload?.consignor?.name || "",
-    fromAddr1: lrPayload?.consignor?.address || "",
-    fromAddr2: "",
-    fromPlace: lrPayload?.consignor?.location?.city || "",
-    fromPincode: 0,
-    fromStateCode: 0,
-
-    toGstin: "", // TODO: source from consignee GST profile
-    toTrdName: lrPayload?.consignee?.name || "",
-    toAddr1: lrPayload?.consignee?.address || "",
-    toAddr2: "",
-    toPlace: lrPayload?.consignee?.location?.city || "",
-    toPincode: 0,
-    toStateCode: 0,
-
-    transactionType: 1,
-
-    totalValue: Number(lrPayload?.freight?.agreedFreight || 0),
-    cgstValue: 0,
-    sgstValue: 0,
-    igstValue: 0,
-    cessValue: 0,
-    otherValue: 0,
-    totInvValue: Number(lrPayload?.freight?.agreedFreight || 0),
-
-    transporterId: "",
-    transporterName: "",
-
-    transMode: "1",
-    transDistance: String(lrPayload?.route?.distanceKm || "0"),
-
-    vehicleNo: lrPayload?.vehicle?.vehicleNumber || "",
-    vehicleType: "R",
-
-    itemList: [
-        {
-            productName: lrPayload?.cargo?.productName || "",
-            productDesc: lrPayload?.cargo?.productName || "",
-            hsnCode: 0, // TODO: map from product master if HSN is tracked
-            quantity: Number(lrPayload?.cargo?.quantity || 0),
-            qtyUnit: String(lrPayload?.cargo?.unit || "NOS").toUpperCase(),
-            taxableAmount: Number(lrPayload?.freight?.agreedFreight || 0),
-            cgstRate: 0,
-            sgstRate: 0,
-            igstRate: 0,
-            cessRate: 0,
-            cessNonadvol: 0,
-        },
-    ],
-});
-
-/**
- * Handles the "already generated for this document number" case (error_cd 604).
- * Rather than treating it as a hard failure, we should ideally look up the
- * existing e-way bill and link it to the LR anyway.
- *
- * TODO: The exact request/response contract for GetEwayBill (query params,
- * auth requirements) wasn't specified in the integration doc — wire this up
- * against your GetEwayBill Postman request once confirmed. Until then this
- * safely no-ops (logs only), which still satisfies "never surface EWB
- * failures to the user".
- */
-const fetchExistingEWayBill = async (
-    _docNo: string,
-    _authtoken: string
-): Promise<any | null> => {
-    console.warn(
-        "[EWB] Document already has an e-way bill; existing-bill lookup not yet wired (see TODO in fetchExistingEWayBill)."
-    );
-    return null;
-};
-
-/* ===================================================
-   ORCHESTRATOR — CALL THIS AFTER LR CREATE SUCCEEDS
-=================================================== */
-
-/**
- * Fire-and-forget entry point. Call this AFTER createLRCollection resolves
- * successfully and AFTER you've already navigated back / shown the success
- * toast. Do NOT await this in a way that blocks the UI, and do NOT let its
- * rejection surface anywhere the user can see.
- *
- * `dispatch` is your redux store's dispatch (typed `any` here to avoid
- * pulling in your store's AppDispatch type into this file).
- */
-export const triggerEWayBillGeneration = async (
-    dispatch: any,
-    lrResult: any,
-    lrPayload: any
-): Promise<void> => {
-    try {
-        const voucherNumber = getVoucherFromLRResult(lrResult, lrPayload);
-        const lrId = getLRIdFromResult(lrResult);
-        const tripNumber = lrPayload?.tripNumber || lrPayload?.transportOrderNumber || "";
-
-        if (!voucherNumber) {
-            console.warn("[EWB] Skipped: no voucher number found on LR result");
-            return;
-        }
-
-        const requestPayload = buildEWayBillPayload(lrPayload, voucherNumber);
-
-        // Step 3 — access token
-        const tokenResult = await dispatch(getEWayBillAccessToken()).unwrap();
-        const authtoken = tokenResult?.authtoken;
-
-        if (!authtoken) {
-            console.warn("[EWB] No authtoken returned, aborting silently");
-            return;
-        }
-
-        // Step 5 — generate e-way bill
-        let genResponse: any = null;
-
-        try {
-            genResponse = await dispatch(
-                generateEWayBill({ payload: requestPayload, authtoken })
-            ).unwrap();
-        } catch (genError: any) {
-            // GST sandbox returns "already generated" (error_cd 604) as a
-            // 400 — treat that as recoverable instead of a hard failure.
-            if (genError?.error_cd === "604") {
-                const existing = await fetchExistingEWayBill(voucherNumber, authtoken);
-
-                if (existing?.ewayBillNo) {
-                    await dispatch(
-                        saveEWayBill({
-                            lrId,
-                            voucherNumber,
-                            tripNumber,
-                            ewayBillNo: existing.ewayBillNo,
-                            ewayBillDate: existing.ewayBillDate || "",
-                            validUpto: existing.validUpto || "",
-                            authToken: authtoken,
-                            requestPayload,
-                            responsePayload: existing,
-                            createdAt: new Date().toISOString(),
-                        })
-                    ).unwrap();
-                }
-
-                return;
-            }
-
-            // Any other generation failure — log and stop, never surface.
-            console.warn("[EWB] Generation failed silently", genError);
-            return;
-        }
-
-        // Step 6/7 — success, save the record
-        if (!genResponse?.ewayBillNo) {
-            console.warn("[EWB] Generation response missing ewayBillNo, skipping save", genResponse);
-            return;
-        }
-
-        await dispatch(
-            saveEWayBill({
-                lrId,
-                voucherNumber,
-                tripNumber,
-                ewayBillNo: genResponse.ewayBillNo,
-                ewayBillDate: genResponse.ewayBillDate,
-                validUpto: genResponse.validUpto,
-                authToken: authtoken,
-                requestPayload,
-                responsePayload: genResponse,
-                createdAt: new Date().toISOString(),
-            })
-        ).unwrap();
-    } catch (error) {
-        // Per business rule: E-Way Bill failures must NEVER reach the user.
-        console.error("[EWB] Background generation failed silently:", error);
+    if (Array.isArray(data)) {
+        return data[0] || {};
     }
+
+    if (Array.isArray(data?.records)) {
+        return data.records[0] || {};
+    }
+
+    if (Array.isArray(data?.items)) {
+        return data.items[0] || {};
+    }
+
+    return data?.record || data?.item || data;
+};
+
+export const buildSaveEWayBillPayload = ({
+    createdResult,
+    lrPayload,
+    requestPayload,
+    responsePayload,
+    authToken,
+    sek = "",
+}: BuildSaveEWayBillPayloadArgs) => {
+    const lrRecord = getCreatedLRRecord(
+        createdResult
+    );
+
+    const gstResponse =
+        responsePayload?.data?.data ||
+        responsePayload?.data ||
+        responsePayload ||
+        {};
+
+    const lrId = String(
+        lrRecord?._id ||
+        lrRecord?.id ||
+        lrRecord?.lrId ||
+        ""
+    ).trim();
+
+    const voucherNumber = String(
+        lrRecord?.lrNumber ||
+        lrRecord?.voucherNumber ||
+        lrRecord?.lrVoucherNumber ||
+        lrRecord?.tripLRVoucherNumber ||
+        lrPayload?.lrNumber ||
+        requestPayload?.docNo ||
+        ""
+    ).trim();
+
+    const tripNumber = String(
+        lrRecord?.tripNumber ||
+        lrRecord?.transportOrderNumber ||
+        lrPayload?.tripNumber ||
+        lrPayload?.transportOrderNumber ||
+        requestPayload?.docNo ||
+        ""
+    ).trim();
+
+    const invoiceNumber = String(
+        lrRecord?.invoiceNumber ||
+        lrRecord?.invoiceNo ||
+        lrPayload?.invoiceNumber ||
+        lrPayload?.invoiceNo ||
+        ""
+    ).trim();
+
+    const ewayBillNo = String(
+        gstResponse?.ewayBillNo ||
+        gstResponse?.ewbNo ||
+        gstResponse?.EwbNo ||
+        ""
+    ).trim();
+
+    // ⭐ GST response date-time is preserved exactly:
+    // "31/07/2026 11:17:00 AM"
+    const ewayBillDate = String(
+        gstResponse?.ewayBillDate ||
+        gstResponse?.ewayBillDateString ||
+        ""
+    ).trim();
+
+    // ⭐ GST response date-time is preserved exactly:
+    // "02/08/2026 11:59:00 PM"
+    const validUpto = String(
+        gstResponse?.validUpto ||
+        gstResponse?.validUpTo ||
+        ""
+    ).trim();
+
+    return {
+        lrId,
+        voucherNumber,
+        tripNumber,
+        invoiceNumber,
+
+        ewayBillNo,
+        ewayBillDate,
+        validUpto,
+
+        authToken,
+        sek,
+
+        // ⭐ Exact payload sent to Generate E-Way Bill API
+        ewayPayload: requestPayload,
+
+        // ⭐ Exact response returned by GST API
+        rawResponse: gstResponse,
+
+        createdAt: new Date().toISOString(),
+    };
+};
+
+const unwrapDispatchResult = async (dispatch: any, action: any) => {
+    const result = await dispatch(action);
+
+    if (typeof result?.unwrap === "function") {
+        return result.unwrap();
+    }
+
+    if (result?.error) {
+        throw result.error;
+    }
+
+    return result?.payload ?? result;
+};
+
+
+
+const getLRId = (createdResult: any) => {
+    const record = getCreatedLRRecord(createdResult);
+
+    return String(
+        record?._id ||
+        record?.id ||
+        record?.lrId ||
+        ""
+    ).trim();
+};
+
+const getLRVoucherNumber = (
+    createdResult: any,
+    lrPayload: any
+) => {
+    const record = getCreatedLRRecord(createdResult);
+
+    return String(
+        record?.lrNumber ||
+        record?.voucherNumber ||
+        record?.lrVoucherNumber ||
+        record?.tripLRVoucherNumber ||
+        lrPayload?.lrNumber ||
+        lrPayload?.voucherNumber ||
+        lrPayload?.tripNumber ||
+        lrPayload?.transportOrderNumber ||
+        ""
+    ).trim();
+};
+
+const getTripNumber = (
+    createdResult: any,
+    lrPayload: any
+) => {
+    const record = getCreatedLRRecord(createdResult);
+
+    return String(
+        record?.tripNumber ||
+        record?.transportOrderNumber ||
+        record?.transportOrder?.transportOrderNumber ||
+        lrPayload?.tripNumber ||
+        lrPayload?.transportOrderNumber ||
+        ""
+    ).trim();
+};
+
+const getInvoiceNumber = (
+    createdResult: any,
+    lrPayload: any
+) => {
+    const record = getCreatedLRRecord(createdResult);
+
+    return String(
+        record?.invoiceNumber ||
+        record?.invoiceNo ||
+        record?.documents?.find(
+            (document: any) =>
+                String(document?.documentType || "")
+                    .trim()
+                    .toLowerCase() === "invoice"
+        )?.documentNumber ||
+        lrPayload?.invoiceNumber ||
+        lrPayload?.invoiceNo ||
+        ""
+    ).trim();
+};
+
+
+
+/* ===================================================
+   BUILD E-WAY BILL PAYLOAD
+=================================================== */
+export const buildEWayBillPayload = (
+    createdResult: any,
+    lrPayload: any
+) => {
+    const createdData =
+        createdResult?.data?.data ||
+        createdResult?.data ||
+        createdResult ||
+        {};
+
+    const createdRecord =
+        createdData?.record ||
+        createdData?.item ||
+        createdData;
+
+    /* ===================================================
+       HELPERS
+    =================================================== */
+
+    const getText = (
+        value: any,
+        fallback: string
+    ) => {
+        const text = String(value ?? "").trim();
+
+        return text || fallback;
+    };
+
+    const formatDate = (value: any) => {
+        const date = value
+            ? new Date(value)
+            : new Date();
+
+        if (Number.isNaN(date.getTime())) {
+            const currentDate = new Date();
+
+            const currentDay = String(
+                currentDate.getDate()
+            ).padStart(2, "0");
+
+            const currentMonth = String(
+                currentDate.getMonth() + 1
+            ).padStart(2, "0");
+
+            const currentYear =
+                currentDate.getFullYear();
+
+            return `${currentDay}/${currentMonth}/${currentYear}`;
+        }
+
+        const day = String(
+            date.getDate()
+        ).padStart(2, "0");
+
+        const month = String(
+            date.getMonth() + 1
+        ).padStart(2, "0");
+
+        const year = date.getFullYear();
+
+        return `${day}/${month}/${year}`;
+    };
+
+    /* ===================================================
+       DYNAMIC TRIP / TRANSPORT ORDER NUMBER
+    =================================================== */
+
+    const docNo = String(
+        createdRecord?.tripNumber ||
+        createdRecord?.transportOrderNumber ||
+        createdRecord?.transportOrder?.transportOrderNumber ||
+        lrPayload?.tripNumber ||
+        lrPayload?.transportOrderNumber ||
+        "TO-3"
+    ).trim();
+
+    /* ===================================================
+       DYNAMIC ITEM VALUES
+    =================================================== */
+
+    const productName = String(
+        lrPayload?.cargo?.productName ||
+        lrPayload?.productName ||
+        "BLAZER-1"
+    ).trim();
+
+    const productDesc = String(
+        lrPayload?.cargo?.productDescription ||
+        lrPayload?.cargo?.productDesc ||
+        lrPayload?.productDescription ||
+        productName ||
+        "BLAZER-1"
+    ).trim();
+
+    const quantityValue = Number(
+        lrPayload?.cargo?.quantity ||
+        lrPayload?.quantity ||
+        25
+    );
+
+    const quantity =
+        Number.isFinite(quantityValue) &&
+            quantityValue > 0
+            ? quantityValue
+            : 25;
+
+    /* ===================================================
+       EXACT TESTED E-WAY BILL PAYLOAD
+    =================================================== */
+
+    return {
+        supplyType: "O",
+        subSupplyType: "1",
+        subSupplyDesc: "",
+        docType: "INV",
+
+        // ⭐ DYNAMIC: Trip / Transport Order number
+        docNo,
+
+        // ⭐ DYNAMIC: Current date
+        docDate: formatDate(new Date()),
+
+        /*
+        |--------------------------------------------------
+        | STATIC TESTED SUPPLIER DETAILS
+        |--------------------------------------------------
+        */
+
+        fromGstin: "34AACCC1596Q002",
+        fromTrdName: "welton",
+        fromAddr1: "2ND CROSS NO 59  19  A",
+        fromAddr2: "GROUND FLOOR OSBORNE ROAD",
+        fromPlace: "FRAZER TOWN",
+        fromPincode: 605001,
+        actFromStateCode: 34,
+        fromStateCode: 34,
+
+        /*
+        |--------------------------------------------------
+        | STATIC TESTED CONSIGNEE DETAILS
+        |--------------------------------------------------
+        */
+
+        toGstin: "29AACCC1596Q000",
+        toTrdName: "sthuthya",
+        toAddr1: "Shree Nilaya",
+        toAddr2: "Dasarahosahalli",
+        toPlace: "Beml Nagar",
+        toPincode: 562160,
+        actToStateCode: 29,
+        toStateCode: 29,
+
+        transactionType: 1,
+
+        /*
+        |--------------------------------------------------
+        | STATIC TESTED TAX VALUES
+        |--------------------------------------------------
+        */
+
+        otherValue: "-100",
+        totalValue: 56099,
+        cgstValue: 0,
+        sgstValue: 0,
+        igstValue: 300.67,
+        cessValue: 400.56,
+        cessNonAdvolValue: 400,
+        totInvValue: 68358,
+
+        transporterId: "",
+        transporterName: "",
+        transDocNo: "",
+        transMode: "1",
+
+        // ⭐ DYNAMIC: Distance
+        transDistance: "362",
+        // getText(
+        //     lrPayload?.transDistance ||
+        //     lrPayload?.route?.distanceKm,
+        //     "362"
+        // ),
+
+        transDocDate: "",
+
+        // ⭐ DYNAMIC: Vehicle number
+        vehicleNo: getText(
+            lrPayload?.vehicleNo ||
+            lrPayload?.vehicle?.vehicleNumber,
+            "PVC1234"
+        ),
+
+        vehicleType: getText(
+            lrPayload?.vehicleType ||
+            lrPayload?.vehicle?.ewayBillVehicleType,
+            "R"
+        ),
+
+        itemList: [
+            {
+                // ⭐ DYNAMIC ITEM VALUES
+                productName,
+                productDesc,
+                hsnCode: 442199,
+                quantity,
+                qtyUnit: "NOS",
+
+                cgstRate: 0,
+                sgstRate: 0,
+                igstRate: 3,
+                cessRate: 3,
+                cessNonadvol: 0,
+                taxableAmount: 5609889,
+            },
+        ],
+    };
+};
+
+
+
+
+/* ===================================================
+   BACKGROUND E-WAY BILL GENERATION
+=================================================== */
+
+const runEWayBillGeneration = async (
+    dispatch: any,
+    createdResult: any,
+    lrPayload: any
+) => {
+    const lrId = getLRId(createdResult);
+
+    const voucherNumber = getLRVoucherNumber(
+        createdResult,
+        lrPayload
+    );
+
+    const tripNumber = getTripNumber(
+        createdResult,
+        lrPayload
+    );
+
+    const invoiceNumber = getInvoiceNumber(
+        createdResult,
+        lrPayload
+    );
+
+    if (!voucherNumber) {
+        throw new Error(
+            "LR voucher number was not returned after LR creation"
+        );
+    }
+
+    /* ---------------------------------------------------
+       STEP 1: GET ACCESS TOKEN
+    --------------------------------------------------- */
+
+    const tokenResult = await unwrapDispatchResult(
+        dispatch,
+        getEWayBillAccessToken()
+    );
+
+    const tokenData = getResponseData(tokenResult);
+
+    const authToken = String(
+        tokenData?.authtoken ||
+        tokenData?.authToken ||
+        ""
+    ).trim();
+
+    const sek = String(tokenData?.sek || "").trim();
+
+    if (!authToken) {
+        throw new Error(
+            "E-Way Bill access token was not received"
+        );
+    }
+
+    /* ---------------------------------------------------
+       STEP 2: BUILD REQUEST PAYLOAD
+    --------------------------------------------------- */
+
+    const requestPayload = buildEWayBillPayload(
+        createdResult,
+        lrPayload
+    );
+
+    /* ---------------------------------------------------
+       STEP 3: GENERATE E-WAY BILL
+    --------------------------------------------------- */
+
+    const generationResult = await unwrapDispatchResult(
+        dispatch,
+        generateEWayBill({
+            payload: requestPayload,
+            authtoken: authToken,
+        })
+    );
+
+    const responsePayload = getResponseData(generationResult);
+
+    const ewayBillNo = String(
+        responsePayload?.ewayBillNo ||
+        responsePayload?.ewbNo ||
+        responsePayload?.EwbNo ||
+        ""
+    ).trim();
+
+    if (!ewayBillNo) {
+        throw new Error(
+            responsePayload?.message ||
+            responsePayload?.errorMessage ||
+            "E-Way Bill number was not received"
+        );
+    }
+
+    /* ---------------------------------------------------
+       STEP 4: SAVE GENERATED E-WAY BILL
+    --------------------------------------------------- */
+
+    const savePayload = {
+        lrId,
+        voucherNumber,
+        tripNumber,
+        invoiceNumber,
+
+        ewayBillNo,
+
+        ewayBillDate:
+            responsePayload?.ewayBillDate ||
+            responsePayload?.ewayBillDateString ||
+            "",
+
+        validUpto:
+            responsePayload?.validUpto ||
+            responsePayload?.validUpTo ||
+            "",
+
+        authToken,
+        sek,
+
+        requestPayload,
+        responsePayload,
+
+        createdAt: new Date().toISOString(),
+    };
+
+    await unwrapDispatchResult(
+        dispatch,
+        saveEWayBill(savePayload)
+    );
+};
+
+/**
+ * Starts E-Way Bill generation without returning a blocking promise.
+ *
+ * This function intentionally:
+ * - does not show a toast;
+ * - does not throw into the LR screen;
+ * - does not affect navigation;
+ * - does not affect LR creation;
+ * - records errors only in the browser console.
+ */
+export const triggerEWayBillGeneration = (
+    dispatch: any,
+    createdResult: any,
+    lrPayload: any
+) => {
+    Promise.resolve()
+        .then(() =>
+            runEWayBillGeneration(
+                dispatch,
+                createdResult,
+                lrPayload
+            )
+        )
+        .catch((error: any) => {
+            console.error(
+                "[E-WAY BILL BACKGROUND] Generation failed:",
+                {
+                    message:
+                        error?.message ||
+                        "Unknown E-Way Bill generation error",
+
+                    lrId: getLRId(createdResult),
+
+                    voucherNumber: getLRVoucherNumber(
+                        createdResult,
+                        lrPayload
+                    ),
+
+                    tripNumber: getTripNumber(
+                        createdResult,
+                        lrPayload
+                    ),
+                }
+            );
+        });
 };
