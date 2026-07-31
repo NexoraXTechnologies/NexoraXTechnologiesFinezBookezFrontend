@@ -47,6 +47,16 @@ import { ListingModel } from "../../../../components/modal";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 
+const HEADER_ACCOUNT_FIELD_KEYS = new Set([
+    "payAccountCode",
+    "payAccountName",
+]);
+
+const BODY_ACCOUNT_FIELD_KEYS = new Set([
+    "accountCode",
+    "accountName",
+]);
+
 const defaultPagination = {
     offset: 0,
     limit: 10,
@@ -119,6 +129,17 @@ const Payment = () => {
     const [status, setStatus] = useState("open");
     const [showModal, setShowModal] = useState(false);
     const [checkAccount, setCheckAccount] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — REMEMBER WHICH ACCOUNT FIELD OPENED MODAL
+    const [accountCreateTarget, setAccountCreateTarget] = useState<
+        "header" | "body" | null
+    >(null);
+
+    // ⭐ YELLOW STAR: ADDED — REMEMBER PAYMENT ROW THAT OPENED ACCOUNT MODAL
+    const [accountTargetRowIndex, setAccountTargetRowIndex] = useState<
+        number | null
+    >(null);
+
     const [accountListLoaded, setAccountListLoaded] = useState(false);
     const [editingRecord, setEditingRecord] = useState<any>(null);
     const [form, setForm] = useState<any>(getDefaultForm());
@@ -183,6 +204,66 @@ const Payment = () => {
         });
     }, [accounts]);
 
+    // ⭐ YELLOW STAR: ADDED — SEARCH-TO-CREATE FOR PAYMENT ACCOUNTS
+    const templateFieldsWithCreateActions = useMemo(() => {
+        return {
+            ...templateFields,
+
+            header: (templateFields?.header || []).map(
+                (field: any) => {
+                    const fieldKey = String(field?.key || "");
+
+                    if (!HEADER_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (_searchValue: string) => {
+                            setAccountCreateTarget("header");
+                            setAccountTargetRowIndex(null);
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (searchValue: string) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Cash/Bank Account`
+                                : "+ Add New Cash/Bank Account",
+                    };
+                }
+            ),
+
+            body: (templateFields?.body || []).map(
+                (field: any) => {
+                    const fieldKey = String(field?.key || "");
+
+                    if (!BODY_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            _searchValue: string,
+                            rowIndex: number
+                        ) => {
+                            setAccountCreateTarget("body");
+                            setAccountTargetRowIndex(rowIndex);
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (searchValue: string) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as Add Account`
+                                : "+ Add New Account",
+                    };
+                }
+            ),
+        };
+    }, [templateFields]);
+
     /* ===================================================
        FIELD HELPERS
     =================================================== */
@@ -232,7 +313,7 @@ const Payment = () => {
     =================================================== */
 
     const bodyFieldsWithoutReference = useMemo(() => {
-        return (templateFields?.body || []).filter((field: any) => {
+        return (templateFieldsWithCreateActions?.body || []).filter((field: any) => {
             const key = String(field?.key || "").toLowerCase();
 
             return ![
@@ -242,7 +323,7 @@ const Payment = () => {
                 "referencelist",
             ].includes(key);
         });
-    }, [templateFields?.body]);
+    }, [templateFieldsWithCreateActions?.body]);
 
     /* ===================================================
        REFERENCE TABLE FIELDS
@@ -633,6 +714,8 @@ const Payment = () => {
         setErrors({});
         setForm(getDefaultForm());
         setCheckAccount(false);
+        setAccountCreateTarget(null);
+        setAccountTargetRowIndex(null);
     };
 
     const openAddModal = () => {
@@ -869,20 +952,28 @@ const Payment = () => {
                             );
 
                         const targetIndex =
-                            emptyRowIndex >= 0
-                                ? emptyRowIndex
+                            accountCreateTarget === "body" &&
+                                accountTargetRowIndex !== null &&
+                                accountTargetRowIndex >= 0 &&
+                                accountTargetRowIndex < updatedRows.length
+                                ? accountTargetRowIndex
+                                : emptyRowIndex;
+
+                        const rowIndex =
+                            targetIndex >= 0
+                                ? targetIndex
                                 : 0;
 
-                        updatedRows[targetIndex] = {
-                            ...updatedRows[targetIndex],
+                        updatedRows[rowIndex] = {
+                            ...updatedRows[rowIndex],
                             accountCode:
                                 accountCode ||
-                                updatedRows[targetIndex]
+                                updatedRows[rowIndex]
                                     ?.accountCode ||
                                 "",
                             accountName:
                                 accountName ||
-                                updatedRows[targetIndex]
+                                updatedRows[rowIndex]
                                     ?.accountName ||
                                 "",
                             references: [],
@@ -894,11 +985,18 @@ const Payment = () => {
                         };
                     });
 
+                    const errorRowIndex =
+                        accountCreateTarget === "body" &&
+                            accountTargetRowIndex !== null &&
+                            accountTargetRowIndex >= 0
+                            ? accountTargetRowIndex
+                            : 0;
+
                     setErrors((prev: any) => ({
                         ...prev,
                         payBody: "",
-                        [`row_0_accountCode`]: "",
-                        [`row_0_accountName`]: "",
+                        [`row_${errorRowIndex}_accountCode`]: "",
+                        [`row_${errorRowIndex}_accountName`]: "",
                     }));
                 }
             }
@@ -914,6 +1012,8 @@ const Payment = () => {
             );
         } finally {
             setCheckAccount(false);
+            setAccountCreateTarget(null);
+            setAccountTargetRowIndex(null);
         }
     };
 
@@ -1948,6 +2048,8 @@ const Payment = () => {
                         onClose: () => {
                             setShowModal(false);
                             setCheckAccount(false);
+                            setAccountCreateTarget(null);
+                            setAccountTargetRowIndex(null);
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -1964,7 +2066,7 @@ const Payment = () => {
                         handleRowChange,
                         footerTotals,
                         inputData: {
-                            ...templateFields,
+                            ...templateFieldsWithCreateActions,
                             body: bodyFieldsWithoutReference,
                             footer: dynamicFooterArray,
                         },

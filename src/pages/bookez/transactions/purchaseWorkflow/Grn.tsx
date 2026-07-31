@@ -45,6 +45,19 @@ import Permission from "../../../../components/PermissionGuard";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
+import ProductMasterModal from "../../master/productMaster/ProductMasterFormModal";
+
+const VENDOR_FIELD_KEYS = new Set([
+    "grnVendorCode",
+    "grnVendorName",
+]);
+
+const PRODUCT_FIELD_KEYS = new Set([
+    "productCode",
+    "productName",
+    "productId",
+    "product",
+]);
 
 const defaultPagination = {
     offset: 0,
@@ -346,6 +359,21 @@ const Grn = () => {
     // ★ ADDED: Account Master modal state
     const [checkAccount, setCheckAccount] = useState(false);
 
+    // ⭐ YELLOW STAR: ADDED — PRODUCT MASTER MODAL STATE
+    const [checkProduct, setCheckProduct] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — REMEMBER PRODUCT ROW THAT OPENED MODAL
+    const [
+        productTargetRowIndex,
+        setProductTargetRowIndex,
+    ] = useState<number | null>(null);
+
+    // ⭐ YELLOW STAR: ADDED — SEARCH TEXT FOR PRODUCT MODAL
+    const [
+        productSearchValue,
+        setProductSearchValue,
+    ] = useState("");
+
     // ★ ADDED: Wait until Account Master list API is completed
     const [accountListLoaded, setAccountListLoaded] = useState(false);
 
@@ -387,6 +415,74 @@ const Grn = () => {
         body: [],
         footer: [],
     });
+
+    // ⭐ YELLOW STAR: ADDED — VENDOR AND PRODUCT CREATE ACTIONS
+    const templateFieldsWithCreateActions = useMemo(() => {
+        return {
+            ...templateFields,
+
+            header: (templateFields?.header || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!VENDOR_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            _searchValue: string
+                        ) => {
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Vendor`
+                                : "+ Add New Vendor",
+                    };
+                }
+            ),
+
+            body: (templateFields?.body || []).map(
+                (field: any) => {
+                    const fieldKey = String(
+                        field?.key || ""
+                    );
+
+                    if (!PRODUCT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            searchValue: string,
+                            rowIndex: number
+                        ) => {
+                            setProductTargetRowIndex(rowIndex);
+                            setProductSearchValue(searchValue);
+                            setCheckProduct(true);
+                        },
+                        createOptionLabel: (
+                            searchValue: string
+                        ) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Product`
+                                : "+ Add New Product",
+                    };
+                }
+            ),
+        };
+    }, [templateFields]);
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
@@ -791,6 +887,9 @@ const Grn = () => {
         setErrors({});
         setForm(getDefaultForm());
         setCheckAccount(false);
+        setCheckProduct(false);
+        setProductTargetRowIndex(null);
+        setProductSearchValue("");
     };
 
     const handleStatusChange = (nextStatus: string) => {
@@ -1119,6 +1218,319 @@ const Grn = () => {
             );
         } finally {
             setCheckAccount(false);
+        }
+    };
+
+    // ⭐ YELLOW STAR: ADDED — REFRESH PRODUCT OPTIONS AND AUTO-SELECT CREATED PRODUCT
+    const handleProductSaved = async (
+        savedResponse: any
+    ) => {
+        try {
+            await dispatch(
+                getAllReportMapping({
+                    moduleType: "grn",
+                }) as any
+            ).unwrap();
+
+            let updatedData = templateFields;
+
+            if (transactionsSchema) {
+                updatedData =
+                    await loadAllTemplateOptions(
+                        transactionsSchema
+                    );
+
+                setTemplateFields(
+                    updatedData
+                );
+            }
+
+            const savedProduct =
+                savedResponse?.data?.product ||
+                savedResponse?.data?.data?.product ||
+                savedResponse?.data?.data ||
+                savedResponse?.data ||
+                savedResponse?.product ||
+                savedResponse;
+
+            const savedCode =
+                savedProduct?.productCode ||
+                "";
+
+            const savedName =
+                savedProduct?.productName ||
+                "";
+
+            const productFields = (
+                updatedData?.body || []
+            ).filter((field: any) =>
+                PRODUCT_FIELD_KEYS.has(
+                    String(field?.key || "")
+                )
+            );
+
+            let selectedField: any = null;
+            let selectedOption: any = null;
+
+            for (const field of productFields) {
+                const option = (
+                    field?.options || []
+                ).find((item: any) => {
+                    const raw =
+                        item?.raw || {};
+
+                    return (
+                        (
+                            savedCode &&
+                            String(
+                                raw?.productCode ||
+                                item?.value ||
+                                ""
+                            ) ===
+                            String(savedCode)
+                        ) ||
+                        (
+                            savedName &&
+                            String(
+                                raw?.productName ||
+                                item?.label ||
+                                ""
+                            ) ===
+                            String(savedName)
+                        )
+                    );
+                });
+
+                if (option) {
+                    selectedField = field;
+                    selectedOption = option;
+                    break;
+                }
+            }
+
+            const createdProduct =
+                selectedOption?.raw ||
+                savedProduct ||
+                {};
+
+            setForm((prev: any) => {
+                const updatedProducts = [
+                    ...(prev.products || []),
+                ];
+
+                let rowIndex =
+                    productTargetRowIndex !== null &&
+                        productTargetRowIndex >= 0 &&
+                        productTargetRowIndex <
+                        updatedProducts.length
+                        ? productTargetRowIndex
+                        : updatedProducts.findIndex(
+                            (row: any) =>
+                                !row?.productCode &&
+                                !row?.productName &&
+                                !row?.productId
+                        );
+
+                if (rowIndex < 0) {
+                    rowIndex =
+                        updatedProducts.length;
+
+                    updatedProducts.push({
+                        ...emptyProductRow,
+                        id: Date.now(),
+                    });
+                }
+
+                let updatedRow = {
+                    ...(
+                        updatedProducts[
+                        rowIndex
+                        ] ||
+                        emptyProductRow
+                    ),
+                };
+
+                if (
+                    selectedField &&
+                    selectedOption
+                ) {
+                    updatedRow =
+                        applyMappedFields(
+                            selectedField,
+                            selectedOption.value,
+                            updatedRow
+                        );
+
+                    updatedRow =
+                        fillProductDetailsFromSelectedOption(
+                            updatedRow,
+                            selectedOption
+                        );
+                }
+
+                const unitCode =
+                    createdProduct?.unit ||
+                    createdProduct?.uom ||
+                    updatedRow?.unit ||
+                    updatedRow?.uom ||
+                    "";
+
+                const cgstValue =
+                    createdProduct?.cgstPercentage ??
+                    createdProduct?.cgst ??
+                    createdProduct?.csgst ??
+                    createdProduct?.cgstRate ??
+                    createdProduct?.tax?.cgstPercentage ??
+                    createdProduct?.tax?.cgst ??
+                    updatedRow?.cgst ??
+                    "";
+
+                const sgstValue =
+                    createdProduct?.sgstPercentage ??
+                    createdProduct?.sgst ??
+                    createdProduct?.csgst ??
+                    createdProduct?.sgstRate ??
+                    createdProduct?.tax?.sgstPercentage ??
+                    createdProduct?.tax?.sgst ??
+                    updatedRow?.sgst ??
+                    "";
+
+                const igstValue =
+                    createdProduct?.igstPercentage ??
+                    createdProduct?.igst ??
+                    createdProduct?.igstRate ??
+                    createdProduct?.tax?.igstPercentage ??
+                    createdProduct?.tax?.igst ??
+                    updatedRow?.igst ??
+                    "";
+
+                updatedRow = {
+                    ...updatedRow,
+
+                    productCode:
+                        createdProduct?.productCode ||
+                        savedCode ||
+                        updatedRow?.productCode ||
+                        "",
+
+                    productName:
+                        createdProduct?.productName ||
+                        savedName ||
+                        updatedRow?.productName ||
+                        "",
+
+                    productId:
+                        createdProduct?._id ||
+                        createdProduct?.productId ||
+                        updatedRow?.productId ||
+                        "",
+
+                    productDescription:
+                        createdProduct?.productDescription ||
+                        updatedRow?.productDescription ||
+                        "",
+
+                    description:
+                        createdProduct?.productDescription ||
+                        createdProduct?.description ||
+                        updatedRow?.description ||
+                        "",
+
+                    productHSNCode:
+                        createdProduct?.productHSNCode ||
+                        updatedRow?.productHSNCode ||
+                        "",
+
+                    unit: unitCode,
+                    uom: unitCode,
+
+                    unitName:
+                        getUnitLabelFromSchema(
+                            unitCode
+                        ),
+
+                    rate:
+                        createdProduct?.purchasePrice ??
+                        createdProduct?.rate ??
+                        updatedRow?.rate ??
+                        "",
+
+                    acceptedQuantity:
+                        updatedRow?.acceptedQuantity ??
+                        "",
+
+                    rejectedQuantity:
+                        updatedRow?.rejectedQuantity ??
+                        "0",
+
+                    rejectedReason:
+                        updatedRow?.rejectedReason ||
+                        "",
+
+                    cgst: cgstValue,
+                    cgstPercentage: cgstValue,
+
+                    sgst: sgstValue,
+                    sgstPercentage: sgstValue,
+
+                    igst: igstValue,
+                    igstPercentage: igstValue,
+                };
+
+                if (num(igstValue) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstPercentage = "";
+                    updatedRow.sgstPercentage = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
+                }
+
+                if (
+                    num(cgstValue) > 0 ||
+                    num(sgstValue) > 0
+                ) {
+                    updatedRow.igst = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                }
+
+                updatedRow =
+                    calculateRow(
+                        normalizeRowKeys(
+                            updatedRow
+                        )
+                    );
+
+                updatedProducts[
+                    rowIndex
+                ] = updatedRow;
+
+                return {
+                    ...prev,
+                    products:
+                        updatedProducts,
+                };
+            });
+
+            setErrors((prev: any) => ({
+                ...prev,
+                products: "",
+            }));
+        } catch (error: any) {
+            console.log(
+                "Failed to refresh GRN product options:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Product created, but GRN product dropdown refresh failed"
+            );
+        } finally {
+            setCheckProduct(false);
+            setProductTargetRowIndex(null);
+            setProductSearchValue("");
         }
     };
 
@@ -2459,6 +2871,8 @@ const Grn = () => {
                     onClose={() => {
                         setShowModal(false);
                         setCheckAccount(false);
+                        setCheckProduct(false);
+                        setProductSearchValue("");
                         resetMainForm();
                     }}
                     onSubmit={handleSubmit}
@@ -2469,7 +2883,7 @@ const Grn = () => {
                     handleRowChange={handleRowChange}
                     footerTotals={footerTotals}
                     inputData={{
-                        ...templateFields,
+                        ...templateFieldsWithCreateActions,
                         footer: dynamicFooterArray,
                     }}
                     bodyKey="products"
@@ -2481,6 +2895,28 @@ const Grn = () => {
                     onAccountSaved={handleAccountSaved}
                 />
             )}
+
+            <ProductMasterModal
+                show={checkProduct}
+                setShow={(value: boolean) => {
+                    setCheckProduct(value);
+
+                    if (!value) {
+                        setProductTargetRowIndex(
+                            null
+                        );
+
+                        setProductSearchValue(
+                            ""
+                        );
+                    }
+                }}
+                onSaved={handleProductSaved}
+                title="Add New Product"
+                initialProductName={
+                    productSearchValue
+                }
+            />
 
             {/* @ts-ignore  */}
             <ListingModel

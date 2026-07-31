@@ -22,6 +22,16 @@ import Permission from "../../../../../components/PermissionGuard";
 import { getByVoucherNumberSalesInvoiceReturn, updateSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
+const HEADER_ACCOUNT_FIELD_KEYS = new Set([
+    "recAccountCode",
+    "recAccountName",
+]);
+
+const BODY_ACCOUNT_FIELD_KEYS = new Set([
+    "accountCode",
+    "accountName",
+]);
+
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 
 const emptyReceiptRow = { id: Date.now(), accountCode: "", accountName: "", amount: "", netAmount: "", references: [], remarks: "" };
@@ -50,6 +60,16 @@ const SalesReceipt = () => {
 
     // ★ ADDED: Shared Account Master modal state
     const [checkAccount, setCheckAccount] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — REMEMBER WHICH ACCOUNT FIELD OPENED MODAL
+    const [accountCreateTarget, setAccountCreateTarget] = useState<
+        "header" | "body" | null
+    >(null);
+
+    // ⭐ YELLOW STAR: ADDED — REMEMBER RECEIPT ROW THAT OPENED ACCOUNT MODAL
+    const [accountTargetRowIndex, setAccountTargetRowIndex] = useState<
+        number | null
+    >(null);
 
     // ★ ADDED: Prevent modal check before Account Master API completes
     const [accountListLoaded, setAccountListLoaded] = useState(false);
@@ -87,6 +107,66 @@ const SalesReceipt = () => {
         });
     }, [accounts]);
 
+    // ⭐ YELLOW STAR: ADDED — SEARCH-TO-CREATE FOR RECEIPT ACCOUNTS
+    const templateFieldsWithCreateActions = useMemo(() => {
+        return {
+            ...templateFields,
+
+            header: (templateFields?.header || []).map(
+                (field: any) => {
+                    const fieldKey = String(field?.key || "");
+
+                    if (!HEADER_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (_searchValue: string) => {
+                            setAccountCreateTarget("header");
+                            setAccountTargetRowIndex(null);
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (searchValue: string) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Cash/Bank Account`
+                                : "+ Add New Cash/Bank Account",
+                    };
+                }
+            ),
+
+            body: (templateFields?.body || []).map(
+                (field: any) => {
+                    const fieldKey = String(field?.key || "");
+
+                    if (!BODY_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+                        return field;
+                    }
+
+                    return {
+                        ...field,
+                        largeData: true,
+                        showCreateOnEmpty: true,
+                        onCreateOption: (
+                            _searchValue: string,
+                            rowIndex: number
+                        ) => {
+                            setAccountCreateTarget("body");
+                            setAccountTargetRowIndex(rowIndex);
+                            setCheckAccount(true);
+                        },
+                        createOptionLabel: (searchValue: string) =>
+                            searchValue
+                                ? `+ Add "${searchValue}" as New Account`
+                                : "+ Add New Account",
+                    };
+                }
+            ),
+        };
+    }, [templateFields]);
+
     const toNumber = (value: any) => Number(value || 0);
 
     const sanitizeDecimalValue = (value: any) => {
@@ -111,11 +191,11 @@ const SalesReceipt = () => {
     };
 
     const bodyFieldsWithoutReference = useMemo(() => {
-        return (templateFields?.body || []).filter((field: any) => {
+        return (templateFieldsWithCreateActions?.body || []).filter((field: any) => {
             const key = String(field?.key || "").toLowerCase();
             return !["reference", "references", "referencebody", "referencelist", "recsalesinvoicerefs"].includes(key);
         });
-    }, [templateFields?.body]);
+    }, [templateFieldsWithCreateActions?.body]);
 
     const referenceTableFields = useMemo(() => [{ key: "saleInvoice", label: "Sale Invoice", type: "text", disabled: true }, { key: "docDate", label: "Doc Date", type: "date", disabled: true }, { key: "netBillAmount", label: "Net Bill Amount", type: "number", disabled: true }, { key: "netReturnAmount", label: "Net Return Amount", type: "number", disabled: true }, { key: "remainingBillAmount", label: "Remaining Bill Amount", type: "number", disabled: true }, { key: "adjustedAmount", label: "Adjusted Amount", type: "number", isRequired: false }], []);
 
@@ -197,6 +277,8 @@ const SalesReceipt = () => {
         setSelectedReferenceRowIndex(null);
         setNewReferenceAmount("");
         setCheckAccount(false);
+        setAccountCreateTarget(null);
+        setAccountTargetRowIndex(null);
         setForm(getDefaultForm());
         dispatch(clearSalesReceiptReferences());
     };
@@ -348,11 +430,19 @@ const SalesReceipt = () => {
                             });
                         }
 
-                        const targetIndex = rows.findIndex(
+                        const firstEmptyIndex = rows.findIndex(
                             (row: any) =>
                                 !row?.accountCode &&
                                 !row?.accountName
                         );
+
+                        const targetIndex =
+                            accountCreateTarget === "body" &&
+                                accountTargetRowIndex !== null &&
+                                accountTargetRowIndex >= 0 &&
+                                accountTargetRowIndex < rows.length
+                                ? accountTargetRowIndex
+                                : firstEmptyIndex;
 
                         const rowIndex =
                             targetIndex >= 0 ? targetIndex : 0;
@@ -396,6 +486,8 @@ const SalesReceipt = () => {
             );
         } finally {
             setCheckAccount(false);
+            setAccountCreateTarget(null);
+            setAccountTargetRowIndex(null);
         }
     };
 
@@ -1029,7 +1121,16 @@ const SalesReceipt = () => {
         const cashBankMissing =
             cashBankAccounts.length === 0;
 
-        if (customerMissing || cashBankMissing) {
+        if (cashBankMissing) {
+            setAccountCreateTarget("header");
+            setAccountTargetRowIndex(null);
+            setCheckAccount(true);
+            return;
+        }
+
+        if (customerMissing) {
+            setAccountCreateTarget("body");
+            setAccountTargetRowIndex(0);
             setCheckAccount(true);
         }
     }, [
@@ -1115,6 +1216,8 @@ const SalesReceipt = () => {
                         onClose: () => {
                             setShowModal(false);
                             setCheckAccount(false);
+                            setAccountCreateTarget(null);
+                            setAccountTargetRowIndex(null);
                             resetMainForm();
                         },
                         onSubmit: handleSubmit,
@@ -1129,7 +1232,11 @@ const SalesReceipt = () => {
                         handleRowChange,
                         footerTotals,
                         isSummaryFooter: false,
-                        inputData: { ...templateFields, body: bodyFieldsWithoutReference, footer: dynamicFooterArray },
+                        inputData: {
+                            ...templateFieldsWithCreateActions,
+                            body: bodyFieldsWithoutReference,
+                            footer: dynamicFooterArray,
+                        },
                         bodyKey: "recBody",
                         handleChange: handleMainChange,
 

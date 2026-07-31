@@ -375,6 +375,7 @@ const ProductMaster = () => {
         show={showModal}
         setShow={setShowModal}
         editingProduct={editingProduct}
+        // @ts-ignore
         productMasterSchemaFields={customeField}
         schemaLoading={schemaLoading}
         units={units}
