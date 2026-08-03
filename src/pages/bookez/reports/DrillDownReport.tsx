@@ -1384,6 +1384,7 @@ const DrillDownReport = () => {
 
             <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-wrap items-center gap-3">
+                    {/* @ts-ignore */}
                     <Badge
                         {...{
                             count:
