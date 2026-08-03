@@ -466,21 +466,7 @@ type EWayBillState = {
 }
 
 // ⭐ YELLOW STAR: ADDED — MULTI VEHICLE UPDATE PAYLOAD
-type MultiVehicleUpdatePayload = {
-    authtoken: string;
-    payload: {
-        ewbNo: string | number;
-        groupNo: string | number;
-        oldVehicleNo: string;
-        newVehicleNo: string;
-        oldTranNo: string;
-        newTranNo: string;
-        fromPlace: string;
-        fromState: string | number;
-        reasonCode: string | number;
-        reasonRem: string;
-    };
-};
+
 
 type PrintDetailEWayBillPayload = {
     payload: any;
@@ -714,42 +700,6 @@ eWayBillAxios.interceptors.request.use(
 =================================================== */
 
 // ⭐ YELLOW STAR: ADDED — GET ACTUAL EXTERNAL API ERROR
-const getEWayBillApiError = (
-    error: any,
-    fallbackMessage: string
-) => {
-    const responseData =
-        error?.response?.data;
-
-    const nestedError =
-        responseData?.error?.error ||
-        responseData?.data?.error?.error ||
-        null;
-
-    return {
-        message:
-            nestedError?.message ||
-            responseData?.error?.message ||
-            responseData?.data?.error?.message ||
-            responseData?.data?.message ||
-            responseData?.message ||
-            responseData?.errorMessage ||
-            error?.message ||
-            fallbackMessage,
-
-        code:
-            nestedError?.error_cd ||
-            responseData?.error?.error_cd ||
-            responseData?.data?.error?.error_cd ||
-            responseData?.code ||
-            "",
-
-        externalError:
-            responseData?.error ||
-            responseData ||
-            null,
-    };
-};
 
 export const getEWayBillAccessToken = createAsyncThunk(
     "eWayBill/getEWayBillAccessToken",
