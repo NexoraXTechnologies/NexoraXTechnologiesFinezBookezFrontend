@@ -111,7 +111,10 @@ import productMasterSchemaReducer from "../redux/slices/professionalSlice/master
 import unitMeasurementSchemaReducer from "../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
 import transactionModuleReducer from "./slices/professionalSlice/transactionConfiguration/transactionModuleSlice"
 import voucherConfigurationReducer from "../redux/slices/professionalSlice/documentSeries"
-import registerFilterDropdownReducer from "../redux/slices/professionalSlice/registerModule"
+import registerFilterDropdownReducer from "../redux/slices/professionalSlice/registerModule";
+import drillDownReportReducer from "./slices/professionalSlice/drillDownReportSlice";
+import cashBankReportReducer from "./slices/professionalSlice/cashBankReportSlice";
+
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -227,6 +230,9 @@ export const store = configureStore({
     unitMeasurementSchema: unitMeasurementSchemaReducer,
     transactionModule: transactionModuleReducer,
     customTransaction: customTransactionDataReducer,
+
+    drillDownReport: drillDownReportReducer,
+    cashBankReport: cashBankReportReducer
   },
 });
 
