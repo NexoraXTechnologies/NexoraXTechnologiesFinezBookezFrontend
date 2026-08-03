@@ -10,6 +10,8 @@ import AccountsReceivable from "./AccountsReceivable";
 import AccountLedger from "./AccountLedger";
 import StockLedger from "./StockLedger";
 import AccountPayable from "./AccountPayable";
+import DrillDownReport from "./DrillDownReport";
+import CashBankReport from "./CashBankReport";
 
 const cards: any[] = [
   {
@@ -39,6 +41,20 @@ const cards: any[] = [
     component: StockLedger,
     icon: <PackagePlus size={22} />,
     permissionKey: "stockLedger"
+  },
+  {
+    title: "SO Drill Down Report",
+    description: "Analyze sales order details, customer transactions, and order fulfillment status.",
+    component: DrillDownReport,
+    icon: <PackagePlus size={22} />,
+    permissionKey: "soDrillDownReport"
+  },
+  {
+    title: "Cash/Bank Report",
+    description: "Analyze cash and bank transactions, including deposits, withdrawals, and account balances.",
+    component: CashBankReport,
+    icon: <PackagePlus size={22} />,
+    permissionKey: "cashbankReport"
   },
 ];
 
