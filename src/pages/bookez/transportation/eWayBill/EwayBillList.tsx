@@ -644,6 +644,7 @@ const EWayBillList = () => {
         const status = getRowStatus(row);
 
         return (
+            status === "cnl" ||
             status === "close" ||
             status === "closed" ||
             status === "cancelled" ||
@@ -2016,6 +2017,130 @@ const EWayBillList = () => {
                             ? "No open E-Way Bill found"
                             : "No closed E-Way Bill found"
                     }
+                    // actions={(record: any) => {
+                    //     const recordKey = String(
+                    //         record?._id ||
+                    //         record?.ewayBillNo ||
+                    //         ""
+                    //     );
+
+                    //     const isMenuOpen =
+                    //         openActionMenu === recordKey;
+
+                    //     const isDownloading =
+                    //         ewayDownloadLoading ===
+                    //         String(record?.ewayBillNo || "");
+
+                    //     return (
+                    //         <div className="relative flex items-center gap-2">
+
+
+                    //             <Permission
+                    //                 module="bookez"
+                    //                 permissionKey="Pass"
+                    //                 action={"edit" as any}
+                    //             >
+                    //                 <button
+                    //                     type="button"
+                    //                     onClick={() =>
+                    //                         handleEditEWayBill(record)
+                    //                     }
+                    //                     className="rounded-md p-2 text-amber-600 hover:bg-amber-100"
+                    //                     title="Edit"
+                    //                 >
+                    //                     <Edit size={16} />
+                    //                 </button>
+                    //             </Permission>
+
+                    //             <button
+                    //                 type="button"
+                    //                 onClick={() =>
+                    //                     handleDownload(record)
+                    //                 }
+                    //                 disabled={isDownloading}
+                    //                 className="rounded-md p-2 text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    //                 title="Download"
+                    //             >
+                    //                 {isDownloading ? (
+                    //                     <Loader2
+                    //                         size={16}
+                    //                         className="animate-spin"
+                    //                     />
+                    //                 ) : (
+                    //                     <Download size={16} />
+                    //                 )}
+                    //             </button>
+
+                    //             {/* ⭐ YELLOW STAR: ADDED — THREE DOT MENU */}
+                    //             <button
+                    //                 type="button"
+                    //                 onClick={() =>
+                    //                     setOpenActionMenu(
+                    //                         isMenuOpen
+                    //                             ? ""
+                    //                             : recordKey
+                    //                     )
+                    //                 }
+                    //                 className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                    //                 title="More Actions"
+                    //             >
+                    //                 <MoreVertical size={17} />
+                    //             </button>
+
+                    //             {isMenuOpen && (
+                    //                 <div className="absolute right-0 top-10 z-50 min-w-[190px] overflow-hidden rounded-md border border-border bg-card py-1 shadow-xl">
+                    //                     <button
+                    //                         type="button"
+                    //                         onClick={() =>
+                    //                             openEWayBillActionConfirm(
+                    //                                 "cancel",
+                    //                                 record
+                    //                             )
+                    //                         }
+                    //                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-danger hover:bg-danger/10"
+                    //                     >
+                    //                         <Ban size={15} />
+                    //                         Cancel E-Way Bill
+                    //                     </button>
+
+                    //                     <button
+                    //                         type="button"
+                    //                         onClick={() =>
+                    //                             openEWayBillActionConfirm(
+                    //                                 "reject",
+                    //                                 record
+                    //                             )
+                    //                         }
+                    //                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-amber-600 hover:bg-amber-500/10"
+                    //                     >
+                    //                         <XCircle size={15} />
+                    //                         Reject E-Way Bill
+                    //                     </button>
+
+                    //                     <button
+                    //                         type="button"
+                    //                         onClick={() =>
+                    //                             openEWayBillActionConfirm(
+                    //                                 "extendValidity",
+                    //                                 record
+                    //                             )
+                    //                         }
+                    //                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/10"
+                    //                     >
+                    //                         <CalendarClock size={15} />
+                    //                         Extend Validity
+                    //                     </button>
+
+
+
+                    //                 </div>
+                    //             )}
+                    //         </div>
+                    //     );
+                    // }}
+
+
+
                     actions={(record: any) => {
                         const recordKey = String(
                             record?._id ||
@@ -2030,33 +2155,12 @@ const EWayBillList = () => {
                             ewayDownloadLoading ===
                             String(record?.ewayBillNo || "");
 
+                        // ⭐ YELLOW STAR: ADDED — DISABLE ACTIONS FOR CANCELLED E-WAY BILL
+                        const actionsDisabled =
+                            isClosedEWayBill(record);
+
                         return (
                             <div className="relative flex items-center gap-2">
-                                {/* <Permission
-                                    module="bookez"
-                                    permissionKey="Pass"
-                                    action={"view" as any}
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            navigate(
-                                                `/bookEz/transportation/e-way-bill/view/${record.ewayBillNo}`,
-                                                {
-                                                    state: {
-                                                        mode: "view",
-                                                        ewayBillData: record,
-                                                    },
-                                                }
-                                            )
-                                        }
-                                        className="rounded-md p-2 text-primary hover:bg-primary/10"
-                                        title="View"
-                                    >
-                                        <Eye size={16} />
-                                    </button>
-                                </Permission> */}
-
                                 <Permission
                                     module="bookez"
                                     permissionKey="Pass"
@@ -2064,11 +2168,23 @@ const EWayBillList = () => {
                                 >
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            handleEditEWayBill(record)
+                                        onClick={() => {
+                                            if (actionsDisabled) return;
+
+                                            handleEditEWayBill(
+                                                record
+                                            );
+                                        }}
+                                        disabled={actionsDisabled}
+                                        className={`rounded-md p-2 ${actionsDisabled
+                                                ? "cursor-not-allowed text-muted-foreground opacity-40"
+                                                : "text-amber-600 hover:bg-amber-100"
+                                            }`}
+                                        title={
+                                            actionsDisabled
+                                                ? "Actions are disabled for cancelled E-Way Bill"
+                                                : "Edit"
                                         }
-                                        className="rounded-md p-2 text-amber-600 hover:bg-amber-100"
-                                        title="Edit"
                                     >
                                         <Edit size={16} />
                                     </button>
@@ -2076,12 +2192,26 @@ const EWayBillList = () => {
 
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        handleDownload(record)
+                                    onClick={() => {
+                                        if (actionsDisabled) return;
+
+                                        handleDownload(
+                                            record
+                                        );
+                                    }}
+                                    disabled={
+                                        actionsDisabled ||
+                                        isDownloading
                                     }
-                                    disabled={isDownloading}
-                                    className="rounded-md p-2 text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-60"
-                                    title="Download"
+                                    className={`rounded-md p-2 ${actionsDisabled
+                                            ? "cursor-not-allowed text-muted-foreground opacity-40"
+                                            : "text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                        }`}
+                                    title={
+                                        actionsDisabled
+                                            ? "Actions are disabled for cancelled E-Way Bill"
+                                            : "Download"
+                                    }
                                 >
                                     {isDownloading ? (
                                         <Loader2
@@ -2093,70 +2223,84 @@ const EWayBillList = () => {
                                     )}
                                 </button>
 
-                                {/* ⭐ YELLOW STAR: ADDED — THREE DOT MENU */}
+                                {/* ⭐ YELLOW STAR: UPDATED — DISABLED FOR CANCELLED RECORD */}
                                 <button
                                     type="button"
-                                    onClick={() =>
+                                    onClick={() => {
+                                        if (actionsDisabled) {
+                                            setOpenActionMenu(
+                                                ""
+                                            );
+
+                                            return;
+                                        }
+
                                         setOpenActionMenu(
                                             isMenuOpen
                                                 ? ""
                                                 : recordKey
-                                        )
+                                        );
+                                    }}
+                                    disabled={actionsDisabled}
+                                    className={`rounded-md p-2 ${actionsDisabled
+                                            ? "cursor-not-allowed text-muted-foreground opacity-40"
+                                            : "text-muted-foreground hover:bg-muted"
+                                        }`}
+                                    title={
+                                        actionsDisabled
+                                            ? "Actions are disabled for cancelled E-Way Bill"
+                                            : "More Actions"
                                     }
-                                    className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-                                    title="More Actions"
                                 >
                                     <MoreVertical size={17} />
                                 </button>
 
-                                {isMenuOpen && (
-                                    <div className="absolute right-0 top-10 z-50 min-w-[190px] overflow-hidden rounded-md border border-border bg-card py-1 shadow-xl">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                openEWayBillActionConfirm(
-                                                    "cancel",
-                                                    record
-                                                )
-                                            }
-                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-danger hover:bg-danger/10"
-                                        >
-                                            <Ban size={15} />
-                                            Cancel E-Way Bill
-                                        </button>
+                                {!actionsDisabled &&
+                                    isMenuOpen && (
+                                        <div className="absolute right-0 top-10 z-50 min-w-[190px] overflow-hidden rounded-md border border-border bg-card py-1 shadow-xl">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    openEWayBillActionConfirm(
+                                                        "cancel",
+                                                        record
+                                                    )
+                                                }
+                                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-danger hover:bg-danger/10"
+                                            >
+                                                <Ban size={15} />
+                                                Cancel E-Way Bill
+                                            </button>
 
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                openEWayBillActionConfirm(
-                                                    "reject",
-                                                    record
-                                                )
-                                            }
-                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-amber-600 hover:bg-amber-500/10"
-                                        >
-                                            <XCircle size={15} />
-                                            Reject E-Way Bill
-                                        </button>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    openEWayBillActionConfirm(
+                                                        "reject",
+                                                        record
+                                                    )
+                                                }
+                                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-amber-600 hover:bg-amber-500/10"
+                                            >
+                                                <XCircle size={15} />
+                                                Reject E-Way Bill
+                                            </button>
 
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                openEWayBillActionConfirm(
-                                                    "extendValidity",
-                                                    record
-                                                )
-                                            }
-                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/10"
-                                        >
-                                            <CalendarClock size={15} />
-                                            Extend Validity
-                                        </button>
-
-
-
-                                    </div>
-                                )}
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    openEWayBillActionConfirm(
+                                                        "extendValidity",
+                                                        record
+                                                    )
+                                                }
+                                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/10"
+                                            >
+                                                <CalendarClock size={15} />
+                                                Extend Validity
+                                            </button>
+                                        </div>
+                                    )}
                             </div>
                         );
                     }}

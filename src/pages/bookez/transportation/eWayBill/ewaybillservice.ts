@@ -1557,6 +1557,7 @@ const runEWayBillGeneration = async (
 
     await unwrapDispatchResult(
         dispatch,
+        // @ts-ignore
         saveEWayBill(savePayload)
     );
 };
