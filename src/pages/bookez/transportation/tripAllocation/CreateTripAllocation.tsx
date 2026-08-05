@@ -35,6 +35,7 @@ import {
 
 import {
     createInitialTripAllocation,
+
     getTransportOrderVoucher,
     isAllocationClosed,
     mapTransportOrderToAllocation,
@@ -56,6 +57,7 @@ import {
 } from "../tripExpense/tripExpenseInitialState";
 import truckImage from "../../../../assets/truck.png";
 import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
+import { buildRoutesDataFromTransportOrder } from "../../registers/tripAllocationRegister/tripAllocationInitialState";
 const REMARKS_MAX = 200;
 
 const routeTypeOptions = [
@@ -121,10 +123,73 @@ const parseNumber = (value: any) => {
     return Number.isFinite(number) ? number : 0;
 };
 
-const normalizeOwnershipKey = (value: any) =>
-    String(value || "")
+const normalizeOwnershipKey = (value: any) => {
+    const key = String(value || "")
         .toLowerCase()
         .replace(/[^a-z]/g, "");
+
+    if (
+        [
+            "own",
+            "owned",
+            "ownfleet",
+            "ownedvehicle",
+            "company",
+            "companyvehicle",
+            "self",
+        ].includes(key)
+    ) {
+        return "owned";
+    }
+
+    if (
+        [
+            "market",
+            "marketvehicle",
+            "hire",
+            "hired",
+            "hiredvehicle",
+            "outside",
+            "thirdparty",
+            "thirdpartyvehicle",
+        ].includes(key)
+    ) {
+        return "market";
+    }
+
+    return key;
+};
+
+const getReferenceName = (value: any) => {
+    if (!value) return "";
+
+    if (typeof value === "string" || typeof value === "number") {
+        return String(value).trim();
+    }
+
+    return String(
+        value?.name ||
+        value?.label ||
+        value?.accountName ||
+        value?.customerName ||
+        value?.vendorName ||
+        value?.value ||
+        ""
+    ).trim();
+};
+
+const getReferenceCode = (value: any) => {
+    if (!value || typeof value !== "object") return "";
+
+    return String(
+        value?.code ||
+        value?.accountCode ||
+        value?.customerCode ||
+        value?.vendorCode ||
+        value?.value ||
+        ""
+    ).trim();
+};
 
 const getStatusKey = (value: any) =>
     String(value || "")
@@ -302,6 +367,66 @@ const normalizeVehicle = (vehicle: any = {}) => {
         vehicle?.rawRecord?.customEmployeeMaster ||
         null;
 
+    const vendorReference =
+        vehicle?.vendor ||
+        vehicle?.vendorMaster ||
+        vehicle?.customVendorMaster ||
+        vehicle?.rawRecord?.vendor ||
+        vehicle?.rawRecord?.vendorMaster ||
+        vehicle?.rawRecord?.customVendorMaster ||
+        vehicle?.rawRecord?.data?.vendor ||
+        vehicle?.rawRecord?.data?.vendorMaster ||
+        vehicle?.rawRecord?.data?.customVendorMaster ||
+        null;
+
+    const customerReference =
+        vehicle?.customer ||
+        vehicle?.customerMaster ||
+        vehicle?.customCustomerMaster ||
+        vehicle?.rawRecord?.customer ||
+        vehicle?.rawRecord?.customerMaster ||
+        vehicle?.rawRecord?.customCustomerMaster ||
+        vehicle?.rawRecord?.data?.customer ||
+        vehicle?.rawRecord?.data?.customerMaster ||
+        vehicle?.rawRecord?.data?.customCustomerMaster ||
+        null;
+
+    const ownershipType = normalizeOwnershipKey(vehicleOwnership);
+
+    const vendorName = String(
+        vehicle?.vendorName ||
+        vehicle?.rawRecord?.vendorName ||
+        vehicle?.rawRecord?.marketVendorName ||
+        vehicle?.rawRecord?.data?.vendorName ||
+        vehicle?.rawRecord?.data?.marketVendorName ||
+        getReferenceName(vendorReference) ||
+        ""
+    ).trim();
+
+    const vendorCode = String(
+        vehicle?.vendorCode ||
+        vehicle?.rawRecord?.vendorCode ||
+        vehicle?.rawRecord?.data?.vendorCode ||
+        getReferenceCode(vendorReference) ||
+        ""
+    ).trim();
+
+    const customerName = String(
+        vehicle?.customerName ||
+        vehicle?.rawRecord?.customerName ||
+        vehicle?.rawRecord?.data?.customerName ||
+        getReferenceName(customerReference) ||
+        ""
+    ).trim();
+
+    const customerCode = String(
+        vehicle?.customerCode ||
+        vehicle?.rawRecord?.customerCode ||
+        vehicle?.rawRecord?.data?.customerCode ||
+        getReferenceCode(customerReference) ||
+        ""
+    ).trim();
+
     return {
         ...vehicle,
 
@@ -320,7 +445,12 @@ const normalizeVehicle = (vehicle: any = {}) => {
             "",
 
         availabilityStatus,
-        vehicleOwnership,
+        vehicleOwnership: ownershipType,
+        ownershipType,
+        vendorCode,
+        vendorName,
+        customerCode,
+        customerName,
 
         vehicleBodyType:
             vehicle?.vehicleBodyType ||
@@ -575,6 +705,12 @@ const CreateTripAllocation = ({
     const [locationFilter, setLocationFilter] = useState("");
     const [vehicleSearch, setVehicleSearch] = useState("");
     const [showDocuments, setShowDocuments] = useState(false);
+    // ⭐ ADDED — Small assignment confirmation modal.
+    const [showAssignmentConfirm, setShowAssignmentConfirm] = useState(false);
+
+    // ⭐ ADDED — Match React Native edit/view behavior.
+    // Keep the saved vehicle protected until the user explicitly chooses Change Vehicle.
+    const [vehicleLocked, setVehicleLocked] = useState(isEdit || isView);
 
     const loading =
         pageLoading ||
@@ -633,6 +769,59 @@ const CreateTripAllocation = ({
         [vehicles]
     );
 
+    // ⭐ ADDED — Always resolve the selected vehicle against the latest
+    // Vehicle Master data so Vendor/Customer names remain visible in edit mode.
+    const selectedVehicleDetails = useMemo(() => {
+        const savedVehicle = normalizeVehicle(form.vehicleSelection || {});
+        const savedId = String(savedVehicle.selectedVehicleId || "").trim();
+        const savedNumber = String(savedVehicle.vehicleNumber || "").trim();
+
+        const masterVehicle = normalizedVehicles.find((vehicle: any) => {
+            const vehicleId = String(vehicle?.selectedVehicleId || "").trim();
+            const vehicleNumber = String(vehicle?.vehicleNumber || "").trim();
+
+            return (savedId && vehicleId === savedId) ||
+                (savedNumber && vehicleNumber === savedNumber);
+        });
+
+        const mergedVehicle = normalizeVehicle({
+            ...(masterVehicle || {}),
+            ...(form.vehicleSelection || {}),
+        });
+
+        return {
+            ...mergedVehicle,
+            ownershipType:
+                normalizeOwnershipKey(vehicleOwnershipFilter) ||
+                normalizeOwnershipKey(mergedVehicle.ownershipType) ||
+                normalizeOwnershipKey(mergedVehicle.vehicleOwnership),
+            vendorName:
+                mergedVehicle.vendorName ||
+                masterVehicle?.vendorName ||
+                "",
+            vendorCode:
+                mergedVehicle.vendorCode ||
+                masterVehicle?.vendorCode ||
+                "",
+            customerName:
+                mergedVehicle.customerName ||
+                masterVehicle?.customerName ||
+                form.transportOrder?.customerName ||
+                "",
+            customerCode:
+                mergedVehicle.customerCode ||
+                masterVehicle?.customerCode ||
+                form.transportOrder?.customerCode ||
+                "",
+        };
+    }, [
+        form.vehicleSelection,
+        form.transportOrder?.customerName,
+        form.transportOrder?.customerCode,
+        normalizedVehicles,
+        vehicleOwnershipFilter,
+    ]);
+
     const filteredVehicles = useMemo(
         () =>
             filterVehicles({
@@ -680,6 +869,10 @@ const CreateTripAllocation = ({
                 vehicle?.vehicleBodyType,
                 vehicle?.body_type,
                 vehicle?.loadType,
+                vehicle?.vendorName,
+                vehicle?.vendorCode,
+                vehicle?.customerName,
+                vehicle?.customerCode,
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -767,7 +960,7 @@ const CreateTripAllocation = ({
 
     const vehicleOwnershipOptions = [
         { label: "All Vehicles", value: "" },
-        { label: "Own Fleet", value: "own" },
+        { label: "Owned Vehicle", value: "owned" },
         { label: "Market Vehicle", value: "market" },
     ];
 
@@ -1138,17 +1331,34 @@ const CreateTripAllocation = ({
                 };
 
                 setForm(nextForm);
+                setVehicleLocked(true);
 
-                const nextVehicleType = getRequiredVehicleType(nextForm?.transportOrder);
+                // ⭐ ADDED — In edit/view mode show the saved assigned vehicle
+                // values in the filters, exactly like React Native.
+                const nextVehicleType =
+                    normalizedSelectedVehicle?.vehicleType ||
+                    getRequiredVehicleType(nextForm?.transportOrder);
 
                 const nextRequiredCapacity =
+                    normalizedSelectedVehicle?.vehicleCapacityTon ||
+                    normalizedSelectedVehicle?.availableCapacityTon ||
                     nextForm?.transportOrder?.requiredCapacityTon ||
                     nextForm?.transportOrder?.requiredWeightTon ||
                     "";
 
+                const nextLocation =
+                    normalizedSelectedVehicle?.currentLocation || "";
+
+                const nextOwnership = normalizeOwnershipKey(
+                    normalizedSelectedVehicle?.ownershipType ||
+                    normalizedSelectedVehicle?.vehicleOwnership ||
+                    ""
+                );
+
                 setVehicleTypeFilter(nextVehicleType);
                 setCapacityFilter(String(nextRequiredCapacity));
-                setLocationFilter("");
+                setLocationFilter(nextLocation);
+                setVehicleOwnershipFilter(nextOwnership);
                 setVehicleSearch("");
 
                 if (nextForm?.transportOrder?.transportOrderNumber) {
@@ -1249,9 +1459,11 @@ const CreateTripAllocation = ({
                 vehicleSelection: createInitialTripAllocation().vehicleSelection,
             }));
             setVehicleTypeFilter("");
+            setVehicleOwnershipFilter("");
             setCapacityFilter("");
             setLocationFilter("");
             setVehicleSearch("");
+            setVehicleLocked(false);
             return;
         }
 
@@ -1275,6 +1487,7 @@ const CreateTripAllocation = ({
             setForm((prev: any) => ({
                 ...prev,
                 transportOrder: mappedOrder,
+                routesData: buildRoutesDataFromTransportOrder(order),
                 vehicleSelection: createInitialTripAllocation().vehicleSelection,
                 tripPlan: {
                     ...prev.tripPlan,
@@ -1304,9 +1517,11 @@ const CreateTripAllocation = ({
             const requiredVehicleType = getRequiredVehicleType(mappedOrder);
 
             setVehicleTypeFilter(requiredVehicleType);
+            setVehicleOwnershipFilter("");
             setCapacityFilter(String(requiredCapacity));
             setLocationFilter("");
             setVehicleSearch("");
+            setVehicleLocked(false);
 
             const responseVehicles = await dispatch(
                 getVehicleMasterVehicles({
@@ -1695,6 +1910,26 @@ const CreateTripAllocation = ({
             return false;
         }
 
+        // ⭐ ADDED — React Native parity: ownership is required.
+        const ownershipType = normalizeOwnershipKey(
+            form.vehicleSelection?.ownershipType ||
+            form.vehicleSelection?.vehicleOwnership
+        );
+
+        if (!ownershipType) {
+            toast.warn("Please select Ownership Type");
+            return false;
+        }
+
+        // ⭐ ADDED — React Native parity: market vehicle must have its vendor from Vehicle Master.
+        if (
+            ownershipType === "market" &&
+            !String(form.vehicleSelection?.vendorName || "").trim()
+        ) {
+            toast.warn("Market vehicle requires Vendor from Vehicle Master");
+            return false;
+        }
+
         const chosenDriverAssignment =
             driverAssignmentMap[form.driverAllocation.driverId];
 
@@ -1790,7 +2025,7 @@ const CreateTripAllocation = ({
     };
 
 
-    const handleSave = async () => {
+    const handleSave = () => {
         if (isView) {
             goBack();
             return;
@@ -1798,13 +2033,25 @@ const CreateTripAllocation = ({
 
         if (!validate()) return;
 
+        // ⭐ ADDED — Open the small confirmation modal before saving
+        // and before sending the driver notification.
+        setShowAssignmentConfirm(true);
+    };
+
+    const performSave = async () => {
+        setShowAssignmentConfirm(false);
+
         try {
             setPageLoading(true);
 
-            const payload = toTripAllocationPayload({
-                ...form,
-                tripStatus: form.tripStatus || "pending",
-            });
+            const payload = toTripAllocationPayload(
+                isAllocationClosed(form)
+                    ? form
+                    : {
+                        ...form,
+                        tripStatus: "pending",
+                    }
+            );
 
             // =====================================================
             // UPDATE
@@ -2015,7 +2262,7 @@ const CreateTripAllocation = ({
 
                                         <select
                                             value={vehicleTypeFilter}
-                                            disabled={isView}
+                                            disabled={isView || vehicleLocked}
                                             onChange={(e) => setVehicleTypeFilter(e.target.value)}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
@@ -2034,7 +2281,7 @@ const CreateTripAllocation = ({
 
                                         <select
                                             value={capacityFilter}
-                                            disabled={isView}
+                                            disabled={isView || vehicleLocked}
                                             onChange={(e) => setCapacityFilter(e.target.value)}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
@@ -2053,7 +2300,7 @@ const CreateTripAllocation = ({
 
                                         <select
                                             value={locationFilter}
-                                            disabled={isView}
+                                            disabled={isView || vehicleLocked}
                                             onChange={(e) => setLocationFilter(e.target.value)}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
@@ -2072,8 +2319,23 @@ const CreateTripAllocation = ({
 
                                         <select
                                             value={vehicleOwnershipFilter}
-                                            disabled={isView}
-                                            onChange={(e) => setVehicleOwnershipFilter(e.target.value)}
+                                            disabled={isView || vehicleLocked}
+                                            onChange={(e) => {
+                                                const ownershipType = normalizeOwnershipKey(
+                                                    e.target.value
+                                                );
+
+                                                setVehicleOwnershipFilter(ownershipType);
+
+                                                setForm((prev: any) => ({
+                                                    ...prev,
+                                                    vehicleSelection: {
+                                                        ...prev.vehicleSelection,
+                                                        ownershipType,
+                                                        vehicleOwnership: ownershipType,
+                                                    },
+                                                }));
+                                            }}
                                             className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                                         >
                                             {vehicleOwnershipOptions.map((o) => (
@@ -2085,8 +2347,58 @@ const CreateTripAllocation = ({
                                     </div>
 
                                     {selectedVehicle && (
-                                        <div className="md:col-span-2 xl:col-span-4">
-                                            <VehicleSummary form={form} />
+                                        <div className="md:col-span-2 xl:col-span-4 space-y-3">
+                                            {normalizeOwnershipKey(
+                                                vehicleOwnershipFilter ||
+                                                selectedVehicleDetails.ownershipType ||
+                                                selectedVehicleDetails.vehicleOwnership
+                                            ) === "market" && (
+                                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-medium text-muted-foreground">
+                                                                Vendor
+                                                            </p>
+                                                            <p className="mt-1 break-words text-sm font-semibold text-card-foreground">
+                                                                {selectedVehicleDetails.vendorName || "-"}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="min-w-0 text-left sm:text-right">
+                                                            <p className="text-xs font-medium text-muted-foreground">
+                                                                Customer
+                                                            </p>
+                                                            <p className="mt-1 break-words text-sm font-semibold text-card-foreground">
+                                                                {selectedVehicleDetails.customerName ||
+                                                                    form.transportOrder?.customerName ||
+                                                                    "-"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                            <VehicleSummary
+                                                form={{
+                                                    ...form,
+                                                    vehicleSelection: selectedVehicleDetails,
+                                                }}
+                                                showMarketNames={false}
+                                            />
+
+                                            {!isView && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setVehicleSearch("");
+                                                        setVehicleLocked(false);
+                                                    }}
+                                                    className="inline-flex h-5 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 text-xs font-bold text-primary transition hover:bg-primary/10"
+                                                >
+                                                    <RefreshCcw size={12} />
+                                                    {vehicleLocked && isEdit
+                                                        ? "Change Vehicle"
+                                                        : "Choose Another Vehicle"}
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </>
@@ -2094,7 +2406,7 @@ const CreateTripAllocation = ({
                         </FormSectionCard>
                     </div>
 
-                    {transportOrderSelected && !isView && (
+                    {transportOrderSelected && !isView && !vehicleLocked && (
                         <div className="rounded-md border border-border bg-card p-4">
                             {vehiclesLoader ? (
                                 <div className="rounded-md border border-border bg-background p-6 text-center text-sm text-muted-foreground">
@@ -2183,7 +2495,17 @@ const CreateTripAllocation = ({
                                                         <button
                                                             key={vehicle.selectedVehicleId || vehicle.vehicleNumber}
                                                             type="button"
-                                                            onClick={() => applyVehicle(vehicle)}
+                                                            onClick={async () => {
+                                                                await applyVehicle(vehicle);
+
+                                                                // ⭐ ADDED — Lock only during Edit.
+                                                                // During Create, keep Vehicle Type, Capacity,
+                                                                // Location and Ownership filters enabled even
+                                                                // after a vehicle has been selected.
+                                                                if (isEdit) {
+                                                                    setVehicleLocked(true);
+                                                                }
+                                                            }}
                                                             className={`group rounded-md border px-2.5 py-2 text-left text-sm transition ${isSelected
                                                                 ? "border-primary bg-primary/5 shadow-sm"
                                                                 : "border-border bg-card hover:border-primary/40 hover:bg-primary/5"
@@ -2450,6 +2772,128 @@ const CreateTripAllocation = ({
                     </div>
                 </div>
             </main>
+
+            {/* ⭐ ADDED — Driver assignment confirmation modal */}
+            {showAssignmentConfirm && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4"
+                    onMouseDown={() => {
+                        if (!loading) {
+                            setShowAssignmentConfirm(false);
+                        }
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="trip-assignment-confirm-title"
+                        onMouseDown={(event) => event.stopPropagation()}
+                        className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+                    >
+                        <div className="border-b border-border px-5 py-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h2
+                                        id="trip-assignment-confirm-title"
+                                        className="text-base font-bold text-card-foreground"
+                                    >
+                                        {isEdit
+                                            ? "Update Trip Assignment"
+                                            : "Assign Trip to Driver"}
+                                    </h2>
+
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        Confirm before sending the assignment message.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    disabled={loading}
+                                    onClick={() => setShowAssignmentConfirm(false)}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xl text-muted-foreground transition hover:bg-muted hover:text-card-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                    aria-label="Close confirmation"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 px-5 py-4">
+                            <p className="text-sm text-card-foreground">
+                                Send trip assignment notification to{" "}
+                                <span className="font-bold">
+                                    {form.driverAllocation?.driverName ||
+                                        "selected driver"}
+                                </span>
+                                ?
+                            </p>
+
+                            <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-2">
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        Trip
+                                    </p>
+                                    <p className="mt-0.5 break-words text-sm font-semibold text-card-foreground">
+                                        {form.transportOrder?.transportOrderNumber ||
+                                            form.transportOrder?.customerName ||
+                                            "-"}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        Vehicle
+                                    </p>
+                                    <p className="mt-0.5 break-words text-sm font-semibold text-card-foreground">
+                                        {form.vehicleSelection?.vehicleNumber || "-"}
+                                    </p>
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        Driver Mobile
+                                    </p>
+                                    <p className="mt-0.5 break-words text-sm font-semibold text-card-foreground">
+                                        {form.driverAllocation?.mobileNumber ||
+                                            form.driverAllocation?.driverId ||
+                                            "-"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p className="text-xs leading-5 text-muted-foreground">
+                                The driver will receive the assignment message and can
+                                accept it to start expense entry.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 border-t border-border bg-muted/30 px-5 py-4">
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => setShowAssignmentConfirm(false)}
+                                className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-semibold text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={performSave}
+                                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {loading
+                                    ? "Sending..."
+                                    : isEdit
+                                        ? "Update & Notify"
+                                        : "Assign & Notify"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
@@ -2461,7 +2905,7 @@ const Meta = ({ label, value }: any) => (
     </div>
 );
 
-const VehicleSummary = ({ form }: any) => {
+const VehicleSummary = ({ form, showMarketNames = true }: any) => {
     const vehicle = form.vehicleSelection || {};
     const status = vehicle.availabilityStatus || "Available";
 
@@ -2488,6 +2932,33 @@ const VehicleSummary = ({ form }: any) => {
                             {vehicle.currentLocation || "-"} ·{" "}
                             {vehicle.loadType || "FTL"}
                         </p>
+
+                        {showMarketNames &&
+                            normalizeOwnershipKey(
+                                vehicle.ownershipType || vehicle.vehicleOwnership
+                            ) === "market" && (
+                                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <div className="rounded-md border border-border bg-background px-3 py-2">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                            Vendor Name
+                                        </p>
+                                        <p className="mt-0.5 break-words text-xs font-semibold text-card-foreground">
+                                            {vehicle.vendorName || "-"}
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-md border border-border bg-background px-3 py-2">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                            Customer Name
+                                        </p>
+                                        <p className="mt-0.5 break-words text-xs font-semibold text-card-foreground">
+                                            {vehicle.customerName ||
+                                                form.transportOrder?.customerName ||
+                                                "-"}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                     </div>
                 </div>
 

@@ -2040,9 +2040,9 @@ const CreateEditDriverSettlement = ({
                         whatsAppError
                     );
 
-                    toast.warning(
-                        "Driver settlement updated, but WhatsApp notification could not be sent"
-                    );
+                    // toast.warning(
+                    //     "Driver settlement updated, but WhatsApp notification could not be sent"
+                    // );
                 }
 
                 toast.success(

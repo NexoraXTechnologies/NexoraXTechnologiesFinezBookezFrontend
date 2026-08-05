@@ -42,6 +42,8 @@ const contractTypeOptions = [
 	{ label: "Annual", value: "Annual" },
 	{ label: "Spot", value: "Spot" },
 	{ label: "Monthly", value: "Monthly" },
+	{ label: "3 Months", value: "3 Months" },
+	{ label: "6 Months", value: "6 Months" },
 ];
 
 const serviceTypeOptions = [
@@ -66,11 +68,11 @@ const paymentDaysOptions = [
 	{ label: "45 Days", value: "45" },
 ];
 
-const currencyOptions = [
-	{ label: "Select Currency", value: "" },
-	{ label: "INR", value: "INR" },
-	{ label: "USD", value: "USD" },
-];
+// const currencyOptions = [
+// 	{ label: "Select Currency", value: "" },
+// 	{ label: "INR", value: "INR" },
+// 	{ label: "USD", value: "USD" },
+// ];
 
 const vehicleTypeOptions = [
 	{ label: "Select Vehicle Type", value: "" },
@@ -604,9 +606,8 @@ const ExistingDocumentsList = ({ documents, onRemove }: any) => {
 									onClick={(e) => {
 										if (!docUrl) e.preventDefault();
 									}}
-									className={`rounded-md p-2 text-primary transition hover:bg-primary/10 ${
-										!docUrl ? "pointer-events-none opacity-40" : ""
-									}`}
+									className={`rounded-md p-2 text-primary transition hover:bg-primary/10 ${!docUrl ? "pointer-events-none opacity-40" : ""
+										}`}
 									title="Download document"
 								>
 									<Download size={16} />
@@ -909,12 +910,12 @@ const CreateEditTransportContract = () => {
 			type: "select",
 			options: paymentDaysOptions,
 		},
-		{
-			key: "currency",
-			label: "Currency",
-			type: "select",
-			options: currencyOptions,
-		},
+		// {
+		// 	key: "currency",
+		// 	label: "Currency",
+		// 	type: "select",
+		// 	options: currencyOptions,
+		// },
 	];
 
 	const tripCommitmentFields = [
@@ -1123,28 +1124,40 @@ const CreateEditTransportContract = () => {
 						expanded={expandedSections.contractDetails}
 						onToggle={() => toggleSection("contractDetails")}
 					>
-						{renderFields(contractDetailsFields)}
+						<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
+
+							{renderFields(contractDetailsFields)}
+						</div>
 					</SectionCard>
 
-					<SectionCard
-						index={2}
-						title="Contract Period"
-						icon={<CalendarDays size={18} />}
-						expanded={expandedSections.contractPeriod}
-						onToggle={() => toggleSection("contractPeriod")}
-					>
-						{renderFields(contractPeriodFields)}
-					</SectionCard>
+					<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-					<SectionCard
-						index={3}
-						title="Billing Terms"
-						icon={<CreditCard size={18} />}
-						expanded={expandedSections.billingTerms}
-						onToggle={() => toggleSection("billingTerms")}
-					>
-						{renderFields(billingTermsFields)}
-					</SectionCard>
+						<SectionCard
+							index={2}
+							title="Contract Period"
+							icon={<CalendarDays size={18} />}
+							expanded={expandedSections.contractPeriod}
+							onToggle={() => toggleSection("contractPeriod")}
+						>
+							<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-2 gap-4">
+								{renderFields(contractPeriodFields)}
+							</div>
+						</SectionCard>
+
+						<SectionCard
+							index={3}
+							title="Billing Terms"
+							icon={<CreditCard size={18} />}
+							expanded={expandedSections.billingTerms}
+							onToggle={() => toggleSection("billingTerms")}
+						>
+							<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-2 gap-4">
+
+								{renderFields(billingTermsFields)}
+							</div>
+						</SectionCard>
+
+					</div>
 
 					<SectionCard
 						index={4}
@@ -1153,7 +1166,10 @@ const CreateEditTransportContract = () => {
 						expanded={expandedSections.tripCommitment}
 						onToggle={() => toggleSection("tripCommitment")}
 					>
-						{renderFields(tripCommitmentFields)}
+						<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
+
+							{renderFields(tripCommitmentFields)}
+						</div>
 					</SectionCard>
 
 					<SectionCard

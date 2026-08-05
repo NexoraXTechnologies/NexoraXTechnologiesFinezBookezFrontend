@@ -21,7 +21,7 @@
 //         value: item.productName
 //     }))
 
-   
+
 //     const updateLoadField = (key: string, value: any) => {
 //         if (key === "weight") {
 //             update("loadDetails", "weight", String(value).replace(/[^0-9]/g, ""));
@@ -224,10 +224,88 @@ import {
 
 import {
     loadTypeOptions,
-    materialCategoryOptions,
     packagingOptions,
     ewayBillGeneratedByOptions,
 } from "../transportOrderOptions";
+
+
+const formatProductTypeLabel = (
+    value: any
+) => {
+    const text =
+        String(value || "")
+            .trim();
+
+    if (!text) return "";
+
+    const normalizedText =
+        text
+            .replace(
+                /[_-]+/g,
+                " "
+            )
+            .replace(
+                /([a-z])([A-Z])/g,
+                "$1 $2"
+            )
+            .replace(
+                /\s+/g,
+                " "
+            )
+            .trim();
+
+    const knownLabels: Record<string, string> = {
+        finishedgoods:
+            "Finished Goods",
+
+        rawmaterial:
+            "Raw Material",
+
+        semifinishedgoods:
+            "Semi Finished Goods",
+
+        consumablegoods:
+            "Consumable Goods",
+
+        tradinggoods:
+            "Trading Goods",
+
+        service:
+            "Service",
+    };
+
+    const normalizedKey =
+        normalizedText
+            .replace(
+                /\s+/g,
+                ""
+            )
+            .toLowerCase();
+
+    if (
+        knownLabels[
+        normalizedKey
+        ]
+    ) {
+        return knownLabels[
+            normalizedKey
+        ];
+    }
+
+    return normalizedText
+        .split(" ")
+        .filter(Boolean)
+        .map(
+            (word) =>
+                word
+                    .charAt(0)
+                    .toUpperCase() +
+                word
+                    .slice(1)
+                    .toLowerCase()
+        )
+        .join(" ");
+};
 
 const LoadStep = ({
     form,
@@ -249,8 +327,8 @@ const LoadStep = ({
     const productOptions = products.map((item: any) => ({
         label: item.productName,
         value: item.productName,
+        raw: item,
     }));
-
     /* ===================================================
        E-WAY BILL VALUES
     =================================================== */
@@ -336,6 +414,55 @@ const LoadStep = ({
             key,
             value
         );
+    };
+
+
+    const handleProductSelect = (
+        productName: string
+    ) => {
+        const selectedProduct =
+            products.find(
+                (item: any) =>
+                    String(
+                        item?.productName ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase() ===
+                    String(
+                        productName ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase()
+            );
+
+        updateLoadField(
+            "materialName",
+            productName
+        );
+
+        /*
+         * Auto-fill Material Category from the
+         * selected product's Product Type.
+         */
+        const rawProductType =
+            selectedProduct?.productType ||
+            selectedProduct?.productCategory ||
+            selectedProduct?.category ||
+            selectedProduct?.materialCategory ||
+            "";
+
+        const formattedProductType =
+            formatProductTypeLabel(
+                rawProductType
+            );
+
+        updateLoadField(
+            "materialCategory",
+            formattedProductType
+        );
+
     };
 
     /* ===================================================
@@ -451,70 +578,70 @@ const LoadStep = ({
 
     const handleInputChange =
         (key: string) =>
-        (e: any) => {
-            const value =
-                e?.target?.type === "checkbox"
-                    ? e?.target?.checked
-                    : e?.target?.value ?? "";
+            (e: any) => {
+                const value =
+                    e?.target?.type === "checkbox"
+                        ? e?.target?.checked
+                        : e?.target?.value ?? "";
 
-            if (
-                key ===
-                "loadDetails.ewayBillDetails.ewayBillRequired"
-            ) {
-                handleEwayBillRequiredChange(
-                    value
-                );
-
-                return;
-            }
-
-            if (
-                key ===
-                "loadDetails.ewayBillDetails.ewayBillGeneratedBy"
-            ) {
-                handleGeneratedByChange(
-                    value
-                );
-
-                return;
-            }
-
-            if (
-                key.startsWith(
-                    "loadDetails.ewayBillDetails."
-                )
-            ) {
-                const ewayKey =
-                    key.replace(
-                        "loadDetails.ewayBillDetails.",
-                        ""
+                if (
+                    key ===
+                    "loadDetails.ewayBillDetails.ewayBillRequired"
+                ) {
+                    handleEwayBillRequiredChange(
+                        value
                     );
 
-                updateEwayBillField(
-                    ewayKey,
-                    value
-                );
+                    return;
+                }
 
-                return;
-            }
-
-            if (
-                key.startsWith(
-                    "loadDetails."
-                )
-            ) {
-                const loadKey =
-                    key.replace(
-                        "loadDetails.",
-                        ""
+                if (
+                    key ===
+                    "loadDetails.ewayBillDetails.ewayBillGeneratedBy"
+                ) {
+                    handleGeneratedByChange(
+                        value
                     );
 
-                updateLoadField(
-                    loadKey,
-                    value
-                );
-            }
-        };
+                    return;
+                }
+
+                if (
+                    key.startsWith(
+                        "loadDetails.ewayBillDetails."
+                    )
+                ) {
+                    const ewayKey =
+                        key.replace(
+                            "loadDetails.ewayBillDetails.",
+                            ""
+                        );
+
+                    updateEwayBillField(
+                        ewayKey,
+                        value
+                    );
+
+                    return;
+                }
+
+                if (
+                    key.startsWith(
+                        "loadDetails."
+                    )
+                ) {
+                    const loadKey =
+                        key.replace(
+                            "loadDetails.",
+                            ""
+                        );
+
+                    updateLoadField(
+                        loadKey,
+                        value
+                    );
+                }
+            };
 
     /* ===================================================
        SELECT CHANGE
@@ -522,31 +649,50 @@ const LoadStep = ({
 
     const handleSelectChange =
         (key: string) =>
-        (e: any) => {
-            const value =
-                e?.target?.value ??
-                e ??
-                "";
+            (e: any) => {
+                const value =
+                    e?.target?.value ??
+                    e ??
+                    "";
 
-            if (
-                key ===
-                "loadDetails.ewayBillDetails.ewayBillGeneratedBy"
-            ) {
-                handleGeneratedByChange(
-                    value
-                );
 
-                return;
-            }
+                /* ===================================================
+       MATERIAL NAME
 
-            handleInputChange(
-                key
-            )({
-                target: {
-                    value,
-                },
-            });
-        };
+       Auto-fill Material Category using the selected
+       product's productType.
+    =================================================== */
+
+                if (
+                    key ===
+                    "loadDetails.materialName"
+                ) {
+                    handleProductSelect(
+                        value
+                    );
+
+                    return;
+                }
+
+                if (
+                    key ===
+                    "loadDetails.ewayBillDetails.ewayBillGeneratedBy"
+                ) {
+                    handleGeneratedByChange(
+                        value
+                    );
+
+                    return;
+                }
+
+                handleInputChange(
+                    key
+                )({
+                    target: {
+                        value,
+                    },
+                });
+            };
 
     /* ===================================================
        DIRECT FIELD UPDATE
@@ -556,6 +702,21 @@ const LoadStep = ({
         key: string,
         value: any
     ) => {
+
+
+
+        if (
+            key ===
+            "loadDetails.materialName"
+        ) {
+            handleProductSelect(
+                value
+            );
+
+            return;
+        }
+
+
         if (
             key ===
             "loadDetails.ewayBillDetails.ewayBillRequired"
@@ -732,8 +893,9 @@ const LoadStep = ({
         {
             key: "loadDetails.materialCategory",
             label: "Material Category",
-            type: "select",
-            options: materialCategoryOptions,
+            type: "text",
+            placeholder: "Auto-filled from selected product",
+            disabled: true,
         },
         {
             key: "loadDetails.quantity",
@@ -883,14 +1045,14 @@ const LoadStep = ({
                                         ?.ewayBillDocuments
                                 )
                                     ? ewayBillDetails
-                                          .ewayBillDocuments
+                                        .ewayBillDocuments
                                     : ewayBillDetails
-                                          ?.ewayBillDocument
-                                      ? [
+                                        ?.ewayBillDocument
+                                        ? [
                                             ewayBillDetails
                                                 .ewayBillDocument,
                                         ]
-                                      : []
+                                        : []
                             }
                             multiple={false}
                             placeholder="Pick PDF or Image"

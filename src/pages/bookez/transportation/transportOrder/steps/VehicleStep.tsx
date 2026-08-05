@@ -66,6 +66,7 @@ const VehicleStep = ({ form, update ,isView}: any) => {
             label: "Vehicle Type",
             type: "select",
             options: vehicleTypeOptions,
+            mandatory: true,
         },
         {
             key: "vehicleRequirement.vehicleBodyType",

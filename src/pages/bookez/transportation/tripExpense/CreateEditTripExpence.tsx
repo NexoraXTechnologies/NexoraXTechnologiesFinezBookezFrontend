@@ -2391,6 +2391,7 @@ import {
     Coffee,
     CreditCard,
     Droplets,
+    Eye,
     Loader2,
     MoreHorizontal,
     Navigation,
@@ -3482,8 +3483,9 @@ const CreateEditTripExpence = () => {
     const [form, setForm] = useState<any>(createInitialTripExpense());
     const [loading, setLoading] = useState(false);
 
-    const [ewayBillLoading, setEwayBillLoading] = useState(false);
     const [ewayPdfUrl, setEwayPdfUrl] = useState("");
+    // @ts-ignore
+    const [ewayBillLoading, setEwayBillLoading] = useState(false);
     // @ts-ignore
     const [ewayPdfModalVisible, setEwayPdfModalVisible] = useState(false);
     const [ewayPdfLoading, setEwayPdfLoading] = useState(false);
@@ -4576,124 +4578,6 @@ const CreateEditTripExpence = () => {
     };
 
 
-    // const handleUpdateVehicle = () => {
-    //     if (!form.ewayBillNo) {
-    //         toast.error("E-Way Bill not available");
-    //         return;
-    //     }
-
-    //     navigate(
-    //         `/bookEz/transportation/e-way-bill/edit/${form.ewayBillNo}`,
-    //         {
-    //             state: {
-    //                 mode: "edit",
-    //                 ewayBillNo: form.ewayBillNo,
-    //             },
-    //         }
-    //     );
-    // };
-
-    // const handleDownloadEwayBill = async () => {
-    //     const ewayBillNo = String(
-    //         form.ewayBillNo || ""
-    //     ).trim();
-
-    //     if (!ewayBillNo) {
-    //         toast.error(
-    //             "E-Way Bill number is missing"
-    //         );
-
-    //         return;
-    //     }
-
-    //     try {
-    //         setEwayPdfLoading(true);
-
-    //         // ⭐ YELLOW STAR: GET GST E-WAY BILL ACCESS TOKEN
-    //         const tokenResult = await unwrapThunk(
-    //             dispatch,
-    //             getEWayBillAccessToken()
-    //         );
-
-    //         // ⭐ YELLOW STAR: USE ONLY TOKEN RETURNED BY ACCESS TOKEN API
-    //         const gstAuthToken = String(
-    //             tokenResult?.authtoken ||
-    //             tokenResult?.data?.authtoken ||
-    //             tokenResult?.data?.data?.authtoken ||
-    //             ""
-    //         ).trim();
-
-    //         if (!gstAuthToken) {
-    //             throw new Error(
-    //                 "E-Way Bill access token was not received"
-    //             );
-    //         }
-
-    //         // ⭐ YELLOW STAR: PASS GST TOKEN, NOT LOGIN TOKEN
-    //         const eWayBillDetails = await unwrapThunk(
-    //             dispatch,
-    //             getEWayBillFromGst({
-    //                 authtoken: gstAuthToken,
-    //                 ewbNo: ewayBillNo,
-    //             })
-    //         );
-
-    //         const eWayBillData =
-    //             eWayBillDetails?.data?.data ||
-    //             eWayBillDetails?.data ||
-    //             eWayBillDetails;
-
-    //         if (!eWayBillData) {
-    //             throw new Error(
-    //                 "E-Way Bill details were not received"
-    //             );
-    //         }
-
-    //         const pdfBlob = await unwrapThunk(
-    //             dispatch,
-    //             printDetailEWayBill({
-    //                 payload: eWayBillData,
-    //             })
-    //         );
-
-    //         if (!(pdfBlob instanceof Blob)) {
-    //             throw new Error(
-    //                 "Invalid E-Way Bill PDF response"
-    //             );
-    //         }
-
-    //         const objectUrl =
-    //             URL.createObjectURL(pdfBlob);
-
-    //         const link =
-    //             document.createElement("a");
-
-    //         link.href = objectUrl;
-
-    //         link.download =
-    //             `EWayBill_${ewayBillNo.replace(
-    //                 /[^a-zA-Z0-9_-]/g,
-    //                 ""
-    //             )}.pdf`;
-
-    //         document.body.appendChild(link);
-    //         link.click();
-    //         link.remove();
-
-    //         setTimeout(() => {
-    //             URL.revokeObjectURL(objectUrl);
-    //         }, 1000);
-    //     } catch (error: any) {
-    //         toast.error(
-    //             error?.message ||
-    //             error?.data?.message ||
-    //             error?.payload?.message ||
-    //             "Unable to download E-Way Bill"
-    //         );
-    //     } finally {
-    //         setEwayPdfLoading(false);
-    //     }
-    // };
     /* ===================================================
        RENDER
     =================================================== */
@@ -4809,6 +4693,32 @@ const CreateEditTripExpence = () => {
                                     />
                                 </Field>
 
+                                <Field label="E-Way Bill No">
+                                    <div className="relative">
+                                        <input
+                                            readOnly
+                                            className={`${inputClass} pr-12`}
+                                            value={form.ewayBillNo || ""}
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={handleViewEwayBill}
+                                            disabled={
+                                                ewayPdfLoading ||
+                                                !String(form.ewayBillNo || "").trim()
+                                            }
+                                            title="View E-Way Bill"
+                                            className="absolute right-1 top-1/2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {ewayPdfLoading ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </Field>
 
                                 <Field label="LR Date">
                                     <input
@@ -4819,6 +4729,8 @@ const CreateEditTripExpence = () => {
                                         onChange={(e) => patchHeader({ lrDate: e.target.value })}
                                     />
                                 </Field>
+
+
 
                                 <Field label="Vehicle No." mandatory>
                                     <input
@@ -4910,85 +4822,7 @@ const CreateEditTripExpence = () => {
                         </div>
                     </SectionCard>
 
-                    {/* ============================================
-    E-Way Bill
-============================================= */}
-
-
-                    <SectionCard
-                        index={2}
-                        title="E-Way Bill"
-                        icon={<Truck size={18} />}
-                        expanded={expandedSections.ewayBill}
-                        onToggle={() => toggleSection("ewayBill")}
-                    >
-                        {ewayBillLoading ? (
-                            <div className="flex items-center justify-center py-10">
-                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="md:col-span-1 xl:col-span-3">
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-
-                                        <Field label="E-Way Bill No">
-                                            <input
-                                                readOnly
-                                                className={inputClass}
-                                                value={form.ewayBillNo || ""}
-                                            />
-                                        </Field>
-
-                                        <Field label="E-Way Bill Date">
-                                            <input
-                                                readOnly
-                                                className={inputClass}
-                                                value={form.ewayBillDate || ""}
-                                            />
-                                        </Field>
-
-                                        <Field label="Valid Upto">
-                                            <input
-                                                readOnly
-                                                className={inputClass}
-                                                value={form.ewayBillValidUpto || ""}
-                                            />
-                                        </Field>
-
-                                        <div className="flex flex-col sm:flex-row gap-3 lg:justify-end">
-                                            {/* <button
-                                                type="button"
-                                                onClick={handleViewEwayBill}
-                                                className="h-10 w-full sm:w-auto whitespace-nowrap rounded-md border border-primary px-5 text-primary hover:bg-primary/10"
-                                            >
-                                                View E-Way Bill
-                                            </button> */}
-
-                                            <button
-                                                type="button"
-                                                onClick={handleViewEwayBill}
-                                                // disabled={ewayPdfLoading}
-                                                className="flex h-10 w-full sm:w-auto items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-5 text-white hover:bg-primary/90"
-                                            >
-                                                {ewayPdfLoading ? (
-                                                    <>
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                        loading...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Paperclip size={15} />
-                                                        View E-Way Bill
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </SectionCard>
+                  
 
                     <div
                         className={`grid grid-cols-1 gap-4 ${showVehicleStatusSection ? "xl:grid-cols-[0.75fr_1.25fr]" : ""
@@ -5052,24 +4886,7 @@ const CreateEditTripExpence = () => {
                         </div>
                     </div>
 
-                    {/* {visibleCategories.map((category: any, index: number) => (
-                        <SectionCard
-                            key={category.key}
-                            index={index + 4}
-                            title={category.title}
-                            icon={category.icon}
-                            expanded={expandedSections[category.key]}
-                            onToggle={() => toggleSection(category.key)}
-                        >
-                            <CategoryDetails
-                                category={category}
-                                form={form}
-                                setForm={setForm}
-                                readOnly={readOnly}
-                            />
-                        </SectionCard>
-                    ))} */}
-
+                  
 
                     {visibleCategories.map((category: any, index: number) => {
                         const entries = form.expenses?.[category.key]?.entries || [];
