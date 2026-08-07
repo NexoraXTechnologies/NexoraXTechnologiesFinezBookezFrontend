@@ -1118,7 +1118,7 @@ const KitCollection = () => {
 
             const raw =
                 selectedOption?.raw || {};
-
+            console.log({ raw })
             if (
                 PRODUCT_FIELD_KEYS.has(key)
             ) {
@@ -2081,7 +2081,7 @@ const KitCollection = () => {
 
                     <Permission
                         module="bookez"
-                        permissionKey="kitCollection"
+                        permissionKey="Pass"
                         action="create"
                     >
                         <DataCreateButton
@@ -2103,7 +2103,7 @@ const KitCollection = () => {
                     <div className="flex items-center gap-2">
                         <Permission
                             module="bookez"
-                            permissionKey="kitCollection"
+                            permissionKey="Pass"
                             action="update"
                         >
                             <button
@@ -2121,7 +2121,7 @@ const KitCollection = () => {
 
                         <Permission
                             module="bookez"
-                            permissionKey="kitCollection"
+                            permissionKey="Pass"
                             action="delete"
                         >
                             <button

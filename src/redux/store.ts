@@ -115,7 +115,7 @@ import registerFilterDropdownReducer from "../redux/slices/professionalSlice/reg
 import drillDownReportReducer from "./slices/professionalSlice/drillDownReportSlice";
 import cashBankReportReducer from "./slices/professionalSlice/cashBankReportSlice";
 import teamEmployeeSchemaReducer from "./slices/systemConf/teamEmployeeSchemaSlice";
-
+import kitCollectionReducer from "./slices/professionalSlice/kitCollection"
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -235,6 +235,7 @@ export const store = configureStore({
     drillDownReport: drillDownReportReducer,
     cashBankReport: cashBankReportReducer,
     teamEmployeeSchema: teamEmployeeSchemaReducer,
+    kitCollection: kitCollectionReducer,
   },
 });
 
