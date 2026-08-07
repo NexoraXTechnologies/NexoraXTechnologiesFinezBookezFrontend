@@ -1,12 +1,5 @@
-import {
-    createAsyncThunk,
-    createSlice
-} from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import professionalAxios from "../../../../services/professionalAxios";
-
-/* =====================================================
-   TYPES
-===================================================== */
 
 type RejectValue = {
     message: string;
@@ -18,54 +11,39 @@ export type CustomMasterValue = {
     [key: string]: any;
 };
 
-export type CustomMasters = Record<
-    string,
-    CustomMasterValue
->;
+export type CustomMasters = Record<string, CustomMasterValue>;
 
 export type KitBodyItem = {
     productCode: string;
     productName: string;
     productDescription?: string;
     productHSNCode?: string;
-
     quantity: number;
     uom: string;
     rate: number;
-
     gross: number;
-
     discount: number;
     discountAmount: number;
-
     cgst: number;
     cgstAmount: number;
-
     sgst: number;
     sgstAmount: number;
-
     igst: number;
     igstAmount: number;
-
     netAmount: number;
-
     customMasters?: CustomMasters;
-
     [key: string]: any;
 };
 
 export type KitFooter = {
     grossAmount: number;
     discountAmount: number;
-
     cgstAmount: number;
     sgstAmount: number;
     igstAmount: number;
-
     netAmount: number;
     adjustedAmount: number;
     balanceAmount: number;
-
     [key: string]: any;
 };
 
@@ -74,18 +52,13 @@ export type SaveKitCollectionPayload = {
     kitDocDate: string;
     kitRemark?: string;
     kitStatus: string;
-
     customMasters?: CustomMasters;
-
     kitBody: KitBodyItem[];
-
     kitFooter: KitFooter;
-
     [key: string]: any;
 };
 
-export type UpdateKitCollectionData =
-    Partial<SaveKitCollectionPayload>;
+export type UpdateKitCollectionData = Partial<SaveKitCollectionPayload>;
 
 export type UpdateKitCollectionPayload = {
     kitVoucherNumber: string;
@@ -102,43 +75,26 @@ export type GetAllKitCollectionsParams = {
 type KitCollectionState = {
     kitCollections: any[];
     selectedKitCollection: any;
-
     pagination: any;
-
     loading: boolean;
     saveLoading: boolean;
     updateLoading: boolean;
     deleteLoading: boolean;
-
     error: string | null;
 };
-
-/* =====================================================
-   INITIAL STATE
-===================================================== */
 
 const initialState: KitCollectionState = {
     kitCollections: [],
     selectedKitCollection: null,
-
     pagination: null,
-
     loading: false,
     saveLoading: false,
     updateLoading: false,
     deleteLoading: false,
-
     error: null,
 };
 
-/* =====================================================
-   ERROR HANDLER
-===================================================== */
-
-const getErrorMessage = (
-    error: any,
-    fallbackMessage: string
-) => {
+const getErrorMessage = (error: any, fallbackMessage: string) => {
     return (
         error?.response?.data?.message ||
         error?.response?.data?.error?.message ||
@@ -147,17 +103,12 @@ const getErrorMessage = (
     );
 };
 
-/* =====================================================
-   GET RESPONSE DATA
-===================================================== */
-
 const getResponseData = (payload: any) => {
     return payload?.data ?? payload;
 };
 
 const getResponseItem = (payload: any) => {
-    const responseData =
-        getResponseData(payload);
+    const responseData = getResponseData(payload);
 
     return (
         responseData?.item ||
@@ -167,488 +118,269 @@ const getResponseItem = (payload: any) => {
     );
 };
 
-/* =====================================================
-   SAVE KIT COLLECTION
-===================================================== */
+export const saveKitCollection = createAsyncThunk<
+    any,
+    SaveKitCollectionPayload,
+    { rejectValue: RejectValue }
+>(
+    "kitCollection/saveKitCollection",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await professionalAxios.post(
+                "/eTaxSolnMongoApiBackend/users/bookez/kitCollection/save",
+                payload
+            );
 
-export const saveKitCollection =
-    createAsyncThunk<
-        any,
-        SaveKitCollectionPayload,
-        {
-            rejectValue: RejectValue;
+            return response.data;
+        } catch (error: any) {
+            return rejectWithValue({
+                message: getErrorMessage(
+                    error,
+                    "Failed to save kit collection."
+                ),
+            });
         }
-    >(
-        "kitCollection/saveKitCollection",
-        async (
-            payload,
-            { rejectWithValue }
-        ) => {
-            try {
-                const response =
-                    await professionalAxios.post(
-                        "/eTaxSolnMongoApiBackend/users/bookez/kitCollection/save",
-                        payload
-                    );
+    }
+);
 
-                return response.data;
-            } catch (error: any) {
-                return rejectWithValue({
-                    message: getErrorMessage(
-                        error,
-                        "Failed to save kit collection."
-                    ),
-                });
-            }
-        }
-    );
+export const updateKitCollection = createAsyncThunk<
+    any,
+    UpdateKitCollectionPayload,
+    { rejectValue: RejectValue }
+>(
+    "kitCollection/updateKitCollection",
+    async ({ kitVoucherNumber, data }, { rejectWithValue }) => {
+        try {
+            const response = await professionalAxios.put(
+                `/eTaxSolnMongoApiBackend/users/bookez/kitCollection/update/${encodeURIComponent(
+                    kitVoucherNumber
+                )}`,
+                data
+            );
 
-/* =====================================================
-   UPDATE KIT COLLECTION
-===================================================== */
-
-export const updateKitCollection =
-    createAsyncThunk<
-        any,
-        UpdateKitCollectionPayload,
-        {
-            rejectValue: RejectValue;
-        }
-    >(
-        "kitCollection/updateKitCollection",
-        async (
-            {
+            return {
+                ...response.data,
                 kitVoucherNumber,
-                data,
-            },
-            { rejectWithValue }
-        ) => {
-            try {
-                const response =
-                    await professionalAxios.put(
-                        `/eTaxSolnMongoApiBackend/users/bookez/kitCollection/update/${encodeURIComponent(
-                            kitVoucherNumber
-                        )}`,
-                        data
-                    );
-
-                return {
-                    ...response.data,
-                    kitVoucherNumber,
-                };
-            } catch (error: any) {
-                return rejectWithValue({
-                    message: getErrorMessage(
-                        error,
-                        "Failed to update kit collection."
-                    ),
-                });
-            }
+            };
+        } catch (error: any) {
+            return rejectWithValue({
+                message: getErrorMessage(
+                    error,
+                    "Failed to update kit collection."
+                ),
+            });
         }
-    );
+    }
+);
 
-/* =====================================================
-   DELETE KIT COLLECTION
-===================================================== */
+export const deleteKitCollection = createAsyncThunk<
+    any,
+    string,
+    { rejectValue: RejectValue }
+>(
+    "kitCollection/deleteKitCollection",
+    async (kitVoucherNumber, { rejectWithValue }) => {
+        try {
+            const response = await professionalAxios.delete(
+                `/eTaxSolnMongoApiBackend/users/bookez/kitCollection/delete/${encodeURIComponent(
+                    kitVoucherNumber
+                )}`
+            );
 
-export const deleteKitCollection =
-    createAsyncThunk<
-        any,
-        string,
-        {
-            rejectValue: RejectValue;
+            return {
+                ...response.data,
+                kitVoucherNumber,
+            };
+        } catch (error: any) {
+            return rejectWithValue({
+                message: getErrorMessage(
+                    error,
+                    "Failed to delete kit collection."
+                ),
+            });
         }
-    >(
-        "kitCollection/deleteKitCollection",
-        async (
-            kitVoucherNumber,
-            { rejectWithValue }
-        ) => {
-            try {
-                const response =
-                    await professionalAxios.delete(
-                        `/eTaxSolnMongoApiBackend/users/bookez/kitCollection/delete/${encodeURIComponent(
-                            kitVoucherNumber
-                        )}`
-                    );
+    }
+);
 
-                return {
-                    ...response.data,
-                    kitVoucherNumber,
-                };
-            } catch (error: any) {
-                return rejectWithValue({
-                    message: getErrorMessage(
-                        error,
-                        "Failed to delete kit collection."
-                    ),
-                });
-            }
-        }
-    );
+export const getAllKitCollections = createAsyncThunk<
+    any,
+    GetAllKitCollectionsParams | void,
+    { rejectValue: RejectValue }
+>(
+    "kitCollection/getAllKitCollections",
+    async (params, { rejectWithValue }) => {
+        try {
+            const {
+                offset = 0,
+                limit = 100,
+                search = "",
+                status = "",
+            } = params || {};
 
-/* =====================================================
-   GET ALL KIT COLLECTIONS
-===================================================== */
-
-export const getAllKitCollections =
-    createAsyncThunk<
-        any,
-        GetAllKitCollectionsParams | void,
-        {
-            rejectValue: RejectValue;
-        }
-    >(
-        "kitCollection/getAllKitCollections",
-        async (
-            params,
-            { rejectWithValue }
-        ) => {
-            try {
-                const {
-                    offset = 0,
-                    limit = 100,
-                    search = "",
-                    status = "",
-                } = params || {};
-
-                const queryParams: Record<
-                    string,
-                    any
-                > = {
-                    offset,
-                    limit,
-                };
-
-                if (search.trim()) {
-                    queryParams.search =
-                        search.trim();
+            const response = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookez/kitCollection/getAll",
+                {
+                    params: {
+                        offset,
+                        limit,
+                        search,
+                        status,
+                    },
                 }
-
-                if (status.trim()) {
-                    queryParams.status =
-                        status.trim();
-                }
-
-                const response =
-                    await professionalAxios.get(
-                        "/eTaxSolnMongoApiBackend/users/bookez/kitCollection/getAll",
-                        {
-                            params: queryParams,
-                        }
-                    );
-
-                return response.data;
-            } catch (error: any) {
-                return rejectWithValue({
-                    message: getErrorMessage(
-                        error,
-                        "Failed to fetch kit collections."
-                    ),
-                });
-            }
+            );
+            console.log({ response })
+            return response.data?.data;
+        } catch (error: any) {
+            return rejectWithValue({
+                message: getErrorMessage(
+                    error,
+                    "Failed to fetch kit collections."
+                ),
+            });
         }
-    );
+    }
+);
 
-/* =====================================================
-   SLICE
-===================================================== */
+const kitCollectionSlice = createSlice({
+    name: "kitCollection",
+    initialState,
 
-const kitCollectionSlice =
-    createSlice({
-        name: "kitCollection",
+    reducers: {
+        setSelectedKitCollection: (state, action: any) => {
+            state.selectedKitCollection = action.payload;
+        },
 
-        initialState,
+        clearSelectedKitCollection: (state) => {
+            state.selectedKitCollection = null;
+        },
 
-        reducers: {
-            setSelectedKitCollection: (
-                state,
-                action: any
-            ) => {
-                state.selectedKitCollection =
-                    action.payload;
-            },
+        clearKitCollectionError: (state) => {
+            state.error = null;
+        },
 
-            clearSelectedKitCollection: (
-                state
-            ) => {
-                state.selectedKitCollection =
-                    null;
-            },
+        resetKitCollectionState: () => initialState,
+    },
 
-            clearKitCollectionError: (
-                state
-            ) => {
+    extraReducers: (builder) => {
+        builder
+            .addCase(getAllKitCollections.pending, (state) => {
+                state.loading = true;
                 state.error = null;
-            },
+            })
+            .addCase(getAllKitCollections.fulfilled, (state, action) => {
+                console.log({action})
+                state.loading = false;
+                state.kitCollections = action.payload?.records || [];
+                state.pagination = action.payload?.pagination || null;
+            })
+            .addCase(getAllKitCollections.rejected, (state, action) => {
+                state.loading = false;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to fetch kit collections.";
+            });
 
-            resetKitCollectionState: () =>
-                initialState,
-        },
+        builder
+            .addCase(saveKitCollection.pending, (state) => {
+                state.saveLoading = true;
+                state.error = null;
+            })
+            .addCase(saveKitCollection.fulfilled, (state, action) => {
+                state.saveLoading = false;
 
-        extraReducers: (builder) => {
-            /* =========================================
-               GET ALL KIT COLLECTIONS
-            ========================================= */
+                const savedItem = getResponseItem(action.payload);
 
-            builder
-                .addCase(
-                    getAllKitCollections.pending,
-                    (state) => {
-                        state.loading = true;
-                        state.error = null;
+                state.selectedKitCollection = savedItem;
+
+                if (
+                    savedItem &&
+                    typeof savedItem === "object" &&
+                    savedItem?.kitVoucherNumber
+                ) {
+                    const alreadyExists = state.kitCollections.some(
+                        (item) =>
+                            item?.kitVoucherNumber ===
+                            savedItem?.kitVoucherNumber
+                    );
+
+                    if (!alreadyExists) {
+                        state.kitCollections.unshift(savedItem);
                     }
-                )
-                .addCase(
-                    getAllKitCollections.fulfilled,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.loading = false;
+                }
+            })
+            .addCase(saveKitCollection.rejected, (state, action) => {
+                state.saveLoading = false;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to save kit collection.";
+            });
 
-                        const responseData =
-                            getResponseData(
-                                action.payload
-                            );
+        builder
+            .addCase(updateKitCollection.pending, (state) => {
+                state.updateLoading = true;
+                state.error = null;
+            })
+            .addCase(updateKitCollection.fulfilled, (state, action) => {
+                state.updateLoading = false;
 
-                        state.kitCollections =
-                            responseData?.items ||
-                            responseData?.kitCollections ||
-                            responseData?.documents ||
-                            [];
+                const updatedItem = getResponseItem(action.payload);
 
-                        state.pagination =
-                            responseData?.pagination ||
-                            null;
-                    }
-                )
-                .addCase(
-                    getAllKitCollections.rejected,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.loading = false;
+                const kitVoucherNumber =
+                    action.payload?.kitVoucherNumber ||
+                    updatedItem?.kitVoucherNumber;
 
-                        state.error =
-                            action.payload
-                                ?.message ||
-                            "Failed to fetch kit collections.";
-                    }
+                state.selectedKitCollection = updatedItem;
+
+                const itemIndex = state.kitCollections.findIndex(
+                    (item) =>
+                        item?.kitVoucherNumber === kitVoucherNumber
                 );
 
-            /* =========================================
-               SAVE KIT COLLECTION
-            ========================================= */
+                if (itemIndex !== -1) {
+                    state.kitCollections[itemIndex] = {
+                        ...state.kitCollections[itemIndex],
+                        ...updatedItem,
+                        kitVoucherNumber,
+                    };
+                }
+            })
+            .addCase(updateKitCollection.rejected, (state, action) => {
+                state.updateLoading = false;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to update kit collection.";
+            });
 
-            builder
-                .addCase(
-                    saveKitCollection.pending,
-                    (state) => {
-                        state.saveLoading = true;
-                        state.error = null;
-                    }
-                )
-                .addCase(
-                    saveKitCollection.fulfilled,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.saveLoading = false;
+        builder
+            .addCase(deleteKitCollection.pending, (state) => {
+                state.deleteLoading = true;
+                state.error = null;
+            })
+            .addCase(deleteKitCollection.fulfilled, (state, action) => {
+                state.deleteLoading = false;
 
-                        const savedItem =
-                            getResponseItem(
-                                action.payload
-                            );
+                const kitVoucherNumber = action.payload?.kitVoucherNumber;
 
-                        state.selectedKitCollection =
-                            savedItem;
-
-                        if (
-                            savedItem &&
-                            typeof savedItem ===
-                            "object" &&
-                            savedItem
-                                .kitVoucherNumber
-                        ) {
-                            const alreadyExists =
-                                state.kitCollections.some(
-                                    (
-                                        item
-                                    ) =>
-                                        item?.kitVoucherNumber ===
-                                        savedItem?.kitVoucherNumber
-                                );
-
-                            if (
-                                !alreadyExists
-                            ) {
-                                state.kitCollections.unshift(
-                                    savedItem
-                                );
-                            }
-                        }
-                    }
-                )
-                .addCase(
-                    saveKitCollection.rejected,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.saveLoading = false;
-
-                        state.error =
-                            action.payload
-                                ?.message ||
-                            "Failed to save kit collection.";
-                    }
+                state.kitCollections = state.kitCollections.filter(
+                    (item) =>
+                        item?.kitVoucherNumber !== kitVoucherNumber
                 );
 
-            /* =========================================
-               UPDATE KIT COLLECTION
-            ========================================= */
-
-            builder
-                .addCase(
-                    updateKitCollection.pending,
-                    (state) => {
-                        state.updateLoading =
-                            true;
-
-                        state.error = null;
-                    }
-                )
-                .addCase(
-                    updateKitCollection.fulfilled,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.updateLoading =
-                            false;
-
-                        const updatedItem =
-                            getResponseItem(
-                                action.payload
-                            );
-
-                        const kitVoucherNumber =
-                            action.payload
-                                ?.kitVoucherNumber ||
-                            updatedItem
-                                ?.kitVoucherNumber;
-
-                        state.selectedKitCollection =
-                            updatedItem;
-
-                        const itemIndex =
-                            state.kitCollections.findIndex(
-                                (item) =>
-                                    item?.kitVoucherNumber ===
-                                    kitVoucherNumber
-                            );
-
-                        if (
-                            itemIndex !== -1
-                        ) {
-                            state.kitCollections[
-                                itemIndex
-                            ] = {
-                                ...state
-                                    .kitCollections[
-                                itemIndex
-                                ],
-                                ...updatedItem,
-                                kitVoucherNumber,
-                            };
-                        }
-                    }
-                )
-                .addCase(
-                    updateKitCollection.rejected,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.updateLoading =
-                            false;
-
-                        state.error =
-                            action.payload
-                                ?.message ||
-                            "Failed to update kit collection.";
-                    }
-                );
-
-            /* =========================================
-               DELETE KIT COLLECTION
-            ========================================= */
-
-            builder
-                .addCase(
-                    deleteKitCollection.pending,
-                    (state) => {
-                        state.deleteLoading =
-                            true;
-
-                        state.error = null;
-                    }
-                )
-                .addCase(
-                    deleteKitCollection.fulfilled,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.deleteLoading =
-                            false;
-
-                        const kitVoucherNumber =
-                            action.payload
-                                ?.kitVoucherNumber;
-
-                        state.kitCollections =
-                            state.kitCollections.filter(
-                                (item) =>
-                                    item?.kitVoucherNumber !==
-                                    kitVoucherNumber
-                            );
-
-                        if (
-                            state
-                                .selectedKitCollection
-                                ?.kitVoucherNumber ===
-                            kitVoucherNumber
-                        ) {
-                            state.selectedKitCollection =
-                                null;
-                        }
-                    }
-                )
-                .addCase(
-                    deleteKitCollection.rejected,
-                    (
-                        state,
-                        action
-                    ) => {
-                        state.deleteLoading =
-                            false;
-
-                        state.error =
-                            action.payload
-                                ?.message ||
-                            "Failed to delete kit collection.";
-                    }
-                );
-        },
-    });
-
-/* =====================================================
-   ACTIONS
-===================================================== */
+                if (
+                    state.selectedKitCollection?.kitVoucherNumber ===
+                    kitVoucherNumber
+                ) {
+                    state.selectedKitCollection = null;
+                }
+            })
+            .addCase(deleteKitCollection.rejected, (state, action) => {
+                state.deleteLoading = false;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to delete kit collection.";
+            });
+    },
+});
 
 export const {
     setSelectedKitCollection,
@@ -656,9 +388,5 @@ export const {
     clearKitCollectionError,
     resetKitCollectionState,
 } = kitCollectionSlice.actions;
-
-/* =====================================================
-   REDUCER
-===================================================== */
 
 export default kitCollectionSlice.reducer;

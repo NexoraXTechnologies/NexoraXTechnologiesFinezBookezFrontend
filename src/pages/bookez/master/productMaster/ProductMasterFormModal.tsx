@@ -1,14 +1,5 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useDispatch,
-  useSelector,
-} from "react-redux";
-
+import { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
 
@@ -36,19 +27,10 @@ import UnitMasterModal from "../UnitMasterModal";
 
 type ProductMasterModalProps = {
   show: boolean;
-
-  setShow: (
-    value: boolean
-  ) => void;
-
+  setShow: (value: boolean) => void;
   editingProduct?: any;
-
-  onSaved?: (
-    savedProduct: any
-  ) => void | Promise<void>;
-
+  onSaved?: (savedProduct: any) => void | Promise<void>;
   title?: string;
-
   initialProductName?: string;
 };
 
@@ -59,114 +41,72 @@ type ReferenceOption = {
 };
 
 /* =====================================================
-   SYSTEM FIELD KEYS
+   PRODUCT SYSTEM FIELDS
 ===================================================== */
 
-const PRODUCT_SYSTEM_FIELD_KEYS =
-  new Set([
-    "productCode",
-    "productHSNCode",
-    "productType",
-    "productName",
-    "productDescription",
-    "sellingPrice",
-    "purchasePrice",
-    "unit",
-    "csgst",
-    "igst",
-    "imageUrl",
-  ]);
+const PRODUCT_SYSTEM_FIELD_KEYS = new Set([
+  "productCode",
+  "productHSNCode",
+  "productType",
+  "productName",
+  "productDescription",
+  "sellingPrice",
+  "purchasePrice",
+  "unit",
+  "csgst",
+  "igst",
+  "imageUrl",
+]);
 
 /* =====================================================
-   MASTER REFERENCE FIELD TYPES
+   MASTER REFERENCE TYPES
 ===================================================== */
 
-const MASTER_REFERENCE_FIELD_TYPES =
-  new Set([
-    "accountmaster",
-    "productmaster",
-    "unitmaster",
-    "employeemaster",
-    "customemployeemaster",
-    "teamemployeemaster",
-    "custommaster",
-  ]);
+const CODE_NAME_REFERENCE_FIELD_TYPES = new Set([
+  "productmaster",
+  "unitmaster",
+  "accountmaster",
+  "custommaster",
+]);
+
+const STATE_CITY_REFERENCE_FIELD_TYPES = new Set([
+  "statemaster",
+  "citymaster",
+]);
+
+const EMPLOYEE_REFERENCE_FIELD_TYPES = new Set([
+  "employeemaster",
+  "customemployeemaster",
+  "teamemployeemaster",
+]);
+
+const MASTER_REFERENCE_FIELD_TYPES = new Set([
+  ...CODE_NAME_REFERENCE_FIELD_TYPES,
+  ...STATE_CITY_REFERENCE_FIELD_TYPES,
+  ...EMPLOYEE_REFERENCE_FIELD_TYPES,
+]);
 
 /* =====================================================
-   MASTER TYPES FORCED INTO dynamicFields
+   DATASOURCE
 ===================================================== */
 
-const DYNAMIC_MASTER_FIELD_TYPES =
-  new Set([
-    "accountmaster",
-    "productmaster",
-    "unitmaster",
-    "employeemaster",
-    "customemployeemaster",
-    "teamemployeemaster",
-  ]);
+const getDataSource = (field: any) => {
+  const source = field?.dataSource;
 
-/* =====================================================
-   EMPLOYEE REFERENCE TYPES
-===================================================== */
+  if (source && typeof source === "object") return source;
 
-const EMPLOYEE_REFERENCE_FIELD_TYPES =
-  new Set([
-    "employeemaster",
-    "customemployeemaster",
-    "teamemployeemaster",
-  ]);
+  if (typeof source === "string") {
+    const trimmed = source.trim();
 
-/* =====================================================
-   DATASOURCE HELPER
-===================================================== */
-
-const getDataSource = (
-  field: any
-) => {
-  const source =
-    field?.dataSource;
-
-  if (
-    source &&
-    typeof source ===
-    "object"
-  ) {
-    return source;
-  }
-
-  if (
-    typeof source ===
-    "string"
-  ) {
-    const trimmed =
-      source.trim();
-
-    if (!trimmed) {
-      return {};
-    }
+    if (!trimmed) return {};
 
     try {
-      const parsed =
-        JSON.parse(
-          trimmed
-        );
-
-      return (
-        parsed &&
-          typeof parsed ===
-          "object"
-          ? parsed
-          : {
-            api:
-              trimmed,
-          }
-      );
+      const parsed = JSON.parse(trimmed);
+      return parsed && typeof parsed === "object"
+        ? parsed
+        : { api: trimmed };
     } catch {
-      return {
-        api:
-          trimmed,
-      };
+      return { api: trimmed };
     }
   }
 
@@ -177,13 +117,8 @@ const getDataSource = (
    FIELD TYPE
 ===================================================== */
 
-const getFieldType = (
-  field: any
-) => {
-  const dataSource =
-    getDataSource(
-      field
-    );
+const getFieldType = (field: any) => {
+  const dataSource = getDataSource(field);
 
   return String(
     field?.type ||
@@ -194,52 +129,17 @@ const getFieldType = (
     .toLowerCase();
 };
 
-/* =====================================================
-   MASTER REFERENCE CHECK
-===================================================== */
-
-const isMasterReferenceField = (
-  field: any
-) =>
-  MASTER_REFERENCE_FIELD_TYPES.has(
-    getFieldType(
-      field
-    )
+const isMasterReferenceField = (field: any) => {
+  return MASTER_REFERENCE_FIELD_TYPES.has(
+    getFieldType(field)
   );
+};
 
 /* =====================================================
-   RESPONSE HELPERS
+   TEXT
 ===================================================== */
 
-const getProductFromResponse = (
-  response: any
-) =>
-  response?.data?.data
-    ?.product ||
-  response?.data?.product ||
-  response?.data?.data ||
-  response?.data ||
-  response?.product ||
-  response;
-
-const getUnitFromResponse = (
-  response: any
-) =>
-  response?.data?.unit ||
-  response?.data?.data
-    ?.unit ||
-  response?.data?.data ||
-  response?.data ||
-  response?.unit ||
-  response;
-
-/* =====================================================
-   TEXT VALUE
-===================================================== */
-
-const getTextValue = (
-  value: any
-) => {
+const getTextValue = (value: any): string => {
   if (
     value === undefined ||
     value === null
@@ -248,71 +148,62 @@ const getTextValue = (
   }
 
   if (
-    typeof value ===
-    "string" ||
-    typeof value ===
-    "number"
+    typeof value === "string" ||
+    typeof value === "number"
   ) {
-    return String(
-      value
-    );
+    return String(value);
   }
 
-  if (
-    typeof value ===
-    "object"
-  ) {
-    return String(
-      value.en ||
-      value.name ||
-      value.label ||
-      value.productName ||
-      value.unitName ||
-      value.accountName ||
-      value.code ||
-      Object.values(
-        value
-      ).find(
-        (
-          itemValue
-        ) =>
-          typeof itemValue ===
-          "string"
-      ) ||
-      ""
-    );
+  if (typeof value === "object") {
+    const possibleValue =
+      value?.en ||
+      value?.name ||
+      value?.label ||
+      value?.productName ||
+      value?.unitName ||
+      value?.accountName ||
+      value?.cityName ||
+      value?.stateName ||
+      value?.code ||
+      "";
+
+    if (typeof possibleValue === "object") {
+      return getTextValue(possibleValue);
+    }
+
+    if (possibleValue) {
+      return String(possibleValue);
+    }
+
+    const firstTextValue =
+      Object.values(value).find(
+        (itemValue) =>
+          typeof itemValue === "string"
+      );
+
+    return firstTextValue
+      ? String(firstTextValue)
+      : "";
   }
 
   return "";
 };
 
 /* =====================================================
-   BOOLEAN VALUE
+   BOOLEAN
 ===================================================== */
 
-const getBooleanValue = (
-  value: any
-) => {
-  if (
-    typeof value ===
-    "boolean"
-  ) {
+const getBooleanValue = (value: any) => {
+  if (typeof value === "boolean") {
     return value;
   }
 
-  if (
-    typeof value ===
-    "number"
-  ) {
-    return (
-      value === 1
-    );
+  if (typeof value === "number") {
+    return value === 1;
   }
 
   const normalizedValue =
-    String(
-      value ?? ""
-    )
+    String(value ?? "")
       .trim()
       .toLowerCase();
 
@@ -321,61 +212,284 @@ const getBooleanValue = (
     "1",
     "yes",
     "active",
-  ].includes(
-    normalizedValue
-  );
+  ].includes(normalizedValue);
 };
 
 /* =====================================================
-   NORMALIZE PRODUCT TYPE
+   PRODUCT TYPE
 ===================================================== */
 
 const normalizeProductType = (
   value = ""
 ) => {
-  const map: Record<
-    string,
-    string
-  > = {
-    rawmaterial:
-      "Raw Material",
-
-    finishedgoods:
-      "Finished Goods",
-
-    serviceproduct:
-      "Service Product",
-
-    nonstockproduct:
-      "Non Stock Product",
-
-    nonstocks:
-      "Non Stock Product",
-
-    intermediaryproduct:
-      "Intermediary Product",
+  const map: Record<string, string> = {
+    rawmaterial: "Raw Material",
+    finishedgoods: "Finished Goods",
+    serviceproduct: "Service Product",
+    nonstockproduct: "Non Stock Product",
+    nonstocks: "Non Stock Product",
+    intermediaryproduct: "Intermediary Product",
   };
 
   const normalizedKey =
-    String(
-      value
-    )
+    String(value)
       .toLowerCase()
-      .replace(
-        /\s/g,
-        ""
-      );
+      .replace(/\s/g, "");
 
   return (
-    map[
-    normalizedKey
-    ] ||
+    map[normalizedKey] ||
     value
   );
 };
 
 /* =====================================================
-   PROFESSIONAL USER FROM LOCAL STORAGE
+   isDefault HELPERS
+===================================================== */
+
+const isSchemaDefaultFalse = (
+  field: any
+) => {
+  const value =
+    field?.isDefault;
+
+  if (
+    value === false ||
+    value === 0 ||
+    value === "0"
+  ) {
+    return true;
+  }
+
+  return (
+    typeof value === "string" &&
+    value.trim().toLowerCase() ===
+    "false"
+  );
+};
+
+const isSchemaDefaultTrue = (
+  field: any
+) => {
+  const value =
+    field?.isDefault;
+
+  if (
+    value === true ||
+    value === 1 ||
+    value === "1"
+  ) {
+    return true;
+  }
+
+  return (
+    typeof value === "string" &&
+    value.trim().toLowerCase() ===
+    "true"
+  );
+};
+
+/* =====================================================
+   DYNAMIC FIELD
+===================================================== */
+
+const isDynamicSchemaField = (
+  field: any
+) => {
+  if (
+    isMasterReferenceField(field)
+  ) {
+    return true;
+  }
+
+  if (
+    isSchemaDefaultFalse(field)
+  ) {
+    return true;
+  }
+
+  if (
+    field?.isDynamic === true
+  ) {
+    return true;
+  }
+
+  if (
+    field?.isDynamicField === true
+  ) {
+    return true;
+  }
+
+  if (
+    field?.isCustomField === true
+  ) {
+    return true;
+  }
+
+  if (
+    field?.source === "dynamic"
+  ) {
+    return true;
+  }
+
+  if (
+    field?.fieldSource === "dynamic"
+  ) {
+    return true;
+  }
+
+  if (
+    isSchemaDefaultTrue(field)
+  ) {
+    return false;
+  }
+
+  if (
+    field?.isDynamic === false
+  ) {
+    return false;
+  }
+
+  if (
+    field?.isSystemField === true
+  ) {
+    return false;
+  }
+
+  return !PRODUCT_SYSTEM_FIELD_KEYS.has(
+    field?.key
+  );
+};
+
+/* =====================================================
+   EMPTY FORM
+===================================================== */
+
+const buildEmptyForm = (
+  fields: any[] = []
+) => {
+  return (
+    Array.isArray(fields)
+      ? fields
+      : []
+  ).reduce(
+    (
+      accumulator: Record<string, any>,
+      field: any
+    ) => {
+      const fieldType =
+        getFieldType(field);
+
+      if (
+        fieldType === "boolean"
+      ) {
+        accumulator[field.key] =
+          false;
+      } else if (
+        isMasterReferenceField(field)
+      ) {
+        accumulator[field.key] =
+          null;
+      } else {
+        accumulator[field.key] =
+          "";
+      }
+
+      return accumulator;
+    },
+    {}
+  );
+};
+
+/* =====================================================
+   API RECORDS
+===================================================== */
+
+const extractGenericRecords = (
+  responseData: any
+): any[] => {
+  const possibleRoots = [
+    responseData,
+    responseData?.data,
+    responseData?.result,
+    responseData?.payload,
+    responseData?.data?.data,
+  ];
+
+  const possibleKeys = [
+    "items",
+    "records",
+    "products",
+    "units",
+    "accounts",
+    "users",
+    "states",
+    "cities",
+    "hsn",
+    "hsnCodes",
+    "docs",
+    "result",
+  ];
+
+  for (
+    const root of possibleRoots
+  ) {
+    if (
+      Array.isArray(root)
+    ) {
+      return root;
+    }
+
+    if (
+      root &&
+      typeof root === "object"
+    ) {
+      for (
+        const key of possibleKeys
+      ) {
+        if (
+          Array.isArray(
+            root?.[key]
+          )
+        ) {
+          return root[key];
+        }
+      }
+    }
+  }
+
+  return [];
+};
+
+/* =====================================================
+   EMPLOYEE RECORDS
+===================================================== */
+
+const extractEmployeeChildUsers = (
+  responseData: any
+): any[] => {
+  const result =
+    Array.isArray(
+      responseData?.result
+    )
+      ? responseData.result
+      : Array.isArray(
+        responseData?.data?.result
+      )
+        ? responseData.data.result
+        : [];
+
+  return result.flatMap(
+    (record: any) =>
+      Array.isArray(
+        record?.ChildUsers
+      )
+        ? record.ChildUsers
+        : []
+  );
+};
+
+/* =====================================================
+   PROFESSIONAL USER
 ===================================================== */
 
 const getProfessionalUserFromStorage =
@@ -387,15 +501,11 @@ const getProfessionalUserFromStorage =
         );
 
       return rawUser
-        ? JSON.parse(
-          rawUser
-        )
+        ? JSON.parse(rawUser)
         : null;
-    } catch (
-    error
-    ) {
+    } catch (error) {
       console.error(
-        "Unable to read professionalUser from localStorage:",
+        "Unable to read professionalUser:",
         error
       );
 
@@ -439,7 +549,6 @@ const resolveDataSourceApi = (
     resolvedApi =
       resolvedApi.replace(
         /\{userMobileNumberHash\}/g,
-
         encodeURIComponent(
           userMobileNumberHash
         )
@@ -452,7 +561,6 @@ const resolveDataSourceApi = (
     resolvedApi =
       resolvedApi.replace(
         /\{parentUserMobileNumber\}/g,
-
         encodeURIComponent(
           parentUserMobileNumber
         )
@@ -463,7 +571,7 @@ const resolveDataSourceApi = (
 };
 
 /* =====================================================
-   BUILD DATASOURCE REQUEST URL
+   BUILD DATASOURCE URL
 ===================================================== */
 
 const buildDataSourceRequestUrl = (
@@ -477,10 +585,6 @@ const buildDataSourceRequestUrl = (
   if (!resolvedApi) {
     return "";
   }
-
-  /*
-   * Absolute API is used exactly as provided.
-   */
 
   if (
     /^https?:\/\//i.test(
@@ -508,18 +612,11 @@ const buildDataSourceRequestUrl = (
 
   let relativeApi =
     resolvedApi
-      .replace(
-        /^\/+/,
-        ""
-      )
+      .replace(/^\/+/, "")
       .replace(
         /^SandBox\//i,
         ""
       );
-
-  /*
-   * Avoid duplicate backend prefix.
-   */
 
   if (
     baseHasBackendPrefix
@@ -529,10 +626,6 @@ const buildDataSourceRequestUrl = (
       ""
     );
   }
-
-  /*
-   * Add backend prefix when missing.
-   */
 
   if (
     !relativeApi
@@ -545,112 +638,7 @@ const buildDataSourceRequestUrl = (
       `${backendPrefix}/${relativeApi}`;
   }
 
-  /*
-   * No leading slash so the Axios /SandBox/ base
-   * path is preserved.
-   */
-
   return relativeApi;
-};
-
-/* =====================================================
-   EXTRACT GENERIC RECORDS
-===================================================== */
-
-const extractGenericRecords = (
-  responseData: any
-): any[] => {
-  const roots = [
-    responseData,
-    responseData?.data,
-    responseData?.result,
-    responseData?.payload,
-    responseData?.data
-      ?.data,
-  ];
-
-  const keys = [
-    "items",
-    "records",
-    "users",
-    "accounts",
-    "products",
-    "units",
-    "docs",
-    "result",
-  ];
-
-  for (
-    const root of roots
-  ) {
-    if (
-      Array.isArray(
-        root
-      )
-    ) {
-      return root;
-    }
-
-    if (
-      root &&
-      typeof root ===
-      "object"
-    ) {
-      for (
-        const key of keys
-      ) {
-        if (
-          Array.isArray(
-            root?.[key]
-          )
-        ) {
-          return root[
-            key
-          ];
-        }
-      }
-    }
-  }
-
-  return [];
-};
-
-/* =====================================================
-   EXTRACT EMPLOYEE CHILD USERS
-===================================================== */
-
-const extractEmployeeChildUsers = (
-  responseData: any
-): any[] => {
-  const result =
-    Array.isArray(
-      responseData
-        ?.result
-    )
-      ? responseData
-        .result
-      : Array.isArray(
-        responseData
-          ?.data
-          ?.result
-      )
-        ? responseData
-          .data
-          .result
-        : [];
-
-  return result.flatMap(
-    (
-      record: any
-    ) =>
-      Array.isArray(
-        record
-          ?.ChildUsers
-      )
-        ? record
-          .ChildUsers
-        : []
-  );
 };
 
 /* =====================================================
@@ -662,34 +650,16 @@ const buildReferenceOption = (
   item: any
 ): ReferenceOption | null => {
   const fieldType =
-    getFieldType(
-      field
-    );
+    getFieldType(field);
 
   const dataSource =
-    getDataSource(
-      field
-    );
+    getDataSource(field);
 
   const dynamicData =
     item?.data ||
     item?.dynamicFields ||
     item?.customFields ||
     {};
-
-  let valueField =
-    String(
-      field?.valueField ||
-      dataSource?.valueField ||
-      ""
-    ).trim();
-
-  let labelField =
-    String(
-      field?.labelField ||
-      dataSource?.labelField ||
-      ""
-    ).trim();
 
   let optionValue: any =
     "";
@@ -698,65 +668,34 @@ const buildReferenceOption = (
     "";
 
   /* ============================================
-     ACCOUNT MASTER
+     PRODUCT MASTER
   ============================================ */
 
   if (
     fieldType ===
-    "accountmaster"
-  ) {
-    valueField =
-      valueField ||
-      "accountCode";
-
-    labelField =
-      labelField ||
-      "accountName";
-
-    optionValue =
-      item?.[
-      valueField
-      ] ||
-      item?.accountCode ||
-      item?.code;
-
-    optionLabel =
-      item?.[
-      labelField
-      ] ||
-      item?.accountName ||
-      item?.name;
-  }
-
-  /* ============================================
-     PRODUCT MASTER
-  ============================================ */
-
-  else if (
-    fieldType ===
     "productmaster"
   ) {
-    valueField =
-      valueField ||
+    const valueField =
+      field?.valueField ||
+      dataSource?.valueField ||
       "productCode";
 
-    labelField =
-      labelField ||
+    const labelField =
+      field?.labelField ||
+      dataSource?.labelField ||
       "productName";
 
     optionValue =
-      item?.[
-      valueField
-      ] ||
+      item?.[valueField] ||
       item?.productCode ||
-      item?.code;
+      item?.code ||
+      "";
 
     optionLabel =
-      item?.[
-      labelField
-      ] ||
+      item?.[labelField] ||
       item?.productName ||
-      item?.name;
+      item?.name ||
+      optionValue;
   }
 
   /* ============================================
@@ -767,27 +706,103 @@ const buildReferenceOption = (
     fieldType ===
     "unitmaster"
   ) {
-    valueField =
-      valueField ||
+    const valueField =
+      field?.valueField ||
+      dataSource?.valueField ||
       "unitCode";
 
-    labelField =
-      labelField ||
+    const labelField =
+      field?.labelField ||
+      dataSource?.labelField ||
       "unitName";
 
     optionValue =
-      item?.[
-      valueField
-      ] ||
+      item?.[valueField] ||
       item?.unitCode ||
-      item?.code;
+      item?.code ||
+      "";
 
     optionLabel =
-      item?.[
-      labelField
-      ] ||
+      item?.[labelField] ||
       item?.unitName ||
-      item?.name;
+      item?.name ||
+      optionValue;
+  }
+
+  /* ============================================
+     ACCOUNT MASTER
+  ============================================ */
+
+  else if (
+    fieldType ===
+    "accountmaster"
+  ) {
+    const valueField =
+      field?.valueField ||
+      dataSource?.valueField ||
+      "accountCode";
+
+    const labelField =
+      field?.labelField ||
+      dataSource?.labelField ||
+      "accountName";
+
+    optionValue =
+      item?.[valueField] ||
+      item?.accountCode ||
+      item?.code ||
+      "";
+
+    optionLabel =
+      item?.[labelField] ||
+      item?.accountName ||
+      item?.name ||
+      optionValue;
+  }
+
+  /* ============================================
+     STATE MASTER
+  ============================================ */
+
+  else if (
+    fieldType ===
+    "statemaster"
+  ) {
+    optionValue =
+      item?.stateCode ||
+      item?.isoCode ||
+      item?.code ||
+      item?.value ||
+      "";
+
+    optionLabel =
+      getTextValue(
+        item?.name ||
+        item?.stateName ||
+        item?.label
+      );
+  }
+
+  /* ============================================
+     CITY MASTER
+  ============================================ */
+
+  else if (
+    fieldType ===
+    "citymaster"
+  ) {
+    optionLabel =
+      getTextValue(
+        item?.name ||
+        item?.cityName ||
+        item?.label
+      );
+
+    optionValue =
+      optionLabel ||
+      item?.code ||
+      item?.value ||
+      "";
   }
 
   /* ============================================
@@ -801,20 +816,21 @@ const buildReferenceOption = (
   ) {
     optionValue =
       item?.userMobileNumberHash ||
-      item?.mobile;
+      item?.mobile ||
+      "";
 
     optionLabel = [
       item?.userFirstName,
       item?.userMiddleName,
       item?.userLastName,
     ]
-      .filter(
-        Boolean
-      )
-      .join(
-        " "
-      )
+      .filter(Boolean)
+      .join(" ")
       .trim();
+
+    optionLabel =
+      optionLabel ||
+      optionValue;
   }
 
   /* ============================================
@@ -825,37 +841,19 @@ const buildReferenceOption = (
     fieldType ===
     "custommaster"
   ) {
-    valueField =
-      valueField ||
-      "code";
-
-    labelField =
-      labelField ||
-      "name";
-
     optionValue =
-      dynamicData?.[
-      valueField
-      ] ||
-      item?.[
-      valueField
-      ] ||
       dynamicData?.code ||
       item?.code ||
       item?.voucherNumber ||
-      item?._id;
+      item?._id ||
+      "";
 
     optionLabel =
-      dynamicData?.[
-      labelField
-      ] ||
-      item?.[
-      labelField
-      ] ||
       dynamicData?.name ||
-      dynamicData
-        ?.vehicle_number ||
-      item?.name;
+      dynamicData?.vehicle_number ||
+      item?.name ||
+      item?.label ||
+      optionValue;
   }
 
   const finalValue =
@@ -864,27 +862,25 @@ const buildReferenceOption = (
       ""
     ).trim();
 
-  if (!finalValue) {
+  if (
+    !finalValue
+  ) {
     return null;
   }
 
   return {
-    value:
-      finalValue,
-
+    value: finalValue,
     label:
       getTextValue(
         optionLabel
       ) ||
       finalValue,
-
-    raw:
-      item,
+    raw: item,
   };
 };
 
 /* =====================================================
-   LOAD SCHEMA REFERENCE OPTIONS
+   LOAD MASTER REFERENCE OPTIONS
 ===================================================== */
 
 const loadSchemaReferenceOptions =
@@ -893,9 +889,7 @@ const loadSchemaReferenceOptions =
   ) => {
     return Promise.all(
       (
-        Array.isArray(
-          fields
-        )
+        Array.isArray(fields)
           ? fields
           : []
       ).map(
@@ -911,9 +905,7 @@ const loadSchemaReferenceOptions =
           }
 
           const dataSource =
-            getDataSource(
-              field
-            );
+            getDataSource(field);
 
           const rawApi =
             String(
@@ -925,13 +917,11 @@ const loadSchemaReferenceOptions =
           if (!rawApi) {
             return {
               ...field,
-
               options:
                 Array.isArray(
                   field?.options
                 )
-                  ? field
-                    .options
+                  ? field.options
                   : [],
             };
           }
@@ -948,7 +938,7 @@ const loadSchemaReferenceOptions =
             )
           ) {
             console.error(
-              `Datasource placeholder is unresolved for product field "${field.key}":`,
+              `Datasource placeholder unresolved for "${field.key}":`,
               requestUrl ||
               rawApi
             );
@@ -965,30 +955,24 @@ const loadSchemaReferenceOptions =
                 requestUrl,
                 {
                   params:
-                    field
-                      ?.queryParams ||
-                    dataSource
-                      ?.queryParams ||
+                    field?.queryParams ||
+                    dataSource?.queryParams ||
                     {},
                 }
               );
 
             const fieldType =
-              getFieldType(
-                field
-              );
+              getFieldType(field);
 
             const records =
               EMPLOYEE_REFERENCE_FIELD_TYPES.has(
                 fieldType
               )
                 ? extractEmployeeChildUsers(
-                  response
-                    ?.data
+                  response?.data
                 )
                 : extractGenericRecords(
-                  response
-                    ?.data
+                  response?.data
                 );
 
             const options =
@@ -1004,39 +988,26 @@ const loadSchemaReferenceOptions =
                 )
                 .filter(
                   Boolean
-                );
+                ) as ReferenceOption[];
 
             return {
               ...field,
-
               dataSource,
-
-              api:
-                requestUrl,
-
               options,
             };
           } catch (
           error: any
           ) {
             console.error(
-              `Failed to load datasource for product field "${field.key}":`,
-              error
-                ?.response
-                ?.data ||
+              `Failed to load datasource for "${field.key}":`,
+              error?.response?.data ||
               error
             );
 
             return {
               ...field,
-
               dataSource,
-
-              api:
-                requestUrl,
-
-              options:
-                [],
+              options: [],
             };
           }
         }
@@ -1045,7 +1016,7 @@ const loadSchemaReferenceOptions =
   };
 
 /* =====================================================
-   NORMALIZE REFERENCE VALUE
+   NORMALIZE MASTER REFERENCE
 ===================================================== */
 
 const normalizeReferenceValue = (
@@ -1056,17 +1027,98 @@ const normalizeReferenceValue = (
     !value ||
     typeof value !==
     "object" ||
-    Array.isArray(
-      value
-    )
+    Array.isArray(value)
   ) {
     return null;
   }
 
   const fieldType =
-    getFieldType(
-      field
-    );
+    getFieldType(field);
+
+  /* ============================================
+     PRODUCT / UNIT / ACCOUNT / CUSTOM
+  ============================================ */
+
+  if (
+    CODE_NAME_REFERENCE_FIELD_TYPES.has(
+      fieldType
+    )
+  ) {
+    return {
+      code:
+        value?.code ||
+        value?.productCode ||
+        value?.unitCode ||
+        value?.accountCode ||
+        value?.voucherNumber ||
+        value?.value ||
+        value?._id ||
+        "",
+
+      name:
+        getTextValue(
+          value?.name ||
+          value?.productName ||
+          value?.unitName ||
+          value?.accountName ||
+          value?.vehicle_number ||
+          value?.label
+        ),
+    };
+  }
+
+  /* ============================================
+     STATE
+  ============================================ */
+
+  if (
+    fieldType ===
+    "statemaster"
+  ) {
+    return {
+      stateCode:
+        value?.stateCode ||
+        value?.isoCode ||
+        value?.code ||
+        value?.value ||
+        "",
+
+      name:
+        getTextValue(
+          value?.name ||
+          value?.stateName ||
+          value?.label
+        ),
+    };
+  }
+
+  /* ============================================
+     CITY
+  ============================================ */
+
+  if (
+    fieldType ===
+    "citymaster"
+  ) {
+    return {
+      stateCode:
+        value?.stateCode ||
+        value?.state?.isoCode ||
+        value?.state?.stateCode ||
+        "",
+
+      name:
+        getTextValue(
+          value?.name ||
+          value?.cityName ||
+          value?.label
+        ),
+    };
+  }
+
+  /* ============================================
+     EMPLOYEE
+  ============================================ */
 
   if (
     EMPLOYEE_REFERENCE_FIELD_TYPES.has(
@@ -1075,8 +1127,7 @@ const normalizeReferenceValue = (
   ) {
     return {
       userMobileNumberHash:
-        value
-          ?.userMobileNumberHash ||
+        value?.userMobileNumberHash ||
         value?.mobile ||
         value?.value ||
         "",
@@ -1102,39 +1153,17 @@ const normalizeReferenceValue = (
         "",
 
       parentUserMobileNumber:
-        value
-          ?.parentUserMobileNumber ||
+        value?.parentUserMobileNumber ||
         value?.parentMobile ||
         "",
     };
   }
 
-  return {
-    code:
-      value?.code ||
-      value?.productCode ||
-      value?.unitCode ||
-      value?.accountCode ||
-      value?.voucherNumber ||
-      value?.value ||
-      value?._id ||
-      "",
-
-    name:
-      getTextValue(
-        value?.name ||
-        value?.productName ||
-        value?.unitName ||
-        value?.accountName ||
-        value
-          ?.vehicle_number ||
-        value?.label
-      ),
-  };
+  return value;
 };
 
 /* =====================================================
-   GET REFERENCE SELECT VALUE
+   REFERENCE SELECT VALUE
 ===================================================== */
 
 const getReferenceSelectValue = (
@@ -1149,15 +1178,34 @@ const getReferenceSelectValue = (
     typeof value !==
     "object"
   ) {
-    return String(
-      value
-    );
+    return String(value);
   }
 
   const fieldType =
-    getFieldType(
-      field
+    getFieldType(field);
+
+  if (
+    fieldType ===
+    "statemaster"
+  ) {
+    return String(
+      value?.stateCode ||
+      value?.isoCode ||
+      value?.code ||
+      ""
     );
+  }
+
+  if (
+    fieldType ===
+    "citymaster"
+  ) {
+    return String(
+      value?.name ||
+      value?.cityName ||
+      ""
+    );
+  }
 
   if (
     EMPLOYEE_REFERENCE_FIELD_TYPES.has(
@@ -1165,8 +1213,7 @@ const getReferenceSelectValue = (
     )
   ) {
     return String(
-      value
-        ?.userMobileNumberHash ||
+      value?.userMobileNumberHash ||
       value?.mobile ||
       ""
     );
@@ -1177,7 +1224,6 @@ const getReferenceSelectValue = (
     value?.productCode ||
     value?.unitCode ||
     value?.accountCode ||
-    value?.voucherNumber ||
     value?.value ||
     value?._id ||
     ""
@@ -1190,23 +1236,118 @@ const getReferenceSelectValue = (
 
 const buildSelectedReferenceValue = (
   field: any,
-  option:
+  selectedOption:
     | ReferenceOption
     | undefined,
   fallbackValue: string
 ) => {
+  const fieldType =
+    getFieldType(field);
+
   const raw =
-    option?.raw ||
+    selectedOption?.raw ||
     {};
 
-  const fieldType =
-    getFieldType(
-      field
-    );
+  if (
+    fieldType ===
+    "productmaster"
+  ) {
+    return {
+      code:
+        raw?.productCode ||
+        raw?.code ||
+        selectedOption?.value ||
+        fallbackValue,
 
-  /* ============================================
-     EMPLOYEE MASTER
-  ============================================ */
+      name:
+        getTextValue(
+          raw?.productName ||
+          raw?.name ||
+          selectedOption?.label
+        ),
+    };
+  }
+
+  if (
+    fieldType ===
+    "unitmaster"
+  ) {
+    return {
+      code:
+        raw?.unitCode ||
+        raw?.code ||
+        selectedOption?.value ||
+        fallbackValue,
+
+      name:
+        getTextValue(
+          raw?.unitName ||
+          raw?.name ||
+          selectedOption?.label
+        ),
+    };
+  }
+
+  if (
+    fieldType ===
+    "accountmaster"
+  ) {
+    return {
+      code:
+        raw?.accountCode ||
+        raw?.code ||
+        selectedOption?.value ||
+        fallbackValue,
+
+      name:
+        getTextValue(
+          raw?.accountName ||
+          raw?.name ||
+          selectedOption?.label
+        ),
+    };
+  }
+
+  if (
+    fieldType ===
+    "statemaster"
+  ) {
+    return {
+      stateCode:
+        raw?.stateCode ||
+        raw?.isoCode ||
+        raw?.code ||
+        selectedOption?.value ||
+        fallbackValue,
+
+      name:
+        getTextValue(
+          raw?.name ||
+          raw?.stateName ||
+          selectedOption?.label
+        ),
+    };
+  }
+
+  if (
+    fieldType ===
+    "citymaster"
+  ) {
+    return {
+      stateCode:
+        raw?.stateCode ||
+        raw?.state?.isoCode ||
+        raw?.state?.stateCode ||
+        "",
+
+      name:
+        getTextValue(
+          raw?.name ||
+          raw?.cityName ||
+          selectedOption?.label
+        ),
+    };
+  }
 
   if (
     EMPLOYEE_REFERENCE_FIELD_TYPES.has(
@@ -1215,10 +1356,9 @@ const buildSelectedReferenceValue = (
   ) {
     return {
       userMobileNumberHash:
-        raw
-          ?.userMobileNumberHash ||
+        raw?.userMobileNumberHash ||
         raw?.mobile ||
-        option?.value ||
+        selectedOption?.value ||
         fallbackValue,
 
       userFirstName:
@@ -1242,8 +1382,7 @@ const buildSelectedReferenceValue = (
         "",
 
       parentUserMobileNumber:
-        raw
-          ?.parentUserMobileNumber ||
+        raw?.parentUserMobileNumber ||
         raw?.parentMobile ||
         "",
     };
@@ -1255,151 +1394,159 @@ const buildSelectedReferenceValue = (
     raw?.customFields ||
     raw;
 
-  /* ============================================
-     ACCOUNT MASTER
-  ============================================ */
-
-  if (
-    fieldType ===
-    "accountmaster"
-  ) {
-    return {
-      code:
-        raw?.accountCode ||
-        raw?.code ||
-        option?.value ||
-        fallbackValue,
-
-      name:
-        getTextValue(
-          raw?.accountName ||
-          raw?.name ||
-          option?.label
-        ),
-    };
-  }
-
-  /* ============================================
-     PRODUCT MASTER
-  ============================================ */
-
-  if (
-    fieldType ===
-    "productmaster"
-  ) {
-    return {
-      code:
-        raw?.productCode ||
-        raw?.code ||
-        option?.value ||
-        fallbackValue,
-
-      name:
-        getTextValue(
-          raw?.productName ||
-          raw?.name ||
-          option?.label
-        ),
-    };
-  }
-
-  /* ============================================
-     UNIT MASTER
-  ============================================ */
-
-  if (
-    fieldType ===
-    "unitmaster"
-  ) {
-    return {
-      code:
-        raw?.unitCode ||
-        raw?.code ||
-        option?.value ||
-        fallbackValue,
-
-      name:
-        getTextValue(
-          raw?.unitName ||
-          raw?.name ||
-          option?.label
-        ),
-    };
-  }
-
-  /* ============================================
-     CUSTOM MASTER
-  ============================================ */
-
   return {
     code:
       dynamicData?.code ||
       raw?.code ||
       raw?.voucherNumber ||
       raw?._id ||
-      option?.value ||
+      selectedOption?.value ||
       fallbackValue,
 
     name:
       getTextValue(
         dynamicData?.name ||
-        dynamicData
-          ?.vehicle_number ||
+        dynamicData?.vehicle_number ||
         raw?.name ||
-        option?.label
+        selectedOption?.label
       ),
   };
 };
 
 /* =====================================================
-   isDefault HELPERS
+   EDIT VALUE
 ===================================================== */
 
-const isSchemaDefaultFalse = (
-  field: any
+const getProductFieldValue = (
+  field: any,
+  product: any
 ) => {
-  const value =
-    field?.isDefault;
+  const key =
+    field.key;
+
+  const fieldType =
+    getFieldType(field);
+
+  const hasTopLevelValue =
+    Object.prototype.hasOwnProperty.call(
+      product || {},
+      key
+    );
+
+  const hasDynamicValue =
+    Object.prototype.hasOwnProperty.call(
+      product?.dynamicFields || {},
+      key
+    );
+
+  let value: any =
+    "";
 
   if (
-    value === false ||
-    value === 0 ||
-    value === "0"
+    hasTopLevelValue
   ) {
-    return true;
+    value =
+      product?.[key];
+  } else if (
+    hasDynamicValue
+  ) {
+    value =
+      product?.dynamicFields?.[
+      key
+      ];
   }
 
+  if (
+    isMasterReferenceField(
+      field
+    )
+  ) {
+    return normalizeReferenceValue(
+      field,
+      value
+    );
+  }
+
+  if (
+    key === "productType"
+  ) {
+    return normalizeProductType(
+      value || ""
+    );
+  }
+
+  if (
+    key === "unit"
+  ) {
+    if (
+      value &&
+      typeof value ===
+      "object"
+    ) {
+      return (
+        value?.unitCode ||
+        value?.code ||
+        value?.value ||
+        value?._id ||
+        ""
+      );
+    }
+
+    return value ?? "";
+  }
+
+  if (
+    fieldType === "number"
+  ) {
+    if (
+      value === "" ||
+      value === null ||
+      value === undefined
+    ) {
+      return "";
+    }
+
+    return Number(value);
+  }
+
+  if (
+    fieldType === "boolean"
+  ) {
+    return getBooleanValue(
+      value
+    );
+  }
+
+  return value ?? "";
+};
+
+/* =====================================================
+   RESPONSE HELPERS
+===================================================== */
+
+const getProductFromResponse = (
+  response: any
+) => {
   return (
-    typeof value ===
-    "string" &&
-    value
-      .trim()
-      .toLowerCase() ===
-    "false"
+    response?.data?.data?.product ||
+    response?.data?.product ||
+    response?.data?.data ||
+    response?.data ||
+    response?.product ||
+    response
   );
 };
 
-const isSchemaDefaultTrue = (
-  field: any
+const getUnitFromResponse = (
+  response: any
 ) => {
-  const value =
-    field?.isDefault;
-
-  if (
-    value === true ||
-    value === 1 ||
-    value === "1"
-  ) {
-    return true;
-  }
-
   return (
-    typeof value ===
-    "string" &&
-    value
-      .trim()
-      .toLowerCase() ===
-    "true"
+    response?.data?.unit ||
+    response?.data?.data?.unit ||
+    response?.data?.data ||
+    response?.data ||
+    response?.unit ||
+    response
   );
 };
 
@@ -1430,32 +1577,34 @@ const ProductMasterModal = ({
     form,
     setForm,
   ] = useState<
-    Record<
-      string,
-      any
-    >
+    Record<string, any>
   >({});
 
   const [
     errors,
     setErrors,
   ] = useState<
-    Record<
-      string,
-      string
-    >
+    Record<string, string>
   >({});
 
   const [
     productMasterSchemaFields,
     setProductMasterSchemaFields,
-  ] = useState<any[]>(
-    []
-  );
+  ] = useState<any[]>([]);
 
   const [
     schemaLoading,
     setSchemaLoading,
+  ] = useState(false);
+
+  const [
+    hsnOptions,
+    setHsnOptions,
+  ] = useState<any[]>([]);
+
+  const [
+    hsnLoading,
+    setHsnLoading,
   ] = useState(false);
 
   const [
@@ -1472,300 +1621,6 @@ const ProductMasterModal = ({
     submitting,
     setSubmitting,
   ] = useState(false);
-
-  /* ===================================================
-     DYNAMIC SCHEMA FIELD CHECK
-
-     Rules:
-     1. Account/Product/Unit/Employee references always
-        go inside dynamicFields.
-     2. Any schema field where isDefault is false,
-        "false", 0 or "0" goes inside dynamicFields.
-     3. Default fields remain at payload root.
-     4. Existing dynamic flags remain supported.
-  =================================================== */
-
-  const isDynamicSchemaField = (
-    field: any
-  ) => {
-    const fieldType =
-      getFieldType(
-        field
-      );
-
-    /* ============================================
-       MASTER REFERENCE TYPES
-    ============================================ */
-
-    if (
-      DYNAMIC_MASTER_FIELD_TYPES.has(
-        fieldType
-      )
-    ) {
-      return true;
-    }
-
-    /* ============================================
-       SCHEMA isDefault FALSE
-    ============================================ */
-
-    if (
-      isSchemaDefaultFalse(
-        field
-      )
-    ) {
-      return true;
-    }
-
-    /* ============================================
-       EXISTING DYNAMIC FLAGS
-    ============================================ */
-
-    if (
-      field?.isDynamic ===
-      true
-    ) {
-      return true;
-    }
-
-    if (
-      field
-        ?.isDynamicField ===
-      true
-    ) {
-      return true;
-    }
-
-    if (
-      field?.isCustomField ===
-      true
-    ) {
-      return true;
-    }
-
-    if (
-      field?.source ===
-      "dynamic"
-    ) {
-      return true;
-    }
-
-    if (
-      field?.fieldSource ===
-      "dynamic"
-    ) {
-      return true;
-    }
-
-    /* ============================================
-       DEFAULT FIELD
-    ============================================ */
-
-    if (
-      isSchemaDefaultTrue(
-        field
-      )
-    ) {
-      return false;
-    }
-
-    /* ============================================
-       EXISTING SYSTEM FLAGS
-    ============================================ */
-
-    if (
-      field?.isDynamic ===
-      false
-    ) {
-      return false;
-    }
-
-    if (
-      field?.isSystemField ===
-      true
-    ) {
-      return false;
-    }
-
-    return !PRODUCT_SYSTEM_FIELD_KEYS.has(
-      field?.key
-    );
-  };
-
-  /* ===================================================
-     BUILD EMPTY FORM
-  =================================================== */
-
-  const buildEmptyForm = (
-    fields: any[] = []
-  ) =>
-    fields.reduce(
-      (
-        accumulator:
-          Record<
-            string,
-            any
-          >,
-
-        field: any
-      ) => {
-        const fieldType =
-          getFieldType(
-            field
-          );
-
-        if (
-          fieldType ===
-          "boolean"
-        ) {
-          accumulator[
-            field.key
-          ] = false;
-        } else if (
-          isMasterReferenceField(
-            field
-          )
-        ) {
-          accumulator[
-            field.key
-          ] = null;
-        } else {
-          accumulator[
-            field.key
-          ] = "";
-        }
-
-        return accumulator;
-      },
-
-      {}
-    );
-
-  /* ===================================================
-     GET EDIT VALUE
-  =================================================== */
-
-  const getComparableValue = (
-    field: any,
-    product: any
-  ) => {
-    const key =
-      field.key;
-
-    const fieldType =
-      getFieldType(
-        field
-      );
-
-    const hasTopLevelValue =
-      Object.prototype
-        .hasOwnProperty
-        .call(
-          product || {},
-          key
-        );
-
-    const hasDynamicValue =
-      Object.prototype
-        .hasOwnProperty
-        .call(
-          product
-            ?.dynamicFields ||
-          {},
-          key
-        );
-
-    let value: any =
-      "";
-
-    if (
-      hasTopLevelValue
-    ) {
-      value =
-        product?.[
-        key
-        ];
-    } else if (
-      hasDynamicValue
-    ) {
-      value =
-        product
-          ?.dynamicFields?.[
-        key
-        ];
-    }
-
-    if (
-      isMasterReferenceField(
-        field
-      )
-    ) {
-      return normalizeReferenceValue(
-        field,
-        value
-      );
-    }
-
-    if (
-      key ===
-      "productType"
-    ) {
-      return normalizeProductType(
-        value || ""
-      );
-    }
-
-    if (
-      key ===
-      "unit"
-    ) {
-      if (
-        typeof value ===
-        "object" &&
-        value !== null
-      ) {
-        return (
-          value?.unitCode ||
-          value?.code ||
-          value?.value ||
-          value?._id ||
-          ""
-        );
-      }
-
-      return (
-        value ?? ""
-      );
-    }
-
-    if (
-      fieldType ===
-      "number"
-    ) {
-      return (
-        value === undefined ||
-          value === null ||
-          value === ""
-          ? ""
-          : Number(
-            value
-          )
-      );
-    }
-
-    if (
-      fieldType ===
-      "boolean"
-    ) {
-      return getBooleanValue(
-        value
-      );
-    }
-
-    return (
-      value ?? ""
-    );
-  };
 
   /* ===================================================
      LOAD PRODUCT SCHEMA
@@ -1814,24 +1669,137 @@ const ProductMasterModal = ({
           );
 
         setProductMasterSchemaFields(
-          fieldsWithOptions
+          Array.isArray(
+            fieldsWithOptions
+          )
+            ? fieldsWithOptions
+            : []
         );
       } catch (
       error: any
       ) {
+        console.log(
+          "Failed to load Product Master schema",
+          error
+        );
+
         setProductMasterSchemaFields(
           []
         );
 
         toast.error(
-          error
-            ?.response
-            ?.data
+          error?.response?.data
             ?.message ||
           "Failed to load product fields"
         );
       } finally {
         setSchemaLoading(
+          false
+        );
+      }
+    };
+
+  /* ===================================================
+     LOAD HSN CODES
+
+     IMPORTANT:
+     This is an independent API call.
+     It is not dependent on the schema API.
+  =================================================== */
+
+  const loadHSNCodes =
+    async () => {
+      setHsnLoading(
+        true
+      );
+
+      try {
+        const response =
+          await professionalAxios.get(
+            "/eTaxSolnMongoApiBackend/users/global/hsn/search",
+            {
+              params: {
+                offset: 0,
+                limit: 8000,
+                q: "",
+                type: "",
+              },
+            }
+          );
+
+        const records =
+          extractGenericRecords(
+            response?.data
+          );
+
+        const options =
+          records
+            .map(
+              (
+                item: any
+              ) => {
+                const code =
+                  item?.code ||
+                  item?.hsnCode ||
+                  item?.hsn ||
+                  item?.value ||
+                  "";
+
+                const description =
+                  item?.description ||
+                  item?.hsnDescription ||
+                  item?.desc ||
+                  item?.name ||
+                  "";
+
+                if (!code) {
+                  return null;
+                }
+
+                return {
+                  ...item,
+
+                  value:
+                    String(
+                      code
+                    ),
+
+                  label:
+                    description
+                      ? `${code} - ${description}`
+                      : String(
+                        code
+                      ),
+                };
+              }
+            )
+            .filter(
+              Boolean
+            );
+
+        setHsnOptions(
+          options
+        );
+      } catch (
+      error: any
+      ) {
+        console.log(
+          "Failed to load HSN codes",
+          error?.response?.data ||
+          error
+        );
+
+        setHsnOptions(
+          []
+        );
+
+        toast.error(
+          error?.response?.data
+            ?.message ||
+          "Failed to load HSN codes"
+        );
+      } finally {
+        setHsnLoading(
           false
         );
       }
@@ -1863,6 +1831,11 @@ const ProductMasterModal = ({
 
   /* ===================================================
      OPEN EFFECT
+
+     Opening the modal now calls:
+     1. Product schema
+     2. HSN API
+     3. Unit Master
   =================================================== */
 
   useEffect(() => {
@@ -1875,10 +1848,15 @@ const ProductMasterModal = ({
         ""
       );
 
+      setHsnOptions(
+        []
+      );
+
       return;
     }
 
     loadProductSchema();
+    loadHSNCodes();
     loadUnits();
   }, [
     show,
@@ -1914,7 +1892,7 @@ const ProductMasterModal = ({
           nextForm[
             field.key
           ] =
-            getComparableValue(
+            getProductFieldValue(
               field,
               editingProduct
             );
@@ -1935,8 +1913,7 @@ const ProductMasterModal = ({
       if (
         productNameField
       ) {
-        nextForm
-          .productName =
+        nextForm.productName =
           initialProductName;
       }
     }
@@ -1958,12 +1935,16 @@ const ProductMasterModal = ({
   const fieldOptionsMap =
     useMemo(() => {
       const map:
-        Record<
-          string,
-          any[]
-        > = {};
+        Record<string, any[]> =
+        {};
 
-      productMasterSchemaFields.forEach(
+      (
+        Array.isArray(
+          productMasterSchemaFields
+        )
+          ? productMasterSchemaFields
+          : []
+      ).forEach(
         (
           field: any
         ) => {
@@ -1971,6 +1952,43 @@ const ProductMasterModal = ({
             getFieldType(
               field
             );
+
+          /* =========================================
+             HSN OPTIONS
+          ========================================= */
+
+          if (
+            field.key ===
+            "productHSNCode"
+          ) {
+            map[
+              field.key
+            ] =
+              hsnOptions;
+
+            return;
+          }
+
+          /* =========================================
+             MASTER REFERENCE OPTIONS
+          ========================================= */
+
+          if (
+            isMasterReferenceField(
+              field
+            )
+          ) {
+            map[
+              field.key
+            ] =
+              Array.isArray(
+                field?.options
+              )
+                ? field.options
+                : [];
+
+            return;
+          }
 
           if (
             fieldType !==
@@ -1980,7 +1998,7 @@ const ProductMasterModal = ({
           }
 
           /* =========================================
-             UNIT FIELD
+             UNIT OPTIONS
           ========================================= */
 
           if (
@@ -1992,14 +2010,19 @@ const ProductMasterModal = ({
             map[
               field.key
             ] =
-              units?.map(
+              (
+                Array.isArray(
+                  units
+                )
+                  ? units
+                  : []
+              ).map(
                 (
                   item: any
                 ) => {
                   const value =
                     item?.[
-                    field
-                      .valueField
+                    field.valueField
                     ] ||
                     item?.unitCode ||
                     item?.code ||
@@ -2007,8 +2030,7 @@ const ProductMasterModal = ({
 
                   const label =
                     item?.[
-                    field
-                      .labelField
+                    field.labelField
                     ] ||
                     item?.unitName ||
                     item?.name ||
@@ -2023,8 +2045,7 @@ const ProductMasterModal = ({
                       ),
                   };
                 }
-              ) ||
-              [];
+              );
 
             return;
           }
@@ -2086,6 +2107,8 @@ const ProductMasterModal = ({
                   "object"
                 ) {
                   return {
+                    ...option,
+
                     value:
                       option.value ||
                       option.code ||
@@ -2116,186 +2139,8 @@ const ProductMasterModal = ({
     }, [
       productMasterSchemaFields,
       units,
+      hsnOptions,
     ]);
-
-  /* ===================================================
-     VALIDATE FORM
-  =================================================== */
-
-  const validateForm =
-    () => {
-      const validationErrors:
-        Record<
-          string,
-          string
-        > = {};
-
-      productMasterSchemaFields.forEach(
-        (
-          field: any
-        ) => {
-          const value =
-            form?.[
-            field.key
-            ];
-
-          const fieldType =
-            getFieldType(
-              field
-            );
-
-          const required =
-            field.isRequired ||
-            field.required;
-
-          if (
-            required
-          ) {
-            if (
-              fieldType ===
-              "boolean"
-            ) {
-              if (
-                value ===
-                undefined ||
-                value ===
-                null
-              ) {
-                validationErrors[
-                  field.key
-                ] =
-                  `${field.label} required`;
-              }
-            } else if (
-              isMasterReferenceField(
-                field
-              )
-            ) {
-              if (
-                EMPLOYEE_REFERENCE_FIELD_TYPES.has(
-                  fieldType
-                )
-              ) {
-                if (
-                  !String(
-                    value
-                      ?.userMobileNumberHash ||
-                    ""
-                  ).trim()
-                ) {
-                  validationErrors[
-                    field.key
-                  ] =
-                    `${field.label} required`;
-                }
-              } else if (
-                !String(
-                  value?.code ||
-                  ""
-                ).trim() ||
-                !String(
-                  value?.name ||
-                  ""
-                ).trim()
-              ) {
-                validationErrors[
-                  field.key
-                ] =
-                  `${field.label} required`;
-              }
-            } else if (
-              value ===
-              undefined ||
-              value ===
-              null ||
-              String(
-                value
-              ).trim() ===
-              ""
-            ) {
-              validationErrors[
-                field.key
-              ] =
-                `${field.label} required`;
-            }
-          }
-
-          /* =========================================
-             HSN VALIDATION
-          ========================================= */
-
-          if (
-            field.key ===
-            "productHSNCode" &&
-            value &&
-            !/^(?:\d{2}|\d{4}|\d{6}|\d{8})$/.test(
-              String(
-                value
-              )
-            )
-          ) {
-            validationErrors[
-              field.key
-            ] =
-              "Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code.";
-          }
-
-          /* =========================================
-             NEGATIVE NUMBER
-          ========================================= */
-
-          if (
-            fieldType ===
-            "number" &&
-            value !== "" &&
-            value !== null &&
-            value !==
-            undefined &&
-            Number(
-              value
-            ) < 0
-          ) {
-            validationErrors[
-              field.key
-            ] =
-              `${field.label} cannot be negative`;
-          }
-
-          /* =========================================
-             INVALID NUMBER
-          ========================================= */
-
-          if (
-            fieldType ===
-            "number" &&
-            value !== "" &&
-            value !== null &&
-            value !==
-            undefined &&
-            Number.isNaN(
-              Number(
-                value
-              )
-            )
-          ) {
-            validationErrors[
-              field.key
-            ] =
-              `${field.label} must be a valid number`;
-          }
-        }
-      );
-
-      setErrors(
-        validationErrors
-      );
-
-      return (
-        Object.keys(
-          validationErrors
-        ).length === 0
-      );
-    };
 
   /* ===================================================
      UPDATE FIELD
@@ -2329,7 +2174,241 @@ const ProductMasterModal = ({
   };
 
   /* ===================================================
-     RENDER SCHEMA FIELD
+     REFERENCE VALIDATION
+  =================================================== */
+
+  const isReferenceValueEmpty = (
+    field: any,
+    value: any
+  ) => {
+    const fieldType =
+      getFieldType(
+        field
+      );
+
+    if (
+      !value ||
+      typeof value !==
+      "object" ||
+      Array.isArray(value)
+    ) {
+      return true;
+    }
+
+    if (
+      CODE_NAME_REFERENCE_FIELD_TYPES.has(
+        fieldType
+      )
+    ) {
+      return (
+        !String(
+          value?.code ||
+          ""
+        ).trim() ||
+        !String(
+          value?.name ||
+          ""
+        ).trim()
+      );
+    }
+
+    if (
+      fieldType ===
+      "statemaster"
+    ) {
+      return (
+        !String(
+          value?.stateCode ||
+          ""
+        ).trim() ||
+        !String(
+          value?.name ||
+          ""
+        ).trim()
+      );
+    }
+
+    if (
+      fieldType ===
+      "citymaster"
+    ) {
+      return !String(
+        value?.name ||
+        ""
+      ).trim();
+    }
+
+    if (
+      EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+        fieldType
+      )
+    ) {
+      return !String(
+        value?.userMobileNumberHash ||
+        ""
+      ).trim();
+    }
+
+    return false;
+  };
+
+  /* ===================================================
+     VALIDATION
+  =================================================== */
+
+  const validateForm =
+    () => {
+      const validationErrors:
+        Record<string, string> =
+        {};
+
+      (
+        Array.isArray(
+          productMasterSchemaFields
+        )
+          ? productMasterSchemaFields
+          : []
+      ).forEach(
+        (
+          field: any
+        ) => {
+          const value =
+            form?.[
+            field.key
+            ];
+
+          const fieldType =
+            getFieldType(
+              field
+            );
+
+          if (
+            field.isRequired ||
+            field.required
+          ) {
+            if (
+              fieldType ===
+              "boolean"
+            ) {
+              if (
+                value ===
+                undefined ||
+                value ===
+                null
+              ) {
+                validationErrors[
+                  field.key
+                ] =
+                  `${field.label} required`;
+              }
+            } else if (
+              isMasterReferenceField(
+                field
+              )
+            ) {
+              if (
+                isReferenceValueEmpty(
+                  field,
+                  value
+                )
+              ) {
+                validationErrors[
+                  field.key
+                ] =
+                  `${field.label} required`;
+              }
+            } else if (
+              value ===
+              undefined ||
+              value ===
+              null ||
+              String(
+                value
+              ).trim() ===
+              ""
+            ) {
+              validationErrors[
+                field.key
+              ] =
+                `${field.label} required`;
+            }
+          }
+
+          /* =========================================
+             HSN
+          ========================================= */
+
+          if (
+            field.key ===
+            "productHSNCode" &&
+            value &&
+            !/^(?:\d{2}|\d{4}|\d{6}|\d{8})$/.test(
+              String(
+                value
+              )
+            )
+          ) {
+            validationErrors[
+              field.key
+            ] =
+              "Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code.";
+          }
+
+          /* =========================================
+             NUMBER
+          ========================================= */
+
+          if (
+            fieldType ===
+            "number" &&
+            value !== "" &&
+            value !== null &&
+            value !==
+            undefined &&
+            Number.isNaN(
+              Number(
+                value
+              )
+            )
+          ) {
+            validationErrors[
+              field.key
+            ] =
+              `${field.label} must be a valid number`;
+          }
+
+          if (
+            fieldType ===
+            "number" &&
+            value !== "" &&
+            value !== null &&
+            value !==
+            undefined &&
+            Number(
+              value
+            ) < 0
+          ) {
+            validationErrors[
+              field.key
+            ] =
+              `${field.label} cannot be negative`;
+          }
+        }
+      );
+
+      setErrors(
+        validationErrors
+      );
+
+      return (
+        Object.keys(
+          validationErrors
+        ).length === 0
+      );
+    };
+
+  /* ===================================================
+     RENDER FIELD
   =================================================== */
 
   const renderSchemaField = (
@@ -2365,13 +2444,111 @@ const ProductMasterModal = ({
         ],
 
       disabled:
-        field?.disabled ||
-        field?.isReadonly ||
+        field.disabled ||
+        field.isReadonly ||
         submitting,
     };
 
-    /* =========================================
-       MASTER REFERENCE
+    /* ========================================
+       HSN SELECT
+
+       IMPORTANT:
+       This comes before the normal field.type checks,
+       so productHSNCode always renders as a dropdown.
+    ========================================= */
+
+    if (
+      field.key ===
+      "productHSNCode"
+    ) {
+      return (
+        <SelectInput
+          key={
+            field.key
+          }
+          name={
+            field.key
+          }
+          label={
+            field.label
+          }
+          mandatory={
+            field.isRequired ||
+            field.required
+          }
+          value={
+            value
+          }
+          placeholder="Select HSN/SAC Code"
+          error={
+            errors?.[
+            field.key
+            ]
+          }
+          largeData={
+            true
+          }
+          disabled={
+            field.disabled ||
+            field.isReadonly ||
+            submitting ||
+            hsnLoading
+          }
+          styles={{
+            menuPortal: (
+              base: any
+            ) => ({
+              ...base,
+
+              zIndex:
+                2147483647,
+            }),
+
+            menu: (
+              base: any
+            ) => ({
+              ...base,
+
+              zIndex:
+                2147483647,
+            }),
+          }}
+          options={[
+            {
+              value: "",
+
+              label:
+                hsnLoading
+                  ? "Loading HSN/SAC codes..."
+                  : hsnOptions.length >
+                    0
+                    ? "Select HSN/SAC Code"
+                    : "No HSN/SAC codes found",
+            },
+
+            ...(
+              fieldOptionsMap[
+              field.key
+              ] || []
+            ),
+          ]}
+          onChange={(
+            event: any
+          ) => {
+            updateField(
+              field.key,
+
+              event?.target
+                ?.value ??
+              ""
+            );
+          }}
+        />
+      );
+    }
+
+    /* ========================================
+       MASTER REFERENCE SELECT
     ========================================= */
 
     if (
@@ -2380,13 +2557,10 @@ const ProductMasterModal = ({
       )
     ) {
       const options =
-        (
-          Array.isArray(
-            field?.options
-          )
-            ? field.options
-            : []
-        ) as ReferenceOption[];
+        fieldOptionsMap[
+        field.key
+        ] ||
+        [];
 
       const selectedValue =
         getReferenceSelectValue(
@@ -2422,38 +2596,32 @@ const ProductMasterModal = ({
             true
           }
           disabled={
-            field?.disabled ||
-            field?.isReadonly ||
-            submitting ||
-            schemaLoading
+            field.disabled ||
+            field.isReadonly ||
+            submitting
           }
           styles={{
-            menuPortal:
-              (
-                base:
-                  any
-              ) => ({
-                ...base,
+            menuPortal: (
+              base: any
+            ) => ({
+              ...base,
 
-                zIndex:
-                  2147483647,
-              }),
+              zIndex:
+                2147483647,
+            }),
 
-            menu:
-              (
-                base:
-                  any
-              ) => ({
-                ...base,
+            menu: (
+              base: any
+            ) => ({
+              ...base,
 
-                zIndex:
-                  2147483647,
-              }),
+              zIndex:
+                2147483647,
+            }),
           }}
           options={[
             {
-              value:
-                "",
+              value: "",
 
               label:
                 options.length >
@@ -2467,15 +2635,13 @@ const ProductMasterModal = ({
           onChange={(
             event: any
           ) => {
-            const nextValue =
-              String(
-                event?.target
-                  ?.value ??
-                ""
-              );
+            const selectedValue =
+              event?.target
+                ?.value ??
+              "";
 
             if (
-              !nextValue
+              !selectedValue
             ) {
               updateField(
                 field.key,
@@ -2488,30 +2654,34 @@ const ProductMasterModal = ({
             const selectedOption =
               options.find(
                 (
-                  option
+                  option: any
                 ) =>
                   String(
-                    option.value
+                    option?.value
                   ) ===
-                  nextValue
+                  String(
+                    selectedValue
+                  )
+              );
+
+            const selectedReference =
+              buildSelectedReferenceValue(
+                field,
+                selectedOption,
+                selectedValue
               );
 
             updateField(
               field.key,
-
-              buildSelectedReferenceValue(
-                field,
-                selectedOption,
-                nextValue
-              )
+              selectedReference
             );
           }}
         />
       );
     }
 
-    /* =========================================
-       SELECT
+    /* ========================================
+       NORMAL SELECT
     ========================================= */
 
     if (
@@ -2555,15 +2725,14 @@ const ProductMasterModal = ({
               true
             }
             disabled={
-              field?.disabled ||
-              field?.isReadonly ||
+              field.disabled ||
+              field.isReadonly ||
               submitting
             }
             options={
               fieldOptionsMap[
               field.key
-              ] ||
-              []
+              ] || []
             }
             showCreateOnEmpty={
               true
@@ -2631,41 +2800,36 @@ const ProductMasterModal = ({
             ]
           }
           styles={{
-            menuPortal:
-              (
-                base:
-                  any
-              ) => ({
-                ...base,
+            menuPortal: (
+              base: any
+            ) => ({
+              ...base,
 
-                zIndex:
-                  2147483647,
-              }),
+              zIndex:
+                2147483647,
+            }),
 
-            menu:
-              (
-                base:
-                  any
-              ) => ({
-                ...base,
+            menu: (
+              base: any
+            ) => ({
+              ...base,
 
-                zIndex:
-                  2147483647,
-              }),
+              zIndex:
+                2147483647,
+            }),
           }}
           largeData={
             true
           }
           disabled={
-            field?.disabled ||
-            field?.isReadonly ||
+            field.disabled ||
+            field.isReadonly ||
             submitting
           }
           options={
             fieldOptionsMap[
             field.key
-            ] ||
-            []
+            ] || []
           }
           onChange={(
             event: any
@@ -2682,8 +2846,8 @@ const ProductMasterModal = ({
       );
     }
 
-    /* =========================================
-       BOOLEAN TOGGLE
+    /* ========================================
+       BOOLEAN
     ========================================= */
 
     if (
@@ -2724,8 +2888,8 @@ const ProductMasterModal = ({
             ]
           }
           disabled={
-            field?.disabled ||
-            field?.isReadonly ||
+            field.disabled ||
+            field.isReadonly ||
             submitting
           }
           onChange={(
@@ -2746,7 +2910,7 @@ const ProductMasterModal = ({
       );
     }
 
-    /* =========================================
+    /* ========================================
        NUMBER
     ========================================= */
 
@@ -2775,7 +2939,7 @@ const ProductMasterModal = ({
       );
     }
 
-    /* =========================================
+    /* ========================================
        TEXTAREA
     ========================================= */
 
@@ -2803,13 +2967,13 @@ const ProductMasterModal = ({
       );
     }
 
-    /* =========================================
-       HSN CODE
+    /* ========================================
+       DATE
     ========================================= */
 
     if (
-      field.key ===
-      "productHSNCode"
+      fieldType ===
+      "date"
     ) {
       return (
         <TextInput
@@ -2817,32 +2981,22 @@ const ProductMasterModal = ({
             field.key
           }
           {...commonProps}
-          type="text"
+          type="date"
           onChange={(
             event: any
           ) => {
-            const numericValue =
-              event.target
-                .value
-                .replace(
-                  /\D/g,
-                  ""
-                )
-                .slice(
-                  0,
-                  8
-                );
-
             updateField(
               field.key,
-              numericValue
+
+              event.target
+                .value
             );
           }}
         />
       );
     }
 
-    /* =========================================
+    /* ========================================
        IMAGE
     ========================================= */
 
@@ -2894,7 +3048,7 @@ const ProductMasterModal = ({
       );
     }
 
-    /* =========================================
+    /* ========================================
        STRING
     ========================================= */
 
@@ -2990,16 +3144,11 @@ const ProductMasterModal = ({
       }
 
       const payload:
-        Record<
-          string,
-          any
-        > = {};
+        Record<string, any> =
+        {};
 
       const dynamicFields:
-        Record<
-          string,
-          any
-        > = {
+        Record<string, any> = {
         ...(
           editingProduct
             ?.dynamicFields ||
@@ -3007,7 +3156,13 @@ const ProductMasterModal = ({
         ),
       };
 
-      productMasterSchemaFields.forEach(
+      (
+        Array.isArray(
+          productMasterSchemaFields
+        )
+          ? productMasterSchemaFields
+          : []
+      ).forEach(
         (
           field: any
         ) => {
@@ -3022,7 +3177,7 @@ const ProductMasterModal = ({
             ];
 
           /* =========================================
-             NORMALIZE REFERENCE VALUE
+             MASTER REFERENCE
           ========================================= */
 
           if (
@@ -3038,7 +3193,7 @@ const ProductMasterModal = ({
           }
 
           /* =========================================
-             NORMALIZE NUMBER
+             NUMBER
           ========================================= */
 
           else if (
@@ -3056,7 +3211,7 @@ const ProductMasterModal = ({
           }
 
           /* =========================================
-             NORMALIZE BOOLEAN
+             BOOLEAN
           ========================================= */
 
           else if (
@@ -3070,7 +3225,7 @@ const ProductMasterModal = ({
           }
 
           /* =========================================
-             DYNAMIC OR ROOT PAYLOAD
+             DYNAMIC OR ROOT
           ========================================= */
 
           if (
@@ -3167,14 +3322,10 @@ const ProductMasterModal = ({
         const apiErrors =
           error?.error ||
           error?.errors ||
-          error
-            ?.response
-            ?.data
-            ?.error ||
-          error
-            ?.response
-            ?.data
-            ?.errors ||
+          error?.response
+            ?.data?.error ||
+          error?.response
+            ?.data?.errors ||
           {};
 
         if (
@@ -3191,9 +3342,7 @@ const ProductMasterModal = ({
         }
 
         toast.error(
-          error
-            ?.response
-            ?.data
+          error?.response?.data
             ?.message ||
           error?.message ||
           "Product operation failed"
@@ -3240,8 +3389,7 @@ const ProductMasterModal = ({
                 field: any
               ) =>
                 !getBooleanValue(
-                  field
-                    ?.isHidden
+                  field?.isHidden
                 )
             )
             .map(
@@ -3256,6 +3404,8 @@ const ProductMasterModal = ({
       );
     }, [
       schemaLoading,
+      hsnLoading,
+      hsnOptions,
       productMasterSchemaFields,
       form,
       errors,
@@ -3264,7 +3414,7 @@ const ProductMasterModal = ({
     ]);
 
   /* ===================================================
-     PORTAL GUARD
+     PORTAL
   =================================================== */
 
   if (
@@ -3277,10 +3427,6 @@ const ProductMasterModal = ({
   ) {
     return null;
   }
-
-  /* ===================================================
-     UI
-  =================================================== */
 
   return createPortal(
     <>
@@ -3324,14 +3470,15 @@ const ProductMasterModal = ({
           showUnitModal
         }
         setShow={(
-          value:
-            boolean
+          value: boolean
         ) => {
           setShowUnitModal(
             value
           );
 
-          if (!value) {
+          if (
+            !value
+          ) {
             setUnitSearchValue(
               ""
             );
