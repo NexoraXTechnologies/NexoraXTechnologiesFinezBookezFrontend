@@ -26,7 +26,10 @@ import {
 	Wallet,
 } from "lucide-react";
 
-import { fetchProfessionalDashboardAnalytics } from "../../redux/slices/professionalSlice/dashboard/professionalDashboardSlice";
+import {
+	fetchProfessionalDashboardAnalytics,
+	fetchTransportDashboardAnalytics,
+} from "../../redux/slices/professionalSlice/dashboard/professionalDashboardSlice";
 
 import AiTaxCopilotDrawer from "./AiChat/AiTaxCopilotDrawer";
 import AiChatBox from "./AiChat/AiChatBox";
@@ -648,12 +651,12 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 										dataKey="month"
 										axisLine={false}
 										tickLine={false}
-											tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+										tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
 									/>
 									<YAxis
 										axisLine={false}
 										tickLine={false}
-											tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+										tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
 										tickFormatter={(value) =>
 											Number(value) >= 100000
 												? `${Math.round(Number(value) / 100000)}L`
@@ -688,40 +691,40 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					accent="sales"
 					right={
 						<>
-						{/* <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
+							{/* <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
 							API Data
 						</span> */}
-						
+
 						</>
 					}
 				>
 					{!moduleAreaChartData.length ? (
 						<EmptyData text="No transaction data available" />
 					) : (
-							<div className="relative min-w-0 overflow-hidden rounded-2xl bg-card px-3 pb-2">
+						<div className="relative min-w-0 overflow-hidden rounded-2xl bg-card px-3 pb-2">
 							<div className="mb-2 flex flex-col gap-1 px-2">
-									<p className="text-xs font-bold text-muted-foreground">
+								<p className="text-xs font-bold text-muted-foreground">
 									Total module transactions
 								</p>
 
 								<div className="flex items-end justify-between gap-3">
-										<h2 className="text-4xl font-black tracking-tight text-foreground">
+									<h2 className="text-4xl font-black tracking-tight text-foreground">
 										{formatNumber(totalTransactionCount)}
 									</h2>
 
 									<div className="text-right">
-											<p className="text-xs font-bold text-muted-foreground">
-												Top module
-											</p>
+										<p className="text-xs font-bold text-muted-foreground">
+											Top module
+										</p>
 
-											<p className="text-sm font-black text-primary">
+										<p className="text-sm font-black text-primary">
 											{highestModule.name}
 										</p>
 									</div>
 								</div>
 							</div>
 
-								<div className="h-[220px] min-w-0 overflow-hidden">
+							<div className="h-[220px] min-w-0 overflow-hidden">
 								<ResponsiveContainer width="100%" height="100%">
 									<AreaChart
 										data={moduleAreaChartData}
@@ -733,21 +736,21 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 										}}
 									>
 										<defs>
-												<linearGradient
-													id="moduleAreaFill"
-													x1="0"
-													y1="0"
-													x2="0"
-													y2="1"
-												>
+											<linearGradient
+												id="moduleAreaFill"
+												x1="0"
+												y1="0"
+												x2="0"
+												y2="1"
+											>
 												<stop offset="0%" stopColor="#c084fc" stopOpacity={0.28} />
 												<stop offset="55%" stopColor="#f5d0fe" stopOpacity={0.14} />
-													<stop offset="100%" stopColor="var(--card)" stopOpacity={0} />
+												<stop offset="100%" stopColor="var(--card)" stopOpacity={0} />
 											</linearGradient>
 										</defs>
 
 										<CartesianGrid
-												stroke="var(--border)"
+											stroke="var(--border)"
 											strokeDasharray="0"
 											vertical={false}
 										/>
@@ -757,12 +760,12 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											axisLine={false}
 											tickLine={false}
 											interval={0}
-												height={42}
-												tickMargin={12}
-												padding={{
-													left: 25,
-													right: 25,
-												}}
+											height={42}
+											tickMargin={12}
+											padding={{
+												left: 25,
+												right: 25,
+											}}
 											tick={{
 												fontSize: 11,
 												fill: "var(--muted-foreground)",
@@ -788,7 +791,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 
 										<Tooltip
 											cursor={{
-													stroke: "var(--border)",
+												stroke: "var(--border)",
 												strokeWidth: 1,
 											}}
 											content={<ModuleAreaTooltip />}
@@ -1018,13 +1021,395 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 	);
 };
 
+
+/* ===================================================
+   TRANSPORT ANALYTICS VIEW - ADDED ONLY
+=================================================== */
+
+const TransportAnalyticsView = ({
+	analytics,
+	loading,
+	error,
+}: {
+	analytics: any;
+	loading: boolean;
+	error: any;
+}) => {
+	const data = analytics || {};
+	const vehicles = data?.vehicles || {};
+	const transportOrder = data?.transportOrder || {};
+	const tripAllocation = data?.tripAllocation || {};
+	const vehicleMaintenance = data?.vehicleMaintenance || {};
+	const driverSettlement = data?.driverSettlement || {};
+	const ewayBill = data?.ewayBill || {};
+
+	const ownedList = vehicles?.ownedList || [];
+	const marketList = vehicles?.marketList || [];
+	const transportOrderList = transportOrder?.list || [];
+	const tripAllocationList = tripAllocation?.list || [];
+	const driverSettlementList = driverSettlement?.list || [];
+	const ewayBillList = ewayBill?.list || [];
+
+	const totalOwned = toNumber(vehicles?.totalOwned);
+	const totalMarket = toNumber(vehicles?.totalMarket);
+	const totalVehicles = totalOwned + totalMarket;
+	const totalOrders = toNumber(transportOrder?.total);
+	const totalTrips = toNumber(tripAllocation?.total);
+	const pendingTrips = toNumber(tripAllocation?.pending);
+	const totalSettlements = toNumber(driverSettlement?.total);
+	const pendingSettlements = toNumber(driverSettlement?.pending);
+	const totalEwayBills = toNumber(ewayBill?.total);
+
+	const expectedFreight = transportOrderList.reduce(
+		(sum: number, item: any) => sum + toNumber(item?.expectedFreight),
+		0
+	);
+
+	const fleetData = [
+		{ name: "Owned", value: totalOwned },
+		{ name: "Market", value: totalMarket },
+	].filter((item) => item.value > 0);
+
+	const activityData = [
+		{ name: "Orders", value: totalOrders },
+		{ name: "Trips", value: totalTrips },
+		{ name: "Settlements", value: totalSettlements },
+		{ name: "E-Way Bills", value: totalEwayBills },
+	];
+
+	const maintenanceData = [
+		{ name: "PUC", value: toNumber(vehicleMaintenance?.totalPuc) },
+		{ name: "Insurance", value: toNumber(vehicleMaintenance?.totalInsurance) },
+		{ name: "Fitness", value: toNumber(vehicleMaintenance?.totalFitness) },
+	];
+
+	const hasActivityData = activityData.some((item) => item.value > 0);
+	const hasMaintenanceData = maintenanceData.some((item) => item.value > 0);
+
+	if (loading) {
+		return (
+			<div className="flex min-h-[420px] items-center justify-center">
+				<motion.div
+					initial={{ opacity: 0, scale: 0.94 }}
+					animate={{ opacity: 1, scale: 1 }}
+					className="rounded-2xl border border-border bg-card px-6 py-5 text-card-foreground shadow-sm"
+				>
+					<p className="text-sm font-bold text-muted-foreground">
+						Loading transport analytics...
+					</p>
+				</motion.div>
+			</div>
+		);
+	}
+
+	if (error) {
+		return <p className="mt-10 text-center text-danger">{error}</p>;
+	}
+
+	return (
+		<motion.div
+			key="transport-analytics"
+			variants={pageAnimation}
+			initial="hidden"
+			animate="visible"
+			exit="exit"
+			className="space-y-5"
+		>
+			<motion.div
+				variants={compactContainerAnim}
+				initial="hidden"
+				animate="visible"
+				className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+			>
+				<CompactKpiCard
+					title="Total Vehicles"
+					value={totalVehicles > 0 ? formatNumber(totalVehicles) : "No data found"}
+					subtitle={
+						totalVehicles > 0
+							? `${formatNumber(totalOwned)} owned • ${formatNumber(totalMarket)} market`
+							: "No vehicle data available"
+					}
+					icon={Building2}
+					chartType="bar"
+					accent="sales"
+				/>
+
+				<CompactKpiCard
+					title="Transport Orders"
+					value={totalOrders > 0 ? formatNumber(totalOrders) : "No data found"}
+					subtitle={
+						totalOrders > 0
+							? `${formatMoney(expectedFreight)} expected freight`
+							: "No transport orders available"
+					}
+					icon={ShoppingCart}
+					chartType="line"
+					accent="receivable"
+				/>
+
+				<CompactKpiCard
+					title="Trip Allocation"
+					value={totalTrips > 0 ? formatNumber(totalTrips) : "No data found"}
+					subtitle={
+						totalTrips > 0
+							? `${formatNumber(pendingTrips)} pending`
+							: "No trip allocation available"
+					}
+					icon={ReceiptText}
+					chartType="donut"
+					accent="purchase"
+				/>
+
+				<CompactKpiCard
+					title="Driver Settlement"
+					value={totalSettlements > 0 ? formatNumber(totalSettlements) : "No data found"}
+					subtitle={
+						totalSettlements > 0
+							? `${formatNumber(pendingSettlements)} pending`
+							: "No driver settlement available"
+					}
+					icon={Wallet}
+					chartType="bar"
+					accent="payable"
+				/>
+			</motion.div>
+
+			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+				<CompactWidgetCard title="Owned vs Market Vehicles" accent="sales">
+					{fleetData.length === 0 ? (
+						<EmptyData text="No vehicle data available" />
+					) : (
+						<div className="relative h-[250px]">
+							<ResponsiveContainer width="100%" height="100%">
+								<PieChart>
+									<Pie
+										data={fleetData}
+										dataKey="value"
+										nameKey="name"
+										cx="50%"
+										cy="50%"
+										innerRadius={65}
+										outerRadius={95}
+										paddingAngle={6}
+										stroke="var(--card)"
+										strokeWidth={5}
+									>
+										{fleetData.map((item, index) => (
+											<Cell
+												key={item.name}
+												fill={CHART_COLORS[index % CHART_COLORS.length]}
+											/>
+										))}
+									</Pie>
+									<Tooltip content={<CompactTooltip />} />
+								</PieChart>
+							</ResponsiveContainer>
+
+							<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+								<p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+									Vehicles
+								</p>
+								<p className="text-2xl font-black text-foreground">
+									{formatNumber(totalVehicles)}
+								</p>
+							</div>
+						</div>
+					)}
+				</CompactWidgetCard>
+
+				<CompactWidgetCard
+					title="Transport Activity"
+					className="xl:col-span-2"
+					accent="purchase"
+				>
+					{!hasActivityData ? (
+						<EmptyData text="No transport activity found" />
+					) : (
+						<div className="h-[250px]">
+							<ResponsiveContainer width="100%" height="100%">
+								<BarChart data={activityData} barGap={8}>
+									<CartesianGrid strokeDasharray="4 4" vertical={false} />
+									<XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
+									<YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
+									<Tooltip content={<CompactTooltip />} />
+									<Bar dataKey="value" fill="#2563eb" radius={[10, 10, 10, 10]} maxBarSize={52} />
+								</BarChart>
+							</ResponsiveContainer>
+						</div>
+					)}
+				</CompactWidgetCard>
+			</div>
+
+			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+				<CompactWidgetCard
+					title="Vehicle Maintenance"
+					className="xl:col-span-2"
+					accent="sales"
+				>
+					{!hasMaintenanceData ? (
+						<EmptyData text="No maintenance data found" />
+					) : (
+						<div className="h-[230px]">
+							<ResponsiveContainer width="100%" height="100%">
+								<BarChart data={maintenanceData}>
+									<CartesianGrid strokeDasharray="4 4" vertical={false} />
+									<XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
+									<YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
+									<Tooltip content={<CompactTooltip />} />
+									<Bar dataKey="value" fill="#c084fc" radius={[10, 10, 10, 10]} maxBarSize={60} />
+								</BarChart>
+							</ResponsiveContainer>
+						</div>
+					)}
+				</CompactWidgetCard>
+
+				<CompactWidgetCard title="E-Way Bills" accent="payable">
+					<div className="space-y-2">
+						{ewayBillList.length === 0 && <EmptyData text="No E-Way Bills available" />}
+
+						{ewayBillList.map((item: any, index: number) => (
+							<CompactRankItem
+								key={`${item?.ewayBillNumber || "eway"}-${index}`}
+								index={index}
+								title={item?.ewayBillNumber || "-"}
+								subtitle="Valid Upto"
+								value={item?.validUpto || "-"}
+								accent="payable"
+							/>
+						))}
+					</div>
+				</CompactWidgetCard>
+			</div>
+
+			<div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+				<CompactWidgetCard title="Owned Vehicles" accent="sales">
+					<div className="space-y-2">
+						{ownedList.length === 0 && <EmptyData text="No owned vehicles available" />}
+
+						{ownedList.map((item: any, index: number) => (
+							<CompactRankItem
+								key={`${item?.vehicleNumber || "owned"}-${index}`}
+								index={index}
+								title={item?.vehicleNumber || "-"}
+								subtitle="Owned Vehicle"
+								value={item?.status || "-"}
+								accent="sales"
+							/>
+						))}
+					</div>
+				</CompactWidgetCard>
+
+				<CompactWidgetCard title="Market Vehicles" accent="purchase">
+					<div className="space-y-2">
+						{marketList.length === 0 && <EmptyData text="No market vehicles available" />}
+
+						{marketList.map((item: any, index: number) => (
+							<CompactRankItem
+								key={`${item?.vehicleNumber || "market"}-${index}`}
+								index={index}
+								title={item?.vehicleNumber || "-"}
+								subtitle="Market Vehicle"
+								value={item?.status || "-"}
+								accent="purchase"
+							/>
+						))}
+					</div>
+				</CompactWidgetCard>
+
+				<CompactWidgetCard title="Transport Orders" accent="receivable">
+					<div className="space-y-2">
+						{transportOrderList.length === 0 && <EmptyData text="No transport orders available" />}
+
+						{transportOrderList.map((item: any, index: number) => (
+							<CompactRankItem
+								key={`${item?.voucherNumber || "order"}-${index}`}
+								index={index}
+								title={item?.customerName || "-"}
+								subtitle={item?.voucherNumber || "-"}
+								value={formatMoney(item?.expectedFreight)}
+								accent="receivable"
+							/>
+						))}
+					</div>
+				</CompactWidgetCard>
+
+				<CompactWidgetCard title="Trip Allocation" accent="payable">
+					<div className="space-y-2">
+						{tripAllocationList.length === 0 && <EmptyData text="No trip allocations available" />}
+
+						{tripAllocationList.map((item: any, index: number) => (
+							<CompactRankItem
+								key={`${item?.voucher || "trip"}-${index}`}
+								index={index}
+								title={item?.name || "-"}
+								subtitle={item?.voucher || "-"}
+								value={item?.status || "-"}
+								accent="payable"
+							/>
+						))}
+					</div>
+				</CompactWidgetCard>
+			</div>
+
+			<div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+				<CompactWidgetCard title="Driver Settlement" accent="sales">
+					<div className="space-y-2">
+						{driverSettlementList.length === 0 && <EmptyData text="No driver settlements available" />}
+
+						{driverSettlementList.map((item: any, index: number) => (
+							<CompactRankItem
+								key={`${item?.voucherNumber || "settlement"}-${index}`}
+								index={index}
+								title={item?.driverName || "-"}
+								subtitle={item?.voucherNumber || "-"}
+								value={item?.status || "-"}
+								accent="sales"
+							/>
+						))}
+					</div>
+				</CompactWidgetCard>
+
+				<CompactWidgetCard title="Maintenance Summary" accent="purchase">
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+						<div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+							<p className="text-2xl font-black text-foreground">
+								{formatNumber(vehicleMaintenance?.totalPuc)}
+							</p>
+							<p className="mt-1 text-xs font-bold text-muted-foreground">PUC</p>
+						</div>
+
+						<div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+							<p className="text-2xl font-black text-foreground">
+								{formatNumber(vehicleMaintenance?.totalInsurance)}
+							</p>
+							<p className="mt-1 text-xs font-bold text-muted-foreground">Insurance</p>
+						</div>
+
+						<div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+							<p className="text-2xl font-black text-foreground">
+								{formatNumber(vehicleMaintenance?.totalFitness)}
+							</p>
+							<p className="mt-1 text-xs font-bold text-muted-foreground">Fitness</p>
+						</div>
+					</div>
+				</CompactWidgetCard>
+			</div>
+		</motion.div>
+	);
+};
+
 const ProfessionalDashboard = () => {
 	const dispatch = useDispatch();
 
 	const [openChat, setOpenChat] = useState(false);
 	const [activeTab, setActiveTab] = useState<TabType>("taxez");
+	const [dashboardSection, setDashboardSection] = useState<"dashboard" | "analytics">("dashboard");
 
 	const { analytics, bookEzAnalytics, loading, error } = useSelector(
+		(s: any) => s.professionalDashboard
+	);
+
+	const { transportAnalytics, transportLoading, transportError } = useSelector(
 		(s: any) => s.professionalDashboard
 	);
 
@@ -1077,6 +1462,12 @@ const ProfessionalDashboard = () => {
 	useEffect(() => {
 		dispatch(fetchProfessionalDashboardAnalytics() as any);
 	}, [dispatch]);
+
+	useEffect(() => {
+		if (dashboardSection === "analytics" && !transportAnalytics && !transportLoading) {
+			dispatch(fetchTransportDashboardAnalytics() as any);
+		}
+	}, [dashboardSection, dispatch, transportAnalytics, transportLoading]);
 
 	useEffect(() => {
 		if (visibleTabs.length > 0) {
@@ -1141,29 +1532,65 @@ const ProfessionalDashboard = () => {
 			transition={{ duration: 0.45 }}
 			className="relative min-h-screen bg-background p-4 text-foreground md:p-6"
 		>
-			<AnimatePresence mode="wait">
-				{activeTab === "taxez" && canShowTaxEz && (
-					<TaxEzDashboardView analytics={analytics} />
-				)}
+			<div className="mb-5 inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
+				<button
+					type="button"
+					onClick={() => setDashboardSection("dashboard")}
+					className={`rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "dashboard"
+							? "bg-primary text-primary-foreground shadow-sm"
+							: "text-muted-foreground hover:bg-muted hover:text-foreground"
+						}`}
+				>
+					Dashboard
+				</button>
 
-				{/* {activeTab === "bookez" && canShowBookEz && (
-					<BookEzDashboardView analytics={bookEzAnalytics} />
-				)} */}
+				<button
+					type="button"
+					onClick={() => setDashboardSection("analytics")}
+					className={`rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "analytics"
+							? "bg-primary text-primary-foreground shadow-sm"
+							: "text-muted-foreground hover:bg-muted hover:text-foreground"
+						}`}
+				>
+					Analytics
+				</button>
+			</div>
 
-				<BookEzDashboardView analytics={bookEzAnalytics} />
-			</AnimatePresence>
-
-			{activeTab === "taxez" && canShowTaxEz && (
+			{dashboardSection === "dashboard" && (
 				<>
-					<div className="fixed bottom-8 right-6 z-50">
-						<AiChatBox onClick={() => setOpenChat(true)} />
-					</div>
+					<AnimatePresence mode="wait">
+						{activeTab === "taxez" && canShowTaxEz && (
+							<TaxEzDashboardView analytics={analytics} />
+						)}
 
-					<AiTaxCopilotDrawer
-						open={openChat}
-						onClose={() => setOpenChat(false)}
-					/>
+						{/* {activeTab === "bookez" && canShowBookEz && (
+							<BookEzDashboardView analytics={bookEzAnalytics} />
+						)} */}
+
+						<BookEzDashboardView analytics={bookEzAnalytics} />
+					</AnimatePresence>
+
+					{activeTab === "taxez" && canShowTaxEz && (
+						<>
+							<div className="fixed bottom-8 right-6 z-50">
+								<AiChatBox onClick={() => setOpenChat(true)} />
+							</div>
+
+							<AiTaxCopilotDrawer
+								open={openChat}
+								onClose={() => setOpenChat(false)}
+							/>
+						</>
+					)}
 				</>
+			)}
+
+			{dashboardSection === "analytics" && (
+				<TransportAnalyticsView
+					analytics={transportAnalytics}
+					loading={transportLoading}
+					error={transportError}
+				/>
 			)}
 		</motion.div>
 	);

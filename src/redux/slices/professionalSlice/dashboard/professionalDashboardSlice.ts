@@ -15,7 +15,9 @@ export const fetchProfessionalDashboardAnalytics = createAsyncThunk(
 
       if (!res.data?.success) {
         return rejectWithValue({
-          message: res.data?.message || "Failed to fetch dashboard analytics",
+          message:
+            res.data?.message ||
+            "Failed to fetch dashboard analytics",
         });
       }
 
@@ -23,7 +25,39 @@ export const fetchProfessionalDashboardAnalytics = createAsyncThunk(
     } catch (err: any) {
       return rejectWithValue({
         message:
-          err?.response?.data?.message || "Failed to fetch dashboard analytics",
+          err?.response?.data?.message ||
+          "Failed to fetch dashboard analytics",
+      });
+    }
+  }
+);
+
+/* ===================================================
+   FETCH TRANSPORT DASHBOARD ANALYTICS
+=================================================== */
+
+export const fetchTransportDashboardAnalytics = createAsyncThunk(
+  "professionalDashboard/fetchTransportAnalytics",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await professionalAxios.get(
+        "/eTaxSolnMongoApiBackend/users/dashboard/transportAnalytics"
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message:
+            res.data?.message ||
+            "Failed to fetch transport analytics",
+        });
+      }
+
+      return res.data?.data ?? null;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          "Failed to fetch transport analytics",
       });
     }
   }
@@ -34,7 +68,11 @@ export const fetchProfessionalDashboardAnalytics = createAsyncThunk(
 =================================================== */
 
 const staticDefaults = {
-  documents: { total: 0, active: 0, deleted: 0 },
+  documents: {
+    total: 0,
+    active: 0,
+    deleted: 0,
+  },
 
   tasks: {
     total: 0,
@@ -173,22 +211,40 @@ const bookEzDefaults = {
 
 const initialState = {
   analytics: {
-    accountMaster: { ...staticDefaults.accountMaster },
-    productMaster: { ...staticDefaults.productMaster },
-    documents: { ...staticDefaults.documents },
-    tasks: { ...staticDefaults.tasks },
-    incomeTax: { ...staticDefaults.incomeTax },
-    employees: { ...staticDefaults.employees },
-    itr: { ...staticDefaults.itr },
+    accountMaster: {
+      ...staticDefaults.accountMaster,
+    },
+    productMaster: {
+      ...staticDefaults.productMaster,
+    },
+    documents: {
+      ...staticDefaults.documents,
+    },
+    tasks: {
+      ...staticDefaults.tasks,
+    },
+    incomeTax: {
+      ...staticDefaults.incomeTax,
+    },
+    employees: {
+      ...staticDefaults.employees,
+    },
+    itr: {
+      ...staticDefaults.itr,
+    },
   },
 
-  // ✅ New: full BookEz dashboard data
   bookEzAnalytics: {
     ...bookEzDefaults,
   },
 
+  transportAnalytics: null as any,
+
   loading: false,
   error: null as any,
+
+  transportLoading: false,
+  transportError: null as any,
 };
 
 /* ===================================================
@@ -198,44 +254,96 @@ const initialState = {
 const mapApiToDashboardShape = (api: any) => {
   return {
     accountMaster: {
-      total: api?.masters?.accounts ?? api?.accountMaster?.total ?? 0,
+      total:
+        api?.masters?.accounts ??
+        api?.accountMaster?.total ??
+        0,
     },
 
     productMaster: {
-      total: api?.masters?.products ?? api?.productMaster?.total ?? 0,
+      total:
+        api?.masters?.products ??
+        api?.productMaster?.total ??
+        0,
     },
 
     documents: {
-      total: api?.operations?.totalDocuments ?? api?.documents?.total ?? 0,
-      active: api?.documents?.active ?? 0,
+      total:
+        api?.operations?.totalDocuments ??
+        api?.documents?.total ??
+        0,
+
+      active:
+        api?.documents?.active ??
+        0,
+
       deleted:
-        api?.operations?.totalDeletedDocuments ?? api?.documents?.deleted ?? 0,
+        api?.operations?.totalDeletedDocuments ??
+        api?.documents?.deleted ??
+        0,
     },
 
     tasks: {
-      total: api?.operations?.totalTasks ?? api?.tasks?.total ?? 0,
-      inProgress: api?.tasks?.inProgress ?? api?.operations?.pendingTasks ?? 0,
-      partiallyCompleted: api?.tasks?.partiallyCompleted ?? 0,
-      completed: api?.operations?.completedTasks ?? api?.tasks?.completed ?? 0,
+      total:
+        api?.operations?.totalTasks ??
+        api?.tasks?.total ??
+        0,
+
+      inProgress:
+        api?.tasks?.inProgress ??
+        api?.operations?.pendingTasks ??
+        0,
+
+      partiallyCompleted:
+        api?.tasks?.partiallyCompleted ??
+        0,
+
+      completed:
+        api?.operations?.completedTasks ??
+        api?.tasks?.completed ??
+        0,
     },
 
     incomeTax: {
       totalTaxPayers:
-        api?.taxpayers?.totalTaxpayers ?? api?.incomeTax?.totalTaxPayers ?? 0,
-      active: api?.taxpayers?.activeTaxpayers ?? api?.incomeTax?.active ?? 0,
+        api?.taxpayers?.totalTaxpayers ??
+        api?.incomeTax?.totalTaxPayers ??
+        0,
+
+      active:
+        api?.taxpayers?.activeTaxpayers ??
+        api?.incomeTax?.active ??
+        0,
+
       inactive:
-        api?.taxpayers?.inactiveTaxpayers ?? api?.incomeTax?.inactive ?? 0,
+        api?.taxpayers?.inactiveTaxpayers ??
+        api?.incomeTax?.inactive ??
+        0,
     },
 
     employees: {
-      total: api?.employees?.totalEmployees ?? api?.employees?.total ?? 0,
-      active: api?.employees?.active ?? 0,
-      inactive: api?.employees?.inactive ?? 0,
+      total:
+        api?.employees?.totalEmployees ??
+        api?.employees?.total ??
+        0,
+
+      active:
+        api?.employees?.active ??
+        0,
+
+      inactive:
+        api?.employees?.inactive ??
+        0,
     },
 
     itr: {
-      filedSuccessfully: api?.itr?.filedSuccessfully ?? 0,
-      draft: api?.itr?.draft ?? 0,
+      filedSuccessfully:
+        api?.itr?.filedSuccessfully ??
+        0,
+
+      draft:
+        api?.itr?.draft ??
+        0,
     },
   };
 };
@@ -244,7 +352,10 @@ const mapApiToDashboardShape = (api: any) => {
    MERGE TAXEZ ANALYTICS
 =================================================== */
 
-const mergeAnalytics = (defaults: any, apiMapped: any) => {
+const mergeAnalytics = (
+  defaults: any,
+  apiMapped: any
+) => {
   return {
     accountMaster: {
       ...defaults.accountMaster,
@@ -287,7 +398,10 @@ const mergeAnalytics = (defaults: any, apiMapped: any) => {
    MERGE BOOKEZ ANALYTICS
 =================================================== */
 
-const mergeBookEzAnalytics = (defaults: any, api: any) => {
+const mergeBookEzAnalytics = (
+  defaults: any,
+  api: any
+) => {
   return {
     masters: {
       ...defaults.masters,
@@ -352,10 +466,22 @@ const mergeBookEzAnalytics = (defaults: any, api: any) => {
     analytics: {
       ...defaults.analytics,
       ...(api?.analytics || {}),
-      topSellingProducts: api?.analytics?.topSellingProducts || [],
-      topPurchasingProducts: api?.analytics?.topPurchasingProducts || [],
-      topCustomers: api?.analytics?.topCustomers || [],
-      topVendors: api?.analytics?.topVendors || [],
+
+      topSellingProducts:
+        api?.analytics?.topSellingProducts ||
+        [],
+
+      topPurchasingProducts:
+        api?.analytics?.topPurchasingProducts ||
+        [],
+
+      topCustomers:
+        api?.analytics?.topCustomers ||
+        [],
+
+      topVendors:
+        api?.analytics?.topVendors ||
+        [],
     },
   };
 };
@@ -364,62 +490,169 @@ const mergeBookEzAnalytics = (defaults: any, api: any) => {
    SLICE
 =================================================== */
 
-const professionalDashboardSlice = createSlice({
-  name: "professionalDashboard",
+const professionalDashboardSlice =
+  createSlice({
+    name: "professionalDashboard",
 
-  initialState,
+    initialState,
 
-  reducers: {
-    resetProfessionalDashboard: (state) => {
-      state.analytics = { ...initialState.analytics };
-      state.bookEzAnalytics = { ...initialState.bookEzAnalytics };
-      state.loading = false;
-      state.error = null;
-    },
+    reducers: {
+      resetProfessionalDashboard: (state) => {
+        state.analytics = {
+          ...initialState.analytics,
+        };
 
-    setStaticDashboardCounts: (state, action) => {
-      state.analytics = mergeAnalytics(state.analytics, action.payload);
-    },
+        state.bookEzAnalytics = {
+          ...initialState.bookEzAnalytics,
+        };
 
-    setBookEzDashboardCounts: (state, action) => {
-      state.bookEzAnalytics = mergeBookEzAnalytics(
-        state.bookEzAnalytics,
-        action.payload
-      );
-    },
-  },
+        state.transportAnalytics = null;
 
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchProfessionalDashboardAnalytics.pending, (state) => {
-        state.loading = true;
+        state.loading = false;
         state.error = null;
-      })
 
-      .addCase(fetchProfessionalDashboardAnalytics.fulfilled, (state, action) => {
-        state.loading = false;
+        state.transportLoading = false;
+        state.transportError = null;
+      },
 
-        const apiData = action.payload || {};
+      setStaticDashboardCounts: (
+        state,
+        action
+      ) => {
+        state.analytics =
+          mergeAnalytics(
+            state.analytics,
+            action.payload
+          );
+      },
 
-        // ✅ Old TaxEz shape
-        const mappedAnalytics = mapApiToDashboardShape(apiData);
-        state.analytics = mergeAnalytics(initialState.analytics, mappedAnalytics);
+      setBookEzDashboardCounts: (
+        state,
+        action
+      ) => {
+        state.bookEzAnalytics =
+          mergeBookEzAnalytics(
+            state.bookEzAnalytics,
+            action.payload
+          );
+      },
 
-        // ✅ Full BookEz shape for BookEz dashboard
-        state.bookEzAnalytics = mergeBookEzAnalytics(bookEzDefaults, apiData);
-      })
+      setTransportDashboardAnalytics: (
+        state,
+        action
+      ) => {
+        state.transportAnalytics =
+          action.payload;
+      },
+    },
 
-      .addCase(fetchProfessionalDashboardAnalytics.rejected, (state, action: any) => {
-        state.loading = false;
-        state.error = action.payload?.message || "Something went wrong";
-      });
-  },
-});
+    extraReducers: (builder) => {
+      builder
+        /* ===================================================
+           PROFESSIONAL / BOOKEZ DASHBOARD ANALYTICS
+        =================================================== */
+
+        .addCase(
+          fetchProfessionalDashboardAnalytics.pending,
+          (state) => {
+            state.loading = true;
+            state.error = null;
+          }
+        )
+
+        .addCase(
+          fetchProfessionalDashboardAnalytics.fulfilled,
+          (state, action) => {
+            state.loading = false;
+
+            const apiData =
+              action.payload || {};
+
+            const mappedAnalytics =
+              mapApiToDashboardShape(
+                apiData
+              );
+
+            state.analytics =
+              mergeAnalytics(
+                initialState.analytics,
+                mappedAnalytics
+              );
+
+            state.bookEzAnalytics =
+              mergeBookEzAnalytics(
+                bookEzDefaults,
+                apiData
+              );
+          }
+        )
+
+        .addCase(
+          fetchProfessionalDashboardAnalytics.rejected,
+          (
+            state,
+            action: any
+          ) => {
+            state.loading = false;
+
+            state.error =
+              action.payload?.message ||
+              "Something went wrong";
+          }
+        )
+
+        /* ===================================================
+           TRANSPORT DASHBOARD ANALYTICS
+        =================================================== */
+
+        .addCase(
+          fetchTransportDashboardAnalytics.pending,
+          (state) => {
+            state.transportLoading = true;
+            state.transportError = null;
+          }
+        )
+
+        .addCase(
+          fetchTransportDashboardAnalytics.fulfilled,
+          (state, action) => {
+            state.transportLoading = false;
+
+            state.transportAnalytics =
+              action.payload ||
+              null;
+          }
+        )
+
+        .addCase(
+          fetchTransportDashboardAnalytics.rejected,
+          (
+            state,
+            action: any
+          ) => {
+            state.transportLoading = false;
+
+            state.transportError =
+              action.payload?.message ||
+              "Failed to fetch transport analytics";
+          }
+        );
+    },
+  });
+
+/* ===================================================
+   EXPORT ACTIONS
+=================================================== */
 
 export const {
   resetProfessionalDashboard,
   setStaticDashboardCounts,
   setBookEzDashboardCounts,
+  setTransportDashboardAnalytics,
 } = professionalDashboardSlice.actions;
+
+/* ===================================================
+   EXPORT REDUCER
+=================================================== */
 
 export default professionalDashboardSlice.reducer;
