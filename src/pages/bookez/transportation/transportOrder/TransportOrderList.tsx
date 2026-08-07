@@ -412,7 +412,7 @@ const TransportOrderList = () => {
 			render: (row: any) => {
 				const value = row?.freightDetails?.expectedFreight;
 
-				return value ? money(value) :money("0");
+				return value ? money(value) : money("0");
 			},
 			type: "amount",
 		},
@@ -608,7 +608,7 @@ const TransportOrderList = () => {
 										{allocatedLR && (
 											<>
 
-												<Permission
+												{/* <Permission
 													module="bookez"
 													permissionKey="transportOrder"
 													action="view"
@@ -621,13 +621,27 @@ const TransportOrderList = () => {
 													>
 														<Eye size={16} />
 													</button>
-												</Permission>
-												<span className="inline-flex items-center rounded-md border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+												</Permission> */}
+												{/* <span className="inline-flex items-center rounded-md border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success"
+												onClick={() => handleViewOrder(record)}
+												>
 													Allocated
 													{allocatedLR?.lrNumber
 														? ` • ${allocatedLR.lrNumber}`
 														: ""}
-												</span>
+												</span> */}
+
+
+												<button
+													type="button"
+													onClick={() => handleViewOrder(record)}
+													className="inline-flex cursor-pointer items-center rounded-md border border-success/20 bg-success/10 px-3 py-1 text-xs font-semibold text-success transition-all duration-200 hover:bg-success/20 focus:outline-none focus:ring-2 focus:ring-success/30"
+												>
+													<span>
+														Allocated
+														{allocatedLR?.lrNumber ? ` • ${allocatedLR.lrNumber}` : ""}
+													</span>
+												</button>
 
 
 											</>
