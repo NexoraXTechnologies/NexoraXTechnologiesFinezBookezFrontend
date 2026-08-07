@@ -94,6 +94,7 @@ import seederConfgReducer from "./slices/professionalSlice/seeder"
 import permissionReducer from "./slices/permissionSlice";
 import postingReduce from "./slices/professionalSlice/posting";
 import posReducer from "./slices/professionalSlice/pos";
+import tripLrEntryRegisterReducer from "./slices/professionalSlice/bookEzRegister/tripLrEntryRegister";
 import dbAccessReducer from "./slices/userExplorer";
 import allRegistersReducer from "../redux/slices/professionalSlice/register";
 import areaDashboardReducer from "../redux/slices/professionalSlice/dashboard/registerDashboard"
@@ -198,6 +199,7 @@ export const store = configureStore({
     tripAllocationRegister: tripAllocationRegisterReducer,
     tripExpenseRegister: tripExpenseRegisterReducer,
     podRegister: podRegisterReducer,
+    tripLrEntryRegister: tripLrEntryRegisterReducer,
     driverSettlementRegister: driverSettlementRegisterReducer,
     vehicleMaintenanceRegister: vehicleMaintenanceRegisterReducer,
     whatsApp: whatsAppReducer,
