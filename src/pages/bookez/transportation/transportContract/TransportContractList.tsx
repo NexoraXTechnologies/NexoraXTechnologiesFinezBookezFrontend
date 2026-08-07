@@ -365,7 +365,7 @@ const TransportContractList = () => {
                                 : "text-muted-foreground hover:bg-muted"
                                 }`}
                         >
-                            Close ({closeCount})
+                            Closed ({closeCount})
                         </button>
                     </div>
 

@@ -206,12 +206,12 @@ const ProfessionalProfile = () => {
   };
 
   return (
-    <div className="min-h-full bg-background px-3 py-4 text-foreground sm:px-5 lg:px-6">
+    <div className="min-h-full bg-background px-3 py-4 text-foreground sm:px-5 lg:px-4">
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
-        className="mx-auto w-full max-w-7xl"
+        className="mx-auto w-full "
       >
         {/* Page heading */}
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
