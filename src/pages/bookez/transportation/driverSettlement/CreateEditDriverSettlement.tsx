@@ -2040,9 +2040,9 @@ const CreateEditDriverSettlement = ({
                         whatsAppError
                     );
 
-                    toast.warning(
-                        "Driver settlement updated, but WhatsApp notification could not be sent"
-                    );
+                    // toast.warning(
+                    //     "Driver settlement updated, but WhatsApp notification could not be sent"
+                    // );
                 }
 
                 toast.success(
@@ -2069,12 +2069,20 @@ const CreateEditDriverSettlement = ({
 
 
             if (voucherNumberResult) {
-                await dispatch(
-                    sendWhatsAppMessage({
-                        moduleType: "driverSettlement",
-                        voucherNumber: voucherNumberResult,
-                    })
-                ).unwrap();
+                try {
+                    await dispatch(
+                        sendWhatsAppMessage({
+                            moduleType: "driverSettlement",
+                            voucherNumber: voucherNumberResult,
+                        })
+                    ).unwrap();
+
+                } catch (error) {
+                    console.error(
+                        "[DriverSettlement] WhatsApp notification failed:",
+                        error
+                    );
+                }
             }
 
 

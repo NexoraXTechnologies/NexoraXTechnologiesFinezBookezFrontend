@@ -2390,8 +2390,8 @@ import {
     CheckCircle2,
     Coffee,
     CreditCard,
-    Download,
     Droplets,
+    Eye,
     Loader2,
     MoreHorizontal,
     Navigation,
@@ -2428,9 +2428,7 @@ import { formatStatusLabel } from "../../../../utils/helperFunctions";
 import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
 import {
     getAllEWayBill,
-    getEWayBillAccessToken,
-    getEWayBillFromGst,
-    printDetailEWayBill,
+    getEWayBillPdfByNumber,
 } from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
 
 
@@ -2509,7 +2507,49 @@ const deliveryStatusOptions = [
 /* ===================================================
    HELPERS
 =================================================== */
+// ⭐ YELLOW STAR: ADDED — CONVERT SAVED BASE64 PDF TO BLOB
+const base64ToPdfBlob = (
+    value: string
+) => {
+    const base64 = String(
+        value || ""
+    )
+        .replace(
+            /^data:application\/pdf;base64,/i,
+            ""
+        )
+        .replace(/\s/g, "");
 
+    if (!base64) {
+        throw new Error(
+            "Saved E-Way Bill PDF is empty"
+        );
+    }
+
+    const binary =
+        window.atob(base64);
+
+    const bytes =
+        new Uint8Array(
+            binary.length
+        );
+
+    for (
+        let index = 0;
+        index < binary.length;
+        index += 1
+    ) {
+        bytes[index] =
+            binary.charCodeAt(index);
+    }
+
+    return new Blob(
+        [bytes],
+        {
+            type: "application/pdf",
+        }
+    );
+};
 
 const normalizeTripDocKey = (value: any) =>
     String(value || "")
@@ -2670,13 +2710,29 @@ const findEwayBillForTrip = (
 const getEntryCountLabel = (count: number) =>
     `${count} ${count === 1 ? "Entry" : "Entries"}`;
 
-const unwrapThunk = async (dispatch: any, action: any) => {
-    const res = await dispatch(action);
+const unwrapThunk = async (
+    dispatch: any,
+    action: any
+) => {
+    const result = await dispatch(action);
 
-    if (res?.unwrap) return res.unwrap();
-    if (res?.error) throw res.error;
+    if (
+        result?.meta?.requestStatus ===
+        "rejected"
+    ) {
+        throw (
+            result?.payload ||
+            result?.error || {
+                message:
+                    "Request failed",
+            }
+        );
+    }
 
-    return res?.payload ?? res;
+    return (
+        result?.payload ??
+        result
+    );
 };
 
 const formatIndianNumber = (value: any) =>
@@ -3427,8 +3483,10 @@ const CreateEditTripExpence = () => {
     const [form, setForm] = useState<any>(createInitialTripExpense());
     const [loading, setLoading] = useState(false);
 
-    const [ewayBillLoading, setEwayBillLoading] = useState(false);
     const [ewayPdfUrl, setEwayPdfUrl] = useState("");
+    // @ts-ignore
+    const [ewayBillLoading, setEwayBillLoading] = useState(false);
+    // @ts-ignore
     const [ewayPdfModalVisible, setEwayPdfModalVisible] = useState(false);
     const [ewayPdfLoading, setEwayPdfLoading] = useState(false);
     const [expandedSections, setExpandedSections] = useState<any>(
@@ -4352,7 +4410,6 @@ const CreateEditTripExpence = () => {
         );
     };
 
-
     const handleViewEwayBill = async () => {
         const ewayBillNo = String(
             form.ewayBillNo || ""
@@ -4366,76 +4423,153 @@ const CreateEditTripExpence = () => {
             return;
         }
 
+        if (ewayPdfLoading) {
+            return;
+        }
+
         try {
             setEwayPdfLoading(true);
 
-            // ⭐ YELLOW STAR: GET GST E-WAY BILL ACCESS TOKEN
-            const tokenResult = await unwrapThunk(
-                dispatch,
-                getEWayBillAccessToken()
-            );
+            /* ===================================================
+               CALL ONLY SAVED PDF API
+               GET /users/eWayBill/pdf/:ewayBillNo
+            =================================================== */
 
-            // ⭐ YELLOW STAR: USE ONLY TOKEN RETURNED BY ACCESS TOKEN API
-            const gstAuthToken = String(
-                tokenResult?.authtoken ||
-                tokenResult?.data?.authtoken ||
-                tokenResult?.data?.data?.authtoken ||
-                ""
-            ).trim();
-
-            if (!gstAuthToken) {
-                throw new Error(
-                    "E-Way Bill access token was not received"
+            const savedPdfResult =
+                await unwrapThunk(
+                    dispatch,
+                    getEWayBillPdfByNumber({
+                        ewayBillNo,
+                        includeBase64: true,
+                    })
                 );
+
+            const savedPdfData =
+                savedPdfResult?.data?.data ||
+                savedPdfResult?.data ||
+                savedPdfResult ||
+                {};
+
+            let pdfBlob: Blob | null =
+                null;
+
+            /* ===================================================
+               SUPPORT API RETURNING BLOB
+            =================================================== */
+
+            if (
+                savedPdfResult instanceof Blob
+            ) {
+                pdfBlob =
+                    savedPdfResult;
+            } else if (
+                savedPdfData?.blob instanceof Blob
+            ) {
+                pdfBlob =
+                    savedPdfData.blob;
             }
 
-            // ⭐ YELLOW STAR: PASS GST TOKEN, NOT LOGIN TOKEN
-            const eWayBillDetails = await unwrapThunk(
-                dispatch,
-                getEWayBillFromGst({
-                    authtoken: gstAuthToken,
-                    ewbNo: ewayBillNo,
-                })
-            );
+            /* ===================================================
+               SUPPORT API RETURNING BASE64
+            =================================================== */
 
-            const eWayBillData =
-                eWayBillDetails?.data?.data ||
-                eWayBillDetails?.data ||
-                eWayBillDetails;
+            if (!pdfBlob) {
+                const pdfBase64 = String(
+                    savedPdfData?.pdfBase64 ||
+                    savedPdfData?.base64 ||
+                    savedPdfData?.fileBase64 ||
+                    savedPdfData?.pdf?.pdfBase64 ||
+                    savedPdfData?.document
+                        ?.pdfBase64 ||
+                    ""
+                ).trim();
 
-            if (!eWayBillData) {
-                throw new Error(
-                    "E-Way Bill details were not received"
-                );
+                if (pdfBase64) {
+                    pdfBlob =
+                        base64ToPdfBlob(
+                            pdfBase64
+                        );
+                }
             }
 
-            const pdfBlob = await unwrapThunk(
-                dispatch,
-                printDetailEWayBill({
-                    payload: eWayBillData,
-                })
-            );
+            if (!pdfBlob) {
+                throw {
+                    code:
+                        "EWAY_BILL_PDF_NOT_FOUND",
 
-            if (!(pdfBlob instanceof Blob)) {
-                throw new Error(
-                    "Invalid E-Way Bill PDF response"
-                );
+                    status:
+                        404,
+
+                    message:
+                        "Saved E-Way Bill PDF is not available",
+                };
             }
 
             if (ewayPdfUrl) {
-                URL.revokeObjectURL(ewayPdfUrl);
+                URL.revokeObjectURL(
+                    ewayPdfUrl
+                );
             }
 
             const objectUrl =
-                URL.createObjectURL(pdfBlob);
+                URL.createObjectURL(
+                    pdfBlob
+                );
 
-            setEwayPdfUrl(objectUrl);
-            setEwayPdfModalVisible(true);
+            setEwayPdfUrl(
+                objectUrl
+            );
+
+            setEwayPdfModalVisible(
+                true
+            );
         } catch (error: any) {
-            toast.error(
-                error?.message ||
+            const status = Number(
+                error?.status ||
+                error?.response?.status ||
+                error?.payload?.status ||
+                0
+            );
+
+            const code = String(
+                error?.code ||
+                error?.payload?.code ||
+                error?.response?.data?.code ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+            const errorMessage = String(
+                error?.response?.data?.message ||
                 error?.data?.message ||
                 error?.payload?.message ||
+                error?.message ||
+                ""
+            ).trim();
+
+            const isPdfNotFound =
+                status === 404 ||
+                code === "NOT_FOUND" ||
+                code === "PDF_NOT_FOUND" ||
+                code ===
+                "EWAY_BILL_PDF_NOT_FOUND" ||
+                errorMessage
+                    .toLowerCase()
+                    .includes(
+                        "pdf not found"
+                    );
+
+            if (isPdfNotFound) {
+                toast.info(
+                    `PDF is not available for E-Way Bill No. ${ewayBillNo}. Please download the E-Way Bill PDF first, then you can view it here.`
+                );
+
+                return;
+            }
+
+            toast.error(
+                errorMessage ||
                 "Unable to load E-Way Bill PDF"
             );
         } finally {
@@ -4444,124 +4578,6 @@ const CreateEditTripExpence = () => {
     };
 
 
-    // const handleUpdateVehicle = () => {
-    //     if (!form.ewayBillNo) {
-    //         toast.error("E-Way Bill not available");
-    //         return;
-    //     }
-
-    //     navigate(
-    //         `/bookEz/transportation/e-way-bill/edit/${form.ewayBillNo}`,
-    //         {
-    //             state: {
-    //                 mode: "edit",
-    //                 ewayBillNo: form.ewayBillNo,
-    //             },
-    //         }
-    //     );
-    // };
-
-    const handleDownloadEwayBill = async () => {
-        const ewayBillNo = String(
-            form.ewayBillNo || ""
-        ).trim();
-
-        if (!ewayBillNo) {
-            toast.error(
-                "E-Way Bill number is missing"
-            );
-
-            return;
-        }
-
-        try {
-            setEwayPdfLoading(true);
-
-            // ⭐ YELLOW STAR: GET GST E-WAY BILL ACCESS TOKEN
-            const tokenResult = await unwrapThunk(
-                dispatch,
-                getEWayBillAccessToken()
-            );
-
-            // ⭐ YELLOW STAR: USE ONLY TOKEN RETURNED BY ACCESS TOKEN API
-            const gstAuthToken = String(
-                tokenResult?.authtoken ||
-                tokenResult?.data?.authtoken ||
-                tokenResult?.data?.data?.authtoken ||
-                ""
-            ).trim();
-
-            if (!gstAuthToken) {
-                throw new Error(
-                    "E-Way Bill access token was not received"
-                );
-            }
-
-            // ⭐ YELLOW STAR: PASS GST TOKEN, NOT LOGIN TOKEN
-            const eWayBillDetails = await unwrapThunk(
-                dispatch,
-                getEWayBillFromGst({
-                    authtoken: gstAuthToken,
-                    ewbNo: ewayBillNo,
-                })
-            );
-
-            const eWayBillData =
-                eWayBillDetails?.data?.data ||
-                eWayBillDetails?.data ||
-                eWayBillDetails;
-
-            if (!eWayBillData) {
-                throw new Error(
-                    "E-Way Bill details were not received"
-                );
-            }
-
-            const pdfBlob = await unwrapThunk(
-                dispatch,
-                printDetailEWayBill({
-                    payload: eWayBillData,
-                })
-            );
-
-            if (!(pdfBlob instanceof Blob)) {
-                throw new Error(
-                    "Invalid E-Way Bill PDF response"
-                );
-            }
-
-            const objectUrl =
-                URL.createObjectURL(pdfBlob);
-
-            const link =
-                document.createElement("a");
-
-            link.href = objectUrl;
-
-            link.download =
-                `EWayBill_${ewayBillNo.replace(
-                    /[^a-zA-Z0-9_-]/g,
-                    ""
-                )}.pdf`;
-
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            setTimeout(() => {
-                URL.revokeObjectURL(objectUrl);
-            }, 1000);
-        } catch (error: any) {
-            toast.error(
-                error?.message ||
-                error?.data?.message ||
-                error?.payload?.message ||
-                "Unable to download E-Way Bill"
-            );
-        } finally {
-            setEwayPdfLoading(false);
-        }
-    };
     /* ===================================================
        RENDER
     =================================================== */
@@ -4677,6 +4693,32 @@ const CreateEditTripExpence = () => {
                                     />
                                 </Field>
 
+                                <Field label="E-Way Bill No">
+                                    <div className="relative">
+                                        <input
+                                            readOnly
+                                            className={`${inputClass} pr-12`}
+                                            value={form.ewayBillNo || ""}
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={handleViewEwayBill}
+                                            disabled={
+                                                ewayPdfLoading ||
+                                                !String(form.ewayBillNo || "").trim()
+                                            }
+                                            title="View E-Way Bill"
+                                            className="absolute right-1 top-1/2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {ewayPdfLoading ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </Field>
 
                                 <Field label="LR Date">
                                     <input
@@ -4687,6 +4729,8 @@ const CreateEditTripExpence = () => {
                                         onChange={(e) => patchHeader({ lrDate: e.target.value })}
                                     />
                                 </Field>
+
+
 
                                 <Field label="Vehicle No." mandatory>
                                     <input
@@ -4778,85 +4822,7 @@ const CreateEditTripExpence = () => {
                         </div>
                     </SectionCard>
 
-                    {/* ============================================
-    E-Way Bill
-============================================= */}
-
-
-                    <SectionCard
-                        index={2}
-                        title="E-Way Bill"
-                        icon={<Truck size={18} />}
-                        expanded={expandedSections.ewayBill}
-                        onToggle={() => toggleSection("ewayBill")}
-                    >
-                        {ewayBillLoading ? (
-                            <div className="flex items-center justify-center py-10">
-                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="md:col-span-1 xl:col-span-3">
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-
-                                        <Field label="E-Way Bill No">
-                                            <input
-                                                readOnly
-                                                className={inputClass}
-                                                value={form.ewayBillNo || ""}
-                                            />
-                                        </Field>
-
-                                        <Field label="E-Way Bill Date">
-                                            <input
-                                                readOnly
-                                                className={inputClass}
-                                                value={form.ewayBillDate || ""}
-                                            />
-                                        </Field>
-
-                                        <Field label="Valid Upto">
-                                            <input
-                                                readOnly
-                                                className={inputClass}
-                                                value={form.ewayBillValidUpto || ""}
-                                            />
-                                        </Field>
-
-                                        <div className="flex flex-col sm:flex-row gap-3 lg:justify-end">
-                                            {/* <button
-                                                type="button"
-                                                onClick={handleViewEwayBill}
-                                                className="h-10 w-full sm:w-auto whitespace-nowrap rounded-md border border-primary px-5 text-primary hover:bg-primary/10"
-                                            >
-                                                View E-Way Bill
-                                            </button> */}
-
-                                            <button
-                                                type="button"
-                                                onClick={handleViewEwayBill}
-                                                // disabled={ewayPdfLoading}
-                                                className="flex h-10 w-full sm:w-auto items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-5 text-white hover:bg-primary/90"
-                                            >
-                                                {ewayPdfLoading ? (
-                                                    <>
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                        loading...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Paperclip size={15} />
-                                                         View E-Way Bill
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </SectionCard>
+                  
 
                     <div
                         className={`grid grid-cols-1 gap-4 ${showVehicleStatusSection ? "xl:grid-cols-[0.75fr_1.25fr]" : ""
@@ -4920,24 +4886,7 @@ const CreateEditTripExpence = () => {
                         </div>
                     </div>
 
-                    {/* {visibleCategories.map((category: any, index: number) => (
-                        <SectionCard
-                            key={category.key}
-                            index={index + 4}
-                            title={category.title}
-                            icon={category.icon}
-                            expanded={expandedSections[category.key]}
-                            onToggle={() => toggleSection(category.key)}
-                        >
-                            <CategoryDetails
-                                category={category}
-                                form={form}
-                                setForm={setForm}
-                                readOnly={readOnly}
-                            />
-                        </SectionCard>
-                    ))} */}
-
+                  
 
                     {visibleCategories.map((category: any, index: number) => {
                         const entries = form.expenses?.[category.key]?.entries || [];
@@ -5140,79 +5089,6 @@ const CreateEditTripExpence = () => {
 
 
 
-            {ewayPdfModalVisible && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-                    <div className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-card shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                            <div>
-                                <h2 className="text-base font-bold text-card-foreground">
-                                    E-Way Bill PDF
-                                </h2>
-
-                                <p className="text-xs text-muted-foreground">
-                                    {form.ewayBillNo || "-"}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setEwayPdfModalVisible(false)
-                                }
-                                className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 bg-muted/20">
-                            {ewayPdfUrl ? (
-                                <iframe
-                                    title="E-Way Bill PDF"
-                                    src={ewayPdfUrl}
-                                    className="h-full w-full border-0"
-                                />
-                            ) : (
-                                <div className="flex h-full items-center justify-center">
-                                    <p className="text-sm text-muted-foreground">
-                                        PDF not loaded
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex justify-end gap-2 border-t border-border p-3">
-                            <button
-                                type="button"
-                                onClick={handleDownloadEwayBill}
-                                disabled={ewayPdfLoading}
-                                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-60"
-                            >
-                                {ewayPdfLoading ? (
-                                    <Loader2
-                                        size={16}
-                                        className="animate-spin"
-                                    />
-                                ) : (
-                                    <Download size={16} />
-                                )}
-
-                                Download
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setEwayPdfModalVisible(false)
-                                }
-                                className="rounded-md border border-border px-4 py-2 text-sm font-bold"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

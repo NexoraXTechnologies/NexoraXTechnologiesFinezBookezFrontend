@@ -817,6 +817,7 @@ const CreateEditEWayBill = () => {
             // (row.ewayPayload.*, row.rawResponse.*)
             await dispatch(
                 saveEWayBill({
+                    // @ts-ignore
                     ewayBillNo: genResponse.ewayBillNo,
                     voucherNumber: gstPayload.docNo,
                     authToken: authtoken,

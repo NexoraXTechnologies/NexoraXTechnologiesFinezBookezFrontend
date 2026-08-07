@@ -143,24 +143,24 @@ const RiskStep = ({ form, update,isView }: any) => {
     ];
 
     const trackingFields = [
-        {
-            key: "trackingPreferences.gpsTrackingRequired",
-            label: "GPS Tracking Required",
-            type: "checkbox",
-            // className: "md:col-span-2 xl:col-span-3",
-        },
+        // {
+        //     key: "trackingPreferences.gpsTrackingRequired",
+        //     label: "GPS Tracking Required",
+        //     type: "checkbox",
+           
+        // },
         {
             key: "trackingPreferences.podRequired",
             label: "POD Required",
             type: "checkbox",
             // className: "md:col-span-2 xl:col-span-3",
         },
-        {
-            key: "trackingPreferences.liveTrackingEnabled",
-            label: "Live Tracking Enabled",
-            type: "checkbox",
-            // className: "md:col-span-2 xl:col-span-3",
-        },
+        // {
+        //     key: "trackingPreferences.liveTrackingEnabled",
+        //     label: "Live Tracking Enabled",
+        //     type: "checkbox",
+           
+        // },
     ];
 
     const renderFields = (fields: any[]) =>

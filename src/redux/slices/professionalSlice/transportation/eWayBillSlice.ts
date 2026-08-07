@@ -1,437 +1,3 @@
-// /* ===================================================
-//     GET ALL E-Way Bills
-// =================================================== */
-
-// import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-// import axios from "axios";
-// import professionalAxios from "../../../../services/professionalAxios";
-
-
-// type EWayBillState = {
-//     limit?: number,
-//     offset?: number,
-//     search?: string,
-//     status?: string
-// }
-
-// type EWayBillSliceState = {
-//     eWayBill: any[];
-//     selectedEWayBill: any | null;
-//     pagination: any | null;
-
-//     listingLoader: boolean;
-//     detailLoader: boolean;
-//     saveLoader: boolean;
-//     accessTokenLoader: boolean;
-//     generateLoader: boolean;
-
-//     accessToken: string | null;
-//     generatedEWayBill: any | null;
-
-//     successMessage: string | null;
-//     error: string | null;
-// };
-
-// export const getAllEWayBill = createAsyncThunk(
-//     "eWayBill/getAllEWayBill",
-//     async (
-//         {
-//             limit = 10,
-//             offset = 0,
-//             search = "",
-//             status = "",
-//         }: EWayBillState = {},
-//         { rejectWithValue }
-//     ) => {
-//         try {
-//             const response = await professionalAxios.get(
-//                 "/eTaxSolnMongoApiBackend/users/eWayBill/getAll",
-//                 {
-//                     params: {
-//                         limit,
-//                         offset,
-//                         search,
-//                         status,
-
-//                     },
-//                 }
-//             );
-
-//             return response?.data || null;
-//         } catch (error: any) {
-//             return rejectWithValue({
-//                 message:
-//                     error?.response?.data?.message ||
-//                     error?.message ||
-//                     "Failed to get all E-Way Bills",
-//             });
-//         }
-//     }
-// );
-
-
-// /* ===================================================
-//     GET E-Way Bill BY VOUCHER NUMBER
-// =================================================== */
-
-// export const getEWayBillByNumber = createAsyncThunk(
-//     "driverSettlement/getEWayBillByNumber",
-//     async (eWayBillNumber: string, { rejectWithValue }) => {
-//         try {
-//             const response = await professionalAxios.get(
-//                 `/eTaxSolnMongoApiBackend/users/eWayBill/${eWayBillNumber}`
-//             );
-
-//             return response?.data || null;
-//         } catch (error: any) {
-//             return rejectWithValue({
-//                 message:
-//                     error?.response?.data?.message ||
-//                     error?.message ||
-//                     "Failed to get E-Way Bill",
-//             });
-//         }
-//     }
-// );
-
-
-// /* ===================================================
-//     SAVE E-WAY BILL
-// =================================================== */
-
-// export const saveEWayBill = createAsyncThunk(
-//     "eWayBill/saveEWayBill",
-//     async (payload: any, { rejectWithValue }) => {
-//         try {
-//             const response = await professionalAxios.post(
-//                 "/eTaxSolnMongoApiBackend/users/eWayBill/save",
-//                 payload
-//             );
-
-//             return response.data;
-//         } catch (error: any) {
-//             return rejectWithValue({
-//                 message:
-//                     error?.response?.data?.message ||
-//                     error?.message ||
-//                     "Failed to save E-Way Bill",
-//             });
-//         }
-//     }
-// );
-
-
-
-
-
-// /* ===================================================
-//     GET E-WAY BILL ACCESS TOKEN (GST API — called directly)
-// =================================================== */
-
-
-// /**
-//  * Hardcoded sandbox credentials — matches the working Postman
-//  * ACCESSTOKEN / GENEWAYBILL requests.
-//  *
-//  * TODO: Move these to env vars / a secrets store before going to production.
-//  */
-// const EWB_CREDENTIALS = {
-//     aspid: "1807712726",
-//     password: "NexoraX@1234",
-//     gstin: "34AACCC1596Q002",
-//     username: "TaxProEnvPON",
-//     ewbpwd: "abc34*",
-// };
-
-// export const getEWayBillAccessToken = createAsyncThunk(
-//     "eWayBill/getEWayBillAccessToken",
-//     async (_, { rejectWithValue }) => {
-//         try {
-//             const response = await professionalAxios.get(
-//                 "/eTaxSolnMongoApiBackend/users/bookez/eWayBill/accessToken",
-//                 {
-//                     params: {
-//                         action: "ACCESSTOKEN",
-//                         aspid: EWB_CREDENTIALS.aspid,
-//                         password: EWB_CREDENTIALS.password,
-//                         gstin: EWB_CREDENTIALS.gstin,
-//                         username: EWB_CREDENTIALS.username,
-//                         ewbpwd: EWB_CREDENTIALS.ewbpwd,
-//                     },
-//                 }
-//             );
-
-//             const responseData = response?.data?.data || response?.data;
-
-//             if (!responseData?.authtoken) {
-//                 return rejectWithValue({
-//                     message:
-//                         response?.data?.message ||
-//                         responseData?.error?.message ||
-//                         responseData?.errorMessage ||
-//                         "E-Way Bill access token was not received",
-//                 });
-//             }
-
-//             return responseData;
-//         } catch (error: any) {
-//             return rejectWithValue({
-//                 message:
-//                     error?.response?.data?.message ||
-//                     error?.response?.data?.data?.message ||
-//                     error?.message ||
-//                     "Failed to get E-Way Bill access token",
-//             });
-//         }
-//     }
-// );
-
-
-
-// export const generateEWayBill = createAsyncThunk(
-//     "eWayBill/generateEWayBill",
-//     async (
-//         {
-//             payload,
-//             authtoken,
-//         }: {
-//             payload: any;
-//             authtoken: string;
-//         },
-//         { rejectWithValue }
-//     ) => {
-//         try {
-//             if (!authtoken?.trim()) {
-//                 return rejectWithValue({
-//                     message: "E-Way Bill access token is required",
-//                 });
-//             }
-
-//             const response = await professionalAxios.post(
-//                 "/eTaxSolnMongoApiBackend/users/bookez/eWayBill/generate",
-//                 payload,
-//                 {
-//                     params: {
-//                         action: "GENEWAYBILL",
-//                         aspid: EWB_CREDENTIALS.aspid,
-//                         password: EWB_CREDENTIALS.password,
-//                         gstin: EWB_CREDENTIALS.gstin,
-//                         ewbpwd: EWB_CREDENTIALS.ewbpwd,
-//                         authtoken: authtoken.trim(),
-//                     },
-//                 }
-//             );
-
-//             return response?.data?.data || response?.data || null;
-//         } catch (error: any) {
-//             return rejectWithValue({
-//                 message:
-//                     error?.response?.data?.message ||
-//                     error?.response?.data?.data?.message ||
-//                     error?.response?.data?.error?.message ||
-//                     error?.message ||
-//                     "Failed to generate E-Way Bill",
-//             });
-//         }
-//     }
-// );
-// /* ===================================================
-//     SLICE
-// =================================================== */
-// const initialState: EWayBillSliceState = {
-//     eWayBill: [],
-//     selectedEWayBill: null,
-//     pagination: null,
-
-//     listingLoader: false,
-//     detailLoader: false,
-//     saveLoader: false,
-//     accessTokenLoader: false,
-//     generateLoader: false,
-
-//     accessToken: null,
-//     generatedEWayBill: null,
-
-//     successMessage: null,
-//     error: null,
-// };
-
-// const eWayBillSlice = createSlice({
-//     name: "eWaybill",
-//     initialState,
-//     reducers: {
-//         clearEWayBillError: (state) => {
-//             state.error = null;
-//         },
-
-//         clearSelectedEWayBill: (state) => {
-//             state.selectedEWayBill = null;
-//             state.error = null;
-//         },
-
-//         clearEWayBillSuccessMessage: (state) => {
-//             state.successMessage = null;
-//         },
-
-//         clearEWayBillState: (state) => {
-//             state.error = null;
-//             state.successMessage = null;
-//             state.selectedEWayBill = null;
-//         },
-
-//         clearGeneratedEWayBill: (state) => {
-//             state.generatedEWayBill = null;
-//             state.accessToken = null;
-//         },
-//     },
-
-//     extraReducers: (builder) => {
-//         builder
-
-//             .addCase(getAllEWayBill.pending, (state) => {
-//                 state.listingLoader = true;
-//                 state.error = null;
-//             })
-//             .addCase(getAllEWayBill.fulfilled, (state, action) => {
-//                 state.listingLoader = false;
-//                 const records = action.payload?.data?.items || [];
-//                 state.eWayBill = Array.isArray(records) ? records : [];
-//                 state.pagination = action.payload?.data?.pagination || null;
-//                 state.error = null;
-//             })
-//             .addCase(getAllEWayBill.rejected, (state, action: any) => {
-//                 state.listingLoader = false;
-//                 state.eWayBill = [];
-//                 state.pagination = null;
-//                 state.error = action.payload?.message || "Failed to get e way bill";
-//             })
-
-
-
-//             /* ===================================================
-//                           GET BY e-way-bill NUMBER
-//                        =================================================== */
-
-//             .addCase(getEWayBillByNumber.pending, (state) => {
-//                 state.detailLoader = true;
-//                 state.error = null;
-//             })
-//             .addCase(getEWayBillByNumber.fulfilled, (state, action) => {
-//                 state.detailLoader = false;
-
-//                 // ✅ Do not overwrite transportContract array here
-//                 state.selectedEWayBill = action.payload?.data || null;
-
-//                 state.error = null;
-//             })
-//             .addCase(getEWayBillByNumber.rejected, (state, action: any) => {
-//                 state.detailLoader = false;
-//                 state.selectedEWayBill = null;
-//                 state.error =
-//                     action.payload?.message || "Failed to get driver settlement";
-//             })
-
-
-//             /* ===================================================
-//         SAVE
-//     =================================================== */
-
-//             .addCase(saveEWayBill.pending, (state) => {
-//                 state.saveLoader = true;
-//                 state.error = null;
-//                 state.successMessage = null;
-//             })
-
-//             .addCase(saveEWayBill.fulfilled, (state, action: any) => {
-//                 state.saveLoader = false;
-//                 state.successMessage =
-//                     action.payload?.message ||
-//                     "E-Way Bill saved successfully.";
-//                 state.error = null;
-//             })
-
-//             .addCase(saveEWayBill.rejected, (state, action: any) => {
-//                 state.saveLoader = false;
-//                 state.error =
-//                     action.payload?.message ||
-//                     "Failed to save E-Way Bill";
-//             })
-
-
-//             /* ===================================================
-//         ACCESS TOKEN
-//     =================================================== */
-
-//             .addCase(getEWayBillAccessToken.pending, (state) => {
-//                 state.accessTokenLoader = true;
-//                 state.error = null;
-//             })
-
-//             .addCase(getEWayBillAccessToken.fulfilled, (state, action: any) => {
-//                 state.accessTokenLoader = false;
-//                 state.accessToken = action.payload?.authtoken || null;
-//                 state.error = null;
-//             })
-
-//             .addCase(getEWayBillAccessToken.rejected, (state, action: any) => {
-//                 state.accessTokenLoader = false;
-//                 state.accessToken = null;
-//                 state.error =
-//                     action.payload?.message ||
-//                     "Failed to get e-way bill access token";
-//             })
-
-
-//             /* ===================================================
-//         GENERATE
-//     =================================================== */
-
-//             .addCase(generateEWayBill.pending, (state) => {
-//                 state.generateLoader = true;
-//                 state.error = null;
-//             })
-
-//             .addCase(generateEWayBill.fulfilled, (state, action: any) => {
-//                 state.generateLoader = false;
-//                 state.generatedEWayBill = action.payload || null;
-//                 state.error = null;
-//             })
-
-//             .addCase(generateEWayBill.rejected, (state, action: any) => {
-//                 state.generateLoader = false;
-//                 state.generatedEWayBill = null;
-//                 state.error =
-//                     action.payload?.message ||
-//                     "Failed to generate E-Way Bill";
-//             })
-//     }
-// })
-
-// export const {
-//     clearEWayBillError,
-//     clearSelectedEWayBill,
-//     clearEWayBillSuccessMessage,
-//     clearEWayBillState,
-//     clearGeneratedEWayBill,
-// } = eWayBillSlice.actions;
-
-// export default eWayBillSlice.reducer;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ===================================================
     GET ALL E-Way Bills
 =================================================== */
@@ -488,6 +54,11 @@ type EWayBillSliceState = {
     saveLoader: boolean;
     accessTokenLoader: boolean;
     generateLoader: boolean;
+    updateLoader: boolean;
+
+    pdfSaveLoader: boolean;
+    pdfListingLoader: boolean;
+    pdfDownloadLoader: boolean;
 
     // ⭐ YELLOW STAR: ADDED — GST GET E-WAY BILL LOADER
     getEWayBillFromGstLoader: boolean;
@@ -504,9 +75,39 @@ type EWayBillSliceState = {
     // ⭐ YELLOW STAR: ADDED — PRINT DETAIL PDF
     printDetailEWayBillPdf: Blob | null;
 
+    eWayBillPdfRecords: any[];
+    eWayBillPdfPagination: any | null;
+    selectedEWayBillPdf: any | null;
+
     successMessage: string | null;
     error: string | null;
 };
+
+
+
+type UpdateEWayBillPayload = {
+    id: string;
+    payload: any;
+};
+
+
+/* ===================================================
+    E-WAY BILL PDF TYPES
+=================================================== */
+
+type SaveEWayBillPdfPayload = {
+    payload: any;
+};
+
+type GetAllEWayBillPdfParams = {
+    offset?: number;
+    limit?: number;
+    search?: string;
+};
+
+// type GetEWayBillPdfByNumberPayload = {
+//     ewayBillNo: string | number;
+// };
 
 export const getAllEWayBill = createAsyncThunk(
     "eWayBill/getAllEWayBill",
@@ -575,28 +176,120 @@ export const getEWayBillByNumber = createAsyncThunk(
     SAVE E-WAY BILL
 =================================================== */
 
+// export const saveEWayBill = createAsyncThunk(
+//     "eWayBill/saveEWayBill",
+//     async (payload: any, { rejectWithValue }) => {
+//         try {
+//             const response = await professionalAxios.post(
+//                 "/eTaxSolnMongoApiBackend/users/eWayBill/save",
+//                 payload
+//             );
+
+//             return response.data;
+//         } catch (error: any) {
+//             return rejectWithValue({
+//                 message:
+//                     error?.response?.data?.message ||
+//                     error?.message ||
+//                     "Failed to save E-Way Bill",
+//             });
+//         }
+//     }
+// );
+
+type SaveEWayBillPayload = {
+    payload: any;
+};
+
 export const saveEWayBill = createAsyncThunk(
     "eWayBill/saveEWayBill",
-    async (payload: any, { rejectWithValue }) => {
+    async (
+        {
+            payload,
+        }: SaveEWayBillPayload,
+        {
+            rejectWithValue,
+        }
+    ) => {
         try {
-            const response = await professionalAxios.post(
-                "/eTaxSolnMongoApiBackend/users/eWayBill/save",
-                payload
-            );
+            if (
+                !payload ||
+                typeof payload !== "object"
+            ) {
+                return rejectWithValue({
+                    message:
+                        "E-Way Bill payload is required",
+                });
+            }
 
-            return response.data;
+            const response =
+                await professionalAxios.post(
+                    "/eTaxSolnMongoApiBackend/users/eWayBill/save",
+
+                    // ⭐ YELLOW STAR: COMPLETE DYNAMIC E-WAY BILL JSON BODY
+                    payload,
+
+                    {
+                        // ⭐ YELLOW STAR: ACCESS-TOKEN CREDENTIALS IN QUERY PARAMS
+                        params: {
+                            action:
+                                "ACCESSTOKEN",
+
+                            aspid:
+                                EWB_CREDENTIALS.aspid,
+
+                            password:
+                                EWB_CREDENTIALS.password,
+
+                            gstin:
+                                EWB_CREDENTIALS.gstin,
+
+                            username:
+                                EWB_CREDENTIALS.username,
+
+                            ewbpwd:
+                                EWB_CREDENTIALS.ewbpwd,
+                        },
+                    }
+                );
+
+            return (
+                response?.data ||
+                null
+            );
         } catch (error: any) {
+            const responseData =
+                error?.response?.data;
+
+            const errorMessage =
+                responseData?.error?.error?.message ||
+                responseData?.error?.message ||
+                responseData?.data?.error?.error?.message ||
+                responseData?.data?.error?.message ||
+                responseData?.data?.message ||
+                responseData?.message ||
+                responseData?.errorMessage ||
+                error?.message ||
+                "Failed to save E-Way Bill";
+
             return rejectWithValue({
                 message:
-                    error?.response?.data?.message ||
-                    error?.message ||
-                    "Failed to save E-Way Bill",
+                    errorMessage,
+
+                code:
+                    responseData?.code ||
+                    responseData?.error?.error?.error_cd ||
+                    responseData?.error?.error_cd ||
+                    "",
+
+                error:
+                    responseData?.error ||
+                    responseData ||
+                    null,
             });
         }
     }
 );
-
-
 
 
 
@@ -845,6 +538,85 @@ export const getEWayBillFromGst = createAsyncThunk(
 );
 
 
+/* ===================================================
+    UPDATE E-WAY BILL BY ID
+=================================================== */
+
+// ⭐ YELLOW STAR: ADDED — UPDATE SAVED E-WAY BILL
+
+export const updateEWayBill = createAsyncThunk(
+    "eWayBill/updateEWayBill",
+    async (
+        {
+            id,
+            payload,
+        }: UpdateEWayBillPayload,
+        { rejectWithValue }
+    ) => {
+        try {
+            const normalizedId = String(
+                id || ""
+            ).trim();
+
+            if (!normalizedId) {
+                return rejectWithValue({
+                    message:
+                        "E-Way Bill document ID is required",
+                });
+            }
+
+            if (
+                !payload ||
+                typeof payload !== "object"
+            ) {
+                return rejectWithValue({
+                    message:
+                        "E-Way Bill update payload is required",
+                });
+            }
+
+            const response =
+                await professionalAxios.put(
+                    `/eTaxSolnMongoApiBackend/users/eWayBill/update/${normalizedId}`,
+                    payload
+                );
+
+            return (
+                response?.data ||
+                null
+            );
+        } catch (error: any) {
+            const responseData =
+                error?.response?.data;
+
+            const errorMessage =
+                responseData?.error?.error?.message ||
+                responseData?.error?.message ||
+                responseData?.data?.error?.message ||
+                responseData?.data?.message ||
+                responseData?.message ||
+                responseData?.errorMessage ||
+                error?.message ||
+                "Failed to update E-Way Bill";
+
+            return rejectWithValue({
+                message:
+                    errorMessage,
+
+                code:
+                    responseData?.code ||
+                    responseData?.error?.error?.error_cd ||
+                    responseData?.error?.error_cd ||
+                    "",
+
+                error:
+                    responseData?.error ||
+                    responseData ||
+                    null,
+            });
+        }
+    }
+);
 
 
 
@@ -1445,6 +1217,210 @@ export const printDetailEWayBill = createAsyncThunk(
 );
 
 
+
+
+/* ===================================================
+    SAVE E-WAY BILL PDF
+=================================================== */
+
+// ⭐ YELLOW STAR: ADDED — SAVE E-WAY BILL PDF
+
+export const saveEWayBillPdf = createAsyncThunk(
+    "eWayBill/saveEWayBillPdf",
+    async (
+        {
+            payload,
+        }: SaveEWayBillPdfPayload,
+        { rejectWithValue }
+    ) => {
+        try {
+            if (
+                !payload ||
+                typeof payload !== "object"
+            ) {
+                return rejectWithValue({
+                    message:
+                        "E-Way Bill PDF payload is required",
+                });
+            }
+
+            const response =
+                await professionalAxios.post(
+                    "/eTaxSolnMongoApiBackend/users/eWayBill/pdf/save",
+                    payload
+                );
+
+            return (
+                response?.data?.data ||
+                response?.data ||
+                null
+            );
+        } catch (error: any) {
+            const responseData =
+                error?.response?.data;
+
+            const errorMessage =
+                responseData?.error?.error?.message ||
+                responseData?.error?.message ||
+                responseData?.data?.error?.error?.message ||
+                responseData?.data?.error?.message ||
+                responseData?.data?.message ||
+                responseData?.message ||
+                responseData?.errorMessage ||
+                error?.message ||
+                "Failed to save E-Way Bill PDF";
+
+            return rejectWithValue({
+                message: errorMessage,
+
+                code:
+                    responseData?.code ||
+                    responseData?.error?.error?.error_cd ||
+                    responseData?.error?.error_cd ||
+                    "",
+
+                error:
+                    responseData?.error ||
+                    responseData ||
+                    null,
+            });
+        }
+    }
+);
+
+
+
+/* ===================================================
+    GET ALL E-WAY BILL PDF RECORDS
+=================================================== */
+
+// ⭐ YELLOW STAR: ADDED — GET ALL SAVED E-WAY BILL PDFS
+
+export const getAllEWayBillPdf = createAsyncThunk(
+    "eWayBill/getAllEWayBillPdf",
+    async (
+        {
+            offset = 0,
+            limit = 20,
+            search = "",
+        }: GetAllEWayBillPdfParams = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const response =
+                await professionalAxios.get(
+                    "/eTaxSolnMongoApiBackend/users/eWayBill/pdf/getAll",
+                    {
+                        params: {
+                            offset,
+                            limit,
+                            ...(String(search || "").trim()
+                                ? {
+                                    search:
+                                        String(
+                                            search
+                                        ).trim(),
+                                }
+                                : {}),
+                        },
+                    }
+                );
+
+            return (
+                response?.data?.data ||
+                response?.data ||
+                null
+            );
+        } catch (error: any) {
+            const responseData =
+                error?.response?.data;
+
+            const errorMessage =
+                responseData?.error?.error?.message ||
+                responseData?.error?.message ||
+                responseData?.data?.error?.error?.message ||
+                responseData?.data?.error?.message ||
+                responseData?.data?.message ||
+                responseData?.message ||
+                responseData?.errorMessage ||
+                error?.message ||
+                "Failed to get saved E-Way Bill PDFs";
+
+            return rejectWithValue({
+                message: errorMessage,
+
+                code:
+                    responseData?.code ||
+                    responseData?.error?.error?.error_cd ||
+                    responseData?.error?.error_cd ||
+                    "",
+
+                error:
+                    responseData?.error ||
+                    responseData ||
+                    null,
+            });
+        }
+    }
+);
+
+
+
+/* ===================================================
+    GET E-WAY BILL PDF BY NUMBER
+=================================================== */
+
+// ⭐ YELLOW STAR: ADDED — GET SAVED PDF BY E-WAY BILL NUMBER
+
+export const getEWayBillPdfByNumber = createAsyncThunk(
+    "eWayBill/getEWayBillPdfByNumber",
+    async (
+        {
+            ewayBillNo,
+            includeBase64 = true,
+        }: {
+            ewayBillNo: string | number;
+            includeBase64?: boolean;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const response =
+                await professionalAxios.get(
+                    `/eTaxSolnMongoApiBackend/users/eWayBill/pdf/${encodeURIComponent(
+                        String(ewayBillNo).trim()
+                    )}`,
+                    {
+                        params: {
+                            includeBase64,
+                        },
+                    }
+                );
+
+            return response?.data || null;
+        } catch (error: any) {
+            return rejectWithValue({
+                message:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "E-Way Bill PDF not found",
+
+                code:
+                    error?.response?.data?.code ||
+                    "",
+
+                status:
+                    error?.response?.status ||
+                    0,
+            });
+        }
+    }
+);
+
+
+
+
+
 /* ===================================================
     SLICE
 =================================================== */
@@ -1464,12 +1440,21 @@ const initialState: EWayBillSliceState = {
     extendValidityLoader: false,
     multiVehicleUpdateLoader: false,
     actionResult: null,
+    updateLoader: false,
 
     // ⭐ YELLOW STAR: ADDED — GST GET E-WAY BILL LOADER
     getEWayBillFromGstLoader: false,
 
     // ⭐ YELLOW STAR: ADDED — PRINT DETAIL E-WAY BILL LOADER
     printDetailEWayBillLoader: false,
+    pdfSaveLoader: false,
+    pdfListingLoader: false,
+    pdfDownloadLoader: false,
+
+
+    eWayBillPdfRecords: [],
+    eWayBillPdfPagination: null,
+    selectedEWayBillPdf: null,
 
     accessToken: null,
     generatedEWayBill: null,
@@ -1704,6 +1689,211 @@ const eWayBillSlice = createSlice({
 
 
             /* ===================================================
+    SAVE E-WAY BILL PDF
+=================================================== */
+
+            .addCase(
+                saveEWayBillPdf.pending,
+                (state) => {
+                    state.pdfSaveLoader =
+                        true;
+
+                    state.successMessage =
+                        null;
+
+                    state.error =
+                        null;
+                }
+            )
+
+            .addCase(
+                saveEWayBillPdf.fulfilled,
+                (state, action: any) => {
+                    state.pdfSaveLoader =
+                        false;
+
+                    const savedPdfRecord =
+                        action.payload?.record ||
+                        action.payload?.item ||
+                        action.payload?.data ||
+                        action.payload ||
+                        null;
+
+                    if (savedPdfRecord) {
+                        state.selectedEWayBillPdf =
+                            savedPdfRecord;
+                    }
+
+                    state.successMessage =
+                        action.payload?.message ||
+                        "E-Way Bill PDF saved successfully.";
+
+                    state.error =
+                        null;
+                }
+            )
+
+            .addCase(
+                saveEWayBillPdf.rejected,
+                (state, action: any) => {
+                    state.pdfSaveLoader =
+                        false;
+
+                    state.error =
+                        action.payload?.message ||
+                        "Failed to save E-Way Bill PDF";
+                }
+            )
+
+
+            /* ===================================================
+                GET ALL E-WAY BILL PDF RECORDS
+            =================================================== */
+
+            .addCase(
+                getAllEWayBillPdf.pending,
+                (state) => {
+                    state.pdfListingLoader =
+                        true;
+
+                    state.error =
+                        null;
+                }
+            )
+
+            .addCase(
+                getAllEWayBillPdf.fulfilled,
+                (state, action: any) => {
+                    state.pdfListingLoader =
+                        false;
+
+                    const responseData =
+                        action.payload || {};
+
+                    const records =
+                        responseData?.records ||
+                        responseData?.items ||
+                        responseData?.data?.records ||
+                        responseData?.data?.items ||
+                        responseData?.data ||
+                        [];
+
+                    state.eWayBillPdfRecords =
+                        Array.isArray(records)
+                            ? records
+                            : [];
+
+                    state.eWayBillPdfPagination =
+                        responseData?.pagination ||
+                        responseData?.data?.pagination ||
+                        {
+                            offset:
+                                responseData?.offset ??
+                                0,
+
+                            limit:
+                                responseData?.limit ??
+                                20,
+
+                            totalDocs:
+                                responseData?.totalDocs ??
+                                responseData?.totalRecords ??
+                                (
+                                    Array.isArray(
+                                        records
+                                    )
+                                        ? records.length
+                                        : 0
+                                ),
+
+                            totalPages:
+                                responseData?.totalPages ??
+                                1,
+
+                            hasNextPage:
+                                Boolean(
+                                    responseData
+                                        ?.hasNextPage
+                                ),
+
+                            hasPrevPage:
+                                Boolean(
+                                    responseData
+                                        ?.hasPrevPage
+                                ),
+                        };
+
+                    state.error =
+                        null;
+                }
+            )
+
+            .addCase(
+                getAllEWayBillPdf.rejected,
+                (state, action: any) => {
+                    state.pdfListingLoader =
+                        false;
+
+                    state.eWayBillPdfRecords =
+                        [];
+
+                    state.error =
+                        action.payload?.message ||
+                        "Failed to get saved E-Way Bill PDFs";
+                }
+            )
+
+
+            /* ===================================================
+                GET E-WAY BILL PDF BY NUMBER
+            =================================================== */
+
+            .addCase(
+                getEWayBillPdfByNumber.pending,
+                (state) => {
+                    state.pdfDownloadLoader =
+                        true;
+
+                    state.selectedEWayBillPdf =
+                        null;
+
+                    state.error =
+                        null;
+                }
+            )
+
+            .addCase(
+                getEWayBillPdfByNumber.fulfilled,
+                (state, action: any) => {
+                    state.pdfDownloadLoader =
+                        false;
+
+                    state.selectedEWayBillPdf =
+                        action.payload ||
+                        null;
+
+                    state.error =
+                        null;
+                }
+            )
+
+            .addCase(
+                getEWayBillPdfByNumber.rejected,
+                (state, action: any) => {
+                    state.pdfDownloadLoader =
+                        false;
+
+                    state.selectedEWayBillPdf =
+                        null;
+
+                    state.error =
+                        action.payload?.message ||
+                        "Failed to get saved E-Way Bill PDF";
+                }
+            )
+
+
+            /* ===================================================
     REJECT E-WAY BILL
 =================================================== */
 
@@ -1839,6 +2029,112 @@ const eWayBillSlice = createSlice({
                     state.error =
                         action.payload?.message ||
                         "Failed to update E-Way Bill vehicle";
+                }
+            )
+
+
+
+            /* ===================================================
+                UPDATE E-WAY BILL
+            =================================================== */
+
+            // ⭐ YELLOW STAR: ADDED — UPDATE SAVED E-WAY BILL
+
+            .addCase(
+                updateEWayBill.pending,
+                (state) => {
+                    state.updateLoader = true;
+                    state.successMessage = null;
+                    state.error = null;
+                }
+            )
+
+            .addCase(
+                updateEWayBill.fulfilled,
+                (state, action: any) => {
+                    state.updateLoader = false;
+
+                    const updatedRecord =
+                        action.payload?.data?.record ||
+                        action.payload?.data?.item ||
+                        action.payload?.data ||
+                        action.payload?.record ||
+                        action.payload?.item ||
+                        null;
+
+                    if (updatedRecord) {
+                        const updatedId = String(
+                            updatedRecord?._id ||
+                            updatedRecord?.documentId ||
+                            ""
+                        );
+
+                        const updatedEwayBillNo =
+                            String(
+                                updatedRecord?.ewayBillNo ||
+                                updatedRecord?.ewayPayload
+                                    ?.ewayBillNo ||
+                                ""
+                            );
+
+                        state.eWayBill =
+                            state.eWayBill.map(
+                                (item: any) => {
+                                    const itemId = String(
+                                        item?._id ||
+                                        item?.documentId ||
+                                        ""
+                                    );
+
+                                    const itemEwayBillNo =
+                                        String(
+                                            item?.ewayBillNo ||
+                                            item?.ewayPayload
+                                                ?.ewayBillNo ||
+                                            ""
+                                        );
+
+                                    const isSameRecord =
+                                        (
+                                            updatedId &&
+                                            itemId ===
+                                            updatedId
+                                        ) ||
+                                        (
+                                            updatedEwayBillNo &&
+                                            itemEwayBillNo ===
+                                            updatedEwayBillNo
+                                        );
+
+                                    return isSameRecord
+                                        ? {
+                                            ...item,
+                                            ...updatedRecord,
+                                        }
+                                        : item;
+                                }
+                            );
+
+                        state.selectedEWayBill =
+                            updatedRecord;
+                    }
+
+                    state.successMessage =
+                        action.payload?.message ||
+                        "E-Way Bill updated successfully.";
+
+                    state.error = null;
+                }
+            )
+
+            .addCase(
+                updateEWayBill.rejected,
+                (state, action: any) => {
+                    state.updateLoader = false;
+
+                    state.error =
+                        action.payload?.message ||
+                        "Failed to update E-Way Bill";
                 }
             )
     }
