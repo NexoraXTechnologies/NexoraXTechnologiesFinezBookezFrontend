@@ -8,94 +8,51 @@ import Pagination from "../../../../components/pagination";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
 
 import {
-    getTripAllocationByVoucherNumber,
-} from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
-
-import { getTripAllocationRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/tripAllocationRegister";
-
-import {
-    formatDateForInput,
-    money,
     toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
-    truncate,
 } from "../../../../utils/helperFunctions";
-import CreateTripAllocation from "../../transportation/tripAllocation/CreateTripAllocation";
 
+import { addTripLrEntry } from "../../../../redux/slices/professionalSlice/bookEzRegister/tripLrEntryRegister";
+
+import {
+    getTripLRCollectionByVoucherNumber,
+} from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
+
+import CreateViewTripLREntry from "./CreateViewTripLREntry";
 
 type ExportType = "pdf" | "excel" | "";
 
 type RegisterPayload = {
     fromDate: string;
     toDate: string;
+    customerCode?: string;
+    productCode?: string;
+    customCodes?: string[];
+    selectedColumns?: string[];
     offset: number;
     limit: number;
     exportType: ExportType;
 };
 
-const getAllocationVoucher = (row: any): string =>
+const getLRVoucher = (row: any): string =>
+    row?.lrNumber ||
     row?.voucherNumber ||
-    row?.tripAllocationVoucherNumber ||
-    row?.tripNumber ||
-    row?.allocationNumber ||
+    row?.lrVoucherNumber ||
+    row?.tripLRVoucherNumber ||
     "";
 
-const normalizeAllocationStatus = (status: any): string => {
-    const key = String(status || "")
-        .trim()
-        .toLowerCase()
-        .replace(/[\s-]+/g, "_");
-
-    if (key === "complete" || key === "completed") return "completed";
-    if (key === "cancelled" || key === "canceled") return "cancelled";
-
-    return key || "pending";
-};
-
-const getStatusLabel = (row: any): string => {
-    const status = normalizeAllocationStatus(
-        row?.tripStatus ||
-        row?.allocationStatus ||
-        row?.status,
-    );
-
-    return status
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (character) => character.toUpperCase());
-};
-
-const getStatusClassName = (status: string): string => {
-    const key = normalizeAllocationStatus(status);
-
-    if (key === "completed") {
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400";
-    }
-
-    if (key === "cancelled") {
-        return "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400";
-    }
-
-    if (
-        key === "in_transit" ||
-        key === "loading" ||
-        key === "unloading"
-    ) {
-        return "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400";
-    }
-
-    return "bg-amber-100 text-amber-700 dark:bg-amber-300/15 dark:text-amber-400";
-};
-
-const getAllocationFromResponse = (
+const getLRFromResponse = (
     response: any,
-    voucherNumber: string,
+    voucherNumber: string
 ): any | null => {
-    const directCandidates = [
-        response?.tripAllocation,
-        response?.data?.tripAllocation,
-        response?.allocation,
-        response?.data?.allocation,
+    const candidates = [
+        response?.lr,
+        response?.data?.lr,
+        response?.tripLR,
+        response?.data?.tripLR,
+        response?.tripLRCollection,
+        response?.data?.tripLRCollection,
         response?.record,
         response?.data?.record,
         response?.data?.data,
@@ -103,60 +60,72 @@ const getAllocationFromResponse = (
         response,
     ];
 
-    for (const item of directCandidates) {
+    for (const candidate of candidates) {
         if (
-            !item ||
-            typeof item !== "object" ||
-            Array.isArray(item)
+            !candidate ||
+            typeof candidate !== "object" ||
+            Array.isArray(candidate)
         ) {
             continue;
         }
 
-        const foundVoucher =
-            getAllocationVoucher(item);
+        const foundVoucher = getLRVoucher(candidate);
 
         if (
             !foundVoucher ||
             foundVoucher === voucherNumber
         ) {
-            return item;
+            return candidate;
         }
     }
 
     const records = Array.isArray(response)
         ? response
-        : Array.isArray(response?.records)
-            ? response.records
-            : Array.isArray(response?.allocations)
-                ? response.allocations
-                : Array.isArray(response?.data?.records)
-                    ? response.data.records
-                    : Array.isArray(response?.data?.allocations)
-                        ? response.data.allocations
+        : Array.isArray(response?.lrs)
+            ? response.lrs
+            : Array.isArray(response?.data?.lrs)
+                ? response.data.lrs
+                : Array.isArray(response?.records)
+                    ? response.records
+                    : Array.isArray(response?.data?.records)
+                        ? response.data.records
                         : [];
 
     return (
         records.find(
             (item: any) =>
-                getAllocationVoucher(item) === voucherNumber
+                getLRVoucher(item) === voucherNumber
         ) ||
         records[0] ||
         null
     );
 };
 
-const getBlobFromResponse = (response: any): Blob | null => {
-    if (response instanceof Blob) return response;
-    if (response?.blob instanceof Blob) return response.blob;
-    if (response?.data instanceof Blob) return response.data;
-    if (response?.data?.blob instanceof Blob) return response.data.blob;
+const getBlobFromResponse = (
+    response: any
+): Blob | null => {
+    if (response instanceof Blob) {
+        return response;
+    }
+
+    if (response?.blob instanceof Blob) {
+        return response.blob;
+    }
+
+    if (response?.data instanceof Blob) {
+        return response.data;
+    }
+
+    if (response?.data?.blob instanceof Blob) {
+        return response.data.blob;
+    }
 
     return null;
 };
 
 const downloadBlobFile = (
     blob: Blob,
-    fileName: string,
+    fileName: string
 ) => {
     const url =
         window.URL.createObjectURL(blob);
@@ -177,31 +146,22 @@ const downloadBlobFile = (
 
 const mainColumns = [
     {
-        key: "tripAllocationVoucherNumber",
-        title: "Allocation No.",
+        key: "lrNumber",
+        title: "LR No.",
         render: (row: any) => (
             <span className="font-medium text-card-foreground">
-                {getAllocationVoucher(row) || "-"}
+                {row?.lrNumber || "-"}
             </span>
         ),
     },
     {
-        key: "allocationDate",
+        key: "lrDate",
         title: "Date",
-        render: (row: any) =>
-            formatDateForInput(
-                row?.allocationDate ||
-                row?.createdAt
-            ),
-    },
-    {
-        key: "transportOrderNumber",
-        title: "Transport Order",
         render: (row: any) => (
-            <span className="font-medium text-card-foreground">
-                {row?.transportOrder?.transportOrderNumber ||
-                    row?.transportOrderNumber ||
-                    "-"}
+            <span className="whitespace-nowrap">
+                {row?.lrDate
+                    ? new Date(row.lrDate).toLocaleDateString("en-IN")
+                    : "-"}
             </span>
         ),
     },
@@ -211,35 +171,14 @@ const mainColumns = [
         render: (row: any) => (
             <div>
                 <div className="font-medium text-card-foreground">
-                    {row?.transportOrder?.customerName ||
-                        row?.customerName ||
-                        "-"}
+                    {row?.customer?.customerName || "-"}
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                    {row?.transportOrder?.customerCode ||
-                        row?.customerCode ||
-                        "-"}
+                    {row?.customer?.customerCode || "-"}
                 </div>
             </div>
         ),
-    },
-    {
-        key: "route",
-        title: "Route",
-        render: (row: any) => {
-            const source =
-                row?.transportOrder?.source ||
-                row?.source ||
-                "-";
-
-            const destination =
-                row?.transportOrder?.destination ||
-                row?.destination ||
-                "-";
-
-            return `${truncate(source, 18)} → ${truncate(destination, 18)}`;
-        },
     },
     {
         key: "vehicleNumber",
@@ -247,54 +186,76 @@ const mainColumns = [
         render: (row: any) => (
             <div>
                 <div className="font-medium text-card-foreground">
-                    {row?.vehicleSelection?.vehicleNumber || "-"}
+                    {row?.vehicle?.vehicleNumber || "-"}
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                    {row?.driverAllocation?.driverName || "-"}
+                    {row?.vehicle?.vehicleType || "-"}
                 </div>
             </div>
         ),
     },
     {
-        key: "expectedFreight",
-        title: "Expected Freight",
-        type: "amount",
+        key: "source",
+        title: "Source",
         render: (row: any) => (
-            <span className="whitespace-nowrap font-medium text-card-foreground">
-                {money(
-                    row?.transportOrder?.expectedFreight || 0
-                )}
-            </span>
+            <div>
+                <div>
+                    {row?.consignor?.location?.city ||
+                        row?.route?.source ||
+                        "-"}
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                    {row?.consignor?.location?.state || "-"}
+                </div>
+            </div>
         ),
     },
     {
-        key: "tripStatus",
-        title: "Status",
-        render: (row: any) => {
-            const label =
-                getStatusLabel(row);
+        key: "destination",
+        title: "Destination",
+        render: (row: any) => (
+            <div>
+                <div>
+                    {row?.consignee?.location?.city ||
+                        row?.route?.destination ||
+                        "-"}
+                </div>
 
-            return (
-                <span
-                    className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium capitalize ${getStatusClassName(
-                        label,
-                    )}`}
-                >
-                    {label}
-                </span>
-            );
-        },
+                <div className="text-xs text-muted-foreground">
+                    {row?.consignee?.location?.state || "-"}
+                </div>
+            </div>
+        ),
+    },
+    {
+        key: "driver",
+        title: "Driver",
+        render: (row: any) => (
+            <div>
+                <div className="font-medium text-card-foreground">
+                    {row?.driver?.driverName || "-"}
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                    {row?.driver?.driverCode || "-"}
+                </div>
+            </div>
+        ),
     },
 ];
 
-const TripAllocationRegister = () => {
+const TripLrEntryRegister = () => {
     const dispatch = useDispatch<any>();
 
-    const [fromDate, setFromDate] =
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+
+    const [customerCode, setCustomerCode] =
         useState("");
 
-    const [toDate, setToDate] =
+    const [productCode, setProductCode] =
         useState("");
 
     const [localOffset, setLocalOffset] =
@@ -312,10 +273,10 @@ const TripAllocationRegister = () => {
     const [excelLoading, setExcelLoading] =
         useState(false);
 
-    const [openingVoucher, setOpeningVoucher] =
+    const [dateError, setDateError] =
         useState("");
 
-    const [dateError, setDateError] =
+    const [openingVoucher, setOpeningVoucher] =
         useState("");
 
     const [viewModal, setViewModal] =
@@ -324,7 +285,7 @@ const TripAllocationRegister = () => {
     const [viewLoading, setViewLoading] =
         useState(false);
 
-    const [viewAllocation, setViewAllocation] =
+    const [viewLRData, setViewLRData] =
         useState<any>(null);
 
     const [viewVoucherNumber, setViewVoucherNumber] =
@@ -334,36 +295,37 @@ const TripAllocationRegister = () => {
         useState("");
 
     const {
-        tripAllocationRegisterData = [],
+        tripLrRegisterData = [],
         pagination: registerPagination = {},
-        listingLoader: registerLoader = false,
+        listingLoader = false,
+        addLoader = false,
         error: registerError = null,
     } = useSelector(
         (state: any) =>
-            state.tripAllocationRegister || {}
+            state.tripLrEntryRegister || {}
     );
 
     const {
         detailLoader = false,
     } = useSelector(
         (state: any) =>
-            state.tripAllocation || {}
+            state.tripLRCollection || {}
     );
 
     const tableData = useMemo(() => {
         return Array.isArray(
-            tripAllocationRegisterData
+            tripLrRegisterData
         )
-            ? tripAllocationRegisterData
+            ? tripLrRegisterData
             : [];
-    }, [tripAllocationRegisterData]);
+    }, [tripLrRegisterData]);
 
-    const currentPagination = useMemo(() => {
-        return registerPagination || {};
-    }, [registerPagination]);
+    const currentPagination =
+        useMemo(() => {
+            return registerPagination || {};
+        }, [registerPagination]);
 
-    const hasRegisterData =
-        tableData.length > 0;
+    const hasRegisterData = tableData.length > 0;
 
     const validateDates = (): boolean => {
         if (!fromDate && !toDate) {
@@ -372,26 +334,16 @@ const TripAllocationRegister = () => {
         }
 
         if (!fromDate || !toDate) {
-            setDateError(
-                "Please select both From Date and To Date."
-            );
-
+            setDateError("Please select both From Date and To Date.");
             return false;
         }
 
-        if (
-            new Date(fromDate).getTime() >
-            new Date(toDate).getTime()
-        ) {
-            setDateError(
-                "From Date cannot be greater than To Date."
-            );
-
+        if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
+            setDateError("From Date cannot be greater than To Date.");
             return false;
         }
 
         setDateError("");
-
         return true;
     };
 
@@ -400,40 +352,31 @@ const TripAllocationRegister = () => {
     ): RegisterPayload => ({
         fromDate: fromDate || "",
         toDate: toDate || "",
-        offset:
-            exportType
-                ? 0
-                : localOffset,
+        customerCode: customerCode || undefined,
+        productCode: productCode || undefined,
+        offset: exportType ? 0 : localOffset,
         limit: localLimit,
         exportType,
     });
 
     useEffect(() => {
-        if (
-            (fromDate && !toDate) ||
-            (!fromDate && toDate)
-        ) {
-            return;
-        }
+        if ((fromDate && !toDate) || (!fromDate && toDate)) return;
 
         if (
             fromDate &&
             toDate &&
-            new Date(fromDate).getTime() >
-            new Date(toDate).getTime()
+            new Date(fromDate).getTime() > new Date(toDate).getTime()
         ) {
             return;
         }
 
-        dispatch(
-            getTripAllocationRegister(
-                getPayload()
-            )
-        );
+        dispatch(addTripLrEntry(getPayload()));
     }, [
         dispatch,
         fromDate,
         toDate,
+        customerCode,
+        productCode,
         localOffset,
         localLimit,
         refreshKey,
@@ -456,12 +399,10 @@ const TripAllocationRegister = () => {
         setDateError("");
         setFromDate("");
         setToDate("");
+        setCustomerCode("");
+        setProductCode("");
         setLocalOffset(0);
-
-        setRefreshKey(
-            (previous) =>
-                previous + 1
-        );
+        setRefreshKey((previous) => previous + 1);
     };
 
     const handleDownloadPdf =
@@ -479,7 +420,7 @@ const TripAllocationRegister = () => {
 
                 const response =
                     await dispatch(
-                        getTripAllocationRegister(
+                        addTripLrEntry(
                             getPayload("pdf")
                         )
                     ).unwrap();
@@ -492,12 +433,12 @@ const TripAllocationRegister = () => {
                 if (blob) {
                     downloadBlobFile(
                         blob,
-                        "trip-allocation-register.pdf"
+                        "trip-lr-register.pdf"
                     );
                 }
             } catch (error) {
                 console.log(
-                    "Trip Allocation Register PDF download failed",
+                    "Trip LR Register PDF download failed",
                     error
                 );
             } finally {
@@ -520,7 +461,7 @@ const TripAllocationRegister = () => {
 
                 const response =
                     await dispatch(
-                        getTripAllocationRegister(
+                        addTripLrEntry(
                             getPayload("excel")
                         )
                     ).unwrap();
@@ -533,12 +474,12 @@ const TripAllocationRegister = () => {
                 if (blob) {
                     downloadBlobFile(
                         blob,
-                        "trip-allocation-register.xlsx"
+                        "trip-lr-register.xlsx"
                     );
                 }
             } catch (error) {
                 console.log(
-                    "Trip Allocation Register Excel download failed",
+                    "Trip LR Register Excel download failed",
                     error
                 );
             } finally {
@@ -549,16 +490,16 @@ const TripAllocationRegister = () => {
     const closeViewModal = () => {
         setViewModal(false);
         setViewLoading(false);
-        setViewAllocation(null);
+        setViewLRData(null);
         setViewVoucherNumber("");
         setViewError("");
         setOpeningVoucher("");
     };
 
-    const handleViewAllocation =
+    const handleViewVoucher =
         async (row: any) => {
             const voucherNumber =
-                getAllocationVoucher(row);
+                getLRVoucher(row);
 
             if (
                 !voucherNumber ||
@@ -574,7 +515,7 @@ const TripAllocationRegister = () => {
 
                 setViewModal(true);
                 setViewLoading(true);
-                setViewAllocation(null);
+                setViewLRData(null);
 
                 setViewVoucherNumber(
                     voucherNumber
@@ -584,37 +525,38 @@ const TripAllocationRegister = () => {
 
                 const response =
                     await dispatch(
-                        getTripAllocationByVoucherNumber(
+                        getTripLRCollectionByVoucherNumber(
                             voucherNumber
                         )
                     ).unwrap();
 
-                const allocationData =
-                    getAllocationFromResponse(
+                const lrData =
+                    getLRFromResponse(
                         response,
                         voucherNumber
                     );
 
-                if (!allocationData) {
+                if (!lrData) {
                     setViewError(
-                        "Trip allocation details were not found."
+                        "Trip LR details were not found."
                     );
 
                     return;
                 }
 
-                setViewAllocation(
-                    allocationData
+                setViewLRData(
+                    lrData
                 );
             } catch (error: any) {
                 console.log(
-                    "Failed to open trip allocation",
+                    "Failed to open Trip LR",
                     error
                 );
 
                 setViewError(
                     error?.message ||
-                    "Failed to load trip allocation."
+                    error?.response?.data?.message ||
+                    "Failed to load Trip LR."
                 );
             } finally {
                 setViewLoading(false);
@@ -625,21 +567,14 @@ const TripAllocationRegister = () => {
     return (
         <div className="flex h-full w-full flex-col gap-4 bg-background p-4 text-foreground">
             <RegisterFilterCard
-                title="Trip Allocation Register Filters"
+                title="Trip LR Register Filters"
                 fields={[
                     {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value:
-                            fromDate
-                                ? toDateInputValue(
-                                    fromDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
+                        value: fromDate ? toDateInputValue(fromDate) : "",
+                        onChange: (value) => {
                             setFromDate(
                                 toLocalStartOfDayUtc(
                                     value
@@ -655,15 +590,8 @@ const TripAllocationRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value:
-                            toDate
-                                ? toDateInputValue(
-                                    toDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
+                        value: toDate ? toDateInputValue(toDate) : "",
+                        onChange: (value) => {
                             setToDate(
                                 toLocalEndOfDayUtc(
                                     value
@@ -677,28 +605,16 @@ const TripAllocationRegister = () => {
                     },
                 ]}
                 gridCols="2"
-                onSearch={
-                    handleSearch
-                }
-                onClear={
-                    handleClear
-                }
+                onSearch={handleSearch}
+                onClear={handleClear}
                 onDownloadPdf={
                     handleDownloadPdf
                 }
                 onDownloadExcel={
                     handleDownloadExcel
                 }
-                pdfDisabled={
-                    !hasRegisterData ||
-                    pdfLoading ||
-                    excelLoading
-                }
-                excelDisabled={
-                    !hasRegisterData ||
-                    excelLoading ||
-                    pdfLoading
-                }
+                pdfDisabled={!hasRegisterData || pdfLoading || excelLoading}
+                excelDisabled={!hasRegisterData || excelLoading || pdfLoading}
                 pdfLoading={
                     pdfLoading
                 }
@@ -724,36 +640,30 @@ const TripAllocationRegister = () => {
                     "string"
                         ? registerError
                         : registerError?.message ||
-                        "Failed to load trip allocation register."}
+                          "Failed to load Trip LR register."}
                 </div>
             )}
 
             <DataTable
-                columns={
-                    mainColumns
-                }
-                data={
-                    tableData
-                }
+                columns={mainColumns}
+                data={tableData}
                 loading={
-                    registerLoader
+                    addLoader ||
+                    listingLoader
                 }
-                emptyMessage="No trip allocations found"
+                emptyMessage="No Trip LR entries found"
                 showFieldSelector={
                     false
                 }
-                actions={(
-                    row: any
-                ) => {
+                actions={(row: any) => {
                     const voucherNumber =
-                        getAllocationVoucher(
-                            row
-                        );
+                        getLRVoucher(row);
 
                     const isOpening =
                         openingVoucher ===
                             voucherNumber &&
-                        detailLoader;
+                        (detailLoader ||
+                            viewLoading);
 
                     return (
                         <button
@@ -766,12 +676,12 @@ const TripAllocationRegister = () => {
                             ) => {
                                 event.stopPropagation();
 
-                                handleViewAllocation(
+                                handleViewVoucher(
                                     row
                                 );
                             }}
                             className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
-                            title="Open Trip Allocation"
+                            title="View Trip LR"
                         >
                             {isOpening ? (
                                 <LoaderCircle
@@ -794,7 +704,7 @@ const TripAllocationRegister = () => {
 
             {Number(
                 currentPagination?.totalDocs ||
-                0
+                    0
             ) > 0 && (
                 <div className="mt-2">
                     <Pagination
@@ -833,15 +743,13 @@ const TripAllocationRegister = () => {
             )}
 
             <PageComponentModal
-                show={
-                    viewModal
-                }
+                show={viewModal}
                 title={
                     viewVoucherNumber
-                        ? `Trip Allocation - ${viewVoucherNumber}`
-                        : "Trip Allocation"
+                        ? ` ${viewVoucherNumber}`
+                        : "Trip LR"
                 }
-                description="View trip allocation details."
+                description="View Trip LR details."
                 onClose={
                     closeViewModal
                 }
@@ -849,10 +757,13 @@ const TripAllocationRegister = () => {
                 {viewLoading ? (
                     <div className="flex min-h-[420px] items-center justify-center">
                         <div className="flex items-center gap-3 rounded-md border border-border bg-card px-5 py-4 shadow-sm">
-                            <LoaderCircle className="animate-spin text-primary" />
+                            <LoaderCircle
+                                size={20}
+                                className="animate-spin text-primary"
+                            />
 
                             <span className="text-sm font-semibold">
-                                Loading trip allocation...
+                                Loading Trip LR...
                             </span>
                         </div>
                     </div>
@@ -860,15 +771,15 @@ const TripAllocationRegister = () => {
                     <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
                         {viewError}
                     </div>
-                ) : viewAllocation ? (
-                    <CreateTripAllocation
+                ) : viewLRData ? (
+                    <CreateViewTripLREntry
                         embedded
                         mode="view"
                         voucherNumber={
                             viewVoucherNumber
                         }
-                        allocationData={
-                            viewAllocation
+                        lrData={
+                            viewLRData
                         }
                         onClose={
                             closeViewModal
@@ -880,4 +791,4 @@ const TripAllocationRegister = () => {
     );
 };
 
-export default TripAllocationRegister;
+export default TripLrEntryRegister;

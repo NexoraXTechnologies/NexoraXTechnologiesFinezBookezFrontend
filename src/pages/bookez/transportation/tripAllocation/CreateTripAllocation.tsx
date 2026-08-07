@@ -34,6 +34,7 @@ import {
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 
 import {
+    
     createInitialTripAllocation,
 
     getTransportOrderVoucher,
@@ -58,6 +59,7 @@ import {
 import truckImage from "../../../../assets/truck.png";
 import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
 import { buildRoutesDataFromTransportOrder } from "../../registers/tripAllocationRegister/tripAllocationInitialState";
+
 const REMARKS_MAX = 200;
 
 const routeTypeOptions = [

@@ -22,15 +22,6 @@ type DriverSettlementRegisterPayload = {
     exportType: ExportType;
 };
 
-const getTodayDate = (): string => {
-    const now = new Date();
-    const localDate = new Date(
-        now.getTime() - now.getTimezoneOffset() * 60 * 1000
-    );
-
-    return localDate.toISOString().split("T")[0];
-};
-
 /* ===================================================
    FIELD HELPERS
    No RN reference exists for this register, so these are
@@ -258,13 +249,9 @@ const mainColumns = [
 
 const DriverSettlementRegister = () => {
     const dispatch = useDispatch<any>();
-    const today = getTodayDate();
 
-    const [fromDate, setFromDate] = useState<string>(
-        toLocalStartOfDayUtc(today)
-    );
-
-    const [toDate, setToDate] = useState<string>(toLocalEndOfDayUtc(today));
+    const [fromDate, setFromDate] = useState<string>("");
+    const [toDate, setToDate] = useState<string>("");
     const [localOffset, setLocalOffset] = useState<number>(0);
     const [localLimit, setLocalLimit] = useState<number>(10);
     const [refreshKey, setRefreshKey] = useState<number>(0);
@@ -300,9 +287,16 @@ const DriverSettlementRegister = () => {
         return pagination || {};
     }, [pagination]);
 
+    const hasRegisterData = tableData.length > 0;
+
     const validateDates = (): boolean => {
+        if (!fromDate && !toDate) {
+            setDateError("");
+            return true;
+        }
+
         if (!fromDate || !toDate) {
-            setDateError("Please select From Date and To Date.");
+            setDateError("Please select both From Date and To Date.");
             return false;
         }
 
@@ -318,17 +312,21 @@ const DriverSettlementRegister = () => {
     const getPayload = (
         exportType: ExportType = ""
     ): DriverSettlementRegisterPayload => ({
-        fromDate,
-        toDate,
-        offset: localOffset,
+        fromDate: fromDate || "",
+        toDate: toDate || "",
+        offset: exportType ? 0 : localOffset,
         limit: localLimit,
         exportType,
     });
 
     useEffect(() => {
-        if (!fromDate || !toDate) return;
+        if ((fromDate && !toDate) || (!fromDate && toDate)) return;
 
-        if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
+        if (
+            fromDate &&
+            toDate &&
+            new Date(fromDate).getTime() > new Date(toDate).getTime()
+        ) {
             return;
         }
 
@@ -343,26 +341,21 @@ const DriverSettlementRegister = () => {
     };
 
     const handleClear = () => {
-        const currentDate = getTodayDate();
-
         setDateError("");
-        setFromDate(toLocalStartOfDayUtc(currentDate));
-        setToDate(toLocalEndOfDayUtc(currentDate));
+        setFromDate("");
+        setToDate("");
         setLocalOffset(0);
         setRefreshKey((previous) => previous + 1);
     };
 
     const handleDownloadPdf = async () => {
-        if (pdfLoading || !validateDates()) return;
+        if (!hasRegisterData || pdfLoading || !validateDates()) return;
 
         try {
             setPdfLoading(true);
 
             const response = await dispatch(
-                addDriverSettlementRegister({
-                    ...getPayload("pdf"),
-                    offset: 0,
-                })
+                addDriverSettlementRegister(getPayload("pdf"))
             ).unwrap();
 
             const blob = getBlobFromResponse(response);
@@ -387,16 +380,13 @@ const DriverSettlementRegister = () => {
     };
 
     const handleDownloadExcel = async () => {
-        if (excelLoading || !validateDates()) return;
+        if (!hasRegisterData || excelLoading || !validateDates()) return;
 
         try {
             setExcelLoading(true);
 
             const response = await dispatch(
-                addDriverSettlementRegister({
-                    ...getPayload("excel"),
-                    offset: 0,
-                })
+                addDriverSettlementRegister(getPayload("excel"))
             ).unwrap();
 
             const blob = getBlobFromResponse(response);
@@ -450,25 +440,25 @@ const DriverSettlementRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: toDateInputValue(fromDate),
+                        value: fromDate ? toDateInputValue(fromDate) : "",
                         onChange: (value: string) => {
                             setFromDate(toLocalStartOfDayUtc(value));
                             setLocalOffset(0);
                             setDateError("");
                         },
-                        required: true,
+                        required: false,
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDateInputValue(toDate),
+                        value: toDate ? toDateInputValue(toDate) : "",
                         onChange: (value: string) => {
                             setToDate(toLocalEndOfDayUtc(value));
                             setLocalOffset(0);
                             setDateError("");
                         },
-                        required: true,
+                        required: false,
                     },
                 ]}
                 gridCols="2"
@@ -476,13 +466,13 @@ const DriverSettlementRegister = () => {
                 onClear={handleClear}
                 onDownloadPdf={handleDownloadPdf}
                 onDownloadExcel={handleDownloadExcel}
-                pdfDisabled={pdfLoading || excelLoading || !fromDate || !toDate}
-                excelDisabled={excelLoading || pdfLoading || !fromDate || !toDate}
+                pdfDisabled={!hasRegisterData || pdfLoading || excelLoading}
+                excelDisabled={!hasRegisterData || excelLoading || pdfLoading}
                 pdfLoading={pdfLoading}
                 excelLoading={excelLoading}
                 downloadDisabledMessage={
-                    !fromDate || !toDate
-                        ? "Please select From Date and To Date."
+                    !hasRegisterData
+                        ? "No data available to export."
                         : "Please wait, export is processing."
                 }
             />

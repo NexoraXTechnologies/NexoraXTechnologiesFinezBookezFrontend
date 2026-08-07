@@ -32,6 +32,7 @@ import SalesReturnRegister from "./SalesReturnRegister";
 import PurchaseReturnRegister from "./PurchaseReturnRegister";
 import OpeningBalanceRegister from "./OpeningBalanceRegister";
 import OpeningStockRegister from "./OpeningStockRegister";
+import TripLrEntryRegister from "./TripLrEntryRegister";
 
 const cards: any[] = [
   {
@@ -116,6 +117,13 @@ const cards: any[] = [
     description: "Monitor trip-related expenses including fuel, tolls, and other operational costs.",
     component: TripExpenseRegister,
     icon: <WalletCards size={22} />,
+    permissionKey: "registers.tripExpenseRegister"
+  },
+  {
+    title: "Trip LR Entry Register",
+    description: "Manage and track trip LR entries, including details and statuses.",
+    component: TripLrEntryRegister,
+    icon: <ClipboardList size={22} />,
     permissionKey: "registers.tripExpenseRegister"
   },
   {

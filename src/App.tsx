@@ -75,9 +75,8 @@ import LiveTripTracking from './pages/bookez/transportation/whereIsDriver/liveTr
 import CreateEditDriverSettlement from './pages/bookez/transportation/driverSettlement/CreateEditDriverSettlement';
 import DriverSettlementList from './pages/bookez/transportation/driverSettlement/DriverSettlementList';
 import PosPosting from './pages/setting/systemConfiguration/posPosting';
-import CreateEditTransportOrder from './pages/bookez/registers/transportOrderRegister/CreateEditTransportOrder';
+
 import TripAllocationRegister from './pages/bookez/registers/tripAllocationRegister';
-import CreateEditTripAllocationRegistration from './pages/bookez/registers/tripAllocationRegister/CreateEditTripAllocation';
 import TripExpenseRegister from './pages/bookez/registers/TripExpenseRegister';
 import CreateEditTripExpense from './pages/bookez/registers/TripExpenseRegister/CreateEditTripExpense';
 import TransactionConfiguration from './pages/setting/transactionConfiguration';
@@ -255,17 +254,17 @@ function App() {
 
           <Route
             path="/bookez/transportation/transport-order/create"
-            element={<CreateEditTransportOrder />}
+            element={<CreateTransportOrder />}
           />
 
           <Route
             path="/bookez/transportation/transport-order/edit/:voucherNumber"
-            element={<CreateEditTransportOrder />}
+            element={<CreateTransportOrder />}
           />
 
           <Route
             path="/bookez/transportation/transport-order/view/:voucherNumber"
-            element={<CreateEditTransportOrder />}
+            element={<CreateTransportOrder />}
           />
 
           <Route
@@ -275,17 +274,17 @@ function App() {
 
           <Route
             path="/bookez/transportation/trip-allocation-reg/create"
-            element={<CreateEditTripAllocationRegistration />}
+            element={<CreateTripAllocation />}
           />
 
           <Route
             path="/bookez/transportation/trip-allocation-reg/edit/:voucherNumber"
-            element={<CreateEditTripAllocationRegistration />}
+            element={<CreateTripAllocation />}
           />
 
           <Route
             path="/bookez/transportation/trip-allocation-reg/view/:voucherNumber"
-            element={<CreateEditTripAllocationRegistration />}
+            element={<CreateTripAllocation />}
           />
 
           <Route
