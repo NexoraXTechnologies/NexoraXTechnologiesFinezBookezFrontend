@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PrimaryButton, SecondaryButton } from "./buttons";
 import { LogOut, X } from "lucide-react";
@@ -12,7 +12,8 @@ import { toast } from "react-toastify";
 import { buildUpiLink, generateQrDataUrl } from "../utils/pdf/upiQr";
 import { normalizeDoc } from "../utils/pdf/pdfNormalizer";
 import { getCitiesByState, getStates } from "../redux/slices/professionalSlice/stateCitySlice";
-import { SelectInput, TextArea, TextInput } from "./inputs";
+import { SelectInput, TextArea, TextInput, ToggleInput } from "./inputs";
+import professionalAxios from "../services/professionalAxios";
 
 type ModalProps = {
     show: boolean;
@@ -501,44 +502,2129 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
         </AnimatePresence>
     );
 };
+/* =====================================================
+   ACCOUNT MASTER MODAL PROPS
+===================================================== */
 
 type AccountMasterModalProps = {
     show: boolean;
-    setShow: (show: boolean) => void;
+
+    setShow: (
+        show: boolean
+    ) => void;
+
     editingAccount?: any;
-    onSaved?: (account?: any) => void;
+
+    onSaved?: (
+        account?: any
+    ) => void | Promise<void>;
+
     title?: string;
 };
 
-export const getDisplayName = (name: any) => {
-    if (!name) return "";
+/* =====================================================
+   DISPLAY NAME
+===================================================== */
 
-    if (typeof name === "string") return name;
+export const getDisplayName = (
+    value: any
+) => {
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
+    }
 
-    if (typeof name === "object") {
-        return (
-            name.en ||
-            name.mr ||
-            name.hi ||
-            name.gu ||
-            name.ta ||
-            name.te ||
-            name.kn ||
-            name.ml ||
-            name.pa ||
+    if (
+        typeof value === "string" ||
+        typeof value === "number"
+    ) {
+        return String(
+            value
+        );
+    }
+
+    if (
+        typeof value === "object"
+    ) {
+        return String(
+            value.en ||
+            value.mr ||
+            value.hi ||
+            value.gu ||
+            value.ta ||
+            value.te ||
+            value.kn ||
+            value.ml ||
+            value.pa ||
+            value.name ||
+            value.label ||
+            value.cityName ||
+            value.stateName ||
             ""
         );
     }
 
-    return String(name);
+    return "";
 };
 
-export const buildEmptyAccountForm = (fields: any[] = []) => {
-    return fields.reduce((acc: any, field: any) => {
-        acc[field.key] = "";
-        return acc;
-    }, {});
+/* =====================================================
+   ACCOUNT SYSTEM FIELDS
+===================================================== */
+
+const ACCOUNT_SYSTEM_FIELD_KEYS =
+    new Set([
+        "accountCode",
+        "accountName",
+        "accountType",
+        "accountMobile",
+        "accountEmail",
+        "accountCreditLimit",
+        "accountAddress",
+        "gstNumber",
+        "state",
+        "city",
+    ]);
+
+/* =====================================================
+   REFERENCE FIELD TYPES
+===================================================== */
+
+const CODE_NAME_REFERENCE_FIELD_TYPES =
+    new Set([
+        "productmaster",
+        "unitmaster",
+        "accountmaster",
+        "custommaster",
+    ]);
+
+const STATE_CITY_REFERENCE_FIELD_TYPES =
+    new Set([
+        "statemaster",
+        "citymaster",
+    ]);
+
+const EMPLOYEE_REFERENCE_FIELD_TYPES =
+    new Set([
+        "customemployeemaster",
+        "employeemaster",
+        "teamemployeemaster",
+    ]);
+
+/* =====================================================
+   BOOLEAN HELPER
+===================================================== */
+
+const isTrueAccountValue = (
+    value: any
+) => {
+    if (
+        value === true ||
+        value === 1
+    ) {
+        return true;
+    }
+
+    const normalized =
+        String(
+            value ?? ""
+        )
+            .trim()
+            .toLowerCase();
+
+    return (
+        normalized === "true" ||
+        normalized === "1" ||
+        normalized === "yes" ||
+        normalized === "active"
+    );
 };
+
+/* =====================================================
+   FIELD TYPE
+===================================================== */
+
+const getAccountFieldType = (
+    field: any
+) => {
+    return String(
+        field?.type ||
+        field?.dataSource?.type ||
+        ""
+    )
+        .trim()
+        .toLowerCase();
+};
+
+/* =====================================================
+   REFERENCE FIELD HELPERS
+===================================================== */
+
+const isCodeNameReferenceField = (
+    field: any
+) => {
+    return CODE_NAME_REFERENCE_FIELD_TYPES.has(
+        getAccountFieldType(
+            field
+        )
+    );
+};
+
+const isStateCityReferenceField = (
+    field: any
+) => {
+    return STATE_CITY_REFERENCE_FIELD_TYPES.has(
+        getAccountFieldType(
+            field
+        )
+    );
+};
+
+const isEmployeeReferenceField = (
+    field: any
+) => {
+    return EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+        getAccountFieldType(
+            field
+        )
+    );
+};
+
+const isMasterReferenceField = (
+    field: any
+) => {
+    return (
+        isCodeNameReferenceField(
+            field
+        ) ||
+        isStateCityReferenceField(
+            field
+        ) ||
+        isEmployeeReferenceField(
+            field
+        )
+    );
+};
+
+/* =====================================================
+   LOCAL STORAGE USER
+
+   Finds the logged-in user without depending on only
+   one localStorage key.
+===================================================== */
+
+const findUserObjectWithMobile = (
+    value: any
+): any => {
+    if (
+        !value ||
+        typeof value !==
+        "object"
+    ) {
+        return null;
+    }
+
+    if (
+        String(
+            value
+                ?.userMobileNumberHash ||
+            ""
+        ).trim()
+    ) {
+        return value;
+    }
+
+    const nestedCandidates = [
+        value?.user,
+        value?.data,
+        value?.result,
+        value?.professionalUser,
+        value?.loggedInUser,
+        value?.currentUser,
+        value?.authUser,
+        value?.profile,
+        value?.data?.user,
+        value?.data
+            ?.professionalUser,
+    ];
+
+    for (
+        const candidate of
+        nestedCandidates
+    ) {
+        const found =
+            findUserObjectWithMobile(
+                candidate
+            );
+
+        if (found) {
+            return found;
+        }
+    }
+
+    return null;
+};
+
+const getProfessionalUserFromStorage =
+    () => {
+        if (
+            typeof window ===
+            "undefined" ||
+            !window.localStorage
+        ) {
+            return null;
+        }
+
+        const preferredKeys = [
+            "professionalUser",
+            "user",
+            "userData",
+            "loggedInUser",
+            "currentUser",
+            "authUser",
+            "profile",
+        ];
+
+        for (
+            const key of
+            preferredKeys
+        ) {
+            const rawValue =
+                localStorage.getItem(
+                    key
+                );
+
+            if (!rawValue) {
+                continue;
+            }
+
+            try {
+                const parsedValue =
+                    JSON.parse(
+                        rawValue
+                    );
+
+                const foundUser =
+                    findUserObjectWithMobile(
+                        parsedValue
+                    );
+
+                if (foundUser) {
+                    return foundUser;
+                }
+            } catch {
+                /*
+                 * Ignore non-JSON localStorage values.
+                 */
+            }
+        }
+
+        /*
+         * Fallback: inspect every JSON localStorage value.
+         * This handles projects where the login object is
+         * stored under a different key.
+         */
+        for (
+            let index = 0;
+            index <
+            localStorage.length;
+            index += 1
+        ) {
+            const key =
+                localStorage.key(
+                    index
+                );
+
+            if (!key) {
+                continue;
+            }
+
+            const rawValue =
+                localStorage.getItem(
+                    key
+                );
+
+            if (!rawValue) {
+                continue;
+            }
+
+            try {
+                const parsedValue =
+                    JSON.parse(
+                        rawValue
+                    );
+
+                const foundUser =
+                    findUserObjectWithMobile(
+                        parsedValue
+                    );
+
+                if (foundUser) {
+                    return foundUser;
+                }
+            } catch {
+                /*
+                 * Ignore non-JSON localStorage values.
+                 */
+            }
+        }
+
+        const directMobile =
+            String(
+                localStorage.getItem(
+                    "userMobileNumberHash"
+                ) ||
+                ""
+            ).trim();
+
+        if (directMobile) {
+            return {
+                userMobileNumberHash:
+                    directMobile,
+
+                parentUserMobileNumber:
+                    directMobile,
+            };
+        }
+
+        return null;
+    };
+
+/* =====================================================
+   RESOLVE DATASOURCE PLACEHOLDERS
+===================================================== */
+
+const resolveAccountDataSourceApi = (
+    rawApi: string
+) => {
+    const storedUser =
+        getProfessionalUserFromStorage();
+
+    const userMobileNumberHash =
+        String(
+            storedUser
+                ?.userMobileNumberHash ||
+            ""
+        ).trim();
+
+    const parentUserMobileNumber =
+        String(
+            storedUser
+                ?.parentUserMobileNumber ||
+            userMobileNumberHash ||
+            ""
+        ).trim();
+
+    let resolvedApi =
+        String(
+            rawApi || ""
+        ).trim();
+
+    if (
+        userMobileNumberHash
+    ) {
+        resolvedApi =
+            resolvedApi.replace(
+                /\{userMobileNumberHash\}/g,
+
+                encodeURIComponent(
+                    userMobileNumberHash
+                )
+            );
+    }
+
+    if (
+        parentUserMobileNumber
+    ) {
+        resolvedApi =
+            resolvedApi.replace(
+                /\{parentUserMobileNumber\}/g,
+
+                encodeURIComponent(
+                    parentUserMobileNumber
+                )
+            );
+    }
+
+    return resolvedApi;
+};
+
+const buildAccountDataSourceRequestPath = (
+    rawApi: string
+) => {
+    const resolvedApi =
+        resolveAccountDataSourceApi(
+            rawApi
+        );
+
+    if (!resolvedApi) {
+        return "";
+    }
+
+    const backendPrefix =
+        "eTaxSolnMongoApiBackend";
+
+    const axiosBaseUrl =
+        String(
+            professionalAxios
+                ?.defaults
+                ?.baseURL ||
+            ""
+        ).trim();
+
+    const baseAlreadyHasBackendPrefix =
+        /\/eTaxSolnMongoApiBackend\/?$/i.test(
+            axiosBaseUrl
+        );
+
+    /* =========================================
+       COMPLETE ABSOLUTE URL
+    ========================================= */
+
+    if (
+        /^https?:\/\//i.test(
+            resolvedApi
+        )
+    ) {
+        try {
+            const parsedUrl =
+                new URL(
+                    resolvedApi
+                );
+
+            const cleanPath =
+                parsedUrl.pathname.replace(
+                    /^\/+/,
+                    ""
+                );
+
+            /*
+             * The complete datasource already contains:
+             * eTaxSolnMongoApiBackend
+             */
+            if (
+                cleanPath.includes(
+                    backendPrefix
+                )
+            ) {
+                return resolvedApi;
+            }
+
+            /*
+             * Add the backend prefix after SandBox.
+             */
+            const pathParts =
+                cleanPath.split("/");
+
+            const sandboxIndex =
+                pathParts.findIndex(
+                    (part) =>
+                        part.toLowerCase() ===
+                        "sandbox"
+                );
+
+            if (sandboxIndex >= 0) {
+                pathParts.splice(
+                    sandboxIndex + 1,
+                    0,
+                    backendPrefix
+                );
+            } else {
+                pathParts.unshift(
+                    backendPrefix
+                );
+            }
+
+            parsedUrl.pathname =
+                `/${pathParts.join("/")}`;
+
+            return parsedUrl.toString();
+        } catch (error) {
+            console.error(
+                "Invalid datasource URL:",
+                resolvedApi,
+                error
+            );
+
+            return "";
+        }
+    }
+
+    /* =========================================
+       RELATIVE DATASOURCE URL
+    ========================================= */
+
+    let relativeApi =
+        resolvedApi
+            .trim()
+            .replace(
+                /^\/+/,
+                ""
+            )
+            .replace(
+                /^SandBox\//i,
+                ""
+            );
+
+    /*
+     * Avoid duplicate prefix when professionalAxios
+     * baseURL already ends with eTaxSolnMongoApiBackend.
+     */
+    if (baseAlreadyHasBackendPrefix) {
+        relativeApi =
+            relativeApi.replace(
+                /^eTaxSolnMongoApiBackend\/?/i,
+                ""
+            );
+
+        return relativeApi;
+    }
+
+    /*
+     * Add the required backend prefix.
+     */
+    if (
+        !relativeApi
+            .toLowerCase()
+            .startsWith(
+                backendPrefix.toLowerCase()
+            )
+    ) {
+        relativeApi =
+            `${backendPrefix}/${relativeApi}`;
+    }
+
+    /*
+     * Important: no leading slash.
+     * This preserves /SandBox/ from the Axios base URL.
+     */
+    return relativeApi;
+};
+
+/* =====================================================
+   EXTRACT DATASOURCE RECORDS
+===================================================== */
+
+const getAccountDataSourceRecords = (
+    responseData: any
+): any[] => {
+    const possibleRoots = [
+        responseData,
+        responseData?.data,
+        responseData?.result,
+        responseData?.payload,
+        responseData?.data?.data,
+    ];
+
+    const possibleArrayKeys = [
+        "items",
+        "records",
+        "users",
+        "accounts",
+        "products",
+        "units",
+        "states",
+        "cities",
+        "docs",
+    ];
+
+    for (
+        const root of
+        possibleRoots
+    ) {
+        if (
+            Array.isArray(
+                root
+            )
+        ) {
+            return root;
+        }
+
+        if (
+            root &&
+            typeof root ===
+            "object"
+        ) {
+            for (
+                const key of
+                possibleArrayKeys
+            ) {
+                if (
+                    Array.isArray(
+                        root?.[key]
+                    )
+                ) {
+                    return root[
+                        key
+                    ];
+                }
+            }
+        }
+    }
+
+    return [];
+};
+
+/* =====================================================
+   REFERENCE LABEL / VALUE FIELDS
+===================================================== */
+
+const getDefaultReferenceFields = (
+    field: any
+) => {
+    const fieldType =
+        getAccountFieldType(
+            field
+        );
+
+    let labelField =
+        String(
+            field?.labelField ||
+            field?.dataSource
+                ?.labelField ||
+            ""
+        ).trim();
+
+    let valueField =
+        String(
+            field?.valueField ||
+            field?.dataSource
+                ?.valueField ||
+            ""
+        ).trim();
+
+    if (
+        fieldType ===
+        "productmaster"
+    ) {
+        labelField =
+            labelField ||
+            "productName";
+
+        valueField =
+            valueField ||
+            "productCode";
+    }
+
+    if (
+        fieldType ===
+        "unitmaster"
+    ) {
+        labelField =
+            labelField ||
+            "unitName";
+
+        valueField =
+            valueField ||
+            "unitCode";
+    }
+
+    if (
+        fieldType ===
+        "accountmaster"
+    ) {
+        labelField =
+            labelField ||
+            "accountName";
+
+        valueField =
+            valueField ||
+            "accountCode";
+    }
+
+    if (
+        fieldType ===
+        "custommaster"
+    ) {
+        labelField =
+            labelField ||
+            "name";
+
+        valueField =
+            valueField ||
+            "code";
+    }
+
+    if (
+        fieldType ===
+        "statemaster"
+    ) {
+        labelField =
+            labelField ||
+            "name";
+
+        valueField =
+            valueField ||
+            "isoCode";
+    }
+
+    if (
+        fieldType ===
+        "citymaster"
+    ) {
+        labelField =
+            labelField ||
+            "name";
+
+        valueField =
+            valueField ||
+            "name";
+    }
+
+    if (
+        EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+            fieldType
+        )
+    ) {
+        labelField =
+            labelField ||
+            "userFirstName";
+
+        valueField =
+            valueField ||
+            "userMobileNumberHash";
+    }
+
+    return {
+        labelField:
+            labelField ||
+            "name",
+
+        valueField:
+            valueField ||
+            "code",
+    };
+};
+
+/* =====================================================
+   BUILD OPTION FROM DATASOURCE RECORD
+===================================================== */
+
+const buildAccountReferenceOption = (
+    field: any,
+    item: any
+) => {
+    const fieldType =
+        getAccountFieldType(
+            field
+        );
+
+    const {
+        labelField,
+        valueField,
+    } =
+        getDefaultReferenceFields(
+            field
+        );
+
+    const dynamicData =
+        item?.data ||
+        item?.dynamicFields ||
+        item?.customFields ||
+        {};
+
+    let optionLabel =
+        item?.[
+        labelField
+        ] ??
+        dynamicData?.[
+        labelField
+        ] ??
+        "";
+
+    let optionValue =
+        item?.[
+        valueField
+        ] ??
+        dynamicData?.[
+        valueField
+        ] ??
+        "";
+
+    /* ============================================
+       PRODUCT MASTER
+    ============================================= */
+
+    if (
+        fieldType ===
+        "productmaster"
+    ) {
+        optionLabel =
+            item?.productName ||
+            getDisplayName(
+                item?.name
+            ) ||
+            optionLabel;
+
+        optionValue =
+            item?.productCode ||
+            item?.code ||
+            optionValue;
+    }
+
+    /* ============================================
+       UNIT MASTER
+    ============================================= */
+
+    if (
+        fieldType ===
+        "unitmaster"
+    ) {
+        optionLabel =
+            item?.unitName ||
+            getDisplayName(
+                item?.name
+            ) ||
+            optionLabel;
+
+        optionValue =
+            item?.unitCode ||
+            item?.code ||
+            optionValue;
+    }
+
+    /* ============================================
+       ACCOUNT MASTER
+    ============================================= */
+
+    if (
+        fieldType ===
+        "accountmaster"
+    ) {
+        optionLabel =
+            item?.accountName ||
+            getDisplayName(
+                item?.name
+            ) ||
+            optionLabel;
+
+        optionValue =
+            item?.accountCode ||
+            item?.code ||
+            optionValue;
+    }
+
+    /* ============================================
+       CUSTOM MASTER
+    ============================================= */
+
+    if (
+        fieldType ===
+        "custommaster"
+    ) {
+        optionLabel =
+            dynamicData?.name ||
+            dynamicData
+                ?.vehicle_number ||
+            item?.name ||
+            item?.moduleName ||
+            optionLabel;
+
+        optionValue =
+            dynamicData?.code ||
+            item?.code ||
+            item?.voucherNumber ||
+            item?._id ||
+            optionValue;
+    }
+
+    /* ============================================
+       STATE MASTER
+    ============================================= */
+
+    if (
+        fieldType ===
+        "statemaster"
+    ) {
+        optionLabel =
+            getDisplayName(
+                item?.name ||
+                item?.stateName
+            ) ||
+            optionLabel;
+
+        optionValue =
+            item?.stateCode ||
+            item?.isoCode ||
+            item?.code ||
+            optionValue;
+    }
+
+    /* ============================================
+       CITY MASTER
+    ============================================= */
+
+    if (
+        fieldType ===
+        "citymaster"
+    ) {
+        optionLabel =
+            getDisplayName(
+                item?.name ||
+                item?.cityName
+            ) ||
+            optionLabel;
+
+        optionValue =
+            optionLabel ||
+            optionValue;
+    }
+
+    /* ============================================
+       TEAM / EMPLOYEE MASTER
+    ============================================= */
+
+    if (
+        EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+            fieldType
+        )
+    ) {
+        optionLabel = [
+            item?.userFirstName,
+            item?.userMiddleName,
+            item?.userLastName,
+        ]
+            .filter(
+                Boolean
+            )
+            .join(
+                " "
+            )
+            .trim();
+
+        optionValue =
+            item
+                ?.userMobileNumberHash ||
+            item?.mobile ||
+            optionValue;
+    }
+
+    const finalValue =
+        String(
+            optionValue ??
+            ""
+        ).trim();
+
+    if (!finalValue) {
+        return null;
+    }
+
+    return {
+        label:
+            String(
+                getDisplayName(
+                    optionLabel
+                ) ||
+                finalValue
+            ),
+
+        value:
+            finalValue,
+
+        raw:
+            item,
+    };
+};
+
+/* =====================================================
+   DATASOURCE HELPERS
+===================================================== */
+
+const getAccountFieldDataSource = (
+    field: any
+) => {
+    const rawDataSource =
+        field?.dataSource;
+
+    if (
+        rawDataSource &&
+        typeof rawDataSource ===
+        "object"
+    ) {
+        return rawDataSource;
+    }
+
+    if (
+        typeof rawDataSource ===
+        "string" &&
+        rawDataSource.trim()
+    ) {
+        try {
+            const parsed =
+                JSON.parse(
+                    rawDataSource
+                );
+
+            if (
+                parsed &&
+                typeof parsed ===
+                "object"
+            ) {
+                return parsed;
+            }
+        } catch {
+            /*
+             * Ignore malformed JSON datasource.
+             */
+        }
+    }
+
+    return {};
+};
+
+const getAccountFieldDataSourceApi = (
+    field: any
+) => {
+    const dataSource =
+        getAccountFieldDataSource(
+            field
+        );
+
+    return String(
+        field?.api ||
+        dataSource?.api ||
+        dataSource?.url ||
+        ""
+    ).trim();
+};
+
+const flattenEmployeeDataSourceRecords = (
+    records: any[]
+) => {
+    const employees: any[] =
+        [];
+
+    (
+        Array.isArray(
+            records
+        )
+            ? records
+            : []
+    ).forEach(
+        (
+            record: any
+        ) => {
+            const childUsers =
+                record?.ChildUsers ||
+                record?.childUsers ||
+                record?.children ||
+                [];
+
+            if (
+                Array.isArray(
+                    childUsers
+                )
+            ) {
+                employees.push(
+                    ...childUsers
+                );
+            }
+
+            if (
+                String(
+                    record
+                        ?.userMobileNumberHash ||
+                    ""
+                ).trim()
+            ) {
+                employees.push(
+                    record
+                );
+            }
+        }
+    );
+
+    const uniqueByMobile =
+        new Map<
+            string,
+            any
+        >();
+
+    employees.forEach(
+        (
+            employee: any
+        ) => {
+            const mobile =
+                String(
+                    employee
+                        ?.userMobileNumberHash ||
+                    employee?.mobile ||
+                    ""
+                ).trim();
+
+            if (
+                mobile &&
+                !uniqueByMobile.has(
+                    mobile
+                )
+            ) {
+                uniqueByMobile.set(
+                    mobile,
+                    employee
+                );
+            }
+        }
+    );
+
+    return Array.from(
+        uniqueByMobile.values()
+    );
+};
+
+/* =====================================================
+   EXTRACT CHILD USERS FROM EMPLOYEE API RESPONSE
+===================================================== */
+
+const getEmployeeChildUsers = (
+    responseData: any
+): any[] => {
+    const result =
+        Array.isArray(
+            responseData?.result
+        )
+            ? responseData.result
+            : Array.isArray(
+                responseData?.data?.result
+            )
+                ? responseData.data.result
+                : [];
+
+    return result.flatMap(
+        (record: any) =>
+            Array.isArray(
+                record?.ChildUsers
+            )
+                ? record.ChildUsers
+                : []
+    );
+};
+/* =====================================================
+   LOAD DATASOURCE OPTIONS FOR SCHEMA FIELDS
+===================================================== */
+
+const loadAccountSchemaOptions =
+    async (
+        fields: any[]
+    ) => {
+        return Promise.all(
+            (
+                Array.isArray(
+                    fields
+                )
+                    ? fields
+                    : []
+            ).map(
+                async (
+                    field: any
+                ) => {
+                    const rawApi =
+                        String(
+                            field?.api ||
+                            field?.dataSource
+                                ?.api ||
+                            ""
+                        ).trim();
+
+                    if (!rawApi) {
+                        return {
+                            ...field,
+
+                            options:
+                                Array.isArray(
+                                    field?.options
+                                )
+                                    ? field.options
+                                    : [],
+                        };
+                    }
+
+                    const requestPath =
+                        buildAccountDataSourceRequestPath(
+                            rawApi
+                        );
+
+                    if (!requestPath) {
+                        return {
+                            ...field,
+                            options: [],
+                        };
+                    }
+
+                    if (
+                        /\{[^}]+\}/.test(
+                            requestPath
+                        )
+                    ) {
+                        console.error(
+                            `Datasource placeholder value missing for field "${field.key}":`,
+                            requestPath
+                        );
+
+                        return {
+                            ...field,
+                            options: [],
+                        };
+                    }
+
+                    try {
+                        console.log(
+                            "ACCOUNT DATASOURCE REQUEST:",
+                            requestPath
+                        );
+
+                        const response =
+                            await professionalAxios.get(
+                                requestPath,
+                                {
+                                    params:
+                                        field?.queryParams ||
+                                        field?.dataSource
+                                            ?.queryParams ||
+                                        {},
+                                }
+                            );
+
+                        const fieldType =
+                            getAccountFieldType(
+                                field
+                            );
+
+                        let records: any[] =
+                            [];
+
+                        /* ========================================
+                           TEAM / EMPLOYEE MASTER
+
+                           API response:
+                           result[].ChildUsers[]
+                        ======================================== */
+
+                        if (
+                            EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+                                fieldType
+                            )
+                        ) {
+                            records =
+                                getEmployeeChildUsers(
+                                    response?.data
+                                );
+                        } else {
+                            records =
+                                getAccountDataSourceRecords(
+                                    response?.data
+                                );
+                        }
+
+                        console.log(
+                            `DATASOURCE RECORDS FOR ${field.key}:`,
+                            records
+                        );
+
+                        const options =
+                            records
+                                .map(
+                                    (
+                                        item: any
+                                    ) =>
+                                        buildAccountReferenceOption(
+                                            field,
+                                            item
+                                        )
+                                )
+                                .filter(
+                                    Boolean
+                                );
+
+                        return {
+                            ...field,
+
+                            api:
+                                requestPath,
+
+                            options,
+                        };
+                    } catch (
+                    error: any
+                    ) {
+                        console.error(
+                            `Failed to load datasource for field "${field.key}":`,
+                            error?.response
+                                ?.data ||
+                            error
+                        );
+
+                        return {
+                            ...field,
+
+                            api:
+                                requestPath,
+
+                            options:
+                                [],
+                        };
+                    }
+                }
+            )
+        );
+    };
+
+/* =====================================================
+   BUILD EMPTY ACCOUNT FORM
+===================================================== */
+
+const buildEmptyAccountForm = (
+    fields: any[] = []
+) => {
+    return (
+        Array.isArray(
+            fields
+        )
+            ? fields
+            : []
+    ).reduce(
+        (
+            accumulator: Record<
+                string,
+                any
+            >,
+
+            field: any
+        ) => {
+            const fieldType =
+                getAccountFieldType(
+                    field
+                );
+
+            if (
+                fieldType ===
+                "boolean"
+            ) {
+                accumulator[
+                    field.key
+                ] = false;
+            } else if (
+                isMasterReferenceField(
+                    field
+                )
+            ) {
+                accumulator[
+                    field.key
+                ] = null;
+            } else {
+                accumulator[
+                    field.key
+                ] = "";
+            }
+
+            return accumulator;
+        },
+
+        {}
+    );
+};
+
+/* =====================================================
+   DYNAMIC ACCOUNT FIELD CHECK
+===================================================== */
+/* =====================================================
+   FORCE MASTER REFERENCE FIELDS INTO dynamicFields
+===================================================== */
+
+const DYNAMIC_MASTER_FIELD_TYPES =
+    new Set([
+        "accountmaster",
+        "productmaster",
+        "unitmaster",
+        "employeemaster",
+        "customemployeemaster",
+        "teamemployeemaster",
+    ]);
+
+/* =====================================================
+   SCHEMA isDefault HELPER
+
+   The schema API may return isDefault as:
+   false, "false", 0 or "0".
+===================================================== */
+
+const isSchemaDefaultFalse = (
+    field: any
+) => {
+    const value =
+        field?.isDefault;
+
+    if (
+        value === false ||
+        value === 0 ||
+        value === "0"
+    ) {
+        return true;
+    }
+
+    return (
+        typeof value ===
+        "string" &&
+        value
+            .trim()
+            .toLowerCase() ===
+        "false"
+    );
+};
+
+/* =====================================================
+   DYNAMIC ACCOUNT FIELD CHECK
+
+   Rules:
+   1. Master references always go into dynamicFields.
+   2. Every schema field with isDefault false goes into
+      dynamicFields.
+   3. Existing dynamic flags remain supported.
+   4. Default/system fields remain at payload root.
+===================================================== */
+
+const isDynamicAccountSchemaField = (
+    field: any
+) => {
+    const fieldType =
+        getAccountFieldType(
+            field
+        );
+
+    if (
+        DYNAMIC_MASTER_FIELD_TYPES.has(
+            fieldType
+        )
+    ) {
+        return true;
+    }
+
+    if (
+        isSchemaDefaultFalse(
+            field
+        )
+    ) {
+        return true;
+    }
+
+    if (
+        field?.isDynamic ===
+        true
+    ) {
+        return true;
+    }
+
+    if (
+        field?.isDynamicField ===
+        true
+    ) {
+        return true;
+    }
+
+    if (
+        field?.isCustomField ===
+        true
+    ) {
+        return true;
+    }
+
+    if (
+        field?.source ===
+        "dynamic"
+    ) {
+        return true;
+    }
+
+    if (
+        field?.fieldSource ===
+        "dynamic"
+    ) {
+        return true;
+    }
+
+    if (
+        field?.isDefault ===
+        true ||
+        String(
+            field?.isDefault ??
+            ""
+        )
+            .trim()
+            .toLowerCase() ===
+        "true"
+    ) {
+        return false;
+    }
+
+    if (
+        field?.isDynamic ===
+        false
+    ) {
+        return false;
+    }
+
+    if (
+        field?.isSystemField ===
+        true
+    ) {
+        return false;
+    }
+
+    return !ACCOUNT_SYSTEM_FIELD_KEYS.has(
+        field?.key
+    );
+};
+
+/* =====================================================
+   NORMALIZE ACCOUNT FIELD VALUE
+===================================================== */
+
+const normalizeAccountFieldValue = (
+    field: any,
+    value: any
+) => {
+    const fieldType =
+        getAccountFieldType(
+            field
+        );
+
+    if (
+        CODE_NAME_REFERENCE_FIELD_TYPES.has(
+            fieldType
+        )
+    ) {
+        if (
+            value &&
+            typeof value ===
+            "object" &&
+            !Array.isArray(
+                value
+            )
+        ) {
+            return {
+                code:
+                    value?.code ||
+                    value?.productCode ||
+                    value?.unitCode ||
+                    value?.accountCode ||
+                    value?.voucherNumber ||
+                    value?.value ||
+                    value?._id ||
+                    "",
+
+                name:
+                    getDisplayName(
+                        value?.name ||
+                        value?.productName ||
+                        value?.unitName ||
+                        value?.accountName ||
+                        value?.vehicle_number ||
+                        value?.moduleName ||
+                        value?.label
+                    ),
+            };
+        }
+
+        return null;
+    }
+
+    if (
+        fieldType ===
+        "statemaster"
+    ) {
+        if (
+            value &&
+            typeof value ===
+            "object" &&
+            !Array.isArray(
+                value
+            )
+        ) {
+            return {
+                stateCode:
+                    value?.stateCode ||
+                    value?.isoCode ||
+                    value?.code ||
+                    value?.value ||
+                    "",
+
+                name:
+                    getDisplayName(
+                        value?.name ||
+                        value?.stateName ||
+                        value?.label
+                    ),
+            };
+        }
+
+        return null;
+    }
+
+    if (
+        fieldType ===
+        "citymaster"
+    ) {
+        if (
+            value &&
+            typeof value ===
+            "object" &&
+            !Array.isArray(
+                value
+            )
+        ) {
+            return {
+                stateCode:
+                    value?.stateCode ||
+                    value?.state?.isoCode ||
+                    value?.state
+                        ?.stateCode ||
+                    "",
+
+                name:
+                    getDisplayName(
+                        value?.name ||
+                        value?.cityName ||
+                        value?.label
+                    ),
+            };
+        }
+
+        return null;
+    }
+
+    if (
+        EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+            fieldType
+        )
+    ) {
+        if (
+            value &&
+            typeof value ===
+            "object" &&
+            !Array.isArray(
+                value
+            )
+        ) {
+            return {
+                userMobileNumberHash:
+                    value
+                        ?.userMobileNumberHash ||
+                    value?.mobile ||
+                    value?.value ||
+                    "",
+
+                userFirstName:
+                    value?.userFirstName ||
+                    value?.firstName ||
+                    "",
+
+                userMiddleName:
+                    value?.userMiddleName ||
+                    value?.middleName ||
+                    "",
+
+                userLastName:
+                    value?.userLastName ||
+                    value?.lastName ||
+                    "",
+
+                userType:
+                    value?.userType ||
+                    value?.type ||
+                    "",
+
+                parentUserMobileNumber:
+                    value
+                        ?.parentUserMobileNumber ||
+                    value?.parentMobile ||
+                    "",
+            };
+        }
+
+        return null;
+    }
+
+    if (
+        fieldType ===
+        "number" &&
+        value !== "" &&
+        value !== null &&
+        value !== undefined
+    ) {
+        return Number(
+            value
+        );
+    }
+
+    if (
+        fieldType ===
+        "boolean"
+    ) {
+        return isTrueAccountValue(
+            value
+        );
+    }
+
+    return (
+        value ?? ""
+    );
+};
+
+/* =====================================================
+   GET FIELD VALUE FROM ACCOUNT
+===================================================== */
+
+const getAccountSchemaFieldValue = (
+    field: any,
+    account: any
+) => {
+    const key =
+        field.key;
+
+    const hasTopLevelValue =
+        Object.prototype.hasOwnProperty.call(
+            account || {},
+            key
+        );
+
+    const hasDynamicValue =
+        Object.prototype.hasOwnProperty.call(
+            account?.dynamicFields ||
+            {},
+            key
+        );
+
+    let value: any =
+        "";
+
+    if (
+        hasTopLevelValue
+    ) {
+        value =
+            account?.[key];
+    } else if (
+        hasDynamicValue
+    ) {
+        value =
+            account
+                ?.dynamicFields?.[
+            key
+            ];
+    }
+
+    return normalizeAccountFieldValue(
+        field,
+        value
+    );
+};
+
+/* =====================================================
+   GET REFERENCE SELECT VALUE
+===================================================== */
+
+const getMasterReferenceSelectValue = (
+    field: any,
+    value: any
+) => {
+    if (!value) {
+        return "";
+    }
+
+    if (
+        typeof value !==
+        "object"
+    ) {
+        return String(
+            value
+        );
+    }
+
+    const fieldType =
+        getAccountFieldType(
+            field
+        );
+
+    if (
+        fieldType ===
+        "statemaster"
+    ) {
+        return String(
+            value?.stateCode ||
+            value?.isoCode ||
+            value?.code ||
+            value?.value ||
+            ""
+        );
+    }
+
+    if (
+        fieldType ===
+        "citymaster"
+    ) {
+        return String(
+            getDisplayName(
+                value?.name ||
+                value?.cityName ||
+                value?.value
+            )
+        );
+    }
+
+    if (
+        EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+            fieldType
+        )
+    ) {
+        return String(
+            value
+                ?.userMobileNumberHash ||
+            value?.mobile ||
+            value?.value ||
+            ""
+        );
+    }
+
+    return String(
+        value?.code ||
+        value?.productCode ||
+        value?.unitCode ||
+        value?.accountCode ||
+        value?.voucherNumber ||
+        value?.value ||
+        value?._id ||
+        ""
+    );
+};
+
+/* =====================================================
+   BUILD REFERENCE VALUE FOR PAYLOAD
+===================================================== */
+
+const getMasterReferenceValue = (
+    field: any,
+    option: any,
+    fallbackValue = ""
+) => {
+    const fieldType =
+        getAccountFieldType(
+            field
+        );
+
+    const raw =
+        option?.raw ||
+        {};
+
+    if (
+        fieldType ===
+        "productmaster"
+    ) {
+        return {
+            code:
+                raw?.productCode ||
+                raw?.code ||
+                option?.value ||
+                fallbackValue,
+
+            name:
+                getDisplayName(
+                    raw?.productName ||
+                    raw?.name ||
+                    option?.label
+                ),
+        };
+    }
+
+    if (
+        fieldType ===
+        "unitmaster"
+    ) {
+        return {
+            code:
+                raw?.unitCode ||
+                raw?.code ||
+                option?.value ||
+                fallbackValue,
+
+            name:
+                getDisplayName(
+                    raw?.unitName ||
+                    raw?.name ||
+                    option?.label
+                ),
+        };
+    }
+
+    if (
+        fieldType ===
+        "accountmaster"
+    ) {
+        return {
+            code:
+                raw?.accountCode ||
+                raw?.code ||
+                option?.value ||
+                fallbackValue,
+
+            name:
+                getDisplayName(
+                    raw?.accountName ||
+                    raw?.name ||
+                    option?.label
+                ),
+        };
+    }
+
+    if (
+        fieldType ===
+        "custommaster"
+    ) {
+        const dynamicData =
+            raw?.data ||
+            raw?.dynamicFields ||
+            raw?.customFields ||
+            raw;
+
+        return {
+            code:
+                dynamicData?.code ||
+                raw?.code ||
+                raw?.voucherNumber ||
+                raw?._id ||
+                option?.value ||
+                fallbackValue,
+
+            name:
+                getDisplayName(
+                    dynamicData?.name ||
+                    dynamicData
+                        ?.vehicle_number ||
+                    raw?.name ||
+                    option?.label
+                ),
+        };
+    }
+
+    if (
+        fieldType ===
+        "statemaster"
+    ) {
+        return {
+            stateCode:
+                raw?.stateCode ||
+                raw?.isoCode ||
+                raw?.code ||
+                option?.value ||
+                fallbackValue,
+
+            name:
+                getDisplayName(
+                    raw?.name ||
+                    raw?.stateName ||
+                    option?.label
+                ),
+        };
+    }
+
+    if (
+        fieldType ===
+        "citymaster"
+    ) {
+        return {
+            stateCode:
+                raw?.stateCode ||
+                raw?.state?.isoCode ||
+                raw?.state
+                    ?.stateCode ||
+                "",
+
+            name:
+                getDisplayName(
+                    raw?.name ||
+                    raw?.cityName ||
+                    option?.label
+                ),
+        };
+    }
+
+    if (
+        EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+            fieldType
+        )
+    ) {
+        return {
+            userMobileNumberHash:
+                raw
+                    ?.userMobileNumberHash ||
+                raw?.mobile ||
+                option?.value ||
+                fallbackValue,
+
+            userFirstName:
+                raw?.userFirstName ||
+                raw?.firstName ||
+                "",
+
+            userMiddleName:
+                raw?.userMiddleName ||
+                raw?.middleName ||
+                "",
+
+            userLastName:
+                raw?.userLastName ||
+                raw?.lastName ||
+                "",
+
+            userType:
+                raw?.userType ||
+                raw?.type ||
+                "",
+
+            parentUserMobileNumber:
+                raw
+                    ?.parentUserMobileNumber ||
+                raw?.parentMobile ||
+                "",
+        };
+    }
+
+    return null;
+};
+
+/* =====================================================
+   COMPARE VALUES
+===================================================== */
+
+const areAccountFieldValuesEqual = (
+    firstValue: any,
+    secondValue: any
+) => {
+    if (
+        typeof firstValue ===
+        "object" ||
+        typeof secondValue ===
+        "object"
+    ) {
+        return (
+            JSON.stringify(
+                firstValue ??
+                null
+            ) ===
+            JSON.stringify(
+                secondValue ??
+                null
+            )
+        );
+    }
+
+    return (
+        firstValue ===
+        secondValue
+    );
+};
+
+/* =====================================================
+   ACCOUNT MASTER MODAL
+===================================================== */
 
 const AccountMasterModal = ({
     show,
@@ -547,242 +2633,661 @@ const AccountMasterModal = ({
     onSaved,
     title,
 }: AccountMasterModalProps) => {
-    const dispatch = useDispatch<any>();
+    const dispatch =
+        useDispatch<any>();
 
     const {
         accountMasterSchemaFields = [],
         schemaLoading,
-    } = useSelector((state: any) => state.accountMaster || {});
+    } = useSelector(
+        (state: any) =>
+            state.accountMaster ||
+            {}
+    );
 
     const {
         states = [],
         cities = [],
-    } = useSelector((state: any) => state.stateCity || {});
+    } = useSelector(
+        (state: any) =>
+            state.stateCity ||
+            {}
+    );
 
-    const [form, setForm] = useState<any>({});
-    const [errors, setErrors] = useState<any>({});
-    const [pendingCity, setPendingCity] = useState("");
-    const [submitting, setSubmitting] = useState(false);
+    const [
+        form,
+        setForm,
+    ] = useState<
+        Record<
+            string,
+            any
+        >
+    >({});
+
+    const [
+        errors,
+        setErrors,
+    ] = useState<
+        Record<
+            string,
+            string
+        >
+    >({});
+
+    const [
+        pendingCity,
+        setPendingCity,
+    ] = useState("");
+
+    const [
+        submitting,
+        setSubmitting,
+    ] = useState(false);
+
+    const [
+        loadedSchemaFields,
+        setLoadedSchemaFields,
+    ] = useState<any[]>([]);
+
+    const [
+        optionsLoading,
+        setOptionsLoading,
+    ] = useState(false);
+
+    const [
+        optionsReady,
+        setOptionsReady,
+    ] = useState(false);
+
+    const schemaFields =
+        useMemo(
+            () => {
+                if (
+                    optionsReady
+                ) {
+                    return loadedSchemaFields;
+                }
+
+                return Array.isArray(
+                    accountMasterSchemaFields
+                )
+                    ? accountMasterSchemaFields
+                    : [];
+            },
+            [
+                optionsReady,
+                loadedSchemaFields,
+                accountMasterSchemaFields,
+            ]
+        );
 
     /* ============================================
        FETCH ACCOUNT SCHEMA AND STATES
     ============================================= */
 
     useEffect(() => {
+        if (!show) {
+            return;
+        }
+
         dispatch(
             getAllAccountMasterSchema({
                 offset: 0,
-                limit: 50,
+
+                // Large limit so newly added fields are included.
+                limit: 500,
             }) as any
         );
-// @ts-ignore
-        
-        dispatch(getStates() as any);
-    }, [dispatch]);
+
+        dispatch(
+            getStates() as any
+        );
+    }, [
+        dispatch,
+        show,
+    ]);
 
     /* ============================================
-       INITIALIZE ADD / EDIT FORM
+       LOAD SCHEMA DATASOURCE OPTIONS
     ============================================= */
 
     useEffect(() => {
-        if (!show || accountMasterSchemaFields.length === 0) return;
+        if (!show) {
+            setLoadedSchemaFields(
+                []
+            );
+
+            setOptionsLoading(
+                false
+            );
+
+            setOptionsReady(
+                false
+            );
+
+            return;
+        }
+
+        if (
+            !Array.isArray(
+                accountMasterSchemaFields
+            ) ||
+            accountMasterSchemaFields
+                .length === 0
+        ) {
+            if (
+                !schemaLoading
+            ) {
+                setLoadedSchemaFields(
+                    []
+                );
+
+                setOptionsReady(
+                    true
+                );
+            }
+
+            return;
+        }
+
+        let isMounted =
+            true;
+
+        const loadOptions =
+            async () => {
+                setOptionsLoading(
+                    true
+                );
+
+                setOptionsReady(
+                    false
+                );
+
+                try {
+                    const fieldsWithOptions =
+                        await loadAccountSchemaOptions(
+                            accountMasterSchemaFields
+                        );
+
+                    if (!isMounted) {
+                        return;
+                    }
+
+                    setLoadedSchemaFields(
+                        fieldsWithOptions
+                    );
+                } catch (
+                error
+                ) {
+                    console.error(
+                        "Failed to prepare Account Master schema options:",
+                        error
+                    );
+
+                    if (!isMounted) {
+                        return;
+                    }
+
+                    setLoadedSchemaFields(
+                        accountMasterSchemaFields
+                    );
+                } finally {
+                    if (
+                        isMounted
+                    ) {
+                        setOptionsLoading(
+                            false
+                        );
+
+                        setOptionsReady(
+                            true
+                        );
+                    }
+                }
+            };
+
+        loadOptions();
+
+        return () => {
+            isMounted =
+                false;
+        };
+    }, [
+        show,
+        schemaLoading,
+        accountMasterSchemaFields,
+    ]);
+
+    /* ============================================
+       INITIALIZE CREATE / EDIT FORM
+    ============================================= */
+
+    useEffect(() => {
+        if (
+            !show ||
+            !optionsReady ||
+            schemaFields.length ===
+            0
+        ) {
+            return;
+        }
 
         setErrors({});
         setPendingCity("");
 
-        if (!editingAccount) {
-            setForm(buildEmptyAccountForm(accountMasterSchemaFields));
+        const nextForm =
+            buildEmptyAccountForm(
+                schemaFields
+            );
+
+        if (
+            !editingAccount
+        ) {
+            setForm(
+                nextForm
+            );
+
             return;
         }
 
-        const nextForm = buildEmptyAccountForm(
-            accountMasterSchemaFields
+        let existingCity =
+            "";
+
+        schemaFields.forEach(
+            (
+                field: any
+            ) => {
+                const key =
+                    field.key;
+
+                if (
+                    key ===
+                    "state"
+                ) {
+                    nextForm.state =
+                        typeof editingAccount
+                            .state ===
+                            "object"
+                            ? editingAccount
+                                ?.state
+                                ?.isoCode ||
+                            editingAccount
+                                ?.state
+                                ?.stateCode ||
+                            editingAccount
+                                ?.state
+                                ?.code ||
+                            ""
+                            : editingAccount
+                                ?.state ||
+                            "";
+
+                    return;
+                }
+
+                if (
+                    key ===
+                    "city"
+                ) {
+                    existingCity =
+                        typeof editingAccount
+                            .city ===
+                            "object"
+                            ? getDisplayName(
+                                editingAccount
+                                    ?.city
+                                    ?.name ||
+                                editingAccount
+                                    ?.city
+                                    ?.cityName
+                            )
+                            : editingAccount
+                                ?.city ||
+                            "";
+
+                    nextForm.city =
+                        "";
+
+                    return;
+                }
+
+                if (
+                    key ===
+                    "accountType"
+                ) {
+                    nextForm.accountType =
+                        editingAccount
+                            ?.accountType
+                            ? String(
+                                editingAccount
+                                    .accountType
+                            ).toLowerCase()
+                            : "";
+
+                    return;
+                }
+
+                nextForm[
+                    key
+                ] =
+                    getAccountSchemaFieldValue(
+                        field,
+                        editingAccount
+                    );
+            }
         );
 
-        let existingCity = "";
+        setForm(
+            nextForm
+        );
 
-        accountMasterSchemaFields.forEach((field: any) => {
-            const key = field.key;
+        setPendingCity(
+            existingCity
+        );
 
-            if (key === "state") {
-                nextForm.state =
-                    typeof editingAccount.state === "object"
-                        ? editingAccount.state?.isoCode ||
-                        editingAccount.state?.stateCode ||
-                        editingAccount.state?.code ||
-                        ""
-                        : editingAccount.state || "";
-
-                return;
-            }
-
-            if (key === "city") {
-                existingCity =
-                    typeof editingAccount.city === "object"
-                        ? getDisplayName(
-                            editingAccount.city?.name ||
-                            editingAccount.city?.cityName
-                        )
-                        : editingAccount.city || "";
-
-                nextForm.city = "";
-                return;
-            }
-
-            if (key === "accountType") {
-                nextForm.accountType = editingAccount?.accountType
-                    ? String(
-                        editingAccount.accountType
-                    ).toLowerCase()
-                    : "";
-
-                return;
-            }
-
-            nextForm[key] = editingAccount?.[key] ?? "";
-        });
-
-        setForm(nextForm);
-        setPendingCity(existingCity);
-
-        if (nextForm.state) {
+        if (
+            nextForm.state
+        ) {
             dispatch(
                 getCitiesByState({
-                    stateCode: nextForm.state,
-                    searchText: "",
+                    stateCode:
+                        nextForm.state,
+
+                    searchText:
+                        "",
                 }) as any
             );
         }
     }, [
         show,
         editingAccount,
-        accountMasterSchemaFields,
+        optionsReady,
+        schemaFields,
         dispatch,
     ]);
 
     /* ============================================
-       FETCH CITIES WHEN STATE CHANGES
+       FETCH CITIES WHEN SYSTEM STATE CHANGES
     ============================================= */
 
     useEffect(() => {
-        if (!show || !form.state) return;
+        if (
+            !show ||
+            !form.state
+        ) {
+            return;
+        }
 
         dispatch(
             getCitiesByState({
-                stateCode: form.state,
-                searchText: "",
+                stateCode:
+                    form.state,
+
+                searchText:
+                    "",
             }) as any
         );
-    }, [dispatch, show, form.state]);
+    }, [
+        dispatch,
+        show,
+        form.state,
+    ]);
 
     /* ============================================
-       SET EDIT CITY AFTER CITY API RESPONSE
+       SET EDIT CITY
     ============================================= */
 
     useEffect(() => {
-        if (!pendingCity || !cities?.length) return;
+        if (
+            !pendingCity ||
+            !Array.isArray(
+                cities
+            ) ||
+            cities.length === 0
+        ) {
+            return;
+        }
 
-        const matchedCity = cities.find((item: any) => {
-            const cityName = getDisplayName(
-                item.name || item.cityName
+        const cityExists =
+            cities.some(
+                (
+                    item: any
+                ) => {
+                    return (
+                        getDisplayName(
+                            item?.name ||
+                            item?.cityName
+                        ) ===
+                        pendingCity
+                    );
+                }
             );
 
-            return cityName === pendingCity;
-        });
+        if (!cityExists) {
+            return;
+        }
 
-        if (!matchedCity) return;
+        setForm(
+            (
+                previous
+            ) => ({
+                ...previous,
 
-        setForm((previous: any) => ({
-            ...previous,
-            city: pendingCity,
-        }));
+                city:
+                    pendingCity,
+            })
+        );
 
-        setPendingCity("");
-    }, [cities, pendingCity]);
+        setPendingCity(
+            ""
+        );
+    }, [
+        cities,
+        pendingCity,
+    ]);
 
     /* ============================================
-       FIELD OPTIONS
+       GET FIELD OPTIONS
     ============================================= */
 
-    const getFieldOptions = (field: any) => {
-        if (field.key === "state") {
-            return states.map((item: any) => {
-                const stateCode =
-                    item.isoCode ||
-                    item.stateCode ||
-                    item.code ||
-                    "";
+    const getFieldOptions = (
+        field: any
+    ) => {
+        const fieldType =
+            getAccountFieldType(
+                field
+            );
 
-                const stateName = getDisplayName(
-                    item.name || item.stateName
-                );
+        if (
+            field.key ===
+            "state"
+        ) {
+            return (
+                Array.isArray(
+                    states
+                )
+                    ? states
+                    : []
+            ).map(
+                (
+                    item: any
+                ) => {
+                    const stateCode =
+                        item?.isoCode ||
+                        item?.stateCode ||
+                        item?.code ||
+                        "";
 
-                return {
-                    value: stateCode,
-                    label: stateName || stateCode,
-                };
-            });
+                    const stateName =
+                        getDisplayName(
+                            item?.name ||
+                            item?.stateName
+                        );
+
+                    return {
+                        value:
+                            String(
+                                stateCode
+                            ),
+
+                        label:
+                            stateName ||
+                            String(
+                                stateCode
+                            ),
+
+                        raw:
+                            item,
+                    };
+                }
+            );
         }
 
-        if (field.key === "city") {
-            return cities.map((item: any) => {
-                const cityName = getDisplayName(
-                    item.name || item.cityName
-                );
+        if (
+            field.key ===
+            "city"
+        ) {
+            return (
+                Array.isArray(
+                    cities
+                )
+                    ? cities
+                    : []
+            ).map(
+                (
+                    item: any
+                ) => {
+                    const cityName =
+                        getDisplayName(
+                            item?.name ||
+                            item?.cityName
+                        );
 
-                return {
-                    value: cityName,
-                    label: cityName,
-                };
-            });
+                    return {
+                        value:
+                            cityName,
+
+                        label:
+                            cityName,
+
+                        raw:
+                            item,
+                    };
+                }
+            );
         }
 
-        if (field.key === "accountType") {
-            return (field.options || []).map((option: any) => {
-                const label =
-                    typeof option === "object"
-                        ? option.label ||
-                        option.name ||
-                        option.value ||
-                        ""
-                        : option;
+        if (
+            field.key ===
+            "accountType"
+        ) {
+            return (
+                Array.isArray(
+                    field?.options
+                )
+                    ? field.options
+                    : []
+            ).map(
+                (
+                    option: any
+                ) => {
+                    const label =
+                        typeof option ===
+                            "object"
+                            ? option?.label ||
+                            option?.name ||
+                            option?.value ||
+                            ""
+                            : option;
 
-                const value =
-                    typeof option === "object"
-                        ? option.value ||
-                        option.code ||
-                        option.name ||
-                        label
-                        : option;
+                    const value =
+                        typeof option ===
+                            "object"
+                            ? option?.value ||
+                            option?.code ||
+                            option?.name ||
+                            label
+                            : option;
 
-                return {
-                    label,
-                    value: String(value).toLowerCase(),
-                };
-            });
+                    return {
+                        label:
+                            String(
+                                label
+                            ),
+
+                        value:
+                            String(
+                                value
+                            ).toLowerCase(),
+                    };
+                }
+            );
         }
 
-        return (field.options || []).map((option: any) => {
-            if (typeof option === "object") {
-                return {
-                    value:
-                        option.value ||
-                        option.code ||
-                        option.name ||
-                        "",
-                    label:
-                        option.label ||
-                        option.name ||
-                        option.value ||
-                        "",
-                };
-            }
+        return (
+            Array.isArray(
+                field?.options
+            )
+                ? field.options
+                : []
+        )
+            .map(
+                (
+                    option: any
+                ) => {
+                    if (
+                        typeof option ===
+                        "object" &&
+                        option !== null
+                    ) {
+                        return {
+                            ...option,
 
-            return {
-                value: option,
-                label: option,
-            };
-        });
+                            value:
+                                String(
+                                    option?.value ||
+                                    option?.code ||
+                                    option?.name ||
+                                    ""
+                                ),
+
+                            label:
+                                String(
+                                    option?.label ||
+                                    option?.name ||
+                                    option?.value ||
+                                    option?.code ||
+                                    ""
+                                ),
+
+                            raw:
+                                option?.raw ||
+                                option,
+                        };
+                    }
+
+                    return {
+                        value:
+                            String(
+                                option
+                            ),
+
+                        label:
+                            String(
+                                option
+                            ),
+
+                        raw:
+                            option,
+                    };
+                }
+            )
+            .filter(
+                (
+                    option: any
+                ) =>
+                    option.value
+            );
     };
 
     /* ============================================
@@ -793,147 +3298,489 @@ const AccountMasterModal = ({
         field: any,
         value: any
     ) => {
-        setForm((previous: any) => ({
-            ...previous,
-            [field.key]: value,
-            ...(field.key === "state"
-                ? {
-                    city: "",
-                }
-                : {}),
-        }));
+        setForm(
+            (
+                previous
+            ) => ({
+                ...previous,
 
-        setErrors((previous: any) => ({
-            ...previous,
-            [field.key]: "",
-            ...(field.key === "state"
-                ? {
-                    city: "",
-                }
-                : {}),
-        }));
+                [field.key]:
+                    value,
 
-        if (field.key === "state") {
-            setPendingCity("");
+                ...(
+                    field.key ===
+                        "state"
+                        ? {
+                            city: "",
+                        }
+                        : {}
+                ),
+            })
+        );
+
+        setErrors(
+            (
+                previous
+            ) => ({
+                ...previous,
+
+                [field.key]:
+                    "",
+
+                ...(
+                    field.key ===
+                        "state"
+                        ? {
+                            city: "",
+                        }
+                        : {}
+                ),
+            })
+        );
+
+        if (
+            field.key ===
+            "state"
+        ) {
+            setPendingCity(
+                ""
+            );
         }
     };
 
     /* ============================================
-       RENDER SCHEMA FIELD
+       RENDER FIELD
     ============================================= */
 
-    const renderSchemaField = (field: any) => {
-        const value = form?.[field.key] ?? "";
+    const renderSchemaField = (
+        field: any
+    ) => {
+        const fieldType =
+            getAccountFieldType(
+                field
+            );
 
-        const commonProps = {
-            label: field.label,
-            mandatory: field.isRequired,
-            value,
-            placeholder: `Enter ${field.label}`,
-            error: errors?.[field.key],
-            disabled:
-                field.disabled ||
-                field.isReadonly ||
-                submitting,
-        };
+        const value =
+            form?.[
+            field.key
+            ] ?? "";
 
-        if (field.type === "select") {
-            const options = getFieldOptions(field);
+        const mandatory =
+            isTrueAccountValue(
+                field?.isRequired
+            ) ||
+            isTrueAccountValue(
+                field?.required
+            );
+
+        const error =
+            errors?.[
+            field.key
+            ];
+
+        const disabled =
+            Boolean(
+                field?.disabled ||
+                field?.isReadonly ||
+                submitting
+            );
+
+        if (
+            fieldType ===
+            "select"
+        ) {
+            const options =
+                getFieldOptions(
+                    field
+                );
 
             return (
                 <SelectInput
-                    key={field.key}
-                    label={field.label}
-                    mandatory={field.isRequired}
-                    value={value}
-                    placeholder={`Select ${field.label}`}
-                    error={errors?.[field.key]}
-                    disabled={
-                        field.disabled ||
-                        field.isReadonly ||
-                        submitting ||
-                        (field.key === "city" && !form.state)
+                    key={
+                        field.key
                     }
-                    onChange={(event: any) =>
-                        handleFieldChange(
-                            field,
-                            event?.target?.value ?? ""
+                    name={
+                        field.key
+                    }
+                    label={
+                        field.label
+                    }
+                    mandatory={
+                        mandatory
+                    }
+                    value={
+                        value
+                    }
+                    placeholder={`Select ${field.label}`}
+                    error={
+                        error
+                    }
+                    disabled={
+                        disabled ||
+                        (
+                            field.key ===
+                            "city" &&
+                            !form.state
                         )
                     }
                     options={[
                         {
-                            value: "",
+                            value:
+                                "",
+
                             label:
-                                field.key === "city" &&
+                                field.key ===
+                                    "city" &&
                                     !form.state
                                     ? "Select state first"
                                     : `Select ${field.label}`,
                         },
+
                         ...options,
                     ]}
-                />
-            );
-        }
-
-        if (field.type === "number") {
-            return (
-                <TextInput
-                    key={field.key}
-                    {...commonProps}
-                    type="number"
-                    onChange={(event: any) =>
+                    onChange={(
+                        event: any
+                    ) =>
                         handleFieldChange(
                             field,
-                            event.target.value
+                            event?.target
+                                ?.value ??
+                            ""
                         )
                     }
                 />
             );
         }
 
-        if (field.type === "textarea") {
+        if (
+            isMasterReferenceField(
+                field
+            )
+        ) {
+            const options =
+                getFieldOptions(
+                    field
+                );
+
+            const selectedValue =
+                getMasterReferenceSelectValue(
+                    field,
+                    form?.[
+                    field.key
+                    ]
+                );
+
+            return (
+                <SelectInput
+                    key={
+                        field.key
+                    }
+                    name={
+                        field.key
+                    }
+                    label={
+                        field.label
+                    }
+                    mandatory={
+                        mandatory
+                    }
+                    value={
+                        selectedValue
+                    }
+                    placeholder={`Select ${field.label}`}
+                    error={
+                        error
+                    }
+                    largeData={
+                        true
+                    }
+                    disabled={
+                        disabled ||
+                        optionsLoading
+                    }
+                    options={[
+                        {
+                            value:
+                                "",
+
+                            label:
+                                optionsLoading
+                                    ? `Loading ${field.label}...`
+                                    : options.length >
+                                        0
+                                        ? `Select ${field.label}`
+                                        : `No ${field.label} found`,
+                        },
+
+                        ...options,
+                    ]}
+                    onChange={(
+                        event: any
+                    ) => {
+                        const nextValue =
+                            event?.target
+                                ?.value ??
+                            "";
+
+                        if (!nextValue) {
+                            handleFieldChange(
+                                field,
+                                null
+                            );
+
+                            return;
+                        }
+
+                        const selectedOption =
+                            options.find(
+                                (
+                                    option: any
+                                ) =>
+                                    String(
+                                        option
+                                            ?.value
+                                    ) ===
+                                    String(
+                                        nextValue
+                                    )
+                            );
+
+                        handleFieldChange(
+                            field,
+
+                            getMasterReferenceValue(
+                                field,
+                                selectedOption,
+                                nextValue
+                            )
+                        );
+                    }}
+                />
+            );
+        }
+
+        if (
+            fieldType ===
+            "boolean"
+        ) {
+            const booleanValue =
+                isTrueAccountValue(
+                    form?.[
+                    field.key
+                    ]
+                );
+
+            return (
+                <ToggleInput
+                    key={
+                        field.key
+                    }
+                    label={
+                        field.label
+                    }
+                    name={
+                        field.key
+                    }
+                    value={
+                        booleanValue
+                    }
+                    checked={
+                        booleanValue
+                    }
+                    mandatory={
+                        mandatory
+                    }
+                    error={
+                        error
+                    }
+                    disabled={
+                        disabled
+                    }
+                    onChange={(
+                        event: any
+                    ) =>
+                        handleFieldChange(
+                            field,
+
+                            event?.target
+                                ?.checked ??
+                            false
+                        )
+                    }
+                />
+            );
+        }
+
+        if (
+            fieldType ===
+            "textarea"
+        ) {
             return (
                 <TextArea
-                    key={field.key}
-                    {...commonProps}
-                    onChange={(event: any) =>
+                    key={
+                        field.key
+                    }
+                    label={
+                        field.label
+                    }
+                    mandatory={
+                        mandatory
+                    }
+                    value={
+                        value
+                    }
+                    placeholder={
+                        field?.placeholder ||
+                        `Enter ${field.label}`
+                    }
+                    error={
+                        error
+                    }
+                    disabled={
+                        disabled
+                    }
+                    onChange={(
+                        event: any
+                    ) =>
                         handleFieldChange(
                             field,
-                            event.target.value
+                            event.target
+                                .value
                         )
                     }
                 />
             );
         }
 
-        if (field.key === "accountMobile") {
+        if (
+            fieldType ===
+            "number"
+        ) {
             return (
                 <TextInput
-                    key={field.key}
-                    {...commonProps}
+                    key={
+                        field.key
+                    }
+                    label={
+                        field.label
+                    }
+                    mandatory={
+                        mandatory
+                    }
+                    value={
+                        value
+                    }
+                    placeholder={
+                        field?.placeholder ||
+                        `Enter ${field.label}`
+                    }
+                    error={
+                        error
+                    }
+                    disabled={
+                        disabled
+                    }
+                    type="number"
+                    onChange={(
+                        event: any
+                    ) =>
+                        handleFieldChange(
+                            field,
+                            event.target
+                                .value
+                        )
+                    }
+                />
+            );
+        }
+
+        if (
+            fieldType ===
+            "date"
+        ) {
+            return (
+                <TextInput
+                    key={
+                        field.key
+                    }
+                    label={
+                        field.label
+                    }
+                    mandatory={
+                        mandatory
+                    }
+                    value={
+                        value
+                    }
+                    placeholder={
+                        field?.placeholder ||
+                        `Select ${field.label}`
+                    }
+                    error={
+                        error
+                    }
+                    disabled={
+                        disabled
+                    }
+                    type="date"
+                    onChange={(
+                        event: any
+                    ) =>
+                        handleFieldChange(
+                            field,
+                            event.target
+                                .value
+                        )
+                    }
+                />
+            );
+        }
+
+        if (
+            field.key ===
+            "accountMobile"
+        ) {
+            return (
+                <TextInput
+                    key={
+                        field.key
+                    }
+                    label={
+                        field.label
+                    }
+                    mandatory={
+                        mandatory
+                    }
+                    value={
+                        value
+                    }
+                    placeholder={
+                        field?.placeholder ||
+                        `Enter ${field.label}`
+                    }
+                    error={
+                        error
+                    }
+                    disabled={
+                        disabled
+                    }
                     type="text"
-                    onChange={(event: any) =>
+                    onChange={(
+                        event: any
+                    ) =>
                         handleFieldChange(
                             field,
-                            event.target.value
-                                .replace(/\D/g, "")
-                                .slice(0, 10)
-                        )
-                    }
-                />
-            );
-        }
 
-        if (field.key === "accountEmail") {
-            return (
-                <TextInput
-                    key={field.key}
-                    {...commonProps}
-                    type="email"
-                    onChange={(event: any) =>
-                        handleFieldChange(
-                            field,
-                            event.target.value
+                            event.target
+                                .value
+                                .replace(
+                                    /\D/g,
+                                    ""
+                                )
+                                .slice(
+                                    0,
+                                    10
+                                )
                         )
                     }
                 />
@@ -942,13 +3789,41 @@ const AccountMasterModal = ({
 
         return (
             <TextInput
-                key={field.key}
-                {...commonProps}
-                type="text"
-                onChange={(event: any) =>
+                key={
+                    field.key
+                }
+                label={
+                    field.label
+                }
+                mandatory={
+                    mandatory
+                }
+                value={
+                    value
+                }
+                placeholder={
+                    field?.placeholder ||
+                    `Enter ${field.label}`
+                }
+                error={
+                    error
+                }
+                disabled={
+                    disabled
+                }
+                type={
+                    field.key ===
+                        "accountEmail"
+                        ? "email"
+                        : "text"
+                }
+                onChange={(
+                    event: any
+                ) =>
                     handleFieldChange(
                         field,
-                        event.target.value
+                        event.target
+                            .value
                     )
                 }
             />
@@ -959,274 +3834,802 @@ const AccountMasterModal = ({
        VALIDATE FORM
     ============================================= */
 
-    const validateForm = () => {
-        const validationErrors: any = {};
+    const validateForm =
+        () => {
+            const validationErrors: Record<
+                string,
+                string
+            > = {};
 
-        accountMasterSchemaFields.forEach((field: any) => {
-            const value = form?.[field.key];
+            schemaFields.forEach(
+                (
+                    field: any
+                ) => {
+                    const value =
+                        form?.[
+                        field.key
+                        ];
+
+                    const fieldType =
+                        getAccountFieldType(
+                            field
+                        );
+
+                    const required =
+                        isTrueAccountValue(
+                            field?.isRequired
+                        ) ||
+                        isTrueAccountValue(
+                            field?.required
+                        );
+
+                    if (!required) {
+                        return;
+                    }
+
+                    if (
+                        fieldType ===
+                        "boolean"
+                    ) {
+                        if (
+                            value ===
+                            undefined ||
+                            value === null
+                        ) {
+                            validationErrors[
+                                field.key
+                            ] =
+                                `${field.label} required`;
+                        }
+
+                        return;
+                    }
+
+                    if (
+                        CODE_NAME_REFERENCE_FIELD_TYPES.has(
+                            fieldType
+                        )
+                    ) {
+                        if (
+                            !value ||
+                            !String(
+                                value?.code ||
+                                ""
+                            ).trim() ||
+                            !String(
+                                value?.name ||
+                                ""
+                            ).trim()
+                        ) {
+                            validationErrors[
+                                field.key
+                            ] =
+                                `${field.label} required`;
+                        }
+
+                        return;
+                    }
+
+                    if (
+                        fieldType ===
+                        "statemaster"
+                    ) {
+                        if (
+                            !value ||
+                            !String(
+                                value
+                                    ?.stateCode ||
+                                ""
+                            ).trim() ||
+                            !String(
+                                value?.name ||
+                                ""
+                            ).trim()
+                        ) {
+                            validationErrors[
+                                field.key
+                            ] =
+                                `${field.label} required`;
+                        }
+
+                        return;
+                    }
+
+                    if (
+                        fieldType ===
+                        "citymaster"
+                    ) {
+                        if (
+                            !value ||
+                            !String(
+                                value?.name ||
+                                ""
+                            ).trim()
+                        ) {
+                            validationErrors[
+                                field.key
+                            ] =
+                                `${field.label} required`;
+                        }
+
+                        return;
+                    }
+
+                    if (
+                        EMPLOYEE_REFERENCE_FIELD_TYPES.has(
+                            fieldType
+                        )
+                    ) {
+                        if (
+                            !value ||
+                            !String(
+                                value
+                                    ?.userMobileNumberHash ||
+                                ""
+                            ).trim()
+                        ) {
+                            validationErrors[
+                                field.key
+                            ] =
+                                `${field.label} required`;
+                        }
+
+                        return;
+                    }
+
+                    if (
+                        value ===
+                        undefined ||
+                        value === null ||
+                        String(
+                            value
+                        ).trim() ===
+                        ""
+                    ) {
+                        validationErrors[
+                            field.key
+                        ] =
+                            `${field.label} required`;
+                    }
+                }
+            );
+
+            const mobile =
+                form
+                    ?.accountMobile;
 
             if (
-                field.isRequired &&
-                String(value ?? "").trim() === ""
+                mobile &&
+                !/^\d{10}$/.test(
+                    String(
+                        mobile
+                    )
+                )
             ) {
-                validationErrors[field.key] =
-                    `${field.label} required`;
-            }
-
-            if (
-                field.key === "accountMobile" &&
-                value &&
-                !/^\d{10}$/.test(String(value))
-            ) {
-                validationErrors[field.key] =
+                validationErrors
+                    .accountMobile =
                     "Mobile must be 10 digits";
             }
 
+            const email = form?.accountEmail;
+
             if (
-                field.key === "accountEmail" &&
-                value &&
+                email &&
                 !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-                    String(value)
+                    String(
+                        email
+                    )
                 )
             ) {
-                validationErrors[field.key] =
+                validationErrors
+                    .accountEmail =
                     "Invalid email address";
             }
 
-            if (
-                field.key === "accountCreditLimit" &&
-                value !== "" &&
-                value !== null &&
-                value !== undefined &&
-                Number(value) < 0
-            ) {
-                validationErrors[field.key] =
-                    "Credit limit cannot be negative";
-            }
-        });
+            schemaFields.forEach(
+                (
+                    field: any
+                ) => {
+                    if (
+                        getAccountFieldType(
+                            field
+                        ) !==
+                        "number"
+                    ) {
+                        return;
+                    }
 
-        setErrors(validationErrors);
+                    const value =
+                        form?.[
+                        field.key
+                        ];
 
-        return Object.keys(validationErrors).length === 0;
-    };
+                    if (
+                        value === "" ||
+                        value === null ||
+                        value ===
+                        undefined
+                    ) {
+                        return;
+                    }
 
-    /* ============================================
-       SELECTED STATE / CITY
-    ============================================= */
+                    if (
+                        Number.isNaN(
+                            Number(
+                                value
+                            )
+                        )
+                    ) {
+                        validationErrors[
+                            field.key
+                        ] =
+                            `${field.label} must be a valid number`;
 
-    const findSelectedState = () => {
-        return states.find((item: any) => {
-            const stateCode =
-                item.isoCode ||
-                item.stateCode ||
-                item.code ||
-                "";
+                        return;
+                    }
 
-            return stateCode === form.state;
-        });
-    };
-
-    const findSelectedCity = () => {
-        return cities.find((item: any) => {
-            const cityName = getDisplayName(
-                item.name || item.cityName
+                    if (
+                        Number(
+                            value
+                        ) < 0
+                    ) {
+                        validationErrors[
+                            field.key
+                        ] =
+                            `${field.label} cannot be negative`;
+                    }
+                }
             );
 
-            return cityName === form.city;
-        });
+            setErrors(
+                validationErrors
+            );
+
+            return (
+                Object.keys(
+                    validationErrors
+                ).length ===
+                0
+            );
+        };
+
+    /* ============================================
+       SELECTED SYSTEM STATE / CITY
+    ============================================= */
+
+    const findSelectedState =
+        () => {
+            return (
+                Array.isArray(
+                    states
+                )
+                    ? states
+                    : []
+            ).find(
+                (
+                    item: any
+                ) => {
+                    const stateCode =
+                        item?.isoCode ||
+                        item?.stateCode ||
+                        item?.code ||
+                        "";
+
+                    return (
+                        String(
+                            stateCode
+                        ) ===
+                        String(
+                            form.state ||
+                            ""
+                        )
+                    );
+                }
+            );
+        };
+
+    const findSelectedCity =
+        () => {
+            return (
+                Array.isArray(
+                    cities
+                )
+                    ? cities
+                    : []
+            ).find(
+                (
+                    item: any
+                ) => {
+                    const cityName =
+                        getDisplayName(
+                            item?.name ||
+                            item?.cityName
+                        );
+
+                    return (
+                        cityName ===
+                        form.city
+                    );
+                }
+            );
+        };
+
+    /* ============================================
+       RESOLVE FIELD VALUE FOR PAYLOAD
+
+       Prepare the final field value before deciding
+       whether it belongs at root or in dynamicFields.
+    ============================================ */
+
+    const resolveAccountPayloadFieldValue = (
+        field: any,
+        selectedState: any,
+        selectedCity: any
+    ) => {
+        const key =
+            field.key;
+
+        let value: any =
+            form?.[key];
+
+        if (
+            key ===
+            "state"
+        ) {
+            value =
+                selectedState ||
+                form.state;
+        }
+
+        if (
+            key ===
+            "city"
+        ) {
+            value =
+                selectedCity ||
+                form.city;
+        }
+
+        value =
+            normalizeAccountFieldValue(
+                field,
+                value
+            );
+
+        if (
+            key ===
+            "accountType"
+        ) {
+            value =
+                String(
+                    value ??
+                    ""
+                ).toLowerCase();
+        }
+
+        return value;
     };
 
     /* ============================================
-       CREATE / UPDATE ACCOUNT
-    ============================================= */
+       SUBMIT
+    ============================================ */
 
-    const handleSubmit = async () => {
-        if (submitting || !validateForm()) return;
+    const handleSubmit =
+        async () => {
+            if (
+                submitting ||
+                schemaLoading ||
+                optionsLoading ||
+                !optionsReady ||
+                !validateForm()
+            ) {
+                return;
+            }
 
-        const selectedState = findSelectedState();
-        const selectedCity = findSelectedCity();
+            const selectedState =
+                findSelectedState();
 
-        setSubmitting(true);
+            const selectedCity =
+                findSelectedCity();
 
-        try {
-            let savedAccount: any;
+            setSubmitting(
+                true
+            );
 
-            if (editingAccount) {
-                const updatePayload: any = {};
+            try {
+                let savedAccount: any;
 
-                accountMasterSchemaFields.forEach(
-                    (field: any) => {
-                        const key = field.key;
+                /* ====================================
+                   UPDATE ACCOUNT
+                ==================================== */
 
-                        if (key === "state") {
-                            const oldStateCode =
-                                typeof editingAccount.state ===
-                                    "object"
-                                    ? editingAccount.state
-                                        ?.isoCode ||
-                                    editingAccount.state
-                                        ?.stateCode ||
-                                    editingAccount.state
-                                        ?.code ||
-                                    ""
-                                    : editingAccount.state ||
-                                    "";
+                if (
+                    editingAccount
+                ) {
+                    const updatePayload: Record<
+                        string,
+                        any
+                    > = {};
+
+                    const dynamicFields: Record<
+                        string,
+                        any
+                    > = {
+                        ...(
+                            editingAccount
+                                ?.dynamicFields ||
+                            {}
+                        ),
+                    };
+
+                    let dynamicFieldsChanged =
+                        false;
+
+                    schemaFields.forEach(
+                        (
+                            field: any
+                        ) => {
+                            const key =
+                                field.key;
+
+                            const currentValue =
+                                resolveAccountPayloadFieldValue(
+                                    field,
+                                    selectedState,
+                                    selectedCity
+                                );
 
                             if (
-                                form.state !== oldStateCode
+                                isDynamicAccountSchemaField(
+                                    field
+                                )
                             ) {
-                                updatePayload.state =
-                                    selectedState ||
-                                    form.state;
-                            }
-
-                            return;
-                        }
-
-                        if (key === "city") {
-                            const oldCityName =
-                                typeof editingAccount.city ===
-                                    "object"
-                                    ? getDisplayName(
-                                        editingAccount.city
-                                            ?.name ||
+                                const hasExistingDynamicValue =
+                                    Object.prototype.hasOwnProperty.call(
                                         editingAccount
-                                            .city
-                                            ?.cityName
-                                    )
-                                    : editingAccount.city ||
-                                    "";
+                                            ?.dynamicFields ||
+                                        {},
+                                        key
+                                    );
 
-                            if (
-                                form.city !== oldCityName
-                            ) {
-                                updatePayload.city =
-                                    selectedCity ||
-                                    form.city;
+                                const previousRawValue =
+                                    hasExistingDynamicValue
+                                        ? editingAccount
+                                            ?.dynamicFields?.[
+                                        key
+                                        ]
+                                        : editingAccount?.[
+                                        key
+                                        ];
+
+                                const oldValue =
+                                    normalizeAccountFieldValue(
+                                        field,
+                                        previousRawValue
+                                    );
+
+                                dynamicFields[
+                                    key
+                                ] =
+                                    currentValue;
+
+                                if (
+                                    !hasExistingDynamicValue ||
+                                    !areAccountFieldValuesEqual(
+                                        currentValue,
+                                        oldValue
+                                    )
+                                ) {
+                                    dynamicFieldsChanged =
+                                        true;
+                                }
+
+                                return;
                             }
 
-                            return;
-                        }
-
-                        const oldValue =
-                            key === "accountType"
-                                ? String(
+                            let oldValue =
+                                normalizeAccountFieldValue(
+                                    field,
                                     editingAccount?.[
                                     key
-                                    ] ?? ""
-                                ).toLowerCase()
-                                : editingAccount?.[
-                                key
-                                ] ?? "";
+                                    ]
+                                );
 
-                        if (form[key] !== oldValue) {
-                            updatePayload[key] =
-                                form[key];
+                            if (
+                                key ===
+                                "accountType"
+                            ) {
+                                oldValue =
+                                    String(
+                                        oldValue ??
+                                        ""
+                                    ).toLowerCase();
+                            }
+
+                            if (
+                                !areAccountFieldValuesEqual(
+                                    currentValue,
+                                    oldValue
+                                )
+                            ) {
+                                updatePayload[
+                                    key
+                                ] =
+                                    currentValue;
+                            }
                         }
+                    );
+
+                    if (
+                        dynamicFieldsChanged
+                    ) {
+                        updatePayload.dynamicFields =
+                            dynamicFields;
                     }
+
+                    if (
+                        Object.keys(
+                            updatePayload
+                        ).length ===
+                        0
+                    ) {
+                        toast.info(
+                            "No changes found"
+                        );
+
+                        return;
+                    }
+
+                    savedAccount =
+                        await dispatch(
+                            updateAccount({
+                                accountCode:
+                                    editingAccount
+                                        .accountCode,
+
+                                data:
+                                    updatePayload,
+                            }) as any
+                        ).unwrap();
+
+                    toast.success(
+                        "Account updated successfully"
+                    );
+                } else {
+                    /* ====================================
+                       CREATE ACCOUNT
+                    ==================================== */
+
+                    const payload: Record<
+                        string,
+                        any
+                    > = {};
+
+                    const dynamicFields: Record<
+                        string,
+                        any
+                    > = {};
+
+                    schemaFields.forEach(
+                        (
+                            field: any
+                        ) => {
+                            const key =
+                                field.key;
+
+                            const value =
+                                resolveAccountPayloadFieldValue(
+                                    field,
+                                    selectedState,
+                                    selectedCity
+                                );
+
+                            if (
+                                isDynamicAccountSchemaField(
+                                    field
+                                )
+                            ) {
+                                dynamicFields[
+                                    key
+                                ] =
+                                    value;
+                            } else {
+                                payload[
+                                    key
+                                ] =
+                                    value;
+                            }
+                        }
+                    );
+
+                    payload.dynamicFields =
+                        dynamicFields;
+
+                    savedAccount =
+                        await dispatch(
+                            createAccount(
+                                payload
+                            ) as any
+                        ).unwrap();
+
+                    toast.success(
+                        "Account created successfully"
+                    );
+                }
+
+                setShow(
+                    false
+                );
+
+                setForm(
+                    buildEmptyAccountForm(
+                        schemaFields
+                    )
+                );
+
+                setErrors({});
+                setPendingCity("");
+
+                setLoadedSchemaFields(
+                    []
+                );
+
+                setOptionsLoading(
+                    false
+                );
+
+                setOptionsReady(
+                    false
                 );
 
                 if (
-                    Object.keys(updatePayload).length === 0
+                    onSaved
                 ) {
-                    toast.info("No changes found");
-                    return;
+                    await onSaved(
+                        savedAccount
+                    );
+                }
+            } catch (
+            error: any
+            ) {
+                const apiErrors =
+                    error?.error ||
+                    error?.errors ||
+                    error?.response
+                        ?.data?.error ||
+                    error?.response
+                        ?.data?.errors ||
+                    {};
+
+                if (
+                    apiErrors &&
+                    typeof apiErrors ===
+                    "object" &&
+                    !Array.isArray(
+                        apiErrors
+                    )
+                ) {
+                    setErrors(
+                        apiErrors
+                    );
                 }
 
-                savedAccount = await dispatch(
-                    updateAccount({
-                        accountCode:
-                            editingAccount.accountCode,
-                        data: updatePayload,
-                    }) as any
-                ).unwrap();
-
-                toast.success(
-                    "Account updated successfully"
+                toast.error(
+                    error?.response
+                        ?.data?.message ||
+                    error?.message ||
+                    (
+                        typeof error ===
+                            "string"
+                            ? error
+                            : ""
+                    ) ||
+                    "Account operation failed"
                 );
-            } else {
-                const payload = {
-                    ...form,
-                    state: selectedState || form.state,
-                    city: selectedCity || form.city,
-                };
-
-                savedAccount = await dispatch(
-                    createAccount(payload) as any
-                ).unwrap();
-
-                toast.success(
-                    "Account created successfully"
+            } finally {
+                setSubmitting(
+                    false
                 );
             }
+        };
 
-            setShow(false);
-            setForm(
-                buildEmptyAccountForm(
-                    accountMasterSchemaFields
-                )
-            );
-            setErrors({});
-            setPendingCity("");
+    /* ============================================
+       MODAL VISIBILITY
+    ============================================= */
 
-            if (onSaved) {
-                onSaved(savedAccount);
-            }
-        } catch (error: any) {
-            toast.error(
-                error?.message ||
-                error ||
-                "Account operation failed"
-            );
-        } finally {
-            setSubmitting(false);
+    const handleModalVisibility = (
+        value: boolean
+    ) => {
+        if (
+            submitting
+        ) {
+            return;
         }
-    };
 
-    const handleModalVisibility = (value: boolean) => {
-        if (submitting) return;
-
-        setShow(value);
+        setShow(
+            value
+        );
 
         if (!value) {
             setErrors({});
             setPendingCity("");
+            setLoadedSchemaFields(
+                []
+            );
+            setOptionsLoading(
+                false
+            );
+            setOptionsReady(
+                false
+            );
         }
     };
 
+    const modalLoading =
+        schemaLoading ||
+        optionsLoading ||
+        !optionsReady;
+
     return (
         <Modal
-            {...{
-                show,
-                setShow: handleModalVisibility,
-                handleSubmit,
-                state: editingAccount,
-                title:
-                    title ||
-                    (editingAccount
+            show={
+                show
+            }
+            setShow={
+                handleModalVisibility
+            }
+            handleSubmit={
+                handleSubmit
+            }
+            state={
+                Boolean(
+                    editingAccount
+                )
+            }
+            loader={
+                submitting
+            }
+            title={
+                title ||
+                (
+                    editingAccount
                         ? "Update Account"
-                        : "Add New Account"),
-                body: (
-                    <>
-                        {schemaLoading ? (
-                            <div className="py-6 text-sm text-muted-foreground">
-                                Loading account fields...
-                            </div>
-                        ) : accountMasterSchemaFields.length ===
-                            0 ? (
-                            <div className="py-6 text-sm text-muted-foreground">
-                                Account Master schema fields
-                                not found.
+                        : "Add New Account"
+                )
+            }
+            body={
+                <>
+                    {modalLoading ? (
+                        <div className="py-6 text-sm text-muted-foreground">
+                            Loading account fields...
+                        </div>
+                    ) : schemaFields.length ===
+                        0 ? (
+                        <div className="py-6 text-sm text-muted-foreground">
+                                Account Master schema fields not found.
                             </div>
                         ) : (
-                            accountMasterSchemaFields.map(
-                                (field: any) =>
-                                    renderSchemaField(field)
+                                schemaFields
+                                    .filter(
+                                        (
+                                            field: any
+                                        ) =>
+                                            !isTrueAccountValue(
+                                                field
+                                                    ?.isHidden
+                                            )
+                                    )
+                                    .map(
+                                        (
+                                            field: any
+                                        ) =>
+                                            renderSchemaField(
+                                                field
+                                            )
                             )
-                        )}
-                    </>
-                ),
-            }}
+                    )}
+                </>
+            }
         />
     );
 };

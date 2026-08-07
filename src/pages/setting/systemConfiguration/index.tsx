@@ -83,7 +83,7 @@ const inventoryTagLevelOptions = [
         value: "WAREHOUSE_LOCATION_BATCH",
     },
     {
-        label: "Warehouse + Location + Batch + Bin",
+        label: "Warehouse + Location + Bin + Batch",
         value: "WAREHOUSE_LOCATION_BATCH_BIN",
     },
     {

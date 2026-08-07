@@ -1,6 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
-
+import {
+    resolveTransportationEnabled,
+    syncVehicleMasterCustomMaster,
+} from "./syncVehicleMasterCustomMaster";
 /* ===================================================
    CONSTANTS
 =================================================== */
@@ -664,58 +667,181 @@ export const updateSystemConfiguration = createAsyncThunk(
    SAVE OR UPDATE CONFIGURATION
 =================================================== */
 
-export const saveOrUpdateSystemConfiguration = createAsyncThunk(
-    "systemConfiguration/saveOrUpdateSystemConfiguration",
-    async ({ configuration, }: { configuration: any; }, { dispatch, rejectWithValue }) => {
-        try {
-            const configurationCode = configuration?.configurationCode;
-            let result: any;
+/* ===================================================
+   SAVE OR UPDATE CONFIGURATION
+=================================================== */
 
-            if (configurationCode) {
-                result = await dispatch(
-                    updateSystemConfiguration({
-                        configurationCode,
-                        configuration,
-                    }) as any
-                ).unwrap();
+export const saveOrUpdateSystemConfiguration =
+    createAsyncThunk(
+        "systemConfiguration/saveOrUpdateSystemConfiguration",
 
-                const latest = await dispatch(
-                    getSystemConfigurationByCode({
-                        configurationCode,
-                    }) as any
-                ).unwrap();
+        async (
+            {
+                configuration,
+            }: {
+                configuration: any;
+            },
+
+            {
+                dispatch,
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const configurationCode =
+                    configuration
+                        ?.configurationCode;
+
+                let result: any;
+
+                let latestConfiguration: any;
+
+                let mode:
+                    | "save"
+                    | "update";
+
+                /* ==========================================
+                   STEP 1: SAVE OR UPDATE CONFIGURATION
+                ========================================== */
+
+                if (configurationCode) {
+                    mode = "update";
+
+                    result =
+                        await dispatch(
+                            updateSystemConfiguration(
+                                {
+                                    configurationCode,
+                                    configuration,
+                                }
+                            ) as any
+                        ).unwrap();
+
+                    latestConfiguration =
+                        await dispatch(
+                            getSystemConfigurationByCode(
+                                {
+                                    configurationCode,
+                                }
+                            ) as any
+                        ).unwrap();
+                } else {
+                    mode = "save";
+
+                    result =
+                        await dispatch(
+                            saveSystemConfiguration(
+                                {
+                                    configuration,
+                                }
+                            ) as any
+                        ).unwrap();
+
+                    const newCode =
+                        result?.data
+                            ?.configurationCode;
+
+                    if (newCode) {
+                        latestConfiguration =
+                            await dispatch(
+                                getSystemConfigurationByCode(
+                                    {
+                                        configurationCode:
+                                            newCode,
+                                    }
+                                ) as any
+                            ).unwrap();
+                    } else {
+                        latestConfiguration =
+                            await dispatch(
+                                getLatestSystemConfiguration() as any
+                            ).unwrap();
+                    }
+                }
+
+                /* ==========================================
+                   ⭐ ADDED: VEHICLE MASTER SYNCHRONIZATION
+
+                   Configuration save/update remains primary.
+                   Vehicle Master failure does not reject the
+                   successfully saved configuration.
+                ========================================== */
+
+                let vehicleMasterSync: any = {
+                    skipped: true,
+                };
+
+                try {
+                    const transportationEnabled =
+                        resolveTransportationEnabled(
+                            latestConfiguration
+                                ?.systemConfiguration ||
+                            configuration
+                                ?.systemConfiguration
+                        );
+
+                    vehicleMasterSync =
+                        await syncVehicleMasterCustomMaster(
+                            transportationEnabled
+                        );
+
+                    console.log(
+                        "Vehicle Master synchronization result:",
+                        vehicleMasterSync
+                    );
+                } catch (
+                syncError: any
+                ) {
+                    console.log(
+                        "syncVehicleMasterCustomMaster error:",
+                        syncError
+                    );
+
+                    vehicleMasterSync = {
+                        failed: true,
+
+                        message:
+                            syncError?.message ||
+                            "Vehicle Master synchronization failed.",
+                    };
+                }
+
+                /* ==========================================
+                   STEP 3: RETURN SUCCESSFUL CONFIGURATION
+                ========================================== */
 
                 return {
-                    message: result?.message || "Configuration updated successfully",
-                    configuration: latest,
-                    mode: "update",
+                    message:
+                        result?.message ||
+                        (
+                            mode ===
+                                "update"
+                                ? "Configuration updated successfully"
+                                : "Configuration saved successfully"
+                        ),
+
+                    configuration:
+                        latestConfiguration,
+
+                    mode,
+
+                    vehicleMasterSync,
                 };
+            } catch (err: any) {
+                return rejectWithValue({
+                    message:
+                        err?.message ||
+                        err?.response?.data
+                            ?.message ||
+                        "Failed to save configuration",
+
+                    status:
+                        err?.response
+                            ?.status,
+                });
             }
-            result = await dispatch(saveSystemConfiguration({ configuration, }) as any).unwrap();
-            const newCode = result?.data?.configurationCode;
-            if (newCode) {
-                const latest = await dispatch(getSystemConfigurationByCode({ configurationCode: newCode, }) as any).unwrap();
-
-                return {
-                    message: result?.message || "Configuration saved successfully", configuration: latest, mode: "save",
-                };
-            }
-
-            const latest = await dispatch(getLatestSystemConfiguration() as any).unwrap();
-
-            return {
-                message: result?.message || "Configuration saved successfully",
-                configuration: latest,
-                mode: "save",
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message: err?.message || err?.response?.data?.message || "Failed to save configuration",
-                status: err?.response?.status,
-            });
         }
-    }
-);
+    );
 
 export const verifyWhatsAppMetaCredentials = createAsyncThunk(
     "systemConfiguration/verifyWhatsAppMetaCredentials",

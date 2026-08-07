@@ -140,46 +140,188 @@ const CONDITIONAL_MARGIN_FIELD_KEYS = new Set([
     "nonTaxGross",
 ]);
 
-export const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all(
-        (fields || []).map(async (field) => {
-            if (!field?.api) return field;
+export const loadFieldOptions = async (
+    fields: any[]
+) => {
+    const updatedFields =
+        await Promise.all(
+            (fields || []).map(
+                async (field: any) => {
+                    const fieldType =
+                        String(
+                            field?.type ||
+                            field?.dataSource
+                                ?.type ||
+                            ""
+                        ).toLowerCase();
 
-            try {
-                const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    {
-                        params: field.queryParams || {},
+                    /*
+                     * Existing pages continue using field.api.
+                     * Account Master productmaster uses
+                     * field.dataSource.api.
+                     */
+                    const api =
+                        field?.api ||
+                        (
+                            fieldType ===
+                                "productmaster"
+                                ? field
+                                    ?.dataSource
+                                    ?.api
+                                : ""
+                        );
+
+                    if (!api) {
+                        return field;
                     }
-                );
 
-                const records = getRecords(res.data);
+                    try {
+                        const labelField =
+                            field
+                                ?.labelField ||
+                            field
+                                ?.dataSource
+                                ?.labelField ||
+                            (
+                                fieldType ===
+                                    "productmaster"
+                                    ? "productName"
+                                    : ""
+                            );
 
-                const options = Array.isArray(records)
-                    ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
-                        raw: item,
-                    }))
-                    : [];
+                        const valueField =
+                            field
+                                ?.valueField ||
+                            field
+                                ?.dataSource
+                                ?.valueField ||
+                            (
+                                fieldType ===
+                                    "productmaster"
+                                    ? "productCode"
+                                    : ""
+                            );
 
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(
-                    `Failed to load options for ${field.key}`,
+                        const apiUrl =
+                            String(api).startsWith(
+                                "/eTaxSolnMongoApiBackend"
+                            )
+                                ? String(api)
+                                : `/eTaxSolnMongoApiBackend${String(
+                                    api
+                                ).startsWith(
+                                    "/"
+                                )
+                                    ? api
+                                    : `/${api}`
+                                }`;
+
+                        console.log(
+                            "[loadFieldOptions] calling:",
+                            apiUrl
+                        );
+
+                        const res =
+                            await professionalAxios.get(
+                                apiUrl,
+                                {
+                                    params:
+                                        field
+                                            ?.queryParams ||
+                                        field
+                                            ?.dataSource
+                                            ?.queryParams ||
+                                        {},
+                                }
+                            );
+
+                        const records =
+                            getRecords(
+                                res.data
+                            );
+
+                        const options =
+                            Array.isArray(
+                                records
+                            )
+                                ? records
+                                    .map(
+                                        (
+                                            item: any
+                                        ) => {
+                                            const value =
+                                                item?.[
+                                                valueField
+                                                ] ||
+                                                item
+                                                    ?.productCode ||
+                                                item
+                                                    ?.code ||
+                                                item
+                                                    ?._id ||
+                                                "";
+
+                                            const label =
+                                                item?.[
+                                                labelField
+                                                ] ||
+                                                item
+                                                    ?.productName ||
+                                                item
+                                                    ?.name ||
+                                                value;
+
+                                            return {
+                                                label:
+                                                    String(
+                                                        label ||
+                                                        ""
+                                                    ),
+
+                                                value:
+                                                    String(
+                                                        value ||
+                                                        ""
+                                                    ),
+
+                                                raw:
+                                                    item,
+                                            };
+                                        }
+                                    )
+                                    .filter(
+                                        (
+                                            option: any
+                                        ) =>
+                                            option.value
+                                    )
+                                : [];
+
+                        console.log(
+                            `[loadFieldOptions] ${field.key} options:`,
+                            options
+                        );
+
+                        return {
+                            ...field,
+                            options,
+                        };
+                    } catch (
                     error
-                );
+                    ) {
+                        console.log(
+                            `Failed to load options for ${field.key}`,
+                            error
+                        );
 
-                return {
-                    ...field,
-                    options: [],
-                };
-            }
-        })
-    );
+                        return {
+                            ...field,
+                            options: [],
+                        };
+                    }
+                }
+            )
+        );
 
     return updatedFields;
 };

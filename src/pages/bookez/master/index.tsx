@@ -19,6 +19,7 @@ import UnitMaster from "./UnitMaster";
 import ReportMapping from "./ReportMapping";
 import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
 import CustomMasterComp from "./customMasterComp";
+import KitCollection from "./kitCollection";
 
 
 const MasterDashboard = () => {
@@ -61,11 +62,19 @@ const MasterDashboard = () => {
         component: UnitMaster,
         permissionKey: "unitMaster"
       },
+      {
+        title: "KIT",
+        description: "Manage unit measurements for products and transactions.",
+        icon: <Ruler size={22} />,
+        component: KitCollection,
+        permissionKey: "unitMaster"
+      },
     ];
 
     const apiCards: any[] = customMasterModules.map((item: any) => {
       const moduleName = item?.moduleName || "Custom Master";
       const moduleCode = item?.moduleCode || item?._id || "";
+      console.log({ item })
       const CustomMasterScreen = () => (
         <CustomMasterComp name={moduleName} moduleCode={moduleCode} />
       );

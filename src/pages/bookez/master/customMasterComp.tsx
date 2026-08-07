@@ -134,26 +134,12 @@ const buildApiUrl = (field: any, formState: any): string | null => {
 	return filled.startsWith(API_PREFIX) ? filled : `${API_PREFIX}${filled}`;
 };
 
-// Whether this field should render as a dynamically-loaded dropdown at all
-// (either via schema dataSource, or via the override map above).
 const hasDynamicSource = (field: any): boolean =>
 	!!field?.dataSource || !!FIELD_DATA_SOURCE_OVERRIDES[field?.key];
 
-// Per-field normalizers: each takes the RAW response.data (not pre-unwrapped,
-// since the shapes genuinely differ) plus a small `context` object, and
-// returns [{label, value, raw}]. `value` is what the <select> itself uses
-// (has to be a primitive string — HTML selects can't carry objects); `raw` is
-// the actual object the backend now requires for these fields (confirmed by
-// the VALIDATION_ERROR: "vendor/customemployeemaster/statemaster/citymaster
-// must be object") and is swapped back in at submit time in handleSubmit.
-// This replaces the earlier generic guesser, which broke on statemaster: its
-// records have no `code`/`value`/`_id` field, so it fell back to `item.name`
-// (an object of translations) and stuffed "[object Object]" into the value —
-// that's exactly what caused "Failed to load cityMaster" / the INVALID_QUERY error.
 type NormalizeContext = { currentUserHash: string };
 const FIELD_NORMALIZERS: Record<string, (raw: any, context: NormalizeContext) => { label: string; value: string; raw: any }[]> = {
-	// doc 5 shape: { records: [{ name: {en, hi, ...}, isoCode, ... }] } — the
-	// whole record is what accounts' own "state" field stores, so submit it as-is.
+
 	statemaster: (raw) => {
 		const records =
 			raw?.records ||
@@ -409,13 +395,6 @@ const CustomMasterComp = ({
 			// @ts-ignore
 			const payload: any = await dispatch(fetchMasterOptions({ key: field.key, url })).unwrap();
 			const raw = payload?.data;
-			// Look up by field.type first: schema keys are custom per module
-			// (e.g. this field's key is "customemployeemaster" but its type is
-			// "employeemaster"), so keying only by field.key silently missed it
-			// and fell through to the generic normalizer, which doesn't know how
-			// to unwrap { result: [{ParentUser, ChildUsers}] }. field.key is kept
-			// as a fallback for override-only fields like "vendor", which has no
-			// distinguishing type ("select") of its own.
 			const normalize = FIELD_NORMALIZERS[field.type] || FIELD_NORMALIZERS[field.key] || normalizeGeneric;
 			const options = normalize(raw, { currentUserHash: getCurrentUserMobileHash() });
 			setDynamicOptions((prev: any) => ({ ...prev, [field.key]: options }));
@@ -448,13 +427,6 @@ const CustomMasterComp = ({
 			}
 		});
 	};
-
-	// NEW: the <select> itself can only carry a primitive string value, but a
-	// record loaded from the DB may already have these fields as full objects
-	// (once saves start going through resolveSubmitValue below) or, for older
-	// records, as the plain strings we used to save. This extracts whichever
-	// primitive the option list is keyed by, from either shape, so the correct
-	// option shows as selected either way.
 	const getSelectDisplayValue = (field: any, val: any): string => {
 		if (val === undefined || val === null) return "";
 		if (typeof val !== "object") return String(val);
@@ -465,12 +437,6 @@ const CustomMasterComp = ({
 		return "";
 	};
 
-	// NEW: backend now requires vendor/customemployeemaster/statemaster/citymaster
-	// to be objects (VALIDATION_ERROR: "<field> must be object"), not the plain
-	// code/name string the <select> works with. If the field's current value is
-	// already an object (untouched from the loaded record), submit it as-is;
-	// otherwise it's a string the user just picked, so look up that option's
-	// `raw` object from the already-fetched dynamicOptions list.
 	const resolveSubmitValue = (
 		field: any,
 		currentValue: any,
@@ -509,8 +475,6 @@ const CustomMasterComp = ({
 		setErrors({});
 	};
 
-	// NEW: once the schema is loaded and modal is open, fetch options for any
-	// dynamic field that doesn't depend on another field first.
 	useEffect(() => {
 		if (!showModal || schemaLoading) return;
 		addInput.forEach((field: any) => {
@@ -518,9 +482,7 @@ const CustomMasterComp = ({
 				fetchDynamicOptions(field, form);
 			}
 		});
-		// Also cover the edit case: if a dependent field already has a saved
-		// parent value (e.g. editing a record that already has a state), fetch
-		// its options too.
+
 		addInput.forEach((field: any) => {
 			const depKey = getDependsOnKey(field);
 			if (hasDynamicSource(field) && depKey && form?.[depKey]) {
@@ -630,11 +592,6 @@ const CustomMasterComp = ({
 			);
 		}
 
-		// NEW: dynamic master-backed fields (employeemaster / statemaster / citymaster /
-		// vendor / ...). Detected via hasDynamicSource() so both schema-driven
-		// dataSource fields AND the FIELD_DATA_SOURCE_OVERRIDES fields (like
-		// vendor, which the schema ships with hardcoded options: ["okay"]) go
-		// through the same dynamic-select path instead of the static one below.
 		if (hasDynamicSource(field)) {
 			const depKey = getDependsOnKey(field);
 
@@ -899,7 +856,7 @@ const CustomMasterComp = ({
 			toast.error(message);
 		}
 	};
-
+	console.log({ moduleCode })
 	const handleDeleteConfirm = async () => {
 		try {
 			// @ts-ignore
@@ -918,7 +875,7 @@ const CustomMasterComp = ({
 		// FIX: was reading `search` (pre-debounce) instead of `debouncedSearch`,
 		// which made the debounce effect pointless — this fired on every keystroke.
 		// @ts-ignore
-		dispatch(searchData({ voucherNumber: debouncedSearch }))
+		dispatch(searchData({ voucherNumber: moduleCode }))
 	};
 
 	useEffect(() => {

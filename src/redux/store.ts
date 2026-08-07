@@ -114,6 +114,7 @@ import voucherConfigurationReducer from "../redux/slices/professionalSlice/docum
 import registerFilterDropdownReducer from "../redux/slices/professionalSlice/registerModule";
 import drillDownReportReducer from "./slices/professionalSlice/drillDownReportSlice";
 import cashBankReportReducer from "./slices/professionalSlice/cashBankReportSlice";
+import teamEmployeeSchemaReducer from "./slices/systemConf/teamEmployeeSchemaSlice";
 
 export const store = configureStore({
   reducer: {
@@ -232,7 +233,8 @@ export const store = configureStore({
     customTransaction: customTransactionDataReducer,
 
     drillDownReport: drillDownReportReducer,
-    cashBankReport: cashBankReportReducer
+    cashBankReport: cashBankReportReducer,
+    teamEmployeeSchema: teamEmployeeSchemaReducer,
   },
 });
 

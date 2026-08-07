@@ -308,7 +308,7 @@ const PosPosting = () => {
                         />
                     </div>
 
-                    {accountOptionsMissing ? (
+                    {/* {accountOptionsMissing ? (
                         <div className="mt-3 flex flex-col gap-3 rounded-md border border-warning/20 bg-warning/10 p-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-start gap-2">
                                 <AlertCircle size={17} className="mt-0.5 shrink-0 text-warning" />
@@ -328,7 +328,7 @@ const PosPosting = () => {
                                 Open Account Master
                             </button>
                         </div>
-                    ) : null}
+                    ) : null} */}
                 </motion.div>
 
                 <motion.div variants={fadeUp} initial="hidden" animate="show" className="rounded-md border border-border bg-card p-3 text-card-foreground shadow-sm">

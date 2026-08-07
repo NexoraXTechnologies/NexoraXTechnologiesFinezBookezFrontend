@@ -235,9 +235,8 @@ export const searchData = createAsyncThunk(
     try {
 
       const res = await professionalAxios.get(
-        `/eTaxSolnMongoApiBackend/users/customMaster/data/getByVoucher/${voucherNumber}`
+        `/eTaxSolnMongoApiBackend/users/customMaster/module/getByCode/${voucherNumber}`
       );
-
       if (!res.data?.success) {
         return rejectWithValue({
           message:
