@@ -20,6 +20,10 @@ const mainColumns = [
         title: "Customer Name",
     },
     {
+        key: "customerNumber",
+        title: "Mobile No.",
+    },
+    {
         key: "sInvCustomerCode",
         title: "Customer Code",
     },

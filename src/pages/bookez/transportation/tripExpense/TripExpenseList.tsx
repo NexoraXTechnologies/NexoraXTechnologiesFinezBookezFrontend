@@ -1172,7 +1172,7 @@ const TripExpenseList = () => {
                                 : "text-muted-foreground hover:bg-muted"
                                 }`}
                         >
-                            Close ({closedCount})
+                            Closed ({closedCount})
                         </button>
                     </div>
                     <DataREfreshButton

@@ -1968,7 +1968,7 @@ const EWayBillList = () => {
                                 : "text-muted-foreground hover:bg-muted"
                                 }`}
                         >
-                            Close ({closeCount})
+                            Closed ({closeCount})
                         </button>
 
                     </div>
@@ -2017,130 +2017,7 @@ const EWayBillList = () => {
                             ? "No open E-Way Bill found"
                             : "No closed E-Way Bill found"
                     }
-                    // actions={(record: any) => {
-                    //     const recordKey = String(
-                    //         record?._id ||
-                    //         record?.ewayBillNo ||
-                    //         ""
-                    //     );
-
-                    //     const isMenuOpen =
-                    //         openActionMenu === recordKey;
-
-                    //     const isDownloading =
-                    //         ewayDownloadLoading ===
-                    //         String(record?.ewayBillNo || "");
-
-                    //     return (
-                    //         <div className="relative flex items-center gap-2">
-
-
-                    //             <Permission
-                    //                 module="bookez"
-                    //                 permissionKey="Pass"
-                    //                 action={"edit" as any}
-                    //             >
-                    //                 <button
-                    //                     type="button"
-                    //                     onClick={() =>
-                    //                         handleEditEWayBill(record)
-                    //                     }
-                    //                     className="rounded-md p-2 text-amber-600 hover:bg-amber-100"
-                    //                     title="Edit"
-                    //                 >
-                    //                     <Edit size={16} />
-                    //                 </button>
-                    //             </Permission>
-
-                    //             <button
-                    //                 type="button"
-                    //                 onClick={() =>
-                    //                     handleDownload(record)
-                    //                 }
-                    //                 disabled={isDownloading}
-                    //                 className="rounded-md p-2 text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    //                 title="Download"
-                    //             >
-                    //                 {isDownloading ? (
-                    //                     <Loader2
-                    //                         size={16}
-                    //                         className="animate-spin"
-                    //                     />
-                    //                 ) : (
-                    //                     <Download size={16} />
-                    //                 )}
-                    //             </button>
-
-                    //             {/* ⭐ YELLOW STAR: ADDED — THREE DOT MENU */}
-                    //             <button
-                    //                 type="button"
-                    //                 onClick={() =>
-                    //                     setOpenActionMenu(
-                    //                         isMenuOpen
-                    //                             ? ""
-                    //                             : recordKey
-                    //                     )
-                    //                 }
-                    //                 className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-                    //                 title="More Actions"
-                    //             >
-                    //                 <MoreVertical size={17} />
-                    //             </button>
-
-                    //             {isMenuOpen && (
-                    //                 <div className="absolute right-0 top-10 z-50 min-w-[190px] overflow-hidden rounded-md border border-border bg-card py-1 shadow-xl">
-                    //                     <button
-                    //                         type="button"
-                    //                         onClick={() =>
-                    //                             openEWayBillActionConfirm(
-                    //                                 "cancel",
-                    //                                 record
-                    //                             )
-                    //                         }
-                    //                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-danger hover:bg-danger/10"
-                    //                     >
-                    //                         <Ban size={15} />
-                    //                         Cancel E-Way Bill
-                    //                     </button>
-
-                    //                     <button
-                    //                         type="button"
-                    //                         onClick={() =>
-                    //                             openEWayBillActionConfirm(
-                    //                                 "reject",
-                    //                                 record
-                    //                             )
-                    //                         }
-                    //                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-amber-600 hover:bg-amber-500/10"
-                    //                     >
-                    //                         <XCircle size={15} />
-                    //                         Reject E-Way Bill
-                    //                     </button>
-
-                    //                     <button
-                    //                         type="button"
-                    //                         onClick={() =>
-                    //                             openEWayBillActionConfirm(
-                    //                                 "extendValidity",
-                    //                                 record
-                    //                             )
-                    //                         }
-                    //                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/10"
-                    //                     >
-                    //                         <CalendarClock size={15} />
-                    //                         Extend Validity
-                    //                     </button>
-
-
-
-                    //                 </div>
-                    //             )}
-                    //         </div>
-                    //     );
-                    // }}
-
-
-
+                
                     actions={(record: any) => {
                         const recordKey = String(
                             record?._id ||

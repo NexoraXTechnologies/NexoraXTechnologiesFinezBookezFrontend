@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Edit, Lock, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Edit, Lock, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 
 import DataTable from "../../../../components/DataTable";
@@ -233,6 +233,7 @@ const TripLREntryList = () => {
         offset: 0,
         limit: 20,
     });
+
 
     const [openCount, setOpenCount] = useState(0);
     const [closedCount, setClosedCount] = useState(0);
@@ -757,7 +758,7 @@ const TripLREntryList = () => {
                                 : "text-muted-foreground hover:bg-muted"
                                 }`}
                         >
-                            Close ({closedCount})
+                            Closed ({closedCount})
                         </button>
                     </div>
 
@@ -812,6 +813,15 @@ const TripLREntryList = () => {
 
                                 return (
                                     <div className="flex items-center gap-2">
+
+                                        {/* <button
+                                            id="lr-entry-download-button"
+                                            type="button"
+                                            onClick={() => {}}
+                                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                        >
+                                            <Download size={16} />
+                                        </button> */}
                                         <Permission
                                             module="bookez"
                                             permissionKey="tripLrCollection"
@@ -884,6 +894,9 @@ const TripLREntryList = () => {
                     }
                 />
             )}
+
+
+           
         </div>
     );
 };
