@@ -31,7 +31,7 @@ const schemaColumns = [
     { key: "key", title: "Key", render: (f: SchemaField) => <span>{f.key}</span> },
     { key: "label", title: "Label", render: (f: SchemaField) => f.label || "—" },
     { key: "type", title: "Type", render: (f: SchemaField) => f.type || "—" },
-    { key: "reference", title: "Reference", render: (f: SchemaField) => f.ref || "—" },
+    // { key: "reference", title: "Reference", render: (f: SchemaField) => f.ref || "—" },
     {
         key: "isRequired",
         title: "Required",

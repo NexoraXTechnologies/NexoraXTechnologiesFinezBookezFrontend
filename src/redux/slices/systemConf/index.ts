@@ -107,6 +107,7 @@ export const getEmptySystemConfiguration = () => ({
     inventoryConfiguration: {
         maintainInventory: false,
         inventoryTagLevel: "",
+        whereToAddInventory: "",
         inventoryPickMethod: "",
         negativeStockPolicy: "",
     },
@@ -203,6 +204,7 @@ export const normalizeSystemConfiguration = (raw: any) => ({
     inventoryConfiguration: {
         maintainInventory: toBool(raw?.inventoryConfiguration?.maintainInventory),
         inventoryTagLevel: raw?.inventoryConfiguration?.inventoryTagLevel || "",
+        whereToAddInventory: raw?.inventoryConfiguration?.whereToAddInventory || "",
         inventoryPickMethod: raw?.inventoryConfiguration?.inventoryPickMethod || "",
         negativeStockPolicy:
             raw?.inventoryConfiguration?.negativeStockPolicy || "",
@@ -383,6 +385,14 @@ const buildConfigurationPayload = (configuration: any) => {
 
             inventoryTagLevel:
                 configuration?.inventoryConfiguration?.inventoryTagLevel || "",
+
+            whereToAddInventory:
+                (
+                    configuration?.inventoryConfiguration?.inventoryTagLevel === "WAREHOUSE" ||
+                    configuration?.inventoryConfiguration?.inventoryTagLevel === "WAREHOUSE_LOCATION"
+                )
+                    ? configuration?.inventoryConfiguration?.whereToAddInventory || ""
+                    : "",
 
             inventoryPickMethod:
                 configuration?.inventoryConfiguration?.inventoryPickMethod || "",

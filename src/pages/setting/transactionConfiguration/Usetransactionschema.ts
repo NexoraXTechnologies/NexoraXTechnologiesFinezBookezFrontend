@@ -153,6 +153,8 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
     const buildSchemaFieldPayload = (): SchemaField => {
         const payload: SchemaField = {
             key: schemaForm.key.trim(),
+            customMasterCode: schemaForm?.customMasterCode,
+            customMasterName: schemaForm?.customMasterName,
             label: schemaForm.label.trim(),
             type: schemaForm.type,
             isRequired: schemaForm.isRequired,

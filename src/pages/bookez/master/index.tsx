@@ -21,14 +21,15 @@ import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/
 import CustomMasterComp from "./customMasterComp";
 import KitCollection from "./kitCollection";
 
-
 const MasterDashboard = () => {
   const dispatch = useDispatch();
 
   const { customMasterModules = [], loading } = useSelector(
     (state: any) => state.customMasterModule
   );
-
+  console.log({
+    data: customMasterModules?.[0]?.moduleCode, customMasterModules
+  })
   useEffect(() => {
     dispatch(
       getCustomMasterModules({
@@ -78,6 +79,7 @@ const MasterDashboard = () => {
       const CustomMasterScreen = () => (
         <CustomMasterComp name={moduleName} moduleCode={moduleCode} />
       );
+
       if (item?.status !== "active") return {}
       return {
         title: moduleName,

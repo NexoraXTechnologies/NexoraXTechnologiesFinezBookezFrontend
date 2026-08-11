@@ -23,21 +23,12 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
-import {
-    clearSystemConfigurationError,
-    enableWhatsAppWithDefaultModulesLocal,
-    getLatestSystemConfiguration,
-    saveOrUpdateSystemConfiguration,
-    setWhatsAppModuleEnabledLocal,
-    updateFinanceConfigurationLocalField,
-    updateInventoryConfigurationLocalField,
-    updateSystemConfigurationNestedField,
-    updateWhatsAppModuleLocalToggle,
-    verifyWhatsAppMetaCredentials,
-} from "../../../redux/slices/systemConf";
+import { clearSystemConfigurationError, enableWhatsAppWithDefaultModulesLocal, getLatestSystemConfiguration, saveOrUpdateSystemConfiguration, setWhatsAppModuleEnabledLocal, updateFinanceConfigurationLocalField, updateInventoryConfigurationLocalField, updateSystemConfigurationNestedField, updateWhatsAppModuleLocalToggle, verifyWhatsAppMetaCredentials } from "../../../redux/slices/systemConf";
+
 import { acceptRequestsUser, getDbAccessRequestsUser } from "../../../redux/slices/userExplorer";
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
 import { SelectInput } from "../../../components/inputs";
+import { resolveInventoryTagLevel, syncInventoryTagLevelMasters } from "./syncInventoryTagLevelMasters";
 
 /* ===================================================
    CONSTANTS
@@ -78,28 +69,21 @@ const WHATSAPP_MODULE_LABELS: Record<string, string> = {
 const inventoryTagLevelOptions = [
     { label: "Warehouse", value: "WAREHOUSE" },
     { label: "Warehouse + Location", value: "WAREHOUSE_LOCATION" },
-    {
-        label: "Warehouse + Location + Batch",
-        value: "WAREHOUSE_LOCATION_BATCH",
-    },
-    {
-        label: "Warehouse + Location + Bin + Batch",
-        value: "WAREHOUSE_LOCATION_BATCH_BIN",
-    },
-    {
-        label: "Full Tracking",
-        value: "FULL_TRACKING_WITH_WAREHOUSE_LOCATION_BATCH_RACK_BIN_SERIAL",
-    },
+    { label: "Warehouse + Location + Bin", value: "WAREHOUSE_LOCATION_BIN", },
+    { label: "Warehouse + Location + Bin + Batch", value: "WAREHOUSE_LOCATION_BIN_BATCH", },
+    { label: "Full Tracking", value: "FULL_TRACKING_WITH_WAREHOUSE_LOCATION_BATCH_BIN_SERIAL" },
+];
+
+const whereToAdd = [
+    { label: "Header", value: "header" },
+    { label: "body", value: "body" },
 ];
 
 const inventoryPickMethodOptions = [
     { label: "FIFO", value: "FIFO" },
     { label: "LIFO", value: "LIFO" },
     { label: "FEFO", value: "FEFO" },
-    {
-        label: "FIFO With Batch Priority & Expiry Validation",
-        value: "FIFO_WITH_BATCH_PRIORITY_AND_EXPIRY_VALIDATION",
-    },
+    { label: "FIFO With Batch Priority & Expiry Validation", value: "FIFO_WITH_BATCH_PRIORITY_AND_EXPIRY_VALIDATION", },
 ];
 
 const negativeStockPolicyOptions = [
@@ -330,6 +314,11 @@ const SystemConfiguration = () => {
     const transportationModuleConfiguration = configuration?.systemConfiguration?.transportationModuleConfiguration || {};
     const whatsAppConfig = systemConfig?.whatsAppConfiguration || {};
     const { accounts } = useSelector((s: any) => s.accountMaster);
+
+    const showWhereToAdd =
+        inventoryConfig?.inventoryTagLevel === "WAREHOUSE" ||
+        inventoryConfig?.inventoryTagLevel === "WAREHOUSE_LOCATION";
+
     const acceptDbRequest = async ({ action, requestId }: any) => {
         setDbReqLoader(true);
         const res = await dispatch(acceptRequestsUser({ requestId, action }) as any);
@@ -337,7 +326,9 @@ const SystemConfiguration = () => {
         toast.success(res?.payload?.message)
         setDbReqLoader(false);
     }
+
     console.log({ transportationModuleConfiguration })
+
     useEffect(() => {
         dispatch(getLatestSystemConfiguration());
     }, [dispatch]);
@@ -362,6 +353,19 @@ const SystemConfiguration = () => {
     }, []);
 
     useEffect(() => {
+        if (!showWhereToAdd && inventoryConfig?.whereToAddInventory) {
+            dispatch(updateInventoryConfigurationLocalField({
+                key: "whereToAddInventory",
+                value: "",
+            } as any));
+        }
+    }, [
+        dispatch,
+        showWhereToAdd,
+        inventoryConfig?.whereToAddInventory,
+    ]);
+
+    useEffect(() => {
         if (whatsAppConfig?.enableWhatsAppModule) {
             localStorage.setItem(BOOKEZ_WHATSAPP_SEND_ENABLED_KEY, "1");
         } else {
@@ -383,7 +387,6 @@ const SystemConfiguration = () => {
 
     const updateInventoryField = useCallback(
         (key: string, value: any) => {
-            // cast to any to satisfy dispatch type expectations
             dispatch(updateInventoryConfigurationLocalField({ key, value } as any));
         },
         [dispatch]
@@ -424,7 +427,6 @@ const SystemConfiguration = () => {
     const handleEnableWhatsAppModuleToggle = useCallback(
         async (nextEnabled: boolean) => {
             if (!nextEnabled) {
-                // cast to any to satisfy action creator typing when passing a boolean payload
                 dispatch(setWhatsAppModuleEnabledLocal(false as any));
                 localStorage.removeItem(BOOKEZ_WHATSAPP_SEND_ENABLED_KEY);
                 localStorage.removeItem(BOOKEZ_WHATSAPP_MODULE_CONFIG_KEY);
@@ -433,12 +435,14 @@ const SystemConfiguration = () => {
 
             try {
                 const loginuser = JSON.parse(localStorage.getItem("professionalUser") || "")?.userMobileNumberHash
+
                 if (!loginuser) {
                     toast.error(
                         "Logged-in user identity is missing. Please sign in again."
                     );
                     return;
                 }
+
                 await dispatch(verifyWhatsAppMetaCredentials({ loginuser })).unwrap();
                 dispatch(enableWhatsAppWithDefaultModulesLocal());
                 localStorage.setItem(BOOKEZ_WHATSAPP_SEND_ENABLED_KEY, "1");
@@ -457,6 +461,38 @@ const SystemConfiguration = () => {
                     configuration,
                 })
             ).unwrap();
+
+            try {
+                const inventoryConfiguration =
+                    result?.configuration?.inventoryConfiguration ||
+                    configuration?.inventoryConfiguration ||
+                    {};
+
+                const inventoryTagLevel =
+                    resolveInventoryTagLevel(
+                        inventoryConfiguration
+                    );
+
+                const whereToAddInventory =
+                    inventoryConfiguration?.whereToAddInventory ||
+                    "";
+
+                const inventoryMasterSync =
+                    await syncInventoryTagLevelMasters(
+                        inventoryTagLevel,
+                        whereToAddInventory
+                    );
+
+                console.log(
+                    "Inventory Master synchronization result:",
+                    inventoryMasterSync
+                );
+            } catch (syncError) {
+                console.log(
+                    "syncInventoryTagLevelMasters error:",
+                    syncError
+                );
+            }
 
             toast.success(
                 result?.message ||
@@ -737,6 +773,18 @@ const SystemConfiguration = () => {
                     options={inventoryTagLevelOptions}
                 />
 
+                {showWhereToAdd ? (
+                    <SelectRow
+                        title="Where to add"
+                        description="Choose where inventory tracking fields should be added."
+                        value={inventoryConfig?.whereToAddInventory || ""}
+                        onChange={(value) =>
+                            updateInventoryField("whereToAddInventory", value)
+                        }
+                        options={whereToAdd}
+                    />
+                ) : null}
+
                 <SelectRow
                     title="Inventory Pick Method"
                     description="Choose stock picking method like FIFO, LIFO or FEFO."
@@ -949,8 +997,6 @@ const SystemConfiguration = () => {
 
             case "dbRequest":
                 return dbRequestTab();
-            case "transportation":
-                return renderTransportationTab();
 
             case "system":
             default:
@@ -996,11 +1042,12 @@ const SystemConfiguration = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-                    <aside className="max-h-max rounded border border-border bg-card p-2 shadow-sm lg:sticky lg:top-4 lg:self-start">                        <div className="mb-2 px-3 py-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Configuration Menu
-                        </p>
-                    </div>
+                    <aside className="max-h-max rounded border border-border bg-card p-2 shadow-sm lg:sticky lg:top-4 lg:self-start">
+                        <div className="mb-2 px-3 py-2">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                Configuration Menu
+                            </p>
+                        </div>
 
                         <div className="space-y-1">
                             {tabs.map((tab) => {

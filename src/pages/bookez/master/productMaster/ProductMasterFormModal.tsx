@@ -2,28 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
-
-import {
-  CreatableSelectInput,
-  ImageUploadInput,
-  SelectInput,
-  TextArea,
-  TextInput,
-  ToggleInput,
-} from "../../../../components/inputs";
-
+import { CreatableSelectInput, ImageUploadInput, SelectInput, TextArea, TextInput, ToggleInput } from "../../../../components/inputs";
 import professionalAxios from "../../../../services/professionalAxios";
 import Modal from "../../../../components/modal";
-
-import {
-  getAllUnits,
-} from "../../../../redux/slices/professionalSlice/unitMasterSlice";
-
+import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 import UnitMasterModal from "../UnitMasterModal";
-
-/* =====================================================
-   TYPES
-===================================================== */
 
 type ProductMasterModalProps = {
   show: boolean;
@@ -40,10 +23,6 @@ type ReferenceOption = {
   raw: any;
 };
 
-/* =====================================================
-   PRODUCT SYSTEM FIELDS
-===================================================== */
-
 const PRODUCT_SYSTEM_FIELD_KEYS = new Set([
   "productCode",
   "productHSNCode",
@@ -57,10 +36,6 @@ const PRODUCT_SYSTEM_FIELD_KEYS = new Set([
   "igst",
   "imageUrl",
 ]);
-
-/* =====================================================
-   MASTER REFERENCE TYPES
-===================================================== */
 
 const CODE_NAME_REFERENCE_FIELD_TYPES = new Set([
   "productmaster",
@@ -86,10 +61,6 @@ const MASTER_REFERENCE_FIELD_TYPES = new Set([
   ...EMPLOYEE_REFERENCE_FIELD_TYPES,
 ]);
 
-/* =====================================================
-   DATASOURCE
-===================================================== */
-
 const getDataSource = (field: any) => {
   const source = field?.dataSource;
 
@@ -113,10 +84,6 @@ const getDataSource = (field: any) => {
   return {};
 };
 
-/* =====================================================
-   FIELD TYPE
-===================================================== */
-
 const getFieldType = (field: any) => {
   const dataSource = getDataSource(field);
 
@@ -134,10 +101,6 @@ const isMasterReferenceField = (field: any) => {
     getFieldType(field)
   );
 };
-
-/* =====================================================
-   TEXT
-===================================================== */
 
 const getTextValue = (value: any): string => {
   if (
@@ -270,8 +233,7 @@ const isSchemaDefaultFalse = (
 const isSchemaDefaultTrue = (
   field: any
 ) => {
-  const value =
-    field?.isDefault;
+  const value = field?.isDefault;
 
   if (
     value === true ||
@@ -593,49 +555,20 @@ const buildDataSourceRequestUrl = (
   ) {
     return resolvedApi;
   }
+  const backendPrefix = "eTaxSolnMongoApiBackend";
+  const axiosBaseUrl = String(professionalAxios?.defaults?.baseURL || "").trim();
+  const baseHasBackendPrefix = /\/eTaxSolnMongoApiBackend\/?$/i.test(axiosBaseUrl);
+  let relativeApi = resolvedApi.replace(/^\/+/, "").replace(/^SandBox\//i, "");
 
-  const backendPrefix =
-    "eTaxSolnMongoApiBackend";
-
-  const axiosBaseUrl =
-    String(
-      professionalAxios
-        ?.defaults
-        ?.baseURL ||
-      ""
-    ).trim();
-
-  const baseHasBackendPrefix =
-    /\/eTaxSolnMongoApiBackend\/?$/i.test(
-      axiosBaseUrl
-    );
-
-  let relativeApi =
-    resolvedApi
-      .replace(/^\/+/, "")
-      .replace(
-        /^SandBox\//i,
-        ""
-      );
-
-  if (
-    baseHasBackendPrefix
-  ) {
+  if (baseHasBackendPrefix) {
     return relativeApi.replace(
       /^eTaxSolnMongoApiBackend\/?/i,
       ""
     );
   }
 
-  if (
-    !relativeApi
-      .toLowerCase()
-      .startsWith(
-        backendPrefix.toLowerCase()
-      )
-  ) {
-    relativeApi =
-      `${backendPrefix}/${relativeApi}`;
+  if (!relativeApi.toLowerCase().startsWith(backendPrefix.toLowerCase())) {
+    relativeApi = `${backendPrefix}/${relativeApi}`;
   }
 
   return relativeApi;
@@ -652,29 +585,17 @@ const buildReferenceOption = (
   const fieldType =
     getFieldType(field);
 
-  const dataSource =
-    getDataSource(field);
+  const dataSource = getDataSource(field);
 
-  const dynamicData =
-    item?.data ||
-    item?.dynamicFields ||
-    item?.customFields ||
-    {};
-
-  let optionValue: any =
-    "";
-
-  let optionLabel: any =
-    "";
+  const dynamicData = item?.data || item?.dynamicFields || item?.customFields || {};
+  let optionValue: any = "";
+  let optionLabel: any = "";
 
   /* ============================================
      PRODUCT MASTER
   ============================================ */
 
-  if (
-    fieldType ===
-    "productmaster"
-  ) {
+  if (fieldType === "productmaster") {
     const valueField =
       field?.valueField ||
       dataSource?.valueField ||
@@ -2774,7 +2695,6 @@ const ProductMasterModal = ({
           />
         );
       }
-
       return (
         <SelectInput
           key={

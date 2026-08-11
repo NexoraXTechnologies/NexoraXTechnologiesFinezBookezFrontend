@@ -3,7 +3,7 @@ import { CreatableSelectInput, SelectInput, TextInput } from "../inputs";
 
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 
-type ColumnType = "select" | "text" | "number" | "date";
+type ColumnType = "select" | "custommaster" | "text" | "number" | "date";
 
 export type EditableColumn = {
     key: string;
@@ -15,8 +15,8 @@ export type EditableColumn = {
     options?: any[];
     required?: boolean;
     isRequired?: boolean;
-    disabled?: boolean;
-    isReadonly?: boolean;
+    disabled?: boolean | string;
+    isReadonly?: boolean | string;
     isHidden?: boolean | string;
     align?: "left" | "right" | "center";
     largeData?: boolean;
@@ -147,6 +147,133 @@ const EditableLineTable = ({
         return (
             value === true ||
             String(value ?? "").trim().toLowerCase() === "true"
+        );
+    };
+
+    const getColumnType = (column: EditableColumn) => {
+        return String(
+            column?.type || ""
+        )
+            .trim()
+            .toLowerCase();
+    };
+
+    const isCustomMasterColumn = (
+        column: EditableColumn
+    ) => {
+        return (
+            getColumnType(column) ===
+            "custommaster"
+        );
+    };
+
+    const isSelectColumn = (
+        column: EditableColumn
+    ) => {
+        const type =
+            getColumnType(column);
+
+        return (
+            type === "select" ||
+            type === "custommaster"
+        );
+    };
+
+    const getCellValue = (
+        row: any,
+        column: EditableColumn
+    ) => {
+        if (isCustomMasterColumn(column)) {
+            const directValue = row?.[column.key];
+
+            if (
+                directValue !== undefined &&
+                directValue !== null &&
+                directValue !== ""
+            ) {
+                if (
+                    typeof directValue ===
+                    "object"
+                ) {
+                    return (
+                        directValue?.code ||
+                        directValue?.value ||
+                        ""
+                    );
+                }
+
+                return directValue;
+            }
+
+            const customMasterValue =
+                row?.customMasters?.[
+                column.key
+                ];
+
+            if (
+                customMasterValue &&
+                typeof customMasterValue ===
+                "object"
+            ) {
+                return (
+                    customMasterValue?.code ||
+                    customMasterValue?.value ||
+                    ""
+                );
+            }
+
+            return "";
+        }
+
+        return (
+            row?.[
+            column.key
+            ] ??
+            ""
+        );
+    };
+
+    const normalizeOptions = (
+        column: EditableColumn
+    ) => {
+        return (
+            column?.options ||
+            []
+        ).map(
+            (option: any) => {
+                if (
+                    typeof option ===
+                    "object"
+                ) {
+                    return {
+                        ...option,
+
+                        label:
+                            option?.label ||
+                            option?.name ||
+                            option?.value ||
+                            option?.code ||
+                            "",
+
+                        value:
+                            option?.value ||
+                            option?.code ||
+                            option?._id ||
+                            option?.name ||
+                            "",
+                    };
+                }
+
+                return {
+                    label:
+                        String(
+                            option
+                        ),
+
+                    value:
+                        option,
+                };
+            }
         );
     };
 
@@ -304,18 +431,31 @@ const EditableLineTable = ({
 
                                                 const disabledCell =
                                                     isView ||
-                                                    Boolean(
+                                                    isTrueValue(
                                                         isCellDisabled?.(
                                                             column,
                                                             row,
                                                             rowIndex
                                                         )
                                                     ) ||
-                                                    Boolean(
-                                                        column.disabled ||
+                                                    isTrueValue(
+                                                        column.disabled
+                                                    ) ||
+                                                    isTrueValue(
                                                         column.isReadonly
                                                     ) ||
                                                     calculatedField;
+
+                                                const cellValue =
+                                                    getCellValue(
+                                                        row,
+                                                        column
+                                                    );
+
+                                                const selectOptions =
+                                                    normalizeOptions(
+                                                        column
+                                                    );
 
                                                 return (
                                                     <td
@@ -335,18 +475,18 @@ const EditableLineTable = ({
                                                             </div>
                                                         ) : (
                                                             <div className="min-w-0">
-                                                                {column.type ===
-                                                                    "select" ? (
+                                                                {isSelectColumn(
+                                                                    column
+                                                                ) ? (
                                                                     typeof column.onCreateOption ===
-                                                                        "function" ? (
+                                                                        "function" &&
+                                                                        !isCustomMasterColumn(
+                                                                            column
+                                                                        ) ? (
                                                                         <CreatableSelectInput
                                                                             label=""
                                                                             value={
-                                                                                row?.[
-                                                                                column
-                                                                                    .key
-                                                                                ] ??
-                                                                                ""
+                                                                                cellValue
                                                                             }
                                                                             placeholder={
                                                                                 column.placeholder ||
@@ -394,8 +534,7 @@ const EditableLineTable = ({
                                                                                 )
                                                                             }
                                                                             options={
-                                                                                column.options ||
-                                                                                []
+                                                                                selectOptions
                                                                             }
                                                                         />
                                                                     ) : (
@@ -405,11 +544,7 @@ const EditableLineTable = ({
                                                                                 false
                                                                             }
                                                                             value={
-                                                                                row?.[
-                                                                                column
-                                                                                    .key
-                                                                                ] ??
-                                                                                ""
+                                                                                cellValue
                                                                             }
                                                                             placeholder={
                                                                                 column.placeholder ||
@@ -445,8 +580,7 @@ const EditableLineTable = ({
                                                                                         )}`,
                                                                                     value: "",
                                                                                 },
-                                                                                ...(column.options ||
-                                                                                    []),
+                                                                                ...selectOptions,
                                                                             ]}
                                                                         />
                                                                     )
@@ -469,11 +603,14 @@ const EditableLineTable = ({
                                                                                     : "text"
                                                                         }
                                                                         value={
-                                                                            row?.[
-                                                                            column
-                                                                                .key
-                                                                            ] ??
-                                                                            ""
+                                                                            column.type === "date" &&
+                                                                                cellValue
+                                                                                ? String(
+                                                                                    cellValue
+                                                                                ).split(
+                                                                                    "T"
+                                                                                )[0]
+                                                                                : cellValue
                                                                         }
                                                                         placeholder={
                                                                             column.placeholder ||
@@ -565,8 +702,7 @@ const EditableLineTable = ({
                                                 }
                                                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-danger/20 bg-danger/10 text-danger transition hover:border-danger/30 hover:bg-danger/20 active:scale-[0.96]"
                                                 title="Delete"
-                                                aria-label={`Delete row ${rowIndex + 1
-                                                    }`}
+                                                aria-label={`Delete row ${rowIndex + 1}`}
                                             >
                                                 <Trash2 size={16} />
                                             </button>

@@ -1008,7 +1008,7 @@ const MasterConfiguration = () => {
 		  !validateSchemaForm()) {
 		  return;
 	  }
-	  const fieldPayload = buildSchemaFieldPayload();
+		const fieldPayload: any = buildSchemaFieldPayload();
     try {
 		if (schemaContext.kind ===
 			"custom") {
@@ -1407,9 +1407,7 @@ const MasterConfiguration = () => {
 		  "customMasters") {
       return renderCustomMasters();
     }
-	  if (activeTab ===
-		  "customMasterSchema" &&
-		  selectedCustomSchemaMaster) {
+	  if (activeTab === "customMasterSchema" && selectedCustomSchemaMaster) {
 		  return (<div className="space-y-4">
 			  <button type="button" onClick={() => {
 				  setActiveTab("customMasters");
