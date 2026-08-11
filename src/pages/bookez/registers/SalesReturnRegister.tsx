@@ -21,8 +21,14 @@ import {
 } from "../../../redux/slices/professionalSlice/registerModule";
 
 import professionalAxios from "../../../services/professionalAxios";
-import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
+import {
+    loadAllTemplateOptions,
+    toDateInputValue,
+    toLocalEndOfDayUtc,
+    toLocalStartOfDayUtc,
+} from "../../../utils/helperFunctions";
 import { getSalesReturnRegister } from "../../../redux/slices/professionalSlice/register";
+import { toast } from "react-toastify";
 
 /* ===================================================
    TYPES
@@ -119,8 +125,8 @@ const resolveProfessionalApiPath = (
     }
 
     return `${BOOKEZ_API_PREFIX}${normalizedPath.startsWith("/")
-            ? normalizedPath
-            : `/${normalizedPath}`
+        ? normalizedPath
+        : `/${normalizedPath}`
         }`;
 };
 
@@ -170,6 +176,7 @@ const mapCustomMasterOptions = (
 
 const getVoucherNumber = (row: any): string => {
     return String(
+        row?.sInvReturnVoucherNumber ||
         row?.sRetVoucherNumber ||
         row?.sReturnVoucherNumber ||
         row?.salesReturnVoucherNumber ||
@@ -181,6 +188,7 @@ const getVoucherNumber = (row: any): string => {
 
 const getVoucherDate = (row: any): any => {
     return (
+        row?.sInvReturnVoucherDate ||
         row?.sRetVoucherDate ||
         row?.sReturnVoucherDate ||
         row?.salesReturnVoucherDate ||
@@ -192,6 +200,7 @@ const getVoucherDate = (row: any): any => {
 
 const getCustomerName = (row: any): string => {
     return (
+        row?.sInvReturnCustomerName ||
         row?.sRetCustomerName ||
         row?.sReturnCustomerName ||
         row?.salesReturnCustomerName ||
@@ -203,6 +212,8 @@ const getCustomerName = (row: any): string => {
 
 const getCustomerCode = (row: any): string => {
     return (
+        row?.sInvReturnCustomerCode ||
+        row?.sInvCustomerCode ||
         row?.sRetCustomerCode ||
         row?.sReturnCustomerCode ||
         row?.salesReturnCustomerCode ||
@@ -225,6 +236,10 @@ const getSalesInvoiceNumber = (row: any): string => {
 };
 
 const getBodyRows = (row: any): any[] => {
+    if (Array.isArray(row?.sInvReturnBody)) {
+        return row.sInvReturnBody;
+    }
+
     if (Array.isArray(row?.sRetBody)) {
         return row.sRetBody;
     }
@@ -250,6 +265,7 @@ const getBodyRows = (row: any): any[] => {
 
 const getFooter = (row: any): any => {
     return (
+        row?.sInvReturnFooter ||
         row?.sRetFooter ||
         row?.sReturnFooter ||
         row?.salesReturnFooter ||
@@ -258,46 +274,46 @@ const getFooter = (row: any): any => {
     );
 };
 
-const getProductSummary = (row: any): string => {
-    if (row?.productName || row?.product) {
-        return row?.productName || row?.product;
-    }
+// const getProductSummary = (row: any): string => {
+//     if (row?.productName || row?.product) {
+//         return row?.productName || row?.product;
+//     }
 
-    const body = getBodyRows(row);
+//     const body = getBodyRows(row);
 
-    if (!body.length) {
-        return "-";
-    }
+//     if (!body.length) {
+//         return "-";
+//     }
 
-    const firstProduct =
-        body[0]?.productName ||
-        body[0]?.productCode ||
-        "-";
+//     const firstProduct =
+//         body[0]?.productName ||
+//         body[0]?.productCode ||
+//         "-";
 
-    if (body.length === 1) {
-        return firstProduct;
-    }
+//     if (body.length === 1) {
+//         return firstProduct;
+//     }
 
-    return `${firstProduct} +${body.length - 1} more`;
-};
+//     return `${firstProduct} +${body.length - 1} more`;
+// };
 
-const getTotalQuantity = (row: any): number => {
-    const footer = getFooter(row);
+// const getTotalQuantity = (row: any): number => {
+//     const footer = getFooter(row);
 
-    if (footer?.totalQuantity !== undefined) {
-        return toNumber(footer.totalQuantity);
-    }
+//     if (footer?.totalQuantity !== undefined) {
+//         return toNumber(footer.totalQuantity);
+//     }
 
-    if (row?.quantity !== undefined) {
-        return toNumber(row.quantity);
-    }
+//     if (row?.quantity !== undefined) {
+//         return toNumber(row.quantity);
+//     }
 
-    return getBodyRows(row).reduce(
-        (total: number, item: any) =>
-            total + toNumber(item?.quantity),
-        0
-    );
-};
+//     return getBodyRows(row).reduce(
+//         (total: number, item: any) =>
+//             total + toNumber(item?.quantity),
+//         0
+//     );
+// };
 
 const getNetAmount = (row: any): number => {
     const footer = getFooter(row);
@@ -314,6 +330,8 @@ const getNetAmount = (row: any): number => {
 
 const getReturnStatus = (row: any): string => {
     return String(
+        row?.sInvReturnStatus ||
+        row?.sInvStatus ||
         row?.sRetStatus ||
         row?.sReturnStatus ||
         row?.salesReturnStatus ||
@@ -322,16 +340,7 @@ const getReturnStatus = (row: any): string => {
     );
 };
 
-const getDocumentStatus = (row: any): string => {
-    return String(
-        row?.sRetDocStatus ||
-        row?.sReturnDocStatus ||
-        row?.salesReturnDocStatus ||
-        row?.documentStatus ||
-        row?.docStatus ||
-        "-"
-    );
-};
+
 
 const getReturnStatusClass = (value: any): string => {
     const status = normalizeStatus(value);
@@ -362,22 +371,7 @@ const getReturnStatusClass = (value: any): string => {
     return "bg-muted text-muted-foreground";
 };
 
-const getDocumentStatusClass = (value: any): string => {
-    const status = normalizeStatus(value);
 
-    if (status === "open") {
-        return "bg-success/10 text-success";
-    }
-
-    if (
-        status === "close" ||
-        status === "closed"
-    ) {
-        return "bg-muted text-muted-foreground";
-    }
-
-    return "bg-primary/10 text-primary";
-};
 
 /* ===================================================
    TABLE COLUMNS
@@ -430,26 +424,7 @@ const mainColumns = [
             </span>
         ),
     },
-    {
-        key: "productName",
-        title: "Product",
 
-        render: (row: any) => (
-            <span className="font-medium text-card-foreground">
-                {getProductSummary(row)}
-            </span>
-        ),
-    },
-    {
-        key: "totalQuantity",
-        title: "Quantity",
-
-        render: (row: any) => (
-            <span className="font-medium text-card-foreground">
-                {getTotalQuantity(row)}
-            </span>
-        ),
-    },
     {
         key: "netAmount",
         title: "Net Amount",
@@ -480,26 +455,7 @@ const mainColumns = [
             );
         },
     },
-    {
-        key: "documentStatus",
-        title: "Document Status",
 
-        render: (row: any) => {
-            const status = getDocumentStatus(row);
-
-            return (
-                <span
-                    className={`
-                        inline-flex rounded-full px-3 py-1
-                        text-xs font-bold uppercase
-                        ${getDocumentStatusClass(status)}
-                    `}
-                >
-                    {status}
-                </span>
-            );
-        },
-    },
 ];
 
 /* ===================================================
@@ -509,167 +465,53 @@ const mainColumns = [
 const normalizeSalesReturnForView = (record: any) => {
     const footer = getFooter(record);
 
-    const products = getBodyRows(record).map(
-        (item: any) => ({
+    const products = getBodyRows(record).map((item: any) => {
+        const unitCode = item?.unit || item?.uom || "";
+
+        return {
             ...item,
-
-            productCode:
-                item?.productCode || "",
-
-            productName:
-                item?.productName || "",
-
-            productId:
-                item?.productId || "",
-
-            productDescription:
-                item?.productDescription ||
-                item?.description ||
-                "",
-
-            description:
-                item?.description ||
-                item?.productDescription ||
-                "",
-
-            productHSNCode:
-                item?.productHSNCode || "",
-
-            remarks:
-                item?.remarks || "",
-
-            quantity:
-                item?.quantity || "",
-
-            returnedQuantity:
-                item?.returnedQuantity ||
-                item?.returnQuantity ||
-                item?.quantity ||
-                "",
-
-            returnQuantity:
-                item?.returnQuantity ||
-                item?.returnedQuantity ||
-                item?.quantity ||
-                "",
-
-            unit:
-                item?.unit ||
-                item?.uom ||
-                "",
-
-            uom:
-                item?.uom ||
-                item?.unit ||
-                "",
-
-            unitName:
-                item?.unitName || "",
-
-            rate:
-                item?.rate || "",
-
-            gross:
-                item?.gross ||
-                item?.grossAmount ||
-                "",
-
-            grossAmount:
-                item?.grossAmount ||
-                item?.gross ||
-                "",
-
-            discount:
-                item?.discount ??
-                item?.discountPercentage ??
-                "",
-
-            discountPercentage:
-                item?.discountPercentage ??
-                item?.discount ??
-                "",
-
-            discountAmount:
-                item?.discountAmount ||
-                "0.00",
-
-            taxableAmount:
-                item?.taxableAmount ||
-                "0.00",
-
-            cgst:
-                item?.cgst ??
-                item?.cgstPercentage ??
-                "",
-
-            cgstPercentage:
-                item?.cgstPercentage ??
-                item?.cgst ??
-                "",
-
-            cgstAmount:
-                item?.cgstAmount ||
-                "0.00",
-
-            sgst:
-                item?.sgst ??
-                item?.sgstPercentage ??
-                "",
-
-            sgstPercentage:
-                item?.sgstPercentage ??
-                item?.sgst ??
-                "",
-
-            sgstAmount:
-                item?.sgstAmount ||
-                "0.00",
-
-            igst:
-                item?.igst ??
-                item?.igstPercentage ??
-                "",
-
-            igstPercentage:
-                item?.igstPercentage ??
-                item?.igst ??
-                "",
-
-            igstAmount:
-                item?.igstAmount ||
-                "0.00",
-
-            taxAmount:
-                item?.taxAmount ||
-                "0.00",
-
-            otherAmount:
-                item?.otherAmount ||
-                "0.00",
-
-            netAmount:
-                item?.netAmount ||
-                item?.netTotal ||
-                "",
-
-            netTotal:
-                item?.netTotal ||
-                item?.netAmount ||
-                "",
-
-            sInvVoucherNumber:
-                item?.sInvVoucherNumber ||
-                item?.salesInvoiceVoucherNumber ||
-                "",
-        })
-    );
+            productCode: item?.productCode || "",
+            productName: item?.productName || "",
+            productId: item?.productId || item?._id || "",
+            productDescription: item?.productDescription || item?.description || "",
+            description: item?.description || item?.productDescription || "",
+            productHSNCode: item?.productHSNCode || "",
+            remarks: item?.remarks || "",
+            quantity: item?.quantity || "",
+            returnedQuantity: item?.returnedQuantity || item?.returnQuantity || item?.quantity || "",
+            returnQuantity: item?.returnQuantity || item?.returnedQuantity || item?.quantity || "",
+            unit: unitCode,
+            uom: unitCode,
+            unitName: item?.unitName || "",
+            rate: item?.rate || "",
+            gross: item?.gross || item?.grossAmount || 0,
+            grossAmount: item?.grossAmount || item?.gross || 0,
+            discount: item?.discount ?? item?.discountPercentage ?? "",
+            discountPercentage: item?.discountPercentage ?? item?.discount ?? "",
+            discountAmount: item?.discountAmount || 0,
+            taxableAmount: item?.taxableAmount || 0,
+            cgst: item?.cgst ?? item?.cgstPercentage ?? "",
+            cgstPercentage: item?.cgstPercentage ?? item?.cgst ?? "",
+            cgstAmount: item?.cgstAmount || 0,
+            sgst: item?.sgst ?? item?.sgstPercentage ?? "",
+            sgstPercentage: item?.sgstPercentage ?? item?.sgst ?? "",
+            sgstAmount: item?.sgstAmount || 0,
+            igst: item?.igst ?? item?.igstPercentage ?? "",
+            igstPercentage: item?.igstPercentage ?? item?.igst ?? "",
+            igstAmount: item?.igstAmount || 0,
+            taxAmount: item?.taxAmount || 0,
+            otherAmount: item?.otherAmount || 0,
+            netAmount: item?.netAmount || item?.netTotal || 0,
+            netTotal: item?.netTotal || item?.netAmount || 0,
+            sInvVoucherNumber: item?.sInvVoucherNumber || record?.sInvVoucherNumber || "",
+        };
+    });
 
     const totalQuantity =
-        footer?.totalQuantity ||
+        footer?.totalQuantity ??
         products.reduce(
             (total: number, product: any) =>
-                total +
-                toNumber(
+                total + toNumber(
                     product?.returnQuantity ||
                     product?.returnedQuantity ||
                     product?.quantity
@@ -677,100 +519,140 @@ const normalizeSalesReturnForView = (record: any) => {
             0
         );
 
+    const voucherNumber = getVoucherNumber(record);
+    const voucherDate = getVoucherDate(record);
+    const customerCode = getCustomerCode(record) === "-" ? "" : getCustomerCode(record);
+    const customerName = getCustomerName(record) === "-" ? "" : getCustomerName(record);
+    const returnStatus = getReturnStatus(record) === "-" ? "" : getReturnStatus(record);
+    const invoiceVoucherNumber =
+        getSalesInvoiceNumber(record) === "-" ? "" : getSalesInvoiceNumber(record);
+
+    const grossAmount =
+        footer?.grossAmount ||
+        footer?.totalGrossAmount ||
+        record?.grossAmount ||
+        "0.00";
+
+    const discountAmount =
+        footer?.discountAmount ||
+        footer?.totalDiscountAmount ||
+        record?.discountAmount ||
+        "0.00";
+
+    const cgstAmount =
+        footer?.cgstAmount ||
+        footer?.totalCgstAmount ||
+        record?.cgstAmount ||
+        "0.00";
+
+    const sgstAmount =
+        footer?.sgstAmount ||
+        footer?.totalSgstAmount ||
+        record?.sgstAmount ||
+        "0.00";
+
+    const igstAmount =
+        footer?.igstAmount ||
+        footer?.totalIgstAmount ||
+        record?.igstAmount ||
+        "0.00";
+
+    const taxAmount =
+        footer?.taxAmount ||
+        footer?.totalTaxAmount ||
+        record?.taxAmount ||
+        "0.00";
+
+    const otherAmount =
+        footer?.otherAmount ||
+        footer?.totalOtherAmount ||
+        record?.otherAmount ||
+        "0.00";
+
+    const netAmount =
+        footer?.netAmount ||
+        footer?.totalNetAmount ||
+        record?.netAmount ||
+        record?.returnAmount ||
+        "0.00";
+
+    const adjustedAmount =
+        footer?.adjustedAmount ||
+        record?.adjustedAmount ||
+        "0.00";
+
+    const balanceAmount =
+        footer?.balanceAmount ||
+        footer?.netAmount ||
+        footer?.totalNetAmount ||
+        record?.balanceAmount ||
+        record?.netAmount ||
+        "0.00";
+
     return {
         ...record,
 
-        sRetVoucherNumber:
-            getVoucherNumber(record),
-
-        sRetVoucherDate:
-            getVoucherDate(record),
-
-        sRetCustomerCode:
-            getCustomerCode(record) === "-"
-                ? ""
-                : getCustomerCode(record),
-
-        sRetCustomerName:
-            getCustomerName(record) === "-"
-                ? ""
-                : getCustomerName(record),
-
-        sRetStatus:
-            getReturnStatus(record) === "-"
-                ? ""
-                : getReturnStatus(record),
-
-        sRetDocStatus:
-            getDocumentStatus(record) === "-"
-                ? ""
-                : getDocumentStatus(record),
-
-        sInvVoucherNumber:
-            getSalesInvoiceNumber(record) === "-"
-                ? ""
-                : getSalesInvoiceNumber(record),
+        // Actual Sales Return field keys used by the Sales Return screen
+        sInvReturnVoucherNumber: record?.sInvReturnVoucherNumber || voucherNumber,
+        sInvReturnVoucherDate: record?.sInvReturnVoucherDate || voucherDate,
+        sInvReturnCustomerCode: record?.sInvReturnCustomerCode || customerCode,
+        sInvCustomerCode: record?.sInvCustomerCode || customerCode,
+        sInvReturnCustomerName: record?.sInvReturnCustomerName || customerName,
+        sInvVoucherNumber: record?.sInvVoucherNumber || invoiceVoucherNumber,
+        sInvReturnSalesAccount: record?.sInvReturnSalesAccount || record?.sInvSalesAccount || "SA021",
+        sInvReturnStatus: record?.sInvReturnStatus || returnStatus || "open",
+        sInvStatus: record?.sInvStatus || record?.sInvReturnStatus || returnStatus || "open",
+        sInvReturnRemark: record?.sInvReturnRemark || record?.sInvRemark || record?.remark || "",
+        sInvReturnRemarks: record?.sInvReturnRemarks || record?.sInvRemarks || record?.remarks || "",
+        isAutoPost: record?.isAutoPost ?? false,
 
         products,
+        sInvReturnBody: products,
+
+        grossAmount,
+        discountAmount,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
+        taxAmount,
+        otherAmount,
+        netAmount,
+        adjustedAmount,
+        balanceAmount,
+        totalQuantity,
+
+        sInvReturnFooter: {
+            ...footer,
+            grossAmount,
+            discountAmount,
+            cgstAmount,
+            sgstAmount,
+            igstAmount,
+            taxAmount,
+            otherAmount,
+            netAmount,
+            adjustedAmount,
+            balanceAmount,
+            totalQuantity,
+            totalGrossAmount: footer?.totalGrossAmount || grossAmount,
+            totalDiscountAmount: footer?.totalDiscountAmount || discountAmount,
+            totalCgstAmount: footer?.totalCgstAmount || cgstAmount,
+            totalSgstAmount: footer?.totalSgstAmount || sgstAmount,
+            totalIgstAmount: footer?.totalIgstAmount || igstAmount,
+            totalTaxAmount: footer?.totalTaxAmount || taxAmount,
+            totalOtherAmount: footer?.totalOtherAmount || otherAmount,
+            totalNetAmount: footer?.totalNetAmount || netAmount,
+        },
+
+        // Keep older aliases too
+        sRetVoucherNumber: voucherNumber,
+        sRetVoucherDate: voucherDate,
+        sRetCustomerCode: customerCode,
+        sRetCustomerName: customerName,
+        sRetStatus: returnStatus,
         sRetBody: products,
         sReturnBody: products,
         salesReturnBody: products,
-
-        grossAmount:
-            footer?.grossAmount ||
-            footer?.totalGrossAmount ||
-            "0.00",
-
-        discountAmount:
-            footer?.discountAmount ||
-            footer?.totalDiscountAmount ||
-            "0.00",
-
-        cgstAmount:
-            footer?.cgstAmount ||
-            footer?.totalCgstAmount ||
-            "0.00",
-
-        sgstAmount:
-            footer?.sgstAmount ||
-            footer?.totalSgstAmount ||
-            "0.00",
-
-        igstAmount:
-            footer?.igstAmount ||
-            footer?.totalIgstAmount ||
-            "0.00",
-
-        taxAmount:
-            footer?.taxAmount ||
-            footer?.totalTaxAmount ||
-            "0.00",
-
-        otherAmount:
-            footer?.otherAmount ||
-            footer?.totalOtherAmount ||
-            "0.00",
-
-        netAmount:
-            footer?.netAmount ||
-            footer?.totalNetAmount ||
-            record?.netAmount ||
-            record?.returnAmount ||
-            "0.00",
-
-        adjustedAmount:
-            footer?.adjustedAmount ||
-            "0.00",
-
-        balanceAmount:
-            footer?.balanceAmount ||
-            footer?.netAmount ||
-            footer?.totalNetAmount ||
-            record?.netAmount ||
-            record?.returnAmount ||
-            "0.00",
-
-        totalQuantity,
     };
 };
 
@@ -787,6 +669,7 @@ const SalesReturnRegister = () => {
 
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
+    const [dateError, setDateError] = useState("");
     const [customer, setCustomer] = useState("");
     const [product, setProduct] = useState("");
 
@@ -915,7 +798,7 @@ const SalesReturnRegister = () => {
        CUSTOM FILTERS
     =================================================== */
 
-    const customFilters:any = useMemo<
+    const customFilters: any = useMemo<
         CustomFilterDefinition[]
     >(() => {
         return Array.isArray(registerFilterDropdowns)
@@ -946,21 +829,7 @@ const SalesReturnRegister = () => {
        FILTER CHECK
     =================================================== */
 
-    const hasAnyFilter = useMemo(() => {
-        return Boolean(
-            fromDate ||
-            toDate ||
-            customer ||
-            product ||
-            selectedCustomCodes.length
-        );
-    }, [
-        fromDate,
-        toDate,
-        customer,
-        product,
-        selectedCustomCodesKey,
-    ]);
+
 
     /* ===================================================
        OPTIONS
@@ -1018,6 +887,28 @@ const SalesReturnRegister = () => {
         return salesReturnPagination || {};
     }, [salesReturnPagination]);
 
+    const hasRegisterData = tableData.length > 0;
+
+    const validateDates = (): boolean => {
+        if (!fromDate && !toDate) {
+            setDateError("");
+            return true;
+        }
+
+        if (!fromDate || !toDate) {
+            setDateError("Please select both From Date and To Date.");
+            return false;
+        }
+
+        if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
+            setDateError("From Date cannot be greater than To Date.");
+            return false;
+        }
+
+        setDateError("");
+        return true;
+    };
+
     /* ===================================================
        API PAYLOAD
     =================================================== */
@@ -1037,8 +928,8 @@ const SalesReturnRegister = () => {
             accountCode: customer,
             productCode: product,
 
-            fromDate,
-            toDate,
+            fromDate: fromDate || "",
+            toDate: toDate || "",
 
             customCodes:
                 selectedCustomCodes.length
@@ -1251,6 +1142,22 @@ const SalesReturnRegister = () => {
     =================================================== */
 
     useEffect(() => {
+        if (
+            (fromDate && !toDate) ||
+            (!fromDate && toDate)
+        ) {
+            return;
+        }
+
+        if (
+            fromDate &&
+            toDate &&
+            new Date(fromDate).getTime() >
+            new Date(toDate).getTime()
+        ) {
+            return;
+        }
+
         dispatch(
             getSalesReturnRegister(
                 getPayload()
@@ -1406,6 +1313,10 @@ const SalesReturnRegister = () => {
     =================================================== */
 
     const handleRefresh = () => {
+        if (!validateDates()) {
+            return;
+        }
+
         setLocalOffset(0);
 
         setRefreshKey(
@@ -1414,6 +1325,7 @@ const SalesReturnRegister = () => {
     };
 
     const handleClear = () => {
+        setDateError("");
         setFromDate("");
         setToDate("");
         setCustomer("");
@@ -1433,42 +1345,27 @@ const SalesReturnRegister = () => {
     const handleViewVoucher = async (
         row: any
     ) => {
-        const voucherNumber =
-            getVoucherNumber(row);
-
-        if (!voucherNumber) {
-            console.log(
-                "Sales return voucher number missing:",
-                row
-            );
-
-            return;
-        }
-
         try {
             setViewModal(true);
             setViewLoading(true);
             setViewErrors({});
-            setViewForm({});
-
-            await dispatch(
-                getAllTransactionSchema(
-                    REGISTER_MODULE
-                ) as any
-            );
 
             setViewForm(
                 normalizeSalesReturnForView(
                     row
                 )
             );
+
+            await dispatch(
+                getAllTransactionSchema(
+                    REGISTER_MODULE
+                ) as any
+            );
         } catch (error) {
             console.log(
                 "Sales return view failed:",
                 error
             );
-
-            setViewForm({});
         } finally {
             setViewLoading(false);
         }
@@ -1516,10 +1413,11 @@ const SalesReturnRegister = () => {
         requestedType: ExportType
     ) => {
         if (
-            !hasAnyFilter ||
+            !hasRegisterData ||
             exportColumnsLoading ||
             pdfLoading ||
-            excelLoading
+            excelLoading ||
+            !validateDates()
         ) {
             return;
         }
@@ -1635,8 +1533,10 @@ const SalesReturnRegister = () => {
     const performExportDownload =
         async () => {
             if (
+                !hasRegisterData ||
                 !exportType ||
-                !selectedExportColumns.length
+                !selectedExportColumns.length ||
+                !validateDates()
             ) {
                 return;
             }
@@ -1680,11 +1580,45 @@ const SalesReturnRegister = () => {
                             : "sales-return-register.xlsx"
                     );
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.log(
                     `Sales return register ${currentExportType.toUpperCase()} download failed:`,
                     error
                 );
+
+                let message =
+                    `Failed to download ${currentExportType.toUpperCase()}`;
+
+                const responseData =
+                    error?.response?.data;
+
+                if (responseData instanceof Blob) {
+                    try {
+                        const errorText =
+                            await responseData.text();
+
+                        const parsedError =
+                            JSON.parse(errorText);
+
+                        message =
+                            parsedError?.message ||
+                            parsedError?.error ||
+                            message;
+                    } catch {
+                        message =
+                            error?.message ||
+                            message;
+                    }
+                } else {
+                    message =
+                        responseData?.message ||
+                        responseData?.error ||
+                        error?.message ||
+                        message;
+                }
+
+                closeExportModal();
+                toast.error(message);
             } finally {
                 setPdfLoading(false);
                 setExcelLoading(false);
@@ -1704,28 +1638,52 @@ const SalesReturnRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value:
+                            fromDate
+                                ? toDateInputValue(
+                                    fromDate
+                                )
+                                : "",
                         required: false,
 
                         onChange: (
                             value: string
                         ) => {
-                            setFromDate(value);
+                            setFromDate(
+                                value
+                                    ? toLocalStartOfDayUtc(
+                                        value
+                                    )
+                                    : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value:
+                            toDate
+                                ? toDateInputValue(
+                                    toDate
+                                )
+                                : "",
                         required: false,
 
                         onChange: (
                             value: string
                         ) => {
-                            setToDate(value);
+                            setToDate(
+                                value
+                                    ? toLocalEndOfDayUtc(
+                                        value
+                                    )
+                                    : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                     },
                     {
@@ -1817,13 +1775,15 @@ const SalesReturnRegister = () => {
                     openExportPicker("excel")
                 }
                 pdfDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     pdfLoading ||
+                    excelLoading ||
                     exportColumnsLoading
                 }
                 excelDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     excelLoading ||
+                    pdfLoading ||
                     exportColumnsLoading
                 }
                 pdfLoading={
@@ -1838,11 +1798,17 @@ const SalesReturnRegister = () => {
                         "excel")
                 }
                 downloadDisabledMessage={
-                    !hasAnyFilter
-                        ? "Please select any filter first."
+                    !hasRegisterData
+                        ? "No data available to export."
                         : "Please wait, export is processing."
                 }
             />
+
+            {dateError && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    {dateError}
+                </div>
+            )}
 
             <DataTable
                 columns={mainColumns}
@@ -1858,7 +1824,7 @@ const SalesReturnRegister = () => {
                         type="button"
                         onClick={(event) => {
                             event.stopPropagation();
-
+                            setViewModal(true);
                             handleViewVoucher(
                                 row
                             );

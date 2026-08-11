@@ -1540,23 +1540,23 @@ const isDobField = (
   );
 };
 
-const isCustomMasterField = (
-  field: TeamEmployeeSchemaField
-) => {
-  return (
-    getSchemaFieldType(
-      field
-    ) ===
-    "custommaster" &&
-    Boolean(
-      String(
-        field
-          ?.customMasterCode ||
-        ""
-      ).trim()
-    )
-  );
-};
+// const isCustomMasterField = (
+//   field: TeamEmployeeSchemaField
+// ) => {
+//   return (
+//     getSchemaFieldType(
+//       field
+//     ) ===
+//     "custommaster" &&
+//     Boolean(
+//       String(
+//         field
+//           ?.customMasterCode ||
+//         ""
+//       ).trim()
+//     )
+//   );
+// };
 
 const isEmptyValue = (
   value: any
@@ -1859,32 +1859,32 @@ const buildCustomMasterOptions = (
    INITIAL FORM HELPERS
 =================================================== */
 
-const getCustomMasterPrefill = (
-  value: any
-) => {
-  if (
-    value === null ||
-    value === undefined
-  ) {
-    return "";
-  }
+// const getCustomMasterPrefill = (
+//   value: any
+// ) => {
+//   if (
+//     value === null ||
+//     value === undefined
+//   ) {
+//     return "";
+//   }
 
-  if (
-    typeof value !==
-    "object"
-  ) {
-    return String(value);
-  }
+//   if (
+//     typeof value !==
+//     "object"
+//   ) {
+//     return String(value);
+//   }
 
-  return String(
-    value?.code ||
-    value?.value ||
-    value
-      ?.voucherNumber ||
-    value?._id ||
-    ""
-  );
-};
+//   return String(
+//     value?.code ||
+//     value?.value ||
+//     value
+//       ?.voucherNumber ||
+//     value?._id ||
+//     ""
+//   );
+// };
 
 const getInitialFieldValue = (
   field: TeamEmployeeSchemaField,
@@ -4440,9 +4440,8 @@ const Users = () => {
         setShow={
           closeModal
         }
-        handleSubmit={
-          handleSubmit
-        }
+        // @ts-ignore
+        handleSubmit={handleSubmit}
         title="Team/Employee"
         state={
           editingAccount

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, Edit, Lock, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Edit, Loader2, Lock, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 
 import DataTable from "../../../../components/DataTable";
@@ -17,13 +17,39 @@ import {
 
 import {
     deleteTripLRCollection,
+    downloadBookezReportPdf,
     getAllLRCollection,
     getTripLRCollectionByVoucherNumber,
 } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
+import { getCompany } from "../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 /* ===================================================
    HELPERS
 =================================================== */
+
+// const getCompanyList = (res: any) => {
+//     const data = res?.data || res || {};
+
+//     const list =
+//         data?.records ||
+//         data?.items ||
+//         data?.docs ||
+//         data?.companies ||
+//         data?.data?.records ||
+//         data?.data?.items ||
+//         data?.data?.docs ||
+//         data?.data?.companies ||
+//         data?.data ||
+//         [];
+
+//     if (Array.isArray(list)) return list;
+
+//     if (list && typeof list === "object") {
+//         return [list];
+//     }
+
+//     return [];
+// };
 
 const getApiList = (res: any) => {
     const data = res?.data || res || {};
@@ -249,7 +275,7 @@ const TripLREntryList = () => {
     const searchTimerRef = useRef<any>(null);
 
     const pageTitle = location.state?.title || "Trip L/R Entry";
-
+    const [pdfLoadingVoucher, setPdfLoadingVoucher] = useState<string | null>(null);
     const totalLRCount = openCount + closedCount;
 
     /* ===================================================
@@ -559,6 +585,320 @@ const TripLREntryList = () => {
         }
     };
 
+    const handleDownloadPdf = async (record: any) => {
+        const voucherNumber = getLRVoucher(record);
+
+        try {
+            if (!voucherNumber) {
+                toast.warn("LR number not found");
+                return;
+            }
+
+            setPdfLoadingVoucher(voucherNumber);
+
+            /* ===================================================
+               GET FULL LR DATA
+            =================================================== */
+
+            const lrResponse = await dispatch(
+                getTripLRCollectionByVoucherNumber(voucherNumber) as any
+            ).unwrap();
+
+            const lrData =
+                lrResponse?.data ||
+                lrResponse ||
+                null;
+
+            if (!lrData) {
+                toast.warn("LR data not found");
+                return;
+            }
+
+            /* ===================================================
+               GET COMPANY MASTER DATA
+            =================================================== */
+
+            const companyResponse = await dispatch(
+                getCompany({
+                    offset: 0,
+                    limit: 1,
+                    search: "",
+                }) as any
+            ).unwrap();
+
+            const company =
+                companyResponse?.data ||
+                companyResponse ||
+                null;
+
+            if (!company) {
+                toast.warn("Company Master data not found");
+                return;
+            }
+
+            /* ===================================================
+               HELPERS
+            =================================================== */
+
+            const getStringValue = (value: any) => {
+                if (value === null || value === undefined) {
+                    return "";
+                }
+
+                return String(value);
+            };
+
+            const getEmailValue = (value: any) => {
+                if (!value) return "";
+
+                const email = String(value);
+
+                const markdownEmailMatch = email.match(
+                    /^\[([^\]]+)\]\(mailto\\?:([^)]+)\)$/
+                );
+
+                if (markdownEmailMatch?.[1]) {
+                    return markdownEmailMatch[1];
+                }
+
+                return email;
+            };
+
+            const formatPdfDate = (value: any) => {
+                if (!value) return "";
+
+                const date = new Date(value);
+
+                if (Number.isNaN(date.getTime())) {
+                    return getStringValue(value);
+                }
+
+                return date
+                    .toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                    })
+                    .replace(/ /g, "-");
+            };
+
+            /* ===================================================
+               ACTUAL LR OBJECTS
+            =================================================== */
+
+            const vehicle = lrData?.vehicle || {};
+            const driver = lrData?.driver || {};
+            const customer = lrData?.customer || {};
+            const route = lrData?.route || {};
+            const consignor = lrData?.consignor || {};
+            const consignee = lrData?.consignee || {};
+            const cargo = lrData?.cargo || {};
+            const freight = lrData?.freight || {};
+
+            /* ===================================================
+               BUILD EXACT PDF PAYLOAD
+            =================================================== */
+
+            const pdfData = {
+                companyName: getStringValue(
+                    company?.companyName
+                ),
+
+                companyAddress: getStringValue(
+                    company?.companyAddress
+                ),
+
+                companyPhone: getStringValue(
+                    company?.companyMobile
+                ),
+
+                companyEmail: getEmailValue(
+                    company?.companyEmail
+                ),
+
+                companyGstin: getStringValue(
+                    company?.gstNumber
+                ),
+
+                bank1: {
+                    name: getStringValue(
+                        company?.bankName
+                    ),
+
+                    branch: getStringValue(
+                        company?.bankAddress
+                    ),
+
+                    acNo: getStringValue(
+                        company?.bankAccountNumber
+                    ),
+
+                    ifsc: getStringValue(
+                        company?.ifscCode
+                    )
+                },
+
+                bank2: {
+                    name: "",
+                    branch: "",
+                    acNo: "",
+                    ifsc: ""
+                },
+
+                lrNumber: getStringValue(
+                    lrData?.lrNumber ||
+                    voucherNumber
+                ),
+
+                lrDate: formatPdfDate(
+                    lrData?.lrDate
+                ),
+
+                vehicle: {
+                    vehicleNumber: getStringValue(
+                        vehicle?.vehicleNumber
+                    ),
+
+                    ownerName: getStringValue(
+                        vehicle?.ownerName
+                    ),
+
+                    ownerMobile: getStringValue(
+                        vehicle?.ownerMobile
+                    )
+                },
+
+                driver: {
+                    driverName: getStringValue(
+                        driver?.driverName
+                    ),
+
+                    driverMobile: getStringValue(
+                        driver?.driverCode ||
+                        driver?.mobileNumber
+                    ),
+
+                    dlNo: getStringValue(
+                        driver?.dlNo ||
+                        driver?.drivingLicenseNumber
+                    )
+                },
+
+                customer: {
+                    customerName: getStringValue(
+                        customer?.customerName
+                    )
+                },
+
+                route: {
+                    from: getStringValue(
+                        route?.source
+                    ),
+
+                    to: getStringValue(
+                        route?.destination
+                    )
+                },
+
+                consignor: {
+                    consignorName: getStringValue(
+                        consignor?.name
+                    ),
+
+                    gstin: getStringValue(
+                        consignor?.gstin ||
+                        consignor?.gstNumber
+                    )
+                },
+
+                consignee: {
+                    consigneeName: getStringValue(
+                        consignee?.name
+                    ),
+
+                    gstin: getStringValue(
+                        consignee?.gstin ||
+                        consignee?.gstNumber
+                    )
+                },
+
+                cargo: {
+                    noOfBales: getStringValue(
+                        cargo?.quantity
+                    ),
+
+                    quality: getStringValue(
+                        cargo?.quality
+                    ),
+
+                    prNo: getStringValue(
+                        cargo?.prNo
+                    ),
+
+                    pMarks: getStringValue(
+                        cargo?.pMarks
+                    ),
+
+                    lotNo: getStringValue(
+                        cargo?.lotNo
+                    ),
+
+                    privateMark: getStringValue(
+                        cargo?.privateMark
+                    ),
+
+                    invoiceNo: getStringValue(
+                        cargo?.invoiceNo
+                    ),
+
+                    goodsValue: getStringValue(
+                        cargo?.goodsValue
+                    ),
+
+                    rate: getStringValue(
+                        cargo?.rate
+                    ),
+
+                    qty: getStringValue(
+                        cargo?.quantity
+                    ),
+
+                    total: getStringValue(
+                        freight?.agreedFreight
+                    ),
+
+                    advance: getStringValue(
+                        freight?.advancePaid
+                    ),
+
+                    balance: getStringValue(
+                        freight?.balancePayable
+                    )
+                }
+            };
+
+            /* ===================================================
+               DOWNLOAD PDF
+            =================================================== */
+
+            await dispatch(
+                downloadBookezReportPdf({
+                    reportType: "COIMBATORECOSIGNEE_VOUCHER",
+                    voucherNumber,
+                    pdfData
+                }) as any
+            ).unwrap();
+
+        } catch (error: any) {
+            toast.error(
+                error?.message ||
+                "Failed to download PDF"
+            );
+        }finally {
+        setPdfLoadingVoucher(null);
+    }
+    };
+
     /* ===================================================
        COLUMNS
     =================================================== */
@@ -814,14 +1154,19 @@ const TripLREntryList = () => {
                                 return (
                                     <div className="flex items-center gap-2">
 
-                                        {/* <button
+                                        <button
                                             id="lr-entry-download-button"
                                             type="button"
-                                            onClick={() => {}}
-                                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                                            disabled={pdfLoadingVoucher === getLRVoucher(record)}
+                                            onClick={() => handleDownloadPdf(record)}
+                                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                            <Download size={16} />
-                                        </button> */}
+                                            {pdfLoadingVoucher === getLRVoucher(record) ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
+                                                <Download size={16} />
+                                            )}
+                                        </button>
                                         <Permission
                                             module="bookez"
                                             permissionKey="tripLrCollection"
@@ -896,7 +1241,7 @@ const TripLREntryList = () => {
             )}
 
 
-           
+
         </div>
     );
 };

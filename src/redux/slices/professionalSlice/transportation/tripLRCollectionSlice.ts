@@ -185,6 +185,89 @@ export const updateTripLRCollection = createAsyncThunk(
     }
 )
 
+
+
+/* ===================================================
+    DOWNLOAD BOOKEZ REPORT PDF
+=================================================== */
+
+export const downloadBookezReportPdf = createAsyncThunk(
+    "tripLRCollection/downloadBookezReportPdf",
+    async (
+        {
+            reportType,
+            voucherNumber,
+            pdfData
+        }: {
+            reportType: string;
+            voucherNumber: string;
+            pdfData: any;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const response = await professionalAxios.post(
+                `/eTaxSolnMongoApiBackend/users/bookez/BookezReportPdf/download-pdf/${reportType}/${voucherNumber}`,
+                {
+                    pdfData
+                },
+                {
+                    responseType: "blob"
+                }
+            );
+
+            const blob = new Blob([response.data], {
+                type: "application/pdf"
+            });
+
+            const pdfUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = pdfUrl;
+            link.download = `${voucherNumber}.pdf`;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            window.URL.revokeObjectURL(pdfUrl);
+
+            return {
+                success: true,
+                voucherNumber
+            };
+        } catch (error: any) {
+            let message = "Failed to download PDF";
+
+            if (error?.response?.data instanceof Blob) {
+                try {
+                    const errorText = await error.response.data.text();
+                    const errorJson = JSON.parse(errorText);
+
+                    message =
+                        errorJson?.message ||
+                        errorJson?.error ||
+                        message;
+                } catch {
+                    message = error?.message || message;
+                }
+            } else {
+                message =
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    message;
+            }
+
+            return rejectWithValue({
+                message
+            });
+        }
+    }
+);
+
+
+
+
 /* ===================================================
     SLICE
 =================================================== */
@@ -358,8 +441,8 @@ const tripLRCollectionSlice = createSlice({
 
                     state.tripLRCollection = exists
                         ? currentList.map((t: any) =>
-                              getLRVoucher(t) === updatedVoucher ? updatedLR : t
-                          )
+                            getLRVoucher(t) === updatedVoucher ? updatedLR : t
+                        )
                         : [updatedLR, ...currentList];
 
                     state.selectedTripLRCollection = updatedLR;
@@ -374,9 +457,29 @@ const tripLRCollectionSlice = createSlice({
             })
 
 
+            // download BookEZ report PDF
+            .addCase(downloadBookezReportPdf.pending, (state) => {
+                state.pdfLoader = true;
+                state.error = null;
+            })
+
+            .addCase(downloadBookezReportPdf.fulfilled, (state) => {
+                state.pdfLoader = false;
+                state.error = null;
+            })
+
+            .addCase(downloadBookezReportPdf.rejected, (state, action) => {
+                state.pdfLoader = false;
+
+                state.error =
+                    (action.payload as { message?: string })?.message ||
+                    "Failed to download PDF";
+            });
+
+
     }
 })
 
 
-export const {clearTripLRCollectionError , clearTripLRCollectionState}=tripLRCollectionSlice.actions;
+export const { clearTripLRCollectionError, clearTripLRCollectionState } = tripLRCollectionSlice.actions;
 export default tripLRCollectionSlice.reducer;

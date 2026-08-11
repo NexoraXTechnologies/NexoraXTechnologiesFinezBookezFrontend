@@ -36,8 +36,12 @@ import {
 import professionalAxios from "../../../services/professionalAxios";
 import {
     loadAllTemplateOptions,
+    toDateInputValue,
+    toLocalEndOfDayUtc,
+    toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
 import { getQuotationRegister } from "../../../redux/slices/professionalSlice/register";
+import { toast } from "react-toastify";
 
 /* ===================================================
    TYPES
@@ -858,6 +862,11 @@ const QuotationRegister = () => {
     ] = useState("");
 
     const [
+        dateError,
+        setDateError,
+    ] = useState("");
+
+    const [
         customer,
         setCustomer,
     ] = useState("");
@@ -1037,7 +1046,7 @@ const QuotationRegister = () => {
        CUSTOM FILTERS
     =================================================== */
 
-    const customFilters:any =
+    const customFilters: any =
         useMemo<
             CustomFilterDefinition[]
         >(() => {
@@ -1080,23 +1089,7 @@ const QuotationRegister = () => {
        FILTER ACTIVE CHECK
     =================================================== */
 
-    const hasAnyFilter =
-        useMemo(() => {
-            return Boolean(
-                fromDate ||
-                toDate ||
-                customer ||
-                product ||
-                selectedCustomCodes
-                    .length
-            );
-        }, [
-            fromDate,
-            toDate,
-            customer,
-            product,
-            selectedCustomCodesKey,
-        ]);
+
 
     /* ===================================================
        OPTIONS
@@ -1187,6 +1180,36 @@ const QuotationRegister = () => {
             quotationPagination,
         ]);
 
+    const hasRegisterData =
+        tableData.length > 0;
+
+    const validateDates = (): boolean => {
+        if (!fromDate && !toDate) {
+            setDateError("");
+            return true;
+        }
+
+        if (!fromDate || !toDate) {
+            setDateError(
+                "Please select both From Date and To Date."
+            );
+            return false;
+        }
+
+        if (
+            new Date(fromDate).getTime() >
+            new Date(toDate).getTime()
+        ) {
+            setDateError(
+                "From Date cannot be greater than To Date."
+            );
+            return false;
+        }
+
+        setDateError("");
+        return true;
+    };
+
     /* ===================================================
        PAYLOAD
     =================================================== */
@@ -1206,8 +1229,8 @@ const QuotationRegister = () => {
             accountCode: customer,
             productCode: product,
 
-            fromDate,
-            toDate,
+            fromDate: fromDate || "",
+            toDate: toDate || "",
 
             customCodes:
                 selectedCustomCodes
@@ -1437,6 +1460,22 @@ const QuotationRegister = () => {
     =================================================== */
 
     useEffect(() => {
+        if (
+            (fromDate && !toDate) ||
+            (!fromDate && toDate)
+        ) {
+            return;
+        }
+
+        if (
+            fromDate &&
+            toDate &&
+            new Date(fromDate).getTime() >
+            new Date(toDate).getTime()
+        ) {
+            return;
+        }
+
         dispatch(
             getQuotationRegister(
                 getPayload()
@@ -1620,6 +1659,10 @@ const QuotationRegister = () => {
     =================================================== */
 
     const handleRefresh = () => {
+        if (!validateDates()) {
+            return;
+        }
+
         setLocalOffset(0);
 
         setRefreshKey(
@@ -1629,6 +1672,7 @@ const QuotationRegister = () => {
     };
 
     const handleClear = () => {
+        setDateError("");
         setFromDate("");
         setToDate("");
         setCustomer("");
@@ -1750,10 +1794,11 @@ const QuotationRegister = () => {
             requestedType: ExportType
         ) => {
             if (
-                !hasAnyFilter ||
+                !hasRegisterData ||
                 exportColumnsLoading ||
                 pdfLoading ||
-                excelLoading
+                excelLoading ||
+                !validateDates()
             ) {
                 return;
             }
@@ -1891,66 +1936,108 @@ const QuotationRegister = () => {
         );
     };
 
-    const performExportDownload =
-        async () => {
-            if (
-                !exportType ||
-                !selectedExportColumns.length
-            ) {
+    const performExportDownload = async () => {
+        if (
+            !hasRegisterData ||
+            !exportType ||
+            !selectedExportColumns.length ||
+            !validateDates()
+        ) {
+            return;
+        }
+
+        const currentExportType = exportType;
+
+        const columns = [
+            ...selectedExportColumns,
+        ];
+
+        try {
+            if (currentExportType === "pdf") {
+                setPdfLoading(true);
+            } else {
+                setExcelLoading(true);
+            }
+
+            const response =
+                await professionalAxios.post(
+                    "/eTaxSolnMongoApiBackend/users/bookEZ/registers/quotationRegister",
+                    getPayload(
+                        currentExportType,
+                        columns
+                    ),
+                    {
+                        responseType: "blob",
+                    }
+                );
+
+            const blob = response?.data;
+
+            if (!(blob instanceof Blob)) {
+                closeExportModal();
+
+                toast.error(
+                    `Failed to download ${currentExportType.toUpperCase()}`
+                );
+
                 return;
             }
 
-            const currentExportType =
-                exportType;
-
-            const columns = [
-                ...selectedExportColumns,
-            ];
+            downloadBlobFile(
+                blob,
+                currentExportType === "pdf"
+                    ? "quotation-register.pdf"
+                    : "quotation-register.xlsx"
+            );
 
             closeExportModal();
+        } catch (error: any) {
+            console.log(
+                `Quotation register ${currentExportType.toUpperCase()} download failed`,
+                error
+            );
 
-            try {
-                if (
-                    currentExportType ===
-                    "pdf"
-                ) {
-                    setPdfLoading(true);
-                } else {
-                    setExcelLoading(
-                        true
-                    );
+            let message =
+                `Failed to download ${currentExportType.toUpperCase()}`;
+
+            const responseData =
+                error?.response?.data;
+
+            if (responseData instanceof Blob) {
+                try {
+                    const errorText =
+                        await responseData.text();
+
+                    const parsedError =
+                        JSON.parse(errorText);
+
+                    message =
+                        parsedError?.message ||
+                        parsedError?.error ||
+                        message;
+                } catch {
+                    message =
+                        error?.message ||
+                        message;
                 }
-
-                const response =
-                    await dispatch(
-                        getQuotationRegister(
-                            getPayload(
-                                currentExportType,
-                                columns
-                            )
-                        )
-                    ).unwrap();
-
-                if (response?.blob) {
-                    downloadBlobFile(
-                        response.blob,
-
-                        currentExportType ===
-                            "pdf"
-                            ? "quotation-register.pdf"
-                            : "quotation-register.xlsx"
-                    );
-                }
-            } catch (error) {
-                console.log(
-                    `Quotation register ${currentExportType.toUpperCase()} download failed:`,
-                    error
-                );
-            } finally {
-                setPdfLoading(false);
-                setExcelLoading(false);
+            } else {
+                message =
+                    responseData?.message ||
+                    responseData?.error ||
+                    error?.message ||
+                    message;
             }
-        };
+
+            // Close modal on ANY error
+            closeExportModal();
+
+            // Then show backend error message
+            toast.error(message);
+        } finally {
+            setPdfLoading(false);
+            setExcelLoading(false);
+        }
+    };
 
     /* ===================================================
        RENDER
@@ -1965,7 +2052,12 @@ const QuotationRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value:
+                            fromDate
+                                ? toDateInputValue(
+                                    fromDate
+                                )
+                                : "",
                         required: false,
 
                         onChange: (
@@ -1973,18 +2065,29 @@ const QuotationRegister = () => {
                         ) => {
                             setFromDate(
                                 value
+                                    ? toLocalStartOfDayUtc(
+                                        value
+                                    )
+                                    : ""
                             );
 
                             setLocalOffset(
                                 0
                             );
+
+                            setDateError("");
                         },
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value:
+                            toDate
+                                ? toDateInputValue(
+                                    toDate
+                                )
+                                : "",
                         required: false,
 
                         onChange: (
@@ -1992,11 +2095,17 @@ const QuotationRegister = () => {
                         ) => {
                             setToDate(
                                 value
+                                    ? toLocalEndOfDayUtc(
+                                        value
+                                    )
+                                    : ""
                             );
 
                             setLocalOffset(
                                 0
                             );
+
+                            setDateError("");
                         },
                     },
                     {
@@ -2108,13 +2217,15 @@ const QuotationRegister = () => {
                     )
                 }
                 pdfDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     pdfLoading ||
+                    excelLoading ||
                     exportColumnsLoading
                 }
                 excelDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     excelLoading ||
+                    pdfLoading ||
                     exportColumnsLoading
                 }
                 pdfLoading={
@@ -2130,11 +2241,17 @@ const QuotationRegister = () => {
                         "excel")
                 }
                 downloadDisabledMessage={
-                    !hasAnyFilter
-                        ? "Please select any filter first."
+                    !hasRegisterData
+                        ? "No data available to export."
                         : "Please wait, export is processing."
                 }
             />
+
+            {dateError && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    {dateError}
+                </div>
+            )}
 
             <DataTable
                 columns={mainColumns}
