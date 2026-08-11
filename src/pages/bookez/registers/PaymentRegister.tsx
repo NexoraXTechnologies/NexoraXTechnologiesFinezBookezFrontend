@@ -24,13 +24,19 @@ import {
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
 import { getByVoucherNumberPayment } from "../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
 
-import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
+import {
+    loadAllTemplateOptions,
+    toDateInputValue,
+    toLocalEndOfDayUtc,
+    toLocalStartOfDayUtc,
+} from "../../../utils/helperFunctions";
 import professionalAxios from "../../../services/professionalAxios";
 import { Checkbox } from "../../../components/inputs";
 import {
     clearRegisterFilterDropdowns,
     getRegisterFilterDropdowns,
 } from "../../../redux/slices/professionalSlice/registerModule";
+import { toast } from "react-toastify";
 
 /* ===================================================
    TABLE COLUMNS
@@ -243,8 +249,8 @@ const resolveProfessionalApiPath = (apiPath: string) => {
     }
 
     return `${BOOKEZ_API_PREFIX}${normalizedPath.startsWith("/")
-            ? normalizedPath
-            : `/${normalizedPath}`
+        ? normalizedPath
+        : `/${normalizedPath}`
         }`;
 };
 
@@ -306,6 +312,7 @@ const PaymentRegister = () => {
 
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
+    const [dateError, setDateError] = useState<string>("");
     const [account, setAccount] = useState<string>("");
 
     const [customFilterOptions, setCustomFilterOptions] = useState<
@@ -374,7 +381,7 @@ const PaymentRegister = () => {
             state.registerFilterDropdown || {}
     );
 
-    const customFilters:any = useMemo<
+    const customFilters: any = useMemo<
         CustomFilterDefinition[]
     >(() => {
         return Array.isArray(registerFilterDropdowns)
@@ -393,7 +400,7 @@ const PaymentRegister = () => {
     const selectedCustomCodes = useMemo(() => {
         return customFilters
             .map(
-                (filter:any) =>
+                (filter: any) =>
                     selectedCustomFilters[filter.key] || ""
             )
             .filter(Boolean);
@@ -407,19 +414,7 @@ const PaymentRegister = () => {
         );
     }, [selectedCustomCodes]);
 
-    const hasAnyFilter = useMemo(() => {
-        return Boolean(
-            fromDate ||
-            toDate ||
-            account ||
-            selectedCustomCodes.length
-        );
-    }, [
-        fromDate,
-        toDate,
-        account,
-        selectedCustomCodes.length,
-    ]);
+
 
     /* ===================================================
        OPTIONS
@@ -448,6 +443,28 @@ const PaymentRegister = () => {
         return pagination || {};
     }, [pagination]);
 
+    const hasRegisterData = tableData.length > 0;
+
+    const validateDates = (): boolean => {
+        if (!fromDate && !toDate) {
+            setDateError("");
+            return true;
+        }
+
+        if (!fromDate || !toDate) {
+            setDateError("Please select both From Date and To Date.");
+            return false;
+        }
+
+        if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
+            setDateError("From Date cannot be greater than To Date.");
+            return false;
+        }
+
+        setDateError("");
+        return true;
+    };
+
     /* ===================================================
        PAYLOAD
     =================================================== */
@@ -463,8 +480,8 @@ const PaymentRegister = () => {
             ) as string[];
 
             return {
-                fromDate,
-                toDate,
+                fromDate: fromDate || "",
+                toDate: toDate || "",
 
                 offset: isExport ? 0 : localOffset,
                 limit: isExport ? 120000 : localLimit,
@@ -606,7 +623,7 @@ const PaymentRegister = () => {
                     string
                 > = {};
 
-                customFilters.forEach((filter:any) => {
+                customFilters.forEach((filter: any) => {
                     if (
                         filter?.key &&
                         previous[filter.key]
@@ -644,6 +661,16 @@ const PaymentRegister = () => {
     =================================================== */
 
     useEffect(() => {
+        if ((fromDate && !toDate) || (!fromDate && toDate)) return;
+
+        if (
+            fromDate &&
+            toDate &&
+            new Date(fromDate).getTime() > new Date(toDate).getTime()
+        ) {
+            return;
+        }
+
         const payload = getPayload();
 
         const requestKey = JSON.stringify({
@@ -662,7 +689,7 @@ const PaymentRegister = () => {
             requestKey;
 
         dispatch(addPaymentRegister(payload));
-    }, [dispatch, getPayload, refreshKey]);
+    }, [dispatch, fromDate, toDate, getPayload, refreshKey]);
 
     /* ===================================================
        PREPARE VIEW TEMPLATE FIELDS
@@ -757,11 +784,14 @@ const PaymentRegister = () => {
     =================================================== */
 
     const handleRefresh = () => {
+        if (!validateDates()) return;
+
         setLocalOffset(0);
         setRefreshKey((prev) => prev + 1);
     };
 
     const handleClear = () => {
+        setDateError("");
         setFromDate("");
         setToDate("");
         setAccount("");
@@ -839,10 +869,11 @@ const PaymentRegister = () => {
         type: "pdf" | "excel"
     ) => {
         if (
-            !hasAnyFilter ||
+            !hasRegisterData ||
             exportColumnsLoading ||
             pdfLoading ||
-            excelLoading
+            excelLoading ||
+            !validateDates()
         ) {
             return;
         }
@@ -933,8 +964,10 @@ const PaymentRegister = () => {
 
     const performExportDownload = async () => {
         if (
+            !hasRegisterData ||
             !exportType ||
-            !selectedExportColumns.length
+            !selectedExportColumns.length ||
+            !validateDates()
         ) {
             return;
         }
@@ -970,11 +1003,19 @@ const PaymentRegister = () => {
                         : "payment-register.xlsx"
                 );
             }
-        } catch (error) {
+        } catch (error: any) {
             console.log(
                 `Payment register ${currentExportType.toUpperCase()} download failed`,
                 error
             );
+
+            toast.error(
+                error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.message ||
+                `Failed to download ${currentExportType.toUpperCase()}`
+            );
+
         } finally {
             setPdfLoading(false);
             setExcelLoading(false);
@@ -1000,10 +1041,15 @@ const PaymentRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value: fromDate ? toDateInputValue(fromDate) : "",
                         onChange: (value) => {
-                            setFromDate(value);
+                            setFromDate(
+                                value
+                                    ? toLocalStartOfDayUtc(value)
+                                    : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                         required: false,
                     },
@@ -1011,10 +1057,15 @@ const PaymentRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value: toDate ? toDateInputValue(toDate) : "",
                         onChange: (value) => {
-                            setToDate(value);
+                            setToDate(
+                                value
+                                    ? toLocalEndOfDayUtc(value)
+                                    : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                         required: false,
                     },
@@ -1031,7 +1082,7 @@ const PaymentRegister = () => {
                         },
                     },
 
-                    ...customFilters.map((filter:any) => ({
+                    ...customFilters.map((filter: any) => ({
                         key: filter.key,
                         type: "select",
                         label:
@@ -1065,13 +1116,15 @@ const PaymentRegister = () => {
                 onDownloadPdf={handleDownloadPdf}
                 onDownloadExcel={handleDownloadExcel}
                 pdfDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     pdfLoading ||
+                    excelLoading ||
                     exportColumnsLoading
                 }
                 excelDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     excelLoading ||
+                    pdfLoading ||
                     exportColumnsLoading
                 }
                 pdfLoading={
@@ -1085,11 +1138,17 @@ const PaymentRegister = () => {
                         exportType === "excel")
                 }
                 downloadDisabledMessage={
-                    !hasAnyFilter
-                        ? "Please select any filter first."
+                    !hasRegisterData
+                        ? "No data available to export."
                         : "Please wait, export is processing."
                 }
             />
+
+            {dateError && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    {dateError}
+                </div>
+            )}
 
             <DataTable
                 columns={mainColumns}

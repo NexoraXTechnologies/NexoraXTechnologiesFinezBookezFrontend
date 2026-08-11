@@ -21,8 +21,14 @@ import {
 } from "../../../redux/slices/professionalSlice/registerModule";
 
 import professionalAxios from "../../../services/professionalAxios";
-import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
+import {
+    loadAllTemplateOptions,
+    toDateInputValue,
+    toLocalEndOfDayUtc,
+    toLocalStartOfDayUtc,
+} from "../../../utils/helperFunctions";
 import { getPurchaseReturnRegister } from "../../../redux/slices/professionalSlice/register";
+import { toast } from "react-toastify";
 
 /* ===================================================
    TYPES
@@ -165,6 +171,7 @@ const mapCustomMasterOptions = (
 
 const getVoucherNumber = (row: any): string => {
     return String(
+        row?.pInvReturnVoucherNumber ||
         row?.pRetVoucherNumber ||
         row?.pReturnVoucherNumber ||
         row?.purchaseReturnVoucherNumber ||
@@ -176,6 +183,7 @@ const getVoucherNumber = (row: any): string => {
 
 const getVoucherDate = (row: any): any => {
     return (
+        row?.pInvReturnVoucherDate ||
         row?.pRetVoucherDate ||
         row?.pReturnVoucherDate ||
         row?.purchaseReturnVoucherDate ||
@@ -187,6 +195,8 @@ const getVoucherDate = (row: any): any => {
 
 const getVendorName = (row: any): string => {
     return (
+        row?.pInvReturnVendorName ||
+        row?.pInvReturnSupplierName ||
         row?.pRetVendorName ||
         row?.pRetSupplierName ||
         row?.pReturnVendorName ||
@@ -204,6 +214,9 @@ const getVendorName = (row: any): string => {
 
 const getVendorCode = (row: any): string => {
     return (
+        row?.pInvReturnVendorCode ||
+        row?.pInvVendorCode ||
+        row?.pInvReturnSupplierCode ||
         row?.pRetVendorCode ||
         row?.pRetSupplierCode ||
         row?.pReturnVendorCode ||
@@ -232,6 +245,10 @@ const getPurchaseInvoiceNumber = (row: any): string => {
 };
 
 const getBodyRows = (row: any): any[] => {
+    if (Array.isArray(row?.pInvReturnBody)) {
+        return row.pInvReturnBody;
+    }
+
     if (Array.isArray(row?.pRetBody)) {
         return row.pRetBody;
     }
@@ -257,6 +274,7 @@ const getBodyRows = (row: any): any[] => {
 
 const getFooter = (row: any): any => {
     return (
+        row?.pInvReturnFooter ||
         row?.pRetFooter ||
         row?.pReturnFooter ||
         row?.purchaseReturnFooter ||
@@ -326,6 +344,8 @@ const getNetAmount = (row: any): number => {
 
 const getReturnStatus = (row: any): string => {
     return String(
+        row?.pInvReturnStatus ||
+        row?.pInvStatus ||
         row?.pRetStatus ||
         row?.pReturnStatus ||
         row?.purchaseReturnStatus ||
@@ -674,6 +694,110 @@ const normalizePurchaseReturnForView = (
     return {
         ...record,
 
+        pInvReturnVoucherNumber:
+            record?.pInvReturnVoucherNumber ||
+            getVoucherNumber(record),
+
+        pInvReturnVoucherDate:
+            record?.pInvReturnVoucherDate ||
+            getVoucherDate(record),
+
+        pInvReturnVendorCode:
+            record?.pInvReturnVendorCode ||
+            (getVendorCode(record) === "-" ? "" : getVendorCode(record)),
+
+        pInvVendorCode:
+            record?.pInvVendorCode ||
+            (getVendorCode(record) === "-" ? "" : getVendorCode(record)),
+
+        pInvReturnVendorName:
+            record?.pInvReturnVendorName ||
+            (getVendorName(record) === "-" ? "" : getVendorName(record)),
+
+        pInvReturnSupplierCode:
+            record?.pInvReturnSupplierCode ||
+            (getVendorCode(record) === "-" ? "" : getVendorCode(record)),
+
+        pInvReturnSupplierName:
+            record?.pInvReturnSupplierName ||
+            (getVendorName(record) === "-" ? "" : getVendorName(record)),
+
+        pInvVoucherNumber:
+            record?.pInvVoucherNumber ||
+            (getPurchaseInvoiceNumber(record) === "-" ? "" : getPurchaseInvoiceNumber(record)),
+
+        pInvReturnStatus:
+            record?.pInvReturnStatus ||
+            (getReturnStatus(record) === "-" ? "" : getReturnStatus(record)),
+
+        pInvStatus:
+            record?.pInvStatus ||
+            record?.pInvReturnStatus ||
+            (getReturnStatus(record) === "-" ? "" : getReturnStatus(record)),
+
+        pInvReturnRemark:
+            record?.pInvReturnRemark ||
+            record?.pInvRemark ||
+            record?.remark ||
+            "",
+
+        pInvReturnRemarks:
+            record?.pInvReturnRemarks ||
+            record?.pInvRemarks ||
+            record?.remarks ||
+            "",
+
+        pInvReturnBody: products,
+
+        pInvReturnFooter: {
+            ...footer,
+            grossAmount:
+                footer?.grossAmount ||
+                footer?.totalGrossAmount ||
+                "0.00",
+            discountAmount:
+                footer?.discountAmount ||
+                footer?.totalDiscountAmount ||
+                "0.00",
+            cgstAmount:
+                footer?.cgstAmount ||
+                footer?.totalCgstAmount ||
+                "0.00",
+            sgstAmount:
+                footer?.sgstAmount ||
+                footer?.totalSgstAmount ||
+                "0.00",
+            igstAmount:
+                footer?.igstAmount ||
+                footer?.totalIgstAmount ||
+                "0.00",
+            taxAmount:
+                footer?.taxAmount ||
+                footer?.totalTaxAmount ||
+                "0.00",
+            otherAmount:
+                footer?.otherAmount ||
+                footer?.totalOtherAmount ||
+                "0.00",
+            netAmount:
+                footer?.netAmount ||
+                footer?.totalNetAmount ||
+                record?.netAmount ||
+                record?.returnAmount ||
+                "0.00",
+            adjustedAmount:
+                footer?.adjustedAmount ||
+                "0.00",
+            balanceAmount:
+                footer?.balanceAmount ||
+                footer?.netAmount ||
+                footer?.totalNetAmount ||
+                record?.netAmount ||
+                record?.returnAmount ||
+                "0.00",
+            totalQuantity,
+        },
+
         pRetVoucherNumber:
             getVoucherNumber(record),
 
@@ -710,10 +834,10 @@ const normalizePurchaseReturnForView = (
                 ? ""
                 : getDocumentStatus(record),
 
-        pInvVoucherNumber:
-            getPurchaseInvoiceNumber(record) === "-"
-                ? ""
-                : getPurchaseInvoiceNumber(record),
+        // pInvVoucherNumber:
+        //     getPurchaseInvoiceNumber(record) === "-"
+        //         ? ""
+        //         : getPurchaseInvoiceNumber(record),
 
         products,
         pRetBody: products,
@@ -795,6 +919,9 @@ const PurchaseReturnRegister = () => {
         useState("");
 
     const [toDate, setToDate] =
+        useState("");
+
+    const [dateError, setDateError] =
         useState("");
 
     const [vendor, setVendor] =
@@ -959,21 +1086,7 @@ const PurchaseReturnRegister = () => {
        FILTER CHECK
     =================================================== */
 
-    const hasAnyFilter = useMemo(() => {
-        return Boolean(
-            fromDate ||
-            toDate ||
-            vendor ||
-            product ||
-            selectedCustomCodes.length
-        );
-    }, [
-        fromDate,
-        toDate,
-        vendor,
-        product,
-        selectedCustomCodesKey,
-    ]);
+
 
     /* ===================================================
        OPTIONS
@@ -1037,6 +1150,28 @@ const PurchaseReturnRegister = () => {
         return purchaseReturnPagination || {};
     }, [purchaseReturnPagination]);
 
+    const hasRegisterData = tableData.length > 0;
+
+    const validateDates = (): boolean => {
+        if (!fromDate && !toDate) {
+            setDateError("");
+            return true;
+        }
+
+        if (!fromDate || !toDate) {
+            setDateError("Please select both From Date and To Date.");
+            return false;
+        }
+
+        if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
+            setDateError("From Date cannot be greater than To Date.");
+            return false;
+        }
+
+        setDateError("");
+        return true;
+    };
+
     /* ===================================================
        API PAYLOAD
     =================================================== */
@@ -1056,8 +1191,8 @@ const PurchaseReturnRegister = () => {
             accountCode: vendor,
             productCode: product,
 
-            fromDate,
-            toDate,
+            fromDate: fromDate || "",
+            toDate: toDate || "",
 
             customCodes:
                 selectedCustomCodes.length
@@ -1269,6 +1404,16 @@ const PurchaseReturnRegister = () => {
     =================================================== */
 
     useEffect(() => {
+        if ((fromDate && !toDate) || (!fromDate && toDate)) return;
+
+        if (
+            fromDate &&
+            toDate &&
+            new Date(fromDate).getTime() > new Date(toDate).getTime()
+        ) {
+            return;
+        }
+
         dispatch(
             getPurchaseReturnRegister(
                 getPayload()
@@ -1424,6 +1569,8 @@ const PurchaseReturnRegister = () => {
     =================================================== */
 
     const handleRefresh = () => {
+        if (!validateDates()) return;
+
         setLocalOffset(0);
 
         setRefreshKey(
@@ -1432,6 +1579,7 @@ const PurchaseReturnRegister = () => {
     };
 
     const handleClear = () => {
+        setDateError("");
         setFromDate("");
         setToDate("");
         setVendor("");
@@ -1451,42 +1599,27 @@ const PurchaseReturnRegister = () => {
     const handleViewVoucher = async (
         row: any
     ) => {
-        const voucherNumber =
-            getVoucherNumber(row);
-
-        if (!voucherNumber) {
-            console.log(
-                "Purchase return voucher number missing:",
-                row
-            );
-
-            return;
-        }
-
         try {
             setViewModal(true);
             setViewLoading(true);
             setViewErrors({});
-            setViewForm({});
-
-            await dispatch(
-                getAllTransactionSchema(
-                    REGISTER_MODULE
-                ) as any
-            );
 
             setViewForm(
                 normalizePurchaseReturnForView(
                     row
                 )
             );
+
+            await dispatch(
+                getAllTransactionSchema(
+                    REGISTER_MODULE
+                ) as any
+            );
         } catch (error) {
             console.log(
                 "Purchase return view failed:",
                 error
             );
-
-            setViewForm({});
         } finally {
             setViewLoading(false);
         }
@@ -1534,10 +1667,11 @@ const PurchaseReturnRegister = () => {
         requestedType: ExportType
     ) => {
         if (
-            !hasAnyFilter ||
+            !hasRegisterData ||
             exportColumnsLoading ||
             pdfLoading ||
-            excelLoading
+            excelLoading ||
+            !validateDates()
         ) {
             return;
         }
@@ -1650,64 +1784,62 @@ const PurchaseReturnRegister = () => {
         );
     };
 
-    const performExportDownload =
-        async () => {
-            if (
-                !exportType ||
-                !selectedExportColumns.length
-            ) {
-                return;
-            }
+   const performExportDownload = async () => {
+    if (
+        !hasRegisterData ||
+        !exportType ||
+        !selectedExportColumns.length ||
+        !validateDates()
+    ) {
+        return;
+    }
 
-            const currentExportType =
-                exportType;
+    const currentExportType =
+        exportType;
 
-            const columns = [
-                ...selectedExportColumns,
-            ];
+    const columns = [
+        ...selectedExportColumns,
+    ];
 
-            closeExportModal();
+    try {
+        if (currentExportType === "pdf") {
+            setPdfLoading(true);
+        } else {
+            setExcelLoading(true);
+        }
 
-            try {
-                if (
-                    currentExportType ===
-                    "pdf"
-                ) {
-                    setPdfLoading(true);
-                } else {
-                    setExcelLoading(true);
-                }
+        const response =
+            await dispatch(
+                getPurchaseReturnRegister(
+                    getPayload(
+                        currentExportType,
+                        columns
+                    )
+                )
+            ).unwrap();
 
-                const response =
-                    await dispatch(
-                        getPurchaseReturnRegister(
-                            getPayload(
-                                currentExportType,
-                                columns
-                            )
-                        )
-                    ).unwrap();
+        if (response?.blob) {
+            downloadBlobFile(
+                response.blob,
+                currentExportType === "pdf"
+                    ? "purchase-return-register.pdf"
+                    : "purchase-return-register.xlsx"
+            );
+        }
 
-                if (response?.blob) {
-                    downloadBlobFile(
-                        response.blob,
+        closeExportModal();
+    } catch (error: any) {
+        closeExportModal();
 
-                        currentExportType ===
-                            "pdf"
-                            ? "purchase-return-register.pdf"
-                            : "purchase-return-register.xlsx"
-                    );
-                }
-            } catch (error) {
-                console.log(
-                    `Purchase return register ${currentExportType.toUpperCase()} download failed:`,
-                    error
-                );
-            } finally {
-                setPdfLoading(false);
-                setExcelLoading(false);
-            }
-        };
+        toast.error(
+            error?.message ||
+            `Failed to download ${currentExportType.toUpperCase()}`
+        );
+    } finally {
+        setPdfLoading(false);
+        setExcelLoading(false);
+    }
+};
 
     /* ===================================================
        RENDER
@@ -1722,28 +1854,34 @@ const PurchaseReturnRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value: fromDate ? toDateInputValue(fromDate) : "",
                         required: false,
 
                         onChange: (
                             value: string
                         ) => {
-                            setFromDate(value);
+                            setFromDate(
+                                value ? toLocalStartOfDayUtc(value) : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value: toDate ? toDateInputValue(toDate) : "",
                         required: false,
 
                         onChange: (
                             value: string
                         ) => {
-                            setToDate(value);
+                            setToDate(
+                                value ? toLocalEndOfDayUtc(value) : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                     },
                     {
@@ -1834,13 +1972,15 @@ const PurchaseReturnRegister = () => {
                     openExportPicker("excel")
                 }
                 pdfDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     pdfLoading ||
+                    excelLoading ||
                     exportColumnsLoading
                 }
                 excelDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     excelLoading ||
+                    pdfLoading ||
                     exportColumnsLoading
                 }
                 pdfLoading={
@@ -1855,11 +1995,17 @@ const PurchaseReturnRegister = () => {
                         "excel")
                 }
                 downloadDisabledMessage={
-                    !hasAnyFilter
-                        ? "Please select any filter first."
+                    !hasRegisterData
+                        ? "No data available to export."
                         : "Please wait, export is processing."
                 }
             />
+
+            {dateError && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    {dateError}
+                </div>
+            )}
 
             <DataTable
                 columns={mainColumns}
@@ -1875,6 +2021,7 @@ const PurchaseReturnRegister = () => {
                         type="button"
                         onClick={(event) => {
                             event.stopPropagation();
+                            setViewModal(true);
 
                             handleViewVoucher(
                                 row

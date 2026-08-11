@@ -20,10 +20,16 @@ import {
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
 import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 
-import { loadAllTemplateOptions } from "../../../utils/helperFunctions";
+import {
+    loadAllTemplateOptions,
+    toDateInputValue,
+    toLocalEndOfDayUtc,
+    toLocalStartOfDayUtc,
+} from "../../../utils/helperFunctions";
 import professionalAxios from "../../../services/professionalAxios";
 import { Checkbox } from "../../../components/inputs";
 import { clearRegisterFilterDropdowns, getRegisterFilterDropdowns } from "../../../redux/slices/professionalSlice/registerModule";
+import { toast } from "react-toastify";
 
 /* ===================================================
    TABLE COLUMNS
@@ -393,6 +399,7 @@ const PurchaseRegister = () => {
 
     const [fromDate, setFromDate] = useState<string>("");
     const [toDate, setToDate] = useState<string>("");
+    const [dateError, setDateError] = useState<string>("");
     const [vendor, setVendor] = useState<string>("");
 
     const [customFilterOptions, setCustomFilterOptions] = useState<
@@ -453,7 +460,7 @@ const PurchaseRegister = () => {
         (state: any) => state.registerFilterDropdown || {}
     );
 
-    const customFilters:any = useMemo<CustomFilterDefinition[]>(() => {
+    const customFilters: any = useMemo<CustomFilterDefinition[]>(() => {
         return Array.isArray(registerFilterDropdowns)
             ? registerFilterDropdowns
             : [];
@@ -469,7 +476,7 @@ const PurchaseRegister = () => {
 
     const selectedCustomCodes = useMemo(() => {
         return customFilters
-            .map((filter:any) => selectedCustomFilters[filter.key] || "")
+            .map((filter: any) => selectedCustomFilters[filter.key] || "")
             .filter(Boolean);
     }, [customFilters, selectedCustomFilters]);
 
@@ -484,14 +491,7 @@ const PurchaseRegister = () => {
         );
     }, [selectedCustomCodes]);
 
-    const hasAnyFilter = useMemo(() => {
-        return Boolean(
-            fromDate ||
-            toDate ||
-            vendor ||
-            selectedCustomCodes.length
-        );
-    }, [fromDate, toDate, vendor, selectedCustomCodes.length]);
+
 
     /* ===================================================
        OPTIONS
@@ -520,6 +520,28 @@ const PurchaseRegister = () => {
         return pagination || {};
     }, [pagination]);
 
+    const hasRegisterData = tableData.length > 0;
+
+    const validateDates = (): boolean => {
+        if (!fromDate && !toDate) {
+            setDateError("");
+            return true;
+        }
+
+        if (!fromDate || !toDate) {
+            setDateError("Please select both From Date and To Date.");
+            return false;
+        }
+
+        if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
+            setDateError("From Date cannot be greater than To Date.");
+            return false;
+        }
+
+        setDateError("");
+        return true;
+    };
+
     /* ===================================================
        PAYLOAD
     =================================================== */
@@ -533,8 +555,8 @@ const PurchaseRegister = () => {
             const customCodes = JSON.parse(customCodesKey) as string[];
 
             return {
-                fromDate,
-                toDate,
+                fromDate: fromDate || "",
+                toDate: toDate || "",
                 offset: isExport ? 0 : localOffset,
                 limit: isExport ? 120000 : localLimit,
                 vendorCode: vendor,
@@ -642,7 +664,7 @@ const PurchaseRegister = () => {
             setSelectedCustomFilters((previous) => {
                 const nextSelected: Record<string, string> = {};
 
-                customFilters.forEach((filter:any) => {
+                customFilters.forEach((filter: any) => {
                     if (filter?.key && previous[filter.key]) {
                         nextSelected[filter.key] = previous[filter.key];
                     }
@@ -669,6 +691,16 @@ const PurchaseRegister = () => {
     }, [registerFilterDropdownError]);
 
     useEffect(() => {
+        if ((fromDate && !toDate) || (!fromDate && toDate)) return;
+
+        if (
+            fromDate &&
+            toDate &&
+            new Date(fromDate).getTime() > new Date(toDate).getTime()
+        ) {
+            return;
+        }
+
         const payload = getPayload();
 
         /*
@@ -687,7 +719,7 @@ const PurchaseRegister = () => {
 
         lastRegisterRequestKeyRef.current = requestKey;
         dispatch(addPurchaseRegister(payload));
-    }, [dispatch, getPayload, refreshKey]);
+    }, [dispatch, fromDate, toDate, getPayload, refreshKey]);
 
     useEffect(() => {
         const prepareViewFields = async () => {
@@ -749,11 +781,14 @@ const PurchaseRegister = () => {
     =================================================== */
 
     const handleRefresh = () => {
+        if (!validateDates()) return;
+
         setLocalOffset(0);
         setRefreshKey((prev) => prev + 1);
     };
 
     const handleClear = () => {
+        setDateError("");
         setFromDate("");
         setToDate("");
         setVendor("");
@@ -825,7 +860,13 @@ const PurchaseRegister = () => {
     };
 
     const openExportPicker = async (type: "pdf" | "excel") => {
-        if (!hasAnyFilter || exportColumnsLoading || pdfLoading || excelLoading) {
+        if (
+            !hasRegisterData ||
+            exportColumnsLoading ||
+            pdfLoading ||
+            excelLoading ||
+            !validateDates()
+        ) {
             return;
         }
 
@@ -891,7 +932,14 @@ const PurchaseRegister = () => {
     };
 
     const performExportDownload = async () => {
-        if (!exportType || !selectedExportColumns.length) return;
+        if (
+            !hasRegisterData ||
+            !exportType ||
+            !selectedExportColumns.length ||
+            !validateDates()
+        ) {
+            return;
+        }
         const currentExportType = exportType;
         const columns = [...selectedExportColumns];
         closeExportModal();
@@ -917,11 +965,19 @@ const PurchaseRegister = () => {
                         : "purchase-register.xlsx"
                 );
             }
-        } catch (error) {
+        } catch (error: any) {
             console.log(
                 `Purchase register ${currentExportType.toUpperCase()} download failed`,
                 error
             );
+
+            toast.error(
+                error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.message ||
+                `Failed to download ${currentExportType.toUpperCase()}`
+            );
+
         } finally {
             setPdfLoading(false);
             setExcelLoading(false);
@@ -939,10 +995,15 @@ const PurchaseRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate,
+                        value: fromDate ? toDateInputValue(fromDate) : "",
                         onChange: (value) => {
-                            setFromDate(value);
+                            setFromDate(
+                                value
+                                    ? toLocalStartOfDayUtc(value)
+                                    : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                         required: false,
                     },
@@ -950,10 +1011,15 @@ const PurchaseRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate,
+                        value: toDate ? toDateInputValue(toDate) : "",
                         onChange: (value) => {
-                            setToDate(value);
+                            setToDate(
+                                value
+                                    ? toLocalEndOfDayUtc(value)
+                                    : ""
+                            );
                             setLocalOffset(0);
+                            setDateError("");
                         },
                         required: false,
                     },
@@ -969,7 +1035,7 @@ const PurchaseRegister = () => {
                             setLocalOffset(0);
                         },
                     },
-                    ...customFilters.map((filter:any) => ({
+                    ...customFilters.map((filter: any) => ({
                         key: filter.key,
                         type: "select",
                         label: filter.label || filter.key,
@@ -991,13 +1057,15 @@ const PurchaseRegister = () => {
                 onDownloadPdf={handleDownloadPdf}
                 onDownloadExcel={handleDownloadExcel}
                 pdfDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     pdfLoading ||
+                    excelLoading ||
                     exportColumnsLoading
                 }
                 excelDisabled={
-                    !hasAnyFilter ||
+                    !hasRegisterData ||
                     excelLoading ||
+                    pdfLoading ||
                     exportColumnsLoading
                 }
                 pdfLoading={
@@ -1009,11 +1077,17 @@ const PurchaseRegister = () => {
                     (exportColumnsLoading && exportType === "excel")
                 }
                 downloadDisabledMessage={
-                    !hasAnyFilter
-                        ? "Please select any filter first."
+                    !hasRegisterData
+                        ? "No data available to export."
                         : "Please wait, export is processing."
                 }
             />
+
+            {dateError && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    {dateError}
+                </div>
+            )}
 
             <DataTable
                 columns={mainColumns}
