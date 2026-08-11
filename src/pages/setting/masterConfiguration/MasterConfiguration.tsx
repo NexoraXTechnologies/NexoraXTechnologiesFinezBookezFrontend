@@ -62,6 +62,12 @@ type SchemaField = {
   };
 	[key: string]: any;
 };
+type SchemaFieldPayload = Omit<SchemaField, "isRequired" | "isSearchable" | "isFilterable" | "isHidden"> & {
+	isRequired: boolean;
+	isSearchable: boolean;
+	isFilterable: boolean;
+	isHidden: boolean;
+};
 type SchemaFieldForm = {
   key: string;
   label: string;
@@ -186,10 +192,10 @@ const FIELD_TYPE_OPTIONS = [
 		label: "Custom Master",
 	},
 ];
-const SELF_MASTER_FIELD_TYPE_MAP: Partial<Record<StandardMasterKey, string>> = {
-	accountMaster: "accountmaster",
-	productMaster: "productmaster",
-};
+// const SELF_MASTER_FIELD_TYPE_MAP: Partial<Record<StandardMasterKey, string>> = {
+// 	accountMaster: "accountmaster",
+// 	productMaster: "productmaster",
+// };
 const MasterConfiguration = () => {
   const dispatch = useDispatch<any>();
 	const { masterConfigurations = [], pagination = {}, selectedMasterConfiguration, loading: moduleLoading, createLoading, updateLoading, error: moduleError, } = useSelector((state: any) => state.masterConfiguration || {});
@@ -909,11 +915,11 @@ const MasterConfiguration = () => {
 	  return (Object.keys(errors).length ===
 		  0);
   };
-  const buildSchemaFieldPayload = () => {
+	const buildSchemaFieldPayload = (): SchemaFieldPayload => {
 	  const normalizedType = String(schemaForm.type || "")
 		  .trim()
 		  .toLowerCase();
-    const payload: SchemaField = {
+	const payload: SchemaFieldPayload = {
       key: schemaForm.key.trim(),
       label: schemaForm.label.trim(),
 		type: normalizedType,
@@ -1008,7 +1014,7 @@ const MasterConfiguration = () => {
 		  !validateSchemaForm()) {
 		  return;
 	  }
-	  const fieldPayload = buildSchemaFieldPayload();
+	  const fieldPayload:any = buildSchemaFieldPayload();
     try {
 		if (schemaContext.kind ===
 			"custom") {
@@ -1198,6 +1204,7 @@ const MasterConfiguration = () => {
 	const schemaTotalDocs = Number(activeSchemaState
 		.pagination?.totalDocs ||
 		0);
+		// @ts-ignore
 	const renderSchemaBuilder = (title: string, description: string, badgeText?: string) => (<>
 		<Panel title={title} description={description} right={<div className="flex flex-wrap items-center gap-2">
 

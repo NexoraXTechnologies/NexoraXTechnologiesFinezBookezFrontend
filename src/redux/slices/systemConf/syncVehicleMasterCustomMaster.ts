@@ -498,7 +498,7 @@ export const VEHICLE_MASTER_SCHEMA_FIELDS = [
 export const VEHICLE_MASTER_SCHEMA_FIELD_KEYS =
     new Set(
         VEHICLE_MASTER_SCHEMA_FIELDS.map(
-            (field) => field.key
+            (field:any) => field.key
         )
     );
 
@@ -561,7 +561,7 @@ const EMPTY_TEAM_EMPLOYEE_REF_FIELDS = {
 
 const baseTeamEmployeeField = (
     overrides: Record<string, any> = {}
-) => ({
+): Record<string, any> => ({
     isSearchable: false,
     isFilterable: false,
     isHidden: false,

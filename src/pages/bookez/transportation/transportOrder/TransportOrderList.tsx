@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Edit, Eye, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { formatDateTime, money, truncate } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";

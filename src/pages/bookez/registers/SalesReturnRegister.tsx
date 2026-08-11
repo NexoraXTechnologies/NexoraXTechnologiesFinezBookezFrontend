@@ -274,46 +274,46 @@ const getFooter = (row: any): any => {
     );
 };
 
-const getProductSummary = (row: any): string => {
-    if (row?.productName || row?.product) {
-        return row?.productName || row?.product;
-    }
+// const getProductSummary = (row: any): string => {
+//     if (row?.productName || row?.product) {
+//         return row?.productName || row?.product;
+//     }
 
-    const body = getBodyRows(row);
+//     const body = getBodyRows(row);
 
-    if (!body.length) {
-        return "-";
-    }
+//     if (!body.length) {
+//         return "-";
+//     }
 
-    const firstProduct =
-        body[0]?.productName ||
-        body[0]?.productCode ||
-        "-";
+//     const firstProduct =
+//         body[0]?.productName ||
+//         body[0]?.productCode ||
+//         "-";
 
-    if (body.length === 1) {
-        return firstProduct;
-    }
+//     if (body.length === 1) {
+//         return firstProduct;
+//     }
 
-    return `${firstProduct} +${body.length - 1} more`;
-};
+//     return `${firstProduct} +${body.length - 1} more`;
+// };
 
-const getTotalQuantity = (row: any): number => {
-    const footer = getFooter(row);
+// const getTotalQuantity = (row: any): number => {
+//     const footer = getFooter(row);
 
-    if (footer?.totalQuantity !== undefined) {
-        return toNumber(footer.totalQuantity);
-    }
+//     if (footer?.totalQuantity !== undefined) {
+//         return toNumber(footer.totalQuantity);
+//     }
 
-    if (row?.quantity !== undefined) {
-        return toNumber(row.quantity);
-    }
+//     if (row?.quantity !== undefined) {
+//         return toNumber(row.quantity);
+//     }
 
-    return getBodyRows(row).reduce(
-        (total: number, item: any) =>
-            total + toNumber(item?.quantity),
-        0
-    );
-};
+//     return getBodyRows(row).reduce(
+//         (total: number, item: any) =>
+//             total + toNumber(item?.quantity),
+//         0
+//     );
+// };
 
 const getNetAmount = (row: any): number => {
     const footer = getFooter(row);

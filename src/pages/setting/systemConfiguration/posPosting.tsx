@@ -19,7 +19,7 @@ type SavedAccountCardProps = {
     saving: boolean;
 };
 
-const ACCOUNT_MASTER_ROUTE = "/bookEz/account-master";
+// const ACCOUNT_MASTER_ROUTE = "/bookEz/account-master";
 
 const fadeUp: any = {
     hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
@@ -182,9 +182,9 @@ const PosPosting = () => {
         [saveAccount]
     );
     const configuredCount = [posPosting?.sales?.accountCode, posPosting?.cash?.accountCode, posPosting?.upi?.accountCode].filter(Boolean).length;
-    const accountOptionsMissing = !salesOptions.length || !cashOptions.length || !bankOptions.length;
+    // const accountOptionsMissing = !salesOptions.length || !cashOptions.length || !bankOptions.length;
     const controlsDisabled = posPostingLoading || posAccountsLoading || posPostingSaveLoading;
-    const openAccountMaster = () => navigate(ACCOUNT_MASTER_ROUTE);
+    // const openAccountMaster = () => navigate(ACCOUNT_MASTER_ROUTE);
     return (
         <div className="bg-background p-3 text-foreground">
             <AnimatePresence>

@@ -1531,146 +1531,146 @@ const buildAccountReferenceOption = (
    DATASOURCE HELPERS
 ===================================================== */
 
-const getAccountFieldDataSource = (
-    field: any
-) => {
-    const rawDataSource =
-        field?.dataSource;
+// const getAccountFieldDataSource = (
+//     field: any
+// ) => {
+//     const rawDataSource =
+//         field?.dataSource;
 
-    if (
-        rawDataSource &&
-        typeof rawDataSource ===
-        "object"
-    ) {
-        return rawDataSource;
-    }
+//     if (
+//         rawDataSource &&
+//         typeof rawDataSource ===
+//         "object"
+//     ) {
+//         return rawDataSource;
+//     }
 
-    if (
-        typeof rawDataSource ===
-        "string" &&
-        rawDataSource.trim()
-    ) {
-        try {
-            const parsed =
-                JSON.parse(
-                    rawDataSource
-                );
+//     if (
+//         typeof rawDataSource ===
+//         "string" &&
+//         rawDataSource.trim()
+//     ) {
+//         try {
+//             const parsed =
+//                 JSON.parse(
+//                     rawDataSource
+//                 );
 
-            if (
-                parsed &&
-                typeof parsed ===
-                "object"
-            ) {
-                return parsed;
-            }
-        } catch {
-            /*
-             * Ignore malformed JSON datasource.
-             */
-        }
-    }
+//             if (
+//                 parsed &&
+//                 typeof parsed ===
+//                 "object"
+//             ) {
+//                 return parsed;
+//             }
+//         } catch {
+//             /*
+//              * Ignore malformed JSON datasource.
+//              */
+//         }
+//     }
 
-    return {};
-};
+//     return {};
+// };
 
-const getAccountFieldDataSourceApi = (
-    field: any
-) => {
-    const dataSource =
-        getAccountFieldDataSource(
-            field
-        );
+// const getAccountFieldDataSourceApi = (
+//     field: any
+// ) => {
+//     const dataSource =
+//         getAccountFieldDataSource(
+//             field
+//         );
 
-    return String(
-        field?.api ||
-        dataSource?.api ||
-        dataSource?.url ||
-        ""
-    ).trim();
-};
+//     return String(
+//         field?.api ||
+//         dataSource?.api ||
+//         dataSource?.url ||
+//         ""
+//     ).trim();
+// };
 
-const flattenEmployeeDataSourceRecords = (
-    records: any[]
-) => {
-    const employees: any[] =
-        [];
+// const flattenEmployeeDataSourceRecords = (
+//     records: any[]
+// ) => {
+//     const employees: any[] =
+//         [];
 
-    (
-        Array.isArray(
-            records
-        )
-            ? records
-            : []
-    ).forEach(
-        (
-            record: any
-        ) => {
-            const childUsers =
-                record?.ChildUsers ||
-                record?.childUsers ||
-                record?.children ||
-                [];
+//     (
+//         Array.isArray(
+//             records
+//         )
+//             ? records
+//             : []
+//     ).forEach(
+//         (
+//             record: any
+//         ) => {
+//             const childUsers =
+//                 record?.ChildUsers ||
+//                 record?.childUsers ||
+//                 record?.children ||
+//                 [];
 
-            if (
-                Array.isArray(
-                    childUsers
-                )
-            ) {
-                employees.push(
-                    ...childUsers
-                );
-            }
+//             if (
+//                 Array.isArray(
+//                     childUsers
+//                 )
+//             ) {
+//                 employees.push(
+//                     ...childUsers
+//                 );
+//             }
 
-            if (
-                String(
-                    record
-                        ?.userMobileNumberHash ||
-                    ""
-                ).trim()
-            ) {
-                employees.push(
-                    record
-                );
-            }
-        }
-    );
+//             if (
+//                 String(
+//                     record
+//                         ?.userMobileNumberHash ||
+//                     ""
+//                 ).trim()
+//             ) {
+//                 employees.push(
+//                     record
+//                 );
+//             }
+//         }
+//     );
 
-    const uniqueByMobile =
-        new Map<
-            string,
-            any
-        >();
+//     const uniqueByMobile =
+//         new Map<
+//             string,
+//             any
+//         >();
 
-    employees.forEach(
-        (
-            employee: any
-        ) => {
-            const mobile =
-                String(
-                    employee
-                        ?.userMobileNumberHash ||
-                    employee?.mobile ||
-                    ""
-                ).trim();
+//     employees.forEach(
+//         (
+//             employee: any
+//         ) => {
+//             const mobile =
+//                 String(
+//                     employee
+//                         ?.userMobileNumberHash ||
+//                     employee?.mobile ||
+//                     ""
+//                 ).trim();
 
-            if (
-                mobile &&
-                !uniqueByMobile.has(
-                    mobile
-                )
-            ) {
-                uniqueByMobile.set(
-                    mobile,
-                    employee
-                );
-            }
-        }
-    );
+//             if (
+//                 mobile &&
+//                 !uniqueByMobile.has(
+//                     mobile
+//                 )
+//             ) {
+//                 uniqueByMobile.set(
+//                     mobile,
+//                     employee
+//                 );
+//             }
+//         }
+//     );
 
-    return Array.from(
-        uniqueByMobile.values()
-    );
-};
+//     return Array.from(
+//         uniqueByMobile.values()
+//     );
+// };
 
 /* =====================================================
    EXTRACT CHILD USERS FROM EMPLOYEE API RESPONSE
@@ -2740,6 +2740,7 @@ const AccountMasterModal = ({
         );
 
         dispatch(
+            // @ts-ignore
             getStates() as any
         );
     }, [
@@ -3093,10 +3094,7 @@ const AccountMasterModal = ({
     const getFieldOptions = (
         field: any
     ) => {
-        const fieldType =
-            getAccountFieldType(
-                field
-            );
+        // const fieldType =getAccountFieldType(field );
 
         if (
             field.key ===

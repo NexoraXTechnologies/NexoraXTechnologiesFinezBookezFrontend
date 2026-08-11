@@ -27,29 +27,29 @@ import { getCompany } from "../../../../redux/slices/professionalSlice/professio
    HELPERS
 =================================================== */
 
-const getCompanyList = (res: any) => {
-    const data = res?.data || res || {};
+// const getCompanyList = (res: any) => {
+//     const data = res?.data || res || {};
 
-    const list =
-        data?.records ||
-        data?.items ||
-        data?.docs ||
-        data?.companies ||
-        data?.data?.records ||
-        data?.data?.items ||
-        data?.data?.docs ||
-        data?.data?.companies ||
-        data?.data ||
-        [];
+//     const list =
+//         data?.records ||
+//         data?.items ||
+//         data?.docs ||
+//         data?.companies ||
+//         data?.data?.records ||
+//         data?.data?.items ||
+//         data?.data?.docs ||
+//         data?.data?.companies ||
+//         data?.data ||
+//         [];
 
-    if (Array.isArray(list)) return list;
+//     if (Array.isArray(list)) return list;
 
-    if (list && typeof list === "object") {
-        return [list];
-    }
+//     if (list && typeof list === "object") {
+//         return [list];
+//     }
 
-    return [];
-};
+//     return [];
+// };
 
 const getApiList = (res: any) => {
     const data = res?.data || res || {};

@@ -2143,7 +2143,7 @@ type ExportType = "pdf" | "excel";
 =================================================== */
 
 const BOOKEZ_API_PREFIX = "/eTaxSolnMongoApiBackend";
-const REGISTER_MODULE = "openingBalance";
+// const REGISTER_MODULE = "openingBalance";
 
 /* ===================================================
    COMMON HELPERS

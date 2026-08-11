@@ -26,7 +26,7 @@ import professionalAxios from "../../../../services/professionalAxios";
    CONFIG
 =================================================== */
 
-const LIVE_REFRESH_MS = 5000;
+const LIVE_REFRESH_MS = 1000;
 const FOLLOW_ZOOM = 17;
 
 const DEFAULT_CENTER = {

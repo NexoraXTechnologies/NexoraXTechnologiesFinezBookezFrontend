@@ -34,7 +34,7 @@ import {
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 
 import {
-    
+
     createInitialTripAllocation,
 
     getTransportOrderVoucher,
@@ -109,8 +109,8 @@ const getFullName = (user: any) =>
         .join(" ")
         .trim();
 
-const isAssignedStatus = (value: any) =>
-    String(value || "").trim().toLowerCase() === "assigned";
+// const isAssignedStatus = (value: any) =>
+//     String(value || "").trim().toLowerCase() === "assigned";
 
 const parseNumber = (value: any) => {
     if (value === null || value === undefined) return 0;
@@ -246,13 +246,60 @@ const vehicleTypeMatch = (left: any, right: any) => {
     return a === b || a.includes(b) || b.includes(a);
 };
 
+// const normalizeDriverUsers = (users: any[] = []) => {
+//     return (Array.isArray(users) ? users : [])
+//         .map((user: any) => {
+//             const customFields = user?.childUserCustomFields || {};
+//             const mobileNumber = String(user?.userMobileNumberHash || "");
+//             const userType = String(user?.userType || "").toLowerCase();
+//             const isActive = String(user?.isUserActive || "") === "1";
+//             const status = String(customFields?.status || user?.status || "");
+
+//             return {
+//                 raw: user,
+
+//                 driverId: mobileNumber,
+//                 driverName: getFullName(user) || mobileNumber,
+//                 mobileNumber,
+
+//                 licenseNumber:
+//                     customFields?.licenseNumber ||
+//                     user?.licenseNumber ||
+//                     user?.drivingLicenseNumber ||
+//                     "",
+
+//                 licenseExpiryDate:
+//                     customFields?.licenseExpiry ||
+//                     user?.licenseExpiryDate ||
+//                     user?.drivingLicenseExpiryDate ||
+//                     "",
+
+//                 userType: user?.userType || "",
+//                 status,
+//                 isActive,
+//                 hasParent: Boolean(user?.parentUserMobileNumber),
+//                 isDriverType:
+//                     userType.includes("tax payer") ||
+//                     userType.includes("employee") ||
+//                     userType.includes("driver"),
+//             };
+//         })
+//         .filter((driver: any) => {
+//             return (
+//                 driver.driverId &&
+//                 driver.isActive &&
+//                 driver.hasParent &&
+//                 driver.isDriverType &&
+//                 !isAssignedStatus(driver.status)
+//             );
+//         });
+// };
+
 const normalizeDriverUsers = (users: any[] = []) => {
     return (Array.isArray(users) ? users : [])
         .map((user: any) => {
             const customFields = user?.childUserCustomFields || {};
             const mobileNumber = String(user?.userMobileNumberHash || "");
-            const userType = String(user?.userType || "").toLowerCase();
-            const isActive = String(user?.isUserActive || "") === "1";
             const status = String(customFields?.status || user?.status || "");
 
             return {
@@ -276,25 +323,25 @@ const normalizeDriverUsers = (users: any[] = []) => {
 
                 userType: user?.userType || "",
                 status,
-                isActive,
                 hasParent: Boolean(user?.parentUserMobileNumber),
+
                 isDriverType:
-                    userType.includes("tax payer") ||
-                    userType.includes("employee") ||
-                    userType.includes("driver"),
+                    String(customFields?.employeeCategory || "")
+                        .trim()
+                        .toLowerCase() === "driver",
             };
         })
         .filter((driver: any) => {
             return (
                 driver.driverId &&
-                driver.isActive &&
                 driver.hasParent &&
                 driver.isDriverType &&
-                !isAssignedStatus(driver.status)
+                String(driver.status || "")
+                    .trim()
+                    .toLowerCase() === "available"
             );
         });
 };
-
 /**
  * NOTE ON STATUS/OWNERSHIP FIELDS:
  * Vehicles coming from tripAllocationSlice's getVehicleMasterVehicles are
@@ -923,27 +970,88 @@ const CreateTripAllocation = ({
         ]
     );
 
-    const driverOptions = useMemo(
-        () =>
-            (driverUsers || []).map((driver: any) => {
-                const assignment = driverAssignmentMap[driver.driverId];
+    // const driverOptions = useMemo(
+    //     () =>
+    //         (driverUsers || []).map((driver: any) => {
+    //             const assignment = driverAssignmentMap[driver.driverId];
 
-                const isAssignedElsewhere =
-                    assignment &&
-                    (!isEdit || assignment.allocationVoucher !== voucherNumber);
+    //             const isAssignedElsewhere =
+    //                 assignment &&
+    //                 (!isEdit || assignment.allocationVoucher !== voucherNumber);
 
-                return {
-                    label: isAssignedElsewhere
-                        ? `${driver.driverName} - Assigned (${assignment.allocationVoucher})`
-                        : `${driver.driverName} `,
-                    value: driver.driverId,
-                    isDisabled: Boolean(isAssignedElsewhere),
-                    driver,
-                };
-            }),
-        [driverUsers, driverAssignmentMap, isEdit, voucherNumber]
-    );
+    //             return {
+    //                 label: isAssignedElsewhere
+    //                     ? `${driver.driverName} - Assigned (${assignment.allocationVoucher})`
+    //                     : `${driver.driverName} `,
+    //                 value: driver.driverId,
+    //                 isDisabled: Boolean(isAssignedElsewhere),
+    //                 driver,
+    //             };
+    //         }),
+    //     [driverUsers, driverAssignmentMap, isEdit, voucherNumber]
+    // );
 
+
+
+    const driverOptions = useMemo(() => {
+        const options = (driverUsers || []).map((driver: any) => {
+            const assignment = driverAssignmentMap[driver.driverId];
+
+            const isAssignedElsewhere =
+                assignment &&
+                (!isEdit || assignment.allocationVoucher !== voucherNumber);
+
+            return {
+                label: isAssignedElsewhere
+                    ? `${driver.driverName} - Assigned (${assignment.allocationVoucher})`
+                    : driver.driverName || driver.driverId,
+                value: driver.driverId,
+                isDisabled: Boolean(isAssignedElsewhere),
+                driver,
+            };
+        });
+
+        const assignedDriverId = String(
+            form.driverAllocation?.driverId || ""
+        ).trim();
+
+        const assignedDriverName = String(
+            form.driverAllocation?.driverName || ""
+        ).trim();
+
+        if (
+            assignedDriverId &&
+            !options.some((option: any) => option.value === assignedDriverId)
+        ) {
+            options.unshift({
+                label: assignedDriverName || assignedDriverId,
+                value: assignedDriverId,
+                isDisabled: false,
+                driver: {
+                    driverId: assignedDriverId,
+                    driverName: assignedDriverName || assignedDriverId,
+                    mobileNumber:
+                        form.driverAllocation?.mobileNumber || assignedDriverId,
+                    licenseNumber:
+                        form.driverAllocation?.licenseNumber || "",
+                    licenseExpiryDate:
+                        form.driverAllocation?.licenseExpiryDate || "",
+                },
+            });
+        }
+
+        return options;
+    }, [
+        driverUsers,
+        driverAssignmentMap,
+        isEdit,
+        voucherNumber,
+        form.driverAllocation?.driverId,
+        form.driverAllocation?.driverName,
+        form.driverAllocation?.mobileNumber,
+        form.driverAllocation?.licenseNumber,
+        form.driverAllocation?.licenseExpiryDate,
+    ]);
     const helperOptions = useMemo(
         () =>
             (driverUsers || [])
@@ -1271,6 +1379,7 @@ const CreateTripAllocation = ({
                     "childUserCustomFields.licenseNumber",
                     "childUserCustomFields.licenseExpiry",
                     "childUserCustomFields.status",
+                    "childUserCustomFields.employeeCategory",
                 ],
             }) as any
         );
