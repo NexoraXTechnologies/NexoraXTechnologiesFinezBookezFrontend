@@ -104,6 +104,8 @@ const emptyProductRow = {
     nonTaxRate: "",
     taxGross: "",
     nonTaxGross: "",
+
+    customMasters: {},
 };
 
 const getDefaultForm = () => ({
@@ -121,6 +123,7 @@ const getDefaultForm = () => ({
     sInvRemark: "",
     sInvRemarks: "",
     isAutoPost: false,
+    customMasters: {},
     products: [{ ...emptyProductRow, id: Date.now() }],
     grossAmount: "0.00",
     discountAmount: "0.00",
@@ -163,23 +166,126 @@ const CONDITIONAL_MARGIN_FIELD_KEYS = new Set([
     "nonTaxGross",
 ]);
 
+const getDynamicFieldType = (field: any) =>
+    String(
+        field?.type ||
+        field?.dataSource?.type ||
+        ""
+    )
+        .trim()
+        .toLowerCase()
+        .replace(/\s/g, "");
+
+const isCustomMasterField = (field: any) => {
+    const fieldType = getDynamicFieldType(field);
+
+    return (
+        fieldType === "custommaster" ||
+        fieldType === "customemaster" ||
+        Boolean(field?.customMasterCode)
+    );
+};
+
+const getCustomMasterName = (field: any) =>
+    String(
+        field?.customMasterName ||
+        field?.dataSource?.customMasterName ||
+        field?.label ||
+        field?.key ||
+        ""
+    ).trim();
+
+const getCustomMasterSelection = (field: any, selectedValue: any) => {
+    if (
+        selectedValue === undefined ||
+        selectedValue === null ||
+        String(selectedValue).trim() === ""
+    ) {
+        return null;
+    }
+
+    const selectedOption = (field?.options || []).find(
+        (option: any) =>
+            String(option?.value) === String(selectedValue)
+    );
+
+    const raw = selectedOption?.raw || {};
+
+    const nestedData =
+        raw?.data && typeof raw.data === "object"
+            ? raw.data
+            : raw?.dynamicFields && typeof raw.dynamicFields === "object"
+                ? raw.dynamicFields
+                : raw?.customFields && typeof raw.customFields === "object"
+                    ? raw.customFields
+                    : {};
+
+    return {
+        code: String(
+            selectedOption?.value ||
+            raw?.code ||
+            nestedData?.code ||
+            selectedValue ||
+            ""
+        ),
+        name: String(
+            selectedOption?.label ||
+            raw?.name ||
+            nestedData?.name ||
+            ""
+        ),
+    };
+};
+
+
 export const loadFieldOptions = async (fields: any[]) => {
     const updatedFields = await Promise.all(
         (fields || []).map(async (field) => {
-            if (!field?.api) return field;
+            const apiUrl =
+                field?.api ||
+                field?.dataSource?.api ||
+                (field?.customMasterCode
+                    ? `/users/customMaster/data/getAll?moduleCode=${field.customMasterCode}`
+                    : "");
+
+            if (!apiUrl) return field;
 
             try {
                 const res = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend${field.api}`,
-                    { params: field.queryParams || {} }
+                    `/eTaxSolnMongoApiBackend${apiUrl}`,
+                    {
+                        params:
+                            field?.queryParams ||
+                            field?.dataSource?.queryParams ||
+                            {},
+                    }
                 );
 
                 const records = getRecords(res.data);
+                const labelField =
+                    field?.labelField ||
+                    field?.dataSource?.labelField ||
+                    "name";
+                const valueField =
+                    field?.valueField ||
+                    field?.dataSource?.valueField ||
+                    "code";
 
                 const options = Array.isArray(records)
                     ? records.map((item: any) => ({
-                        label: item?.[field.labelField] || "",
-                        value: item?.[field.valueField] || "",
+                        label:
+                            item?.[labelField] ??
+                            item?.name ??
+                            item?.productName ??
+                            item?.accountName ??
+                            "",
+                        value:
+                            item?.[valueField] ??
+                            item?.code ??
+                            item?.productCode ??
+                            item?.accountCode ??
+                            item?._id ??
+                            "",
                         raw: item,
                     }))
                     : [];
@@ -814,9 +920,32 @@ const SalesInVoice = () => {
         const products = record?.sInvBody?.length > 0
             ? record.sInvBody.map((item: any) => {
                 const unitCode = item?.unit || item?.uom || "";
+                const bodyCustomMasterValues = Object.fromEntries(
+                    (templateFields?.body || [])
+                        .filter((field: any) => isCustomMasterField(field))
+                        .map((field: any) => {
+                            const customMasterName = getCustomMasterName(field);
+                            const selectedMaster =
+                                item?.customMasters?.[customMasterName] ||
+                                item?.customMasters?.[field?.key] ||
+                                {};
+
+                            return [
+                                field.key,
+                                selectedMaster?.code || "",
+                            ];
+                        })
+                );
+
                 return calculateRow(
                     normalizeRowKeys({
                         id: item?.id || Date.now() + Math.random(),
+                        ...bodyCustomMasterValues,
+                        customMasters:
+                            item?.customMasters &&
+                                typeof item.customMasters === "object"
+                                ? { ...item.customMasters }
+                                : {},
 
                         // ✅ Preserve Sales Order number from invoice body
                         sOrderNumber: item?.sOrderNumber || record?.sInvSalesOrderVoucherNumber || "",
@@ -897,6 +1026,11 @@ const SalesInVoice = () => {
             sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
             sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
             isAutoPost: record?.isAutoPost || false,
+            customMasters:
+                record?.customMasters &&
+                    typeof record.customMasters === "object"
+                    ? { ...record.customMasters }
+                    : {},
             products,
             grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
@@ -1436,6 +1570,29 @@ const SalesInVoice = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
             const raw = selectedOption?.raw || {};
+
+            if (isCustomMasterField(currentField)) {
+                const customMasterName = getCustomMasterName(currentField);
+                const currentCustomMasters =
+                    updatedRow?.customMasters &&
+                        typeof updatedRow.customMasters === "object"
+                        ? { ...updatedRow.customMasters }
+                        : {};
+
+                const selectedMaster = getCustomMasterSelection(
+                    currentField,
+                    value
+                );
+
+                if (!selectedMaster) {
+                    delete currentCustomMasters[customMasterName];
+                } else {
+                    currentCustomMasters[customMasterName] = selectedMaster;
+                }
+
+                updatedRow.customMasters = currentCustomMasters;
+            }
+
             if (raw?._id && !updatedRow.productId) {
                 updatedRow.productId = raw._id;
             }
@@ -1614,6 +1771,11 @@ const SalesInVoice = () => {
             sInvSalesAccount: form.sInvSalesAccount || "SA021",
             // sInvDocStatus: form.sInvDocStatus || form.sInvStatus || "open",
             sOrderNumber: products?.[0]?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
+            customMasters:
+                form?.customMasters &&
+                    typeof form.customMasters === "object"
+                    ? form.customMasters
+                    : {},
             sInvBody: products.map((item: any) => {
                 const marginProduct = isMarginProductRow(item);
 
@@ -1694,6 +1856,12 @@ const SalesInVoice = () => {
                     nonTaxGross: marginProduct
                         ? fmtMoney(item.nonTaxGross)
                         : "",
+
+                    customMasters:
+                        item?.customMasters &&
+                            typeof item.customMasters === "object"
+                            ? item.customMasters
+                            : {},
 
                     dynamicBodyFields: {
                         ...Object.fromEntries(
@@ -1839,10 +2007,33 @@ const SalesInVoice = () => {
             return;
         }
         const poBody = selectedPurchaseOrder?.sOrderBody || [];
-        const products = poBody?.length ? poBody?.map((item: any) =>
-            calculateRow(
+        const products = poBody?.length ? poBody?.map((item: any) => {
+            const bodyCustomMasterValues = Object.fromEntries(
+                (templateFields?.body || [])
+                    .filter((field: any) => isCustomMasterField(field))
+                    .map((field: any) => {
+                        const customMasterName = getCustomMasterName(field);
+                        const selectedMaster =
+                            item?.customMasters?.[customMasterName] ||
+                            item?.customMasters?.[field?.key] ||
+                            {};
+
+                        return [
+                            field.key,
+                            selectedMaster?.code || "",
+                        ];
+                    })
+            );
+
+            return calculateRow(
                 normalizeRowKeys({
                     id: Date.now() + Math.random(),
+                    ...bodyCustomMasterValues,
+                    customMasters:
+                        item?.customMasters &&
+                            typeof item.customMasters === "object"
+                            ? { ...item.customMasters }
+                            : {},
 
                     // ✅ Store Sales Order voucher in each row
                     sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
@@ -1898,8 +2089,8 @@ const SalesInVoice = () => {
                         item?.dynamicBodyFields?.nonTaxGross ??
                         "",
                 })
-            )
-        )
+            );
+        })
             : [
                 {
                     ...emptyProductRow,
@@ -1921,6 +2112,11 @@ const SalesInVoice = () => {
             sInvRemark: selectedPurchaseOrder?.sOrderRemark || "",
             sInvRemarks: selectedPurchaseOrder?.sOrderRemark || "",
             isAutoPost: selectedPurchaseOrder?.isAutoPost || false,
+            customMasters:
+                selectedPurchaseOrder?.customMasters &&
+                    typeof selectedPurchaseOrder.customMasters === "object"
+                    ? { ...selectedPurchaseOrder.customMasters }
+                    : {},
             products,
         });
 

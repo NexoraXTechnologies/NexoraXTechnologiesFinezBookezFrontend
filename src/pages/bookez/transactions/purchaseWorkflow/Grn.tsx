@@ -119,6 +119,8 @@ const emptyProductRow = {
 
     netAmount: 0,
     netTotal: 0,
+
+    customMasters: {},
 };
 
 const getDefaultForm = () => ({
@@ -137,6 +139,8 @@ const getDefaultForm = () => ({
     grnStatusHistory: [],
 
     isAutoPost: false,
+
+    customMasters: {},
 
     products: [{ ...emptyProductRow, id: Date.now() }],
 
@@ -177,33 +181,181 @@ const getRecords = (res: any) => {
     return [];
 };
 
+const isTrueValue = (value: any) =>
+    value === true ||
+    String(value ?? "").trim().toLowerCase() === "true";
+
+const getDynamicFieldType = (field: any) =>
+    String(
+        field?.type ||
+        field?.dataSource?.type ||
+        ""
+    )
+        .trim()
+        .toLowerCase()
+        .replace(/\s/g, "");
+
+const isCustomMasterField = (field: any) => {
+    const fieldType = getDynamicFieldType(field);
+
+    return (
+        fieldType === "custommaster" ||
+        fieldType === "customemaster" ||
+        Boolean(field?.customMasterCode)
+    );
+};
+
+const getCustomMasterName = (field: any) =>
+    String(
+        field?.customMasterName ||
+        field?.dataSource?.customMasterName ||
+        field?.label ||
+        field?.key ||
+        ""
+    ).trim();
+
 export const loadFieldOptions = async (fields: any[]) => {
     const updatedFields = await Promise.all(
         (fields || []).map(async (field) => {
-            if (!field?.api) return field;
+            const fieldType = String(
+                field?.type || ""
+            )
+                .trim()
+                .toLowerCase();
+
+            const isCustomMaster =
+                fieldType === "custommaster";
+
+            /* ==========================================
+               CUSTOM MASTER
+               Handle separately so moduleCode is sent
+               only once.
+            ========================================== */
+
+            if (isCustomMaster) {
+                const customMasterCode =
+                    field?.customMasterCode ||
+                    field?.dataSource?.customMasterCode ||
+                    "";
+
+                if (!customMasterCode) {
+                    return {
+                        ...field,
+                        options: [],
+                    };
+                }
+
+                try {
+                    const res = await professionalAxios.get(
+                        "/eTaxSolnMongoApiBackend/users/customMaster/data/getAll",
+                        {
+                            params: {
+                                moduleCode:
+                                    customMasterCode,
+                                status:
+                                    "active",
+                                offset:
+                                    0,
+                                limit:
+                                    500,
+                            },
+                        }
+                    );
+
+                    const records =
+                        getRecords(
+                            res.data
+                        );
+
+                    const options =
+                        records.map(
+                            (item: any) => ({
+                                label:
+                                    item?.name ||
+                                    item?.masterName ||
+                                    item?.description ||
+                                    item?.code ||
+                                    "",
+
+                                value:
+                                    item?.code ||
+                                    item?.masterCode ||
+                                    item?._id ||
+                                    "",
+
+                                raw:
+                                    item,
+                            })
+                        );
+
+                    return {
+                        ...field,
+                        options,
+                    };
+                } catch (error) {
+                    console.log(
+                        `Failed to load Custom Master options for ${field.key}`,
+                        error
+                    );
+
+                    return {
+                        ...field,
+                        options: [],
+                    };
+                }
+            }
+
+            /* ==========================================
+               EXISTING LOGIC
+               DON'T CHANGE FOR OTHER FIELDS
+            ========================================== */
+
+            if (!field?.api) {
+                return field;
+            }
 
             try {
                 const res = await professionalAxios.get(
                     `/eTaxSolnMongoApiBackend${field.api}`,
                     {
-                        params: field.queryParams || {},
+                        params:
+                            field.queryParams ||
+                            {},
                     }
                 );
 
-                const records = getRecords(res.data);
+                const records =
+                    getRecords(
+                        res.data
+                    );
 
-                const options = records.map((item: any) => ({
-                    label: item?.[field.labelField] || "",
-                    value: item?.[field.valueField] || "",
-                    raw: item,
-                }));
+                const options =
+                    records.map(
+                        (item: any) => ({
+                            label:
+                                item?.[
+                                field.labelField
+                                ] || "",
+
+                            value:
+                                item?.[
+                                field.valueField
+                                ] || "",
+
+                            raw:
+                                item,
+                        })
+                    );
 
                 return {
                     ...field,
                     options,
                 };
             } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
+                console.log(
+                    `Failed to load options for ${field.key}`,
+                    error
+                );
 
                 return {
                     ...field,
@@ -506,6 +658,181 @@ const Grn = () => {
         return field?.options?.find(
             (opt: any) => String(opt.value) === String(selectedValue)
         );
+    };
+
+    const getCustomMasterSelection = (
+        field: any,
+        selectedValue: any,
+        existingValue?: any
+    ) => {
+        if (
+            selectedValue === undefined ||
+            selectedValue === null ||
+            String(selectedValue).trim() === ""
+        ) {
+            if (
+                existingValue &&
+                typeof existingValue === "object" &&
+                existingValue?.code
+            ) {
+                return {
+                    code: String(existingValue.code || ""),
+                    name: String(existingValue.name || ""),
+                };
+            }
+
+            return null;
+        }
+
+        const selectedOption = getOptionByValue(
+            field,
+            selectedValue
+        );
+
+        const raw =
+            selectedOption?.raw || {};
+
+        const nestedData =
+            raw?.data && typeof raw.data === "object"
+                ? raw.data
+                : raw?.dynamicFields &&
+                    typeof raw.dynamicFields === "object"
+                    ? raw.dynamicFields
+                    : raw?.customFields &&
+                        typeof raw.customFields === "object"
+                        ? raw.customFields
+                        : {};
+
+        return {
+            code: String(
+                selectedOption?.value ||
+                raw?.code ||
+                nestedData?.code ||
+                selectedValue ||
+                ""
+            ),
+            name: String(
+                selectedOption?.label ||
+                raw?.name ||
+                nestedData?.name ||
+                existingValue?.name ||
+                ""
+            ),
+        };
+    };
+
+    const buildCustomMastersPayload = (
+        fields: any[],
+        source: any,
+        existingCustomMasters: any = {}
+    ) => {
+        const customMasters: any = {};
+
+        (fields || []).forEach(
+            (field: any) => {
+                if (
+                    !isCustomMasterField(
+                        field
+                    ) ||
+                    isTrueValue(
+                        field?.isHidden
+                    )
+                ) {
+                    return;
+                }
+
+                const customMasterName =
+                    getCustomMasterName(
+                        field
+                    );
+
+                if (!customMasterName) {
+                    return;
+                }
+
+                const existingValue =
+                    existingCustomMasters?.[
+                    customMasterName
+                    ] ||
+                    existingCustomMasters?.[
+                    field?.key
+                    ];
+
+                const selectedValue =
+                    source?.[
+                    field?.key
+                    ] ??
+                    existingValue?.code ??
+                    "";
+
+                const selectedMaster =
+                    getCustomMasterSelection(
+                        field,
+                        selectedValue,
+                        existingValue
+                    );
+
+                if (
+                    !selectedMaster?.code
+                ) {
+                    return;
+                }
+
+                customMasters[
+                    customMasterName
+                ] = {
+                    code:
+                        selectedMaster.code,
+                    name:
+                        selectedMaster.name,
+                };
+            }
+        );
+
+        return customMasters;
+    };
+
+    const getCustomMasterFieldValues = (
+        fields: any[],
+        customMasters: any
+    ) => {
+        const values: any = {};
+
+        (fields || []).forEach(
+            (field: any) => {
+                if (
+                    !isCustomMasterField(
+                        field
+                    )
+                ) {
+                    return;
+                }
+
+                const customMasterName =
+                    getCustomMasterName(
+                        field
+                    );
+
+                const selectedMaster =
+                    customMasters?.[
+                    customMasterName
+                    ] ||
+                    customMasters?.[
+                    field?.key
+                    ];
+
+                if (
+                    selectedMaster?.code
+                ) {
+                    values[
+                        field.key
+                    ] =
+                        selectedMaster.code;
+                }
+            }
+        );
+
+        return values;
     };
 
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
@@ -925,6 +1252,12 @@ const Grn = () => {
     const buildGrnProductRow = (item: any) => {
         const unitCode = item?.unit || item?.uom || "";
 
+        const customMasterValues =
+            getCustomMasterFieldValues(
+                templateFields?.body || [],
+                item?.customMasters || {}
+            );
+
         return calculateRow(
             normalizeRowKeys({
                 id: item?.id || Date.now() + Math.random(),
@@ -993,6 +1326,16 @@ const Grn = () => {
 
                 netAmount: item?.netAmount || item?.netTotal || 0,
                 netTotal: item?.netTotal || item?.netAmount || 0,
+
+                customMasters:
+                    item?.customMasters &&
+                        typeof item.customMasters === "object"
+                        ? {
+                            ...item.customMasters,
+                        }
+                        : {},
+
+                ...customMasterValues,
             })
         );
     };
@@ -1030,6 +1373,19 @@ const Grn = () => {
 
             grnVendorCode: selectedPurchaseOrder?.pOrdVendorCode || "",
             grnVendorName: selectedPurchaseOrder?.pOrdVendorName || "",
+
+            customMasters:
+                selectedPurchaseOrder?.customMasters &&
+                    typeof selectedPurchaseOrder.customMasters === "object"
+                    ? {
+                        ...selectedPurchaseOrder.customMasters,
+                    }
+                    : {},
+
+            ...getCustomMasterFieldValues(
+                templateFields?.header || [],
+                selectedPurchaseOrder?.customMasters || {}
+            ),
 
             products,
         });
@@ -1070,6 +1426,19 @@ const Grn = () => {
 
             isAutoPost: record?.isAutoPost || false,
 
+            customMasters:
+                record?.customMasters &&
+                    typeof record.customMasters === "object"
+                    ? {
+                        ...record.customMasters,
+                    }
+                    : {},
+
+            ...getCustomMasterFieldValues(
+                templateFields?.header || [],
+                record?.customMasters || {}
+            ),
+
             products,
 
             grossAmount:
@@ -1103,7 +1472,24 @@ const Grn = () => {
             };
 
             if (currentField?.mapFields) {
-                updated = applyMappedFields(currentField, value, updated);
+                updated = applyMappedFields(
+                    currentField,
+                    value,
+                    updated
+                );
+            }
+
+            if (
+                isCustomMasterField(
+                    currentField
+                )
+            ) {
+                updated.customMasters =
+                    buildCustomMastersPayload(
+                        templateFields?.header || [],
+                        updated,
+                        prev?.customMasters || {}
+                    );
             }
 
             return updated;
@@ -1777,6 +2163,20 @@ const Grn = () => {
             }
             const selectedOption = getOptionByValue(currentField, value);
             const raw = selectedOption?.raw || {};
+
+            if (
+                isCustomMasterField(
+                    currentField
+                )
+            ) {
+                updatedRow.customMasters =
+                    buildCustomMastersPayload(
+                        templateFields?.body || [],
+                        updatedRow,
+                        currentRow?.customMasters || {}
+                    );
+            }
+
             const lowerKey = String(key).toLowerCase();
             const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
             if (isProductField && selectedOption?.raw) {
@@ -1921,8 +2321,15 @@ const Grn = () => {
     };
 
     const buildGrnBodyPayload = (products: any[]) => {
-        return products.map((item: any) =>
-            removeEmptyValues({
+        return products.map((item: any) => {
+            const customMasters =
+                buildCustomMastersPayload(
+                    templateFields?.body || [],
+                    item,
+                    item?.customMasters || {}
+                );
+
+            return removeEmptyValues({
                 productCode: item.productCode,
                 productName: item.productName,
                 productId: item.productId,
@@ -1932,6 +2339,12 @@ const Grn = () => {
 
                 productHSNCode: item.productHSNCode,
                 remarks: item.remarks,
+
+                ...(Object.keys(customMasters).length
+                    ? {
+                        customMasters,
+                    }
+                    : {}),
 
                 quantity: String(
                     num(item.acceptedQuantity) + num(item.rejectedQuantity)
@@ -1996,8 +2409,8 @@ const Grn = () => {
 
                 netAmount: fmtMoney(item.netAmount || item.netTotal),
                 netTotal: fmtMoney(item.netTotal || item.netAmount),
-            })
-        );
+            });
+        });
     };
 
     const buildGrnFooterPayload = (footer: any) => {
@@ -2285,6 +2698,13 @@ const Grn = () => {
         const products = cleanRows();
         const footer = calculateFooter(products);
 
+        const customMasters =
+            buildCustomMastersPayload(
+                templateFields?.header || [],
+                form,
+                form?.customMasters || {}
+            );
+
         const payload: any = {
             grnVoucherDate: form.grnVoucherDate,
 
@@ -2295,6 +2715,12 @@ const Grn = () => {
 
             grnStatus: form.grnStatus || "open",
             grnRemark: form.grnRemark,
+
+            ...(Object.keys(customMasters).length
+                ? {
+                    customMasters,
+                }
+                : {}),
 
             grnBody: buildGrnBodyPayload(products),
             grnFooter: buildGrnFooterPayload(footer),
