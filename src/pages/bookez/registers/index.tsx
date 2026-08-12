@@ -14,6 +14,9 @@ import {
   PackageOpen,
   HandCoins,
   ArchiveRestore,
+  LucideClipboardList,
+  ShoppingBag,
+  Package,
 } from "lucide-react";
 
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
@@ -33,8 +36,19 @@ import PurchaseReturnRegister from "./PurchaseReturnRegister";
 import OpeningBalanceRegister from "./OpeningBalanceRegister";
 import OpeningStockRegister from "./OpeningStockRegister";
 import TripLrEntryRegister from "./TripLrEntryRegister";
+import SalesOrderRegister from "./SalesOrderRegister";
+import PurchaseOrderRegister from "./PurchaseOrderRegister";
+import GrnRegister from "./GrnRegister";
+
 
 const cards: any[] = [
+  {
+    title: "Sales Order Register",
+    description: "View sales orders, customer details, quantities, and total order values.",
+    component: SalesOrderRegister,
+    icon: <LucideClipboardList size={22} />,
+    permissionKey: "registers.salesOrderRegister"
+  },
   {
     title: "Sales Register",
     description: "View sales invoices, customer billing, taxable values, and total sales records.",
@@ -43,11 +57,25 @@ const cards: any[] = [
     permissionKey: "registers.salesRegister"
   },
   {
+    title: "Purchase Order Register",
+    description: "View purchase orders, vendor details, quantities, and total order values.",
+    component: PurchaseOrderRegister,
+    icon: <ShoppingBag size={22} />,
+    permissionKey: "registers.purchaseOrderRegister"
+  },
+  {
     title: "Purchase Register",
     description: "View purchase invoices, vendor billing, taxable values, and total purchase records.",
     component: PurchaseRegister,
     icon: <ReceiptText size={22} />,
     permissionKey: "registers.purchaseRegister"
+  },
+  {
+    title: "GRN Register",
+    description: "View goods receipt notes, vendor details, quantities, and total receipt values.",
+    component: GrnRegister,
+    icon: <Package size={22} />,
+    permissionKey: "registers.grnRegister"
   },
   {
     title: "Receipt Register",

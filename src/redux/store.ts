@@ -100,6 +100,9 @@ import allRegistersReducer from "../redux/slices/professionalSlice/register";
 import areaDashboardReducer from "../redux/slices/professionalSlice/dashboard/registerDashboard"
 import systemConfigurationReducer from "../redux/slices/systemConf";
 import importBankStatementReducer from "../redux/slices/professionalSlice/openingBalancesStocks/bankImpStatement"
+import salesOrderRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/salesOrderRegisterslice"
+import purchaseOrderRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/purchaseOrderRegisterSlice"
+import grnRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/grnRegisterSlice"
 
 
 // masterConfiguration
@@ -222,6 +225,9 @@ export const store = configureStore({
     importBankStatement: importBankStatementReducer,
     voucherConfiguration: voucherConfigurationReducer,
     registerFilterDropdown: registerFilterDropdownReducer,
+    salesOrderRegister: salesOrderRegisterReducer,
+    purchaseOrderRegister: purchaseOrderRegisterReducer,
+    grnRegister: grnRegisterReducer,
     // master configuration
 
     masterConfiguration: masterConfigurationReducer,

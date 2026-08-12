@@ -20,8 +20,8 @@ import professionalAxios from "../../../services/professionalAxios";
 import { clearRegisterFilterDropdowns, getRegisterFilterDropdowns } from "../../../redux/slices/professionalSlice/registerModule";
 import { toast } from "react-toastify";
 import ExportColumnsModal from "./components/ExportColumnsModal";
-import { addSalesOrderRegister } from "../../../redux/slices/professionalSlice/bookEzRegister/salesOrderRegisterslice";
-// import { getSalesOrderByVoucherNumber } from "../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
+import { addGRNRegister } from "../../../redux/slices/professionalSlice/bookEzRegister/grnRegisterSlice";
+
 
 /* ===================================================
    TABLE COLUMNS
@@ -29,19 +29,19 @@ import { addSalesOrderRegister } from "../../../redux/slices/professionalSlice/b
 
 const mainColumns = [
     {
-        key: "sOrderVoucherNumber",
+        key: "grnVoucherNumber",
         title: "Voucher Number",
         render: (row: any) => (
             <span className="font-medium text-card-foreground">
-                {row?.sOrderVoucherNumber || "-"}
+                {row?.grnVoucherNumber || "-"}
             </span>
         ),
     },
     {
-        key: "sOrderVoucherDate",
+        key: "grnVoucherDate",
         title: "Voucher Date",
         render: (row: any) => {
-            const rawDate = row?.sOrderVoucherDate;
+            const rawDate = row?.grnVoucherDate;
 
             const date = rawDate
                 ? new Date(rawDate).toLocaleDateString("en-IN")
@@ -55,15 +55,15 @@ const mainColumns = [
         },
     },
     {
-        key: "sOrderCustomerName",
-        title: "Customer",
+        key: "grnVendorName",
+        title: "Vendor",
         render: (row: any) => (
             <div className="flex flex-col">
                 <span className="font-semibold text-card-foreground">
-                    {row?.sOrderCustomerName || "-"}
+                    {row?.grnVendorName || "-"}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                    {row?.sOrderCustomerCode || "-"}
+                    {row?.grnVendorCode || "-"}
                 </span>
             </div>
         ),
@@ -82,15 +82,15 @@ const mainColumns = [
         title: "Net Amount",
         render: (row: any) => (
             <span className="font-bold text-foreground">
-                ₹{Number(row?.sOrderFooter?.netAmount || 0).toFixed(2)}
+                ₹{Number(row?.grnFooter?.netAmount || 0).toFixed(2)}
             </span>
         ),
     },
     {
-        key: "sOrderStatus",
+        key: "grnStatus",
         title: "Status",
         render: (row: any) => {
-            const status = row?.sOrderStatus || "-";
+            const status = row?.grnStatus || "-";
             const isOpen = String(status).toLowerCase() === "open";
 
             return (
@@ -113,272 +113,6 @@ const mainColumns = [
 /* ===================================================
    HELPERS
 =================================================== */
-
-// const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
-//     if (res?.salesOrder) return res.salesOrder;
-//     if (res?.data?.salesOrder) return res.data.salesOrder;
-
-//     if (res?.order) return res.order;
-//     if (res?.data?.order) return res.data.order;
-
-//     if (res?.record) return res.record;
-//     if (res?.data?.record) return res.data.record;
-
-//     if (
-//         res &&
-//         typeof res === "object" &&
-//         res?.sOrderVoucherNumber === voucherNumber
-//     ) {
-//         return res;
-//     }
-
-//     if (
-//         res?.data &&
-//         typeof res.data === "object" &&
-//         res.data?.sOrderVoucherNumber === voucherNumber
-//     ) {
-//         return res.data;
-//     }
-
-//     const records =
-//         Array.isArray(res)
-//             ? res
-//             : Array.isArray(res?.records)
-//                 ? res.records
-//                 : Array.isArray(res?.orders)
-//                     ? res.orders
-//                     : Array.isArray(res?.salesOrders)
-//                         ? res.salesOrders
-//                         : Array.isArray(res?.data)
-//                             ? res.data
-//                             : Array.isArray(res?.data?.records)
-//                                 ? res.data.records
-//                                 : Array.isArray(res?.data?.orders)
-//                                     ? res.data.orders
-//                                     : Array.isArray(res?.data?.salesOrders)
-//                                         ? res.data.salesOrders
-//                                         : [];
-
-//     return (
-//         records.find(
-//             (item: any) =>
-//                 item?.sOrderVoucherNumber === voucherNumber ||
-//                 item?.voucherNumber === voucherNumber
-//         ) ||
-//         records[0] ||
-//         null
-//     );
-// };
-
-// const normalizeSalesOrderForView = (record: any) => {
-//     const footer = record?.sOrderFooter || {};
-
-//     const products = (record?.sOrderBody || []).map((item: any) => ({
-//         ...item,
-
-//         productCode: item?.productCode || "",
-//         productName: item?.productName || "",
-//         productId: item?.productId || "",
-
-//         productDescription:
-//             item?.productDescription || item?.description || "",
-
-//         description:
-//             item?.description || item?.productDescription || "",
-
-//         productHSNCode: item?.productHSNCode || "",
-
-//         quantity: item?.quantity || "",
-
-//         uom: item?.uom || item?.unit || "",
-
-//         unit: item?.unit || item?.uom || "",
-
-//         unitName: item?.unitName || "",
-
-//         rate: item?.rate || "",
-
-//         gross:
-//             item?.gross ||
-//             item?.grossAmount ||
-//             "",
-
-//         grossAmount:
-//             item?.grossAmount ||
-//             item?.gross ||
-//             "",
-
-//         discount:
-//             item?.discount ||
-//             item?.discountPercentage ||
-//             "",
-
-//         discountPercentage:
-//             item?.discountPercentage ||
-//             item?.discount ||
-//             "",
-
-//         discountAmount:
-//             item?.discountAmount ||
-//             "0.00",
-
-//         taxableAmount:
-//             item?.taxableAmount ||
-//             "0.00",
-
-//         cgst:
-//             item?.cgst ||
-//             item?.cgstPercentage ||
-//             "",
-
-//         cgstPercentage:
-//             item?.cgstPercentage ||
-//             item?.cgst ||
-//             "",
-
-//         cgstAmount:
-//             item?.cgstAmount ||
-//             "0.00",
-
-//         sgst:
-//             item?.sgst ||
-//             item?.sgstPercentage ||
-//             "",
-
-//         sgstPercentage:
-//             item?.sgstPercentage ||
-//             item?.sgst ||
-//             "",
-
-//         sgstAmount:
-//             item?.sgstAmount ||
-//             "0.00",
-
-//         igst:
-//             item?.igst ||
-//             item?.igstPercentage ||
-//             "",
-
-//         igstPercentage:
-//             item?.igstPercentage ||
-//             item?.igst ||
-//             "",
-
-//         igstAmount:
-//             item?.igstAmount ||
-//             "0.00",
-
-//         taxAmount:
-//             item?.taxAmount ||
-//             "0.00",
-
-//         otherAmount:
-//             item?.otherAmount ||
-//             "0.00",
-
-//         netAmount:
-//             item?.netAmount ||
-//             item?.netTotal ||
-//             "",
-
-//         netTotal:
-//             item?.netTotal ||
-//             item?.netAmount ||
-//             "",
-//     }));
-
-//     return {
-//         ...record,
-
-//         sOrderVoucherNumber:
-//             record?.sOrderVoucherNumber ||
-//             record?.voucherNumber ||
-//             "",
-
-//         sOrderVoucherDate:
-//             record?.sOrderVoucherDate ||
-//             record?.voucherDate ||
-//             "",
-
-//         sOrderCustomerCode:
-//             record?.sOrderCustomerCode ||
-//             record?.customerCode ||
-//             "",
-
-//         sOrderCustomerName:
-//             record?.sOrderCustomerName ||
-//             record?.customerName ||
-//             "",
-
-//         sOrderStatus:
-//             record?.sOrderStatus ||
-//             record?.sOrderDocStatus ||
-//             "open",
-
-//         sOrderRemark:
-//             record?.sOrderRemark ||
-//             record?.remark ||
-//             "",
-
-//         products,
-
-//         sOrderBody: products,
-
-//         grossAmount:
-//             footer?.grossAmount ||
-//             footer?.totalGrossAmount ||
-//             "0.00",
-
-//         discountAmount:
-//             footer?.discountAmount ||
-//             footer?.totalDiscountAmount ||
-//             "0.00",
-
-//         cgstAmount:
-//             footer?.cgstAmount ||
-//             footer?.totalCgstAmount ||
-//             "0.00",
-
-//         sgstAmount:
-//             footer?.sgstAmount ||
-//             footer?.totalSgstAmount ||
-//             "0.00",
-
-//         igstAmount:
-//             footer?.igstAmount ||
-//             footer?.totalIgstAmount ||
-//             "0.00",
-
-//         taxAmount:
-//             footer?.taxAmount ||
-//             footer?.totalTaxAmount ||
-//             "0.00",
-
-//         otherAmount:
-//             footer?.otherAmount ||
-//             footer?.totalOtherAmount ||
-//             "0.00",
-
-//         netAmount:
-//             footer?.netAmount ||
-//             footer?.totalNetAmount ||
-//             "0.00",
-
-//         adjustedAmount:
-//             footer?.adjustedAmount ||
-//             "0.00",
-
-//         balanceAmount:
-//             footer?.balanceAmount ||
-//             footer?.netAmount ||
-//             footer?.totalNetAmount ||
-//             "0.00",
-
-//         totalQuantity:
-//             footer?.totalQuantity ||
-//             "0",
-//     };
-// };
 
 type CustomFilterDefinition = {
     key: string;
@@ -476,7 +210,7 @@ const mapCustomMasterOptions = (
    COMPONENT
 =================================================== */
 
-const SalesOrderRegister = () => {
+const GrnRegister = () => {
     const dispatch =
         useDispatch<any>();
 
@@ -498,7 +232,7 @@ const SalesOrderRegister = () => {
     const [dateError, setDateError] =
         useState<string>("");
 
-    const [customer, setCustomer] =
+    const [vendor, setVendor] =
         useState<string>("");
 
     const [product, setProduct] =
@@ -587,7 +321,7 @@ const SalesOrderRegister = () => {
     ] = useState(false);
 
     // @ts-ignore
-    const [viewLoading, setViewLoading,] = useState(false);
+    const [viewLoading,setViewLoading,] = useState(false);
 
     const [
         viewForm,
@@ -627,12 +361,12 @@ const SalesOrderRegister = () => {
     );
 
     const {
-        salesOrderRegisterData = [],
+        grnRegisterData = [],
         addLoader = false,
         pagination = {},
     } = useSelector(
         (state: any) =>
-            state.salesOrderRegister
+            state.grnRegister
     );
 
     // @ts-ignore
@@ -675,7 +409,7 @@ const SalesOrderRegister = () => {
                 .map(
                     (filter: any) =>
                         selectedCustomFilters[
-                        filter.key
+                            filter.key
                         ] ||
                         ""
                 )
@@ -689,7 +423,7 @@ const SalesOrderRegister = () => {
        OPTIONS
     =================================================== */
 
-    const customerOptions =
+    const vendorOptions =
         useMemo(() => {
             return (accounts || [])
                 .map(
@@ -742,12 +476,12 @@ const SalesOrderRegister = () => {
     const tableData =
         useMemo(() => {
             return Array.isArray(
-                salesOrderRegisterData
+                grnRegisterData
             )
-                ? salesOrderRegisterData
+                ? grnRegisterData
                 : [];
         }, [
-            salesOrderRegisterData,
+            grnRegisterData,
         ]);
 
     const currentPagination =
@@ -838,8 +572,8 @@ const SalesOrderRegister = () => {
                     ? 120000
                     : localLimit,
 
-            customerCode:
-                customer,
+            accountCode:
+                vendor,
 
             productCode:
                 product,
@@ -872,7 +606,7 @@ const SalesOrderRegister = () => {
                 limit: 500,
                 search: "",
                 accountType:
-                    "customer",
+                    "vendor",
             })
         );
     }, [
@@ -899,7 +633,7 @@ const SalesOrderRegister = () => {
                 try {
                     await dispatch(
                         getRegisterFilterDropdowns(
-                            "salesOrder"
+                            "grn"
                         )
                     ).unwrap();
                 } finally {
@@ -1003,7 +737,7 @@ const SalesOrderRegister = () => {
                                         ),
                                     ] as const;
                                 } catch (
-                                error
+                                    error
                                 ) {
                                     console.log(
                                         "Custom register filter options failed:",
@@ -1055,14 +789,14 @@ const SalesOrderRegister = () => {
                                 if (
                                     filter?.key &&
                                     previous[
-                                    filter.key
+                                        filter.key
                                     ]
                                 ) {
                                     nextSelected[
                                         filter.key
                                     ] =
                                         previous[
-                                        filter.key
+                                            filter.key
                                         ];
                                 }
                             }
@@ -1117,7 +851,7 @@ const SalesOrderRegister = () => {
         }
 
         dispatch(
-            addSalesOrderRegister(
+            addGRNRegister(
                 getPayload()
             )
         );
@@ -1125,7 +859,7 @@ const SalesOrderRegister = () => {
         dispatch,
         fromDate,
         toDate,
-        customer,
+        vendor,
         product,
         selectedCustomCodes.join("|"),
         localOffset,
@@ -1173,10 +907,10 @@ const SalesOrderRegister = () => {
                         updatedData
                     );
                 } catch (
-                error
+                    error
                 ) {
                     console.log(
-                        "Failed to prepare sales order view fields",
+                        "Failed to prepare GRN view fields",
                         error
                     );
                 }
@@ -1258,7 +992,7 @@ const SalesOrderRegister = () => {
                     ) => {
                         const rawValue =
                             viewFooterTotals?.[
-                            field.key as keyof typeof viewFooterTotals
+                                field.key as keyof typeof viewFooterTotals
                             ] ??
                             "0.00";
 
@@ -1324,7 +1058,7 @@ const SalesOrderRegister = () => {
                 ""
             );
 
-            setCustomer(
+            setVendor(
                 ""
             );
 
@@ -1348,104 +1082,8 @@ const SalesOrderRegister = () => {
             );
         };
 
-
-    // const handleViewVoucher =
-    //     async (
-    //         row: any
-    //     ) => {
-    //         const voucherNumber =
-    //             row
-    //                 ?.sOrderVoucherNumber ||
-    //             row
-    //                 ?.voucherNumber ||
-    //             "";
-
-    //         if (
-    //             !voucherNumber
-    //         ) {
-    //             console.log(
-    //                 "Sales order voucher number missing:",
-    //                 row
-    //             );
-
-    //             return;
-    //         }
-
-    //         try {
-    //             setViewModal(
-    //                 true
-    //             );
-
-    //             setViewLoading(
-    //                 true
-    //             );
-
-    //             setViewErrors(
-    //                 {}
-    //             );
-
-    //             setViewForm(
-    //                 {}
-    //             );
-
-    //             await dispatch(
-    //                 getAllTransactionSchema(
-    //                     "salesOrder"
-    //                 ) as any
-    //             );
-
-    //             const res =
-    //                 await dispatch(
-    //                     getSalesOrderByVoucherNumber(
-    //                         voucherNumber
-    //                     ) as any
-    //                 ).unwrap();
-
-    //             const record =
-    //                 getVoucherRecordFromResponse(
-    //                     res,
-    //                     voucherNumber
-    //                 );
-
-    //             if (
-    //                 !record
-    //             ) {
-    //                 console.log(
-    //                     "Sales order not found:",
-    //                     voucherNumber,
-    //                     res
-    //                 );
-
-    //                 setViewForm(
-    //                     {}
-    //                 );
-
-    //                 return;
-    //             }
-
-    //             setViewForm(
-    //                 normalizeSalesOrderForView(
-    //                     record
-    //                 )
-    //             );
-    //         } catch (
-    //             error
-    //         ) {
-    //             console.log(
-    //                 "Sales order register view order failed",
-    //                 error
-    //             );
-
-    //             setViewForm(
-    //                 {}
-    //             );
-    //         } finally {
-    //             setViewLoading(
-    //                 false
-    //             );
-    //         }
-    //     };
-
+        
+  
     const downloadBlobFile = (
         blob: Blob,
         fileName: string
@@ -1517,7 +1155,7 @@ const SalesOrderRegister = () => {
                         {
                             params: {
                                 module:
-                                    "salesOrder",
+                                    "grn",
                             },
                         }
                     );
@@ -1585,10 +1223,10 @@ const SalesOrderRegister = () => {
                     true
                 );
             } catch (
-            error
+                error
             ) {
                 console.log(
-                    "Sales order register export columns failed",
+                    "GRN register export columns failed",
                     error
                 );
 
@@ -1640,7 +1278,7 @@ const SalesOrderRegister = () => {
 
                 const res =
                     await dispatch(
-                        addSalesOrderRegister(
+                        addGRNRegister(
                             getPayload(
                                 currentExportType,
                                 selectedColumns
@@ -1656,16 +1294,16 @@ const SalesOrderRegister = () => {
 
                         currentExportType ===
                             "pdf"
-                            ? "sales-order-register.pdf"
-                            : "sales-order-register.xlsx"
+                            ? "grn-register.pdf"
+                            : "grn-register.xlsx"
                     );
                 }
             } catch (
-            error:
-                any
+                error:
+                    any
             ) {
                 console.log(
-                    `Sales order register ${currentExportType.toUpperCase()} download failed`,
+                    `GRN register ${currentExportType.toUpperCase()} download failed`,
                     error
                 );
 
@@ -1712,7 +1350,7 @@ const SalesOrderRegister = () => {
     return (
         <div className="flex h-full w-full flex-col gap-4 bg-background p-4 text-foreground">
             <RegisterFilterCard
-                title="Sales Order Register Filters"
+                title="GRN Register Filters"
                 fields={[
                     {
                         key: "fromDate",
@@ -1779,19 +1417,19 @@ const SalesOrderRegister = () => {
                             false,
                     },
                     {
-                        key: "customer",
+                        key: "vendor",
                         type: "select",
-                        label: "Customer",
+                        label: "Vendor",
                         placeholder:
-                            "Customer",
+                            "Vendor",
                         value:
-                            customer,
+                            vendor,
                         options:
-                            customerOptions,
+                            vendorOptions,
                         onChange: (
                             value
                         ) => {
-                            setCustomer(
+                            setVendor(
                                 value
                             );
 
@@ -1843,13 +1481,13 @@ const SalesOrderRegister = () => {
 
                             value:
                                 selectedCustomFilters[
-                                filter.key
+                                    filter.key
                                 ] ||
                                 "",
 
                             options:
                                 customFilterOptions[
-                                filter.key
+                                    filter.key
                                 ] ||
                                 [],
 
@@ -1876,7 +1514,7 @@ const SalesOrderRegister = () => {
                         })
                     ),
                 ]}
-                gridCols="5"
+                gridCols="4"
                 onSearch={
                     handleRefresh
                 }
@@ -1940,38 +1578,38 @@ const SalesOrderRegister = () => {
                 loading={
                     addLoader
                 }
-                emptyMessage="No sales order register data found"
+                emptyMessage="No GRN register data found"
                 showFieldSelector={
                     false
                 }
-            // actions={(
-            //     row:
-            //         any
-            // ) => (
-            //     <button
-            //         type="button"
-            //         onClick={(
-            //             e
-            //         ) => {
-            //             e.stopPropagation();
+                // actions={(
+                //     row:
+                //         any
+                // ) => (
+                //     <button
+                //         type="button"
+                //         onClick={(
+                //             e
+                //         ) => {
+                //             e.stopPropagation();
 
-            //             handleViewVoucher(
-            //                 row
-            //             );
-            //         }}
-            //         className="
-            //             inline-flex cursor-pointer items-center gap-1 rounded-lg
-            //             bg-primary/10 px-3 py-1.5 text-xs font-bold
-            //             text-primary transition hover:bg-primary/20
-            //         "
-            //     >
-            //         <Eye
-            //             size={
-            //                 15
-            //             }
-            //         />
-            //     </button>
-            // )}
+                //             handleViewVoucher(
+                //                 row
+                //             );
+                //         }}
+                //         className="
+                //             inline-flex cursor-pointer items-center gap-1 rounded-lg
+                //             bg-primary/10 px-3 py-1.5 text-xs font-bold
+                //             text-primary transition hover:bg-primary/20
+                //         "
+                //     >
+                //         <Eye
+                //             size={
+                //                 15
+                //             }
+                //         />
+                //     </button>
+                // )}
             />
 
             <ExportColumnsModal
@@ -2018,8 +1656,8 @@ const SalesOrderRegister = () => {
                 edit={
                     true
                 }
-                title="View Sales Order"
-                subtitle="View sales order details"
+                title="View GRN"
+                subtitle="View GRN details"
                 loading={
                     viewLoading
                 }
@@ -2052,7 +1690,7 @@ const SalesOrderRegister = () => {
                 inputData={
                     viewInputData
                 }
-                bodyKey="products"
+                bodyKey="grnBody"
                 handleChange={() => { }}
                 footerTotals={
                     viewFooterTotals
@@ -2100,4 +1738,4 @@ const SalesOrderRegister = () => {
     );
 };
 
-export default SalesOrderRegister;
+export default GrnRegister;

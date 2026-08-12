@@ -19,7 +19,7 @@ export type ReportFilterField = {
     onChange: (value: string) => void;
     disabled?: boolean;
     required?: boolean;
-    colSpan?: 1 | 2 | 3 | 4 | "full";
+    colSpan?: 1 | 2 | 3 | 4 | 5 | "full";
 };
 
 type ReportFilterCardProps = {
@@ -54,7 +54,7 @@ type ReportFilterCardProps = {
     pdfButtonText?: string;
     excelButtonText?: string;
 
-    gridCols?: "1" | "2" | "3" | "4";
+    gridCols?: "1" | "2" | "3" | "4" | "5";
 };
 
 const RegisterFilterCard = ({
@@ -110,7 +110,11 @@ const RegisterFilterCard = ({
                 ? "grid-cols-1 md:grid-cols-2"
                 : gridCols === "3"
                     ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-                    : "grid-cols-1 md:grid-cols-2 xl:grid-cols-4";
+                    : gridCols === "4"
+                        ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-4"
+                        : gridCols === "5"
+                            ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-5"
+                            : "grid-cols-1 md:grid-cols-2 xl:grid-cols-4";
 
     const getColSpanClass = (colSpan?: ReportFilterField["colSpan"]) => {
         if (!colSpan || colSpan === 1) return "";
@@ -125,6 +129,7 @@ const RegisterFilterCard = ({
         if (colSpan === 2) return "md:col-span-2";
         if (colSpan === 3) return "md:col-span-2 xl:col-span-3";
         if (colSpan === 4) return "md:col-span-2 xl:col-span-4";
+        if (colSpan === 5) return "md:col-span-2 xl:col-span-5";
 
         return "";
     };
