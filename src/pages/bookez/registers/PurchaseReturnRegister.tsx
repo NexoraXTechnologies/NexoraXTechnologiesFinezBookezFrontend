@@ -6,8 +6,7 @@ import RegisterFilterCard from "./RegisterFilterCard";
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
-import Modal from "../../../components/modal";
-import { Checkbox } from "../../../components/inputs";
+import ExportColumnsModal from "./components/ExportColumnsModal";
 
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllProducts } from "../../../redux/slices/professionalSlice/productMasterSlice";
@@ -1657,10 +1656,6 @@ const PurchaseReturnRegister = () => {
 
     const closeExportModal = () => {
         setExportModalVisible(false);
-        setExportType(null);
-        setSystemColumns([]);
-        setCustomColumns([]);
-        setSelectedExportColumns([]);
     };
 
     const openExportPicker = async (
@@ -1738,108 +1733,58 @@ const PurchaseReturnRegister = () => {
         }
     };
 
-    const toggleExportColumn = (
-        key: string
+    const performExportDownload = async (
+        columns: string[]
     ) => {
-        setSelectedExportColumns(
-            (previous) =>
-                previous.includes(key)
-                    ? previous.filter(
-                        (item) =>
-                            item !== key
-                    )
-                    : [
-                        ...previous,
-                        key,
-                    ]
-        );
-    };
+        if (
+            !hasRegisterData ||
+            !exportType ||
+            !columns.length ||
+            !validateDates()
+        ) {
+            return;
+        }
 
-    const setSectionSelection = (
-        columns: any[],
-        selected: boolean
-    ) => {
-        const keys = columns.map(
-            (column: any) =>
-                column.key
-        );
+        const currentExportType = exportType;
+        const selectedColumns = [...columns];
 
-        setSelectedExportColumns(
-            (previous) => {
-                const withoutSection =
-                    previous.filter(
-                        (key) =>
-                            !keys.includes(
-                                key
-                            )
-                    );
+        setExportModalVisible(false);
 
-                return selected
-                    ? [
-                        ...withoutSection,
-                        ...keys,
-                    ]
-                    : withoutSection;
+        try {
+            if (currentExportType === "pdf") {
+                setPdfLoading(true);
+            } else {
+                setExcelLoading(true);
             }
-        );
-    };
 
-   const performExportDownload = async () => {
-    if (
-        !hasRegisterData ||
-        !exportType ||
-        !selectedExportColumns.length ||
-        !validateDates()
-    ) {
-        return;
-    }
-
-    const currentExportType =
-        exportType;
-
-    const columns = [
-        ...selectedExportColumns,
-    ];
-
-    try {
-        if (currentExportType === "pdf") {
-            setPdfLoading(true);
-        } else {
-            setExcelLoading(true);
-        }
-
-        const response =
-            await dispatch(
-                getPurchaseReturnRegister(
-                    getPayload(
-                        currentExportType,
-                        columns
+            const response =
+                await dispatch(
+                    getPurchaseReturnRegister(
+                        getPayload(
+                            currentExportType,
+                            selectedColumns
+                        )
                     )
-                )
-            ).unwrap();
+                ).unwrap();
 
-        if (response?.blob) {
-            downloadBlobFile(
-                response.blob,
-                currentExportType === "pdf"
-                    ? "purchase-return-register.pdf"
-                    : "purchase-return-register.xlsx"
+            if (response?.blob) {
+                downloadBlobFile(
+                    response.blob,
+                    currentExportType === "pdf"
+                        ? "purchase-return-register.pdf"
+                        : "purchase-return-register.xlsx"
+                );
+            }
+        } catch (error: any) {
+            toast.error(
+                error?.message ||
+                `Failed to download ${currentExportType.toUpperCase()}`
             );
+        } finally {
+            setPdfLoading(false);
+            setExcelLoading(false);
         }
-
-        closeExportModal();
-    } catch (error: any) {
-        closeExportModal();
-
-        toast.error(
-            error?.message ||
-            `Failed to download ${currentExportType.toUpperCase()}`
-        );
-    } finally {
-        setPdfLoading(false);
-        setExcelLoading(false);
-    }
-};
+    };
 
     /* ===================================================
        RENDER
@@ -2042,228 +1987,16 @@ const PurchaseReturnRegister = () => {
                 )}
             />
 
-            <Modal
+            <ExportColumnsModal
                 show={exportModalVisible}
-                setShow={
-                    setExportModalVisible
-                }
-                handleClose={
-                    closeExportModal
-                }
-                title={
-                    exportType === "pdf"
-                        ? "Select PDF Columns"
-                        : "Select Excel Columns"
-                }
-                maxWidth="xl"
-                gridCols={1}
-                hideFooter={true}
-                bodyClassName="!block !p-0"
-                body={
-                    <div className="flex min-h-0 flex-col">
-                        <div className="max-h-[60vh] flex-1 overflow-y-auto p-6">
-                            <p className="mb-5 text-sm text-muted-foreground">
-                                Select the columns you want to include in the exported file.
-                            </p>
-
-                            {systemColumns.length >
-                                0 && (
-                                    <div className="mb-6">
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <h3 className="font-bold text-primary">
-                                                System Columns
-                                            </h3>
-
-                                            <div className="flex gap-3 text-xs font-bold text-primary">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setSectionSelection(
-                                                            systemColumns,
-                                                            true
-                                                        )
-                                                    }
-                                                    className="cursor-pointer hover:underline"
-                                                >
-                                                    Select All
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setSectionSelection(
-                                                            systemColumns,
-                                                            false
-                                                        )
-                                                    }
-                                                    className="cursor-pointer hover:underline"
-                                                >
-                                                    Clear All
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {systemColumns.map(
-                                            (
-                                                column: any
-                                            ) => (
-                                                <Checkbox
-                                                    key={
-                                                        column.key
-                                                    }
-                                                    checked={selectedExportColumns.includes(
-                                                        column.key
-                                                    )}
-                                                    value={
-                                                        column.key
-                                                    }
-                                                    label={
-                                                        column.label ||
-                                                        column.header ||
-                                                        column.key
-                                                    }
-                                                    onChange={() =>
-                                                        toggleExportColumn(
-                                                            column.key
-                                                        )
-                                                    }
-                                                    className="border-b border-border py-3 hover:bg-muted/40"
-                                                />
-                                            )
-                                        )}
-                                    </div>
-                                )}
-
-                            {customColumns.length >
-                                0 && (
-                                    <div>
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <h3 className="font-bold text-primary">
-                                                Custom Columns
-                                            </h3>
-
-                                            <div className="flex gap-3 text-xs font-bold text-primary">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setSectionSelection(
-                                                            customColumns,
-                                                            true
-                                                        )
-                                                    }
-                                                    className="cursor-pointer hover:underline"
-                                                >
-                                                    Select All
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setSectionSelection(
-                                                            customColumns,
-                                                            false
-                                                        )
-                                                    }
-                                                    className="cursor-pointer hover:underline"
-                                                >
-                                                    Clear All
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {customColumns.map(
-                                            (
-                                                column: any
-                                            ) => (
-                                                <Checkbox
-                                                    key={
-                                                        column.key
-                                                    }
-                                                    checked={selectedExportColumns.includes(
-                                                        column.key
-                                                    )}
-                                                    value={
-                                                        column.key
-                                                    }
-                                                    label={
-                                                        column.label ||
-                                                        column.header ||
-                                                        column.key
-                                                    }
-                                                    onChange={() =>
-                                                        toggleExportColumn(
-                                                            column.key
-                                                        )
-                                                    }
-                                                    className="border-b border-border py-3 hover:bg-muted/40"
-                                                />
-                                            )
-                                        )}
-                                    </div>
-                                )}
-
-                            {!systemColumns.length &&
-                                !customColumns.length && (
-                                    <div className="py-8 text-center text-sm text-muted-foreground">
-                                        No export columns found.
-                                    </div>
-                                )}
-                        </div>
-
-                        <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
-                            <button
-                                type="button"
-                                onClick={
-                                    closeExportModal
-                                }
-                                disabled={
-                                    pdfLoading ||
-                                    excelLoading
-                                }
-                                className="
-                                    cursor-pointer rounded-md
-                                    border border-border bg-card
-                                    px-4 py-2 text-sm
-                                    font-medium text-card-foreground
-                                    transition hover:bg-muted
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-50
-                                "
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={
-                                    performExportDownload
-                                }
-                                disabled={
-                                    !selectedExportColumns.length ||
-                                    pdfLoading ||
-                                    excelLoading
-                                }
-                                className="
-                                    cursor-pointer rounded-md
-                                    bg-primary px-4 py-2
-                                    text-sm font-medium
-                                    text-primary-foreground
-                                    transition hover:opacity-90
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-50
-                                "
-                            >
-                                {pdfLoading ||
-                                    excelLoading
-                                    ? "Downloading..."
-                                    : exportType ===
-                                        "pdf"
-                                        ? "Download PDF"
-                                        : "Download Excel"}
-                            </button>
-                        </div>
-                    </div>
-                }
+                setShow={setExportModalVisible}
+                exportType={exportType}
+                systemColumns={systemColumns}
+                customColumns={customColumns}
+                selectedColumns={selectedExportColumns}
+                loading={pdfLoading || excelLoading}
+                onClose={closeExportModal}
+                onDownload={performExportDownload}
             />
 
             <DynamicAddForm
