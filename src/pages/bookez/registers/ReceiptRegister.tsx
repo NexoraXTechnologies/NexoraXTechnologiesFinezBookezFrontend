@@ -13,7 +13,6 @@ import RegisterFilterCard from "./RegisterFilterCard";
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import DynamicAddForm from "../../../components/voucher/dynamicAddForm";
-import Modal from "../../../components/modal";
 
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
 
@@ -31,12 +30,12 @@ import {
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
 import professionalAxios from "../../../services/professionalAxios";
-import { Checkbox } from "../../../components/inputs";
 import {
     clearRegisterFilterDropdowns,
     getRegisterFilterDropdowns,
 } from "../../../redux/slices/professionalSlice/registerModule";
 import { toast } from "react-toastify";
+import ExportColumnsModal from "./components/ExportColumnsModal";
 
 /* ===================================================
    TABLE COLUMNS
@@ -100,36 +99,16 @@ const mainColumns = [
             </span>
         ),
     },
-    // {
-    //     key: "recStatus",
-    //     title: "Status",
-    //     render: (row: any) => {
-    //         const status = row?.recStatus || row?.status || "-";
-    //         const isOpen = String(status).toLowerCase() === "open";
-
-    //         return (
-    //             <span
-    //                 className={`
-    //                     rounded-full px-3 py-1 text-xs font-bold uppercase
-    //                     ${
-    //                         isOpen
-    //                             ? "bg-success/10 text-success"
-    //                             : "bg-muted text-muted-foreground"
-    //                     }
-    //                 `}
-    //             >
-    //                 {status}
-    //             </span>
-    //         );
-    //     },
-    // },
 ];
 
 /* ===================================================
    HELPERS
 =================================================== */
 
-const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
+const getVoucherRecordFromResponse = (
+    res: any,
+    voucherNumber: string
+) => {
     if (res?.receipt) return res.receipt;
     if (res?.data?.receipt) return res.data.receipt;
 
@@ -232,7 +211,6 @@ const normalizeReceiptForView = (record: any) => {
     };
 };
 
-
 type CustomFilterDefinition = {
     key: string;
     label?: string;
@@ -316,7 +294,6 @@ const ReceiptRegister = () => {
 
     /* ===================================================
        FILTER STATES
-       Blank dates = no default filter.
     =================================================== */
 
     const [fromDate, setFromDate] = useState<string>("");
@@ -345,10 +322,13 @@ const ReceiptRegister = () => {
     const [exportType, setExportType] = useState<
         "pdf" | "excel" | null
     >(null);
+
     const [exportColumnsLoading, setExportColumnsLoading] =
         useState(false);
+
     const [systemColumns, setSystemColumns] = useState<any[]>([]);
     const [customColumns, setCustomColumns] = useState<any[]>([]);
+
     const [selectedExportColumns, setSelectedExportColumns] =
         useState<string[]>([]);
 
@@ -423,8 +403,6 @@ const ReceiptRegister = () => {
         );
     }, [selectedCustomCodes]);
 
-
-
     /* ===================================================
        OPTIONS
     =================================================== */
@@ -461,12 +439,19 @@ const ReceiptRegister = () => {
         }
 
         if (!fromDate || !toDate) {
-            setDateError("Please select both From Date and To Date.");
+            setDateError(
+                "Please select both From Date and To Date."
+            );
             return false;
         }
 
-        if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
-            setDateError("From Date cannot be greater than To Date.");
+        if (
+            new Date(fromDate).getTime() >
+            new Date(toDate).getTime()
+        ) {
+            setDateError(
+                "From Date cannot be greater than To Date."
+            );
             return false;
         }
 
@@ -484,6 +469,7 @@ const ReceiptRegister = () => {
             selectedColumns: string[] = []
         ) => {
             const isExport = Boolean(exportType);
+
             const customCodes = JSON.parse(
                 customCodesKey
             ) as string[];
@@ -537,10 +523,16 @@ const ReceiptRegister = () => {
     =================================================== */
 
     useEffect(() => {
-        dispatch(getRegisterFilterDropdowns("receipt"));
+        dispatch(
+            getRegisterFilterDropdowns(
+                "receipt"
+            )
+        );
 
         return () => {
-            dispatch(clearRegisterFilterDropdowns());
+            dispatch(
+                clearRegisterFilterDropdowns()
+            );
         };
     }, [dispatch]);
 
@@ -557,6 +549,7 @@ const ReceiptRegister = () => {
                     setCustomFilterOptions({});
                     setSelectedCustomFilters({});
                 }
+
                 return;
             }
 
@@ -570,7 +563,10 @@ const ReceiptRegister = () => {
                                 filter?.api || ""
                             );
 
-                        if (!filter?.key || !apiPath) {
+                        if (
+                            !filter?.key ||
+                            !apiPath
+                        ) {
                             return [
                                 filter?.key || "",
                                 [],
@@ -584,11 +580,9 @@ const ReceiptRegister = () => {
                                 );
 
                             const items =
-                                customResponse?.data?.data
-                                    ?.items ||
+                                customResponse?.data?.data?.items ||
                                 customResponse?.data?.items ||
-                                customResponse?.data?.data
-                                    ?.data?.items ||
+                                customResponse?.data?.data?.data?.items ||
                                 customResponse?.data?.records ||
                                 [];
 
@@ -620,30 +614,39 @@ const ReceiptRegister = () => {
 
             setCustomFilterOptions(
                 Object.fromEntries(
-                    optionEntries.filter(([key]) =>
-                        Boolean(key)
+                    optionEntries.filter(
+                        ([key]) =>
+                            Boolean(key)
                     )
                 )
             );
 
-            setSelectedCustomFilters((previous) => {
-                const nextSelected: Record<
-                    string,
-                    string
-                > = {};
+            setSelectedCustomFilters(
+                (previous) => {
+                    const nextSelected: Record<
+                        string,
+                        string
+                    > = {};
 
-                customFilters.forEach((filter: any) => {
-                    if (
-                        filter?.key &&
-                        previous[filter.key]
-                    ) {
-                        nextSelected[filter.key] =
-                            previous[filter.key];
-                    }
-                });
+                    customFilters.forEach(
+                        (filter: any) => {
+                            if (
+                                filter?.key &&
+                                previous[filter.key]
+                            ) {
+                                nextSelected[
+                                    filter.key
+                                ] =
+                                    previous[
+                                    filter.key
+                                    ];
+                            }
+                        }
+                    );
 
-                return nextSelected;
-            });
+                    return nextSelected;
+                }
+            );
         };
 
         loadCustomFilterOptions();
@@ -664,18 +667,21 @@ const ReceiptRegister = () => {
 
     /* ===================================================
        LOAD RECEIPT REGISTER DATA
-
-       The request-key guard prevents an identical request from
-       being dispatched again when unrelated state updates occur.
     =================================================== */
 
     useEffect(() => {
-        if ((fromDate && !toDate) || (!fromDate && toDate)) return;
+        if (
+            (fromDate && !toDate) ||
+            (!fromDate && toDate)
+        ) {
+            return;
+        }
 
         if (
             fromDate &&
             toDate &&
-            new Date(fromDate).getTime() > new Date(toDate).getTime()
+            new Date(fromDate).getTime() >
+            new Date(toDate).getTime()
         ) {
             return;
         }
@@ -697,8 +703,18 @@ const ReceiptRegister = () => {
         lastRegisterRequestKeyRef.current =
             requestKey;
 
-        dispatch(addReceiptRegister(payload));
-    }, [dispatch, fromDate, toDate, getPayload, refreshKey]);
+        dispatch(
+            addReceiptRegister(
+                payload
+            )
+        );
+    }, [
+        dispatch,
+        fromDate,
+        toDate,
+        getPayload,
+        refreshKey,
+    ]);
 
     /* ===================================================
        PREPARE VIEW TEMPLATE FIELDS
@@ -709,20 +725,32 @@ const ReceiptRegister = () => {
             if (!transactionsSchema) return;
 
             const hasSchema =
-                Array.isArray(transactionsSchema?.header) ||
-                Array.isArray(transactionsSchema?.body) ||
-                Array.isArray(transactionsSchema?.footer);
+                Array.isArray(
+                    transactionsSchema?.header
+                ) ||
+                Array.isArray(
+                    transactionsSchema?.body
+                ) ||
+                Array.isArray(
+                    transactionsSchema?.footer
+                );
 
             if (!hasSchema) return;
 
             try {
-                const updatedData = await loadAllTemplateOptions(
-                    transactionsSchema
-                );
+                const updatedData =
+                    await loadAllTemplateOptions(
+                        transactionsSchema
+                    );
 
-                setViewTemplateFields(updatedData);
+                setViewTemplateFields(
+                    updatedData
+                );
             } catch (error) {
-                console.log("Failed to prepare receipt view fields", error);
+                console.log(
+                    "Failed to prepare receipt view fields",
+                    error
+                );
             }
         };
 
@@ -735,28 +763,67 @@ const ReceiptRegister = () => {
 
     const viewFooterTotals = useMemo(() => {
         return {
-            grossAmount: viewForm?.grossAmount || "0.00",
-            discountAmount: viewForm?.discountAmount || "0.00",
-            cgstAmount: viewForm?.cgstAmount || "0.00",
-            sgstAmount: viewForm?.sgstAmount || "0.00",
-            igstAmount: viewForm?.igstAmount || "0.00",
-            taxAmount: viewForm?.taxAmount || "0.00",
-            otherAmount: viewForm?.otherAmount || "0.00",
-            netAmount: viewForm?.netAmount || "0.00",
-            adjustedAmount: viewForm?.adjustedAmount || "0.00",
-            balanceAmount: viewForm?.balanceAmount || "0.00",
-            totalQuantity: viewForm?.totalQuantity || "0",
+            grossAmount:
+                viewForm?.grossAmount ||
+                "0.00",
+
+            discountAmount:
+                viewForm?.discountAmount ||
+                "0.00",
+
+            cgstAmount:
+                viewForm?.cgstAmount ||
+                "0.00",
+
+            sgstAmount:
+                viewForm?.sgstAmount ||
+                "0.00",
+
+            igstAmount:
+                viewForm?.igstAmount ||
+                "0.00",
+
+            taxAmount:
+                viewForm?.taxAmount ||
+                "0.00",
+
+            otherAmount:
+                viewForm?.otherAmount ||
+                "0.00",
+
+            netAmount:
+                viewForm?.netAmount ||
+                "0.00",
+
+            adjustedAmount:
+                viewForm?.adjustedAmount ||
+                "0.00",
+
+            balanceAmount:
+                viewForm?.balanceAmount ||
+                "0.00",
+
+            totalQuantity:
+                viewForm?.totalQuantity ||
+                "0",
         };
     }, [viewForm]);
 
     const viewFooterArray = useMemo(() => {
-        return (viewTemplateFields?.footer || [])
-            .filter((field: any) => !field.isHidden)
+        return (
+            viewTemplateFields?.footer ||
+            []
+        )
+            .filter(
+                (field: any) =>
+                    !field.isHidden
+            )
             .map((field: any) => {
                 const rawValue =
                     viewFooterTotals?.[
                     field.key as keyof typeof viewFooterTotals
-                    ] ?? "0.00";
+                    ] ??
+                    "0.00";
 
                 return {
                     ...field,
@@ -764,37 +831,26 @@ const ReceiptRegister = () => {
                     rawValue,
                 };
             });
-    }, [viewTemplateFields?.footer, viewFooterTotals]);
-
-    // const viewInputData = useMemo(() => {
-    //     const hiddenBodyKeys = [
-    //         "references",
-    //         "reference",
-    //         "remarks",
-    //         "remark",
-    //         "recRemark",
-    //     ];
-
-    //     const filteredBody = (viewTemplateFields?.body || []).filter(
-    //         (field: any) =>
-    //             !hiddenBodyKeys.includes(String(field?.key || "").toLowerCase())
-    //     );
-
-    //     return {
-    //         ...viewTemplateFields,
-    //         body: filteredBody,
-    //         footer: viewFooterArray,
-    //     };
-    // }, [viewTemplateFields, viewFooterArray]);
-
+    }, [
+        viewTemplateFields?.footer,
+        viewFooterTotals,
+    ]);
 
     const viewInputData = useMemo(() => {
-        const filteredHeader = (viewTemplateFields?.header || []).filter(
-            (field: any) =>
-                String(field?.key || "")
-                    .trim()
-                    .toLowerCase() !== "isposposting"
-        );
+        const filteredHeader =
+            (
+                viewTemplateFields?.header ||
+                []
+            ).filter(
+                (field: any) =>
+                    String(
+                        field?.key ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase() !==
+                    "isposposting"
+            );
 
         const hiddenBodyKeys = [
             "references",
@@ -804,12 +860,19 @@ const ReceiptRegister = () => {
             "recRemark",
         ];
 
-        const filteredBody = (viewTemplateFields?.body || []).filter(
-            (field: any) =>
-                !hiddenBodyKeys.includes(
-                    String(field?.key || "").trim()
-                )
-        );
+        const filteredBody =
+            (
+                viewTemplateFields?.body ||
+                []
+            ).filter(
+                (field: any) =>
+                    !hiddenBodyKeys.includes(
+                        String(
+                            field?.key ||
+                            ""
+                        ).trim()
+                    )
+            );
 
         return {
             ...viewTemplateFields,
@@ -817,7 +880,10 @@ const ReceiptRegister = () => {
             body: filteredBody,
             footer: viewFooterArray,
         };
-    }, [viewTemplateFields, viewFooterArray]);
+    }, [
+        viewTemplateFields,
+        viewFooterArray,
+    ]);
 
     /* ===================================================
        HANDLERS
@@ -827,7 +893,11 @@ const ReceiptRegister = () => {
         if (!validateDates()) return;
 
         setLocalOffset(0);
-        setRefreshKey((prev) => prev + 1);
+
+        setRefreshKey(
+            (prev) =>
+                prev + 1
+        );
     };
 
     const handleClear = () => {
@@ -837,15 +907,27 @@ const ReceiptRegister = () => {
         setAccount("");
         setSelectedCustomFilters({});
         setLocalOffset(0);
-        setRefreshKey((prev) => prev + 1);
+
+        setRefreshKey(
+            (prev) =>
+                prev + 1
+        );
     };
 
-    const handleViewVoucher = async (row: any) => {
+    const handleViewVoucher = async (
+        row: any
+    ) => {
         const voucherNumber =
-            row?.recVoucherNumber || row?.voucherNumber || "";
+            row?.recVoucherNumber ||
+            row?.voucherNumber ||
+            "";
 
         if (!voucherNumber) {
-            console.log("Receipt voucher number missing:", row);
+            console.log(
+                "Receipt voucher number missing:",
+                row
+            );
+
             return;
         }
 
@@ -855,7 +937,11 @@ const ReceiptRegister = () => {
             setViewErrors({});
             setViewForm({});
 
-            await dispatch(getAllTransactionSchema("receipt") as any);
+            await dispatch(
+                getAllTransactionSchema(
+                    "receipt"
+                ) as any
+            );
 
             const res = await dispatch(
                 getByVoucherNumberSalesReceiptList({
@@ -863,43 +949,71 @@ const ReceiptRegister = () => {
                 }) as any
             ).unwrap();
 
-            const record = getVoucherRecordFromResponse(res, voucherNumber);
+            const record =
+                getVoucherRecordFromResponse(
+                    res,
+                    voucherNumber
+                );
 
             if (!record) {
-                console.log("Receipt not found:", voucherNumber, res);
+                console.log(
+                    "Receipt not found:",
+                    voucherNumber,
+                    res
+                );
+
                 setViewForm({});
                 return;
             }
 
-            setViewForm(normalizeReceiptForView(record));
+            setViewForm(
+                normalizeReceiptForView(
+                    record
+                )
+            );
         } catch (error) {
-            console.log("Receipt register view failed", error);
+            console.log(
+                "Receipt register view failed",
+                error
+            );
+
             setViewForm({});
         } finally {
             setViewLoading(false);
         }
     };
 
-    const downloadBlobFile = (blob: Blob, fileName: string) => {
-        const url = window.URL.createObjectURL(blob);
+    const downloadBlobFile = (
+        blob: Blob,
+        fileName: string
+    ) => {
+        const url =
+            window.URL.createObjectURL(
+                blob
+            );
 
-        const link = document.createElement("a");
+        const link =
+            document.createElement(
+                "a"
+            );
+
         link.href = url;
         link.download = fileName;
 
-        document.body.appendChild(link);
-        link.click();
+        document.body.appendChild(
+            link
+        );
 
+        link.click();
         link.remove();
-        window.URL.revokeObjectURL(url);
+
+        window.URL.revokeObjectURL(
+            url
+        );
     };
 
     const closeExportModal = () => {
         setExportModalVisible(false);
-        setExportType(null);
-        setSystemColumns([]);
-        setCustomColumns([]);
-        setSelectedExportColumns([]);
     };
 
     const openExportPicker = async (
@@ -924,7 +1038,8 @@ const ReceiptRegister = () => {
                     "/eTaxSolnMongoApiBackend/users/bookez/registers/exportColumns",
                     {
                         params: {
-                            module: "receipt",
+                            module:
+                                "receipt",
                         },
                     }
                 );
@@ -934,100 +1049,103 @@ const ReceiptRegister = () => {
                 response?.data ??
                 {};
 
-            const system = dedupeColumns(
-                data?.systemColumns || []
+            const system =
+                dedupeColumns(
+                    data?.systemColumns ||
+                    []
+                );
+
+            const custom =
+                dedupeColumns(
+                    (
+                        data?.customColumns ||
+                        []
+                    ).filter(
+                        (column: any) =>
+                            !system.some(
+                                (
+                                    systemColumn:
+                                        any
+                                ) =>
+                                    systemColumn
+                                        ?.key ===
+                                    column
+                                        ?.key
+                            )
+                    )
+                );
+
+            setSystemColumns(
+                system
             );
 
-            const custom = dedupeColumns(
-                (data?.customColumns || []).filter(
-                    (column: any) =>
-                        !system.some(
-                            (systemColumn: any) =>
-                                systemColumn?.key ===
-                                column?.key
-                        )
-                )
+            setCustomColumns(
+                custom
             );
-
-            setSystemColumns(system);
-            setCustomColumns(custom);
 
             setSelectedExportColumns(
                 system.map(
-                    (column: any) => column.key
+                    (column: any) =>
+                        column.key
                 )
             );
 
-            setExportModalVisible(true);
+            setExportModalVisible(
+                true
+            );
         } catch (error) {
             console.log(
                 "Receipt register export columns failed",
                 error
             );
+
             setExportType(null);
         } finally {
-            setExportColumnsLoading(false);
+            setExportColumnsLoading(
+                false
+            );
         }
     };
 
-    const toggleExportColumn = (key: string) => {
-        setSelectedExportColumns((previous) =>
-            previous.includes(key)
-                ? previous.filter(
-                    (item) => item !== key
-                )
-                : [...previous, key]
-        );
-    };
-
-    const setSectionSelection = (
-        columns: any[],
-        selected: boolean
+    const performExportDownload = async (
+        columns: string[]
     ) => {
-        const keys = columns.map(
-            (column: any) => column.key
-        );
-
-        setSelectedExportColumns((previous) => {
-            const withoutSection = previous.filter(
-                (key) => !keys.includes(key)
-            );
-
-            return selected
-                ? [...withoutSection, ...keys]
-                : withoutSection;
-        });
-    };
-
-    const performExportDownload = async () => {
         if (
             !hasRegisterData ||
             !exportType ||
-            !selectedExportColumns.length ||
+            !columns.length ||
             !validateDates()
         ) {
             return;
         }
 
-        const currentExportType = exportType;
-        const columns = [
-            ...selectedExportColumns,
-        ];
+        const currentExportType =
+            exportType;
 
-        closeExportModal();
+        const selectedColumns =
+            [...columns];
+
+        setExportModalVisible(false);
 
         try {
-            if (currentExportType === "pdf") {
-                setPdfLoading(true);
+            if (
+                currentExportType ===
+                "pdf"
+            ) {
+                setPdfLoading(
+                    true
+                );
             } else {
-                setExcelLoading(true);
+                setExcelLoading(
+                    true
+                );
             }
 
             const res = await dispatch(
                 addReceiptRegister(
                     getPayload(
                         currentExportType,
-                        columns
+                        selectedColumns
                     )
                 )
             ).unwrap();
@@ -1035,7 +1153,8 @@ const ReceiptRegister = () => {
             if (res?.blob) {
                 downloadBlobFile(
                     res.blob,
-                    currentExportType === "pdf"
+                    currentExportType ===
+                        "pdf"
                         ? "receipt-register.pdf"
                         : "receipt-register.xlsx"
                 );
@@ -1052,7 +1171,6 @@ const ReceiptRegister = () => {
                 error?.message ||
                 `Failed to download ${currentExportType.toUpperCase()}`
             );
-
         } finally {
             setPdfLoading(false);
             setExcelLoading(false);
@@ -1060,10 +1178,14 @@ const ReceiptRegister = () => {
     };
 
     const handleDownloadPdf = () =>
-        openExportPicker("pdf");
+        openExportPicker(
+            "pdf"
+        );
 
     const handleDownloadExcel = () =>
-        openExportPicker("excel");
+        openExportPicker(
+            "excel"
+        );
 
     /* ===================================================
        RENDER
@@ -1078,80 +1200,146 @@ const ReceiptRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate ? toDateInputValue(fromDate) : "",
-                        onChange: (value) => {
+                        value:
+                            fromDate
+                                ? toDateInputValue(
+                                    fromDate
+                                )
+                                : "",
+                        onChange: (
+                            value
+                        ) => {
                             setFromDate(
                                 value
-                                    ? toLocalStartOfDayUtc(value)
+                                    ? toLocalStartOfDayUtc(
+                                        value
+                                    )
                                     : ""
                             );
+
                             setLocalOffset(0);
                             setDateError("");
                         },
-                        required: false,
+                        required:
+                            false,
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate ? toDateInputValue(toDate) : "",
-                        onChange: (value) => {
+                        value:
+                            toDate
+                                ? toDateInputValue(
+                                    toDate
+                                )
+                                : "",
+                        onChange: (
+                            value
+                        ) => {
                             setToDate(
                                 value
-                                    ? toLocalEndOfDayUtc(value)
+                                    ? toLocalEndOfDayUtc(
+                                        value
+                                    )
                                     : ""
                             );
+
                             setLocalOffset(0);
                             setDateError("");
                         },
-                        required: false,
+                        required:
+                            false,
                     },
                     {
                         key: "account",
                         type: "select",
                         label: "Account",
-                        placeholder: "Account",
-                        value: account,
-                        options: accountOptions,
-                        onChange: (value) => {
-                            setAccount(value);
-                            setLocalOffset(0);
+                        placeholder:
+                            "Account",
+                        value:
+                            account,
+                        options:
+                            accountOptions,
+                        onChange: (
+                            value
+                        ) => {
+                            setAccount(
+                                value
+                            );
+
+                            setLocalOffset(
+                                0
+                            );
                         },
                     },
 
-                    ...customFilters.map((filter: any) => ({
-                        key: filter.key,
-                        type: "select",
-                        label:
-                            filter.label ||
-                            filter.key,
-                        placeholder:
-                            filter.label ||
-                            filter.key,
-                        value:
-                            selectedCustomFilters[
-                            filter.key
-                            ] || "",
-                        options:
-                            customFilterOptions[
-                            filter.key
-                            ] || [],
-                        onChange: (value: string) => {
-                            setSelectedCustomFilters(
-                                (previous) => ({
-                                    ...previous,
-                                    [filter.key]: value,
-                                })
-                            );
-                            setLocalOffset(0);
-                        },
-                    })),
+                    ...customFilters.map(
+                        (
+                            filter:
+                                any
+                        ) => ({
+                            key:
+                                filter.key,
+
+                            type:
+                                "select",
+
+                            label:
+                                filter.label ||
+                                filter.key,
+
+                            placeholder:
+                                filter.label ||
+                                filter.key,
+
+                            value:
+                                selectedCustomFilters[
+                                filter.key
+                                ] ||
+                                "",
+
+                            options:
+                                customFilterOptions[
+                                filter.key
+                                ] ||
+                                [],
+
+                            onChange:
+                                (
+                                    value:
+                                        string
+                                ) => {
+                                    setSelectedCustomFilters(
+                                        (
+                                            previous
+                                        ) => ({
+                                            ...previous,
+
+                                            [filter.key]:
+                                                value,
+                                        })
+                                    );
+
+                                    setLocalOffset(
+                                        0
+                                    );
+                                },
+                        })
+                    ),
                 ]}
                 gridCols="3"
-                onSearch={handleRefresh}
-                onClear={handleClear}
-                onDownloadPdf={handleDownloadPdf}
-                onDownloadExcel={handleDownloadExcel}
+                onSearch={
+                    handleRefresh
+                }
+                onClear={
+                    handleClear
+                }
+                onDownloadPdf={
+                    handleDownloadPdf
+                }
+                onDownloadExcel={
+                    handleDownloadExcel
+                }
                 pdfDisabled={
                     !hasRegisterData ||
                     pdfLoading ||
@@ -1166,13 +1354,19 @@ const ReceiptRegister = () => {
                 }
                 pdfLoading={
                     pdfLoading ||
-                    (exportColumnsLoading &&
-                        exportType === "pdf")
+                    (
+                        exportColumnsLoading &&
+                        exportType ===
+                        "pdf"
+                    )
                 }
                 excelLoading={
                     excelLoading ||
-                    (exportColumnsLoading &&
-                        exportType === "excel")
+                    (
+                        exportColumnsLoading &&
+                        exportType ===
+                        "excel"
+                    )
                 }
                 downloadDisabledMessage={
                     !hasRegisterData
@@ -1188,20 +1382,34 @@ const ReceiptRegister = () => {
             )}
 
             <DataTable
-                columns={mainColumns}
-                data={tableData}
+                columns={
+                    mainColumns
+                }
+                data={
+                    tableData
+                }
                 loading={
                     addLoader ||
                     registerFilterDropdownLoading
                 }
                 emptyMessage="No receipt register data found"
-                showFieldSelector={false}
-                actions={(row: any) => (
+                showFieldSelector={
+                    false
+                }
+                actions={(
+                    row:
+                        any
+                ) => (
                     <button
                         type="button"
-                        onClick={(e) => {
+                        onClick={(
+                            e
+                        ) => {
                             e.stopPropagation();
-                            handleViewVoucher(row);
+
+                            handleViewVoucher(
+                                row
+                            );
                         }}
                         className="
                             inline-flex cursor-pointer items-center gap-1 rounded-lg
@@ -1209,235 +1417,126 @@ const ReceiptRegister = () => {
                             text-primary transition hover:bg-primary/20
                         "
                     >
-                        <Eye size={15} />
+                        <Eye
+                            size={
+                                15
+                            }
+                        />
                     </button>
                 )}
             />
 
-            <Modal
-                show={exportModalVisible}
-                setShow={setExportModalVisible}
-                handleClose={closeExportModal}
-                title={
-                    exportType === "pdf"
-                        ? "Select PDF Columns"
-                        : "Select Excel Columns"
+            <ExportColumnsModal
+                show={
+                    exportModalVisible
                 }
-                maxWidth="xl"
-                gridCols={1}
-                hideFooter={true}
-                bodyClassName="!block !p-0"
-                body={
-                    <div className="flex min-h-0 flex-col">
-                        <div className="max-h-[60vh] flex-1 overflow-y-auto p-6">
-                            <p className="mb-5 text-sm text-muted-foreground">
-                                Select the columns you want to include in the exported file.
-                            </p>
-
-                            {systemColumns.length > 0 && (
-                                <div className="mb-6">
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <h3 className="font-bold text-primary">
-                                            System Columns
-                                        </h3>
-
-                                        <div className="flex gap-3 text-xs font-bold text-primary">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setSectionSelection(
-                                                        systemColumns,
-                                                        true
-                                                    )
-                                                }
-                                                className="cursor-pointer hover:underline"
-                                            >
-                                                Select All
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setSectionSelection(
-                                                        systemColumns,
-                                                        false
-                                                    )
-                                                }
-                                                className="cursor-pointer hover:underline"
-                                            >
-                                                Clear All
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {systemColumns.map(
-                                        (column: any) => (
-                                            <Checkbox
-                                                key={column.key}
-                                                checked={selectedExportColumns.includes(
-                                                    column.key
-                                                )}
-                                                value={column.key}
-                                                label={
-                                                    column.label ||
-                                                    column.key
-                                                }
-                                                onChange={() =>
-                                                    toggleExportColumn(
-                                                        column.key
-                                                    )
-                                                }
-                                                className="border-b border-border py-3 hover:bg-muted/40"
-                                            />
-                                        )
-                                    )}
-                                </div>
-                            )}
-
-                            {customColumns.length > 0 && (
-                                <div>
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <h3 className="font-bold text-primary">
-                                            Custom Columns
-                                        </h3>
-
-                                        <div className="flex gap-3 text-xs font-bold text-primary">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setSectionSelection(
-                                                        customColumns,
-                                                        true
-                                                    )
-                                                }
-                                                className="cursor-pointer hover:underline"
-                                            >
-                                                Select All
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setSectionSelection(
-                                                        customColumns,
-                                                        false
-                                                    )
-                                                }
-                                                className="cursor-pointer hover:underline"
-                                            >
-                                                Clear All
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {customColumns.map(
-                                        (column: any) => (
-                                            <Checkbox
-                                                key={column.key}
-                                                checked={selectedExportColumns.includes(
-                                                    column.key
-                                                )}
-                                                value={column.key}
-                                                label={
-                                                    column.label ||
-                                                    column.key
-                                                }
-                                                onChange={() =>
-                                                    toggleExportColumn(
-                                                        column.key
-                                                    )
-                                                }
-                                                className="border-b border-border py-3 hover:bg-muted/40"
-                                            />
-                                        )
-                                    )}
-                                </div>
-                            )}
-
-                            {!systemColumns.length &&
-                                !customColumns.length && (
-                                    <div className="py-8 text-center text-sm text-muted-foreground">
-                                        No export columns found.
-                                    </div>
-                                )}
-                        </div>
-
-                        <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
-                            <button
-                                type="button"
-                                onClick={closeExportModal}
-                                disabled={
-                                    pdfLoading ||
-                                    excelLoading
-                                }
-                                className="cursor-pointer rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={
-                                    performExportDownload
-                                }
-                                disabled={
-                                    !selectedExportColumns.length ||
-                                    pdfLoading ||
-                                    excelLoading
-                                }
-                                className="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {pdfLoading ||
-                                    excelLoading
-                                    ? "Downloading..."
-                                    : exportType ===
-                                        "pdf"
-                                        ? "Download PDF"
-                                        : "Download Excel"}
-                            </button>
-                        </div>
-                    </div>
+                setShow={
+                    setExportModalVisible
+                }
+                exportType={
+                    exportType
+                }
+                systemColumns={
+                    systemColumns
+                }
+                customColumns={
+                    customColumns
+                }
+                selectedColumns={
+                    selectedExportColumns
+                }
+                loading={
+                    pdfLoading ||
+                    excelLoading
+                }
+                onClose={
+                    closeExportModal
+                }
+                onDownload={
+                    performExportDownload
                 }
             />
 
             <DynamicAddForm
-                isView={true}
-                show={viewModal}
-                setShow={setViewModal}
-                edit={true}
+                isView={
+                    true
+                }
+                show={
+                    viewModal
+                }
+                setShow={
+                    setViewModal
+                }
+                edit={
+                    true
+                }
                 title="View Receipt"
                 subtitle="View receipt details"
-                loading={viewLoading}
-                contentLoading={viewLoading}
+                loading={
+                    viewLoading
+                }
+                contentLoading={
+                    viewLoading
+                }
                 onClose={() => {
                     setViewModal(false);
                     setViewForm({});
                     setViewErrors({});
                 }}
                 onSubmit={() => { }}
-                form={viewForm}
-                errors={viewErrors}
+                form={
+                    viewForm
+                }
+                errors={
+                    viewErrors
+                }
                 handleAddRow={() => { }}
                 handleDeleteRow={() => { }}
                 handleRowChange={() => { }}
-                inputData={viewInputData}
+                inputData={
+                    viewInputData
+                }
                 bodyKey="recBody"
                 handleChange={() => { }}
-                footerTotals={viewFooterTotals}
+                footerTotals={
+                    viewFooterTotals
+                }
             />
 
             {currentPagination?.totalDocs > 0 && (
                 <div className="mt-2">
                     <Pagination
-                        localLimit={localLimit}
-                        selectCb={(e: any) => {
-                            setLocalLimit(Number(e.target.value));
-                            setLocalOffset(0);
+                        localLimit={
+                            localLimit
+                        }
+                        selectCb={(
+                            e:
+                                any
+                        ) => {
+                            setLocalLimit(
+                                Number(
+                                    e.target.value
+                                )
+                            );
+
+                            setLocalOffset(
+                                0
+                            );
                         }}
-                        preDisabled={!currentPagination?.hasPrevPage}
-                        nextDisabled={!currentPagination?.hasNextPage}
-                        setLocalOffset={setLocalOffset}
-                        pagination={currentPagination}
+                        preDisabled={
+                            !currentPagination
+                                ?.hasPrevPage
+                        }
+                        nextDisabled={
+                            !currentPagination
+                                ?.hasNextPage
+                        }
+                        setLocalOffset={
+                            setLocalOffset
+                        }
+                        pagination={
+                            currentPagination
+                        }
                     />
                 </div>
             )}
