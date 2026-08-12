@@ -7,6 +7,7 @@ import professionalAxios from "../../../../services/professionalAxios";
 import Modal from "../../../../components/modal";
 import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 import UnitMasterModal from "../UnitMasterModal";
+import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 
 type ProductMasterModalProps = {
   show: boolean;
@@ -3063,29 +3064,13 @@ const ProductMasterModal = ({
         return;
       }
 
-      const payload:
-        Record<string, any> =
-        {};
-
-      const dynamicFields:
-        Record<string, any> = {
-        ...(
-          editingProduct
-            ?.dynamicFields ||
-          {}
+      const payload: Record<string, any> = {};
+      const dynamicFields: Record<string, any> = {
+        ...(editingProduct?.dynamicFields || {}
         ),
       };
 
-      (
-        Array.isArray(
-          productMasterSchemaFields
-        )
-          ? productMasterSchemaFields
-          : []
-      ).forEach(
-        (
-          field: any
-        ) => {
+      (Array.isArray(productMasterSchemaFields) ? productMasterSchemaFields : []).forEach((field: any) => {
           const fieldType =
             getFieldType(
               field
@@ -3134,45 +3119,24 @@ const ProductMasterModal = ({
              BOOLEAN
           ========================================= */
 
-          else if (
-            fieldType ===
-            "boolean"
-          ) {
-            value =
-              getBooleanValue(
-                value
-              );
+          else if (fieldType === "boolean") {
+            value = getBooleanValue(value);
           }
 
           /* =========================================
              DYNAMIC OR ROOT
           ========================================= */
 
-          if (
-            isDynamicSchemaField(
-              field
-            )
-          ) {
-            dynamicFields[
-              field.key
-            ] =
-              value;
+        if (isDynamicSchemaField(field)) {
+          dynamicFields[field.key] = value;
           } else {
-            payload[
-              field.key
-            ] =
-              value;
+          payload[field.key] = value;
           }
         }
       );
 
-      payload.dynamicFields =
-        dynamicFields;
-
-      setSubmitting(
-        true
-      );
-
+      payload.dynamicFields = dynamicFields;
+      setSubmitting(true);
       try {
         let response: any;
 
@@ -3180,19 +3144,9 @@ const ProductMasterModal = ({
            UPDATE PRODUCT
         ========================================= */
 
-        if (
-          editingProduct
-            ?.productCode
-        ) {
-          response =
-            await professionalAxios.put(
-              `/eTaxSolnMongoApiBackend/productMaster/updateProduct/${editingProduct.productCode}`,
-              payload
-            );
-
-          toast.success(
-            "Product updated successfully"
-          );
+        if (editingProduct?.productCode) {
+          response = await professionalAxios.put(`/eTaxSolnMongoApiBackend/productMaster/updateProduct/${editingProduct.productCode}`, payload);
+          toast.success("Product updated successfully");
         }
 
         /* =========================================
@@ -3210,31 +3164,22 @@ const ProductMasterModal = ({
             "Product created successfully"
           );
         }
-
-        const savedProduct =
-          getProductFromResponse(
-            response
-          ) ||
-          payload;
-
-        if (
-          onSaved
-        ) {
+        dispatch(
+          getAllProducts({
+            offset: 0,
+            limit: 10,
+          }) as any
+        );
+        const savedProduct = getProductFromResponse(response) || payload;
+        if (onSaved) {
           await onSaved(
             savedProduct
           );
         }
 
-        setShow(
-          false
-        );
-
+        setShow(false);
         setErrors({});
-
-        setForm(
-          buildEmptyForm(
-            productMasterSchemaFields
-          )
+        setForm(buildEmptyForm(productMasterSchemaFields)
         );
       } catch (
       error: any
@@ -3360,9 +3305,7 @@ const ProductMasterModal = ({
               setShow={
                 setShow
               }
-              handleSubmit={
-                handleSubmit
-              }
+              handleSubmit={handleSubmit}
               loader={
                 submitting
               }

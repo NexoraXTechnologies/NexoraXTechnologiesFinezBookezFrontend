@@ -35,7 +35,7 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
 
     const [showSchemaForm, setShowSchemaForm] = useState(false);
     const [editingSchemaFieldKey, setEditingSchemaFieldKey] = useState<string | null>(null);
-    const [schemaForm, setSchemaForm] = useState<SchemaFieldForm>(INITIAL_SCHEMA_FIELD_FORM);
+    const [schemaForm, setSchemaForm]:any = useState(INITIAL_SCHEMA_FIELD_FORM);
     const [schemaFormErrors, setSchemaFormErrors] = useState<
         Partial<Record<keyof SchemaFieldForm, string>>
     >({});
@@ -135,7 +135,7 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
     };
 
     const updateSchemaFormField = (field: keyof SchemaFieldForm, value: string | boolean) => {
-        setSchemaForm((previous) => ({ ...previous, [field]: value }));
+        setSchemaForm((previous:any) => ({ ...previous, [field]: value }));
         setSchemaFormErrors((previous) => ({ ...previous, [field]: "" }));
     };
 
