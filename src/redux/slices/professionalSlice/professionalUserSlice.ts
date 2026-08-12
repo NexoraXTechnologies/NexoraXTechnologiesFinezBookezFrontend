@@ -219,8 +219,8 @@ export const deleteProfessionalUser = createAsyncThunk(
 export const updateProfessionalUser = createAsyncThunk(
   "professionalUser/updateUser",
   async ({ parentMobile, data }: { parentMobile: string; data: any }, { rejectWithValue }) => {
-    alert("THUNK STARTED");
-    console.log("isdsdsdd")
+    // alert("THUNK STARTED");
+    // console.log("isdsdsdd")
     try {
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/users/${parentMobile}`,
@@ -234,7 +234,7 @@ export const updateProfessionalUser = createAsyncThunk(
 
       return res.data?.data ?? null;
     } catch (err: any) {
-      console.log(err)
+      // console.log(err)
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to update account",
       });
