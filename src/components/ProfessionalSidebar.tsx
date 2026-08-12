@@ -27,6 +27,7 @@ import {
 	MonitorCog,
 	Settings2,
 	Workflow,
+	Factory,
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
@@ -139,6 +140,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "openingBalance",
 							action: "view",
 						},
+						// {
+						// 	name: "Production Workflow",
+						// 	path: "/bookEz/transaction/production",
+						// 	icon: <Factory size={19} />,
+						// 	module: "bookez",
+						// 	permissionKey: "production",
+						// 	action: "view",
+						// },
 						{
 							name: "Sale Workflow",
 							path: "/bookEz/transaction/sale-workflow",
