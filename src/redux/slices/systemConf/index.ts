@@ -4,6 +4,7 @@ import {
     resolveTransportationEnabled,
     syncVehicleMasterCustomMaster,
 } from "./syncVehicleMasterCustomMaster";
+
 /* ===================================================
    CONSTANTS
 =================================================== */
@@ -44,16 +45,25 @@ const createModuleConfigurationTemplate = (enabledDefault: boolean) => {
 const normalizeWhatsAppModuleConfiguration = (whatsAppSection: any) => {
     const src = whatsAppSection?.moduleConfiguration;
 
-    const hasStructuredConfig = src && typeof src === "object" && WHATSAPP_MODULE_ORDER.some((key) => {
-        const item = src[key];
-        return item != null && typeof item === "object" && "enabled" in item;
-    });
+    const hasStructuredConfig =
+        src &&
+        typeof src === "object" &&
+        WHATSAPP_MODULE_ORDER.some((key) => {
+            const item = src[key];
+
+            return (
+                item != null &&
+                typeof item === "object" &&
+                "enabled" in item
+            );
+        });
 
     if (!hasStructuredConfig) {
         return createModuleConfigurationTemplate(true);
     }
 
     const out: any = {};
+
     for (const key of WHATSAPP_MODULE_ORDER) {
         out[key] = {
             enabled: toBool(src?.[key]?.enabled),
@@ -78,7 +88,13 @@ export const getEmptySystemConfiguration = () => ({
             enableLocation: false,
         },
 
-        bankStatementConfiguration: { enableBankStatementImport: false, },
+        kitConfiguration: {
+            enableKit: false,
+        },
+
+        bankStatementConfiguration: {
+            enableBankStatementImport: false,
+        },
 
         productSettings: {
             allowDuplicateProduct: false,
@@ -130,7 +146,8 @@ export const getEmptySystemConfiguration = () => ({
 export const normalizeSystemConfiguration = (raw: any) => ({
     _id: raw?._id || "",
     configurationCode: raw?.configurationCode || "",
-    configurationName: raw?.configurationName || "Default System Config",
+    configurationName:
+        raw?.configurationName || "Default System Config",
     status: raw?.status || "active",
 
     systemConfiguration: {
@@ -140,9 +157,16 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             ),
         },
 
+        kitConfiguration: {
+            enableKit: toBool(
+                raw?.systemConfiguration?.kitConfiguration?.enableKit
+            ),
+        },
+
         bankStatementConfiguration: {
             enableBankStatementImport: toBool(
-                raw?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport
+                raw?.systemConfiguration?.bankStatementConfiguration
+                    ?.enableBankStatementImport
             ),
         },
 
@@ -160,40 +184,56 @@ export const normalizeSystemConfiguration = (raw: any) => ({
 
         scrapManagement: {
             enableScrapManagement: toBool(
-                raw?.systemConfiguration?.scrapManagement?.enableScrapManagement
+                raw?.systemConfiguration?.scrapManagement
+                    ?.enableScrapManagement
             ),
         },
 
         transportationModuleConfiguration: {
             enableTransportationModule: toBool(
-                raw?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.enableTransportationModule
             ),
-            advanceReceive: raw?.systemConfiguration?.transportationModuleConfiguration?.advanceReceive,
-            foodCost: raw?.systemConfiguration?.transportationModuleConfiguration?.foodCost,
-            petrolCost: raw?.systemConfiguration?.transportationModuleConfiguration?.petrolCost,
-            dieselCost: raw?.systemConfiguration?.transportationModuleConfiguration?.dieselCost,
-            runningCost: raw?.systemConfiguration?.transportationModuleConfiguration?.runningCost,
-            breakdownCost: raw?.systemConfiguration?.transportationModuleConfiguration?.breakdownCost,
-            otherCost: raw?.systemConfiguration?.transportationModuleConfiguration?.otherCost,
+            advanceReceive:
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.advanceReceive,
+            foodCost:
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.foodCost,
+            petrolCost:
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.petrolCost,
+            dieselCost:
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.dieselCost,
+            runningCost:
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.runningCost,
+            breakdownCost:
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.breakdownCost,
+            otherCost:
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.otherCost,
         },
 
         whatsAppConfiguration: {
             enableWhatsAppModule: toBool(
-                raw?.systemConfiguration?.whatsAppConfiguration?.enableWhatsAppModule
+                raw?.systemConfiguration?.whatsAppConfiguration
+                    ?.enableWhatsAppModule
             ),
 
-            provider:
-                String(
-                    raw?.systemConfiguration?.whatsAppConfiguration?.provider || "META"
-                )
-                    .trim()
-                    .toUpperCase(),
+            provider: String(
+                raw?.systemConfiguration?.whatsAppConfiguration?.provider ||
+                "META"
+            )
+                .trim()
+                .toUpperCase(),
 
-            defaultLanguage:
-                String(
-                    raw?.systemConfiguration?.whatsAppConfiguration?.defaultLanguage ||
-                    "en_US"
-                ).trim(),
+            defaultLanguage: String(
+                raw?.systemConfiguration?.whatsAppConfiguration
+                    ?.defaultLanguage || "en_US"
+            ).trim(),
 
             moduleConfiguration: normalizeWhatsAppModuleConfiguration(
                 raw?.systemConfiguration?.whatsAppConfiguration
@@ -202,10 +242,15 @@ export const normalizeSystemConfiguration = (raw: any) => ({
     },
 
     inventoryConfiguration: {
-        maintainInventory: toBool(raw?.inventoryConfiguration?.maintainInventory),
-        inventoryTagLevel: raw?.inventoryConfiguration?.inventoryTagLevel || "",
-        whereToAddInventory: raw?.inventoryConfiguration?.whereToAddInventory || "",
-        inventoryPickMethod: raw?.inventoryConfiguration?.inventoryPickMethod || "",
+        maintainInventory: toBool(
+            raw?.inventoryConfiguration?.maintainInventory
+        ),
+        inventoryTagLevel:
+            raw?.inventoryConfiguration?.inventoryTagLevel || "",
+        whereToAddInventory:
+            raw?.inventoryConfiguration?.whereToAddInventory || "",
+        inventoryPickMethod:
+            raw?.inventoryConfiguration?.inventoryPickMethod || "",
         negativeStockPolicy:
             raw?.inventoryConfiguration?.negativeStockPolicy || "",
     },
@@ -228,9 +273,18 @@ export const normalizeSystemConfiguration = (raw: any) => ({
 const unwrapApiRecord = (res: any) => {
     if (res == null) return null;
 
-    const inner = res?.data ?? res?.record ?? res?.result ?? res?.payload ?? res;
+    const inner =
+        res?.data ??
+        res?.record ??
+        res?.result ??
+        res?.payload ??
+        res;
 
-    if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+    if (
+        inner &&
+        typeof inner === "object" &&
+        !Array.isArray(inner)
+    ) {
         if (inner.success === false) return null;
 
         if (
@@ -250,23 +304,32 @@ const extractConfigurationRecords = (apiData: any) => {
 
     if (Array.isArray(apiData?.records)) return apiData.records;
 
-    if (Array.isArray(apiData?.data?.records)) return apiData.data.records;
+    if (Array.isArray(apiData?.data?.records))
+        return apiData.data.records;
 
     if (Array.isArray(apiData?.data)) return apiData.data;
 
-    if (Array.isArray(apiData?.configurations)) return apiData.configurations;
+    if (Array.isArray(apiData?.configurations))
+        return apiData.configurations;
 
-    if (Array.isArray(apiData?.configuration)) return apiData.configuration;
+    if (Array.isArray(apiData?.configuration))
+        return apiData.configuration;
 
     return [];
 };
 
 const extractPagination = (apiData: any, fallback: any) => {
-    return apiData?.pagination || apiData?.data?.pagination || fallback;
+    return (
+        apiData?.pagination ||
+        apiData?.data?.pagination ||
+        fallback
+    );
 };
 
-
-const extractApiArray = (apiData: any, preferredKeys: string[]) => {
+const extractApiArray = (
+    apiData: any,
+    preferredKeys: string[]
+) => {
     const roots = [
         apiData,
         apiData?.data,
@@ -280,7 +343,9 @@ const extractApiArray = (apiData: any, preferredKeys: string[]) => {
 
         if (root && typeof root === "object") {
             for (const key of preferredKeys) {
-                if (Array.isArray(root?.[key])) return root[key];
+                if (Array.isArray(root?.[key])) {
+                    return root[key];
+                }
             }
         }
     }
@@ -289,12 +354,22 @@ const extractApiArray = (apiData: any, preferredKeys: string[]) => {
 };
 
 const extractPosPostingRecords = (apiData: any) =>
-    extractApiArray(apiData, ["records", "items", "posPostings"]);
+    extractApiArray(apiData, [
+        "records",
+        "items",
+        "posPostings",
+    ]);
 
 const extractAccountItems = (apiData: any) =>
-    extractApiArray(apiData, ["items", "records", "accounts"]);
+    extractApiArray(apiData, [
+        "items",
+        "records",
+        "accounts",
+    ]);
 
-export const whatsAppMetaCredentialsHasData = (apiResponse: any) => {
+export const whatsAppMetaCredentialsHasData = (
+    apiResponse: any
+) => {
     const root = unwrapApiRecord(apiResponse);
 
     if (root == null) return false;
@@ -325,10 +400,15 @@ export const whatsAppMetaCredentialsHasData = (apiResponse: any) => {
    PAYLOAD BUILDER
 =================================================== */
 
-const buildConfigurationPayload = (configuration: any) => {
-    const wa = configuration?.systemConfiguration?.whatsAppConfiguration || {};
+const buildConfigurationPayload = (
+    configuration: any
+) => {
+    const wa =
+        configuration?.systemConfiguration
+            ?.whatsAppConfiguration || {};
 
-    const baseMods = wa?.moduleConfiguration || {};
+    const baseMods =
+        wa?.moduleConfiguration || {};
 
     const moduleConfiguration: any = {};
 
@@ -337,73 +417,166 @@ const buildConfigurationPayload = (configuration: any) => {
             enabled: !!baseMods?.[key]?.enabled,
         };
     }
-    console.log({ configuration })
+
+    console.log({ configuration });
+
     return {
-        configurationName: configuration?.configurationName?.trim() || "Default System Config",
-        status: configuration?.status || "active",
+        configurationName:
+            configuration?.configurationName?.trim() ||
+            "Default System Config",
+
+        status:
+            configuration?.status ||
+            "active",
+
         systemConfiguration: {
             salesQuotation: {
-                enableLocation: !!configuration?.systemConfiguration?.salesQuotation?.enableLocation,
+                enableLocation:
+                    !!configuration?.systemConfiguration
+                        ?.salesQuotation?.enableLocation,
             },
+
+            kitConfiguration: {
+                enableKit:
+                    !!configuration?.systemConfiguration
+                        ?.kitConfiguration?.enableKit,
+            },
+
             bankStatementConfiguration: {
-                enableBankStatementImport: !!configuration?.systemConfiguration?.bankStatementConfiguration?.enableBankStatementImport,
+                enableBankStatementImport:
+                    !!configuration?.systemConfiguration
+                        ?.bankStatementConfiguration
+                        ?.enableBankStatementImport,
             },
 
             allowDuplicateProduct:
-                !!configuration?.systemConfiguration?.productSettings?.allowDuplicateProduct,
+                !!configuration?.systemConfiguration
+                    ?.productSettings
+                    ?.allowDuplicateProduct,
 
             posConfiguration: {
-                enablePOSModule: !!configuration?.systemConfiguration?.posConfiguration?.enablePOSModule,
+                enablePOSModule:
+                    !!configuration?.systemConfiguration
+                        ?.posConfiguration
+                        ?.enablePOSModule,
             },
 
             scrapManagement: {
-                enableScrapManagement: !!configuration?.systemConfiguration?.scrapManagement?.enableScrapManagement,
+                enableScrapManagement:
+                    !!configuration?.systemConfiguration
+                        ?.scrapManagement
+                        ?.enableScrapManagement,
             },
 
             transportationModuleConfiguration: {
-                enableTransportationModule: !!configuration?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule,
-                advanceReceive: configuration?.systemConfiguration?.transportationModuleConfiguration?.advanceReceive,
-                foodCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.foodCost,
-                petrolCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.petrolCost,
-                dieselCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.dieselCost,
-                runningCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.runningCost,
-                breakdownCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.breakdownCost,
-                otherCost: configuration?.systemConfiguration?.transportationModuleConfiguration?.otherCost,
+                enableTransportationModule:
+                    !!configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.enableTransportationModule,
+
+                advanceReceive:
+                    configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.advanceReceive,
+
+                foodCost:
+                    configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.foodCost,
+
+                petrolCost:
+                    configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.petrolCost,
+
+                dieselCost:
+                    configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.dieselCost,
+
+                runningCost:
+                    configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.runningCost,
+
+                breakdownCost:
+                    configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.breakdownCost,
+
+                otherCost:
+                    configuration?.systemConfiguration
+                        ?.transportationModuleConfiguration
+                        ?.otherCost,
             },
 
             whatsAppConfiguration: {
-                enableWhatsAppModule: !!wa?.enableWhatsAppModule,
-                provider: String(wa?.provider || "META").trim().toUpperCase(),
-                defaultLanguage: String(wa?.defaultLanguage || "en_US").trim(),
+                enableWhatsAppModule:
+                    !!wa?.enableWhatsAppModule,
+
+                provider:
+                    String(
+                        wa?.provider ||
+                        "META"
+                    )
+                        .trim()
+                        .toUpperCase(),
+
+                defaultLanguage:
+                    String(
+                        wa?.defaultLanguage ||
+                        "en_US"
+                    ).trim(),
+
                 moduleConfiguration,
             },
         },
 
         inventoryConfiguration: {
             maintainInventory:
-                !!configuration?.inventoryConfiguration?.maintainInventory,
+                !!configuration
+                    ?.inventoryConfiguration
+                    ?.maintainInventory,
 
             inventoryTagLevel:
-                configuration?.inventoryConfiguration?.inventoryTagLevel || "",
+                configuration
+                    ?.inventoryConfiguration
+                    ?.inventoryTagLevel ||
+                "",
 
             whereToAddInventory:
-                (
-                    configuration?.inventoryConfiguration?.inventoryTagLevel === "WAREHOUSE" ||
-                    configuration?.inventoryConfiguration?.inventoryTagLevel === "WAREHOUSE_LOCATION"
-                )
-                    ? configuration?.inventoryConfiguration?.whereToAddInventory || ""
+                configuration
+                    ?.inventoryConfiguration
+                    ?.inventoryTagLevel ===
+                    "WAREHOUSE" ||
+                    configuration
+                        ?.inventoryConfiguration
+                        ?.inventoryTagLevel ===
+                    "WAREHOUSE_LOCATION"
+                    ? configuration
+                        ?.inventoryConfiguration
+                        ?.whereToAddInventory ||
+                    ""
                     : "",
 
             inventoryPickMethod:
-                configuration?.inventoryConfiguration?.inventoryPickMethod || "",
+                configuration
+                    ?.inventoryConfiguration
+                    ?.inventoryPickMethod ||
+                "",
 
             negativeStockPolicy:
-                configuration?.inventoryConfiguration?.negativeStockPolicy || "",
+                configuration
+                    ?.inventoryConfiguration
+                    ?.negativeStockPolicy ||
+                "",
         },
 
         financeConfiguration: {
             isActive:
-                !!configuration?.financeConfiguration?.isActive,
+                !!configuration
+                    ?.financeConfiguration
+                    ?.isActive,
         },
 
         anyOtherField:
@@ -415,267 +588,406 @@ const buildConfigurationPayload = (configuration: any) => {
    GET ALL CONFIGURATIONS
 =================================================== */
 
-export const getAllSystemConfigurations = createAsyncThunk(
-    "systemConfiguration/getAllSystemConfigurations",
-    async (
-        {
-            offset = 0,
-            limit = 100000,
-            status = "",
-        }: {
-            offset?: number;
-            limit?: number;
-            status?: string;
-        } = {},
-        { rejectWithValue }
-    ) => {
-        try {
-            const params: {
-                offset: number;
-                limit: number;
+export const getAllSystemConfigurations =
+    createAsyncThunk(
+        "systemConfiguration/getAllSystemConfigurations",
+
+        async (
+            {
+                offset = 0,
+                limit = 100000,
+                status = "",
+            }: {
+                offset?: number;
+                limit?: number;
                 status?: string;
-            } = {
-                offset,
-                limit,
-            };
+            } = {},
 
-            if (status?.trim()) {
-                params.status = status.trim();
+            {
+                rejectWithValue,
             }
+        ) => {
+            try {
+                const params: {
+                    offset: number;
+                    limit: number;
+                    status?: string;
+                } = {
+                    offset,
+                    limit,
+                };
 
-            const res = await professionalAxios.get(
-                "eTaxSolnMongoApiBackend/users/configuration/getAll",
-                {
-                    params,
+                if (status?.trim()) {
+                    params.status =
+                        status.trim();
                 }
-            );
 
-            if (
-                !res.data?.success &&
-                !res.data?.records &&
-                !res.data?.data?.records &&
-                !Array.isArray(res.data)
-            ) {
+                const res =
+                    await professionalAxios.get(
+                        "eTaxSolnMongoApiBackend/users/configuration/getAll",
+                        {
+                            params,
+                        }
+                    );
+
+                if (
+                    !res.data?.success &&
+                    !res.data?.records &&
+                    !res.data?.data
+                        ?.records &&
+                    !Array.isArray(
+                        res.data
+                    )
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res.data
+                                ?.message ||
+                            "Failed to fetch configurations",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                return (
+                    res.data?.data ||
+                    res.data
+                );
+            } catch (err: any) {
                 return rejectWithValue({
                     message:
-                        res.data?.message || "Failed to fetch configurations",
-                    status: res?.status,
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        "Failed to fetch configurations",
+
+                    status:
+                        err?.response
+                            ?.status,
                 });
             }
-
-            return res.data?.data || res.data;
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    "Failed to fetch configurations",
-                status: err?.response?.status,
-            });
         }
-    }
-);
+    );
 
 /* ===================================================
    GET LATEST CONFIGURATION
 =================================================== */
 
-export const getLatestSystemConfiguration = createAsyncThunk(
-    "systemConfiguration/getLatestSystemConfiguration",
-    async (_, { rejectWithValue }) => {
-        try {
-            const res = await professionalAxios.get(
-                "eTaxSolnMongoApiBackend/users/configuration/getAll",
-                {
-                    params: {
-                        offset: 0,
-                        limit: 100000,
-                        status: "",
-                    },
-                }
-            );
+export const getLatestSystemConfiguration =
+    createAsyncThunk(
+        "systemConfiguration/getLatestSystemConfiguration",
 
-            if (
-                !res.data?.success &&
-                !res.data?.records &&
-                !res.data?.data?.records &&
-                !Array.isArray(res.data)
-            ) {
+        async (
+            _,
+            {
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const res =
+                    await professionalAxios.get(
+                        "eTaxSolnMongoApiBackend/users/configuration/getAll",
+                        {
+                            params: {
+                                offset: 0,
+                                limit: 100000,
+                                status: "",
+                            },
+                        }
+                    );
+
+                if (
+                    !res.data?.success &&
+                    !res.data?.records &&
+                    !res.data?.data
+                        ?.records &&
+                    !Array.isArray(
+                        res.data
+                    )
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res.data
+                                ?.message ||
+                            "Failed to fetch latest configuration",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                const data =
+                    res.data?.data ||
+                    res.data;
+
+                const records =
+                    extractConfigurationRecords(
+                        data
+                    );
+
+                if (!records.length) {
+                    return getEmptySystemConfiguration();
+                }
+
+                const sortedRecords =
+                    [...records].sort(
+                        (a, b) => {
+                            const aTime =
+                                new Date(
+                                    a?.modifiedOn ||
+                                    a?.createdOn ||
+                                    "1970-01-01"
+                                ).getTime();
+
+                            const bTime =
+                                new Date(
+                                    b?.modifiedOn ||
+                                    b?.createdOn ||
+                                    "1970-01-01"
+                                ).getTime();
+
+                            return (
+                                bTime -
+                                aTime
+                            );
+                        }
+                    );
+
+                console.log({
+                    sortedRecords:
+                        sortedRecords[0],
+                });
+
+                return normalizeSystemConfiguration(
+                    sortedRecords[0]
+                );
+            } catch (err: any) {
                 return rejectWithValue({
                     message:
-                        res.data?.message ||
+                        err?.response
+                            ?.data
+                            ?.message ||
                         "Failed to fetch latest configuration",
-                    status: res?.status,
+
+                    status:
+                        err?.response
+                            ?.status,
                 });
             }
-
-            const data = res.data?.data || res.data;
-            const records = extractConfigurationRecords(data);
-
-            if (!records.length) {
-                return getEmptySystemConfiguration();
-            }
-
-            const sortedRecords = [...records].sort((a, b) => {
-                const aTime = new Date(
-                    a?.modifiedOn || a?.createdOn || "1970-01-01"
-                ).getTime();
-
-                const bTime = new Date(
-                    b?.modifiedOn || b?.createdOn || "1970-01-01"
-                ).getTime();
-
-                return bTime - aTime;
-            });
-            console.log({ sortedRecords: sortedRecords[0] })
-            return normalizeSystemConfiguration(sortedRecords[0]);
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    "Failed to fetch latest configuration",
-                status: err?.response?.status,
-            });
         }
-    }
-);
+    );
 
 /* ===================================================
    GET CONFIGURATION BY CODE
 =================================================== */
 
-export const getSystemConfigurationByCode = createAsyncThunk(
-    "systemConfiguration/getSystemConfigurationByCode",
-    async (
-        {
-            configurationCode,
-        }: {
-            configurationCode: string;
-        },
-        { rejectWithValue }
-    ) => {
-        try {
-            const res = await professionalAxios.get(
-                `eTaxSolnMongoApiBackend/users/configuration/getByCode/${configurationCode}`
-            );
+export const getSystemConfigurationByCode =
+    createAsyncThunk(
+        "systemConfiguration/getSystemConfigurationByCode",
 
-            if (!res.data?.success && !res.data?.data && !res.data?.configurationCode) {
+        async (
+            {
+                configurationCode,
+            }: {
+                configurationCode: string;
+            },
+
+            {
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const res =
+                    await professionalAxios.get(
+                        `eTaxSolnMongoApiBackend/users/configuration/getByCode/${configurationCode}`
+                    );
+
+                if (
+                    !res.data
+                        ?.success &&
+                    !res.data?.data &&
+                    !res.data
+                        ?.configurationCode
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res.data
+                                ?.message ||
+                            "Failed to fetch configuration",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                const record =
+                    res?.data?.data ||
+                    res?.data?.record ||
+                    res?.data;
+
+                return normalizeSystemConfiguration(
+                    record
+                );
+            } catch (err: any) {
                 return rejectWithValue({
                     message:
-                        res.data?.message || "Failed to fetch configuration",
-                    status: res?.status,
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        "Failed to fetch configuration",
+
+                    status:
+                        err?.response
+                            ?.status,
                 });
             }
-
-            const record = res?.data?.data || res?.data?.record || res?.data;
-
-            return normalizeSystemConfiguration(record);
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    "Failed to fetch configuration",
-                status: err?.response?.status,
-            });
         }
-    }
-);
+    );
 
 /* ===================================================
    SAVE CONFIGURATION
 =================================================== */
 
-export const saveSystemConfiguration = createAsyncThunk(
-    "systemConfiguration/saveSystemConfiguration",
-    async (
-        {
-            configuration,
-        }: {
-            configuration: any;
-        },
-        { rejectWithValue }
-    ) => {
-        try {
-            const payload = buildConfigurationPayload(configuration);
+export const saveSystemConfiguration =
+    createAsyncThunk(
+        "systemConfiguration/saveSystemConfiguration",
 
-            const res = await professionalAxios.post(
-                "eTaxSolnMongoApiBackend/users/configuration/save",
-                payload
-            );
+        async (
+            {
+                configuration,
+            }: {
+                configuration: any;
+            },
 
-            if (!res.data?.success) {
+            {
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const payload =
+                    buildConfigurationPayload(
+                        configuration
+                    );
+
+                const res =
+                    await professionalAxios.post(
+                        "eTaxSolnMongoApiBackend/users/configuration/save",
+                        payload
+                    );
+
+                if (
+                    !res.data?.success
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res.data
+                                ?.message ||
+                            "Failed to save configuration",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                return {
+                    message:
+                        res.data
+                            ?.message,
+
+                    data:
+                        res.data
+                            ?.data,
+                };
+            } catch (err: any) {
                 return rejectWithValue({
                     message:
-                        res.data?.message || "Failed to save configuration",
-                    status: res?.status,
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        "Failed to save configuration",
+
+                    status:
+                        err?.response
+                            ?.status,
                 });
             }
-
-            return {
-                message: res.data?.message,
-                data: res.data?.data,
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    "Failed to save configuration",
-                status: err?.response?.status,
-            });
         }
-    }
-);
+    );
 
 /* ===================================================
    UPDATE CONFIGURATION
 =================================================== */
 
-export const updateSystemConfiguration = createAsyncThunk(
-    "systemConfiguration/updateSystemConfiguration",
-    async (
-        {
-            configurationCode,
-            configuration,
-        }: {
-            configurationCode: string;
-            configuration: any;
-        },
-        { rejectWithValue }
-    ) => {
-        try {
-            const payload = buildConfigurationPayload(configuration);
+export const updateSystemConfiguration =
+    createAsyncThunk(
+        "systemConfiguration/updateSystemConfiguration",
 
-            const res = await professionalAxios.put(
-                `eTaxSolnMongoApiBackend/users/configuration/update/${configurationCode}`,
-                payload
-            );
+        async (
+            {
+                configurationCode,
+                configuration,
+            }: {
+                configurationCode: string;
+                configuration: any;
+            },
 
-            if (!res.data?.success) {
+            {
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const payload =
+                    buildConfigurationPayload(
+                        configuration
+                    );
+
+                const res =
+                    await professionalAxios.put(
+                        `eTaxSolnMongoApiBackend/users/configuration/update/${configurationCode}`,
+                        payload
+                    );
+
+                if (
+                    !res.data?.success
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res.data
+                                ?.message ||
+                            "Failed to update configuration",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                return {
+                    message:
+                        res.data
+                            ?.message,
+
+                    data:
+                        res.data
+                            ?.data,
+
+                    configurationCode,
+                };
+            } catch (err: any) {
                 return rejectWithValue({
                     message:
-                        res.data?.message || "Failed to update configuration",
-                    status: res?.status,
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        "Failed to update configuration",
+
+                    status:
+                        err?.response
+                            ?.status,
                 });
             }
-
-            return {
-                message: res.data?.message,
-                data: res.data?.data,
-                configurationCode,
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    "Failed to update configuration",
-                status: err?.response?.status,
-            });
         }
-    }
-);
-
-/* ===================================================
-   SAVE OR UPDATE CONFIGURATION
-=================================================== */
+    );
 
 /* ===================================================
    SAVE OR UPDATE CONFIGURATION
@@ -853,746 +1165,1602 @@ export const saveOrUpdateSystemConfiguration =
         }
     );
 
-export const verifyWhatsAppMetaCredentials = createAsyncThunk(
-    "systemConfiguration/verifyWhatsAppMetaCredentials",
-    async (
-        {
-            loginuser,
-        }: {
-            loginuser: string;
-        },
-        { rejectWithValue }
-    ) => {
-        try {
-            const encoded = encodeURIComponent(String(loginuser || "").trim());
+export const verifyWhatsAppMetaCredentials =
+    createAsyncThunk(
+        "systemConfiguration/verifyWhatsAppMetaCredentials",
 
-            if (!encoded) {
+        async (
+            {
+                loginuser,
+            }: {
+                loginuser: string;
+            },
+
+            {
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const encoded =
+                    encodeURIComponent(
+                        String(
+                            loginuser ||
+                            ""
+                        ).trim()
+                    );
+
+                if (!encoded) {
+                    return rejectWithValue({
+                        message:
+                            "Logged-in user identity is missing. Please sign in again.",
+
+                        status: 400,
+                    });
+                }
+
+                const res =
+                    await professionalAxios.get(
+                        `eTaxSolnMongoApiBackend/users/whatsapp/metaCredentials/get/${encoded}`
+                    );
+
+                const hasCredentials =
+                    whatsAppMetaCredentialsHasData(
+                        res?.data
+                    );
+
+                if (!hasCredentials) {
+                    return rejectWithValue({
+                        message:
+                            "WhatsApp Meta credentials are not configured",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                return {
+                    hasCredentials,
+
+                    data:
+                        res?.data?.data ||
+                        res?.data,
+                };
+            } catch (err: any) {
                 return rejectWithValue({
                     message:
-                        "Logged-in user identity is missing. Please sign in again.",
-                    status: 400,
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        "Failed to verify WhatsApp Meta credentials",
+
+                    status:
+                        err?.response
+                            ?.status,
                 });
             }
-
-            const res = await professionalAxios.get(
-                `eTaxSolnMongoApiBackend/users/whatsapp/metaCredentials/get/${encoded}`
-            );
-
-            const hasCredentials = whatsAppMetaCredentialsHasData(res?.data);
-
-            if (!hasCredentials) {
-                return rejectWithValue({
-                    message: "WhatsApp Meta credentials are not configured",
-                    status: res?.status,
-                });
-            }
-
-            return {
-                hasCredentials,
-                data: res?.data?.data || res?.data,
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    "Failed to verify WhatsApp Meta credentials",
-                status: err?.response?.status,
-            });
         }
-    }
-);
+    );
 
 /* ===================================================
    POS POSTING APIS
 =================================================== */
 
-export const getAllPosPostings = createAsyncThunk(
-    "systemConfiguration/getAllPosPostings",
-    async (
-        {
-            offset = 0,
-            limit = 100,
-        }: {
-            offset?: number;
-            limit?: number;
-        } = {},
-        { rejectWithValue }
-    ) => {
-        try {
-            const res = await professionalAxios.get(`${POS_POSTING_API}/getAll`, {
-                params: { offset, limit },
-            });
+export const getAllPosPostings =
+    createAsyncThunk(
+        "systemConfiguration/getAllPosPostings",
 
-            if (res?.data?.success === false) {
-                return rejectWithValue({
-                    message: res?.data?.message || "Failed to load POS posting configuration",
-                    status: res?.status,
-                });
+        async (
+            {
+                offset = 0,
+                limit = 100,
+            }: {
+                offset?: number;
+                limit?: number;
+            } = {},
+
+            {
+                rejectWithValue,
             }
+        ) => {
+            try {
+                const res =
+                    await professionalAxios.get(
+                        `${POS_POSTING_API}/getAll`,
+                        {
+                            params: {
+                                offset,
+                                limit,
+                            },
+                        }
+                    );
 
-            const records = extractPosPostingRecords(res?.data);
+                if (
+                    res?.data
+                        ?.success === false
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res?.data
+                                ?.message ||
+                            "Failed to load POS posting configuration",
 
-            return {
-                records,
-                pagination: extractPagination(res?.data, {
-                    offset,
-                    limit,
-                    totalDocs: records.length,
-                }),
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.message ||
-                    "Failed to load POS posting configuration",
-                status: err?.response?.status,
-            });
-        }
-    }
-);
+                        status:
+                            res?.status,
+                    });
+                }
 
-export const getPosPostingAccountOptions = createAsyncThunk(
-    "systemConfiguration/getPosPostingAccountOptions",
-    async (_, { rejectWithValue }) => {
-        try {
-            const requestAccounts = (accountType: "sale" | "cash" | "bank") =>
-                professionalAxios.get(ACCOUNT_MASTER_API, {
-                    params: {
-                        accountType,
-                        offset: 0,
-                        limit: 200,
-                    },
-                });
+                const records =
+                    extractPosPostingRecords(
+                        res?.data
+                    );
 
-            const [salesRes, cashRes, bankRes] = await Promise.all([
-                requestAccounts("sale"),
-                requestAccounts("cash"),
-                requestAccounts("bank"),
-            ]);
+                return {
+                    records,
 
-            const responses = [salesRes, cashRes, bankRes];
-            const failedResponse = responses.find(
-                (response) => response?.data?.success === false
-            );
-
-            if (failedResponse) {
+                    pagination:
+                        extractPagination(
+                            res?.data,
+                            {
+                                offset,
+                                limit,
+                                totalDocs:
+                                    records.length,
+                            }
+                        ),
+                };
+            } catch (err: any) {
                 return rejectWithValue({
                     message:
-                        failedResponse?.data?.message ||
-                        "Failed to load POS account dropdowns",
-                    status: failedResponse?.status,
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        err?.message ||
+                        "Failed to load POS posting configuration",
+
+                    status:
+                        err?.response
+                            ?.status,
                 });
             }
-
-            return {
-                sales: extractAccountItems(salesRes?.data),
-                cash: extractAccountItems(cashRes?.data),
-                bank: extractAccountItems(bankRes?.data),
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.message ||
-                    "Failed to load POS account dropdowns",
-                status: err?.response?.status,
-            });
         }
-    }
-);
+    );
 
-export const savePosPosting = createAsyncThunk(
-    "systemConfiguration/savePosPosting",
-    async ({ payload }: { payload: any }, { rejectWithValue }) => {
-        try {
-            const res = await professionalAxios.post(
-                `${POS_POSTING_API}/save`,
-                payload
-            );
+export const getPosPostingAccountOptions =
+    createAsyncThunk(
+        "systemConfiguration/getPosPostingAccountOptions",
 
-            if (res?.data?.success === false) {
-                return rejectWithValue({
-                    message: res?.data?.message || "Failed to save POS posting",
-                    status: res?.status,
-                });
+        async (
+            _,
+            {
+                rejectWithValue,
             }
+        ) => {
+            try {
+                const requestAccounts =
+                    (
+                        accountType:
+                            | "sale"
+                            | "cash"
+                            | "bank"
+                    ) =>
+                        professionalAxios.get(
+                            ACCOUNT_MASTER_API,
+                            {
+                                params: {
+                                    accountType,
+                                    offset: 0,
+                                    limit: 200,
+                                },
+                            }
+                        );
 
-            return {
-                message: res?.data?.message || "POS posting saved successfully",
-                data: res?.data?.data || res?.data,
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.message ||
-                    "Failed to save POS posting",
-                status: err?.response?.status,
-            });
-        }
-    }
-);
+                const [
+                    salesRes,
+                    cashRes,
+                    bankRes,
+                ] =
+                    await Promise.all([
+                        requestAccounts(
+                            "sale"
+                        ),
+                        requestAccounts(
+                            "cash"
+                        ),
+                        requestAccounts(
+                            "bank"
+                        ),
+                    ]);
 
-export const updatePosPosting = createAsyncThunk(
-    "systemConfiguration/updatePosPosting",
-    async (
-        {
-            commonId,
-            payload,
-        }: {
-            commonId: string;
-            payload: any;
-        },
-        { rejectWithValue }
-    ) => {
-        try {
-            const safeCommonId = encodeURIComponent(String(commonId || "").trim());
+                const responses = [
+                    salesRes,
+                    cashRes,
+                    bankRes,
+                ];
 
-            if (!safeCommonId) {
-                return rejectWithValue({
-                    message: "commonId is required to update POS posting",
-                    status: 400,
-                });
-            }
+                const failedResponse =
+                    responses.find(
+                        (
+                            response
+                        ) =>
+                            response
+                                ?.data
+                                ?.success ===
+                            false
+                    );
 
-            const res = await professionalAxios.put(
-                `${POS_POSTING_API}/update/${safeCommonId}`,
-                payload
-            );
-
-            if (res?.data?.success === false) {
-                return rejectWithValue({
-                    message: res?.data?.message || "Failed to update POS posting",
-                    status: res?.status,
-                });
-            }
-
-            return {
-                message: res?.data?.message || "POS posting updated successfully",
-                data: res?.data?.data || res?.data,
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.response?.data?.message ||
-                    err?.message ||
-                    "Failed to update POS posting",
-                status: err?.response?.status,
-            });
-        }
-    }
-);
-
-export const saveOrUpdatePosPostingAccount = createAsyncThunk(
-    "systemConfiguration/saveOrUpdatePosPostingAccount",
-    async (
-        {
-            key,
-            account,
-        }: {
-            key: "sales" | "cash" | "upi";
-            account: any;
-        },
-        { dispatch, getState, rejectWithValue }
-    ) => {
-        try {
-            if (!POS_POSTING_KEYS.includes(key)) {
-                return rejectWithValue({
-                    message: "Invalid POS posting account type",
-                    status: 400,
-                });
-            }
-
-            if (!account?.accountCode) {
-                return rejectWithValue({
-                    message: "Please select a valid account",
-                    status: 400,
-                });
-            }
-
-            const rootState: any = getState();
-            const current = rootState?.systemConfiguration?.posPosting || null;
-
-            let result: any;
-            let mode: "save" | "update";
-
-            if (!current) {
-                mode = "save";
-                result = await dispatch(
-                    savePosPosting({
-                        payload: {
-                            [key]: account,
-                        },
-                    }) as any
-                ).unwrap();
-            } else {
-                const commonId = current?.commonId;
-
-                if (!commonId) {
+                if (
+                    failedResponse
+                ) {
                     return rejectWithValue({
-                        message: "commonId missing in saved POS configuration",
+                        message:
+                            failedResponse
+                                ?.data
+                                ?.message ||
+                            "Failed to load POS account dropdowns",
+
+                        status:
+                            failedResponse
+                                ?.status,
+                    });
+                }
+
+                return {
+                    sales:
+                        extractAccountItems(
+                            salesRes
+                                ?.data
+                        ),
+
+                    cash:
+                        extractAccountItems(
+                            cashRes
+                                ?.data
+                        ),
+
+                    bank:
+                        extractAccountItems(
+                            bankRes
+                                ?.data
+                        ),
+                };
+            } catch (err: any) {
+                return rejectWithValue({
+                    message:
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        err?.message ||
+                        "Failed to load POS account dropdowns",
+
+                    status:
+                        err?.response
+                            ?.status,
+                });
+            }
+        }
+    );
+
+export const savePosPosting =
+    createAsyncThunk(
+        "systemConfiguration/savePosPosting",
+
+        async (
+            {
+                payload,
+            }: {
+                payload: any;
+            },
+
+            {
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const res =
+                    await professionalAxios.post(
+                        `${POS_POSTING_API}/save`,
+                        payload
+                    );
+
+                if (
+                    res?.data
+                        ?.success === false
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res?.data
+                                ?.message ||
+                            "Failed to save POS posting",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                return {
+                    message:
+                        res?.data
+                            ?.message ||
+                        "POS posting saved successfully",
+
+                    data:
+                        res?.data
+                            ?.data ||
+                        res?.data,
+                };
+            } catch (err: any) {
+                return rejectWithValue({
+                    message:
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        err?.message ||
+                        "Failed to save POS posting",
+
+                    status:
+                        err?.response
+                            ?.status,
+                });
+            }
+        }
+    );
+
+export const updatePosPosting =
+    createAsyncThunk(
+        "systemConfiguration/updatePosPosting",
+
+        async (
+            {
+                commonId,
+                payload,
+            }: {
+                commonId: string;
+                payload: any;
+            },
+
+            {
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                const safeCommonId =
+                    encodeURIComponent(
+                        String(
+                            commonId ||
+                            ""
+                        ).trim()
+                    );
+
+                if (!safeCommonId) {
+                    return rejectWithValue({
+                        message:
+                            "commonId is required to update POS posting",
+
                         status: 400,
                     });
                 }
 
-                mode = "update";
-                result = await dispatch(
-                    updatePosPosting({
-                        commonId,
-                        payload: {
-                            ...current,
-                            [key]: account,
-                        },
-                    }) as any
-                ).unwrap();
+                const res =
+                    await professionalAxios.put(
+                        `${POS_POSTING_API}/update/${safeCommonId}`,
+                        payload
+                    );
+
+                if (
+                    res?.data
+                        ?.success === false
+                ) {
+                    return rejectWithValue({
+                        message:
+                            res?.data
+                                ?.message ||
+                            "Failed to update POS posting",
+
+                        status:
+                            res?.status,
+                    });
+                }
+
+                return {
+                    message:
+                        res?.data
+                            ?.message ||
+                        "POS posting updated successfully",
+
+                    data:
+                        res?.data
+                            ?.data ||
+                        res?.data,
+                };
+            } catch (err: any) {
+                return rejectWithValue({
+                    message:
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        err?.message ||
+                        "Failed to update POS posting",
+
+                    status:
+                        err?.response
+                            ?.status,
+                });
             }
-
-            const refreshed: any = await dispatch(
-                getAllPosPostings({ offset: 0, limit: 100 }) as any
-            ).unwrap();
-
-            return {
-                mode,
-                key,
-                records: refreshed?.records || [],
-                message:
-                    result?.message ||
-                    (mode === "save"
-                        ? "POS posting saved successfully"
-                        : "POS posting updated successfully"),
-            };
-        } catch (err: any) {
-            return rejectWithValue({
-                message:
-                    err?.message ||
-                    err?.response?.data?.message ||
-                    "Failed to save POS posting",
-                status: err?.status || err?.response?.status,
-            });
         }
-    }
-);
+    );
+
+export const saveOrUpdatePosPostingAccount =
+    createAsyncThunk(
+        "systemConfiguration/saveOrUpdatePosPostingAccount",
+
+        async (
+            {
+                key,
+                account,
+            }: {
+                key:
+                | "sales"
+                | "cash"
+                | "upi";
+
+                account: any;
+            },
+
+            {
+                dispatch,
+                getState,
+                rejectWithValue,
+            }
+        ) => {
+            try {
+                if (
+                    !POS_POSTING_KEYS.includes(
+                        key
+                    )
+                ) {
+                    return rejectWithValue({
+                        message:
+                            "Invalid POS posting account type",
+
+                        status: 400,
+                    });
+                }
+
+                if (
+                    !account
+                        ?.accountCode
+                ) {
+                    return rejectWithValue({
+                        message:
+                            "Please select a valid account",
+
+                        status: 400,
+                    });
+                }
+
+                const rootState: any =
+                    getState();
+
+                const current =
+                    rootState
+                        ?.systemConfiguration
+                        ?.posPosting ||
+                    null;
+
+                let result: any;
+
+                let mode:
+                    | "save"
+                    | "update";
+
+                if (!current) {
+                    mode = "save";
+
+                    result =
+                        await dispatch(
+                            savePosPosting(
+                                {
+                                    payload: {
+                                        [key]:
+                                            account,
+                                    },
+                                }
+                            ) as any
+                        ).unwrap();
+                } else {
+                    const commonId =
+                        current
+                            ?.commonId;
+
+                    if (
+                        !commonId
+                    ) {
+                        return rejectWithValue({
+                            message:
+                                "commonId missing in saved POS configuration",
+
+                            status: 400,
+                        });
+                    }
+
+                    mode = "update";
+
+                    result =
+                        await dispatch(
+                            updatePosPosting(
+                                {
+                                    commonId,
+
+                                    payload: {
+                                        ...current,
+
+                                        [key]:
+                                            account,
+                                    },
+                                }
+                            ) as any
+                        ).unwrap();
+                }
+
+                const refreshed: any =
+                    await dispatch(
+                        getAllPosPostings(
+                            {
+                                offset: 0,
+                                limit: 100,
+                            }
+                        ) as any
+                    ).unwrap();
+
+                return {
+                    mode,
+                    key,
+
+                    records:
+                        refreshed
+                            ?.records ||
+                        [],
+
+                    message:
+                        result?.message ||
+                        (
+                            mode ===
+                                "save"
+                                ? "POS posting saved successfully"
+                                : "POS posting updated successfully"
+                        ),
+                };
+            } catch (err: any) {
+                return rejectWithValue({
+                    message:
+                        err?.message ||
+                        err?.response
+                            ?.data
+                            ?.message ||
+                        "Failed to save POS posting",
+
+                    status:
+                        err?.status ||
+                        err?.response
+                            ?.status,
+                });
+            }
+        }
+    );
 
 /* ===================================================
    SLICE
 =================================================== */
 
-const systemConfigurationSlice = createSlice({
-    name: "systemConfiguration",
+const systemConfigurationSlice =
+    createSlice({
+        name:
+            "systemConfiguration",
 
-    initialState: {
-        configuration: getEmptySystemConfiguration(),
-        configurations: [],
+        initialState: {
+            configuration:
+                getEmptySystemConfiguration(),
 
-        pagination: {
-            offset: 0,
-            limit: 100000,
-            totalDocs: 0,
-            totalPages: 1,
-            currentPage: 1,
-            hasNextPage: false,
-            hasPrevPage: false,
-        },
+            configurations: [],
 
-        loading: false,
-        listLoading: false,
-        detailLoading: false,
-        saveLoading: false,
-        updateLoading: false,
-        whatsappVerifyLoading: false,
+            pagination: {
+                offset: 0,
+                limit: 100000,
+                totalDocs: 0,
+                totalPages: 1,
+                currentPage: 1,
+                hasNextPage: false,
+                hasPrevPage: false,
+            },
 
-        whatsappVerified: false,
-        whatsappMetaCredentials: null,
+            loading: false,
+            listLoading: false,
+            detailLoading: false,
+            saveLoading: false,
+            updateLoading: false,
+            whatsappVerifyLoading: false,
 
-        posPosting: null,
-        posPostingRecords: [],
-        posPostingPagination: {
-            offset: 0,
-            limit: 100,
-            totalDocs: 0,
-        },
-        posAccountOptions: {
-            sales: [],
-            cash: [],
-            bank: [],
-        },
-        posPostingLoading: false,
-        posAccountsLoading: false,
-        posPostingSaveLoading: false,
-        posPostingSavingKey: "",
-        posPostingError: null,
-        posPostingSuccessMessage: "",
+            whatsappVerified: false,
+            whatsappMetaCredentials: null,
 
-        error: null,
-        successMessage: "",
-    },
+            posPosting: null,
+            posPostingRecords: [],
 
-    reducers: {
-        clearSystemConfigurationState: (state) => {
-            state.error = null;
-            state.successMessage = "";
-            state.loading = false;
-            state.listLoading = false;
-            state.detailLoading = false;
-            state.saveLoading = false;
-            state.updateLoading = false;
-            state.whatsappVerifyLoading = false;
-            state.posPostingLoading = false;
-            state.posAccountsLoading = false;
-            state.posPostingSaveLoading = false;
-            state.posPostingSavingKey = "";
-            state.posPostingError = null;
-            state.posPostingSuccessMessage = "";
-        },
-
-        clearPosPostingError: (state) => {
-            state.posPostingError = null;
-        },
-
-        clearPosPostingSuccess: (state) => {
-            state.posPostingSuccessMessage = "";
-        },
-
-        resetPosPostingState: (state) => {
-            state.posPosting = null;
-            state.posPostingRecords = [];
-            state.posPostingPagination = {
+            posPostingPagination: {
                 offset: 0,
                 limit: 100,
                 totalDocs: 0,
-            };
-            state.posAccountOptions = {
+            },
+
+            posAccountOptions: {
                 sales: [],
                 cash: [],
                 bank: [],
-            };
-            state.posPostingLoading = false;
-            state.posAccountsLoading = false;
-            state.posPostingSaveLoading = false;
-            state.posPostingSavingKey = "";
-            state.posPostingError = null;
-            state.posPostingSuccessMessage = "";
+            },
+
+            posPostingLoading: false,
+            posAccountsLoading: false,
+            posPostingSaveLoading: false,
+            posPostingSavingKey: "",
+            posPostingError: null,
+            posPostingSuccessMessage: "",
+
+            error: null,
+            successMessage: "",
         },
 
-        clearSystemConfigurationError: (state) => {
-            state.error = null;
-        },
+        reducers: {
+            clearSystemConfigurationState:
+                (state) => {
+                    state.error =
+                        null;
 
-        clearSystemConfigurationSuccess: (state) => {
-            state.successMessage = "";
-        },
+                    state.successMessage =
+                        "";
 
-        resetSystemConfiguration: (state) => {
-            state.configuration = getEmptySystemConfiguration();
-            state.error = null;
-            state.successMessage = "";
-        },
+                    state.loading =
+                        false;
 
-        setSystemConfigurationLocal: (state, action: any) => {
-            state.configuration = action.payload;
-        },
+                    state.listLoading =
+                        false;
 
-        updateSystemConfigurationLocalField: (state, action: any) => {
-            const { key, value } = action.payload || {};
-            state.configuration = {
-                ...state.configuration,
-                [key]: value,
-            };
-        },
+                    state.detailLoading =
+                        false;
 
-        updateInventoryConfigurationLocalField: (state, action: any) => {
-            const { key, value } = action.payload || {};
+                    state.saveLoading =
+                        false;
 
-            state.configuration.inventoryConfiguration = {
-                ...state.configuration.inventoryConfiguration,
-                [key]: value,
-            };
-        },
+                    state.updateLoading =
+                        false;
 
-        updateFinanceConfigurationLocalField: (state, action: any) => {
-            const { key, value } = action.payload || {};
+                    state.whatsappVerifyLoading =
+                        false;
 
-            state.configuration.financeConfiguration = {
-                ...state.configuration.financeConfiguration,
-                [key]: value,
-            };
-        },
+                    state.posPostingLoading =
+                        false;
 
-        updateSystemConfigurationNestedField: (state, action: any) => {
-            const { section, key, value } = action.payload || {};
+                    state.posAccountsLoading =
+                        false;
 
-            state.configuration.systemConfiguration = {
-                ...state.configuration.systemConfiguration,
-                [section]: {
-                    // @ts-ignore
-                    ...state.configuration.systemConfiguration?.[section],
-                    [key]: value,
+                    state.posPostingSaveLoading =
+                        false;
+
+                    state.posPostingSavingKey =
+                        "";
+
+                    state.posPostingError =
+                        null;
+
+                    state.posPostingSuccessMessage =
+                        "";
                 },
-            };
-        },
 
-        updateWhatsAppModuleLocalToggle: (state, action: any) => {
-            const { moduleKey, enabled } = action.payload || {};
-
-            const wa =
-                state.configuration.systemConfiguration?.whatsAppConfiguration ||
-                {};
-
-            const moduleConfiguration = {
-                ...(wa.moduleConfiguration || {}),
-                [moduleKey]: {
-                    enabled: !!enabled,
+            clearPosPostingError:
+                (state) => {
+                    state.posPostingError =
+                        null;
                 },
-            };
 
-            state.configuration.systemConfiguration.whatsAppConfiguration = {
-                ...wa,
-                moduleConfiguration,
-            };
+            clearPosPostingSuccess:
+                (state) => {
+                    state.posPostingSuccessMessage =
+                        "";
+                },
+
+            resetPosPostingState:
+                (state) => {
+                    state.posPosting =
+                        null;
+
+                    state.posPostingRecords =
+                        [];
+
+                    state.posPostingPagination =
+                    {
+                        offset: 0,
+                        limit: 100,
+                        totalDocs: 0,
+                    };
+
+                    state.posAccountOptions =
+                    {
+                        sales: [],
+                        cash: [],
+                        bank: [],
+                    };
+
+                    state.posPostingLoading =
+                        false;
+
+                    state.posAccountsLoading =
+                        false;
+
+                    state.posPostingSaveLoading =
+                        false;
+
+                    state.posPostingSavingKey =
+                        "";
+
+                    state.posPostingError =
+                        null;
+
+                    state.posPostingSuccessMessage =
+                        "";
+                },
+
+            clearSystemConfigurationError:
+                (state) => {
+                    state.error =
+                        null;
+                },
+
+            clearSystemConfigurationSuccess:
+                (state) => {
+                    state.successMessage =
+                        "";
+                },
+
+            resetSystemConfiguration:
+                (state) => {
+                    state.configuration =
+                        getEmptySystemConfiguration();
+
+                    state.error =
+                        null;
+
+                    state.successMessage =
+                        "";
+                },
+
+            setSystemConfigurationLocal:
+                (
+                    state,
+                    action: any
+                ) => {
+                    state.configuration =
+                        action.payload;
+                },
+
+            updateSystemConfigurationLocalField:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const {
+                        key,
+                        value,
+                    } =
+                        action.payload ||
+                        {};
+
+                    state.configuration =
+                    {
+                        ...state.configuration,
+
+                        [key]:
+                            value,
+                    };
+                },
+
+            updateInventoryConfigurationLocalField:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const {
+                        key,
+                        value,
+                    } =
+                        action.payload ||
+                        {};
+
+                    state.configuration.inventoryConfiguration =
+                    {
+                        ...state
+                            .configuration
+                            .inventoryConfiguration,
+
+                        [key]:
+                            value,
+                    };
+                },
+
+            updateFinanceConfigurationLocalField:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const {
+                        key,
+                        value,
+                    } =
+                        action.payload ||
+                        {};
+
+                    state.configuration.financeConfiguration =
+                    {
+                        ...state
+                            .configuration
+                            .financeConfiguration,
+
+                        [key]:
+                            value,
+                    };
+                },
+
+            updateSystemConfigurationNestedField:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const {
+                        section,
+                        key,
+                        value,
+                    } =
+                        action.payload ||
+                        {};
+
+                    state.configuration.systemConfiguration =
+                    {
+                        ...state
+                            .configuration
+                            .systemConfiguration,
+
+                        [section]:
+                        {
+                            // @ts-ignore
+                            ...state
+                                .configuration
+                                .systemConfiguration?.[
+                            section
+                            ],
+
+                            [key]:
+                                value,
+                        },
+                    };
+                },
+
+            updateWhatsAppModuleLocalToggle:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const {
+                        moduleKey,
+                        enabled,
+                    } =
+                        action.payload ||
+                        {};
+
+                    const wa =
+                        state
+                            .configuration
+                            .systemConfiguration
+                            ?.whatsAppConfiguration ||
+                        {};
+
+                    const moduleConfiguration =
+                    {
+                        ...(wa.moduleConfiguration ||
+                            {}),
+
+                        [moduleKey]:
+                        {
+                            enabled:
+                                !!enabled,
+                        },
+                    };
+
+                    state.configuration.systemConfiguration.whatsAppConfiguration =
+                    {
+                        ...wa,
+
+                        moduleConfiguration,
+                    };
+                },
+
+            setWhatsAppModuleEnabledLocal:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const enabled =
+                        !!action.payload;
+
+                    const wa =
+                        state
+                            .configuration
+                            .systemConfiguration
+                            ?.whatsAppConfiguration ||
+                        {};
+
+                    state.configuration.systemConfiguration.whatsAppConfiguration =
+                    {
+                        ...wa,
+
+                        enableWhatsAppModule:
+                            enabled,
+                    };
+                },
+
+            enableWhatsAppWithDefaultModulesLocal:
+                (state) => {
+                    const wa =
+                        state
+                            .configuration
+                            .systemConfiguration
+                            ?.whatsAppConfiguration ||
+                        {};
+
+                    const oldMods =
+                        wa.moduleConfiguration ||
+                        {};
+
+                    const noneOn =
+                        WHATSAPP_MODULE_ORDER.every(
+                            (key) =>
+                                !toBool(
+                                    oldMods?.[
+                                        key
+                                    ]
+                                        ?.enabled
+                                )
+                        );
+
+                    const mergedMods: any =
+                        createModuleConfigurationTemplate(
+                            false
+                        );
+
+                    for (
+                        const key of
+                        WHATSAPP_MODULE_ORDER
+                    ) {
+                        mergedMods[
+                            key
+                        ] = {
+                            enabled:
+                                toBool(
+                                    oldMods?.[
+                                        key
+                                    ]
+                                        ?.enabled
+                                ),
+                        };
+                    }
+
+                    state.configuration.systemConfiguration.whatsAppConfiguration =
+                    {
+                        ...wa,
+
+                        provider:
+                            String(
+                                wa?.provider ||
+                                "META"
+                            )
+                                .trim()
+                                .toUpperCase() ||
+                            "META",
+
+                        defaultLanguage:
+                            String(
+                                wa?.defaultLanguage ||
+                                "en_US"
+                            ).trim() ||
+                            "en_US",
+
+                        enableWhatsAppModule:
+                            true,
+
+                        moduleConfiguration:
+                            noneOn
+                                ? createModuleConfigurationTemplate(
+                                    true
+                                )
+                                : mergedMods,
+                    };
+                },
+
+            clearWhatsAppVerification:
+                (state) => {
+                    state.whatsappVerified =
+                        false;
+
+                    state.whatsappMetaCredentials =
+                        null;
+
+                    state.whatsappVerifyLoading =
+                        false;
+                },
         },
 
-        setWhatsAppModuleEnabledLocal: (state, action: any) => {
-            const enabled = !!action.payload;
+        extraReducers:
+            (builder) => {
+                builder
+                    .addCase(
+                        getAllSystemConfigurations.pending,
+                        (
+                            state
+                        ) => {
+                            state.listLoading =
+                                true;
 
-            const wa =
-                state.configuration.systemConfiguration?.whatsAppConfiguration ||
-                {};
+                            state.error =
+                                null;
+                        }
+                    )
 
-            state.configuration.systemConfiguration.whatsAppConfiguration = {
-                ...wa,
-                enableWhatsAppModule: enabled,
-            };
-        },
+                    .addCase(
+                        getAllSystemConfigurations.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.listLoading =
+                                false;
 
-        enableWhatsAppWithDefaultModulesLocal: (state) => {
-            const wa =
-                state.configuration.systemConfiguration?.whatsAppConfiguration ||
-                {};
+                            const data =
+                                action.payload;
 
-            const oldMods = wa.moduleConfiguration || {};
+                            state.configurations =
+                                extractConfigurationRecords(
+                                    data
+                                );
 
-            const noneOn = WHATSAPP_MODULE_ORDER.every(
-                (key) => !toBool(oldMods?.[key]?.enabled)
-            );
+                            state.pagination =
+                                extractPagination(
+                                    data,
+                                    state.pagination
+                                );
+                        }
+                    )
 
-            const mergedMods: any = createModuleConfigurationTemplate(false);
+                    .addCase(
+                        getAllSystemConfigurations.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.listLoading =
+                                false;
 
-            for (const key of WHATSAPP_MODULE_ORDER) {
-                mergedMods[key] = {
-                    enabled: toBool(oldMods?.[key]?.enabled),
-                };
-            }
+                            state.error =
+                                action.payload
+                                    ?.message;
 
-            state.configuration.systemConfiguration.whatsAppConfiguration = {
-                ...wa,
-                provider: String(wa?.provider || "META").trim().toUpperCase() || "META",
-                defaultLanguage: String(wa?.defaultLanguage || "en_US").trim() || "en_US",
-                enableWhatsAppModule: true,
-                moduleConfiguration: noneOn ? createModuleConfigurationTemplate(true) : mergedMods,
-            };
-        },
+                            state.configurations =
+                                [];
+                        }
+                    );
 
-        clearWhatsAppVerification: (state) => {
-            state.whatsappVerified = false;
-            state.whatsappMetaCredentials = null;
-            state.whatsappVerifyLoading = false;
-        },
-    },
+                builder
+                    .addCase(
+                        getLatestSystemConfiguration.pending,
+                        (
+                            state
+                        ) => {
+                            state.loading =
+                                true;
 
-    extraReducers: (builder) => {
-        builder
-            .addCase(getAllSystemConfigurations.pending, (state) => {
-                state.listLoading = true;
-                state.error = null;
-            })
-            .addCase(getAllSystemConfigurations.fulfilled, (state, action: any) => {
-                state.listLoading = false;
+                            state.error =
+                                null;
+                        }
+                    )
 
-                const data = action.payload;
+                    .addCase(
+                        getLatestSystemConfiguration.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.loading =
+                                false;
 
-                state.configurations = extractConfigurationRecords(data);
-                state.pagination = extractPagination(data, state.pagination);
-            })
-            .addCase(getAllSystemConfigurations.rejected, (state, action: any) => {
-                state.listLoading = false;
-                state.error = action.payload?.message;
-                state.configurations = [];
-            });
+                            state.configuration =
+                                action.payload ||
+                                getEmptySystemConfiguration();
+                        }
+                    )
 
-        builder
-            .addCase(getLatestSystemConfiguration.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(getLatestSystemConfiguration.fulfilled, (state, action: any) => {
-                state.loading = false;
-                state.configuration =
-                    action.payload || getEmptySystemConfiguration();
-            })
-            .addCase(getLatestSystemConfiguration.rejected, (state, action: any) => {
-                state.loading = false;
-                state.error = action.payload?.message;
-                state.configuration = getEmptySystemConfiguration();
-            });
+                    .addCase(
+                        getLatestSystemConfiguration.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.loading =
+                                false;
 
-        builder
-            .addCase(getSystemConfigurationByCode.pending, (state) => {
-                state.detailLoading = true;
-                state.error = null;
-            })
-            .addCase(getSystemConfigurationByCode.fulfilled, (state, action: any) => {
-                state.detailLoading = false;
-                state.configuration =
-                    action.payload || getEmptySystemConfiguration();
-            })
-            .addCase(getSystemConfigurationByCode.rejected, (state, action: any) => {
-                state.detailLoading = false;
-                state.error = action.payload?.message;
-                state.configuration = getEmptySystemConfiguration();
-            });
+                            state.error =
+                                action.payload
+                                    ?.message;
 
-        builder
-            .addCase(saveSystemConfiguration.pending, (state) => {
-                state.saveLoading = true;
-                state.error = null;
-                state.successMessage = "";
-            })
-            .addCase(saveSystemConfiguration.fulfilled, (state, action: any) => {
-                state.saveLoading = false;
-                state.successMessage =
-                    action.payload?.message || "Configuration saved successfully";
-            })
-            .addCase(saveSystemConfiguration.rejected, (state, action: any) => {
-                state.saveLoading = false;
-                state.error = action.payload?.message;
-            });
+                            state.configuration =
+                                getEmptySystemConfiguration();
+                        }
+                    );
 
-        builder
-            .addCase(updateSystemConfiguration.pending, (state) => {
-                state.updateLoading = true;
-                state.error = null;
-                state.successMessage = "";
-            })
-            .addCase(updateSystemConfiguration.fulfilled, (state, action: any) => {
-                state.updateLoading = false;
-                state.successMessage =
-                    action.payload?.message ||
-                    "Configuration updated successfully";
-            })
-            .addCase(updateSystemConfiguration.rejected, (state, action: any) => {
-                state.updateLoading = false;
-                state.error = action.payload?.message;
-            });
+                builder
+                    .addCase(
+                        getSystemConfigurationByCode.pending,
+                        (
+                            state
+                        ) => {
+                            state.detailLoading =
+                                true;
 
-        builder
-            .addCase(saveOrUpdateSystemConfiguration.pending, (state) => {
-                state.saveLoading = true;
-                state.error = null;
-                state.successMessage = "";
-            })
-            .addCase(saveOrUpdateSystemConfiguration.fulfilled, (state, action: any) => {
-                state.saveLoading = false;
-                state.configuration =
-                    action.payload?.configuration ||
-                    state.configuration ||
-                    getEmptySystemConfiguration();
-                state.successMessage =
-                    action.payload?.message ||
-                    "Configuration saved successfully";
-            })
-            .addCase(saveOrUpdateSystemConfiguration.rejected, (state, action: any) => {
-                state.saveLoading = false;
-                state.error = action.payload?.message;
-            });
+                            state.error =
+                                null;
+                        }
+                    )
 
-        builder
-            .addCase(verifyWhatsAppMetaCredentials.pending, (state) => {
-                state.whatsappVerifyLoading = true;
-                state.whatsappVerified = false;
-                state.whatsappMetaCredentials = null;
-                state.error = null;
-            })
-            .addCase(verifyWhatsAppMetaCredentials.fulfilled, (state, action: any) => {
-                state.whatsappVerifyLoading = false;
-                state.whatsappVerified = true;
-                state.whatsappMetaCredentials = action.payload?.data || null;
-            })
-            .addCase(verifyWhatsAppMetaCredentials.rejected, (state, action: any) => {
-                state.whatsappVerifyLoading = false;
-                state.whatsappVerified = false;
-                state.whatsappMetaCredentials = null;
-                state.error = action.payload?.message;
-            });
+                    .addCase(
+                        getSystemConfigurationByCode.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.detailLoading =
+                                false;
 
-        builder
-            .addCase(getAllPosPostings.pending, (state) => {
-                state.posPostingLoading = true;
-                state.posPostingError = null;
-            })
-            .addCase(getAllPosPostings.fulfilled, (state, action: any) => {
-                const records = action.payload?.records || [];
+                            state.configuration =
+                                action.payload ||
+                                getEmptySystemConfiguration();
+                        }
+                    )
 
-                state.posPostingLoading = false;
-                state.posPostingRecords = records;
-                state.posPosting = records[0] || null;
-                state.posPostingPagination =
-                    action.payload?.pagination || state.posPostingPagination;
-            })
-            .addCase(getAllPosPostings.rejected, (state, action: any) => {
-                state.posPostingLoading = false;
-                state.posPosting = null;
-                state.posPostingRecords = [];
-                state.posPostingError = action.payload?.message;
-            });
+                    .addCase(
+                        getSystemConfigurationByCode.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.detailLoading =
+                                false;
 
-        builder
-            .addCase(getPosPostingAccountOptions.pending, (state) => {
-                state.posAccountsLoading = true;
-                state.posPostingError = null;
-            })
-            .addCase(getPosPostingAccountOptions.fulfilled, (state, action: any) => {
-                state.posAccountsLoading = false;
-                state.posAccountOptions = {
-                    sales: action.payload?.sales || [],
-                    cash: action.payload?.cash || [],
-                    bank: action.payload?.bank || [],
-                };
-            })
-            .addCase(getPosPostingAccountOptions.rejected, (state, action: any) => {
-                state.posAccountsLoading = false;
-                state.posAccountOptions = {
-                    sales: [],
-                    cash: [],
-                    bank: [],
-                };
-                state.posPostingError = action.payload?.message;
-            });
+                            state.error =
+                                action.payload
+                                    ?.message;
 
-        builder
-            .addCase(saveOrUpdatePosPostingAccount.pending, (state, action: any) => {
-                state.posPostingSaveLoading = true;
-                state.posPostingSavingKey = action.meta?.arg?.key || "";
-                state.posPostingError = null;
-                state.posPostingSuccessMessage = "";
-            })
-            .addCase(saveOrUpdatePosPostingAccount.fulfilled, (state, action: any) => {
-                const records = action.payload?.records || [];
+                            state.configuration =
+                                getEmptySystemConfiguration();
+                        }
+                    );
 
-                state.posPostingSaveLoading = false;
-                state.posPostingSavingKey = "";
-                state.posPostingRecords = records;
-                state.posPosting = records[0] || null;
-                state.posPostingSuccessMessage =
-                    action.payload?.message || "POS posting saved successfully";
-            })
-            .addCase(saveOrUpdatePosPostingAccount.rejected, (state, action: any) => {
-                state.posPostingSaveLoading = false;
-                state.posPostingSavingKey = "";
-                state.posPostingError = action.payload?.message;
-            });
-    },
-});
+                builder
+                    .addCase(
+                        saveSystemConfiguration.pending,
+                        (
+                            state
+                        ) => {
+                            state.saveLoading =
+                                true;
+
+                            state.error =
+                                null;
+
+                            state.successMessage =
+                                "";
+                        }
+                    )
+
+                    .addCase(
+                        saveSystemConfiguration.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.saveLoading =
+                                false;
+
+                            state.successMessage =
+                                action.payload
+                                    ?.message ||
+                                "Configuration saved successfully";
+                        }
+                    )
+
+                    .addCase(
+                        saveSystemConfiguration.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.saveLoading =
+                                false;
+
+                            state.error =
+                                action.payload
+                                    ?.message;
+                        }
+                    );
+
+                builder
+                    .addCase(
+                        updateSystemConfiguration.pending,
+                        (
+                            state
+                        ) => {
+                            state.updateLoading =
+                                true;
+
+                            state.error =
+                                null;
+
+                            state.successMessage =
+                                "";
+                        }
+                    )
+
+                    .addCase(
+                        updateSystemConfiguration.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.updateLoading =
+                                false;
+
+                            state.successMessage =
+                                action.payload
+                                    ?.message ||
+                                "Configuration updated successfully";
+                        }
+                    )
+
+                    .addCase(
+                        updateSystemConfiguration.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.updateLoading =
+                                false;
+
+                            state.error =
+                                action.payload
+                                    ?.message;
+                        }
+                    );
+
+                builder
+                    .addCase(
+                        saveOrUpdateSystemConfiguration.pending,
+                        (
+                            state
+                        ) => {
+                            state.saveLoading =
+                                true;
+
+                            state.error =
+                                null;
+
+                            state.successMessage =
+                                "";
+                        }
+                    )
+
+                    .addCase(
+                        saveOrUpdateSystemConfiguration.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.saveLoading =
+                                false;
+
+                            state.configuration =
+                                action.payload
+                                    ?.configuration ||
+                                state.configuration ||
+                                getEmptySystemConfiguration();
+
+                            state.successMessage =
+                                action.payload
+                                    ?.message ||
+                                "Configuration saved successfully";
+                        }
+                    )
+
+                    .addCase(
+                        saveOrUpdateSystemConfiguration.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.saveLoading =
+                                false;
+
+                            state.error =
+                                action.payload
+                                    ?.message;
+                        }
+                    );
+
+                builder
+                    .addCase(
+                        verifyWhatsAppMetaCredentials.pending,
+                        (
+                            state
+                        ) => {
+                            state.whatsappVerifyLoading =
+                                true;
+
+                            state.whatsappVerified =
+                                false;
+
+                            state.whatsappMetaCredentials =
+                                null;
+
+                            state.error =
+                                null;
+                        }
+                    )
+
+                    .addCase(
+                        verifyWhatsAppMetaCredentials.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.whatsappVerifyLoading =
+                                false;
+
+                            state.whatsappVerified =
+                                true;
+
+                            state.whatsappMetaCredentials =
+                                action.payload
+                                    ?.data ||
+                                null;
+                        }
+                    )
+
+                    .addCase(
+                        verifyWhatsAppMetaCredentials.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.whatsappVerifyLoading =
+                                false;
+
+                            state.whatsappVerified =
+                                false;
+
+                            state.whatsappMetaCredentials =
+                                null;
+
+                            state.error =
+                                action.payload
+                                    ?.message;
+                        }
+                    );
+
+                builder
+                    .addCase(
+                        getAllPosPostings.pending,
+                        (
+                            state
+                        ) => {
+                            state.posPostingLoading =
+                                true;
+
+                            state.posPostingError =
+                                null;
+                        }
+                    )
+
+                    .addCase(
+                        getAllPosPostings.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            const records =
+                                action.payload
+                                    ?.records ||
+                                [];
+
+                            state.posPostingLoading =
+                                false;
+
+                            state.posPostingRecords =
+                                records;
+
+                            state.posPosting =
+                                records[0] ||
+                                null;
+
+                            state.posPostingPagination =
+                                action.payload
+                                    ?.pagination ||
+                                state.posPostingPagination;
+                        }
+                    )
+
+                    .addCase(
+                        getAllPosPostings.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.posPostingLoading =
+                                false;
+
+                            state.posPosting =
+                                null;
+
+                            state.posPostingRecords =
+                                [];
+
+                            state.posPostingError =
+                                action.payload
+                                    ?.message;
+                        }
+                    );
+
+                builder
+                    .addCase(
+                        getPosPostingAccountOptions.pending,
+                        (
+                            state
+                        ) => {
+                            state.posAccountsLoading =
+                                true;
+
+                            state.posPostingError =
+                                null;
+                        }
+                    )
+
+                    .addCase(
+                        getPosPostingAccountOptions.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.posAccountsLoading =
+                                false;
+
+                            state.posAccountOptions =
+                            {
+                                sales:
+                                    action.payload
+                                        ?.sales ||
+                                    [],
+
+                                cash:
+                                    action.payload
+                                        ?.cash ||
+                                    [],
+
+                                bank:
+                                    action.payload
+                                        ?.bank ||
+                                    [],
+                            };
+                        }
+                    )
+
+                    .addCase(
+                        getPosPostingAccountOptions.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.posAccountsLoading =
+                                false;
+
+                            state.posAccountOptions =
+                            {
+                                sales: [],
+                                cash: [],
+                                bank: [],
+                            };
+
+                            state.posPostingError =
+                                action.payload
+                                    ?.message;
+                        }
+                    );
+
+                builder
+                    .addCase(
+                        saveOrUpdatePosPostingAccount.pending,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.posPostingSaveLoading =
+                                true;
+
+                            state.posPostingSavingKey =
+                                action.meta
+                                    ?.arg
+                                    ?.key ||
+                                "";
+
+                            state.posPostingError =
+                                null;
+
+                            state.posPostingSuccessMessage =
+                                "";
+                        }
+                    )
+
+                    .addCase(
+                        saveOrUpdatePosPostingAccount.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            const records =
+                                action.payload
+                                    ?.records ||
+                                [];
+
+                            state.posPostingSaveLoading =
+                                false;
+
+                            state.posPostingSavingKey =
+                                "";
+
+                            state.posPostingRecords =
+                                records;
+
+                            state.posPosting =
+                                records[0] ||
+                                null;
+
+                            state.posPostingSuccessMessage =
+                                action.payload
+                                    ?.message ||
+                                "POS posting saved successfully";
+                        }
+                    )
+
+                    .addCase(
+                        saveOrUpdatePosPostingAccount.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.posPostingSaveLoading =
+                                false;
+
+                            state.posPostingSavingKey =
+                                "";
+
+                            state.posPostingError =
+                                action.payload
+                                    ?.message;
+                        }
+                    );
+            },
+    });
 
 export const {
     clearSystemConfigurationState,

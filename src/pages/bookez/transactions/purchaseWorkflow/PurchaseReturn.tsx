@@ -103,6 +103,8 @@ const emptyProductRow = {
 
     netAmount: 0,
     netTotal: 0,
+
+    customMasters: {},
 };
 
 const getDefaultForm = () => ({
@@ -122,6 +124,8 @@ const getDefaultForm = () => ({
     pRetStatusHistory: [],
 
     isAutoPost: false,
+
+    customMasters: {},
 
     products: [{ ...emptyProductRow, id: Date.now() }],
 
@@ -158,6 +162,39 @@ const getRecords = (res: any) => {
                                     ? res
                                     : [];
 };
+
+const isTrueValue = (value: any) =>
+    value === true ||
+    String(value ?? "").trim().toLowerCase() === "true";
+
+const getDynamicFieldType = (field: any) =>
+    String(
+        field?.type ||
+        field?.dataSource?.type ||
+        ""
+    )
+        .trim()
+        .toLowerCase()
+        .replace(/\s/g, "");
+
+const isCustomMasterField = (field: any) => {
+    const fieldType = getDynamicFieldType(field);
+
+    return (
+        fieldType === "custommaster" ||
+        fieldType === "customemaster" ||
+        Boolean(field?.customMasterCode)
+    );
+};
+
+const getCustomMasterName = (field: any) =>
+    String(
+        field?.customMasterName ||
+        field?.dataSource?.customMasterName ||
+        field?.label ||
+        field?.key ||
+        ""
+    ).trim();
 
 /* ===================================================
    PURCHASE RETURN
@@ -254,6 +291,145 @@ const PurchaseReturn = () => {
 
     const getOptionByValue = (field: any, selectedValue: any) => {
         return field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
+    };
+
+    const getCustomMasterSelection = (
+        field: any,
+        selectedValue: any,
+        existingValue?: any
+    ) => {
+        if (
+            selectedValue === undefined ||
+            selectedValue === null ||
+            String(selectedValue).trim() === ""
+        ) {
+            if (
+                existingValue &&
+                typeof existingValue === "object" &&
+                existingValue?.code
+            ) {
+                return {
+                    code: String(existingValue.code || ""),
+                    name: String(existingValue.name || ""),
+                };
+            }
+
+            return null;
+        }
+
+        const selectedOption = getOptionByValue(
+            field,
+            selectedValue
+        );
+
+        const raw =
+            selectedOption?.raw || {};
+
+        const nestedData =
+            raw?.data && typeof raw.data === "object"
+                ? raw.data
+                : raw?.dynamicFields &&
+                    typeof raw.dynamicFields === "object"
+                    ? raw.dynamicFields
+                    : raw?.customFields &&
+                        typeof raw.customFields === "object"
+                        ? raw.customFields
+                        : {};
+
+        return {
+            code: String(
+                selectedOption?.value ||
+                raw?.code ||
+                nestedData?.code ||
+                selectedValue ||
+                ""
+            ),
+            name: String(
+                selectedOption?.label ||
+                raw?.name ||
+                nestedData?.name ||
+                existingValue?.name ||
+                ""
+            ),
+        };
+    };
+
+    const buildCustomMastersPayload = (
+        fields: any[],
+        source: any,
+        existingCustomMasters: any = {}
+    ) => {
+        const customMasters: any = {};
+
+        (fields || []).forEach((field: any) => {
+            if (
+                !isCustomMasterField(field) ||
+                isTrueValue(field?.isHidden)
+            ) {
+                return;
+            }
+
+            const customMasterName =
+                getCustomMasterName(field);
+
+            if (!customMasterName) {
+                return;
+            }
+
+            const existingValue =
+                existingCustomMasters?.[customMasterName] ||
+                existingCustomMasters?.[field?.key];
+
+            const selectedValue =
+                source?.[field?.key] ??
+                existingValue?.code ??
+                "";
+
+            const selectedMaster =
+                getCustomMasterSelection(
+                    field,
+                    selectedValue,
+                    existingValue
+                );
+
+            if (!selectedMaster?.code) {
+                return;
+            }
+
+            customMasters[customMasterName] = {
+                code: selectedMaster.code,
+                name: selectedMaster.name,
+            };
+        });
+
+        return customMasters;
+    };
+
+    const getCustomMasterFieldValues = (
+        fields: any[],
+        customMasters: any
+    ) => {
+        const values: any = {};
+
+        (fields || []).forEach((field: any) => {
+            if (!isCustomMasterField(field)) {
+                return;
+            }
+
+            const customMasterName =
+                getCustomMasterName(field);
+
+            const selectedMaster =
+                customMasters?.[customMasterName] ||
+                customMasters?.[field?.key];
+
+            if (selectedMaster?.code) {
+                values[field.key] =
+                    selectedMaster.code;
+            }
+        });
+
+        return values;
     };
 
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
@@ -740,6 +916,12 @@ const PurchaseReturn = () => {
     const buildPurchaseReturnProductRow = (item: any) => {
         const unitCode = item?.unit || item?.uom || "";
 
+        const customMasterValues =
+            getCustomMasterFieldValues(
+                templateFields?.body || [],
+                item?.customMasters || {}
+            );
+
         return calculateRow(
             normalizeRowKeys({
                 id: item?.id || Date.now() + Math.random(),
@@ -810,6 +992,16 @@ const PurchaseReturn = () => {
 
                 netAmount: 0,
                 netTotal: 0,
+
+                customMasters:
+                    item?.customMasters &&
+                        typeof item.customMasters === "object"
+                        ? {
+                            ...item.customMasters,
+                        }
+                        : {},
+
+                ...customMasterValues,
             })
         );
     };
@@ -896,6 +1088,19 @@ const PurchaseReturn = () => {
                 pRetVendorCode: mergedGrn?.grnVendorCode || "",
                 pRetVendorName: mergedGrn?.grnVendorName || "",
 
+                customMasters:
+                    mergedGrn?.customMasters &&
+                        typeof mergedGrn.customMasters === "object"
+                        ? {
+                            ...mergedGrn.customMasters,
+                        }
+                        : {},
+
+                ...getCustomMasterFieldValues(
+                    templateFields?.header || [],
+                    mergedGrn?.customMasters || {}
+                ),
+
                 products,
             });
 
@@ -950,6 +1155,19 @@ const PurchaseReturn = () => {
 
             isAutoPost: record?.isAutoPost || false,
 
+            customMasters:
+                record?.customMasters &&
+                    typeof record.customMasters === "object"
+                    ? {
+                        ...record.customMasters,
+                    }
+                    : {},
+
+            ...getCustomMasterFieldValues(
+                templateFields?.header || [],
+                record?.customMasters || {}
+            ),
+
             products,
 
             grossAmount:
@@ -999,6 +1217,15 @@ const PurchaseReturn = () => {
 
             if (currentField?.mapFields) {
                 updated = applyMappedFields(currentField, value, updated);
+            }
+
+            if (isCustomMasterField(currentField)) {
+                updated.customMasters =
+                    buildCustomMastersPayload(
+                        templateFields?.header || [],
+                        updated,
+                        prev?.customMasters || {}
+                    );
             }
 
             return updated;
@@ -1056,6 +1283,16 @@ const PurchaseReturn = () => {
             if (currentField?.mapFields) {
                 updatedRow = applyMappedFields(currentField, value, updatedRow);
             }
+
+            if (isCustomMasterField(currentField)) {
+                updatedRow.customMasters =
+                    buildCustomMastersPayload(
+                        templateFields?.body || [],
+                        updatedRow,
+                        currentRow?.customMasters || {}
+                    );
+            }
+
             const selectedOption = getOptionByValue(currentField, value);
             if (selectedOption?.raw?._id && !updatedRow.productId) {
                 updatedRow.productId = selectedOption.raw._id;
@@ -1256,6 +1493,13 @@ const PurchaseReturn = () => {
         const products = cleanRows();
         const footer = calculateFooter(products);
 
+        const customMasters =
+            buildCustomMastersPayload(
+                templateFields?.header || [],
+                form,
+                form?.customMasters || {}
+            );
+
         const payload: any = {
             pRetVoucherDate: form.pRetVoucherDate,
 
@@ -1269,8 +1513,21 @@ const PurchaseReturn = () => {
 
             pRetRemark: form.pRetRemark,
 
-            pRetBody: products.map((item: any) =>
-                removeEmptyValues({
+            ...(Object.keys(customMasters).length
+                ? {
+                    customMasters,
+                }
+                : {}),
+
+            pRetBody: products.map((item: any) => {
+                const bodyCustomMasters =
+                    buildCustomMastersPayload(
+                        templateFields?.body || [],
+                        item,
+                        item?.customMasters || {}
+                    );
+
+                return removeEmptyValues({
                     productCode: item.productCode,
                     productName: item.productName,
                     productId: item.productId,
@@ -1330,8 +1587,14 @@ const PurchaseReturn = () => {
 
                     netAmount: fmtMoney(item.netAmount || item.netTotal),
                     netTotal: fmtMoney(item.netTotal || item.netAmount),
-                })
-            ),
+
+                    ...(Object.keys(bodyCustomMasters).length
+                        ? {
+                            customMasters: bodyCustomMasters,
+                        }
+                        : {}),
+                });
+            }),
 
             pRetFooter: {
                 grossAmount: fmtMoney(footer.totalGrossAmount),

@@ -11,9 +11,7 @@ const TransactionDashboard = ({
   cards,
 }: any) => {
   const navigate = useNavigate();
-
   const [activeCard, setActiveCard]: any = useState(null);
-
   const ActiveComponent = activeCard?.component;
 
   const handleCardClick = (card: any) => {
