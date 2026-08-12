@@ -40,7 +40,7 @@ const MasterDashboard = () => {
 
   useEffect(() => {
     dispatch(
-      getAllSystemConfigurations() as any
+      getAllSystemConfigurations({}) as any
     );
   },[])
   const masterCards: any[] = useMemo(() => {
