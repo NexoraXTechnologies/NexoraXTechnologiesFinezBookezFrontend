@@ -33,6 +33,8 @@ const INVENTORY_TRANSACTION_MODULES = [
     "salesInvoice",
     "salesReturn",
     "openingStock",
+    "issueToProduction",
+    "receiptFromProduction"
 ];
 
 const INVENTORY_MASTERS: Record<

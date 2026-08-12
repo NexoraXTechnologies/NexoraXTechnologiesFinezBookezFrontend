@@ -20,16 +20,14 @@ import ReportMapping from "./ReportMapping";
 import { getCustomMasterModules } from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
 import CustomMasterComp from "./customMasterComp";
 import KitCollection from "./kitCollection";
+import { getAllSystemConfigurations } from "../../../redux/slices/systemConf";
 
 const MasterDashboard = () => {
   const dispatch = useDispatch();
+  const { customMasterModules = [], loading } = useSelector((state: any) => state.customMasterModule);
+  const { configurations = [] } = useSelector((state: any) => state.systemConfiguration);
+  const kitEanble = (configurations?.[0]?.systemConfiguration?.kitConfiguration?.enableKit == "true") || configurations?.[0]?.systemConfiguration?.kitConfiguration?.enableKit == true;
 
-  const { customMasterModules = [], loading } = useSelector(
-    (state: any) => state.customMasterModule
-  );
-  console.log({
-    data: customMasterModules?.[0]?.moduleCode, customMasterModules
-  })
   useEffect(() => {
     dispatch(
       getCustomMasterModules({
@@ -40,6 +38,11 @@ const MasterDashboard = () => {
     );
   }, [dispatch]);
 
+  useEffect(() => {
+    dispatch(
+      getAllSystemConfigurations() as any
+    );
+  },[])
   const masterCards: any[] = useMemo(() => {
     const defaultCards: any[] = [
       {
@@ -63,19 +66,18 @@ const MasterDashboard = () => {
         component: UnitMaster,
         permissionKey: "unitMaster"
       },
-      {
+      ...(kitEanble ? [{
         title: "KIT",
         description: "Manage unit measurements for products and transactions.",
         icon: <Ruler size={22} />,
         component: KitCollection,
         permissionKey: "unitMaster"
-      },
+      }] : []),
     ];
 
     const apiCards: any[] = customMasterModules.map((item: any) => {
       const moduleName = item?.moduleName || "Custom Master";
       const moduleCode = item?.moduleCode || item?._id || "";
-      console.log({ item })
       const CustomMasterScreen = () => (
         <CustomMasterComp name={moduleName} moduleCode={moduleCode} />
       );
@@ -90,7 +92,7 @@ const MasterDashboard = () => {
         permissionKey: "Pass"
       };
     });
-
+ 
     const reportCard: any = [
       {
         title: "Reports Mapping",
@@ -102,7 +104,7 @@ const MasterDashboard = () => {
     ];
 
     return [...defaultCards, ...apiCards, ...reportCard];
-  }, [customMasterModules]);
+  }, [customMasterModules, configurations]);
 
   return (
     <TransactionDashboard

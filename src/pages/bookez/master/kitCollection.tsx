@@ -2200,6 +2200,7 @@ const KitCollection = () => {
 
             {!fieldsLoading && (
                 <DynamicAddForm
+                    isSummaryFooter={false}
                     show={showModal}
                     setShow={setShowModal}
                     edit={Boolean(

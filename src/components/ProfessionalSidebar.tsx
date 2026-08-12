@@ -164,9 +164,6 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							action: "view",
 						},
 
-
-
-
 						{
 							name: "Engineering Module",
 							path: "/bookEz/engineering-module",
