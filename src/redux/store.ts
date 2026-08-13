@@ -103,6 +103,7 @@ import importBankStatementReducer from "../redux/slices/professionalSlice/openin
 import salesOrderRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/salesOrderRegisterslice"
 import purchaseOrderRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/purchaseOrderRegisterSlice"
 import grnRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/grnRegisterSlice"
+import creditNoteRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/creditNoteRegisterSlice"
 
 
 // masterConfiguration
@@ -228,6 +229,7 @@ export const store = configureStore({
     salesOrderRegister: salesOrderRegisterReducer,
     purchaseOrderRegister: purchaseOrderRegisterReducer,
     grnRegister: grnRegisterReducer,
+    creditNoteRegister: creditNoteRegisterReducer,
     // master configuration
 
     masterConfiguration: masterConfigurationReducer,

@@ -62,6 +62,12 @@ type EditableLineTableProps = {
         row: any,
         rowIndex: number
     ) => boolean;
+
+    renderCellExtra?: (
+        column: EditableColumn,
+        row: any,
+        rowIndex: number
+    ) => React.ReactNode;
 };
 
 const LEFT_WIDTH = "70px";
@@ -87,6 +93,7 @@ const EditableLineTable = ({
     isColumnVisible,
     isCellVisible,
     isCellDisabled,
+    renderCellExtra,
 }: EditableLineTableProps) => {
     const getReferenceButtonText = (
         row: any,
@@ -474,7 +481,7 @@ const EditableLineTable = ({
                                                                 —
                                                             </div>
                                                         ) : (
-                                                            <div className="min-w-0">
+                                                            <div className="relative min-w-0">
                                                                 {isSelectColumn(
                                                                     column
                                                                 ) ? (
@@ -626,18 +633,42 @@ const EditableLineTable = ({
                                                                         disabled={
                                                                             disabledCell
                                                                         }
-                                                                        onChange={(
-                                                                            event: any
-                                                                        ) =>
+                                                                        onKeyDown={(event: any) => {
+                                                                            const isNumberField =
+                                                                                column.type === "number" ||
+                                                                                column.key === "nonTaxRate" ||
+                                                                                calculatedField;
+
+                                                                            if (
+                                                                                isNumberField &&
+                                                                                String(cellValue ?? "") === "0" &&
+                                                                                /^[1-9]$/.test(event.key)
+                                                                            ) {
+                                                                                event.preventDefault();
+
+                                                                                onChange(
+                                                                                    rowIndex,
+                                                                                    column.key,
+                                                                                    event.key
+                                                                                );
+                                                                            }
+                                                                        }}
+                                                                        onChange={(event: any) =>
                                                                             onChange(
                                                                                 rowIndex,
                                                                                 column.key,
-                                                                                event
-                                                                                    .target
-                                                                                    .value
+                                                                                event.target.value
                                                                             )
                                                                         }
                                                                     />
+                                                                )}
+
+
+
+                                                                {renderCellExtra?.(
+                                                                    column,
+                                                                    row,
+                                                                    rowIndex
                                                                 )}
                                                             </div>
                                                         )}

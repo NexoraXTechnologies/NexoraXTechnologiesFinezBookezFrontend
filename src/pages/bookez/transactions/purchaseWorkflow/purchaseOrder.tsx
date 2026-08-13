@@ -19,6 +19,8 @@ import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import ProductMasterModal from "../../master/productMaster/ProductMasterFormModal";
+import { getProductBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
+import InputBorderLabel from "../../../../components/common/InputBorderLabel";
 
 const VENDOR_FIELD_KEYS = new Set([
     "pOrdVendorCode",
@@ -56,6 +58,8 @@ const emptyProductRow = {
     remarks: "",
 
     quantity: "",
+    availableQuantity: null,
+    productType: "",
 
     uom: "",
     unit: "",
@@ -119,6 +123,23 @@ const getDefaultForm = () => ({
     otherAmount: "0.00",
     netAmount: "0.00",
 });
+
+const renderPurchaseOrderCellExtra = (column: any, row: any) => {
+    if (column?.key !== "quantity" || !row?.productCode) return null;
+
+    const productType = String(row?.productType || "").trim().toLowerCase();
+
+    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+    return (
+        <InputBorderLabel
+            label="Avl Qty"
+            value={row?.availableQuantity}
+            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            successWhenPositive
+        />
+    );
+};
 
 /* ===================================================
    PURCHASE ORDER
@@ -315,6 +336,61 @@ const PurchaseOrder = () => {
         );
     };
 
+    const getProductMasterFromRow = (row: any) => {
+        if (!row) return null;
+
+        const rowProductValues = [
+            row?.productCode,
+            row?.productId,
+            row?.productName,
+        ]
+            .filter(
+                (value) =>
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+            )
+            .map((value) => String(value));
+
+        if (!rowProductValues.length) return null;
+
+        const productFields = (templateFields?.body || []).filter(
+            (field: any) =>
+                ["productCode", "productId", "productName", "product"].includes(
+                    String(field?.key || "")
+                )
+        );
+
+        for (const field of productFields) {
+            const selectedOption = (field?.options || []).find(
+                (option: any) => {
+                    const optionValues = [
+                        option?.value,
+                        option?.raw?._id,
+                        option?.raw?.productId,
+                        option?.raw?.productCode,
+                        option?.raw?.productName,
+                    ]
+                        .filter(
+                            (value) =>
+                                value !== undefined &&
+                                value !== null &&
+                                value !== ""
+                        )
+                        .map((value) => String(value));
+
+                    return optionValues.some((value) =>
+                        rowProductValues.includes(value)
+                    );
+                }
+            );
+
+            if (selectedOption?.raw) return selectedOption.raw;
+        }
+
+        return null;
+    };
+
     const applyMappedFields = (
         field: any,
         selectedValue: any,
@@ -357,6 +433,14 @@ const PurchaseOrder = () => {
             productId: product?._id || row.productId || "",
             productCode: product?.productCode || row.productCode || "",
             productName: product?.productName || row.productName || "",
+
+            productType:
+                product?.productType ||
+                product?.dynamicFields?.productType ||
+                row.productType ||
+                "",
+
+            availableQuantity: null,
 
             productDescription:
                 product?.productDescription || row.productDescription || "",
@@ -587,6 +671,162 @@ const PurchaseOrder = () => {
         );
     };
 
+    const productBalanceSignature = useMemo(
+        () =>
+            (form?.products || [])
+                .map((item: any) =>
+                    [
+                        item?.productCode || "",
+                        item?.productId || "",
+                        item?.productName || "",
+                    ].join("|")
+                )
+                .join("||"),
+        [form?.products]
+    );
+
+    useEffect(() => {
+        if (!showModal || !productBalanceSignature) return;
+
+        let cancelled = false;
+
+        const fetchAvailableQuantities = async () => {
+            const now = new Date();
+            const financialYear =
+                now.getMonth() >= 3
+                    ? now.getFullYear()
+                    : now.getFullYear() - 1;
+
+            const fromDate = new Date(
+                financialYear,
+                3,
+                1,
+                0,
+                0,
+                0,
+                0
+            ).toISOString();
+
+            const toDate = now.toISOString();
+
+            const balanceRows = await Promise.all(
+                (form?.products || []).map(async (item: any) => {
+                    const productCode = String(
+                        item?.productCode || ""
+                    ).trim();
+
+                    if (!productCode) {
+                        return {
+                            productCode,
+                            productType: String(
+                                item?.productType || ""
+                            )
+                                .trim()
+                                .toLowerCase(),
+                            availableQuantity: null,
+                        };
+                    }
+
+                    const productMaster =
+                        getProductMasterFromRow(item) || {};
+
+                    const productType = String(
+                        item?.productType ||
+                        productMaster?.productType ||
+                        productMaster?.dynamicFields?.productType ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                    if (
+                        ["serviceproduct", "nonstocks"].includes(
+                            productType
+                        )
+                    ) {
+                        return {
+                            productCode,
+                            productType,
+                            availableQuantity: null,
+                        };
+                    }
+
+                    try {
+                        const balance: any = await dispatch(
+                            getProductBalance({
+                                productCode,
+                                fromDate,
+                                toDate,
+                            }) as any
+                        ).unwrap();
+
+                        return {
+                            productCode,
+                            productType,
+                            availableQuantity:
+                                balance?.balanceQuantity !== undefined &&
+                                balance?.balanceQuantity !== null
+                                    ? balance.balanceQuantity
+                                    : null,
+                        };
+                    } catch (error) {
+                        console.log(
+                            `Failed to fetch available quantity for ${productCode}`,
+                            error
+                        );
+
+                        return {
+                            productCode,
+                            productType,
+                            availableQuantity: null,
+                        };
+                    }
+                })
+            );
+
+            if (cancelled) return;
+
+            setForm((prev: any) => {
+                const updatedProducts = (prev?.products || []).map(
+                    (currentRow: any, index: number) => {
+                        const balanceRow = balanceRows[index];
+
+                        if (
+                            !balanceRow ||
+                            String(currentRow?.productCode || "") !==
+                                String(balanceRow?.productCode || "")
+                        ) {
+                            return currentRow;
+                        }
+
+                        return {
+                            ...currentRow,
+                            productType: balanceRow.productType,
+                            availableQuantity:
+                                balanceRow.availableQuantity,
+                        };
+                    }
+                );
+
+                return {
+                    ...prev,
+                    products: updatedProducts,
+                };
+            });
+        };
+
+        void fetchAvailableQuantities();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        showModal,
+        productBalanceSignature,
+        templateFields,
+        dispatch,
+    ]);
+
     useEffect(() => {
         dispatch(getAllTransactionSchema("purchaseOrder") as any);
     }, [dispatch]);
@@ -803,6 +1043,14 @@ const PurchaseOrder = () => {
                             remarks: item?.remarks || "",
 
                             quantity: item?.quantity || "",
+
+                            availableQuantity: null,
+
+                            productType:
+                                item?.productType ||
+                                getProductMasterFromRow(item)?.productType ||
+                                getProductMasterFromRow(item)?.dynamicFields?.productType ||
+                                "",
 
                             unit: unitCode,
                             uom: unitCode,
@@ -1327,6 +1575,13 @@ const PurchaseOrder = () => {
                         updatedRow?.rate ??
                         "",
 
+                    availableQuantity: null,
+
+                    productType:
+                        createdProduct?.productType ||
+                        createdProduct?.dynamicFields?.productType ||
+                        "",
+
                     cgst: cgstValue,
                     cgstPercentage: cgstValue,
 
@@ -1465,6 +1720,8 @@ const PurchaseOrder = () => {
                 updatedRow.productCode = raw?.productCode || raw?.code || updatedRow.productCode || "";
                 updatedRow.productName = raw?.productName || raw?.name || selectedOption?.label || updatedRow.productName || "";
                 updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
+                updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || "";
+                updatedRow.availableQuantity = null;
                 const cgstValue = raw?.cgstPercentage ?? raw?.cgst ?? raw?.csgst ?? raw?.cgstRate ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
                 const sgstValue = raw?.sgstPercentage ?? raw?.sgst ?? raw?.csgst ?? raw?.sgstRate ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
                 const igstValue = raw?.igstPercentage ?? raw?.igst ?? raw?.igstRate ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
@@ -2039,6 +2296,7 @@ const PurchaseOrder = () => {
 
                         bodyKey: "products",
                         handleChange: handleMainChange,
+                        bodyCellExtraRenderer: renderPurchaseOrderCellExtra,
 
                         // ★ ADDED: Shared Account Master modal props
                         checkAccount,

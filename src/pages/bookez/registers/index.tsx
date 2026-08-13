@@ -39,6 +39,7 @@ import TripLrEntryRegister from "./TripLrEntryRegister";
 import SalesOrderRegister from "./SalesOrderRegister";
 import PurchaseOrderRegister from "./PurchaseOrderRegister";
 import GrnRegister from "./GrnRegister";
+import CreditNoteRegister from "./CreditNoteRegister";
 
 
 const cards: any[] = [
@@ -125,6 +126,13 @@ const cards: any[] = [
     component: OpeningStockRegister,
     icon: <PackageOpen size={22} />,
     permissionKey: "registers.openingStockRegister"
+  },
+  {
+    title: "Credit Note Register",
+    description: "View credit notes, customer details, amounts, and credit note status.",
+    component: CreditNoteRegister,
+    icon: <FileText size={22} />,
+    permissionKey: "registers.creditNoteRegister"
   },
   {
     title: "Transport Order Register",

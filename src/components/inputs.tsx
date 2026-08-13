@@ -99,6 +99,7 @@ const TextInput = ({
     label = "",
     value,
     onChange,
+    onKeyDown,
     placeholder,
     name = "",
     mandatory = false,
@@ -123,6 +124,7 @@ const TextInput = ({
                 value={value}
                 name={name || value}
                 onChange={onChange}
+                onKeyDown={onKeyDown}
                 type={type}
                 placeholder={placeholder}
                 className={`

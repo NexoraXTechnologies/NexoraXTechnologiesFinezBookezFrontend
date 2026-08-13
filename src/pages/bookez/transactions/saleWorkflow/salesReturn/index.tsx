@@ -21,6 +21,8 @@ import Permission from "../../../../../components/PermissionGuard";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
+import { getProductBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
+import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
 
 const CUSTOMER_FIELD_KEYS = new Set([
     "sInvReturnCustomerCode",
@@ -35,8 +37,33 @@ const PRODUCT_FIELD_KEYS = new Set([
     "product",
 ]);
 
-const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0, customMasters: {} };
+const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", availableQuantity: null, productType: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0, customMasters: {} };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, customMasters: {}, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
+
+const getFinancialYearRange = (dateValue?: string) => {
+    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
+    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
+    return {
+        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
+        toDate: selectedDate.toISOString(),
+    };
+};
+
+const renderSalesReturnCellExtra = (column: any, row: any) => {
+    if (column?.key !== "quantity" || !row?.productCode) return null;
+
+    const productType = String(row?.productType || "").trim().toLowerCase();
+    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+    return (
+        <InputBorderLabel
+            label="Avl Qty"
+            value={row?.availableQuantity}
+            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            successWhenPositive
+        />
+    );
+};
 
 const SalesReturn = () => {
     const dispatch = useDispatch<any>();
@@ -165,6 +192,40 @@ const SalesReturn = () => {
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
+
+    const getProductMasterFromRow = (row: any) => {
+        if (!row) return null;
+
+        const rowProductValues = [row?.productCode, row?.productId, row?.productName]
+            .filter((value) => value !== undefined && value !== null && value !== "")
+            .map((value) => String(value));
+
+        if (!rowProductValues.length) return null;
+
+        const productFields = (templateFields?.body || []).filter((field: any) =>
+            ["productCode", "productId", "productName", "product"].includes(String(field?.key || ""))
+        );
+
+        for (const field of productFields) {
+            const selectedOption = (field?.options || []).find((option: any) => {
+                const optionValues = [
+                    option?.value,
+                    option?.raw?._id,
+                    option?.raw?.productId,
+                    option?.raw?.productCode,
+                    option?.raw?.productName,
+                ]
+                    .filter((value) => value !== undefined && value !== null && value !== "")
+                    .map((value) => String(value));
+
+                return optionValues.some((value) => rowProductValues.includes(value));
+            });
+
+            if (selectedOption?.raw) return selectedOption.raw;
+        }
+
+        return null;
+    };
 
     const isCustomMasterField = (field: any) => {
         return String(field?.type || "").trim().toLowerCase() === "custommaster";
@@ -528,6 +589,14 @@ const SalesReturn = () => {
 
                         quantity:
                             item?.quantity ||
+                            "",
+
+                        availableQuantity: null,
+
+                        productType:
+                            item?.productType ||
+                            getProductMasterFromRow(item)?.productType ||
+                            getProductMasterFromRow(item)?.dynamicFields?.productType ||
                             "",
 
                         unit:
@@ -1134,6 +1203,13 @@ const SalesReturn = () => {
                         updatedRow?.rate ??
                         "",
 
+                    availableQuantity: null,
+
+                    productType:
+                        createdProduct?.productType ||
+                        createdProduct?.dynamicFields?.productType ||
+                        "",
+
                     cgst:
                         createdProduct?.csgst ??
                         createdProduct?.cgst ??
@@ -1285,6 +1361,15 @@ const SalesReturn = () => {
             ) {
                 updatedRow.productId =
                     selectedOption.raw._id;
+            }
+
+            if (PRODUCT_FIELD_KEYS.has(key)) {
+                const productRaw = selectedOption?.raw || {};
+                updatedRow.productType =
+                    productRaw?.productType ||
+                    productRaw?.dynamicFields?.productType ||
+                    "";
+                updatedRow.availableQuantity = null;
             }
 
             if (
@@ -1917,6 +2002,14 @@ const SalesReturn = () => {
                                 item?.quantity ||
                                 "",
 
+                            availableQuantity: null,
+
+                            productType:
+                                item?.productType ||
+                                getProductMasterFromRow(item)?.productType ||
+                                getProductMasterFromRow(item)?.dynamicFields?.productType ||
+                                "",
+
                             unit:
                                 unitCode,
 
@@ -2138,6 +2231,129 @@ const SalesReturn = () => {
 
     useEffect(() => { fetchSalesInvoices(); }, [localOffset, localLimit, debouncedSearch, status]);
 
+    const productBalanceSignature = useMemo(
+        () =>
+            (form?.products || [])
+                .map((item: any) =>
+                    [
+                        item?.productCode || "",
+                        item?.productId || "",
+                        item?.productName || "",
+                    ].join("|")
+                )
+                .join("||"),
+        [form?.products]
+    );
+
+    useEffect(() => {
+        if (!showModal || !productBalanceSignature) return;
+
+        let cancelled = false;
+
+        const fetchAvailableQuantities = async () => {
+            const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+
+            const balanceRows = await Promise.all(
+                (form?.products || []).map(async (item: any) => {
+                    const productCode = String(item?.productCode || "").trim();
+                    if (!productCode) {
+                        return {
+                            productCode,
+                            productType: String(item?.productType || "").trim().toLowerCase(),
+                            availableQuantity: null,
+                        };
+                    }
+
+                    const productMaster = getProductMasterFromRow(item) || {};
+                    const productType = String(
+                        item?.productType ||
+                        productMaster?.productType ||
+                        productMaster?.dynamicFields?.productType ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                    if (["serviceproduct", "nonstocks"].includes(productType)) {
+                        return {
+                            productCode,
+                            productType,
+                            availableQuantity: null,
+                        };
+                    }
+
+                    try {
+                        const balance: any = await dispatch(
+                            getProductBalance({
+                                productCode,
+                                fromDate,
+                                toDate,
+                            }) as any
+                        ).unwrap();
+
+                        return {
+                            productCode,
+                            productType,
+                            availableQuantity:
+                                balance?.balanceQuantity !== undefined &&
+                                balance?.balanceQuantity !== null
+                                    ? balance.balanceQuantity
+                                    : null,
+                        };
+                    } catch (error) {
+                        console.log(
+                            `Failed to fetch available quantity for ${productCode}`,
+                            error
+                        );
+
+                        return {
+                            productCode,
+                            productType,
+                            availableQuantity: null,
+                        };
+                    }
+                })
+            );
+
+            if (cancelled) return;
+
+            setForm((prev: any) => {
+                const currentProducts = [...(prev?.products || [])];
+
+                const updatedProducts = currentProducts.map(
+                    (currentRow: any, index: number) => {
+                        const balanceRow = balanceRows[index];
+
+                        if (
+                            !balanceRow ||
+                            String(currentRow?.productCode || "") !==
+                                String(balanceRow?.productCode || "")
+                        ) {
+                            return currentRow;
+                        }
+
+                        return {
+                            ...currentRow,
+                            productType: balanceRow.productType,
+                            availableQuantity: balanceRow.availableQuantity,
+                        };
+                    }
+                );
+
+                return {
+                    ...prev,
+                    products: updatedProducts,
+                };
+            });
+        };
+
+        void fetchAvailableQuantities();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [showModal, productBalanceSignature, templateFields, dispatch]);
+
     useEffect(() => { dispatch(getAllTransactionSchema("salesReturn") as any); }, [dispatch]);
 
     useEffect(() => {
@@ -2341,6 +2557,7 @@ const SalesReturn = () => {
                         },
                         bodyKey: "products",
                         handleChange: handleMainChange,
+                        bodyCellExtraRenderer: renderSalesReturnCellExtra,
 
                         // ★ ADDED: Common Account Master modal props
                         checkAccount,

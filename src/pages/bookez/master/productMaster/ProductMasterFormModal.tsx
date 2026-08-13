@@ -2178,156 +2178,55 @@ const ProductMasterModal = ({
      VALIDATION
   =================================================== */
 
-  const validateForm =
-    () => {
-      const validationErrors:
-        Record<string, string> =
-        {};
+ const validateForm = () => {
+  const validationErrors: Record<string, string> = {};
 
-      (
-        Array.isArray(
-          productMasterSchemaFields
-        )
-          ? productMasterSchemaFields
-          : []
-      ).forEach(
-        (
-          field: any
-        ) => {
-          const value =
-            form?.[
-            field.key
-            ];
+  (Array.isArray(productMasterSchemaFields) ? productMasterSchemaFields : []).forEach((field: any) => {
+    // ⭐ Skip all validation for hidden fields
+    if (field.isHidden === true) return;
 
-          const fieldType =
-            getFieldType(
-              field
-            );
+    const value = form?.[field.key];
+    const fieldType = getFieldType(field);
 
-          if (
-            field.isRequired ||
-            field.required
-          ) {
-            if (
-              fieldType ===
-              "boolean"
-            ) {
-              if (
-                value ===
-                undefined ||
-                value ===
-                null
-              ) {
-                validationErrors[
-                  field.key
-                ] =
-                  `${field.label} required`;
-              }
-            } else if (
-              isMasterReferenceField(
-                field
-              )
-            ) {
-              if (
-                isReferenceValueEmpty(
-                  field,
-                  value
-                )
-              ) {
-                validationErrors[
-                  field.key
-                ] =
-                  `${field.label} required`;
-              }
-            } else if (
-              value ===
-              undefined ||
-              value ===
-              null ||
-              String(
-                value
-              ).trim() ===
-              ""
-            ) {
-              validationErrors[
-                field.key
-              ] =
-                `${field.label} required`;
-            }
-          }
-
-          /* =========================================
-             HSN
-          ========================================= */
-
-          if (
-            field.key ===
-            "productHSNCode" &&
-            value &&
-            !/^(?:\d{2}|\d{4}|\d{6}|\d{8})$/.test(
-              String(
-                value
-              )
-            )
-          ) {
-            validationErrors[
-              field.key
-            ] =
-              "Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code.";
-          }
-
-          /* =========================================
-             NUMBER
-          ========================================= */
-
-          if (
-            fieldType ===
-            "number" &&
-            value !== "" &&
-            value !== null &&
-            value !==
-            undefined &&
-            Number.isNaN(
-              Number(
-                value
-              )
-            )
-          ) {
-            validationErrors[
-              field.key
-            ] =
-              `${field.label} must be a valid number`;
-          }
-
-          if (
-            fieldType ===
-            "number" &&
-            value !== "" &&
-            value !== null &&
-            value !==
-            undefined &&
-            Number(
-              value
-            ) < 0
-          ) {
-            validationErrors[
-              field.key
-            ] =
-              `${field.label} cannot be negative`;
-          }
+    if (field.isRequired || field.required) {
+      if (fieldType === "boolean") {
+        if (value === undefined || value === null) {
+          validationErrors[field.key] = `${field.label} required`;
         }
-      );
+      } else if (isMasterReferenceField(field)) {
+        if (isReferenceValueEmpty(field, value)) {
+          validationErrors[field.key] = `${field.label} required`;
+        }
+      } else if (value === undefined || value === null || String(value).trim() === "") {
+        validationErrors[field.key] = `${field.label} required`;
+      }
+    }
 
-      setErrors(
-        validationErrors
-      );
+    /* =========================================
+       HSN
+    ========================================= */
 
-      return (
-        Object.keys(
-          validationErrors
-        ).length === 0
-      );
-    };
+    if (field.key === "productHSNCode" && value && !/^(?:\d{2}|\d{4}|\d{6}|\d{8})$/.test(String(value))) {
+      validationErrors[field.key] = "Invalid HSN/SAC code. Allowed: 2, 4, 6, or 8 digit numeric code.";
+    }
+
+    /* =========================================
+       NUMBER
+    ========================================= */
+
+    if (fieldType === "number" && value !== "" && value !== null && value !== undefined && Number.isNaN(Number(value))) {
+      validationErrors[field.key] = `${field.label} must be a valid number`;
+    }
+
+    if (fieldType === "number" && value !== "" && value !== null && value !== undefined && Number(value) < 0) {
+      validationErrors[field.key] = `${field.label} cannot be negative`;
+    }
+  });
+
+  setErrors(validationErrors);
+
+  return Object.keys(validationErrors).length === 0;
+};
 
   /* ===================================================
      RENDER FIELD
@@ -3063,7 +2962,6 @@ const ProductMasterModal = ({
       ) {
         return;
       }
-
       const payload: Record<string, any> = {};
       const dynamicFields: Record<string, any> = {
         ...(editingProduct?.dynamicFields || {}

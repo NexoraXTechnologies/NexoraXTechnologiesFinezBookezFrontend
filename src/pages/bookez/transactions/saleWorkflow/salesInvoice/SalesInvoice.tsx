@@ -37,6 +37,8 @@ import Permission from "../../../../../components/PermissionGuard";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
+import { getProductBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
+import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
 
 const CUSTOMER_FIELD_KEYS = new Set([
     "sInvCustomerCode",
@@ -74,6 +76,8 @@ const emptyProductRow = {
     productHSNCode: "",
     remarks: "",
     quantity: "",
+    availableQuantity: null,
+    productType: "",
     uom: "",
     unit: "",
     unitName: "",
@@ -314,6 +318,32 @@ const loadAllTemplateOptions = async (templateData: any) => {
         body: updatedBody,
         footer: updatedFooter,
     };
+};
+
+const getFinancialYearRange = (dateValue?: string) => {
+    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
+    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
+
+    return {
+        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
+        toDate: selectedDate.toISOString(),
+    };
+};
+
+const renderSalesInvoiceCellExtra = (column: any, row: any) => {
+    if (column?.key !== "quantity" || !row?.productCode) return null;
+
+    const productType = String(row?.productType || "").trim().toLowerCase();
+    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+    return (
+        <InputBorderLabel
+            label="Avl Qty"
+            value={row?.availableQuantity}
+            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            successWhenPositive
+        />
+    );
 };
 
 const SalesInVoice = () => {
@@ -914,12 +944,93 @@ const SalesInVoice = () => {
         setShowPurchaseOrderModal(true);
     };
 
+    const loadAvailableQuantity = async (
+        index: number,
+        productCode: string,
+        productType: string
+    ) => {
+        const normalizedProductType = String(productType || "").trim().toLowerCase();
+
+        if (!productCode || ["serviceproduct", "nonstocks"].includes(normalizedProductType)) {
+            setForm((previous: any) => {
+                const updatedProducts = [...(previous.products || [])];
+                if (!updatedProducts[index]) return previous;
+
+                updatedProducts[index] = {
+                    ...updatedProducts[index],
+                    productType: normalizedProductType,
+                    availableQuantity: null,
+                };
+
+                return { ...previous, products: updatedProducts };
+            });
+            return;
+        }
+
+        setForm((previous: any) => {
+            const updatedProducts = [...(previous.products || [])];
+
+            if (
+                !updatedProducts[index] ||
+                String(updatedProducts[index]?.productCode || "") !== String(productCode)
+            ) {
+                return previous;
+            }
+
+            updatedProducts[index] = {
+                ...updatedProducts[index],
+                productType: normalizedProductType,
+                availableQuantity: null,
+            };
+
+            return { ...previous, products: updatedProducts };
+        });
+
+        try {
+            const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+
+            const balance: any = await dispatch(
+                getProductBalance({
+                    productCode,
+                    fromDate,
+                    toDate,
+                }) as any
+            ).unwrap();
+
+            setForm((previous: any) => {
+                const updatedProducts = [...(previous.products || [])];
+
+                if (
+                    !updatedProducts[index] ||
+                    String(updatedProducts[index]?.productCode || "") !== String(productCode)
+                ) {
+                    return previous;
+                }
+
+                updatedProducts[index] = {
+                    ...updatedProducts[index],
+                    productType: normalizedProductType,
+                    availableQuantity:
+                        balance?.balanceQuantity !== undefined &&
+                        balance?.balanceQuantity !== null
+                            ? balance.balanceQuantity
+                            : null,
+                };
+
+                return { ...previous, products: updatedProducts };
+            });
+        } catch (error) {
+            console.log(`Failed to fetch available quantity for ${productCode}`, error);
+        }
+    };
+
     const openEditModal = (record: any) => {
         const footer = record?.sInvFooter || {};
 
         const products = record?.sInvBody?.length > 0
             ? record.sInvBody.map((item: any) => {
                 const unitCode = item?.unit || item?.uom || "";
+                const productMaster = getProductMasterFromRow(item) || {};
                 const bodyCustomMasterValues = Object.fromEntries(
                     (templateFields?.body || [])
                         .filter((field: any) => isCustomMasterField(field))
@@ -960,6 +1071,12 @@ const SalesInVoice = () => {
                         productHSNCode: item?.productHSNCode || "",
                         remarks: item?.remarks || "",
                         quantity: item?.quantity || "",
+                        availableQuantity: null,
+                        productType:
+                            item?.productType ||
+                            productMaster?.productType ||
+                            productMaster?.dynamicFields?.productType ||
+                            "",
                         unit: unitCode,
                         uom: unitCode,
                         unitName:
@@ -1044,6 +1161,86 @@ const SalesInVoice = () => {
 
         setShowModal(true);
     };
+
+    useEffect(() => {
+        if (!showModal || !editingRecord) return;
+        if (!form?.products?.length) return;
+
+        let cancelled = false;
+
+        const fetchEditAvailableQuantities = async () => {
+            const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+
+            const productsWithBalance = await Promise.all(
+                (form.products || []).map(async (item: any) => {
+                    const productCode = String(item?.productCode || "").trim();
+                    if (!productCode) return item;
+
+                    const productMaster = getProductMasterFromRow(item) || {};
+                    const productType = String(
+                        item?.productType ||
+                        productMaster?.productType ||
+                        productMaster?.dynamicFields?.productType ||
+                        ""
+                    ).trim().toLowerCase();
+
+                    if (["serviceproduct", "nonstocks"].includes(productType)) {
+                        return {
+                            ...item,
+                            productType,
+                            availableQuantity: null,
+                        };
+                    }
+
+                    try {
+                        const balance: any = await dispatch(
+                            getProductBalance({
+                                productCode,
+                                fromDate,
+                                toDate,
+                            }) as any
+                        ).unwrap();
+
+                        return {
+                            ...item,
+                            productType,
+                            availableQuantity:
+                                balance?.balanceQuantity !== undefined &&
+                                balance?.balanceQuantity !== null
+                                    ? balance.balanceQuantity
+                                    : null,
+                        };
+                    } catch (error) {
+                        console.log(`Failed to fetch available quantity for ${productCode}`, error);
+
+                        return {
+                            ...item,
+                            productType,
+                            availableQuantity: item?.availableQuantity ?? null,
+                        };
+                    }
+                })
+            );
+
+            if (cancelled) return;
+
+            setForm((previous: any) => ({
+                ...previous,
+                products: productsWithBalance,
+            }));
+        };
+
+        void fetchEditAvailableQuantities();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        showModal,
+        editingRecord,
+        form?.sInvVoucherNumber,
+        dispatch,
+    ]);
 
     const handleMainChange = (key: string, value: any) => {
         setForm((prev: any) => {
@@ -1388,6 +1585,11 @@ const SalesInVoice = () => {
                         "",
 
                     marginProduct,
+                    productType:
+                        createdProduct?.productType ||
+                        createdProduct?.dynamicFields?.productType ||
+                        "",
+                    availableQuantity: null,
 
                     taxRate:
                         marginProduct
@@ -1598,6 +1800,11 @@ const SalesInVoice = () => {
             }
             updatedRow = normalizeRowKeys(updatedRow);
             if (key === "productCode" || key === "productName" || key === "productId") {
+                updatedRow.productType =
+                    raw?.productType ||
+                    raw?.dynamicFields?.productType ||
+                    "";
+                updatedRow.availableQuantity = null;
                 updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
                 updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
                 updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
@@ -1646,6 +1853,33 @@ const SalesInVoice = () => {
 
             return { ...prev, products: updatedProducts };
         });
+
+        if (PRODUCT_FIELD_KEYS.has(key)) {
+            const currentField = getBodyFieldByKey(key);
+            const selectedOption = getOptionByValue(currentField, value);
+            const raw = selectedOption?.raw || {};
+
+            const productCode = String(
+                raw?.productCode ||
+                selectedOption?.value ||
+                value ||
+                ""
+            ).trim();
+
+            const productType = String(
+                raw?.productType ||
+                raw?.dynamicFields?.productType ||
+                ""
+            );
+
+            if (productCode) {
+                void loadAvailableQuantity(
+                    index,
+                    productCode,
+                    productType
+                );
+            }
+        }
 
         setErrors((prev: any) => ({
             ...prev,
@@ -2001,13 +2235,14 @@ const SalesInVoice = () => {
         });
     }, [templateFields?.footer, footerValues]);
 
-    const handlePurchaseOrderConfirm = () => {
+    const handlePurchaseOrderConfirm = async () => {
         if (!selectedPurchaseOrder) {
             toast.error("Please select purchase order");
             return;
         }
         const poBody = selectedPurchaseOrder?.sOrderBody || [];
         const products = poBody?.length ? poBody?.map((item: any) => {
+            const productMaster = getProductMasterFromRow(item) || {};
             const bodyCustomMasterValues = Object.fromEntries(
                 (templateFields?.body || [])
                     .filter((field: any) => isCustomMasterField(field))
@@ -2045,6 +2280,12 @@ const SalesInVoice = () => {
                     productHSNCode: item?.productHSNCode || "",
                     remarks: item?.remarks || "",
                     quantity: item?.quantity || "",
+                    availableQuantity: null,
+                    productType:
+                        item?.productType ||
+                        productMaster?.productType ||
+                        productMaster?.dynamicFields?.productType ||
+                        "",
                     unit: item?.unit,
                     uom: item?.uom,
                     unitName: item?.unitName || getUnitLabelFromSchema(item?.unitName),
@@ -2099,6 +2340,58 @@ const SalesInVoice = () => {
                 },
             ];
 
+        const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+
+        const productsWithBalance = await Promise.all(
+            products.map(async (item: any) => {
+                const productCode = String(item?.productCode || "").trim();
+                if (!productCode) return item;
+
+                const productMaster = getProductMasterFromRow(item) || {};
+                const productType = String(
+                    item?.productType ||
+                    productMaster?.productType ||
+                    productMaster?.dynamicFields?.productType ||
+                    ""
+                ).trim().toLowerCase();
+
+                if (["serviceproduct", "nonstocks"].includes(productType)) {
+                    return {
+                        ...item,
+                        productType,
+                        availableQuantity: null,
+                    };
+                }
+
+                try {
+                    const balance: any = await dispatch(
+                        getProductBalance({
+                            productCode,
+                            fromDate,
+                            toDate,
+                        }) as any
+                    ).unwrap();
+
+                    return {
+                        ...item,
+                        productType,
+                        availableQuantity:
+                            balance?.balanceQuantity !== undefined &&
+                            balance?.balanceQuantity !== null
+                                ? balance.balanceQuantity
+                                : null,
+                    };
+                } catch (error) {
+                    console.log(`Failed to fetch available quantity for ${productCode}`, error);
+                    return {
+                        ...item,
+                        productType,
+                        availableQuantity: null,
+                    };
+                }
+            })
+        );
+
         setForm({
             ...getDefaultForm(),
             sInvVoucherNumber: "AUTO",
@@ -2117,7 +2410,7 @@ const SalesInVoice = () => {
                     typeof selectedPurchaseOrder.customMasters === "object"
                     ? { ...selectedPurchaseOrder.customMasters }
                     : {},
-            products,
+            products: productsWithBalance,
         });
 
         setErrors({});
@@ -2414,6 +2707,7 @@ const SalesInVoice = () => {
                         handleChange: handleMainChange,
                         isBodyColumnVisible,
                         isBodyCellVisible,
+                        bodyCellExtraRenderer: renderSalesInvoiceCellExtra,
 
                         // ★ ADDED: Shared Account Master modal props
                         checkAccount,
