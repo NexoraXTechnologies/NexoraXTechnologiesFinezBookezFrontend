@@ -1536,23 +1536,23 @@ const ProfessionalDashboard = () => {
 				<button
 					type="button"
 					onClick={() => setDashboardSection("dashboard")}
-					className={`rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "dashboard"
+					className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "dashboard"
 							? "bg-primary text-primary-foreground shadow-sm"
 							: "text-muted-foreground hover:bg-muted hover:text-foreground"
 						}`}
 				>
-					Dashboard
+					BookEZ
 				</button>
 
 				<button
 					type="button"
 					onClick={() => setDashboardSection("analytics")}
-					className={`rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "analytics"
+					className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "analytics"
 							? "bg-primary text-primary-foreground shadow-sm"
 							: "text-muted-foreground hover:bg-muted hover:text-foreground"
 						}`}
 				>
-					Analytics
+					Transport
 				</button>
 			</div>
 

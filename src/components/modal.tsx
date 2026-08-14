@@ -122,7 +122,7 @@ const Modal = ({
                         >
                             <div>
                                 <h2 className="mb-0 text-xl font-semibold text-secondary-foreground">
-                                    {state ? `Edit ${title}` : `Add ${title}`}
+                                    {state ? `Edit ${title}` : `${title}`}
                                 </h2>
 
                                 <p className="text-sm text-muted-foreground">
@@ -4591,7 +4591,7 @@ const AccountMasterModal = ({
                 title ||
                 (
                     editingAccount
-                        ? "Update Account"
+                        ? "Account"
                         : "Add New Account"
                 )
             }

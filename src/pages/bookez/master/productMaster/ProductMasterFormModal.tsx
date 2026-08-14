@@ -3210,7 +3210,7 @@ const ProductMasterModal = ({
                 title ||
                 (
                   editingProduct
-                    ? "Update Product"
+                    ? "Product"
                     : "Add New Product"
                 )
               }

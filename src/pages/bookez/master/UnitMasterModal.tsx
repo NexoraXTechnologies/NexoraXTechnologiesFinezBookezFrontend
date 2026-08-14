@@ -2672,7 +2672,7 @@ const UnitMasterModal = ({
                         title ||
                         (
                             editingUnit
-                                ? "Update Unit"
+                                ? "Unit"
                                 : "Add New Unit"
                         )
                     }

@@ -745,36 +745,36 @@ const CustomMasterComp = ({
 		});
 
 	const addInput = [
-		{
-			key:
-				"moduleCode",
+		// {
+		// 	key:
+		// 		"moduleCode",
 
-			label:
-				"Module Code",
+		// 	label:
+		// 		"Module Code",
 
-			type:
-				"string",
+		// 	type:
+		// 		"string",
 
-			disabled:
-				true
-		},
+		// 	disabled:
+		// 		true
+		// },
 
-		{
-			key:
-				"voucherNumber",
+		// {
+		// 	key:
+		// 		"voucherNumber",
 
-			label:
-				"Voucher Number",
+		// 	label:
+		// 		"Voucher Number",
 
-			autoGen:
-				"Auto Generated",
+		// 	autoGen:
+		// 		"Auto Generated",
 
-			type:
-				"string",
+		// 	type:
+		// 		"string",
 
-			disabled:
-				true
-		},
+		// 	disabled:
+		// 		true
+		// },
 
 		...inputSchema
 	];
@@ -2422,15 +2422,13 @@ const CustomMasterComp = ({
 						setShowModal,
 
 					handleSubmit,
-
-					loader:
-						submitLoader,
+					loader: submitLoader,
 
 					state:
 						edit,
 
 					title:
-						`${name}`,
+						`${!edit ? "Add" : ""} ${name}`,
 					body: (
 						<>
 							{
