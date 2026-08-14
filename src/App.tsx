@@ -85,6 +85,7 @@ import CustomTransactionDashboard from './pages/bookez/transactions/customTransa
 import CustomTransaction from './pages/bookez/transactions/customTransactions/CustomTransaction';
 import EWayBillList from './pages/bookez/transportation/eWayBill/EwayBillList';
 import CreateEditEWayBill from './pages/bookez/transportation/eWayBill/Createeditewaybill';
+import BarCodeAndQrCode from './pages/bookez/barcodeAndQRcode';
 
 function App() {
   useAppearance();
@@ -130,6 +131,7 @@ function App() {
           />
 
           <Route path="/bookEz/master" element={<MasterDashboard />} />
+          <Route path="/bookEz/qr-and-barcode-generator" element={<BarCodeAndQrCode />} />
           <Route path="master/company" element={<CompanyMaster />} />
           <Route path="master/account" element={<AccountMaster />} />
           <Route path="master/product" element={<ProductMaster />} />

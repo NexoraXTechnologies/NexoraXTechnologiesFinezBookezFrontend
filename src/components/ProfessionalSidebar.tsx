@@ -131,6 +131,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "accountMaster",
 							action: "view",
 						},
+						{
+							name: "QR",
+							path: "/bookEz/qr-and-barcode-generator",
+							icon: <BrickWallShield size={20} />,
+							module: "bookez",
+							permissionKey: "accountMaster",
+							action: "view",
+						},
 
 						{
 							name: "Opening Balances / Stocks",

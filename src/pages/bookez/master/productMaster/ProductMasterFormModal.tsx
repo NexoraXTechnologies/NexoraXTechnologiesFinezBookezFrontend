@@ -3055,12 +3055,8 @@ const ProductMasterModal = ({
      SUBMIT
   =================================================== */
 
-  const handleSubmit =
-    async () => {
-      if (
-        submitting ||
-        !validateForm()
-      ) {
+  const handleSubmit = async () => {
+    if (submitting || !validateForm()) {
         return;
       }
 
