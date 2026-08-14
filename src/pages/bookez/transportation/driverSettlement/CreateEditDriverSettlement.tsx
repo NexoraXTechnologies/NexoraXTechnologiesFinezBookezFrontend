@@ -2188,6 +2188,16 @@ const CreateEditDriverSettlement = ({
 
                     transportOrderNumber,
 
+                    TripOrder: transportOrderNumber,
+                    LRNo: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || "",
+                    Driver: tripDetails?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
+                    customMasters: {
+                        "Vehicle Master": {
+                            code: tripDetails?.vehicleCode || "",
+                            name: tripDetails?.vehicleNo || "",
+                        },
+                    },
+
                     transactionPurpose:
                         "TRIP_EXPENSE_PAYMENT",
                 };
@@ -2281,6 +2291,16 @@ const CreateEditDriverSettlement = ({
                         settlementNumber,
 
                     transportOrderNumber,
+
+                    TripOrder: transportOrderNumber,
+                    LRNo: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || "",
+                    Driver: tripDetails?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
+                    customMasters: {
+                        "Vehicle Master": {
+                            code: tripDetails?.vehicleCode || "",
+                            name: tripDetails?.vehicleNo || "",
+                        },
+                    },
 
                     transactionPurpose:
                         "FREIGHT_RECEIPT",
