@@ -13,7 +13,7 @@ import {
 	BookText,
 	LayoutDashboard,
 	X,
-	CreditCard,
+	// CreditCard,
 	BrickWallShield,
 	WalletCards,
 	BadgeIndianRupee,
@@ -132,6 +132,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "accountMaster",
 							action: "view",
 						},
+						// {
+						// 	name: "QR",
+						// 	path: "/bookEz/qr-and-barcode-generator",
+						// 	icon: <BrickWallShield size={20} />,
+						// 	module: "bookez",
+						// 	permissionKey: "accountMaster",
+						// 	action: "view",
+						// },
 
 						{
 							name: "Opening Balances / Stocks",
@@ -230,11 +238,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			path: "/users",
 			icon: <Users size={20} />,
 		},
-		{
-			name: "Subscription",
-			path: "/subscription",
-			icon: <CreditCard size={20} />,
-		},
+		// {
+		// 	name: "Subscription",
+		// 	path: "/subscription",
+		// 	icon: <CreditCard size={20} />,
+		// },
 		{
 			name: "Settings",
 			icon: <Settings size={20} />,

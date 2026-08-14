@@ -4591,7 +4591,7 @@ const AccountMasterModal = ({
                 title ||
                 (
                     editingAccount
-                        ? "Update Account"
+                        ? "Account"
                         : "Add New Account"
                 )
             }

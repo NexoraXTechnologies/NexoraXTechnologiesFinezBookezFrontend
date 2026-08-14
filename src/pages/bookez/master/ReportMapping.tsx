@@ -579,7 +579,7 @@ const ReportMapping = () => {
 					setShow: setShowModal,
 					handleSubmit: handleSaveReportMapping,
 					state: editingReport,
-					title: "Add New Report Mapping",
+					title: !editingReport ? "Add Report Mapping" : "Report Mapping",
 					body: (
 						<>
 							<TextInput

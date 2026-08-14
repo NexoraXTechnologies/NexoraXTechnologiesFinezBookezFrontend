@@ -2954,12 +2954,8 @@ const ProductMasterModal = ({
      SUBMIT
   =================================================== */
 
-  const handleSubmit =
-    async () => {
-      if (
-        submitting ||
-        !validateForm()
-      ) {
+  const handleSubmit = async () => {
+    if (submitting || !validateForm()) {
         return;
       }
       const payload: Record<string, any> = {};
@@ -3214,7 +3210,7 @@ const ProductMasterModal = ({
                 title ||
                 (
                   editingProduct
-                    ? "Update Product"
+                    ? "Product"
                     : "Add New Product"
                 )
               }

@@ -120,7 +120,9 @@ import registerFilterDropdownReducer from "../redux/slices/professionalSlice/reg
 import drillDownReportReducer from "./slices/professionalSlice/drillDownReportSlice";
 import cashBankReportReducer from "./slices/professionalSlice/cashBankReportSlice";
 import teamEmployeeSchemaReducer from "./slices/systemConf/teamEmployeeSchemaSlice";
-import kitCollectionReducer from "./slices/professionalSlice/kitCollection"
+import kitCollectionReducer from "./slices/professionalSlice/kitCollection";
+import barcodeQrReducer from "./slices/professionalSlice/BarCodeAndQRCode";
+
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -246,6 +248,8 @@ export const store = configureStore({
     cashBankReport: cashBankReportReducer,
     teamEmployeeSchema: teamEmployeeSchemaReducer,
     kitCollection: kitCollectionReducer,
+
+    barcodeQr: barcodeQrReducer,
   },
 });
 
