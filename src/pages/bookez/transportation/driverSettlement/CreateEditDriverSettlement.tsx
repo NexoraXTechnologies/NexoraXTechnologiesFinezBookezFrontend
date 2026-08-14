@@ -2188,13 +2188,13 @@ const CreateEditDriverSettlement = ({
 
                     transportOrderNumber,
 
-                    TripOrder: transportOrderNumber,
-                    LRNo: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || "",
-                    Driver: tripDetails?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
+                    trip_order: transportOrderNumber,
+                    lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
+                    driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
                     customMasters: {
-                        "Vehicle Master": {
-                            code: tripDetails?.vehicleCode || "",
-                            name: tripDetails?.vehicleNo || "",
+                        vehicle_master: {
+                            code: tripDetails?.vehicleCode || selectedLREntry?.vehicle?.vehicleCode || selectedAllocation?.vehicle?.vehicleCode || selectedAllocation?.vehicleDetails?.vehicleCode || "",
+                            name: tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleNumber || getVehicleNumber(selectedAllocation, "") || "",
                         },
                     },
 
@@ -2292,16 +2292,15 @@ const CreateEditDriverSettlement = ({
 
                     transportOrderNumber,
 
-                    TripOrder: transportOrderNumber,
-                    LRNo: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || "",
-                    Driver: tripDetails?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
+                    trip_order: transportOrderNumber,
+                    lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
+                    driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
                     customMasters: {
-                        "Vehicle Master": {
-                            code: tripDetails?.vehicleCode || "",
-                            name: tripDetails?.vehicleNo || "",
+                        vehicle_master: {
+                            code: tripDetails?.vehicleCode || selectedLREntry?.vehicle?.vehicleCode || selectedAllocation?.vehicle?.vehicleCode || selectedAllocation?.vehicleDetails?.vehicleCode || "",
+                            name: tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleNumber || getVehicleNumber(selectedAllocation, "") || "",
                         },
                     },
-
                     transactionPurpose:
                         "FREIGHT_RECEIPT",
                 };
