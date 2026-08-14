@@ -24,13 +24,13 @@ const BarCodeAndQrCode = () => {
                 component: AssignBarcodeQrCode,
                 permissionKey: "accountMaster"
             },
-            {
-                title: "BarCode/QR Code Print",
-                description: "Manage customers, vendors, cash, bank and ledgers.",
-                icon: <Wallet size={22} />,
-                component: BarcodeQrLabelPrint,
-                permissionKey: "accountMaster"
-            }
+            // {
+            //     title: "BarCode/QR Code Print",
+            //     description: "Manage customers, vendors, cash, bank and ledgers.",
+            //     icon: <Wallet size={22} />,
+            //     component: BarcodeQrLabelPrint,
+            //     permissionKey: "accountMaster"
+            // }
         ];
 
         return [...defaultCards];

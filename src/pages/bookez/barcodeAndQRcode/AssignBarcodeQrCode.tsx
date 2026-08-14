@@ -4,17 +4,26 @@ import Barcode from "react-barcode";
 import QRCode from "qrcode";
 import { Trash2 } from "lucide-react";
 import { SelectInput, TextInput } from "../../../components/inputs";
+import DataTable from "../../../components/DataTable";
+import Pagination from "../../../components/pagination";
 import { getAllProducts } from "../../../redux/slices/professionalSlice/productMasterSlice";
+import {
+    createBarcodeQrAssignment,
+    deleteBarcodeQrAssignment,
+    getAllBarcodeQrAssignments,
+    getAllBarcodeQrTemplates,
+} from "../../../redux/slices/professionalSlice/BarCodeAndQRCode";
 
 type CodeType = "barcode" | "qrcode";
 type BarcodeType = "CODE128" | "CODE39";
 type Orientation = "portrait" | "landscape";
 type CodeSource = "auto" | "manual";
+type ActiveTab = "assign" | "listing";
 type BarcodeValuePartType = "string" | "date" | "day" | "month" | "year" | "increment";
 type DateFormat = "DDMMYYYY" | "DD-MM-YYYY" | "YYYYMMDD";
 
 type BarcodeValuePart = {
-    id: string;
+    id?: string;
     type: BarcodeValuePartType;
     value?: string;
     dateFormat?: DateFormat;
@@ -38,12 +47,13 @@ type TemplateFields = {
 };
 
 type BarcodeQrTemplate = {
+    _id?: string;
     templateCode: string;
     templateName: string;
     codeType: CodeType;
-    barcodeType: BarcodeType;
-    barcodeValueFormat: BarcodeValuePart[];
-    separator: string;
+    barcodeType?: BarcodeType | null;
+    barcodeValueFormat?: BarcodeValuePart[];
+    separator?: string;
     labelSize: string;
     width: number;
     height: number;
@@ -92,31 +102,37 @@ type ProductSnapshot = {
     expiryDate: string;
 };
 
-type BarcodeAssignment = {
-    assignmentCode: string;
-    templateCode: string;
-    templateName: string;
-    productId?: string;
+type QrValue = {
     productCode: string;
     productName: string;
+    hsnCode?: string;
+    uom?: string;
+    mrp?: string;
+    sellingPrice?: string;
     batchNumber?: string;
     serialNumber?: string;
     warehouse?: string;
     location?: string;
-    mrp?: string;
-    sellingPrice?: string;
-    hsnCode?: string;
-    uom?: string;
     manufacturingDate?: string;
     expiryDate?: string;
+};
+
+type BarcodeAssignment = {
+    _id?: string;
+    assignmentCode?: string;
+    templateCode: string;
+    templateName?: string;
+    productCode: string;
+    productName?: string;
     codeSource: CodeSource;
     codeType: CodeType;
     barcodeType?: BarcodeType;
-    codeValue: string;
+    codeValue?: string;
+    qrValue?: QrValue;
     sequenceNumber?: number;
     status: "active" | "inactive";
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
 };
 
 type FormState = {
@@ -127,8 +143,15 @@ type FormState = {
     status: "active" | "inactive";
 };
 
-const BARCODE_TEMPLATE_STORAGE_KEY = "bookez_barcode_qr_templates";
-const BARCODE_ASSIGNMENT_STORAGE_KEY = "bookez_barcode_qr_assignments";
+const defaultPagination = {
+    offset: 0,
+    limit: 10,
+    totalDocs: 0,
+    totalPages: 1,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+};
 
 const CODE_SOURCE_OPTIONS = [
     { label: "Auto Generate", value: "auto" },
@@ -139,23 +162,6 @@ const STATUS_OPTIONS = [
     { label: "Active", value: "active" },
     { label: "Inactive", value: "inactive" },
 ];
-
-const getStoredArray = <T,>(key: string): T[] => {
-    try {
-        const stored = localStorage.getItem(key);
-        if (!stored) return [];
-
-        const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-        console.error(`Failed to read ${key}:`, error);
-        return [];
-    }
-};
-
-const saveStoredArray = <T,>(key: string, records: T[]) => {
-    localStorage.setItem(key, JSON.stringify(records));
-};
 
 const valueToString = (value: any) => {
     if (value === undefined || value === null) return "";
@@ -247,20 +253,6 @@ const formatDateValue = (value: string, format: DateFormat) => {
     }
 };
 
-const getNextAssignmentCode = (assignments: BarcodeAssignment[]) => {
-    let highest = 0;
-
-    assignments.forEach((assignment) => {
-        const match = assignment?.assignmentCode?.match(/^BQA-(\d+)$/);
-        if (!match) return;
-
-        const number = Number(match[1]);
-        if (number > highest) highest = number;
-    });
-
-    return `BQA-${String(highest + 1).padStart(6, "0")}`;
-};
-
 const getNextSequenceNumber = (template: BarcodeQrTemplate | null, assignments: BarcodeAssignment[]) => {
     if (!template) return 1;
 
@@ -275,9 +267,7 @@ const getNextSequenceNumber = (template: BarcodeQrTemplate | null, assignments: 
 
     if (!templateAssignments.length) return start;
 
-    const highestSequence = Math.max(
-        ...templateAssignments.map((assignment) => Number(assignment.sequenceNumber ?? 0))
-    );
+    const highestSequence = Math.max(...templateAssignments.map((assignment) => Number(assignment.sequenceNumber ?? 0)));
 
     return Math.max(start, highestSequence + 1);
 };
@@ -309,6 +299,12 @@ const generateCodeValue = (template: BarcodeQrTemplate | null, sequenceNumber: n
     return values.filter(Boolean).join(template?.separator || "");
 };
 
+const removeEmptyValues = (value: QrValue): QrValue => {
+    return Object.fromEntries(
+        Object.entries(value).filter(([, fieldValue]) => fieldValue !== "" && fieldValue !== null && fieldValue !== undefined)
+    ) as QrValue;
+};
+
 const getDefaultForm = (): FormState => ({
     templateCode: "",
     productCode: "",
@@ -320,45 +316,91 @@ const getDefaultForm = (): FormState => ({
 const AssignBarcodeQrCode = () => {
     const dispatch = useDispatch<any>();
 
-    const { products, loading: productsLoading, error: productError } = useSelector(
-        (state: any) => state.productMaster
-    );
+    const { products, loading: productsLoading, error: productError } = useSelector((state: any) => state.productMaster);
 
-    const [templates, setTemplates] = useState<BarcodeQrTemplate[]>([]);
-    const [assignments, setAssignments] = useState<BarcodeAssignment[]>([]);
+    const {
+        templates = [],
+        templateLoading = false,
+        assignments = [],
+        assignmentPagination = defaultPagination,
+        assignmentLoading = false,
+        assignmentCreateLoading = false,
+        assignmentDeleteLoading = false,
+        error: barcodeQrError,
+    } = useSelector((state: any) => state.barcodeQr || {});
+
+    const [activeTab, setActiveTab] = useState<ActiveTab>("assign");
     const [form, setForm] = useState<FormState>(getDefaultForm());
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [qrCodeUrl, setQrCodeUrl] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const [apiError, setApiError] = useState("");
+    const [localOffset, setLocalOffset] = useState(0);
+    const [localLimit, setLocalLimit] = useState(10);
 
-    const loadProducts = () => {
-        dispatch(
-            getAllProducts({
+    const loadAllAssignmentsForAssign = async () => {
+        await dispatch(
+            getAllBarcodeQrAssignments({
                 offset: 0,
-                limit: 199,
+                limit: 500,
                 search: "",
-                productType: "",
+                status: "",
+                codeType: "",
+                productCode: "",
+                templateCode: "",
             })
         );
     };
 
-    useEffect(() => {
-        const savedTemplates = getStoredArray<BarcodeQrTemplate>(BARCODE_TEMPLATE_STORAGE_KEY);
-        const savedAssignments = getStoredArray<BarcodeAssignment>(BARCODE_ASSIGNMENT_STORAGE_KEY);
+    const loadAssignmentList = async () => {
+        await dispatch(
+            getAllBarcodeQrAssignments({
+                offset: localOffset,
+                limit: localLimit,
+                search: "",
+                status: "",
+                codeType: "",
+                productCode: "",
+                templateCode: "",
+            })
+        );
+    };
 
-        setTemplates(savedTemplates);
-        setAssignments(savedAssignments);
-        loadProducts();
-    }, []);
+    const loadProducts = () => {
+        dispatch(getAllProducts({ offset: 0, limit: 199, search: "", productType: "" }));
+    };
+
+    useEffect(() => {
+        dispatch(getAllProducts({ offset: 0, limit: 199, search: "", productType: "" }));
+        dispatch(getAllBarcodeQrTemplates({ offset: 0, limit: 500, search: "", status: "active", codeType: "" }));
+        loadAllAssignmentsForAssign();
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (activeTab !== "listing") return;
+        loadAssignmentList();
+    }, [activeTab, localOffset, localLimit]);
+
+    const handleTabChange = (tab: ActiveTab) => {
+        setActiveTab(tab);
+        setSuccessMessage("");
+        setApiError("");
+
+        if (tab === "listing") {
+            setLocalOffset(0);
+        } else {
+            loadAllAssignmentsForAssign();
+        }
+    };
 
     const activeTemplates = useMemo(
-        () => templates.filter((template) => template?.status === "active"),
+        () => (templates || []).filter((template: BarcodeQrTemplate) => template?.status === "active"),
         [templates]
     );
 
     const templateOptions = useMemo(
         () =>
-            activeTemplates.map((template) => ({
+            activeTemplates.map((template: BarcodeQrTemplate) => ({
                 label: `${template.templateName} (${template.templateCode})`,
                 value: template.templateCode,
             })),
@@ -377,7 +419,7 @@ const AssignBarcodeQrCode = () => {
     );
 
     const selectedTemplate = useMemo(
-        () => activeTemplates.find((template) => template.templateCode === form.templateCode) || null,
+        () => activeTemplates.find((template: BarcodeQrTemplate) => template.templateCode === form.templateCode) || null,
         [activeTemplates, form.templateCode]
     );
 
@@ -392,12 +434,12 @@ const AssignBarcodeQrCode = () => {
     const productData = useMemo(() => getProductSnapshot(selectedProduct), [selectedProduct]);
 
     const hasIncrement = useMemo(
-        () => Boolean(selectedTemplate?.barcodeValueFormat?.some((part) => part.type === "increment")),
+        () => Boolean(selectedTemplate?.barcodeValueFormat?.some((part: BarcodeValuePart) => part.type === "increment")),
         [selectedTemplate]
     );
 
     const nextSequenceNumber = useMemo(
-        () => getNextSequenceNumber(selectedTemplate, assignments),
+        () => getNextSequenceNumber(selectedTemplate, assignments || []),
         [selectedTemplate, assignments]
     );
 
@@ -411,26 +453,135 @@ const AssignBarcodeQrCode = () => {
         [form.codeSource, form.manualCode, autoGeneratedCode]
     );
 
+    const qrValue = useMemo<QrValue | null>(() => {
+        if (!selectedProduct) return null;
+
+        return removeEmptyValues({
+            productCode: productData.productCode,
+            productName: productData.productName,
+            hsnCode: productData.hsnCode,
+            uom: productData.uom,
+            mrp: productData.mrp,
+            sellingPrice: productData.sellingPrice,
+            batchNumber: productData.batchNumber,
+            serialNumber: productData.serialNumber,
+            warehouse: productData.warehouse,
+            location: productData.location,
+            manufacturingDate: productData.manufacturingDate,
+            expiryDate: productData.expiryDate,
+        });
+    }, [selectedProduct, productData]);
+
+    const qrEncodedValue = useMemo(() => {
+        if (!qrValue) return "";
+        return JSON.stringify(qrValue);
+    }, [qrValue]);
+
+    const assignmentColumns = useMemo(
+        () => [
+            {
+                key: "assignmentCode",
+                title: "Assignment",
+                render: (assignment: BarcodeAssignment) => assignment.assignmentCode || "-",
+            },
+            {
+                key: "productName",
+                title: "Product",
+                render: (assignment: BarcodeAssignment) => (
+                    <div>
+                        <p className="font-medium">
+                            {assignment.productName || assignment.qrValue?.productName || "-"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{assignment.productCode || "-"}</p>
+                    </div>
+                ),
+            },
+            {
+                key: "templateName",
+                title: "Template",
+                render: (assignment: BarcodeAssignment) => (
+                    <div>
+                        <p className="font-medium">{assignment.templateName || "-"}</p>
+                        <p className="text-xs text-muted-foreground">{assignment.templateCode || "-"}</p>
+                    </div>
+                ),
+            },
+            {
+                key: "codeType",
+                title: "Code Type",
+                render: (assignment: BarcodeAssignment) =>
+                    assignment.codeType === "barcode" ? "Barcode" : "QR Code",
+            },
+            {
+                key: "codeValue",
+                title: "Barcode Value",
+                render: (assignment: BarcodeAssignment) =>
+                    assignment.codeType === "barcode" ? (
+                        <span className="font-mono font-medium">{assignment.codeValue || "-"}</span>
+                    ) : (
+                        "-"
+                    ),
+            },
+            {
+                key: "codeSource",
+                title: "Source",
+                render: (assignment: BarcodeAssignment) =>
+                    assignment.codeType === "qrcode"
+                        ? "Auto Generate"
+                        : assignment.codeSource === "auto"
+                            ? "Auto Generate"
+                            : "Manual",
+            },
+            {
+                key: "sequenceNumber",
+                title: "Sequence",
+                render: (assignment: BarcodeAssignment) =>
+                    assignment.sequenceNumber !== undefined && assignment.sequenceNumber !== null
+                        ? assignment.sequenceNumber
+                        : "-",
+            },
+            {
+                key: "status",
+                title: "Status",
+                render: (assignment: BarcodeAssignment) => (
+                    <span className="capitalize">{assignment.status || "-"}</span>
+                ),
+            },
+        ],
+        []
+    );
+
     const updateField = (key: keyof FormState, value: any) => {
         setForm((previous) => ({ ...previous, [key]: value }));
         setErrors((previous) => ({ ...previous, [key]: "" }));
         setSuccessMessage("");
+        setApiError("");
     };
 
     const handleTemplateChange = (value: string) => {
-        setForm((previous) => ({ ...previous, templateCode: value, manualCode: "" }));
+        const template = activeTemplates.find((item: BarcodeQrTemplate) => item.templateCode === value);
+
+        setForm((previous) => ({
+            ...previous,
+            templateCode: value,
+            codeSource: template?.codeType === "qrcode" ? "auto" : previous.codeSource,
+            manualCode: "",
+        }));
+
         setErrors({});
         setSuccessMessage("");
+        setApiError("");
     };
 
     const handleProductChange = (value: string) => {
         setForm((previous) => ({ ...previous, productCode: value }));
         setErrors((previous) => ({ ...previous, productCode: "" }));
         setSuccessMessage("");
+        setApiError("");
     };
 
     useEffect(() => {
-        if (selectedTemplate?.codeType !== "qrcode" || !finalCodeValue) {
+        if (selectedTemplate?.codeType !== "qrcode" || !qrEncodedValue) {
             setQrCodeUrl("");
             return;
         }
@@ -439,7 +590,7 @@ const AssignBarcodeQrCode = () => {
 
         const generateQRCode = async () => {
             try {
-                const value = await QRCode.toDataURL(finalCodeValue, {
+                const value = await QRCode.toDataURL(qrEncodedValue, {
                     errorCorrectionLevel: "M",
                     margin: 1,
                     width: 400,
@@ -457,7 +608,7 @@ const AssignBarcodeQrCode = () => {
         return () => {
             active = false;
         };
-    }, [selectedTemplate, finalCodeValue]);
+    }, [selectedTemplate, qrEncodedValue]);
 
     const previewSize = useMemo(() => {
         if (!selectedTemplate) return { width: 300, height: 150 };
@@ -495,15 +646,27 @@ const AssignBarcodeQrCode = () => {
 
         if (!form.templateCode) nextErrors.templateCode = "Template is required";
         if (!form.productCode) nextErrors.productCode = "Product is required";
-        if (form.codeSource === "manual" && !form.manualCode.trim()) nextErrors.manualCode = "Code value is required";
-        if (!finalCodeValue) nextErrors.codeValue = "Barcode / QR value is empty";
 
-        if (finalCodeValue) {
-            const duplicate = assignments.some(
-                (assignment) => assignment?.codeValue?.trim()?.toLowerCase() === finalCodeValue.trim().toLowerCase()
-            );
+        if (selectedTemplate?.codeType === "barcode") {
+            if (form.codeSource === "manual" && !form.manualCode.trim()) {
+                nextErrors.manualCode = "Code value is required";
+            }
 
-            if (duplicate) nextErrors.codeValue = "This Barcode / QR Code is already assigned";
+            if (!finalCodeValue) nextErrors.codeValue = "Barcode value is empty";
+
+            if (finalCodeValue) {
+                const duplicate = (assignments || []).some(
+                    (assignment: BarcodeAssignment) =>
+                        assignment.codeType === "barcode" &&
+                        assignment?.codeValue?.trim()?.toLowerCase() === finalCodeValue.trim().toLowerCase()
+                );
+
+                if (duplicate) nextErrors.codeValue = "This Barcode is already assigned";
+            }
+        }
+
+        if (selectedTemplate?.codeType === "qrcode" && !qrValue) {
+            nextErrors.codeValue = "QR Code product data is empty";
         }
 
         setErrors(nextErrors);
@@ -517,74 +680,115 @@ const AssignBarcodeQrCode = () => {
         }));
 
         setErrors({});
+        setApiError("");
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!validate()) return;
         if (!selectedTemplate || !selectedProduct) return;
 
         try {
-            const now = new Date().toISOString();
+            setApiError("");
+            setSuccessMessage("");
 
-            const assignment: BarcodeAssignment = {
-                assignmentCode: getNextAssignmentCode(assignments),
-                templateCode: selectedTemplate.templateCode,
-                templateName: selectedTemplate.templateName,
-                productId: productData.productId || undefined,
-                productCode: productData.productCode,
-                productName: productData.productName,
-                batchNumber: productData.batchNumber || undefined,
-                serialNumber: productData.serialNumber || undefined,
-                warehouse: productData.warehouse || undefined,
-                location: productData.location || undefined,
-                mrp: productData.mrp || undefined,
-                sellingPrice: productData.sellingPrice || undefined,
-                hsnCode: productData.hsnCode || undefined,
-                uom: productData.uom || undefined,
-                manufacturingDate: productData.manufacturingDate || undefined,
-                expiryDate: productData.expiryDate || undefined,
-                codeSource: form.codeSource,
-                codeType: selectedTemplate.codeType,
-                barcodeType: selectedTemplate.codeType === "barcode" ? selectedTemplate.barcodeType : undefined,
-                codeValue: finalCodeValue,
-                sequenceNumber: form.codeSource === "auto" && hasIncrement ? nextSequenceNumber : undefined,
-                status: form.status,
-                createdAt: now,
-                updatedAt: now,
-            };
+            const payload =
+                selectedTemplate.codeType === "barcode"
+                    ? {
+                        templateCode: selectedTemplate.templateCode,
+                        productCode: productData.productCode,
+                        codeType: "barcode" as const,
+                        barcodeType: selectedTemplate.barcodeType || "CODE128",
+                        codeSource: form.codeSource,
+                        codeValue: finalCodeValue,
+                        sequenceNumber: form.codeSource === "auto" && hasIncrement ? nextSequenceNumber : undefined,
+                        status: form.status,
+                    }
+                    : {
+                        templateCode: selectedTemplate.templateCode,
+                        productCode: productData.productCode,
+                        codeType: "qrcode" as const,
+                        codeSource: "auto" as const,
+                        qrValue: qrValue || {},
+                        status: form.status,
+                    };
 
-            const updatedAssignments = [...assignments, assignment];
+            const result = await dispatch(createBarcodeQrAssignment(payload)).unwrap();
 
-            saveStoredArray(BARCODE_ASSIGNMENT_STORAGE_KEY, updatedAssignments);
-            setAssignments(updatedAssignments);
-            setSuccessMessage(`${assignment.codeValue} assigned successfully to ${assignment.productName}`);
+            setSuccessMessage(
+                selectedTemplate.codeType === "barcode"
+                    ? `${finalCodeValue} assigned successfully to ${productData.productName}`
+                    : `QR Code assigned successfully to ${productData.productName}`
+            );
+
+            console.log("BARCODE / QR ASSIGNMENT SAVED", result);
+
+            await loadAllAssignmentsForAssign();
+
             resetForm(true);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to save Barcode / QR assignment:", error);
+            setSuccessMessage("");
+            setApiError(error?.message || error?.error?.message || "Failed to assign Barcode / QR Code");
         }
     };
 
-    const handleDelete = (assignmentCode: string) => {
-        const updatedAssignments = assignments.filter((assignment) => assignment.assignmentCode !== assignmentCode);
+    const handleDelete = async (templateCode: string) => {
+        try {
+            setApiError("");
+            setSuccessMessage("");
 
-        saveStoredArray(BARCODE_ASSIGNMENT_STORAGE_KEY, updatedAssignments);
-        setAssignments(updatedAssignments);
-        setSuccessMessage("Assignment deleted successfully");
+            await dispatch(deleteBarcodeQrAssignment(templateCode)).unwrap();
+
+            setSuccessMessage("Assignment deleted successfully");
+
+            if ((assignments?.length || 0) === 1 && localOffset > 0) {
+                setLocalOffset((previous) => Math.max(0, previous - localLimit));
+            } else {
+                await loadAssignmentList();
+            }
+        } catch (error: any) {
+            console.error("Failed to delete Barcode / QR assignment:", error);
+            setApiError(error?.message || error?.error?.message || "Failed to delete Barcode / QR assignment");
+        }
     };
 
     return (
         <div className="flex h-auto w-full flex-col gap-3 rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-border pb-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 className="text-xl font-semibold text-card-foreground">Assign Barcode / QR Code</h1>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                        Select product and assign generated or existing Barcode / QR Code.
-                    </p>
-                </div>
+            <div className="border-b border-border">
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => handleTabChange("assign")}
+                        className={`relative px-4 py-2.5 text-sm font-semibold transition ${activeTab === "assign"
+                                ? "text-primary"
+                                : "text-muted-foreground hover:text-card-foreground"
+                            }`}
+                    >
+                        Assign Barcode / QR
 
-                <div className="rounded-sm border border-border bg-muted/30 px-3 py-1.5 text-sm">
-                    <span className="text-muted-foreground">Total Assigned:</span>
-                    <span className="ml-2 font-semibold">{assignments.length}</span>
+                        {activeTab === "assign" ? (
+                            <span className="absolute bottom-0 left-0 h-0.5 w-full bg-primary" />
+                        ) : null}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleTabChange("listing")}
+                        className={`relative px-4 py-2.5 text-sm font-semibold transition ${activeTab === "listing"
+                                ? "text-primary"
+                                : "text-muted-foreground hover:text-card-foreground"
+                            }`}
+                    >
+                        Assigned List
+
+                        <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
+                            {assignmentPagination?.totalDocs ?? assignments?.length ?? 0}
+                        </span>
+
+                        {activeTab === "listing" ? (
+                            <span className="absolute bottom-0 left-0 h-0.5 w-full bg-primary" />
+                        ) : null}
+                    </button>
                 </div>
             </div>
 
@@ -594,446 +798,475 @@ const AssignBarcodeQrCode = () => {
                 </div>
             ) : null}
 
-            {activeTemplates.length === 0 ? (
-                <div className="rounded-md border border-border bg-muted/20 p-4">
-                    <p className="text-sm font-semibold">No active Barcode / QR Code template found.</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Create and save an active template first.</p>
+            {apiError || barcodeQrError ? (
+                <div className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm font-medium text-danger">
+                    {apiError || barcodeQrError}
                 </div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-                <div className="min-w-0 space-y-3">
-                    <div className="rounded-md border border-border bg-card">
-                        <div className="border-b border-border px-4 py-3">
-                            <h2 className="text-base font-semibold">Assignment Details</h2>
-                            <p className="mt-0.5 text-sm text-muted-foreground">Select template, product and code source.</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 lg:grid-cols-4">
-                            <SelectInput
-                                label="Template"
-                                mandatory
-                                value={form.templateCode}
-                                error={errors.templateCode}
-                                options={templateOptions}
-                                placeholder="Select Template"
-                                onChange={(event: any) => handleTemplateChange(event.target.value)}
-                            />
-
-                            <div className="lg:col-span-2">
-                                <SelectInput
-                                    label="Product"
-                                    mandatory
-                                    value={form.productCode}
-                                    error={errors.productCode || productError || ""}
-                                    options={productOptions}
-                                    placeholder={productsLoading ? "Loading Products..." : "Select Product"}
-                                    disabled={productsLoading}
-                                    largeData
-                                    onChange={(event: any) => handleProductChange(event.target.value)}
-                                />
-                            </div>
-
-                            <SelectInput
-                                label="Code Source"
-                                value={form.codeSource}
-                                options={CODE_SOURCE_OPTIONS}
-                                onChange={(event: any) => updateField("codeSource", event.target.value)}
-                            />
-
-                            <SelectInput
-                                label="Status"
-                                value={form.status}
-                                options={STATUS_OPTIONS}
-                                onChange={(event: any) => updateField("status", event.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {selectedProduct ? (
-                        <div className="rounded-md border border-border bg-card">
-                            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-                                <div>
-                                    <h2 className="text-base font-semibold">Selected Product</h2>
-                                    <p className="mt-0.5 text-sm text-muted-foreground">
-                                        Product details loaded automatically from Product Master.
-                                    </p>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={loadProducts}
-                                    disabled={productsLoading}
-                                    className="h-8 rounded-sm border border-border bg-card px-3 text-sm font-medium transition hover:border-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {productsLoading ? "Loading..." : "Refresh"}
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4 text-sm md:grid-cols-3 lg:grid-cols-4">
-                                <div>
-                                    <p className="text-muted-foreground">Product Code</p>
-                                    <p className="mt-0.5 font-medium">{productData.productCode || "-"}</p>
-                                </div>
-
-                                <div>
-                                    <p className="text-muted-foreground">Product Name</p>
-                                    <p className="mt-0.5 font-medium">{productData.productName || "-"}</p>
-                                </div>
-
-                                <div>
-                                    <p className="text-muted-foreground">HSN Code</p>
-                                    <p className="mt-0.5 font-medium">{productData.hsnCode || "-"}</p>
-                                </div>
-
-                                <div>
-                                    <p className="text-muted-foreground">UOM</p>
-                                    <p className="mt-0.5 font-medium">{productData.uom || "-"}</p>
-                                </div>
-
-                                {productData.mrp ? (
-                                    <div>
-                                        <p className="text-muted-foreground">MRP</p>
-                                        <p className="mt-0.5 font-medium">{productData.mrp}</p>
-                                    </div>
-                                ) : null}
-
-                                {productData.sellingPrice ? (
-                                    <div>
-                                        <p className="text-muted-foreground">Selling Price</p>
-                                        <p className="mt-0.5 font-medium">{productData.sellingPrice}</p>
-                                    </div>
-                                ) : null}
-
-                                {productData.batchNumber ? (
-                                    <div>
-                                        <p className="text-muted-foreground">Batch</p>
-                                        <p className="mt-0.5 font-medium">{productData.batchNumber}</p>
-                                    </div>
-                                ) : null}
-
-                                {productData.serialNumber ? (
-                                    <div>
-                                        <p className="text-muted-foreground">Serial Number</p>
-                                        <p className="mt-0.5 font-medium">{productData.serialNumber}</p>
-                                    </div>
-                                ) : null}
-
-                                {productData.warehouse ? (
-                                    <div>
-                                        <p className="text-muted-foreground">Warehouse</p>
-                                        <p className="mt-0.5 font-medium">{productData.warehouse}</p>
-                                    </div>
-                                ) : null}
-
-                                {productData.location ? (
-                                    <div>
-                                        <p className="text-muted-foreground">Location</p>
-                                        <p className="mt-0.5 font-medium">{productData.location}</p>
-                                    </div>
-                                ) : null}
-
-                                {productData.manufacturingDate ? (
-                                    <div>
-                                        <p className="text-muted-foreground">Manufacturing Date</p>
-                                        <p className="mt-0.5 font-medium">{productData.manufacturingDate}</p>
-                                    </div>
-                                ) : null}
-
-                                {productData.expiryDate ? (
-                                    <div>
-                                        <p className="text-muted-foreground">Expiry Date</p>
-                                        <p className="mt-0.5 font-medium">{productData.expiryDate}</p>
-                                    </div>
-                                ) : null}
-                            </div>
+            {activeTab === "assign" ? (
+                <>
+                    {!templateLoading && activeTemplates.length === 0 ? (
+                        <div className="rounded-md border border-border bg-muted/20 p-4">
+                            <p className="text-sm font-semibold">No active Barcode / QR Code template found.</p>
+                            <p className="mt-1 text-sm text-muted-foreground">Create and save an active template first.</p>
                         </div>
                     ) : null}
 
-                    <div className="rounded-md border border-border bg-card">
-                        <div className="border-b border-border px-4 py-3">
-                            <h2 className="text-base font-semibold">Barcode / QR Code</h2>
-                            <p className="mt-0.5 text-sm text-muted-foreground">
-                                Generate from template or enter an existing code.
-                            </p>
-                        </div>
-
-                        <div className="p-4">
-                            {form.codeSource === "manual" ? (
-                                <TextInput
-                                    label="Code Value"
-                                    mandatory
-                                    value={form.manualCode}
-                                    error={errors.manualCode || errors.codeValue}
-                                    placeholder="Scan or enter Barcode / QR Code"
-                                    onChange={(event: any) => updateField("manualCode", event.target.value)}
-                                />
-                            ) : (
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-sm font-medium text-card-foreground">Generated Code</label>
-
-                                        <div
-                                            className={`flex h-8 items-center rounded-sm border bg-primary/5 px-3 ${errors.codeValue ? "border-danger" : "border-primary/40"
-                                                }`}
-                                        >
-                                            <span className="truncate font-mono text-sm font-semibold text-primary">
-                                                {autoGeneratedCode || "-"}
-                                            </span>
-                                        </div>
-
-                                        {errors.codeValue ? (
-                                            <p className="text-xs text-danger">{errors.codeValue}</p>
-                                        ) : null}
-                                    </div>
-
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-sm font-medium text-card-foreground">Next Increment</label>
-
-                                        <div className="flex h-8 items-center rounded-sm border border-border bg-input px-3 text-sm font-medium">
-                                            {hasIncrement ? nextSequenceNumber : "Not Used"}
-                                        </div>
-                                    </div>
+                    <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+                        <div className="min-w-0 space-y-3">
+                            <div className="rounded-md border border-border bg-card">
+                                <div className="border-b border-border px-4 py-3">
+                                    <h2 className="text-base font-semibold">Assignment Details</h2>
+                                    <p className="mt-0.5 text-sm text-muted-foreground">
+                                        Select template, product and code source.
+                                    </p>
                                 </div>
-                            )}
-                        </div>
-                    </div>
 
-                    <div className="flex justify-end gap-2">
-                        <button
-                            type="button"
-                            onClick={() => resetForm(false)}
-                            className="h-8 rounded-sm border border-border bg-card px-4 text-sm font-medium transition hover:border-primary hover:bg-muted"
-                        >
-                            Clear
-                        </button>
+                                <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 lg:grid-cols-4">
+                                    <SelectInput
+                                        label="Template"
+                                        mandatory
+                                        value={form.templateCode}
+                                        error={errors.templateCode}
+                                        options={templateOptions}
+                                        placeholder={templateLoading ? "Loading Templates..." : "Select Template"}
+                                        disabled={templateLoading}
+                                        onChange={(event: any) => handleTemplateChange(event.target.value)}
+                                    />
 
-                        <button
-                            type="button"
-                            disabled={activeTemplates.length === 0}
-                            onClick={handleSave}
-                            className="h-8 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            Assign Barcode / QR
-                        </button>
-                    </div>
-                </div>
+                                    <div className="lg:col-span-2">
+                                        <SelectInput
+                                            label="Product"
+                                            mandatory
+                                            value={form.productCode}
+                                            error={errors.productCode || productError || ""}
+                                            options={productOptions}
+                                            placeholder={productsLoading ? "Loading Products..." : "Select Product"}
+                                            disabled={productsLoading}
+                                            largeData
+                                            onChange={(event: any) => handleProductChange(event.target.value)}
+                                        />
+                                    </div>
 
-                <div className="min-w-0">
-                    <div className="sticky top-3 overflow-hidden rounded-md border border-border bg-card">
-                        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-                            <div>
-                                <h2 className="text-base font-semibold">Label Preview</h2>
+                                    {selectedTemplate?.codeType !== "qrcode" ? (
+                                        <SelectInput
+                                            label="Code Source"
+                                            value={form.codeSource}
+                                            options={CODE_SOURCE_OPTIONS}
+                                            onChange={(event: any) => updateField("codeSource", event.target.value)}
+                                        />
+                                    ) : (
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-sm font-medium text-card-foreground">Code Source</label>
 
-                                <p className="mt-0.5 text-sm text-muted-foreground">
-                                    {selectedTemplate
-                                        ? `${selectedTemplate.width} mm × ${selectedTemplate.height} mm`
-                                        : "Select Template"}
-                                </p>
+                                            <div className="flex h-8 items-center rounded-sm border border-border bg-muted/40 px-3 text-sm">
+                                                Auto Generate
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <SelectInput
+                                        label="Status"
+                                        value={form.status}
+                                        options={STATUS_OPTIONS}
+                                        onChange={(event: any) => updateField("status", event.target.value)}
+                                    />
+                                </div>
                             </div>
 
-                            {selectedTemplate ? (
-                                <div className="rounded-sm border border-primary/20 bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
-                                    {selectedTemplate.codeType === "barcode" ? selectedTemplate.barcodeType : "QR Code"}
+                            {selectedProduct ? (
+                                <div className="rounded-md border border-border bg-card">
+                                    <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                                        <div>
+                                            <h2 className="text-base font-semibold">Selected Product</h2>
+                                            <p className="mt-0.5 text-sm text-muted-foreground">
+                                                Product details loaded automatically from Product Master.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={loadProducts}
+                                            disabled={productsLoading}
+                                            className="h-8 rounded-sm border border-border bg-card px-3 text-sm font-medium transition hover:border-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {productsLoading ? "Loading..." : "Refresh"}
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4 text-sm md:grid-cols-3 lg:grid-cols-4">
+                                        <div>
+                                            <p className="text-muted-foreground">Product Code</p>
+                                            <p className="mt-0.5 font-medium">{productData.productCode || "-"}</p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-muted-foreground">Product Name</p>
+                                            <p className="mt-0.5 font-medium">{productData.productName || "-"}</p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-muted-foreground">HSN Code</p>
+                                            <p className="mt-0.5 font-medium">{productData.hsnCode || "-"}</p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-muted-foreground">UOM</p>
+                                            <p className="mt-0.5 font-medium">{productData.uom || "-"}</p>
+                                        </div>
+
+                                        {productData.mrp ? (
+                                            <div>
+                                                <p className="text-muted-foreground">MRP</p>
+                                                <p className="mt-0.5 font-medium">{productData.mrp}</p>
+                                            </div>
+                                        ) : null}
+
+                                        {productData.sellingPrice ? (
+                                            <div>
+                                                <p className="text-muted-foreground">Selling Price</p>
+                                                <p className="mt-0.5 font-medium">{productData.sellingPrice}</p>
+                                            </div>
+                                        ) : null}
+
+                                        {productData.batchNumber ? (
+                                            <div>
+                                                <p className="text-muted-foreground">Batch</p>
+                                                <p className="mt-0.5 font-medium">{productData.batchNumber}</p>
+                                            </div>
+                                        ) : null}
+
+                                        {productData.serialNumber ? (
+                                            <div>
+                                                <p className="text-muted-foreground">Serial Number</p>
+                                                <p className="mt-0.5 font-medium">{productData.serialNumber}</p>
+                                            </div>
+                                        ) : null}
+
+                                        {productData.warehouse ? (
+                                            <div>
+                                                <p className="text-muted-foreground">Warehouse</p>
+                                                <p className="mt-0.5 font-medium">{productData.warehouse}</p>
+                                            </div>
+                                        ) : null}
+
+                                        {productData.location ? (
+                                            <div>
+                                                <p className="text-muted-foreground">Location</p>
+                                                <p className="mt-0.5 font-medium">{productData.location}</p>
+                                            </div>
+                                        ) : null}
+
+                                        {productData.manufacturingDate ? (
+                                            <div>
+                                                <p className="text-muted-foreground">Manufacturing Date</p>
+                                                <p className="mt-0.5 font-medium">{productData.manufacturingDate}</p>
+                                            </div>
+                                        ) : null}
+
+                                        {productData.expiryDate ? (
+                                            <div>
+                                                <p className="text-muted-foreground">Expiry Date</p>
+                                                <p className="mt-0.5 font-medium">{productData.expiryDate}</p>
+                                            </div>
+                                        ) : null}
+                                    </div>
                                 </div>
                             ) : null}
+
+                            {selectedTemplate?.codeType === "barcode" ? (
+                                <div className="rounded-md border border-border bg-card">
+                                    <div className="border-b border-border px-4 py-3">
+                                        <h2 className="text-base font-semibold">Barcode</h2>
+                                        <p className="mt-0.5 text-sm text-muted-foreground">
+                                            Generate from template or enter an existing Barcode.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4">
+                                        {form.codeSource === "manual" ? (
+                                            <TextInput
+                                                label="Code Value"
+                                                mandatory
+                                                value={form.manualCode}
+                                                error={errors.manualCode || errors.codeValue}
+                                                placeholder="Scan or enter Barcode"
+                                                onChange={(event: any) => updateField("manualCode", event.target.value)}
+                                            />
+                                        ) : (
+                                            <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-sm font-medium text-card-foreground">
+                                                        Generated Code
+                                                    </label>
+
+                                                    <div
+                                                        className={`flex h-8 items-center rounded-sm border bg-primary/5 px-3 ${errors.codeValue ? "border-danger" : "border-primary/40"
+                                                            }`}
+                                                    >
+                                                        <span className="truncate font-mono text-sm font-semibold text-primary">
+                                                            {autoGeneratedCode || "-"}
+                                                        </span>
+                                                    </div>
+
+                                                    {errors.codeValue ? (
+                                                        <p className="text-xs text-danger">{errors.codeValue}</p>
+                                                    ) : null}
+                                                </div>
+
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-sm font-medium text-card-foreground">
+                                                        Next Increment
+                                                    </label>
+
+                                                    <div className="flex h-8 items-center rounded-sm border border-border bg-input px-3 text-sm font-medium">
+                                                        {hasIncrement ? nextSequenceNumber : "Not Used"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => resetForm(false)}
+                                    disabled={assignmentCreateLoading}
+                                    className="h-8 rounded-sm border border-border bg-card px-4 text-sm font-medium transition hover:border-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Clear
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={activeTemplates.length === 0 || assignmentCreateLoading}
+                                    onClick={handleSave}
+                                    className="h-8 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {assignmentCreateLoading ? "Assigning..." : "Assign Barcode / QR"}
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="p-4">
-                            <div className="flex min-h-[260px] items-center justify-center overflow-auto rounded-md border border-dashed border-border bg-muted/20 p-4">
-                                {selectedTemplate ? (
-                                    <div
-                                        className="flex flex-col items-center justify-center overflow-hidden border border-slate-400 bg-white p-2 text-black shadow-sm"
-                                        style={{
-                                            width: previewSize.width,
-                                            height: previewSize.height,
-                                            minWidth: previewSize.width,
-                                            minHeight: previewSize.height,
-                                        }}
-                                    >
-                                        {selectedTemplate?.fields?.productName ? (
-                                            <div className="mb-1 max-w-full truncate text-center text-[11px] font-semibold">
-                                                {productData.productName || "PRODUCT NAME"}
-                                            </div>
-                                        ) : null}
+                        <div className="min-w-0">
+                            <div className="sticky top-3 overflow-hidden rounded-md border border-border bg-card">
+                                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                                    <div>
+                                        <h2 className="text-base font-semibold">Label Preview</h2>
 
-                                        {selectedTemplate.codeType === "barcode" ? (
-                                            finalCodeValue ? (
-                                                <div className="max-w-full overflow-hidden">
-                                                    <Barcode
-                                                        value={finalCodeValue}
-                                                        format={selectedTemplate.barcodeType}
-                                                        width={selectedTemplate.width <= 38 ? 0.8 : 1}
-                                                        height={barcodeHeight}
-                                                        displayValue={false}
-                                                        margin={0}
-                                                        background="#ffffff"
-                                                        lineColor="#000000"
-                                                    />
-                                                </div>
-                                            ) : null
-                                        ) : qrCodeUrl ? (
-                                            <img
-                                                src={qrCodeUrl}
-                                                alt="QR Code"
-                                                style={{ width: qrSize, height: qrSize }}
-                                            />
-                                        ) : null}
+                                        <p className="mt-0.5 text-sm text-muted-foreground">
+                                            {selectedTemplate
+                                                ? `${selectedTemplate.width} mm × ${selectedTemplate.height} mm`
+                                                : "Select Template"}
+                                        </p>
+                                    </div>
 
-                                        <div className="mt-1 max-w-full break-all text-center font-mono text-[9px] font-semibold">
-                                            {finalCodeValue || "-"}
+                                    {selectedTemplate ? (
+                                        <div className="rounded-sm border border-primary/20 bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
+                                            {selectedTemplate.codeType === "barcode"
+                                                ? selectedTemplate.barcodeType
+                                                : "QR Code"}
                                         </div>
+                                    ) : null}
+                                </div>
 
-                                        {selectedTemplate?.fields?.productCode ? (
-                                            <div className="mt-0.5 text-center text-[9px]">
-                                                {productData.productCode || "PRD-000001"}
+                                <div className="p-4">
+                                    <div className="flex min-h-[260px] items-center justify-center overflow-auto rounded-md border border-dashed border-border bg-muted/20 p-4">
+                                        {selectedTemplate ? (
+                                            <div
+                                                className="flex flex-col items-center justify-center overflow-hidden border border-slate-400 bg-white p-2 text-black shadow-sm"
+                                                style={{
+                                                    width: previewSize.width,
+                                                    height: previewSize.height,
+                                                    minWidth: previewSize.width,
+                                                    minHeight: previewSize.height,
+                                                }}
+                                            >
+                                                {selectedTemplate.fields?.productName ? (
+                                                    <div className="mb-1 max-w-full truncate text-center text-[11px] font-semibold">
+                                                        {productData.productName || "PRODUCT NAME"}
+                                                    </div>
+                                                ) : null}
+
+                                                {selectedTemplate.codeType === "barcode" ? (
+                                                    finalCodeValue ? (
+                                                        <div className="max-w-full overflow-hidden">
+                                                            <Barcode
+                                                                value={finalCodeValue}
+                                                                format={selectedTemplate.barcodeType || "CODE128"}
+                                                                width={selectedTemplate.width <= 38 ? 0.8 : 1}
+                                                                height={barcodeHeight}
+                                                                displayValue={false}
+                                                                margin={0}
+                                                                background="#ffffff"
+                                                                lineColor="#000000"
+                                                            />
+                                                        </div>
+                                                    ) : null
+                                                ) : qrCodeUrl ? (
+                                                    <img
+                                                        src={qrCodeUrl}
+                                                        alt="QR Code"
+                                                        style={{ width: qrSize, height: qrSize }}
+                                                    />
+                                                ) : null}
+
+                                                {selectedTemplate.codeType === "barcode" ? (
+                                                    <div className="mt-1 max-w-full break-all text-center font-mono text-[9px] font-semibold">
+                                                        {finalCodeValue || "-"}
+                                                    </div>
+                                                ) : null}
+
+                                                {selectedTemplate.fields?.productCode ? (
+                                                    <div className="mt-0.5 text-center text-[9px]">
+                                                        {productData.productCode || "PRD-000001"}
+                                                    </div>
+                                                ) : null}
+
+                                                <div className="mt-1 flex max-w-full flex-wrap justify-center gap-x-2 gap-y-0.5 text-[8px]">
+                                                    {selectedTemplate.fields?.mrp && productData.mrp ? (
+                                                        <span>MRP: {productData.mrp}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.sellingPrice && productData.sellingPrice ? (
+                                                        <span>Price: {productData.sellingPrice}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.hsnCode && productData.hsnCode ? (
+                                                        <span>HSN: {productData.hsnCode}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.uom && productData.uom ? (
+                                                        <span>UOM: {productData.uom}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.batchNumber && productData.batchNumber ? (
+                                                        <span>Batch: {productData.batchNumber}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.serialNumber && productData.serialNumber ? (
+                                                        <span>Serial: {productData.serialNumber}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.warehouse && productData.warehouse ? (
+                                                        <span>WH: {productData.warehouse}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.location && productData.location ? (
+                                                        <span>LOC: {productData.location}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.manufacturingDate &&
+                                                        productData.manufacturingDate ? (
+                                                        <span>MFG: {productData.manufacturingDate}</span>
+                                                    ) : null}
+
+                                                    {selectedTemplate.fields?.expiryDate && productData.expiryDate ? (
+                                                        <span>EXP: {productData.expiryDate}</span>
+                                                    ) : null}
+                                                </div>
                                             </div>
-                                        ) : null}
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">
+                                                Select a template to preview the label.
+                                            </p>
+                                        )}
+                                    </div>
 
-                                        <div className="mt-1 flex max-w-full flex-wrap justify-center gap-x-2 gap-y-0.5 text-[8px]">
-                                            {selectedTemplate?.fields?.mrp && productData.mrp ? (
-                                                <span>MRP: {productData.mrp}</span>
-                                            ) : null}
+                                    <div className="mt-3 rounded-md border border-border bg-muted/20 p-3">
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                            <span className="text-muted-foreground">Template</span>
+                                            <span className="truncate text-right font-medium">
+                                                {selectedTemplate?.templateName || "-"}
+                                            </span>
 
-                                            {selectedTemplate?.fields?.sellingPrice && productData.sellingPrice ? (
-                                                <span>Price: {productData.sellingPrice}</span>
-                                            ) : null}
+                                            <span className="text-muted-foreground">Product</span>
+                                            <span className="truncate text-right font-medium">
+                                                {productData.productName || "-"}
+                                            </span>
 
-                                            {selectedTemplate?.fields?.hsnCode && productData.hsnCode ? (
-                                                <span>HSN: {productData.hsnCode}</span>
-                                            ) : null}
+                                            <span className="text-muted-foreground">Product Code</span>
+                                            <span className="text-right font-medium">
+                                                {productData.productCode || "-"}
+                                            </span>
 
-                                            {selectedTemplate?.fields?.uom && productData.uom ? (
-                                                <span>UOM: {productData.uom}</span>
-                                            ) : null}
+                                            <span className="text-muted-foreground">Code Type</span>
+                                            <span className="text-right font-medium">
+                                                {selectedTemplate?.codeType === "barcode"
+                                                    ? "Barcode"
+                                                    : selectedTemplate?.codeType === "qrcode"
+                                                        ? "QR Code"
+                                                        : "-"}
+                                            </span>
 
-                                            {selectedTemplate?.fields?.batchNumber && productData.batchNumber ? (
-                                                <span>Batch: {productData.batchNumber}</span>
-                                            ) : null}
-
-                                            {selectedTemplate?.fields?.serialNumber && productData.serialNumber ? (
-                                                <span>Serial: {productData.serialNumber}</span>
-                                            ) : null}
-
-                                            {selectedTemplate?.fields?.warehouse && productData.warehouse ? (
-                                                <span>WH: {productData.warehouse}</span>
-                                            ) : null}
-
-                                            {selectedTemplate?.fields?.location && productData.location ? (
-                                                <span>LOC: {productData.location}</span>
-                                            ) : null}
-
-                                            {selectedTemplate?.fields?.manufacturingDate && productData.manufacturingDate ? (
-                                                <span>MFG: {productData.manufacturingDate}</span>
-                                            ) : null}
-
-                                            {selectedTemplate?.fields?.expiryDate && productData.expiryDate ? (
-                                                <span>EXP: {productData.expiryDate}</span>
+                                            {selectedTemplate?.codeType === "barcode" ? (
+                                                <>
+                                                    <span className="text-muted-foreground">Source</span>
+                                                    <span className="text-right font-medium">
+                                                        {form.codeSource === "auto" ? "Auto Generate" : "Manual"}
+                                                    </span>
+                                                </>
                                             ) : null}
                                         </div>
                                     </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">Select a template to preview the label.</p>
-                                )}
-                            </div>
 
-                            <div className="mt-3 rounded-md border border-border bg-muted/20 p-3">
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                    <span className="text-muted-foreground">Template</span>
-                                    <span className="truncate text-right font-medium">{selectedTemplate?.templateName || "-"}</span>
-
-                                    <span className="text-muted-foreground">Product</span>
-                                    <span className="truncate text-right font-medium">{productData.productName || "-"}</span>
-
-                                    <span className="text-muted-foreground">Product Code</span>
-                                    <span className="text-right font-medium">{productData.productCode || "-"}</span>
-
-                                    <span className="text-muted-foreground">Source</span>
-                                    <span className="text-right font-medium">
-                                        {form.codeSource === "auto" ? "Auto Generate" : "Manual"}
-                                    </span>
+                                    {selectedTemplate?.codeType === "barcode" ? (
+                                        <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                                            <p className="text-sm font-medium">Code Value</p>
+                                            <p className="mt-1 break-all font-mono text-sm font-semibold text-primary">
+                                                {finalCodeValue || "-"}
+                                            </p>
+                                        </div>
+                                    ) : null}
                                 </div>
-                            </div>
-
-                            <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-                                <p className="text-sm font-medium">Code Value</p>
-                                <p className="mt-1 break-all font-mono text-sm font-semibold text-primary">{finalCodeValue || "-"}</p>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </>
+            ) : null}
 
-            <div className="overflow-hidden rounded-md border border-border bg-card">
-                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-                    <div>
-                        <h2 className="text-base font-semibold">Assigned Barcode / QR Codes</h2>
-                        <p className="mt-0.5 text-sm text-muted-foreground">Records saved in localStorage.</p>
+            {activeTab === "listing" ? (
+                <>
+                    <div className="h-[520px] min-h-[400px]">
+                        <DataTable
+                            columns={assignmentColumns}
+                            data={assignments || []}
+                            loading={assignmentLoading}
+                            showFieldSelector
+                            actions={(assignment: BarcodeAssignment) => (
+                                <button
+                                    type="button"
+                                    title="Delete"
+                                    disabled={assignmentDeleteLoading}
+                                    onClick={() => handleDelete(assignment.templateCode)}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-danger/40 text-danger transition hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
+                        />
                     </div>
 
-                    <span className="text-sm font-medium text-muted-foreground">
-                        {assignments.length} Record{assignments.length === 1 ? "" : "s"}
-                    </span>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px] border-collapse">
-                        <thead>
-                            <tr className="border-b border-border bg-muted/40">
-                                <th className="px-3 py-2 text-left text-sm font-medium">Assignment</th>
-                                <th className="px-3 py-2 text-left text-sm font-medium">Product</th>
-                                <th className="px-3 py-2 text-left text-sm font-medium">Template</th>
-                                <th className="px-3 py-2 text-left text-sm font-medium">Barcode / QR Value</th>
-                                <th className="px-3 py-2 text-left text-sm font-medium">Status</th>
-                                <th className="w-[70px] px-3 py-2 text-center text-sm font-medium">Action</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {assignments.length ? (
-                                [...assignments].reverse().map((assignment) => (
-                                    <tr
-                                        key={assignment.assignmentCode}
-                                        className="border-b border-border last:border-b-0 hover:bg-muted/20"
-                                    >
-                                        <td className="px-3 py-2 text-sm font-medium">{assignment.assignmentCode}</td>
-
-                                        <td className="px-3 py-2">
-                                            <p className="text-sm font-medium">{assignment.productName}</p>
-                                            <p className="text-sm text-muted-foreground">{assignment.productCode}</p>
-                                        </td>
-
-                                        <td className="px-3 py-2">
-                                            <p className="text-sm">{assignment.templateName}</p>
-                                            <p className="text-sm text-muted-foreground">{assignment.templateCode}</p>
-                                        </td>
-
-                                        <td className="px-3 py-2 font-mono text-sm font-medium">{assignment.codeValue}</td>
-                                        <td className="px-3 py-2 text-sm capitalize">{assignment.status}</td>
-
-                                        <td className="px-3 py-2 text-center">
-                                            <button
-                                                type="button"
-                                                title="Delete"
-                                                onClick={() => handleDelete(assignment.assignmentCode)}
-                                                className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-danger/40 text-danger transition hover:bg-danger/10"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                                        No Barcode / QR Code assignments found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                    {assignmentPagination?.totalDocs > 0 ? (
+                        <Pagination
+                            {...{
+                                localLimit,
+                                selectCb: (event: any) => {
+                                    setLocalLimit(Number(event.target.value));
+                                    setLocalOffset(0);
+                                },
+                                preDisabled: !assignmentPagination?.hasPrevPage,
+                                nextDisabled: !assignmentPagination?.hasNextPage,
+                                setLocalOffset,
+                                pagination: assignmentPagination,
+                            }}
+                        />
+                    ) : null}
+                </>
+            ) : null}
         </div>
     );
 };
