@@ -13,7 +13,7 @@ import {
 	BookText,
 	LayoutDashboard,
 	X,
-	CreditCard,
+	// CreditCard,
 	BrickWallShield,
 	WalletCards,
 	BadgeIndianRupee,
@@ -237,11 +237,11 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			path: "/users",
 			icon: <Users size={20} />,
 		},
-		{
-			name: "Subscription",
-			path: "/subscription",
-			icon: <CreditCard size={20} />,
-		},
+		// {
+		// 	name: "Subscription",
+		// 	path: "/subscription",
+		// 	icon: <CreditCard size={20} />,
+		// },
 		{
 			name: "Settings",
 			icon: <Settings size={20} />,

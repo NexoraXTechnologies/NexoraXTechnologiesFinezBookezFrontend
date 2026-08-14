@@ -122,7 +122,7 @@ const Modal = ({
                         >
                             <div>
                                 <h2 className="mb-0 text-xl font-semibold text-secondary-foreground">
-                                    {state ? `Edit ${title}` : `${title}`}
+                                    {state ? `Edit ${title}` : `Add ${title}`}
                                 </h2>
 
                                 <p className="text-sm text-muted-foreground">

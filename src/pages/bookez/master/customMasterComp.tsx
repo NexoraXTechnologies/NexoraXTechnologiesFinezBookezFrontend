@@ -619,6 +619,7 @@ const normalizeGeneric = (
 
 const CustomMasterComp = ({
 	moduleCode = "",
+	name = ""
 }: CustomMasterCompProps) => {
 	const dispatch =
 		useDispatch<any>();
@@ -2429,8 +2430,7 @@ const CustomMasterComp = ({
 						edit,
 
 					title:
-						"Add New Account",
-
+						`${name}`,
 					body: (
 						<>
 							{
