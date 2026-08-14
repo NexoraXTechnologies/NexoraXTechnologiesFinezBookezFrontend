@@ -22,6 +22,8 @@ import Permission from "../../../../../components/PermissionGuard";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
+import { getProductBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
+import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
 
 const CUSTOMER_FIELD_KEYS = new Set([
     "sOrderCustomerCode",
@@ -55,6 +57,8 @@ const emptyProductRow = {
     productHSNCode: "",
     remarks: "",
     quantity: "",
+    availableQuantity: null,
+    productType: "",
     uom: "",
     unit: "",
     unitName: "",
@@ -343,6 +347,31 @@ const loadAllTemplateOptions = async (templateData: any) => {
         body: updatedBody,
         footer: updatedFooter,
     };
+};
+
+const getFinancialYearRange = (dateValue?: string) => {
+    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
+    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
+    return {
+        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
+        toDate: selectedDate.toISOString(),
+    };
+};
+
+const renderSalesOrderCellExtra = (column: any, row: any) => {
+    if (column?.key !== "quantity" || !row?.productCode) return null;
+
+    const productType = String(row?.productType || "").trim().toLowerCase();
+    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+    return (
+        <InputBorderLabel
+            label="Avl Qty"
+            value={row?.availableQuantity}
+            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            successWhenPositive
+        />
+    );
 };
 
 const SalesOrder = () => {
@@ -1261,11 +1290,108 @@ const SalesOrder = () => {
         );
     };
 
+    const loadAvailableQuantity = async (
+        index: number,
+        productCode: string,
+        productType: string,
+        // @ts-ignore
+        voucherDate: string = form.sOrderVoucherDate
+    ) => {
+        const normalizedProductType = String(productType || "").trim().toLowerCase();
+
+        if (!productCode || ["serviceproduct", "nonstocks"].includes(normalizedProductType)) {
+            setForm((previous: any) => {
+                const updatedProducts = [...(previous.products || [])];
+                if (!updatedProducts[index]) return previous;
+
+                updatedProducts[index] = {
+                    ...updatedProducts[index],
+                    productType: normalizedProductType,
+                    availableQuantity: null,
+                };
+
+                return {
+                    ...previous,
+                    products: updatedProducts,
+                };
+            });
+            return;
+        }
+
+        setForm((previous: any) => {
+            const updatedProducts = [...(previous.products || [])];
+            if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+
+            updatedProducts[index] = {
+                ...updatedProducts[index],
+                productType: normalizedProductType,
+                availableQuantity: null,
+            };
+
+            return {
+                ...previous,
+                products: updatedProducts,
+            };
+        });
+
+        try {
+            const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+            const balance: any = await dispatch(
+                getProductBalance({
+                    productCode,
+                    fromDate,
+                    toDate,
+                }) as any
+            ).unwrap();
+
+            setForm((previous: any) => {
+                const updatedProducts = [...(previous.products || [])];
+                if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+
+                updatedProducts[index] = {
+                    ...updatedProducts[index],
+                    productType: normalizedProductType,
+                    availableQuantity: balance?.balanceQuantity !== undefined && balance?.balanceQuantity !== null ? balance.balanceQuantity : null,
+                };
+
+                return {
+                    ...previous,
+                    products: updatedProducts,
+                };
+            });
+        } catch (error) {
+            console.log(`Failed to fetch available quantity for ${productCode}`, error);
+
+            setForm((previous: any) => {
+                const updatedProducts = [...(previous.products || [])];
+                if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+
+                updatedProducts[index] = {
+                    ...updatedProducts[index],
+                    productType: normalizedProductType,
+                    availableQuantity: updatedProducts[index]?.availableQuantity ?? null,
+                };
+
+                return {
+                    ...previous,
+                    products: updatedProducts,
+                };
+            });
+        }
+    };
+
     const openEditModal = (
         record: any
     ) => {
         const footer =
             record?.sOrderFooter || {};
+
+        const voucherDate =
+            record?.sOrderVoucherDate
+                ? formatDateForInput(
+                    record.sOrderVoucherDate
+                )
+                : todayYMD();
 
         const products =
             record?.sOrderBody
@@ -1276,6 +1402,11 @@ const SalesOrder = () => {
                             item?.unit ||
                             item?.uom ||
                             "";
+
+                        const productMaster =
+                            getProductMasterFromRow(
+                                item
+                            ) || {};
 
                         const row =
                             normalizeRowKeys({
@@ -1325,8 +1456,24 @@ const SalesOrder = () => {
                                     item?.quantity ||
                                     "",
 
-                                unit: unitCode,
-                                uom: unitCode,
+                                // ⭐ YELLOW STAR: ADDED — AVAILABLE QTY EDIT INITIAL STATE
+                                availableQuantity:
+                                    null,
+
+                                productType:
+                                    item?.productType ||
+                                    productMaster
+                                        ?.productType ||
+                                    productMaster
+                                        ?.dynamicFields
+                                        ?.productType ||
+                                    "",
+
+                                unit:
+                                    unitCode,
+
+                                uom:
+                                    unitCode,
 
                                 unitName:
                                     item?.unitName ||
@@ -1474,9 +1621,7 @@ const SalesOrder = () => {
                 "AUTO",
 
             sOrderVoucherDate:
-                formatDateForInput(
-                    record?.sOrderVoucherDate
-                ),
+                voucherDate,
 
             sOrderCustomerCode:
                 record?.sOrderCustomerCode ||
@@ -1559,6 +1704,154 @@ const SalesOrder = () => {
 
         setShowModal(true);
     };
+
+    // ⭐ YELLOW STAR: ADDED — LOAD AVAILABLE QTY AFTER EDIT FORM IS HYDRATED
+    useEffect(() => {
+        if (
+            !showModal ||
+            !editingRecord
+        ) {
+            return;
+        }
+
+        if (
+            !form?.products?.length
+        ) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchEditAvailableQuantities =
+            async () => {
+                const {
+                    fromDate,
+                    toDate,
+                } = getFinancialYearRange(
+                    todayYMD()
+                );
+
+                const productsWithBalance =
+                    await Promise.all(
+                        (
+                            form.products ||
+                            []
+                        ).map(
+                            async (
+                                item: any
+                            ) => {
+                                const productCode =
+                                    String(
+                                        item
+                                            ?.productCode ||
+                                        ""
+                                    ).trim();
+
+                                if (
+                                    !productCode
+                                ) {
+                                    return item;
+                                }
+
+                                const productMaster =
+                                    getProductMasterFromRow(
+                                        item
+                                    ) || {};
+
+                                const productType =
+                                    String(
+                                        item
+                                            ?.productType ||
+                                        productMaster
+                                            ?.productType ||
+                                        productMaster
+                                            ?.dynamicFields
+                                            ?.productType ||
+                                        ""
+                                    )
+                                        .trim()
+                                        .toLowerCase();
+
+                                if (
+                                    [
+                                        "serviceproduct",
+                                        "nonstocks",
+                                    ].includes(
+                                        productType
+                                    )
+                                ) {
+                                    return {
+                                        ...item,
+                                        productType,
+                                        availableQuantity:
+                                            null,
+                                    };
+                                }
+
+                                try {
+                                    const balance: any =
+                                        await dispatch(
+                                            getProductBalance({
+                                                productCode,
+                                                fromDate,
+                                                toDate,
+                                            }) as any
+                                        ).unwrap();
+
+                                    return {
+                                        ...item,
+                                        productType,
+                                        availableQuantity:
+                                            balance?.balanceQuantity !== undefined &&
+                                            balance?.balanceQuantity !== null
+                                                ? balance.balanceQuantity
+                                                : null,
+                                    };
+                                } catch (
+                                error
+                                ) {
+                                    console.log(
+                                        `Failed to fetch available quantity for ${productCode}`,
+                                        error
+                                    );
+
+                                    return {
+                                        ...item,
+                                        productType,
+                                        availableQuantity:
+                                            item?.availableQuantity ?? null,
+                                    };
+                                }
+                            }
+                        )
+                    );
+
+                if (cancelled) {
+                    return;
+                }
+
+                setForm(
+                    (
+                        previous: any
+                    ) => ({
+                        ...previous,
+                        products:
+                            productsWithBalance,
+                    })
+                );
+            };
+
+        void fetchEditAvailableQuantities();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        showModal,
+        editingRecord,
+        form?.sOrderVoucherNumber,
+        dispatch,
+    ]);
 
     const handleMainChange = (
         key: string,
@@ -1842,6 +2135,23 @@ const SalesOrder = () => {
                 savedProduct ||
                 {};
 
+            const availableQuantityRowIndex =
+                productTargetRowIndex !== null &&
+                    productTargetRowIndex >= 0 &&
+                    productTargetRowIndex < (form.products || []).length
+                    ? productTargetRowIndex
+                    : (() => {
+                        const emptyRowIndex = (form.products || []).findIndex(
+                            (row: any) =>
+                                !row?.productCode &&
+                                !row?.productName &&
+                                !row?.productId
+                        );
+                        return emptyRowIndex >= 0
+                            ? emptyRowIndex
+                            : (form.products || []).length;
+                    })();
+
             setForm((previous: any) => {
                 const updatedProducts = [
                     ...(previous.products || []),
@@ -1991,6 +2301,12 @@ const SalesOrder = () => {
 
                     marginProduct,
 
+                    productType:
+                        createdProduct?.productType ||
+                        createdProduct?.dynamicFields?.productType ||
+                        "",
+                    availableQuantity: null,
+
                     nonTaxRate:
                         marginProduct
                             ? (
@@ -2091,6 +2407,25 @@ const SalesOrder = () => {
                         updatedProducts,
                 };
             });
+
+            const createdProductCode =
+                createdProduct?.productCode ||
+                savedCode ||
+                "";
+
+            const createdProductType =
+                createdProduct?.productType ||
+                createdProduct?.dynamicFields?.productType ||
+                "";
+
+            if (createdProductCode) {
+                void loadAvailableQuantity(
+                    availableQuantityRowIndex,
+                    String(createdProductCode),
+                    String(createdProductType),
+                    form.sOrderVoucherDate || todayYMD()
+                );
+            }
 
             setErrors((previous: any) => ({
                 ...previous,
@@ -2293,6 +2628,12 @@ const SalesOrder = () => {
                 key ===
                 "productId"
             ) {
+                updatedRow.productType =
+                    raw?.productType ||
+                    raw?.dynamicFields?.productType ||
+                    "";
+                updatedRow.availableQuantity = null;
+
                 updatedRow.cgst =
                     raw?.csgst;
 
@@ -2391,6 +2732,30 @@ const SalesOrder = () => {
                     updatedProducts,
             };
         });
+
+        if (PRODUCT_FIELD_KEYS.has(key)) {
+            const currentField = getBodyFieldByKey(key);
+            const selectedOption = getOptionByValue(currentField, value);
+            const raw = selectedOption?.raw || {};
+            const productCode =
+                raw?.productCode ||
+                selectedOption?.value ||
+                value ||
+                "";
+            const productType =
+                raw?.productType ||
+                raw?.dynamicFields?.productType ||
+                "";
+
+            if (productCode) {
+                void loadAvailableQuantity(
+                    index,
+                    String(productCode),
+                    String(productType),
+                    form.sOrderVoucherDate || todayYMD()
+                );
+            }
+        }
 
         setErrors((previous: any) => ({
             ...previous,
@@ -4078,6 +4443,9 @@ const SalesOrder = () => {
 
                         isBodyCellDisabled:
                             isSalesOrderBodyCellDisabled,
+
+                        bodyCellExtraRenderer:
+                            renderSalesOrderCellExtra,
 
                         // ★ ADDED: Common Account Master modal props
                         checkAccount,

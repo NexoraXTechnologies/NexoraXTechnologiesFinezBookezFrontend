@@ -101,34 +101,6 @@ export const createProduct = createAsyncThunk(
     }
   }
 );
-/* ===================================================
-    GET ALL PRODUCTS
-=================================================== */
-// export const getAllProducts = createAsyncThunk(
-//   "productMaster/getAllProducts",
-//   async ({ offset = 0, limit = 10, search = "",productType:"" } = {}, { rejectWithValue }) => {
-//     try {
-//       const params = { offset, limit };
-//       if (search.trim()) params.search = search.trim();
-
-//       const res = await professionalAxios.get(
-//         "/eTaxSolnMongoApiBackend/productMaster/getAllProduct",
-//         { params }
-//       );
-
-//       if (!res.data?.success)
-//         return rejectWithValue({
-//           message: res.data?.message || "Failed to fetch products",
-//         });
-
-//       return res.data?.data;
-//     } catch (err) {
-//       return rejectWithValue({
-//         message: err?.response?.data?.message || "Failed to fetch products",
-//       });
-//     }
-//   }
-// );
 
 
 
@@ -217,7 +189,7 @@ export const updateProduct = createAsyncThunk(
         });
 
       return res.data?.data ?? null;
-    } catch (err:any) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to update product",
       });
@@ -242,9 +214,69 @@ export const deleteProduct = createAsyncThunk(
         });
 
       return productCode;
-    } catch (err:any) {
+    } catch (err: any) {
       return rejectWithValue({
         message: err?.response?.data?.message || "Failed to delete product",
+      });
+    }
+  }
+);
+
+
+
+
+export const getProductBalance = createAsyncThunk(
+  "productMaster/getProductBalance",
+  async (
+    {
+      productCode,
+      fromDate,
+      toDate,
+      warehouseCode,
+      locationCode,
+      batchNumber,
+      binCode,
+      rackCode,
+    }: {
+      productCode: string;
+      fromDate: string;
+      toDate: string;
+      warehouseCode?: string;
+      locationCode?: string;
+      batchNumber?: string;
+      binCode?: string;
+      rackCode?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const payload: any = {
+        productCode,
+        fromDate,
+        toDate,
+      };
+
+      if (warehouseCode) payload.warehouseCode = warehouseCode;
+      if (locationCode) payload.locationCode = locationCode;
+      if (batchNumber) payload.batchNumber = batchNumber;
+      if (binCode) payload.binCode = binCode;
+      if (rackCode) payload.rackCode = rackCode;
+
+      const res = await professionalAxios.post(
+        "/eTaxSolnMongoApiBackend/users/bookez/inventoryBalance/getProductBalance",
+        payload
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message: res.data?.message || "Failed to fetch product balance",
+        });
+      }
+
+      return res.data?.data ?? null;
+    } catch (err: any) {
+      return rejectWithValue({
+        message: err?.response?.data?.message || "Failed to fetch product balance",
       });
     }
   }
@@ -271,6 +303,11 @@ const productMasterSlice = createSlice({
     schemaLoading: false,
 
     selectedProduct: null,
+
+    productBalances: {},
+    productBalanceLoading: {},
+    productBalanceError: {},
+
 
     loading: false,
     error: null,
@@ -308,6 +345,45 @@ const productMasterSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.message;
         state.products = [];
+      });
+
+
+    /* ---------- GET PRODUCT AVAILABLE QUANTITY ---------- */
+
+
+    builder
+      .addCase(getProductBalance.pending, (state: any, action: any) => {
+        const productCode = action.meta.arg?.productCode;
+
+        if (productCode) {
+          state.productBalanceLoading[productCode] = true;
+          state.productBalanceError[productCode] = null;
+        }
+      })
+      .addCase(getProductBalance.fulfilled, (state: any, action: any) => {
+        const productCode = action.meta.arg?.productCode;
+
+        if (!productCode) return;
+
+        state.productBalanceLoading[productCode] = false;
+        state.productBalances[productCode] = action.payload ?? {
+          productCode,
+          balanceQuantity: 0,
+        };
+      })
+      .addCase(getProductBalance.rejected, (state: any, action: any) => {
+        const productCode = action.meta.arg?.productCode;
+
+        if (!productCode) return;
+
+        state.productBalanceLoading[productCode] = false;
+        state.productBalanceError[productCode] =
+          action.payload?.message || "Failed to fetch product balance";
+
+        state.productBalances[productCode] = {
+          productCode,
+          balanceQuantity: 0,
+        };
       });
 
     /* ---------- GET BY PRODUCT CODE ---------- */
@@ -397,7 +473,7 @@ const productMasterSlice = createSlice({
 
         state.pagination.totalDocs = Math.max(0, state.pagination.totalDocs - 1);
       })
-      .addCase(deleteProduct.rejected, (state, action:any) => {
+      .addCase(deleteProduct.rejected, (state, action: any) => {
         state.deleteLoading = false;
         state.error = action.payload?.message;
       });

@@ -25,6 +25,10 @@ type DeleteCreditNotePayload = {
   creditNoteNumber: string;
 };
 
+type GetCreditNoteByVoucherPayload = {
+  voucherNumber: string;
+};
+
 /* ===================================================
    ADD CREDIT NOTE
 =================================================== */
@@ -177,6 +181,47 @@ export const getCreditNoteList = createAsyncThunk<
   }
 );
 
+
+
+
+
+/* ===================================================
+   GET CREDIT NOTE BY VOUCHER NUMBER
+=================================================== */
+
+export const getCreditNoteByVoucherNumber = createAsyncThunk<
+  any,
+  GetCreditNoteByVoucherPayload,
+  { rejectValue: RejectValue }
+>(
+  "creditNote/getCreditNoteByVoucherNumber",
+  async ({ voucherNumber }, { rejectWithValue }) => {
+    try {
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/otherApi/salesCreditNote/getByVoucherNo/${encodeURIComponent(
+          voucherNumber
+        )}`
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message:
+            res.data?.message ||
+            "Failed to fetch credit note",
+        });
+      }
+
+      return res.data?.data;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          "Failed to fetch credit note",
+      });
+    }
+  }
+);
+
 /* ===================================================
    SLICE
 =================================================== */
@@ -265,6 +310,26 @@ const creditNoteSlice = createSlice({
         state.addLoader = false;
         state.error =
           action.payload?.message || "Failed to update credit note";
+      })
+
+
+      /* ---------- GET CREDIT NOTE BY VOUCHER ---------- */
+      .addCase(getCreditNoteByVoucherNumber.pending, (state) => {
+        state.error = null;
+        state.selectedCreditNote = null;
+      })
+      .addCase(getCreditNoteByVoucherNumber.fulfilled, (state, action) => {
+        state.selectedCreditNote =
+          action.payload || null;
+
+        state.error = null;
+      })
+      .addCase(getCreditNoteByVoucherNumber.rejected, (state, action) => {
+        state.selectedCreditNote = null;
+
+        state.error =
+          action.payload?.message ||
+          "Failed to fetch credit note";
       })
 
       /* ---------- DELETE CREDIT NOTE ---------- */
