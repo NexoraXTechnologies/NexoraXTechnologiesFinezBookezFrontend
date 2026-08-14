@@ -328,7 +328,7 @@ const AssignBarcodeQrCode = () => {
         assignmentDeleteLoading = false,
         error: barcodeQrError,
     } = useSelector((state: any) => state.barcodeQr || {});
-
+    console.log({ assignments })
     const [activeTab, setActiveTab] = useState<ActiveTab>("assign");
     const [form, setForm] = useState<FormState>(getDefaultForm());
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -480,29 +480,20 @@ const AssignBarcodeQrCode = () => {
     const assignmentColumns = useMemo(
         () => [
             {
-                key: "assignmentCode",
-                title: "Assignment",
-                render: (assignment: BarcodeAssignment) => assignment.assignmentCode || "-",
+                key: "templateCode",
+                title: "Template Code",
             },
             {
-                key: "productName",
+                key: "productCode",
                 title: "Product",
                 render: (assignment: BarcodeAssignment) => (
                     <div>
                         <p className="font-medium">
-                            {assignment.productName || assignment.qrValue?.productName || "-"}
+                            {assignment.qrValue?.productName || assignment.productName || "-"}
                         </p>
-                        <p className="text-xs text-muted-foreground">{assignment.productCode || "-"}</p>
-                    </div>
-                ),
-            },
-            {
-                key: "templateName",
-                title: "Template",
-                render: (assignment: BarcodeAssignment) => (
-                    <div>
-                        <p className="font-medium">{assignment.templateName || "-"}</p>
-                        <p className="text-xs text-muted-foreground">{assignment.templateCode || "-"}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {assignment.productCode || "-"}
+                        </p>
                     </div>
                 ),
             },
@@ -517,7 +508,9 @@ const AssignBarcodeQrCode = () => {
                 title: "Barcode Value",
                 render: (assignment: BarcodeAssignment) =>
                     assignment.codeType === "barcode" ? (
-                        <span className="font-mono font-medium">{assignment.codeValue || "-"}</span>
+                        <span className="font-mono font-medium">
+                            {assignment.codeValue || "-"}
+                        </span>
                     ) : (
                         "-"
                     ),
@@ -526,26 +519,24 @@ const AssignBarcodeQrCode = () => {
                 key: "codeSource",
                 title: "Source",
                 render: (assignment: BarcodeAssignment) =>
-                    assignment.codeType === "qrcode"
-                        ? "Auto Generate"
-                        : assignment.codeSource === "auto"
-                            ? "Auto Generate"
-                            : "Manual",
-            },
-            {
-                key: "sequenceNumber",
-                title: "Sequence",
-                render: (assignment: BarcodeAssignment) =>
-                    assignment.sequenceNumber !== undefined && assignment.sequenceNumber !== null
-                        ? assignment.sequenceNumber
-                        : "-",
+                    assignment.codeSource === "auto" ? "Auto Generate" : "Manual",
             },
             {
                 key: "status",
                 title: "Status",
                 render: (assignment: BarcodeAssignment) => (
-                    <span className="capitalize">{assignment.status || "-"}</span>
+                    <span className="capitalize">
+                        {assignment.status || "-"}
+                    </span>
                 ),
+            },
+            {
+                key: "createdOn",
+                title: "Created On",
+                render: (assignment: BarcodeAssignment) =>
+                    assignment.createdOn
+                        ? new Date(assignment.createdOn).toLocaleString()
+                        : "-",
             },
         ],
         []
@@ -753,7 +744,7 @@ const AssignBarcodeQrCode = () => {
     };
 
     return (
-        <div className="flex h-auto w-full flex-col gap-3 rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
+        <div className="flex h-auto w-full flex-col gap-3 p-4 text-card-foreground">
             <div className="border-b border-border">
                 <div className="flex items-center gap-1">
                     <button
@@ -780,10 +771,6 @@ const AssignBarcodeQrCode = () => {
                             }`}
                     >
                         Assigned List
-
-                        <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
-                            {assignmentPagination?.totalDocs ?? assignments?.length ?? 0}
-                        </span>
 
                         {activeTab === "listing" ? (
                             <span className="absolute bottom-0 left-0 h-0.5 w-full bg-primary" />

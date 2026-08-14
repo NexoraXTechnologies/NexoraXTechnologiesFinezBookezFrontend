@@ -4,7 +4,7 @@ import { BrickWallShield, Wallet } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import AssignBarcodeQrTemplate from "./BarcodeQrTemplate";
 import AssignBarcodeQrCode from "./AssignBarcodeQrCode";
-// import BarcodeQrLabelPrint from "./BarcodeQrLabelPrint";
+import BarcodeQrLabelPrint from "./BarcodeQrLabelPrint";
 
 const BarCodeAndQrCode = () => {
 
