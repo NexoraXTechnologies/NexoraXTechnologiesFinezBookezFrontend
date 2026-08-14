@@ -11,28 +11,27 @@ const BarCodeAndQrCode = () => {
     const masterCards: any[] = useMemo(() => {
         const defaultCards: any[] = [
             {
-                title: "BarCode/QR Code Template",
-                description: "Manage customers, vendors, cash, bank and ledgers.",
+                title: "Barcode / QR Code Template",
+                description: "Create and manage Barcode/QR Code label templates, formats and print settings.",
                 icon: <Wallet size={22} />,
                 component: AssignBarcodeQrTemplate,
                 permissionKey: "accountMaster"
             },
             {
-                title: "Assign BarCode/QR Code",
-                description: "Manage customers, vendors, cash, bank and ledgers.",
+                title: "Assign Barcode / QR Code",
+                description: "Generate and assign Barcode/QR Codes to products using configured templates.",
                 icon: <Wallet size={22} />,
                 component: AssignBarcodeQrCode,
                 permissionKey: "accountMaster"
             },
-            // {
-            //     title: "BarCode/QR Code Print",
-            //     description: "Manage customers, vendors, cash, bank and ledgers.",
-            //     icon: <Wallet size={22} />,
-            //     component: BarcodeQrLabelPrint,
-            //     permissionKey: "accountMaster"
-            // }
+            {
+                title: "Print Barcode / QR Code",
+                description: "Preview and print assigned Barcode/QR Code labels for products.",
+                icon: <Wallet size={22} />,
+                component: BarcodeQrLabelPrint,
+                permissionKey: "accountMaster"
+            }
         ];
-
         return [...defaultCards];
     }, []);
 

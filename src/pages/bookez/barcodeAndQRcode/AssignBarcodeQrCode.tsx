@@ -729,9 +729,7 @@ const AssignBarcodeQrCode = () => {
             setSuccessMessage("");
 
             await dispatch(deleteBarcodeQrAssignment(templateCode)).unwrap();
-
             setSuccessMessage("Assignment deleted successfully");
-
             if ((assignments?.length || 0) === 1 && localOffset > 0) {
                 setLocalOffset((previous) => Math.max(0, previous - localLimit));
             } else {
@@ -742,7 +740,7 @@ const AssignBarcodeQrCode = () => {
             setApiError(error?.message || error?.error?.message || "Failed to delete Barcode / QR assignment");
         }
     };
-
+    console.log({ assignmentPagination })
     return (
         <div className="flex h-auto w-full flex-col gap-3 p-4 text-card-foreground">
             <div className="border-b border-border">
