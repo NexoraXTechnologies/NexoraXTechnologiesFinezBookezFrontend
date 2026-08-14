@@ -99,6 +99,11 @@ const getDefaultForm = () => ({
     paymentMode: "",
     bankReferenceNumber: "",
     paidBy: "",
+    trip_order: "",
+    lr_no: "",
+    driver: "",
+    vehicle_master: null,
+    customMasters: {},
 
     payBody: [{ ...emptyPaymentRow, id: Date.now() }],
 
@@ -205,65 +210,125 @@ const Payment = () => {
     }, [accounts]);
 
     // ⭐ YELLOW STAR: ADDED — SEARCH-TO-CREATE FOR PAYMENT ACCOUNTS
+    // const templateFieldsWithCreateActions = useMemo(() => {
+    //     return {
+    //         ...templateFields,
+
+    //         header: (templateFields?.header || []).map(
+    //             (field: any) => {
+    //                 const fieldKey = String(field?.key || "");
+
+    //                 if (!HEADER_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+    //                     return field;
+    //                 }
+
+    //                 return {
+    //                     ...field,
+    //                     largeData: true,
+    //                     showCreateOnEmpty: true,
+    //                     onCreateOption: (_searchValue: string) => {
+    //                         setAccountCreateTarget("header");
+    //                         setAccountTargetRowIndex(null);
+    //                         setCheckAccount(true);
+    //                     },
+    //                     createOptionLabel: (searchValue: string) =>
+    //                         searchValue
+    //                             ? `+ Add "${searchValue}" as New Cash/Bank Account`
+    //                             : "+ Add New Cash/Bank Account",
+    //                 };
+    //             }
+    //         ),
+
+    //         body: (templateFields?.body || []).map(
+    //             (field: any) => {
+    //                 const fieldKey = String(field?.key || "");
+
+    //                 if (!BODY_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+    //                     return field;
+    //                 }
+
+    //                 return {
+    //                     ...field,
+    //                     largeData: true,
+    //                     showCreateOnEmpty: true,
+    //                     onCreateOption: (
+    //                         _searchValue: string,
+    //                         rowIndex: number
+    //                     ) => {
+    //                         setAccountCreateTarget("body");
+    //                         setAccountTargetRowIndex(rowIndex);
+    //                         setCheckAccount(true);
+    //                     },
+    //                     createOptionLabel: (searchValue: string) =>
+    //                         searchValue
+    //                             ? `+ Add "${searchValue}" as Add Account`
+    //                             : "+ Add New Account",
+    //                 };
+    //             }
+    //         ),
+    //     };
+    // }, [templateFields]);
+
+
     const templateFieldsWithCreateActions = useMemo(() => {
         return {
             ...templateFields,
 
-            header: (templateFields?.header || []).map(
-                (field: any) => {
-                    const fieldKey = String(field?.key || "");
+            header: (templateFields?.header || []).map((field: any) => {
+                const fieldKey = String(field?.key || "");
 
-                    if (!HEADER_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
-                        return field;
-                    }
-
+                // ⭐ PAYMENT ONLY — KEEP VEHICLE MASTER KEY LOWERCASE
+                if (fieldKey === "vehicle_master") {
                     return {
                         ...field,
-                        largeData: true,
-                        showCreateOnEmpty: true,
-                        onCreateOption: (_searchValue: string) => {
-                            setAccountCreateTarget("header");
-                            setAccountTargetRowIndex(null);
-                            setCheckAccount(true);
-                        },
-                        createOptionLabel: (searchValue: string) =>
-                            searchValue
-                                ? `+ Add "${searchValue}" as New Cash/Bank Account`
-                                : "+ Add New Cash/Bank Account",
+                        customMasterName: "vehicle_master",
                     };
                 }
-            ),
 
-            body: (templateFields?.body || []).map(
-                (field: any) => {
-                    const fieldKey = String(field?.key || "");
-
-                    if (!BODY_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
-                        return field;
-                    }
-
-                    return {
-                        ...field,
-                        largeData: true,
-                        showCreateOnEmpty: true,
-                        onCreateOption: (
-                            _searchValue: string,
-                            rowIndex: number
-                        ) => {
-                            setAccountCreateTarget("body");
-                            setAccountTargetRowIndex(rowIndex);
-                            setCheckAccount(true);
-                        },
-                        createOptionLabel: (searchValue: string) =>
-                            searchValue
-                                ? `+ Add "${searchValue}" as Add Account`
-                                : "+ Add New Account",
-                    };
+                if (!HEADER_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+                    return field;
                 }
-            ),
+
+                return {
+                    ...field,
+                    largeData: true,
+                    showCreateOnEmpty: true,
+                    onCreateOption: (_searchValue: string) => {
+                        setAccountCreateTarget("header");
+                        setAccountTargetRowIndex(null);
+                        setCheckAccount(true);
+                    },
+                    createOptionLabel: (searchValue: string) =>
+                        searchValue
+                            ? `+ Add "${searchValue}" as New Cash/Bank Account`
+                            : "+ Add New Cash/Bank Account",
+                };
+            }),
+
+            body: (templateFields?.body || []).map((field: any) => {
+                const fieldKey = String(field?.key || "");
+
+                if (!BODY_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
+                    return field;
+                }
+
+                return {
+                    ...field,
+                    largeData: true,
+                    showCreateOnEmpty: true,
+                    onCreateOption: (_searchValue: string, rowIndex: number) => {
+                        setAccountCreateTarget("body");
+                        setAccountTargetRowIndex(rowIndex);
+                        setCheckAccount(true);
+                    },
+                    createOptionLabel: (searchValue: string) =>
+                        searchValue
+                            ? `+ Add "${searchValue}" as Add Account`
+                            : "+ Add New Account",
+                };
+            }),
         };
     }, [templateFields]);
-
     /* ===================================================
        FIELD HELPERS
     =================================================== */
@@ -723,6 +788,61 @@ const Payment = () => {
         setShowModal(true);
     };
 
+    // const openEditModal = (record: any) => {
+    //     const footer = record?.payFooter || {};
+
+    //     const body =
+    //         record?.payBody?.length > 0
+    //             ? record.payBody.map((row: any) => ({
+    //                 id: row?._id || Date.now() + Math.random(),
+
+    //                 accountCode: row?.accountCode || "",
+    //                 accountName: row?.accountName || "",
+
+    //                 amount: row?.amount || row?.netAmount || "",
+    //                 netAmount: row?.netAmount || row?.amount || "",
+
+    //                 references: Array.isArray(row?.references)
+    //                     ? row.references
+    //                     : [],
+
+    //                 remarks: row?.remarks || "",
+    //             }))
+    //             : [{ ...emptyPaymentRow, id: Date.now() }];
+
+    //     setEditingRecord(record);
+    //     setErrors({});
+
+    //     setForm({
+    //         payVoucherNumber:
+    //             record?.payVoucherNumber ||
+    //             record?.paymentVoucherNumber ||
+    //             record?.voucherNumber ||
+    //             "",
+
+    //         payVoucherDate: formatDateForInput(record?.payVoucherDate),
+
+    //         payAccountCode: record?.payAccountCode || "",
+    //         payAccountName: record?.payAccountName || "",
+
+    //         payStatus: record?.payStatus || "open",
+    //         payRemark: record?.payRemark || "",
+
+    //         paymentMode: record?.paymentMode || "",
+    //         bankReferenceNumber: record?.bankReferenceNumber || "",
+    //         paidBy: record?.paidBy || "",
+
+    //         payBody: body,
+
+    //         netAmount: footer?.netAmount || "0.00",
+    //         adjustedAmount: footer?.adjustedAmount || "0.00",
+    //         balanceAmount: footer?.balanceAmount || "0.00",
+    //     });
+
+    //     setShowModal(true);
+    // };
+
+
     const openEditModal = (record: any) => {
         const footer = record?.payFooter || {};
 
@@ -730,31 +850,21 @@ const Payment = () => {
             record?.payBody?.length > 0
                 ? record.payBody.map((row: any) => ({
                     id: row?._id || Date.now() + Math.random(),
-
                     accountCode: row?.accountCode || "",
                     accountName: row?.accountName || "",
-
                     amount: row?.amount || row?.netAmount || "",
                     netAmount: row?.netAmount || row?.amount || "",
-
-                    references: Array.isArray(row?.references)
-                        ? row.references
-                        : [],
-
+                    references: Array.isArray(row?.references) ? row.references : [],
                     remarks: row?.remarks || "",
                 }))
                 : [{ ...emptyPaymentRow, id: Date.now() }];
 
+        const vehicleMaster = record?.customMasters?.vehicle_master || null;
         setEditingRecord(record);
         setErrors({});
 
         setForm({
-            payVoucherNumber:
-                record?.payVoucherNumber ||
-                record?.paymentVoucherNumber ||
-                record?.voucherNumber ||
-                "",
-
+            payVoucherNumber: record?.payVoucherNumber || record?.paymentVoucherNumber || record?.voucherNumber || "",
             payVoucherDate: formatDateForInput(record?.payVoucherDate),
 
             payAccountCode: record?.payAccountCode || "",
@@ -767,6 +877,25 @@ const Payment = () => {
             bankReferenceNumber: record?.bankReferenceNumber || "",
             paidBy: record?.paidBy || "",
 
+
+            trip_order: record?.trip_order || "",
+            lr_no: record?.lr_no || "",
+            driver: record?.driver || "",
+
+            vehicle_master: vehicleMaster
+                ? {
+                    code: vehicleMaster.code || "",
+                    name: vehicleMaster.name || "",
+                }
+                : null,
+
+            customMasters: {
+                vehicle_master: {
+                    code: vehicleMaster?.code || "",
+                    name: vehicleMaster?.name || "",
+                },
+            },
+
             payBody: body,
 
             netAmount: footer?.netAmount || "0.00",
@@ -776,7 +905,6 @@ const Payment = () => {
 
         setShowModal(true);
     };
-
     /* ===================================================
        DYNAMIC HEADER CHANGE
     =================================================== */
