@@ -1536,7 +1536,7 @@ const CreditNoteRegister = () => {
                     },
 
                 ]}
-                gridCols="5"
+                gridCols="4"
                 onSearch={
                     handleRefresh
                 }

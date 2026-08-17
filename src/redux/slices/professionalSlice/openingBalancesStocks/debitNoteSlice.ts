@@ -25,6 +25,10 @@ type DeleteDebitNotePayload = {
   debitNoteNumber: string;
 };
 
+type GetDebitNoteByVoucherPayload = {
+  voucherNumber: string;
+};
+
 /* ===================================================
    ADD DEBIT NOTE
 =================================================== */
@@ -177,6 +181,44 @@ export const getDebitNoteList = createAsyncThunk<
   }
 );
 
+
+/* ===================================================
+   GET DEBIT NOTE BY VOUCHER NUMBER
+=================================================== */
+
+export const getDebitNoteByVoucherNumber = createAsyncThunk<
+  any,
+  GetDebitNoteByVoucherPayload,
+  { rejectValue: RejectValue }
+>(
+  "debitNote/getDebitNoteByVoucherNumber",
+  async ({ voucherNumber }, { rejectWithValue }) => {
+    try {
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/otherApi/salesDebitNote/getByVoucherNo/${encodeURIComponent(
+          voucherNumber
+        )}`
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message:
+            res.data?.message ||
+            "Failed to fetch debit note",
+        });
+      }
+
+      return res.data?.data;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          "Failed to fetch debit note",
+      });
+    }
+  }
+);
+
 /* ===================================================
    SLICE
 =================================================== */
@@ -252,6 +294,27 @@ const debitNoteSlice = createSlice({
           action.payload?.message || "Failed to fetch debit notes";
         state.debitNotes = [];
       })
+
+
+      /* ---------- GET CREDIT NOTE BY VOUCHER ---------- */
+      .addCase(getDebitNoteByVoucherNumber.pending, (state) => {
+        state.error = null;
+        state.selectedDebitNote = null;
+      })
+      .addCase(getDebitNoteByVoucherNumber.fulfilled, (state, action) => {
+        state.selectedDebitNote =
+          action.payload || null;
+
+        state.error = null;
+      })
+      .addCase(getDebitNoteByVoucherNumber.rejected, (state, action) => {
+        state.selectedDebitNote = null;
+
+        state.error =
+          action.payload?.message ||
+          "Failed to fetch debit note";
+      })
+
 
       /* ---------- UPDATE DEBIT NOTE ---------- */
       .addCase(updateDebitNote.pending, (state) => {

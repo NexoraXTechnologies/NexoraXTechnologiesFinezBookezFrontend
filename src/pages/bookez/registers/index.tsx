@@ -17,6 +17,9 @@ import {
   LucideClipboardList,
   ShoppingBag,
   Package,
+  BadgeMinus,
+  BadgePlus,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
@@ -40,6 +43,8 @@ import SalesOrderRegister from "./SalesOrderRegister";
 import PurchaseOrderRegister from "./PurchaseOrderRegister";
 import GrnRegister from "./GrnRegister";
 import CreditNoteRegister from "./CreditNoteRegister";
+import DebitNoteRegister from "./DebitNoteRegister";
+import ContraVoucherRegister from "./ContraVoucherRegister";
 
 
 const cards: any[] = [
@@ -131,8 +136,22 @@ const cards: any[] = [
     title: "Credit Note Register",
     description: "View credit notes, customer details, amounts, and credit note status.",
     component: CreditNoteRegister,
-    icon: <FileText size={22} />,
+    icon: <BadgePlus size={22} />,
     permissionKey: "registers.creditNoteRegister"
+  },
+  {
+    title: "Debit Note Register",
+    description: "View debit notes, customer details, amounts, and debit note status.",
+    component: DebitNoteRegister,
+    icon: <BadgeMinus size={22} />,
+    permissionKey: "registers.debitNoteRegister"
+  },
+  {
+    title: "Contra Voucher Register",
+    description: "View contra vouchers, references, debit and credit totals, and voucher status.",
+    component: ContraVoucherRegister,
+    icon: <ArrowLeftRight size={22} />,
+    permissionKey: "registers.contraVoucherRegister"
   },
   {
     title: "Transport Order Register",

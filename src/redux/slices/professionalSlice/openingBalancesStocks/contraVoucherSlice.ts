@@ -25,6 +25,9 @@ type DeleteContraVoucherPayload = {
   contraVoucherNumber: string;
 };
 
+type GetContraVoucherByVoucherPayload = {
+  voucherNumber: string;
+}
 /* ===================================================
    ADD CONTRA VOUCHER
 =================================================== */
@@ -177,6 +180,45 @@ export const getContraVoucherList = createAsyncThunk<
   }
 );
 
+
+
+/* ===================================================
+   GET DEBIT NOTE BY VOUCHER NUMBER
+=================================================== */
+
+export const getContraVoucherByVoucherNumber = createAsyncThunk<
+  any,
+  GetContraVoucherByVoucherPayload,
+  { rejectValue: RejectValue }
+>(
+  "contraVoucherSlice/getContraVoucherByVoucherNumber",
+  async ({ voucherNumber }, { rejectWithValue }) => {
+    try {
+      const res = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/otherApi/contraVoucher/getByVoucherNo/${encodeURIComponent(
+          voucherNumber
+        )}`
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue({
+          message:
+            res.data?.message ||
+            "Failed to fetch debit note",
+        });
+      }
+
+      return res.data?.data;
+    } catch (err: any) {
+      return rejectWithValue({
+        message:
+          err?.response?.data?.message ||
+          "Failed to fetch debit note",
+      });
+    }
+  }
+);
+
 /* ===================================================
    SLICE
 =================================================== */
@@ -234,6 +276,28 @@ const contraVoucherSlice = createSlice({
         state.error =
           action.payload?.message || "Failed to create contra voucher";
       })
+
+
+      /* ---------- GET CREDIT NOTE BY VOUCHER ---------- */
+      .addCase(getContraVoucherByVoucherNumber.pending, (state) => {
+        state.error = null;
+        state.selectedContraVoucher = null;
+      })
+      .addCase(getContraVoucherByVoucherNumber.fulfilled, (state, action) => {
+        state.selectedContraVoucher =
+          action.payload || null;
+
+        state.error = null;
+      })
+      .addCase(getContraVoucherByVoucherNumber.rejected, (state, action) => {
+        state.selectedContraVoucher = null;
+
+        state.error =
+          action.payload?.message ||
+          "Failed to fetch contra voucher";
+      })
+
+
 
       /* ---------- CONTRA VOUCHER LISTING ---------- */
       .addCase(getContraVoucherList.pending, (state) => {

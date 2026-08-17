@@ -104,6 +104,8 @@ import salesOrderRegisterReducer from "../redux/slices/professionalSlice/bookEzR
 import purchaseOrderRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/purchaseOrderRegisterSlice"
 import grnRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/grnRegisterSlice"
 import creditNoteRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/creditNoteRegisterSlice"
+import debitNoteRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/debitNoteRegisterSlice"
+import contraVoucherRegisterReducer from "../redux/slices/professionalSlice/bookEzRegister/contraVoucherRegisterSlice"
 
 
 // masterConfiguration
@@ -232,6 +234,8 @@ export const store = configureStore({
     purchaseOrderRegister: purchaseOrderRegisterReducer,
     grnRegister: grnRegisterReducer,
     creditNoteRegister: creditNoteRegisterReducer,
+    debitNoteRegister: debitNoteRegisterReducer,
+    contraVoucherRegister: contraVoucherRegisterReducer,
     // master configuration
 
     masterConfiguration: masterConfigurationReducer,
