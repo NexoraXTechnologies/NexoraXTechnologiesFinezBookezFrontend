@@ -1552,7 +1552,7 @@ const ProfessionalDashboard = () => {
 							: "text-muted-foreground hover:bg-muted hover:text-foreground"
 						}`}
 				>
-					Transport
+					TransportEZ
 				</button>
 			</div>
 

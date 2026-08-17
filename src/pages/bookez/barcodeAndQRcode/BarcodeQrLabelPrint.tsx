@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Barcode from "react-barcode";
 import QRCode from "qrcode";
 import { Printer } from "lucide-react";
 import { SelectInput, TextInput } from "../../../components/inputs";
+import { PrimaryButton } from "../../../components/buttons";
+import { getProductByCode } from "../../../redux/slices/professionalSlice/productMasterSlice";
+import {
+    getAllBarcodeQrAssignments,
+    getAllBarcodeQrTemplates,
+} from "../../../redux/slices/professionalSlice/BarCodeAndQRCode";
 
 type CodeType = "barcode" | "qrcode";
 type BarcodeType = "CODE128" | "CODE39";
@@ -25,10 +32,11 @@ type TemplateFields = {
 };
 
 type BarcodeQrTemplate = {
+    _id?: string;
     templateCode: string;
     templateName: string;
     codeType: CodeType;
-    barcodeType: BarcodeType;
+    barcodeType?: BarcodeType | null;
     labelSize: string;
     width: number;
     height: number;
@@ -39,27 +47,37 @@ type BarcodeQrTemplate = {
 };
 
 type BarcodeAssignment = {
-    assignmentCode: string;
+    _id?: string;
+    assignmentCode?: string;
     templateCode: string;
-    templateName: string;
-    productId?: string;
     productCode: string;
-    productName: string;
-    batchNumber?: string;
-    serialNumber?: string;
-    warehouse?: string;
-    location?: string;
-    mrp?: string;
-    sellingPrice?: string;
-    hsnCode?: string;
-    uom?: string;
-    manufacturingDate?: string;
-    expiryDate?: string;
+    productName?: string;
     codeType: CodeType;
     barcodeType?: BarcodeType;
-    codeValue: string;
+    codeSource?: "auto" | "manual";
+    codeValue?: string;
     qrValue?: Record<string, any> | string;
+    sequenceNumber?: number;
     status: "active" | "inactive";
+    createdOn?: string;
+    createdBy?: string;
+    modifiedOn?: string;
+    modifiedBy?: string;
+};
+
+type ProductPrintData = {
+    productCode: string;
+    productName: string;
+    batchNumber: string;
+    serialNumber: string;
+    warehouse: string;
+    location: string;
+    mrp: string;
+    sellingPrice: string;
+    hsnCode: string;
+    uom: string;
+    manufacturingDate: string;
+    expiryDate: string;
 };
 
 type PrintForm = {
@@ -71,9 +89,6 @@ type PrintForm = {
     height: number;
     orientation: Orientation;
 };
-
-const BARCODE_TEMPLATE_STORAGE_KEY = "bookez_barcode_qr_templates";
-const BARCODE_ASSIGNMENT_STORAGE_KEY = "bookez_barcode_qr_assignments";
 
 const PRINT_TARGET_OPTIONS = [
     { label: "A4 Sheet", value: "a4" },
@@ -95,19 +110,6 @@ const ORIENTATION_OPTIONS = [
     { label: "Portrait", value: "portrait" },
 ];
 
-const getStoredArray = <T,>(key: string): T[] => {
-    try {
-        const stored = localStorage.getItem(key);
-        if (!stored) return [];
-
-        const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-        console.error(`Failed to read ${key}:`, error);
-        return [];
-    }
-};
-
 const getDefaultForm = (): PrintForm => ({
     assignmentCode: "",
     copies: 1,
@@ -118,66 +120,202 @@ const getDefaultForm = (): PrintForm => ({
     orientation: "landscape",
 });
 
+const valueToString = (value: any) => {
+    if (value === undefined || value === null) return "";
+    if (typeof value === "string" || typeof value === "number") return String(value);
+    if (typeof value === "object") return String(value?.name ?? value?.label ?? value?.value ?? value?.code ?? "");
+    return "";
+};
+
+const getProductField = (product: any, keys: string[]) => {
+    if (!product) return "";
+
+    const dynamicFields = product?.dynamicFields && typeof product.dynamicFields === "object" ? product.dynamicFields : {};
+
+    for (const key of keys) {
+        const directValue = product?.[key];
+
+        if (directValue !== undefined && directValue !== null && directValue !== "") {
+            return valueToString(directValue);
+        }
+
+        const dynamicValue = dynamicFields?.[key];
+
+        if (dynamicValue !== undefined && dynamicValue !== null && dynamicValue !== "") {
+            return valueToString(dynamicValue);
+        }
+    }
+
+    const normalizedKeys = keys.map((key) => key.toLowerCase());
+
+    for (const [key, value] of Object.entries(dynamicFields)) {
+        if (normalizedKeys.includes(key.toLowerCase())) return valueToString(value);
+    }
+
+    return "";
+};
+
+const getQrObject = (qrValue: Record<string, any> | string | undefined) => {
+    if (!qrValue) return {};
+
+    if (typeof qrValue === "object") return qrValue;
+
+    try {
+        const parsed = JSON.parse(qrValue);
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+        return {};
+    }
+};
+
+const getAssignmentKey = (assignment: BarcodeAssignment) => {
+    return assignment.assignmentCode || assignment._id || `${assignment.templateCode}-${assignment.productCode}`;
+};
+
 const BarcodeQrLabelPrint = () => {
+    const dispatch = useDispatch<any>();
     const printSourceRef = useRef<HTMLDivElement | null>(null);
 
-    const [templates, setTemplates] = useState<BarcodeQrTemplate[]>([]);
-    const [assignments, setAssignments] = useState<BarcodeAssignment[]>([]);
+    const {
+        templates = [],
+        templateLoading = false,
+        assignments = [],
+        assignmentLoading = false,
+        error: barcodeQrError,
+    } = useSelector((state: any) => state.barcodeQr || {});
+
+    const {
+        selectedProduct,
+        loading: productLoading,
+    } = useSelector((state: any) => state.productMaster || {});
+
     const [form, setForm] = useState<PrintForm>(getDefaultForm());
     const [qrCodeUrl, setQrCodeUrl] = useState("");
     const [error, setError] = useState("");
 
     useEffect(() => {
-        setTemplates(getStoredArray<BarcodeQrTemplate>(BARCODE_TEMPLATE_STORAGE_KEY));
-        setAssignments(getStoredArray<BarcodeAssignment>(BARCODE_ASSIGNMENT_STORAGE_KEY));
-    }, []);
+        dispatch(
+            getAllBarcodeQrTemplates({
+                offset: 0,
+                limit: 500,
+                search: "",
+                status: "",
+                codeType: "",
+            })
+        );
 
-    const activeAssignments = useMemo(() => assignments.filter((assignment) => assignment.status === "active"), [assignments]);
+        dispatch(
+            getAllBarcodeQrAssignments({
+                offset: 0,
+                limit: 500,
+                search: "",
+                status: "active",
+                codeType: "",
+                productCode: "",
+                templateCode: "",
+            })
+        );
+    }, [dispatch]);
+
+    const activeAssignments = useMemo(
+        () => (assignments || []).filter((assignment: BarcodeAssignment) => assignment?.status === "active"),
+        [assignments]
+    );
 
     const assignmentOptions = useMemo(
         () =>
-            activeAssignments.map((assignment) => ({
-                label: `${assignment.productName} - ${assignment.codeValue}`,
-                value: assignment.assignmentCode,
-            })),
+            activeAssignments.map((assignment: BarcodeAssignment) => {
+                const qrObject = getQrObject(assignment.qrValue);
+                const productName = assignment.productName || qrObject?.productName || assignment.productCode;
+                const codeLabel = assignment.codeType === "barcode" ? assignment.codeValue || "Barcode" : "QR Code";
+
+                return {
+                    label: `${productName} - ${codeLabel}`,
+                    value: getAssignmentKey(assignment),
+                };
+            }),
         [activeAssignments]
     );
 
     const selectedAssignment = useMemo(
-        () => activeAssignments.find((assignment) => assignment.assignmentCode === form.assignmentCode) || null,
+        () =>
+            activeAssignments.find(
+                (assignment: BarcodeAssignment) => getAssignmentKey(assignment) === form.assignmentCode
+            ) || null,
         [activeAssignments, form.assignmentCode]
     );
 
     const selectedTemplate = useMemo(
-        () => templates.find((template) => template.templateCode === selectedAssignment?.templateCode) || null,
+        () =>
+            (templates || []).find(
+                (template: BarcodeQrTemplate) => template.templateCode === selectedAssignment?.templateCode
+            ) || null,
         [templates, selectedAssignment]
     );
+
+    const selectedQrObject = useMemo(
+        () => getQrObject(selectedAssignment?.qrValue),
+        [selectedAssignment]
+    );
+
+    const productData = useMemo<ProductPrintData>(() => {
+        return {
+            productCode: valueToString(selectedProduct?.productCode || selectedQrObject?.productCode || selectedAssignment?.productCode),
+            productName: valueToString(selectedProduct?.productName || selectedQrObject?.productName || selectedAssignment?.productName),
+            batchNumber: getProductField(selectedProduct, ["batchNumber", "batchNo", "batch"]) || valueToString(selectedQrObject?.batchNumber),
+            serialNumber: getProductField(selectedProduct, ["serialNumber", "serialNo", "serial"]) || valueToString(selectedQrObject?.serialNumber),
+            warehouse: getProductField(selectedProduct, ["warehouse", "warehouseName", "warehouseCode"]) || valueToString(selectedQrObject?.warehouse),
+            location: getProductField(selectedProduct, ["location", "locationName", "locationCode"]) || valueToString(selectedQrObject?.location),
+            mrp: getProductField(selectedProduct, ["mrp", "MRP", "productMRP"]) || valueToString(selectedQrObject?.mrp),
+            sellingPrice:
+                getProductField(selectedProduct, ["sellingPrice", "salePrice", "salesPrice", "productSellingPrice"]) ||
+                valueToString(selectedQrObject?.sellingPrice),
+            hsnCode:
+                getProductField(selectedProduct, ["productHSNCode", "hsnCode", "HSNCode", "hsn"]) ||
+                valueToString(selectedQrObject?.hsnCode),
+            uom:
+                getProductField(selectedProduct, ["unit", "uom", "UOM", "productUOM", "productUnit"]) ||
+                valueToString(selectedQrObject?.uom),
+            manufacturingDate:
+                getProductField(selectedProduct, ["manufacturingDate", "manufactureDate", "mfgDate"]) ||
+                valueToString(selectedQrObject?.manufacturingDate),
+            expiryDate:
+                getProductField(selectedProduct, ["expiryDate", "expirationDate", "expDate"]) ||
+                valueToString(selectedQrObject?.expiryDate),
+        };
+    }, [selectedProduct, selectedQrObject, selectedAssignment]);
 
     const largerSide = Math.max(form.width, form.height);
     const smallerSide = Math.min(form.width, form.height);
     const labelWidth = form.orientation === "landscape" ? largerSide : smallerSide;
     const labelHeight = form.orientation === "landscape" ? smallerSide : largerSide;
-
     const fields = selectedTemplate?.fields;
 
     const hasExtraFields = Boolean(
-        (fields?.mrp && selectedAssignment?.mrp) ||
-        (fields?.sellingPrice && selectedAssignment?.sellingPrice) ||
-        (fields?.hsnCode && selectedAssignment?.hsnCode) ||
-        (fields?.uom && selectedAssignment?.uom) ||
-        (fields?.batchNumber && selectedAssignment?.batchNumber) ||
-        (fields?.serialNumber && selectedAssignment?.serialNumber) ||
-        (fields?.warehouse && selectedAssignment?.warehouse) ||
-        (fields?.location && selectedAssignment?.location) ||
-        (fields?.manufacturingDate && selectedAssignment?.manufacturingDate) ||
-        (fields?.expiryDate && selectedAssignment?.expiryDate)
+        (fields?.mrp && productData.mrp) ||
+        (fields?.sellingPrice && productData.sellingPrice) ||
+        (fields?.hsnCode && productData.hsnCode) ||
+        (fields?.uom && productData.uom) ||
+        (fields?.batchNumber && productData.batchNumber) ||
+        (fields?.serialNumber && productData.serialNumber) ||
+        (fields?.warehouse && productData.warehouse) ||
+        (fields?.location && productData.location) ||
+        (fields?.manufacturingDate && productData.manufacturingDate) ||
+        (fields?.expiryDate && productData.expiryDate)
     );
 
     const qrEncodedValue = useMemo(() => {
         if (!selectedAssignment) return "";
-        if (selectedAssignment.qrValue && typeof selectedAssignment.qrValue === "object") return JSON.stringify(selectedAssignment.qrValue);
-        if (selectedAssignment.qrValue && typeof selectedAssignment.qrValue === "string") return selectedAssignment.qrValue;
-        return selectedAssignment.codeValue;
+
+        if (selectedAssignment.qrValue && typeof selectedAssignment.qrValue === "object") {
+            return JSON.stringify(selectedAssignment.qrValue);
+        }
+
+        if (selectedAssignment.qrValue && typeof selectedAssignment.qrValue === "string") {
+            return selectedAssignment.qrValue;
+        }
+
+        return "";
     }, [selectedAssignment]);
 
     useEffect(() => {
@@ -234,36 +372,54 @@ const BarcodeQrLabelPrint = () => {
         return Math.max(30, Math.min(availableWidth, availableHeight));
     }, [previewSize, fields, hasExtraFields]);
 
-    const printCopies = useMemo(() => Array.from({ length: Math.max(1, form.copies) }, (_, index) => index), [form.copies]);
+    const printCopies = useMemo(
+        () => Array.from({ length: Math.max(1, form.copies) }, (_, index) => index),
+        [form.copies]
+    );
 
     const estimatedA4Columns = useMemo(() => {
         const usableWidth = 194;
         const gap = 2;
+
         return Math.max(1, Math.floor((usableWidth + gap) / (labelWidth + gap)));
     }, [labelWidth]);
 
     const estimatedA4Rows = useMemo(() => {
         const usableHeight = 281;
         const gap = 2;
+
         return Math.max(1, Math.floor((usableHeight + gap) / (labelHeight + gap)));
     }, [labelHeight]);
 
     const labelsPerA4Page = estimatedA4Columns * estimatedA4Rows;
 
-    const handleAssignmentChange = (assignmentCode: string) => {
-        const assignment = activeAssignments.find((item) => item.assignmentCode === assignmentCode);
-        const template = templates.find((item) => item.templateCode === assignment?.templateCode);
+    const handleAssignmentChange = (assignmentKey: string) => {
+        const assignment = activeAssignments.find(
+            (item: BarcodeAssignment) => getAssignmentKey(item) === assignmentKey
+        );
+
+        const template = (templates || []).find(
+            (item: BarcodeQrTemplate) => item.templateCode === assignment?.templateCode
+        );
 
         setError("");
 
+        if (assignment?.productCode) {
+            dispatch(getProductByCode(assignment.productCode));
+        }
+
         if (!template) {
-            setForm((previous) => ({ ...previous, assignmentCode }));
+            setForm((previous) => ({
+                ...previous,
+                assignmentCode: assignmentKey,
+            }));
+
             return;
         }
 
         setForm((previous) => ({
             ...previous,
-            assignmentCode,
+            assignmentCode: assignmentKey,
             labelSize: template.labelSize || "custom",
             width: template.width || 50,
             height: template.height || 25,
@@ -285,7 +441,11 @@ const BarcodeQrLabelPrint = () => {
 
     const handleCopiesChange = (value: string) => {
         const copies = Math.min(500, Math.max(1, Number(value || 1)));
-        setForm((previous) => ({ ...previous, copies }));
+
+        setForm((previous) => ({
+            ...previous,
+            copies,
+        }));
     };
 
     const waitForImages = async (document: Document) => {
@@ -308,10 +468,17 @@ const BarcodeQrLabelPrint = () => {
     };
 
     const getPrintCss = () => {
-        const productNameSize = labelHeight <= 15 ? "4pt" : labelHeight <= 25 ? "5.5pt" : labelHeight <= 30 ? "6.5pt" : "8pt";
-        const codeValueSize = labelHeight <= 15 ? "3.5pt" : labelHeight <= 25 ? "4.5pt" : labelHeight <= 30 ? "5pt" : "6.5pt";
-        const productCodeSize = labelHeight <= 15 ? "3pt" : labelHeight <= 25 ? "4pt" : labelHeight <= 30 ? "4.5pt" : "6pt";
-        const extraFieldSize = labelHeight <= 15 ? "2.8pt" : labelHeight <= 25 ? "3.5pt" : labelHeight <= 30 ? "4pt" : "5.5pt";
+        const productNameSize =
+            labelHeight <= 15 ? "4pt" : labelHeight <= 25 ? "5.5pt" : labelHeight <= 30 ? "6.5pt" : "8pt";
+
+        const codeValueSize =
+            labelHeight <= 15 ? "3.5pt" : labelHeight <= 25 ? "4.5pt" : labelHeight <= 30 ? "5pt" : "6.5pt";
+
+        const productCodeSize =
+            labelHeight <= 15 ? "3pt" : labelHeight <= 25 ? "4pt" : labelHeight <= 30 ? "4.5pt" : "6pt";
+
+        const extraFieldSize =
+            labelHeight <= 15 ? "2.8pt" : labelHeight <= 25 ? "3.5pt" : labelHeight <= 30 ? "4pt" : "5.5pt";
 
         const commonCss = `
             * {
@@ -553,6 +720,7 @@ const BarcodeQrLabelPrint = () => {
         setError("");
 
         const iframe = document.createElement("iframe");
+
         iframe.style.position = "fixed";
         iframe.style.right = "0";
         iframe.style.bottom = "0";
@@ -560,6 +728,7 @@ const BarcodeQrLabelPrint = () => {
         iframe.style.height = "1px";
         iframe.style.border = "0";
         iframe.style.opacity = "0";
+
         iframe.setAttribute("aria-hidden", "true");
 
         document.body.appendChild(iframe);
@@ -604,7 +773,9 @@ const BarcodeQrLabelPrint = () => {
             printWindow.print();
 
             setTimeout(() => {
-                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
             }, 1500);
         }, 300);
     };
@@ -615,14 +786,24 @@ const BarcodeQrLabelPrint = () => {
         return (
             <div
                 className="flex flex-col overflow-hidden border border-slate-400 bg-white p-2 text-black shadow-sm"
-                style={{ width: previewSize.width, height: previewSize.height }}
+                style={{
+                    width: previewSize.width,
+                    height: previewSize.height,
+                }}
             >
                 {fields?.productName ? (
                     <div
                         className="w-full shrink-0 truncate text-center font-semibold"
-                        style={{ fontSize: previewSize.height <= 100 ? 8 : previewSize.height <= 160 ? 10 : 12 }}
+                        style={{
+                            fontSize:
+                                previewSize.height <= 100
+                                    ? 8
+                                    : previewSize.height <= 160
+                                        ? 10
+                                        : 12,
+                        }}
                     >
-                        {selectedAssignment.productName}
+                        {productData.productName || "-"}
                     </div>
                 ) : null}
 
@@ -630,8 +811,8 @@ const BarcodeQrLabelPrint = () => {
                     {selectedAssignment.codeType === "barcode" ? (
                         <div className="barcode-preview flex h-full w-full items-stretch justify-stretch overflow-hidden">
                             <Barcode
-                                value={selectedAssignment.codeValue}
-                                format={selectedAssignment.barcodeType || "CODE128"}
+                                value={selectedAssignment.codeValue || ""}
+                                format={selectedAssignment.barcodeType || selectedTemplate?.barcodeType || "CODE128"}
                                 width={1}
                                 height={100}
                                 displayValue={false}
@@ -646,43 +827,56 @@ const BarcodeQrLabelPrint = () => {
                                 src={qrCodeUrl}
                                 alt="QR Code"
                                 className="block object-contain"
-                                style={{ width: previewQrSize, height: previewQrSize, maxWidth: "100%", maxHeight: "100%" }}
+                                style={{
+                                    width: previewQrSize,
+                                    height: previewQrSize,
+                                    maxWidth: "100%",
+                                    maxHeight: "100%",
+                                }}
                             />
                         </div>
                     ) : null}
                 </div>
 
-                <div
-                    className="w-full shrink-0 truncate text-center font-mono font-semibold"
-                    style={{ fontSize: previewSize.height <= 100 ? 7 : 9 }}
-                >
-                    {selectedAssignment.codeType === "barcode" ? selectedAssignment.codeValue : selectedAssignment.productCode}
-                </div>
+                {selectedAssignment.codeType === "barcode" ? (
+                    <div
+                        className="w-full shrink-0 truncate text-center font-mono font-semibold"
+                        style={{
+                            fontSize: previewSize.height <= 100 ? 7 : 9,
+                        }}
+                    >
+                        {selectedAssignment.codeValue || "-"}
+                    </div>
+                ) : null}
 
                 {fields?.productCode ? (
                     <div
                         className="w-full shrink-0 truncate text-center"
-                        style={{ fontSize: previewSize.height <= 100 ? 7 : 9 }}
+                        style={{
+                            fontSize: previewSize.height <= 100 ? 7 : 9,
+                        }}
                     >
-                        {selectedAssignment.productCode}
+                        {productData.productCode || "-"}
                     </div>
                 ) : null}
 
                 {hasExtraFields ? (
                     <div
                         className="mt-1 flex w-full shrink-0 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 overflow-hidden"
-                        style={{ fontSize: previewSize.height <= 100 ? 6 : 8 }}
+                        style={{
+                            fontSize: previewSize.height <= 100 ? 6 : 8,
+                        }}
                     >
-                        {fields?.mrp && selectedAssignment.mrp ? <span>MRP: {selectedAssignment.mrp}</span> : null}
-                        {fields?.sellingPrice && selectedAssignment.sellingPrice ? <span>Price: {selectedAssignment.sellingPrice}</span> : null}
-                        {fields?.hsnCode && selectedAssignment.hsnCode ? <span>HSN: {selectedAssignment.hsnCode}</span> : null}
-                        {fields?.uom && selectedAssignment.uom ? <span>UOM: {selectedAssignment.uom}</span> : null}
-                        {fields?.batchNumber && selectedAssignment.batchNumber ? <span>Batch: {selectedAssignment.batchNumber}</span> : null}
-                        {fields?.serialNumber && selectedAssignment.serialNumber ? <span>Serial: {selectedAssignment.serialNumber}</span> : null}
-                        {fields?.warehouse && selectedAssignment.warehouse ? <span>WH: {selectedAssignment.warehouse}</span> : null}
-                        {fields?.location && selectedAssignment.location ? <span>LOC: {selectedAssignment.location}</span> : null}
-                        {fields?.manufacturingDate && selectedAssignment.manufacturingDate ? <span>MFG: {selectedAssignment.manufacturingDate}</span> : null}
-                        {fields?.expiryDate && selectedAssignment.expiryDate ? <span>EXP: {selectedAssignment.expiryDate}</span> : null}
+                        {fields?.mrp && productData.mrp ? <span>MRP: {productData.mrp}</span> : null}
+                        {fields?.sellingPrice && productData.sellingPrice ? <span>Price: {productData.sellingPrice}</span> : null}
+                        {fields?.hsnCode && productData.hsnCode ? <span>HSN: {productData.hsnCode}</span> : null}
+                        {fields?.uom && productData.uom ? <span>UOM: {productData.uom}</span> : null}
+                        {fields?.batchNumber && productData.batchNumber ? <span>Batch: {productData.batchNumber}</span> : null}
+                        {fields?.serialNumber && productData.serialNumber ? <span>Serial: {productData.serialNumber}</span> : null}
+                        {fields?.warehouse && productData.warehouse ? <span>WH: {productData.warehouse}</span> : null}
+                        {fields?.location && productData.location ? <span>LOC: {productData.location}</span> : null}
+                        {fields?.manufacturingDate && productData.manufacturingDate ? <span>MFG: {productData.manufacturingDate}</span> : null}
+                        {fields?.expiryDate && productData.expiryDate ? <span>EXP: {productData.expiryDate}</span> : null}
                     </div>
                 ) : null}
             </div>
@@ -693,15 +887,22 @@ const BarcodeQrLabelPrint = () => {
         if (!selectedAssignment) return null;
 
         return (
-            <div key={`${selectedAssignment.assignmentCode}-${index}`} className="print-label">
-                {fields?.productName ? <div className="product-name">{selectedAssignment.productName}</div> : null}
+            <div
+                key={`${getAssignmentKey(selectedAssignment)}-${index}`}
+                className="print-label"
+            >
+                {fields?.productName ? (
+                    <div className="product-name">
+                        {productData.productName || "-"}
+                    </div>
+                ) : null}
 
                 <div className="code-area">
                     {selectedAssignment.codeType === "barcode" ? (
                         <div className="barcode-wrapper">
                             <Barcode
-                                value={selectedAssignment.codeValue}
-                                format={selectedAssignment.barcodeType || "CODE128"}
+                                value={selectedAssignment.codeValue || ""}
+                                format={selectedAssignment.barcodeType || selectedTemplate?.barcodeType || "CODE128"}
                                 width={1}
                                 height={100}
                                 displayValue={false}
@@ -712,29 +913,39 @@ const BarcodeQrLabelPrint = () => {
                         </div>
                     ) : qrCodeUrl ? (
                         <div className="qr-wrapper">
-                            <img src={qrCodeUrl} alt="QR Code" className="qr-image" />
+                            <img
+                                src={qrCodeUrl}
+                                alt="QR Code"
+                                className="qr-image"
+                            />
                         </div>
                     ) : null}
                 </div>
 
-                <div className="code-value">
-                    {selectedAssignment.codeType === "barcode" ? selectedAssignment.codeValue : selectedAssignment.productCode}
-                </div>
+                {selectedAssignment.codeType === "barcode" ? (
+                    <div className="code-value">
+                        {selectedAssignment.codeValue || "-"}
+                    </div>
+                ) : null}
 
-                {fields?.productCode ? <div className="product-code">{selectedAssignment.productCode}</div> : null}
+                {fields?.productCode ? (
+                    <div className="product-code">
+                        {productData.productCode || "-"}
+                    </div>
+                ) : null}
 
                 {hasExtraFields ? (
                     <div className="extra-fields">
-                        {fields?.mrp && selectedAssignment.mrp ? <span>MRP: {selectedAssignment.mrp}</span> : null}
-                        {fields?.sellingPrice && selectedAssignment.sellingPrice ? <span>Price: {selectedAssignment.sellingPrice}</span> : null}
-                        {fields?.hsnCode && selectedAssignment.hsnCode ? <span>HSN: {selectedAssignment.hsnCode}</span> : null}
-                        {fields?.uom && selectedAssignment.uom ? <span>UOM: {selectedAssignment.uom}</span> : null}
-                        {fields?.batchNumber && selectedAssignment.batchNumber ? <span>Batch: {selectedAssignment.batchNumber}</span> : null}
-                        {fields?.serialNumber && selectedAssignment.serialNumber ? <span>Serial: {selectedAssignment.serialNumber}</span> : null}
-                        {fields?.warehouse && selectedAssignment.warehouse ? <span>WH: {selectedAssignment.warehouse}</span> : null}
-                        {fields?.location && selectedAssignment.location ? <span>LOC: {selectedAssignment.location}</span> : null}
-                        {fields?.manufacturingDate && selectedAssignment.manufacturingDate ? <span>MFG: {selectedAssignment.manufacturingDate}</span> : null}
-                        {fields?.expiryDate && selectedAssignment.expiryDate ? <span>EXP: {selectedAssignment.expiryDate}</span> : null}
+                        {fields?.mrp && productData.mrp ? <span>MRP: {productData.mrp}</span> : null}
+                        {fields?.sellingPrice && productData.sellingPrice ? <span>Price: {productData.sellingPrice}</span> : null}
+                        {fields?.hsnCode && productData.hsnCode ? <span>HSN: {productData.hsnCode}</span> : null}
+                        {fields?.uom && productData.uom ? <span>UOM: {productData.uom}</span> : null}
+                        {fields?.batchNumber && productData.batchNumber ? <span>Batch: {productData.batchNumber}</span> : null}
+                        {fields?.serialNumber && productData.serialNumber ? <span>Serial: {productData.serialNumber}</span> : null}
+                        {fields?.warehouse && productData.warehouse ? <span>WH: {productData.warehouse}</span> : null}
+                        {fields?.location && productData.location ? <span>LOC: {productData.location}</span> : null}
+                        {fields?.manufacturingDate && productData.manufacturingDate ? <span>MFG: {productData.manufacturingDate}</span> : null}
+                        {fields?.expiryDate && productData.expiryDate ? <span>EXP: {productData.expiryDate}</span> : null}
                     </div>
                 ) : null}
             </div>
@@ -758,26 +969,19 @@ const BarcodeQrLabelPrint = () => {
             <div className="flex h-auto w-full flex-col gap-3 rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
                 <div className="flex flex-col gap-3 border-b border-border pb-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold text-card-foreground">Barcode / QR Label Print</h1>
+                        <h1 className="text-xl font-semibold text-card-foreground">
+                            Barcode / QR Label Print
+                        </h1>
+
                         <p className="mt-0.5 text-sm text-muted-foreground">
                             Print multiple labels on an A4 sheet or one sticker per page on a label printer.
                         </p>
                     </div>
-
-                    <button
-                        type="button"
-                        onClick={handlePrint}
-                        disabled={!selectedAssignment}
-                        className="inline-flex h-8 items-center gap-2 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Printer size={16} />
-                        Print Labels
-                    </button>
                 </div>
 
-                {error ? (
+                {error || barcodeQrError ? (
                     <div className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-                        {error}
+                        {error || barcodeQrError}
                     </div>
                 ) : null}
 
@@ -785,7 +989,10 @@ const BarcodeQrLabelPrint = () => {
                     <div className="min-w-0 space-y-3">
                         <div className="rounded-md border border-border bg-card">
                             <div className="border-b border-border px-4 py-3">
-                                <h2 className="text-base font-semibold">Print Selection</h2>
+                                <h2 className="text-base font-semibold">
+                                    Print Selection
+                                </h2>
+
                                 <p className="mt-0.5 text-sm text-muted-foreground">
                                     Select code, printer type and number of labels.
                                 </p>
@@ -797,16 +1004,28 @@ const BarcodeQrLabelPrint = () => {
                                     mandatory
                                     value={form.assignmentCode}
                                     options={assignmentOptions}
-                                    placeholder="Select Barcode / QR Code"
+                                    placeholder={
+                                        assignmentLoading
+                                            ? "Loading Barcode / QR Code..."
+                                            : "Select Barcode / QR Code"
+                                    }
+                                    disabled={assignmentLoading || templateLoading}
                                     largeData
-                                    onChange={(event: any) => handleAssignmentChange(event.target.value)}
+                                    onChange={(event: any) =>
+                                        handleAssignmentChange(event.target.value)
+                                    }
                                 />
 
                                 <SelectInput
                                     label="Print On"
                                     value={form.printTarget}
                                     options={PRINT_TARGET_OPTIONS}
-                                    onChange={(event: any) => setForm((previous) => ({ ...previous, printTarget: event.target.value }))}
+                                    onChange={(event: any) =>
+                                        setForm((previous) => ({
+                                            ...previous,
+                                            printTarget: event.target.value,
+                                        }))
+                                    }
                                 />
 
                                 <TextInput
@@ -814,21 +1033,30 @@ const BarcodeQrLabelPrint = () => {
                                     mandatory
                                     type="number"
                                     value={form.copies}
-                                    onChange={(event: any) => handleCopiesChange(event.target.value)}
+                                    onChange={(event: any) =>
+                                        handleCopiesChange(event.target.value)
+                                    }
                                 />
 
                                 <SelectInput
                                     label="Label Size"
                                     value={form.labelSize}
                                     options={LABEL_SIZE_OPTIONS}
-                                    onChange={(event: any) => handleLabelSizeChange(event.target.value)}
+                                    onChange={(event: any) =>
+                                        handleLabelSizeChange(event.target.value)
+                                    }
                                 />
 
                                 <SelectInput
                                     label="Label Orientation"
                                     value={form.orientation}
                                     options={ORIENTATION_OPTIONS}
-                                    onChange={(event: any) => setForm((previous) => ({ ...previous, orientation: event.target.value }))}
+                                    onChange={(event: any) =>
+                                        setForm((previous) => ({
+                                            ...previous,
+                                            orientation: event.target.value,
+                                        }))
+                                    }
                                 />
 
                                 {form.labelSize === "custom" ? (
@@ -837,14 +1065,30 @@ const BarcodeQrLabelPrint = () => {
                                             label="Width (mm)"
                                             type="number"
                                             value={form.width}
-                                            onChange={(event: any) => setForm((previous) => ({ ...previous, width: Math.max(1, Number(event.target.value || 1)) }))}
+                                            onChange={(event: any) =>
+                                                setForm((previous) => ({
+                                                    ...previous,
+                                                    width: Math.max(
+                                                        1,
+                                                        Number(event.target.value || 1)
+                                                    ),
+                                                }))
+                                            }
                                         />
 
                                         <TextInput
                                             label="Height (mm)"
                                             type="number"
                                             value={form.height}
-                                            onChange={(event: any) => setForm((previous) => ({ ...previous, height: Math.max(1, Number(event.target.value || 1)) }))}
+                                            onChange={(event: any) =>
+                                                setForm((previous) => ({
+                                                    ...previous,
+                                                    height: Math.max(
+                                                        1,
+                                                        Number(event.target.value || 1)
+                                                    ),
+                                                }))
+                                            }
                                         />
                                     </>
                                 ) : null}
@@ -855,23 +1099,45 @@ const BarcodeQrLabelPrint = () => {
                             <div className="rounded-md border border-primary/30 bg-primary/5 p-4">
                                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-4">
                                     <div>
-                                        <p className="text-muted-foreground">Columns</p>
-                                        <p className="mt-0.5 font-semibold">{estimatedA4Columns}</p>
+                                        <p className="text-muted-foreground">
+                                            Columns
+                                        </p>
+
+                                        <p className="mt-0.5 font-semibold">
+                                            {estimatedA4Columns}
+                                        </p>
                                     </div>
 
                                     <div>
-                                        <p className="text-muted-foreground">Rows</p>
-                                        <p className="mt-0.5 font-semibold">{estimatedA4Rows}</p>
+                                        <p className="text-muted-foreground">
+                                            Rows
+                                        </p>
+
+                                        <p className="mt-0.5 font-semibold">
+                                            {estimatedA4Rows}
+                                        </p>
                                     </div>
 
                                     <div>
-                                        <p className="text-muted-foreground">Labels / Page</p>
-                                        <p className="mt-0.5 font-semibold">{labelsPerA4Page}</p>
+                                        <p className="text-muted-foreground">
+                                            Labels / Page
+                                        </p>
+
+                                        <p className="mt-0.5 font-semibold">
+                                            {labelsPerA4Page}
+                                        </p>
                                     </div>
 
                                     <div>
-                                        <p className="text-muted-foreground">Required Pages</p>
-                                        <p className="mt-0.5 font-semibold">{Math.ceil(form.copies / labelsPerA4Page)}</p>
+                                        <p className="text-muted-foreground">
+                                            Required Pages
+                                        </p>
+
+                                        <p className="mt-0.5 font-semibold">
+                                            {Math.ceil(
+                                                form.copies / labelsPerA4Page
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -880,40 +1146,77 @@ const BarcodeQrLabelPrint = () => {
                         {selectedAssignment ? (
                             <div className="rounded-md border border-border bg-card">
                                 <div className="border-b border-border px-4 py-3">
-                                    <h2 className="text-base font-semibold">Print Details</h2>
+                                    <h2 className="text-base font-semibold">
+                                        Print Details
+                                    </h2>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4 text-sm md:grid-cols-3">
                                     <div>
-                                        <p className="text-muted-foreground">Product</p>
-                                        <p className="mt-0.5 font-medium">{selectedAssignment.productName}</p>
-                                    </div>
+                                        <p className="text-muted-foreground">
+                                            Product
+                                        </p>
 
-                                    <div>
-                                        <p className="text-muted-foreground">Product Code</p>
-                                        <p className="mt-0.5 font-medium">{selectedAssignment.productCode}</p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-muted-foreground">Code Type</p>
                                         <p className="mt-0.5 font-medium">
-                                            {selectedAssignment.codeType === "barcode" ? "Barcode" : "QR Code"}
+                                            {productLoading
+                                                ? "Loading..."
+                                                : productData.productName || "-"}
                                         </p>
                                     </div>
 
                                     <div>
-                                        <p className="text-muted-foreground">Label Size</p>
-                                        <p className="mt-0.5 font-medium">{labelWidth} × {labelHeight} mm</p>
+                                        <p className="text-muted-foreground">
+                                            Product Code
+                                        </p>
+
+                                        <p className="mt-0.5 font-medium">
+                                            {productData.productCode || "-"}
+                                        </p>
                                     </div>
 
                                     <div>
-                                        <p className="text-muted-foreground">Copies</p>
-                                        <p className="mt-0.5 font-medium">{form.copies}</p>
+                                        <p className="text-muted-foreground">
+                                            Code Type
+                                        </p>
+
+                                        <p className="mt-0.5 font-medium">
+                                            {selectedAssignment.codeType ===
+                                                "barcode"
+                                                ? "Barcode"
+                                                : "QR Code"}
+                                        </p>
                                     </div>
 
                                     <div>
-                                        <p className="text-muted-foreground">Print On</p>
-                                        <p className="mt-0.5 font-medium">{form.printTarget === "a4" ? "A4 Sheet" : "Label Printer"}</p>
+                                        <p className="text-muted-foreground">
+                                            Label Size
+                                        </p>
+
+                                        <p className="mt-0.5 font-medium">
+                                            {labelWidth} × {labelHeight} mm
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-muted-foreground">
+                                            Copies
+                                        </p>
+
+                                        <p className="mt-0.5 font-medium">
+                                            {form.copies}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-muted-foreground">
+                                            Print On
+                                        </p>
+
+                                        <p className="mt-0.5 font-medium">
+                                            {form.printTarget === "a4"
+                                                ? "A4 Sheet"
+                                                : "Label Printer"}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -924,7 +1227,10 @@ const BarcodeQrLabelPrint = () => {
                         <div className="sticky top-3 overflow-hidden rounded-md border border-border bg-card">
                             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
                                 <div>
-                                    <h2 className="text-base font-semibold">Label Preview</h2>
+                                    <h2 className="text-base font-semibold">
+                                        Label Preview
+                                    </h2>
+
                                     <p className="mt-0.5 text-sm text-muted-foreground">
                                         {labelWidth} mm × {labelHeight} mm
                                     </p>
@@ -932,14 +1238,21 @@ const BarcodeQrLabelPrint = () => {
 
                                 {selectedAssignment ? (
                                     <div className="rounded-sm border border-primary/20 bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
-                                        {selectedAssignment.codeType === "barcode" ? selectedAssignment.barcodeType || "Barcode" : "QR Code"}
+                                        {selectedAssignment.codeType ===
+                                            "barcode"
+                                            ? selectedAssignment.barcodeType ||
+                                            selectedTemplate?.barcodeType ||
+                                            "Barcode"
+                                            : "QR Code"}
                                     </div>
                                 ) : null}
                             </div>
 
                             <div className="p-4">
                                 <div className="flex min-h-[300px] items-center justify-center overflow-auto rounded-md border border-dashed border-border bg-muted/20 p-4">
-                                    {selectedAssignment ? renderPreviewLabel() : (
+                                    {selectedAssignment ? (
+                                        renderPreviewLabel()
+                                    ) : (
                                         <p className="text-sm text-muted-foreground">
                                             Select Barcode / QR Code to preview label.
                                         </p>
@@ -947,50 +1260,83 @@ const BarcodeQrLabelPrint = () => {
                                 </div>
 
                                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-md border border-border bg-muted/20 p-3 text-sm">
-                                    <span className="text-muted-foreground">Print On</span>
-                                    <span className="text-right font-medium">{form.printTarget === "a4" ? "A4 Sheet" : "Label Printer"}</span>
+                                    <span className="text-muted-foreground">
+                                        Print On
+                                    </span>
 
-                                    <span className="text-muted-foreground">Copies</span>
-                                    <span className="text-right font-medium">{form.copies}</span>
+                                    <span className="text-right font-medium">
+                                        {form.printTarget === "a4"
+                                            ? "A4 Sheet"
+                                            : "Label Printer"}
+                                    </span>
 
-                                    <span className="text-muted-foreground">Label Size</span>
-                                    <span className="text-right font-medium">{labelWidth} × {labelHeight} mm</span>
+                                    <span className="text-muted-foreground">
+                                        Copies
+                                    </span>
+
+                                    <span className="text-right font-medium">
+                                        {form.copies}
+                                    </span>
+
+                                    <span className="text-muted-foreground">
+                                        Label Size
+                                    </span>
+
+                                    <span className="text-right font-medium">
+                                        {labelWidth} × {labelHeight} mm
+                                    </span>
 
                                     {form.printTarget === "a4" ? (
                                         <>
-                                            <span className="text-muted-foreground">Labels Per Row</span>
-                                            <span className="text-right font-medium">{estimatedA4Columns}</span>
+                                            <span className="text-muted-foreground">
+                                                Labels Per Row
+                                            </span>
 
-                                            <span className="text-muted-foreground">Labels Per A4</span>
-                                            <span className="text-right font-medium">{labelsPerA4Page}</span>
+                                            <span className="text-right font-medium">
+                                                {estimatedA4Columns}
+                                            </span>
+
+                                            <span className="text-muted-foreground">
+                                                Labels Per A4
+                                            </span>
+
+                                            <span className="text-right font-medium">
+                                                {labelsPerA4Page}
+                                            </span>
                                         </>
                                     ) : null}
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={handlePrint}
+                                <PrimaryButton
+                                    callBackFn={handlePrint}
+                                    text={`Print ${form.copies} Label${form.copies === 1 ? "" : "s"
+                                        }`}
+                                    icon={<Printer size={16} />}
                                     disabled={!selectedAssignment}
-                                    className="mt-3 inline-flex h-8 w-full items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <Printer size={16} />
-                                    Print {form.copies} Label{form.copies === 1 ? "" : "s"}
-                                </button>
+                                    className="mt-3 w-full"
+                                />
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div ref={printSourceRef} style={{ display: "none" }}>
+            <div
+                ref={printSourceRef}
+                style={{ display: "none" }}
+            >
                 {selectedAssignment ? (
                     form.printTarget === "a4" ? (
                         <div className="print-sheet">
-                            {printCopies.map((index) => renderPrintLabel(index))}
+                            {printCopies.map((index) =>
+                                renderPrintLabel(index)
+                            )}
                         </div>
                     ) : (
                         <div className="print-roll">
-                            {printCopies.map((index) => renderPrintLabel(index))}
+                            {printCopies.map((index) =>
+                                renderPrintLabel(index)
+                            )}
                         </div>
                     )
                 ) : null}
