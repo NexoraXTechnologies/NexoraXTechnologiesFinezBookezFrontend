@@ -47,6 +47,44 @@ import { ListingModel } from "../../../../components/modal";
 import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/reportMappingSlice";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 
+const isVehicleMasterField = (field: any) => {
+    const key = String(field?.key || "").trim().toLowerCase().replace(/[\s_]/g, "");
+    const name = String(field?.customMasterName || field?.label || "").trim().toLowerCase().replace(/[\s_]/g, "");
+    return key === "vehiclemaster" || name === "vehiclemaster";
+};
+
+const preparePaymentSchema = (schema: any) => {
+    const prepareFields = (fields: any[] = []) => (fields || []).map((field: any) => {
+        if (!isVehicleMasterField(field)) return field;
+
+        return {
+            ...field,
+            customMasterName: "Vehicle Master",
+            valueField: "code",
+            labelField: "name",
+
+            // ⭐ PAYMENT VEHICLE MASTER
+            // Do not preload here. DynamicAddForm loads dataSource.api once.
+            api: undefined,
+            options: [],
+
+            dataSource: {
+                ...(field?.dataSource || {}),
+                customMasterName: "Vehicle Master",
+                valueField: "code",
+                labelField: "name",
+            },
+        };
+    });
+
+    return {
+        ...schema,
+        header: prepareFields(schema?.header || []),
+        body: prepareFields(schema?.body || []),
+        footer: prepareFields(schema?.footer || []),
+    };
+};
+
 const HEADER_ACCOUNT_FIELD_KEYS = new Set([
     "payAccountCode",
     "payAccountName",
@@ -276,12 +314,32 @@ const Payment = () => {
 
             header: (templateFields?.header || []).map((field: any) => {
                 const fieldKey = String(field?.key || "");
+                const normalizedFieldKey = fieldKey.trim().toLowerCase();
 
-                // ⭐ PAYMENT ONLY — KEEP VEHICLE MASTER KEY LOWERCASE
-                if (fieldKey === "vehicle_master") {
+                if (isVehicleMasterField(field)) {
                     return {
                         ...field,
-                        customMasterName: "vehicle_master",
+                        customMasterName: "Vehicle Master",
+                        valueField: "code",
+                        labelField: "name",
+                        api: undefined,
+                        options: [],
+                        disabled: editingRecord ? true : field?.disabled,
+                        isReadonly: editingRecord ? true : field?.isReadonly,
+                        dataSource: {
+                            ...(field?.dataSource || {}),
+                            customMasterName: "Vehicle Master",
+                            valueField: "code",
+                            labelField: "name",
+                        },
+                    };
+                }
+
+                if (["trip_order", "lr_no", "driver"].includes(normalizedFieldKey)) {
+                    return {
+                        ...field,
+                        disabled: editingRecord ? true : field?.disabled,
+                        isReadonly: editingRecord ? true : field?.isReadonly,
                     };
                 }
 
@@ -308,6 +366,25 @@ const Payment = () => {
             body: (templateFields?.body || []).map((field: any) => {
                 const fieldKey = String(field?.key || "");
 
+                if (isVehicleMasterField(field)) {
+                    return {
+                        ...field,
+                        customMasterName: "Vehicle Master",
+                        valueField: "code",
+                        labelField: "name",
+                        api: undefined,
+                        options: [],
+                        disabled: editingRecord ? true : field?.disabled,
+                        isReadonly: editingRecord ? true : field?.isReadonly,
+                        dataSource: {
+                            ...(field?.dataSource || {}),
+                            customMasterName: "Vehicle Master",
+                            valueField: "code",
+                            labelField: "name",
+                        },
+                    };
+                }
+
                 if (!BODY_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
                     return field;
                 }
@@ -328,7 +405,8 @@ const Payment = () => {
                 };
             }),
         };
-    }, [templateFields]);
+    }, [templateFields, editingRecord]);
+
     /* ===================================================
        FIELD HELPERS
     =================================================== */
@@ -687,7 +765,9 @@ const Payment = () => {
             try {
                 setFieldsLoading(true);
 
-                const updatedData = await loadAllTemplateOptions(transactionsSchema, {
+                const paymentSchema = preparePaymentSchema(transactionsSchema);
+
+                const updatedData = await loadAllTemplateOptions(paymentSchema, {
                     header: { accountType: "bank , cash" },
                     body: { accountType: "vendor , expense", limit: 1000 },
                 });
@@ -859,7 +939,7 @@ const Payment = () => {
                 }))
                 : [{ ...emptyPaymentRow, id: Date.now() }];
 
-        const vehicleMaster = record?.customMasters?.vehicle_master || null;
+        const vehicleMaster = record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || null;
         setEditingRecord(record);
         setErrors({});
 
@@ -890,10 +970,15 @@ const Payment = () => {
                 : null,
 
             customMasters: {
-                vehicle_master: {
-                    code: vehicleMaster?.code || "",
-                    name: vehicleMaster?.name || "",
-                },
+                ...(record?.customMasters || {}),
+                ...(vehicleMaster
+                    ? {
+                        "Vehicle Master": {
+                            code: vehicleMaster?.code || "",
+                            name: vehicleMaster?.name || "",
+                        },
+                    }
+                    : {}),
             },
 
             payBody: body,
@@ -918,6 +1003,17 @@ const Payment = () => {
                 [key]: value,
             };
 
+            if (key === "customMasters") {
+                const selectedVehicle = value?.["Vehicle Master"] || value?.vehicle_master;
+
+                updated.vehicle_master = selectedVehicle
+                    ? {
+                        code: selectedVehicle?.code || "",
+                        name: selectedVehicle?.name || "",
+                    }
+                    : null;
+            }
+
             if (currentField?.mapFields) {
                 updated = applyMappedFields(currentField, value, updated);
             }
@@ -928,8 +1024,10 @@ const Payment = () => {
         setErrors((prev: any) => ({
             ...prev,
             [key]: "",
+            ...(key === "customMasters" ? { vehicle_master: "" } : {}),
         }));
     };
+
 
     const handleAccountSaved = async (savedResponse: any) => {
         try {
@@ -950,8 +1048,10 @@ const Payment = () => {
             );
 
             if (transactionsSchema) {
+                const paymentSchema = preparePaymentSchema(transactionsSchema);
+
                 const updatedData = await loadAllTemplateOptions(
-                    transactionsSchema,
+                    paymentSchema,
                     {
                         header: {
                             accountType: "bank , cash",
@@ -1493,7 +1593,9 @@ const Payment = () => {
             if (field.isHidden) return;
             if (!field.isRequired) return;
 
-            const value = form?.[field.key];
+            const value = isVehicleMasterField(field)
+                ? (form?.customMasters?.["Vehicle Master"] || form?.customMasters?.vehicle_master)
+                : form?.[field.key];
 
             if (value === undefined || value === null || value === "") {
                 err[field.key] = `${field.label || field.key} is required`;
@@ -1851,6 +1953,44 @@ const Payment = () => {
             paymentMode: form.paymentMode,
             bankReferenceNumber: form.bankReferenceNumber,
             paidBy: form.paidBy,
+
+            ...(editingRecord?.sourceModule
+                ? { sourceModule: editingRecord.sourceModule }
+                : {}),
+
+            ...(editingRecord?.sourceVoucherNumber
+                ? { sourceVoucherNumber: editingRecord.sourceVoucherNumber }
+                : {}),
+
+            ...(editingRecord?.transportOrderNumber
+                ? { transportOrderNumber: editingRecord.transportOrderNumber }
+                : {}),
+
+            ...(editingRecord?.transactionPurpose
+                ? { transactionPurpose: editingRecord.transactionPurpose }
+                : {}),
+
+            trip_order: form?.trip_order || "",
+            lr_no: form?.lr_no || "",
+            driver: form?.driver || "",
+
+            customMasters: {
+                ...(form?.customMasters || {}),
+                "Vehicle Master": {
+                    code:
+                        form?.customMasters?.["Vehicle Master"]?.code ||
+                        form?.customMasters?.vehicle_master?.code ||
+                        form?.vehicle_master?.code ||
+                        form?.vehicle_master?.value ||
+                        "",
+                    name:
+                        form?.customMasters?.["Vehicle Master"]?.name ||
+                        form?.customMasters?.vehicle_master?.name ||
+                        form?.vehicle_master?.name ||
+                        form?.vehicle_master?.label ||
+                        "",
+                },
+            },
 
             payBody: rows,
 

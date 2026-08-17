@@ -1120,6 +1120,12 @@ const CreateEditDriverSettlement = ({
         licenseExpiryDate: "",
     });
 
+    // ⭐ ADDED — VEHICLE MASTER FROM SELECTED DRIVER DETAILS
+    const [driverVehicleMaster, setDriverVehicleMaster] = useState<any>({
+        code: "",
+        name: "",
+    });
+
     const [salary, setSalary] = useState("");
     const [incentives, setIncentives] = useState("");
     const [paymentMode, setPaymentMode] = useState("");
@@ -1634,6 +1640,10 @@ const CreateEditDriverSettlement = ({
 
         setSelectedDriverId(driverId || "");
         setSelectedTripId("");
+        setDriverVehicleMaster({
+            code: "",
+            name: "",
+        });
 
         if (!selected) {
             setDriverDetail({
@@ -1642,6 +1652,10 @@ const CreateEditDriverSettlement = ({
                 mobileNumber: "",
                 licenseNumber: "",
                 licenseExpiryDate: "",
+            });
+            setDriverVehicleMaster({
+                code: "",
+                name: "",
             });
             return;
         }
@@ -1685,6 +1699,17 @@ const CreateEditDriverSettlement = ({
                 responseData;
 
             const customFields = child?.childUserCustomFields || {};
+
+            // ⭐ ADDED — TAKE VEHICLE MASTER FROM SELECTED DRIVER DETAILS
+            const selectedDriverVehicleMaster =
+                customFields?.vehiclemaster ||
+                customFields?.vehicleMaster ||
+                {};
+
+            setDriverVehicleMaster({
+                code: cleanText(selectedDriverVehicleMaster?.code),
+                name: cleanText(selectedDriverVehicleMaster?.name),
+            });
 
             setDriverDetail((prev: any) => ({
                 ...prev,
@@ -2192,9 +2217,9 @@ const CreateEditDriverSettlement = ({
                     lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
                     driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
                     customMasters: {
-                        vehicle_master: {
-                            code: tripDetails?.vehicleCode || selectedLREntry?.vehicle?.vehicleCode || selectedAllocation?.vehicle?.vehicleCode || selectedAllocation?.vehicleDetails?.vehicleCode || "",
-                            name: tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleNumber || getVehicleNumber(selectedAllocation, "") || "",
+                        "Vehicle Master": {
+                            code: driverVehicleMaster?.code || "",
+                            name: driverVehicleMaster?.name || "",
                         },
                     },
 
@@ -2296,9 +2321,9 @@ const CreateEditDriverSettlement = ({
                     lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
                     driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
                     customMasters: {
-                        vehicle_master: {
-                            code: tripDetails?.vehicleCode || selectedLREntry?.vehicle?.vehicleCode || selectedAllocation?.vehicle?.vehicleCode || selectedAllocation?.vehicleDetails?.vehicleCode || "",
-                            name: tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleNumber || getVehicleNumber(selectedAllocation, "") || "",
+                        "Vehicle Master": {
+                            code: driverVehicleMaster?.code || "",
+                            name: driverVehicleMaster?.name || "",
                         },
                     },
                     transactionPurpose:

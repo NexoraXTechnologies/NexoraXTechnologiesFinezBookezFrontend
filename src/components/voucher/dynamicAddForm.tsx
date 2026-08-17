@@ -521,9 +521,11 @@ const DynamicAddForm = ({
     isBodyColumnVisible,
     isBodyCellVisible,
     isBodyCellDisabled,
+    bodyCellExtraRenderer,
     checkAccount,
     setCheckAccount,
     onAccountSaved,
+    headerChildExtraRenderer,
 }: any) => {
 
     /* =================================================
@@ -1743,18 +1745,18 @@ const DynamicAddForm = ({
                     )
                 ) : (
                     <>
-                            {/* ============================================
+                        {/* ============================================
                             HEADER
                         ============================================ */}
 
                         <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-3">
-                                {loadedInputData?.header?.map(
+                            {loadedInputData?.header?.map(
                                 (
-                                        field:
-                                            any,
+                                    field:
+                                        any,
 
-                                        index:
-                                            number
+                                    index:
+                                        number
                                 ) => {
                                     if (
                                         field?.isHidden ==
@@ -1783,16 +1785,16 @@ const DynamicAddForm = ({
                             )}
                         </div>
 
-                            {/* ============================================
+                        {/* ============================================
                             HEADER CHILD
                         ============================================ */}
 
-                            {loadedInputData
-                                ?.headerChild &&
-                                loadedInputData
-                                    .headerChild
-                                    .length >
-                                0 && (
+                        {loadedInputData
+                            ?.headerChild &&
+                            loadedInputData
+                                .headerChild
+                                .length >
+                            0 && (
                                 <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm">
                                     <div className="mb-4 border-b border-border pb-3">
                                         <h1 className="text-lg font-bold text-card-foreground">
@@ -1820,16 +1822,27 @@ const DynamicAddForm = ({
                                                     }
 
                                                     return (
-                                                        <div
-                                                            key={
-                                                                field?.key ||
-                                                                index
-                                                            }
-                                                        >
-                                                            {renderInput(
-                                                                field
-                                                            )}
+                                                        // <div
+                                                        //     key={
+                                                        //         field?.key ||
+                                                        //         index
+                                                        //     }
+                                                        // >
+                                                        //     {renderInput(
+                                                        //         field
+                                                        //     )}
+                                                        // </div>
+
+
+                                                       
+                                                        <div key={field?.key || index} className="relative">
+                                                            {renderInput(field)}
+
+                                                            {typeof headerChildExtraRenderer === "function"
+                                                                ? headerChildExtraRenderer(field, form)
+                                                                : null}
                                                         </div>
+                                                   
                                                     );
                                                 }
                                             )}
@@ -1837,150 +1850,152 @@ const DynamicAddForm = ({
                                 </div>
                             )}
 
-                            {/* ============================================
+                        {/* ============================================
                             LOCATION
                         ============================================ */}
 
                         {enableLocation && (
                             <LocationSection
-                                    form={
-                                        form
-                                    }
-                                    handleChange={
-                                        handleChange
-                                    }
+                                form={
+                                    form
+                                }
+                                handleChange={
+                                    handleChange
+                                }
                             />
                         )}
 
-                            {/* ============================================
+                        {/* ============================================
                             BODY ERROR
                         ============================================ */}
 
-                            {errors?.[
-                                bodyKey
-                            ] && (
-                                    <p className="mt-4 text-sm text-danger">
-                                        {
-                                            errors?.[
-                                            bodyKey
-                                            ]
-                                        }
-                                    </p>
-                                )}
+                        {errors?.[
+                            bodyKey
+                        ] && (
+                                <p className="mt-4 text-sm text-danger">
+                                    {
+                                        errors?.[
+                                        bodyKey
+                                        ]
+                                    }
+                                </p>
+                            )}
 
-                            {/* ============================================
+                        {/* ============================================
                             LINE TABLE
                         ============================================ */}
 
                         {!manualselected && (
                             <div className="mt-3 w-full max-w-full">
                                 <EditableLineTable
-                                        isView={
-                                            isView
-                                        }
-                                        bodyTitle={
-                                            bodyTitle ||
-                                            "Products"
-                                        }
+                                    isView={
+                                        isView
+                                    }
+                                    bodyTitle={
+                                        bodyTitle ||
+                                        "Products"
+                                    }
                                     addButtonText={
                                         addButtonText ||
                                         "Add Product"
                                     }
-                                        rows={
-                                            form?.[
-                                            bodyKey
-                                            ] ||
-                                            []
-                                        }
-                                        columns={
-                                            loadedInputData?.body ||
-                                            []
+                                    rows={
+                                        form?.[
+                                        bodyKey
+                                        ] ||
+                                        []
                                     }
-                                        errors={
-                                            errors
-                                        }
-                                        onAddRow={
-                                            handleAddRow
-                                        }
-                                        onRefrenceRow={
-                                            handleRefRow
-                                        }
-                                        onDeleteRow={
-                                            handleDeleteRow
-                                        }
-                                        onChange={
-                                            handleRowChange
-                                        }
+                                    columns={
+                                        loadedInputData?.body ||
+                                        []
+                                    }
+                                    errors={
+                                        errors
+                                    }
+                                    onAddRow={
+                                        handleAddRow
+                                    }
+                                    onRefrenceRow={
+                                        handleRefRow
+                                    }
+                                    onDeleteRow={
+                                        handleDeleteRow
+                                    }
+                                    onChange={
+                                        handleRowChange
+                                    }
                                     emptyText="No products added"
-                                        isAddButton={
-                                            isAddButton
-                                        }
-                                        RefrenceBtnText={
-                                            RefrenceBtnText
-                                        }
-                                        isRefrenceAction={
-                                            isRefrenceAction
-                                        }
-                                        isColumnVisible={
-                                            isBodyColumnVisible
-                                        }
-                                        isCellVisible={
-                                            isBodyCellVisible
-                                        }
-                                        isCellDisabled={
-                                            isBodyCellDisabled
-                                        }
+                                    isAddButton={
+                                        isAddButton
+                                    }
+                                    RefrenceBtnText={
+                                        RefrenceBtnText
+                                    }
+                                    isRefrenceAction={
+                                        isRefrenceAction
+                                    }
+                                    isColumnVisible={
+                                        isBodyColumnVisible
+                                    }
+                                    isCellVisible={
+                                        isBodyCellVisible
+                                    }
+                                    isCellDisabled={
+                                        isBodyCellDisabled
+                                    }
+
+                                    renderCellExtra={bodyCellExtraRenderer}
                                 />
                             </div>
                         )}
 
-                            {/* ============================================
+                        {/* ============================================
                             TAX ERRORS
                         ============================================ */}
 
-                            {Object.keys(
-                                errors ||
-                                {}
-                            )
-                                .filter(
-                                    (
-                                        key
-                                    ) =>
-                                        key.includes(
-                                            "_tax"
-                                        )
-                                )
-                                .map(
-                                    (
-                                        key
-                                    ) => (
-                                        <p
-                                            key={
-                                                key
-                                            }
-                                            className="mt-2 text-sm text-danger"
-                                        >
-                                            {
-                                                errors[
-                                                key
-                                                ]
-                                            }
-                                        </p>
+                        {Object.keys(
+                            errors ||
+                            {}
+                        )
+                            .filter(
+                                (
+                                    key
+                                ) =>
+                                    key.includes(
+                                        "_tax"
                                     )
-                                )}
+                            )
+                            .map(
+                                (
+                                    key
+                                ) => (
+                                    <p
+                                        key={
+                                            key
+                                        }
+                                        className="mt-2 text-sm text-danger"
+                                    >
+                                        {
+                                            errors[
+                                            key
+                                            ]
+                                        }
+                                    </p>
+                                )
+                            )}
 
-                            {/* ============================================
+                        {/* ============================================
                             SUMMARY
                         ============================================ */}
 
                         <SummaryCards
-                                items={
-                                    loadedInputData?.footer ||
-                                    []
-                                }
-                                isSummaryFooter={
-                                    isSummaryFooter
-                                }
+                            items={
+                                loadedInputData?.footer ||
+                                []
+                            }
+                            isSummaryFooter={
+                                isSummaryFooter
+                            }
                         />
                     </>
                 )}

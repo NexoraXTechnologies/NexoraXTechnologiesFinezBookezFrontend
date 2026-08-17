@@ -36,6 +36,7 @@ const defaultPagination = {
 const getFinancialYearRange = (dateValue?: string) => {
     const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
     const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
+
     return {
         fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
         toDate: selectedDate.toISOString(),
@@ -45,11 +46,12 @@ const getFinancialYearRange = (dateValue?: string) => {
 const isTrueValue = (value: any) => value === true || String(value ?? "").trim().toLowerCase() === "true";
 
 const getFieldDefaultValue = (field: any) => {
-    if (field?.defaultValue !== undefined && field?.defaultValue !== null) return field.defaultValue;
-
     const type = String(field?.type || "").trim().toLowerCase();
+
     if (type === "boolean") return false;
     if (type === "number" || type === "amount" || type === "currency") return "";
+    if (field?.defaultValue !== undefined && field?.defaultValue !== null) return field.defaultValue;
+
     return "";
 };
 
@@ -57,6 +59,7 @@ const renderIssueToProductionCellExtra = (column: any, row: any) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
+
     if (["serviceproduct", "nonstocks"].includes(productType)) return null;
 
     return (
@@ -71,6 +74,7 @@ const renderIssueToProductionCellExtra = (column: any, row: any) => {
 
 const IssueToProduction = () => {
     const dispatch = useDispatch<any>();
+
     const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema || {});
 
     const [records, setRecords] = useState<any[]>([]);
@@ -90,14 +94,25 @@ const IssueToProduction = () => {
     const [templateFields, setTemplateFields] = useState<any>({ header: [], headerChild: [], body: [], footer: [] });
     const [form, setForm] = useState<any>({});
     const [errors, setErrors] = useState<any>({});
-    const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null });
+    const [confirmTooltip, setConfirmTooltip] = useState<any>({
+        show: false,
+        x: null,
+        y: null,
+        voucherNumber: null,
+    });
 
     const buildBlankRow = (fields: any[] = templateFields?.body || []) => {
-        const row: any = { id: Date.now() + Math.random(), availableQuantity: null, productType: "" };
+        const row: any = {
+            id: Date.now() + Math.random(),
+            availableQuantity: null,
+            productType: "",
+        };
+
         (fields || []).forEach((field: any) => {
             if (!field?.key) return;
             row[field.key] = getFieldDefaultValue(field);
         });
+
         return row;
     };
 
@@ -152,7 +167,12 @@ const IssueToProduction = () => {
         const rate = num(row?.rate);
         const amount = quantity * rate;
 
-        return { ...row, amount, gross: row?.gross !== undefined ? amount : row?.gross, grossAmount: row?.grossAmount !== undefined ? amount : row?.grossAmount };
+        return {
+            ...row,
+            amount,
+            gross: row?.gross !== undefined ? amount : row?.gross,
+            grossAmount: row?.grossAmount !== undefined ? amount : row?.grossAmount,
+        };
     };
 
     const cleanRawMaterials = (rows: any[] = form?.rawMaterials || []) => {
@@ -188,13 +208,17 @@ const IssueToProduction = () => {
 
     const footerTotals = useMemo(() => {
         const rows = (form?.rawMaterials || []).map((row: any) => calculateRow(row));
+
         return rows.reduce(
             (acc: any, row: any) => {
                 acc.totalIssuedQuantity += num(row?.quantity);
                 acc.totalRawMaterialCost += num(row?.amount);
                 return acc;
             },
-            { totalIssuedQuantity: 0, totalRawMaterialCost: 0 }
+            {
+                totalIssuedQuantity: 0,
+                totalRawMaterialCost: 0,
+            }
         );
     }, [form?.rawMaterials]);
 
@@ -203,32 +227,96 @@ const IssueToProduction = () => {
             const key = String(field?.key || "");
             let rawValue = form?.[key] ?? field?.defaultValue ?? "";
 
-            if (key === "totalIssuedQuantity" || key === "totalQuantity") rawValue = footerTotals.totalIssuedQuantity;
-            if (key === "totalRawMaterialCost" || key === "totalAmount" || key === "grossAmount") rawValue = footerTotals.totalRawMaterialCost;
+            if (key === "totalIssuedQuantity" || key === "totalQuantity") {
+                rawValue = footerTotals.totalIssuedQuantity;
+            }
+
+            if (
+                key === "totalRawMaterialCost" ||
+                key === "totalAmount" ||
+                key === "grossAmount"
+            ) {
+                rawValue = footerTotals.totalRawMaterialCost;
+            }
 
             const fieldType = String(field?.type || "").toLowerCase();
-            const isMoneyField = fieldType === "currency" || fieldType === "amount" || key.toLowerCase().includes("cost") || key.toLowerCase().includes("amount");
 
-            return { ...field, rawValue, value: isMoneyField ? money(rawValue || 0) : rawValue };
+            const isMoneyField =
+                fieldType === "currency" ||
+                fieldType === "amount" ||
+                key.toLowerCase().includes("cost") ||
+                key.toLowerCase().includes("amount");
+
+            return {
+                ...field,
+                rawValue,
+                value: isMoneyField ? money(rawValue || 0) : rawValue,
+            };
         });
     }, [templateFields?.footer, form, footerTotals]);
 
+    // ⭐ ADDED — KEEP AUTO GENERATED VOUCHER NUMBER DISABLED
+    const issueFormInputData = useMemo(() => {
+        return {
+            ...templateFields,
+
+            header: (templateFields?.header || []).map((field: any) =>
+                field?.key === "voucherNumber"
+                    ? {
+                        ...field,
+                        disabled: true,
+                        isReadonly: true,
+                    }
+                    : field
+            ),
+
+            headerChild: (templateFields?.headerChild || []).map((field: any) =>
+                field?.key === "voucherNumber"
+                    ? {
+                        ...field,
+                        disabled: true,
+                        isReadonly: true,
+                    }
+                    : field
+            ),
+
+            body: templateFields?.body || [],
+            footer: dynamicFooterArray,
+        };
+    }, [templateFields, dynamicFooterArray]);
+
     const getVoucherNumber = (record: any) => {
-        return record?.voucherNumber || record?.issuesToProductionVoucherNumber || record?.issueToProductionVoucherNumber || "";
+        return (
+            record?.voucherNumber ||
+            record?.issuesToProductionVoucherNumber ||
+            record?.issueToProductionVoucherNumber ||
+            ""
+        );
     };
 
     const fetchIssueToProductionList = async () => {
         try {
             setListingLoader(true);
+
             const response = await professionalAxios.get(`${API_BASE}/getAll`, {
-                params: { status, search: debouncedSearch, limit: localLimit, offset: localOffset },
+                params: {
+                    status,
+                    search: debouncedSearch,
+                    limit: localLimit,
+                    offset: localOffset,
+                },
             });
 
             const data = response?.data?.data || response?.data || {};
+
             setRecords(Array.isArray(data?.records) ? data.records : []);
             setPagination(data?.pagination || defaultPagination);
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || error?.message || "Failed to load Issue to Production list");
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to load Issue to Production list"
+            );
         } finally {
             setListingLoader(false);
         }
@@ -247,6 +335,7 @@ const IssueToProduction = () => {
             setDebouncedSearch(search.trim());
             setLocalOffset(0);
         }, 400);
+
         return () => clearTimeout(timer);
     }, [search]);
 
@@ -264,30 +353,48 @@ const IssueToProduction = () => {
 
             try {
                 setFieldsLoading(true);
+
                 const updated = await loadAllTemplateOptions(transactionsSchema);
+
                 setTemplateFields(updated);
 
                 if (!editingVoucherNumber) {
                     const next: any = {};
-                    [...(updated?.header || []), ...(updated?.headerChild || [])].forEach((field: any) => {
+
+                    [
+                        ...(updated?.header || []),
+                        ...(updated?.headerChild || []),
+                    ].forEach((field: any) => {
                         if (!field?.key) return;
                         next[field.key] = getFieldDefaultValue(field);
                     });
+
                     next.voucherNumber = next.voucherNumber || "AUTO";
                     next.voucherDate = next.voucherDate || todayYMD();
                     next.status = next.status || "open";
                     next.transactionType = next.transactionType || "ISSUE_TO_PRODUCTION";
 
-                    const row: any = { id: Date.now(), availableQuantity: null, productType: "" };
+                    const row: any = {
+                        id: Date.now(),
+                        availableQuantity: null,
+                        productType: "",
+                    };
+
                     (updated?.body || []).forEach((field: any) => {
                         if (!field?.key) return;
                         row[field.key] = getFieldDefaultValue(field);
                     });
+
                     next.rawMaterials = [row];
+
                     setForm(next);
                 }
             } catch (error) {
-                console.log("Failed to prepare Issue to Production schema", error);
+                console.log(
+                    "Failed to prepare Issue to Production schema",
+                    error
+                );
+
                 toast.error("Failed to load Issue to Production fields");
             } finally {
                 setFieldsLoading(false);
@@ -297,42 +404,107 @@ const IssueToProduction = () => {
         prepareFields();
     }, [transactionsSchema]);
 
-    const loadAvailableQuantity = async (index: number, productCode: string, productType: string, voucherDate?: string) => {
+    const loadAvailableQuantity = async (
+        index: number,
+        productCode: string,
+        productType: string,
+        voucherDate?: string
+    ) => {
         const normalizedProductType = String(productType || "").trim().toLowerCase();
 
-        if (!productCode || ["serviceproduct", "nonstocks"].includes(normalizedProductType)) {
+        if (
+            !productCode ||
+            ["serviceproduct", "nonstocks"].includes(normalizedProductType)
+        ) {
             setForm((previous: any) => {
                 const updatedRows = [...(previous?.rawMaterials || [])];
+
                 if (!updatedRows[index]) return previous;
-                updatedRows[index] = { ...updatedRows[index], productType: normalizedProductType, availableQuantity: null };
-                return { ...previous, rawMaterials: updatedRows };
+
+                updatedRows[index] = {
+                    ...updatedRows[index],
+                    productType: normalizedProductType,
+                    availableQuantity: null,
+                };
+
+                return {
+                    ...previous,
+                    rawMaterials: updatedRows,
+                };
             });
+
             return;
         }
 
         setForm((previous: any) => {
             const updatedRows = [...(previous?.rawMaterials || [])];
-            if (!updatedRows[index] || String(updatedRows[index]?.productCode || "") !== String(productCode)) return previous;
-            updatedRows[index] = { ...updatedRows[index], productType: normalizedProductType, availableQuantity: null };
-            return { ...previous, rawMaterials: updatedRows };
+
+            if (
+                !updatedRows[index] ||
+                String(updatedRows[index]?.productCode || "") !==
+                String(productCode)
+            ) {
+                return previous;
+            }
+
+            updatedRows[index] = {
+                ...updatedRows[index],
+                productType: normalizedProductType,
+                availableQuantity: null,
+            };
+
+            return {
+                ...previous,
+                rawMaterials: updatedRows,
+            };
         });
 
         try {
-            const { fromDate, toDate } = getFinancialYearRange(voucherDate || form?.voucherDate || todayYMD());
-            const balance: any = await dispatch(getProductBalance({ productCode, fromDate, toDate }) as any).unwrap();
+            const { fromDate, toDate } = getFinancialYearRange(
+                voucherDate ||
+                form?.voucherDate ||
+                todayYMD()
+            );
+
+            const balance: any = await dispatch(
+                getProductBalance({
+                    productCode,
+                    fromDate,
+                    toDate,
+                }) as any
+            ).unwrap();
 
             setForm((previous: any) => {
                 const updatedRows = [...(previous?.rawMaterials || [])];
-                if (!updatedRows[index] || String(updatedRows[index]?.productCode || "") !== String(productCode)) return previous;
+
+                if (
+                    !updatedRows[index] ||
+                    String(updatedRows[index]?.productCode || "") !==
+                    String(productCode)
+                ) {
+                    return previous;
+                }
+
                 updatedRows[index] = {
                     ...updatedRows[index],
                     productType: normalizedProductType,
-                    availableQuantity: balance?.balanceQuantity !== undefined && balance?.balanceQuantity !== null ? balance.balanceQuantity : null,
+                    availableQuantity:
+                        balance?.balanceQuantity !== undefined &&
+                        balance?.balanceQuantity !== null
+                            ? balance.balanceQuantity
+                            : null,
                 };
-                return { ...previous, rawMaterials: updatedRows };
+
+                return {
+                    ...previous,
+                    rawMaterials: updatedRows,
+                };
             });
         } catch (error) {
-            console.log(`Failed to fetch available quantity for ${productCode}`, error);
+            console.log(
+                `Failed to fetch available quantity for ${productCode}`,
+                error
+            );
         }
     };
 
@@ -341,13 +513,41 @@ const IssueToProduction = () => {
 
         (form?.rawMaterials || []).forEach((row: any, index: number) => {
             if (!row?.productCode) return;
-            const productField = (templateFields?.body || []).find((field: any) => PRODUCT_FIELD_KEYS.has(String(field?.key || "")));
+
+            const productField = (templateFields?.body || []).find(
+                (field: any) =>
+                    PRODUCT_FIELD_KEYS.has(
+                        String(field?.key || "")
+                    )
+            );
+
             const option = (productField?.options || []).find((item: any) => {
                 const raw = item?.raw || {};
-                return [item?.value, raw?.productCode, raw?._id, raw?.productId].some((value) => String(value || "") === String(row.productCode));
+
+                return [
+                    item?.value,
+                    raw?.productCode,
+                    raw?._id,
+                    raw?.productId,
+                ].some(
+                    (value) =>
+                        String(value || "") ===
+                        String(row.productCode)
+                );
             });
-            const productType = option?.raw?.productType || option?.raw?.dynamicFields?.productType || row?.productType || "rawmaterial";
-            void loadAvailableQuantity(index, String(row.productCode), String(productType), form?.voucherDate);
+
+            const productType =
+                option?.raw?.productType ||
+                option?.raw?.dynamicFields?.productType ||
+                row?.productType ||
+                "rawmaterial";
+
+            void loadAvailableQuantity(
+                index,
+                String(row.productCode),
+                String(productType),
+                form?.voucherDate
+            );
         });
     }, [showModal, editingVoucherNumber, form?.voucherNumber]);
 
@@ -358,6 +558,7 @@ const IssueToProduction = () => {
 
     const handleRefresh = async () => {
         setRefreshing(true);
+
         try {
             await fetchIssueToProductionList();
             toast.success("Issue to Production list refreshed");
@@ -380,29 +581,58 @@ const IssueToProduction = () => {
     const buildFormFromRecord = (record: any) => {
         const next = buildBlankForm(templateFields);
 
-        [...(templateFields?.header || []), ...(templateFields?.headerChild || [])].forEach((field: any) => {
+        [
+            ...(templateFields?.header || []),
+            ...(templateFields?.headerChild || []),
+        ].forEach((field: any) => {
             if (!field?.key) return;
-            let value = record?.[field.key] ?? field?.defaultValue ?? next?.[field.key] ?? "";
-            if (String(field?.type || "").toLowerCase() === "date" && value) value = formatDateForInput(value);
+
+            let value =
+                record?.[field.key] ??
+                field?.defaultValue ??
+                next?.[field.key] ??
+                "";
+
+            if (
+                String(field?.type || "").toLowerCase() ===
+                "date" &&
+                value
+            ) {
+                value = formatDateForInput(value);
+            }
+
             next[field.key] = value;
         });
 
         next.voucherNumber = getVoucherNumber(record) || next.voucherNumber;
-        next.voucherDate = record?.voucherDate ? formatDateForInput(record.voucherDate) : next.voucherDate;
+
+        next.voucherDate = record?.voucherDate
+            ? formatDateForInput(record.voucherDate)
+            : next.voucherDate;
+
         next.status = record?.status || next.status || "open";
-        next.transactionType = record?.transactionType || next.transactionType || "ISSUE_TO_PRODUCTION";
+        next.transactionType = record?.transactionType || next.transactionType;
         next.headerRemarks = record?.headerRemarks ?? next.headerRemarks ?? "";
         next.remarks = record?.remarks ?? next.remarks ?? "";
 
-        next.rawMaterials = Array.isArray(record?.rawMaterials) && record.rawMaterials.length
-            ? record.rawMaterials.map((item: any) => ({ ...buildBlankRow(templateFields?.body || []), ...item, id: item?.id || Date.now() + Math.random(), availableQuantity: null, productType: item?.productType || "rawmaterial" }))
-            : [buildBlankRow(templateFields?.body || [])];
+        next.rawMaterials =
+            Array.isArray(record?.rawMaterials) &&
+            record.rawMaterials.length
+                ? record.rawMaterials.map((item: any) => ({
+                    ...buildBlankRow(templateFields?.body || []),
+                    ...item,
+                    id: item?.id || Date.now() + Math.random(),
+                    availableQuantity: null,
+                    productType: item?.productType || "rawmaterial",
+                }))
+                : [buildBlankRow(templateFields?.body || [])];
 
         return next;
     };
 
     const openEditModal = async (record: any) => {
         const voucherNumber = getVoucherNumber(record);
+
         if (!voucherNumber) {
             toast.error("Voucher number not found");
             return;
@@ -410,132 +640,397 @@ const IssueToProduction = () => {
 
         try {
             setFieldsLoading(true);
-            const response = await professionalAxios.get(`${API_BASE}/getByVoucherNo/${encodeURIComponent(voucherNumber)}`);
-            const detail = response?.data?.data || response?.data || record;
+
+            const response = await professionalAxios.get(
+                `${API_BASE}/getByVoucherNo/${encodeURIComponent(voucherNumber)}`
+            );
+
+            const detail =
+                response?.data?.data ||
+                response?.data ||
+                record;
+
             setEditingVoucherNumber(voucherNumber);
             setErrors({});
             setForm(buildFormFromRecord(detail));
             setShowModal(true);
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || error?.message || "Failed to load Issue to Production");
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to load Issue to Production"
+            );
         } finally {
             setFieldsLoading(false);
         }
     };
 
     const handleMainChange = (key: string, value: any) => {
-        setForm((previous: any) => ({ ...previous, [key]: value }));
-        setErrors((previous: any) => ({ ...previous, [key]: "" }));
+        setForm((previous: any) => ({
+            ...previous,
+            [key]: value,
+        }));
+
+        setErrors((previous: any) => ({
+            ...previous,
+            [key]: "",
+        }));
     };
 
     const handleAddRow = () => {
-        setForm((previous: any) => ({ ...previous, rawMaterials: [...(previous?.rawMaterials || []), buildBlankRow(templateFields?.body || [])] }));
+        setForm((previous: any) => ({
+            ...previous,
+            rawMaterials: [
+                ...(previous?.rawMaterials || []),
+                buildBlankRow(templateFields?.body || []),
+            ],
+        }));
     };
 
     const handleDeleteRow = (index: number) => {
         setForm((previous: any) => {
-            const rows = (previous?.rawMaterials || []).filter((_: any, rowIndex: number) => rowIndex !== index);
-            return { ...previous, rawMaterials: rows.length ? rows : [buildBlankRow(templateFields?.body || [])] };
+            const rows = (previous?.rawMaterials || []).filter(
+                (_: any, rowIndex: number) =>
+                    rowIndex !== index
+            );
+
+            return {
+                ...previous,
+                rawMaterials:
+                    rows.length
+                        ? rows
+                        : [buildBlankRow(templateFields?.body || [])],
+            };
         });
     };
 
-    const handleRowChange = (index: number, key: string, value: any) => {
+    const handleRowChange = (
+        index: number,
+        key: string,
+        value: any
+    ) => {
         const field = getBodyFieldByKey(key);
+
         let selectedProductCode = "";
         let selectedProductType = "";
 
         setForm((previous: any) => {
             const rows = [...(previous?.rawMaterials || [])];
-            let row = { ...(rows[index] || buildBlankRow(templateFields?.body || [])) };
-            row = applyMappedFields(field, value, row);
+
+            let row = {
+                ...(rows[index] ||
+                buildBlankRow(templateFields?.body || [])),
+            };
+
+            row = applyMappedFields(
+                field,
+                value,
+                row
+            );
 
             if (PRODUCT_FIELD_KEYS.has(key)) {
-                const option = getOptionByValue(field, value);
+                const option = getOptionByValue(
+                    field,
+                    value
+                );
+
                 const raw = option?.raw || {};
 
-                row.productCode = raw?.productCode || row?.productCode || (key === "productCode" ? value : "");
-                row.productName = raw?.productName || row?.productName || (key === "productName" ? option?.label || value : "");
-                row.productId = raw?._id || raw?.productId || row?.productId || "";
-                row.unit = raw?.unit || row?.unit || "";
-                row.uom = raw?.uom || raw?.unit || row?.uom || "";
-                row.rate = row?.rate || raw?.purchasePrice || raw?.productPurchasePrice || raw?.rate || "";
-                row.productType = raw?.productType || raw?.dynamicFields?.productType || "rawmaterial";
+                row.productCode =
+                    raw?.productCode ||
+                    row?.productCode ||
+                    (key === "productCode" ? value : "");
+
+                row.productName =
+                    raw?.productName ||
+                    row?.productName ||
+                    (key === "productName"
+                        ? option?.label || value
+                        : "");
+
+                row.productId =
+                    raw?._id ||
+                    raw?.productId ||
+                    row?.productId ||
+                    "";
+
+                row.unit =
+                    raw?.unit ||
+                    row?.unit ||
+                    "";
+
+                row.uom =
+                    raw?.uom ||
+                    raw?.unit ||
+                    row?.uom ||
+                    "";
+
+                row.rate =
+                    row?.rate ||
+                    raw?.purchasePrice ||
+                    raw?.productPurchasePrice ||
+                    raw?.rate ||
+                    "";
+
+                row.productType =
+                    raw?.productType ||
+                    raw?.dynamicFields?.productType ||
+                    "rawmaterial";
+
                 row.availableQuantity = null;
-                selectedProductCode = String(row.productCode || "");
-                selectedProductType = String(row.productType || "rawmaterial");
+
+                selectedProductCode =
+                    String(
+                        row.productCode ||
+                        ""
+                    );
+
+                selectedProductType =
+                    String(
+                        row.productType ||
+                        "rawmaterial"
+                    );
             }
 
-            if (key === "quantity" || key === "rate" || PRODUCT_FIELD_KEYS.has(key)) row = calculateRow(row);
+            if (
+                key === "quantity" ||
+                key === "rate" ||
+                PRODUCT_FIELD_KEYS.has(key)
+            ) {
+                row = calculateRow(row);
+            }
 
             rows[index] = row;
-            return { ...previous, rawMaterials: rows };
+
+            return {
+                ...previous,
+                rawMaterials: rows,
+            };
         });
 
-        setErrors((previous: any) => ({ ...previous, rawMaterials: "", [`row_${index}_${key}`]: "" }));
+        setErrors((previous: any) => ({
+            ...previous,
+            rawMaterials: "",
+            [`row_${index}_${key}`]: "",
+        }));
 
         if (PRODUCT_FIELD_KEYS.has(key)) {
-            const option = getOptionByValue(field, value);
+            const option = getOptionByValue(
+                field,
+                value
+            );
+
             const raw = option?.raw || {};
-            const productCode = selectedProductCode || raw?.productCode || (key === "productCode" ? value : "");
-            const productType = selectedProductType || raw?.productType || raw?.dynamicFields?.productType || "rawmaterial";
-            if (productCode) void loadAvailableQuantity(index, String(productCode), String(productType), form?.voucherDate);
+
+            const productCode =
+                selectedProductCode ||
+                raw?.productCode ||
+                (key === "productCode" ? value : "");
+
+            const productType =
+                selectedProductType ||
+                raw?.productType ||
+                raw?.dynamicFields?.productType ||
+                "rawmaterial";
+
+            if (productCode) {
+                void loadAvailableQuantity(
+                    index,
+                    String(productCode),
+                    String(productType),
+                    form?.voucherDate
+                );
+            }
         }
     };
 
-    const validateForm = () => {
-        const nextErrors: any = {};
+  const validateForm = () => {
+    const nextErrors: any = {};
 
-        [...(templateFields?.header || []), ...(templateFields?.headerChild || [])].forEach((field: any) => {
-            if (!field?.key || field?.isHidden || !field?.isRequired) return;
-            const value = form?.[field.key];
-            if (value === "" || value === null || value === undefined) nextErrors[field.key] = `${field?.label || field.key} is required`;
-        });
+    [
+        ...(templateFields?.header || []),
+        ...(templateFields?.headerChild || []),
+    ].forEach((field: any) => {
+        const isRequired =
+            isTrueValue(field?.isRequired) ||
+            isTrueValue(field?.required);
 
-        const rows = cleanRawMaterials();
-        if (!rows.length) nextErrors.rawMaterials = "Please add at least one raw material";
+        const isHidden =
+            isTrueValue(field?.isHidden);
 
-        (form?.rawMaterials || []).forEach((row: any, index: number) => {
-            const hasData = (templateFields?.body || []).some((field: any) => {
-                const value = row?.[field?.key];
-                return value !== "" && value !== null && value !== undefined;
-            });
+        if (
+            !field?.key ||
+            isHidden ||
+            !isRequired
+        ) {
+            return;
+        }
+
+        const value = form?.[field.key];
+
+        const isEmpty =
+            value === "" ||
+            value === null ||
+            value === undefined;
+
+        if (isEmpty) {
+            nextErrors[field.key] =
+                `${field?.label || field.key} is required`;
+        }
+    });
+
+    const rows = cleanRawMaterials();
+
+    if (!rows.length) {
+        nextErrors.rawMaterials =
+            "Please add at least one raw material";
+    }
+
+    (form?.rawMaterials || []).forEach(
+        (row: any, index: number) => {
+            const hasData = (templateFields?.body || []).some(
+                (field: any) => {
+                    const value = row?.[field?.key];
+
+                    return (
+                        value !== "" &&
+                        value !== null &&
+                        value !== undefined
+                    );
+                }
+            );
+
             if (!hasData) return;
 
-            (templateFields?.body || []).forEach((field: any) => {
-                if (!field?.key || field?.isHidden || !field?.isRequired) return;
-                const value = row?.[field.key];
-                if (value === "" || value === null || value === undefined) nextErrors[`row_${index}_${field.key}`] = `${field?.label || field.key} is required`;
-            });
-        });
+            (templateFields?.body || []).forEach(
+                (field: any) => {
+                    const isRequired =
+                        isTrueValue(field?.isRequired) ||
+                        isTrueValue(field?.required);
 
-        setErrors(nextErrors);
-        if (nextErrors.rawMaterials) toast.error(nextErrors.rawMaterials);
-        return Object.keys(nextErrors).length === 0;
-    };
+                    const isHidden =
+                        isTrueValue(field?.isHidden);
+
+                    if (
+                        !field?.key ||
+                        isHidden ||
+                        !isRequired
+                    ) {
+                        return;
+                    }
+
+                    const value = row?.[field.key];
+
+                    const isEmpty =
+                        value === "" ||
+                        value === null ||
+                        value === undefined;
+
+                    if (isEmpty) {
+                        nextErrors[`row_${index}_${field.key}`] =
+                            `${field?.label || field.key} is required`;
+                    }
+                }
+            );
+        }
+    );
+
+    setErrors(nextErrors);
+
+    const firstError =
+        Object.values(nextErrors)?.[0];
+
+    if (firstError) {
+        toast.error(String(firstError));
+    }
+
+    return Object.keys(nextErrors).length === 0;
+};
 
     const buildPayload = () => {
         const payload: any = {};
 
-        [...(templateFields?.header || []), ...(templateFields?.headerChild || [])].forEach((field: any) => {
-            if (!field?.key || field?.key === "voucherNumber") return;
-            payload[field.key] = form?.[field.key];
+        [
+            ...(templateFields?.header || []),
+            ...(templateFields?.headerChild || []),
+        ].forEach((field: any) => {
+            if (
+                !field?.key ||
+                field?.key === "voucherNumber"
+            ) {
+                return;
+            }
+
+            payload[field.key] =
+                form?.[field.key];
         });
 
         (templateFields?.footer || []).forEach((field: any) => {
             if (!field?.key) return;
-            if (field.key === "totalIssuedQuantity" || field.key === "totalQuantity") payload[field.key] = String(footerTotals.totalIssuedQuantity);
-            else if (field.key === "totalRawMaterialCost" || field.key === "totalAmount" || field.key === "grossAmount") payload[field.key] = String(footerTotals.totalRawMaterialCost.toFixed(2));
-            else if (form?.[field.key] !== undefined) payload[field.key] = form[field.key];
+
+            if (
+                field.key === "totalIssuedQuantity" ||
+                field.key === "totalQuantity"
+            ) {
+                payload[field.key] =
+                    String(
+                        footerTotals.totalIssuedQuantity
+                    );
+            } else if (
+                field.key === "totalRawMaterialCost" ||
+                field.key === "totalAmount" ||
+                field.key === "grossAmount"
+            ) {
+                payload[field.key] =
+                    String(
+                        footerTotals.totalRawMaterialCost.toFixed(2)
+                    );
+            } else if (
+                form?.[field.key] !== undefined
+            ) {
+                payload[field.key] =
+                    form[field.key];
+            }
         });
 
-        payload.voucherDate = form?.voucherDate || todayYMD();
-        payload.status = form?.status || "open";
-        payload.transactionType = form?.transactionType || "ISSUE_TO_PRODUCTION";
-        payload.rawMaterials = cleanRawMaterials();
-        payload.totalIssuedQuantity = String(footerTotals.totalIssuedQuantity);
-        payload.totalRawMaterialCost = String(footerTotals.totalRawMaterialCost.toFixed(2));
-        if (form?.headerRemarks !== undefined) payload.headerRemarks = form.headerRemarks;
-        if (form?.remarks !== undefined) payload.remarks = form.remarks;
+        payload.voucherDate =
+            form?.voucherDate ||
+            todayYMD();
+
+        payload.status =
+            form?.status ||
+            "open";
+
+        payload.transactionType =
+            form?.transactionType ||
+            "ISSUE_TO_PRODUCTION";
+
+        payload.rawMaterials =
+            cleanRawMaterials();
+
+        payload.totalIssuedQuantity =
+            String(
+                footerTotals.totalIssuedQuantity
+            );
+
+        payload.totalRawMaterialCost =
+            String(
+                footerTotals.totalRawMaterialCost.toFixed(2)
+            );
+
+        if (
+            form?.headerRemarks !== undefined
+        ) {
+            payload.headerRemarks =
+                form.headerRemarks;
+        }
+
+        if (
+            form?.remarks !== undefined
+        ) {
+            payload.remarks =
+                form.remarks;
+        }
 
         return payload;
     };
@@ -549,18 +1044,37 @@ const IssueToProduction = () => {
             setSubmitting(true);
 
             if (editingVoucherNumber) {
-                await professionalAxios.put(`${API_BASE}/update/${encodeURIComponent(editingVoucherNumber)}`, payload);
-                toast.success("Issue to Production updated successfully");
+                await professionalAxios.put(
+                    `${API_BASE}/update/${encodeURIComponent(
+                        editingVoucherNumber
+                    )}`,
+                    payload
+                );
+
+                toast.success(
+                    "Issue to Production updated successfully"
+                );
             } else {
-                await professionalAxios.post(`${API_BASE}/save`, payload);
-                toast.success("Issue to Production created successfully");
+                await professionalAxios.post(
+                    `${API_BASE}/save`,
+                    payload
+                );
+
+                toast.success(
+                    "Issue to Production created successfully"
+                );
             }
 
             setShowModal(false);
             resetForm();
+
             await fetchIssueToProductionList();
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || error?.message || "Issue to Production operation failed");
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Issue to Production operation failed"
+            );
         } finally {
             setSubmitting(false);
         }
@@ -571,38 +1085,129 @@ const IssueToProduction = () => {
 
         try {
             setDeleteLoader(true);
-            await professionalAxios.delete(`${API_BASE}/delete/${encodeURIComponent(confirmTooltip.voucherNumber)}`);
-            toast.success("Issue to Production deleted successfully");
+
+            await professionalAxios.delete(
+                `${API_BASE}/delete/${encodeURIComponent(
+                    confirmTooltip.voucherNumber
+                )}`
+            );
+
+            toast.success(
+                "Issue to Production deleted successfully"
+            );
+
             await fetchIssueToProductionList();
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || error?.message || "Failed to delete Issue to Production");
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to delete Issue to Production"
+            );
         } finally {
             setDeleteLoader(false);
-            setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
+
+            setConfirmTooltip({
+                show: false,
+                x: null,
+                y: null,
+                voucherNumber: null,
+            });
         }
     };
 
     const columns = [
-        { key: "voucherNumber", title: "Voucher No", render: (row: any) => getVoucherNumber(row) || "-" },
-        { key: "voucherDate", title: "Date", render: (row: any) => row?.voucherDate ? formatDateForList(row.voucherDate) : "-" },
-        { key: "rawMaterials", title: "Raw Items", render: (row: any) => row?.rawMaterials?.length || 0 },
-        { key: "totalIssuedQuantity", title: "Issued Qty", render: (row: any) => row?.totalIssuedQuantity ?? "0" },
-        { key: "totalRawMaterialCost", title: "Raw Material Cost", render: (row: any) => <span className="font-medium text-card-foreground">{money(row?.totalRawMaterialCost || 0)}</span> },
-        { key: "status", title: "Status", render: (row: any) => <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.status === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>{row?.status || "-"}</span> },
+        {
+            key: "voucherNumber",
+            title: "Voucher No",
+            render: (row: any) =>
+                getVoucherNumber(row) ||
+                "-",
+        },
+        {
+            key: "voucherDate",
+            title: "Date",
+            render: (row: any) =>
+                row?.voucherDate
+                    ? formatDateForList(
+                        row.voucherDate
+                    )
+                    : "-",
+        },
+        {
+            key: "rawMaterials",
+            title: "Raw Items",
+            render: (row: any) =>
+                row?.rawMaterials?.length ||
+                0,
+        },
+        {
+            key: "totalIssuedQuantity",
+            title: "Issued Qty",
+            render: (row: any) =>
+                row?.totalIssuedQuantity ??
+                "0",
+        },
+        {
+            key: "totalRawMaterialCost",
+            title: "Raw Material Cost",
+            render: (row: any) => (
+                <span className="font-medium text-card-foreground">
+                    {money(
+                        row?.totalRawMaterialCost ||
+                        0
+                    )}
+                </span>
+            ),
+        },
+        {
+            key: "status",
+            title: "Status",
+            render: (row: any) => (
+                <span
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
+                        row?.status === "open"
+                            ? "border-success/20 bg-success/10 text-success"
+                            : "border-danger/20 bg-danger/10 text-danger"
+                    }`}
+                >
+                    {row?.status || "-"}
+                </span>
+            ),
+        },
     ];
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div className="mb-3 flex items-center">
                 <div className="flex items-start gap-3">
-                    <Badge count={pagination?.totalDocs ?? 0} text="Total Issue to Production:" varient="primary" />
+                    <Badge
+                        count={pagination?.totalDocs ?? 0}
+                        text="Total Issue to Production:"
+                        varient="primary"
+                    />
                 </div>
 
                 <div className="ml-auto flex items-center gap-2">
-                    <Toggle arr={["open", "close"]} state={status} setState={handleStatusChange} />
-                    <SearchInput search={search} setSearch={setSearch} />
-                    <DataREfreshButton callBackFn={handleRefresh} loading={refreshing} />
-                    <DataCreateButton callBackFn={openAddModal} text="Add Issue to Production" />
+                    <Toggle
+                        arr={["open", "close"]}
+                        state={status}
+                        setState={handleStatusChange}
+                    />
+
+                    <SearchInput
+                        search={search}
+                        setSearch={setSearch}
+                    />
+
+                    <DataREfreshButton
+                        callBackFn={handleRefresh}
+                        loading={refreshing}
+                    />
+
+                    <DataCreateButton
+                        callBackFn={openAddModal}
+                        text="Add Issue to Production"
+                    />
                 </div>
             </div>
 
@@ -613,17 +1218,42 @@ const IssueToProduction = () => {
                 emptyMessage={`No ${status} Issue to Production found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <button onClick={() => openEditModal(record)} className="cursor-pointer rounded-md p-2 text-primary transition hover:bg-primary/10" title="Edit">
+                        <button
+                            onClick={() =>
+                                openEditModal(record)
+                            }
+                            className="cursor-pointer rounded-md p-2 text-primary transition hover:bg-primary/10"
+                            title="Edit"
+                        >
                             <Edit size={16} />
                         </button>
+
                         <button
                             disabled={deleteLoader}
                             onClick={(event) => {
-                                const rect = event.currentTarget.getBoundingClientRect();
-                                let x = rect.left - 150;
-                                if (x < 10) x = 10;
-                                const y = rect.top + window.scrollY - 5;
-                                setConfirmTooltip({ show: true, x, y, voucherNumber: getVoucherNumber(record) });
+                                const rect =
+                                    event.currentTarget.getBoundingClientRect();
+
+                                let x =
+                                    rect.left -
+                                    150;
+
+                                if (x < 10) {
+                                    x = 10;
+                                }
+
+                                const y =
+                                    rect.top +
+                                    window.scrollY -
+                                    5;
+
+                                setConfirmTooltip({
+                                    show: true,
+                                    x,
+                                    y,
+                                    voucherNumber:
+                                        getVoucherNumber(record),
+                                });
                             }}
                             className="cursor-pointer rounded-md p-2 text-danger transition hover:bg-danger/10 disabled:opacity-50"
                             title="Delete"
@@ -638,7 +1268,12 @@ const IssueToProduction = () => {
                 <Pagination
                     localLimit={localLimit}
                     selectCb={(event: any) => {
-                        setLocalLimit(Number(event.target.value));
+                        setLocalLimit(
+                            Number(
+                                event.target.value
+                            )
+                        );
+
                         setLocalOffset(0);
                     }}
                     preDisabled={!pagination?.hasPrevPage}
@@ -656,7 +1291,14 @@ const IssueToProduction = () => {
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={handleDeleteConfirm}
-                    onCancel={() => setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null })}
+                    onCancel={() =>
+                        setConfirmTooltip({
+                            show: false,
+                            x: null,
+                            y: null,
+                            voucherNumber: null,
+                        })
+                    }
                 />
             )}
 
@@ -678,7 +1320,7 @@ const IssueToProduction = () => {
                 handleAddRow={handleAddRow}
                 handleDeleteRow={handleDeleteRow}
                 handleRowChange={handleRowChange}
-                inputData={{ ...templateFields, footer: dynamicFooterArray }}
+                inputData={issueFormInputData}
                 bodyKey="rawMaterials"
                 bodyTitle="Raw Materials"
                 addButtonText="Add Raw Material"
