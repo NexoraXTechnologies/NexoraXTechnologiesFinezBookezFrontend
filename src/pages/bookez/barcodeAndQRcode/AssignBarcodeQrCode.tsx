@@ -133,6 +133,7 @@ type BarcodeAssignment = {
     status: "active" | "inactive";
     createdAt?: string;
     updatedAt?: string;
+    createdOn?: any;
 };
 
 type FormState = {

@@ -1289,7 +1289,7 @@ const isReferenceValueEmpty = (
   field: any,
   value: any
 ) => {
-  const normalized =
+  const normalized: any =
     normalizeReferenceValue(
       field,
       value
