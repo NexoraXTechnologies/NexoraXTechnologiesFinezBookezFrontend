@@ -49,6 +49,7 @@ type SchemaField = {
 	isDefault?: boolean | string | number;
 	customMasterCode?: string | null;
 	customMasterName?: string | null;
+	selectionType?: "select" | "multiselect" | string;
 	masterSource?: string | null;
 	dependsOn?: string | null;
 	valueField?: string | null;
@@ -79,6 +80,7 @@ type SchemaFieldForm = {
 	isHidden: boolean;
 	customMasterCode: string;
 	customMasterName: string;
+	selectionType: "select" | "multiselect";
 };
 type SchemaContext = {
 	kind: "standard";
@@ -107,6 +109,7 @@ const INITIAL_SCHEMA_FIELD_FORM: SchemaFieldForm = {
 	isHidden: false,
 	customMasterCode: "",
 	customMasterName: "",
+	selectionType: "select",
 };
 const STANDARD_MASTERS: StandardMasterItem[] = [
 	{
@@ -842,6 +845,9 @@ const MasterConfiguration = () => {
 				""),
 			customMasterName: String(field.customMasterName ||
 				""),
+			selectionType: field.selectionType === "multiselect"
+				? "multiselect"
+				: "select",
 		});
 		setSchemaFormErrors({});
 		setShowSchemaForm(true);
@@ -855,6 +861,7 @@ const MasterConfiguration = () => {
 				? {
 					customMasterCode: "",
 					customMasterName: "",
+					selectionType: "select" as const,
 				}
 				: {}),
 		}));
@@ -959,6 +966,8 @@ const MasterConfiguration = () => {
 				schemaForm.customMasterCode.trim();
 			payload.customMasterName =
 				schemaForm.customMasterName.trim();
+			payload.selectionType =
+				schemaForm.selectionType;
 		}
 		return payload;
 	};
@@ -1732,41 +1741,47 @@ const MasterConfiguration = () => {
 						</div>
 
 						{schemaForm.type ===
-							"custommaster" ? (<div>
-								<label className="mb-1.5 block text-sm font-bold text-card-foreground">
-									Custom Master{" "}
-									<span className="text-danger">
-										*
-									</span>
-								</label>
+							"custommaster" ? (<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+								<div>
+									<label className="mb-1.5 block text-sm font-bold text-card-foreground">
+										Custom Master{" "}
+										<span className="text-danger">
+											*
+										</span>
+									</label>
 
-								<select value={schemaForm.customMasterCode} onChange={(event) => handleCustomMasterReferenceChange(event.target
-									.value)} className={`
+									<select value={schemaForm.customMasterCode} onChange={(event) => handleCustomMasterReferenceChange(event.target.value)} className={`
                       h-10 w-full rounded border bg-background px-3
                       text-sm font-semibold outline-none
                       ${schemaFormErrors.customMasterCode
 											? "border-danger"
 											: "border-input"}
                     `}>
-									<option value="">
-										Select Custom
-										Master
-									</option>
+										<option value="">Select Custom Master</option>
 
-									{masterConfigurations
-										.filter((item: MasterConfigurationItem) => item.status ===
-											"active")
-										.map((item: MasterConfigurationItem) => (<option key={item.moduleCode} value={item.moduleCode}>
-											{item.moduleName}{" "}
-											(
-											{item.moduleCode}
-											)
+										{masterConfigurations.filter((item: MasterConfigurationItem) => item.status === "active").map((item: MasterConfigurationItem) => (<option key={item.moduleCode} value={item.moduleCode}>
+											{item.moduleName} ({item.moduleCode})
 										</option>))}
-								</select>
+									</select>
 
-								{schemaFormErrors.customMasterCode ? (<p className="mt-1 text-xs font-semibold text-danger">
-									{schemaFormErrors.customMasterCode}
-								</p>) : null}
+									{schemaFormErrors.customMasterCode ? (<p className="mt-1 text-xs font-semibold text-danger">
+										{schemaFormErrors.customMasterCode}
+									</p>) : null}
+								</div>
+
+								<div>
+									<label className="mb-1.5 block text-sm font-bold text-card-foreground">
+										Selection Type{" "}
+										<span className="text-danger">
+											*
+										</span>
+									</label>
+
+									<select value={schemaForm.selectionType} onChange={(event) => updateSchemaFormField("selectionType", event.target.value)} className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold outline-none">
+										<option value="select">Select</option>
+										<option value="multiselect">Multi Select</option>
+									</select>
+								</div>
 							</div>) : null}
 
 						<div className="grid grid-cols-2 gap-3 md:grid-cols-4">

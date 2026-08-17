@@ -233,6 +233,31 @@ const getFieldType = (
 		.toLowerCase();
 };
 
+const isCustomMasterMultiSelectField = (
+	field: any
+): boolean => {
+	const fieldType =
+		getFieldType(
+			field
+		);
+
+	const selectionType =
+		String(
+			field?.selectionType ||
+			field?.dataSource?.selectionType ||
+			""
+		)
+			.trim()
+			.toLowerCase();
+
+	return (
+		fieldType ===
+		"custommaster" &&
+		selectionType ===
+		"multiselect"
+	);
+};
+
 type NormalizeContext = {
 	currentUserHash: string
 };
@@ -970,7 +995,7 @@ const CustomMasterComp = ({
 
 	const handleMasterFieldChange = (
 		field: any,
-		value: string
+		value: any
 	) => {
 		setForm(
 			(
@@ -1038,7 +1063,14 @@ const CustomMasterComp = ({
 					);
 
 					if (
-						value
+						Array.isArray(
+							value
+						)
+							? value.length >
+							0
+							: Boolean(
+								value
+							)
 					) {
 						fetchDynamicOptions(
 							dependentField,
@@ -1058,7 +1090,57 @@ const CustomMasterComp = ({
 	const getSelectDisplayValue = (
 		field: any,
 		value: any
-	): string => {
+	): any => {
+		if (
+			isCustomMasterMultiSelectField(
+				field
+			)
+		) {
+			if (
+				!Array.isArray(
+					value
+				)
+			) {
+				return [];
+			}
+
+			return value
+				.map(
+					(
+						item: any
+					) => {
+						if (
+							item &&
+							typeof item ===
+							"object"
+						) {
+							const dynamicData =
+								item?.data ||
+								item?.dynamicFields ||
+								item?.customFields ||
+								item;
+
+							return String(
+								dynamicData?.code ||
+								item?.code ||
+								item?.value ||
+								item?.voucherNumber ||
+								item?._id ||
+								""
+							);
+						}
+
+						return String(
+							item ??
+							""
+						);
+					}
+				)
+				.filter(
+					Boolean
+				);
+		}
+
 		if (
 			value ===
 			undefined ||
@@ -1158,6 +1240,57 @@ const CustomMasterComp = ({
 			return currentValue;
 		}
 
+		const options =
+			dynamicOptions[
+			field.key
+			] ||
+			[];
+
+		if (
+			isCustomMasterMultiSelectField(
+				field
+			)
+		) {
+			const selectedValues =
+				Array.isArray(
+					currentValue
+				)
+					? currentValue
+					: [];
+
+			return selectedValues.map(
+				(
+					item: any
+				) => {
+					if (
+						item &&
+						typeof item ===
+						"object"
+					) {
+						return item;
+					}
+
+					const match =
+						options.find(
+							(
+								option: any
+							) =>
+								String(
+									option.value
+								) ===
+								String(
+									item
+								)
+						);
+
+					return (
+						match?.raw ??
+						item
+					);
+				}
+			);
+		}
+
 		if (
 			currentValue &&
 			typeof currentValue ===
@@ -1165,12 +1298,6 @@ const CustomMasterComp = ({
 		) {
 			return currentValue;
 		}
-
-		const options =
-			dynamicOptions[
-			field.key
-			] ||
-			[];
 
 		const match =
 			options.find(
@@ -1362,11 +1489,21 @@ const CustomMasterComp = ({
 					)
 					: "";
 
+			const parentHasValue =
+				Array.isArray(
+					parentValue
+				)
+					? parentValue.length >
+					0
+					: Boolean(
+						parentValue
+					);
+
 			const waitingOnParent =
 				Boolean(
 					depKey
 				) &&
-				!parentValue;
+				!parentHasValue;
 
 			const isLoading =
 				Boolean(
@@ -1381,11 +1518,56 @@ const CustomMasterComp = ({
 				] ||
 				[];
 
+			const isMultiSelect =
+				isCustomMasterMultiSelectField(
+					field
+				);
+
 			const selectedValue =
 				getSelectDisplayValue(
 					field,
 					value
 				);
+
+			const selectOptions =
+				isMultiSelect
+					? options.map(
+						(
+							option: any
+						) => ({
+							label:
+								option.label,
+
+							value:
+								option.value,
+						})
+					)
+					: [
+						{
+							value:
+								"",
+
+							label:
+								isLoading
+									? `Loading ${field.label}...`
+									: options.length >
+										0
+										? `Select ${field.label}`
+										: `No ${field.label} found`,
+						},
+
+						...options.map(
+							(
+								option: any
+							) => ({
+								label:
+									option.label,
+
+								value:
+									option.value,
+							})
+						),
+					];
 
 			return (
 				<SelectInput
@@ -1423,6 +1605,9 @@ const CustomMasterComp = ({
 					largeData={
 						true
 					}
+					isMulti={
+						isMultiSelect
+					}
 					disabled={
 						field.disabled ||
 						field.isReadonly ||
@@ -1449,32 +1634,9 @@ const CustomMasterComp = ({
 								2147483647,
 						}),
 					}}
-					options={[
-						{
-							value:
-								"",
-
-							label:
-								isLoading
-									? `Loading ${field.label}...`
-									: options.length >
-										0
-										? `Select ${field.label}`
-										: `No ${field.label} found`,
-						},
-
-						...options.map(
-							(
-								option: any
-							) => ({
-								label:
-									option.label,
-
-								value:
-									option.value,
-							})
-						),
-					]}
+					options={
+						selectOptions
+					}
 					onChange={(
 						event: any
 					) => {
@@ -1483,7 +1645,11 @@ const CustomMasterComp = ({
 
 							event?.target
 								?.value ??
-							""
+							(
+								isMultiSelect
+									? []
+									: ""
+							)
 						);
 					}}
 				/>
@@ -1909,6 +2075,13 @@ const CustomMasterComp = ({
 						"string" &&
 						value.trim() ===
 						""
+					) ||
+					(
+						Array.isArray(
+							value
+						) &&
+						value.length ===
+						0
 					);
 
 				if (
@@ -1977,6 +2150,56 @@ const CustomMasterComp = ({
 					moduleCode,
 				}
 			);
+
+		addInput.forEach(
+			(
+				field: any
+			) => {
+				if (
+					!isCustomMasterMultiSelectField(
+						field
+					)
+				) {
+					return;
+				}
+
+				const value =
+					submitData[
+					field.key
+					];
+
+				if (
+					value ===
+					undefined ||
+					value ===
+					null
+				) {
+					return;
+				}
+
+				if (
+					!Array.isArray(
+						value
+					) ||
+					value.some(
+						(
+							item: any
+						) =>
+							!item ||
+							typeof item !==
+							"object" ||
+							Array.isArray(
+								item
+							)
+					)
+				) {
+					err[
+						field.key
+					] =
+						`${field.label} selection could not be resolved. Please select it again.`;
+				}
+			}
+		);
 
 		const objectRequiredFields = [
 			"vendor",

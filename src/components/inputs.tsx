@@ -260,10 +260,9 @@ const SelectInput = ({
     disabled = false,
     defaultValue = null,
     styles: customStyles = EMPTY_STYLES,
-
-    // ✅ New props
     largeData = false,
     batchSize = OPTIONS_BATCH_SIZE,
+    isMulti = false,
 }: any) => {
     const [inputValue, setInputValue] = useState("");
     const [visibleCount, setVisibleCount] = useState(batchSize);
@@ -318,9 +317,38 @@ const SelectInput = ({
         return map;
     }, [normalizedOptions]);
 
+    const getSelectValue = (item: any) => {
+        if (
+            item &&
+            typeof item === "object"
+        ) {
+            return (
+                item.value ??
+                item.code ??
+                item.accountCode ??
+                item.productCode ??
+                item.unitCode ??
+                item._id ??
+                ""
+            );
+        }
+
+        return item ?? "";
+    };
+
     const selectedOption = useMemo(() => {
-        return optionMap.get(String(value ?? "")) || null;
-    }, [optionMap, value]);
+        if (isMulti) {
+            if (!Array.isArray(value)) {
+                return [];
+            }
+
+            return value
+                .map((item: any) => optionMap.get(String(getSelectValue(item))) || null)
+                .filter(Boolean);
+        }
+
+        return optionMap.get(String(getSelectValue(value))) || null;
+    }, [optionMap, value, isMulti]);
 
     /* ===================================================
        MANUAL SEARCH
@@ -379,6 +407,8 @@ const SelectInput = ({
 
     /* ===================================================
        STYLES - SAME CSS
+       Single select remains unchanged.
+       Multi select expands only when chips are selected.
     =================================================== */
 
     const defaultStyles = useMemo(
@@ -386,7 +416,7 @@ const SelectInput = ({
             control: (base: any, state: any) => ({
                 ...base,
                 minHeight: "32px",
-                height: "32px",
+                height: isMulti ? "auto" : "32px",
                 borderRadius: "0.2rem",
                 borderColor: state.isFocused
                     ? "var(--primary)"
@@ -405,8 +435,9 @@ const SelectInput = ({
 
             valueContainer: (base: any) => ({
                 ...base,
-                height: "30px",
-                padding: "0 12px",
+                minHeight: "30px",
+                height: isMulti ? "auto" : "30px",
+                padding: isMulti ? "2px 8px" : "0 12px",
             }),
 
             input: (base: any) => ({
@@ -423,6 +454,31 @@ const SelectInput = ({
                 fontSize: "14px",
             }),
 
+            multiValue: (base: any) => ({
+                ...base,
+                margin: "1px 2px",
+                borderRadius: "0.25rem",
+                backgroundColor: "var(--primary)",
+            }),
+
+            multiValueLabel: (base: any) => ({
+                ...base,
+                padding: "2px 5px",
+                color: "var(--primary-foreground)",
+                fontSize: "12px",
+                fontWeight: 600,
+            }),
+
+            multiValueRemove: (base: any) => ({
+                ...base,
+                color: "var(--primary-foreground)",
+                cursor: "pointer",
+                "&:hover": {
+                    backgroundColor: "var(--danger)",
+                    color: "white",
+                },
+            }),
+
             placeholder: (base: any) => ({
                 ...base,
                 color: "var(--muted-foreground)",
@@ -431,7 +487,8 @@ const SelectInput = ({
 
             indicatorsContainer: (base: any) => ({
                 ...base,
-                height: "30px",
+                minHeight: "30px",
+                height: isMulti ? "auto" : "30px",
             }),
 
             dropdownIndicator: (base: any) => ({
@@ -507,7 +564,7 @@ const SelectInput = ({
                 fontSize: "14px",
             }),
         }),
-        [disabled]
+        [disabled, isMulti]
     );
 
     const mergedStyles = useMemo(() => {
@@ -538,6 +595,9 @@ const SelectInput = ({
                 placeholder={placeholder}
                 isDisabled={disabled}
                 isSearchable
+                isMulti={isMulti}
+                closeMenuOnSelect={!isMulti}
+                hideSelectedOptions={false}
                 isClearable={false}
                 menuPortalTarget={document.body}
                 menuPosition="fixed"
@@ -584,10 +644,14 @@ const SelectInput = ({
                     return newValue;
                 }}
                 onChange={(selected: any) => {
+                    const selectedValue = isMulti
+                        ? (selected || []).map((item: any) => item?.value)
+                        : selected?.value || "";
+
                     onChange({
                         target: {
                             name,
-                            value: selected?.value || "",
+                            value: selectedValue,
                         },
                     });
 
@@ -601,13 +665,6 @@ const SelectInput = ({
             />
 
             {!!error?.length && <p className="text-xs text-danger">{error}</p>}
-
-            {/* {largeData && matchedOptions.length > visibleOptions.length && (
-                <p className="text-[11px] text-muted-foreground">
-                    Showing {visibleOptions.length} of {matchedOptions.length}.
-                    Scroll down to load more.
-                </p>
-            )} */}
         </div>
     );
 };
@@ -1061,6 +1118,7 @@ export const renderField = ({
                 {...commonProps}
                 options={field.options || []}
                 disabled={isView}
+                isMulti={field?.isMulti === true || field?.selectionType === "multiselect"}
                 onChange={handleSelectChange(field.key)}
             />
         );

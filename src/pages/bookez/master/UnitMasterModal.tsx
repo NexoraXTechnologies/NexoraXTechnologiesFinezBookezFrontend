@@ -79,21 +79,16 @@ const getDataSource = (field: any) => {
     if (
         typeof source === "string"
     ) {
-        const trimmed =
-            source.trim();
+        const trimmed = source.trim();
 
         if (!trimmed) {
             return {};
         }
 
         try {
-            const parsed =
-                JSON.parse(
-                    trimmed
-                );
+            const parsed = JSON.parse(trimmed);
 
-            return parsed &&
-                typeof parsed === "object"
+            return parsed && typeof parsed === "object"
                 ? parsed
                 : {
                     api: trimmed,
@@ -108,13 +103,8 @@ const getDataSource = (field: any) => {
     return {};
 };
 
-const getFieldType = (
-    field: any
-) => {
-    const dataSource =
-        getDataSource(
-            field
-        );
+const getFieldType = (field: any) => {
+    const dataSource = getDataSource(field);
 
     return String(
         field?.type ||
@@ -125,18 +115,35 @@ const getFieldType = (
         .toLowerCase();
 };
 
-const isMasterReferenceField = (
-    field: any
-) =>
+const isMasterReferenceField = (field: any) =>
     MASTER_REFERENCE_FIELD_TYPES.has(
-        getFieldType(
-            field
-        )
+        getFieldType(field)
     );
 
-const getTextValue = (
-    value: any
-) => {
+/* =====================================================
+   CUSTOM MASTER MULTI SELECT
+===================================================== */
+
+const isCustomMasterMultiSelectField = (field: any) => {
+    const fieldType = getFieldType(field);
+
+    const dataSource = getDataSource(field);
+
+    const selectionType = String(
+        field?.selectionType ||
+        dataSource?.selectionType ||
+        ""
+    )
+        .trim()
+        .toLowerCase();
+
+    return (
+        fieldType === "custommaster" &&
+        selectionType === "multiselect"
+    );
+};
+
+const getTextValue = (value: any) => {
     if (
         value === undefined ||
         value === null
@@ -148,9 +155,7 @@ const getTextValue = (
         typeof value === "string" ||
         typeof value === "number"
     ) {
-        return String(
-            value
-        );
+        return String(value);
     }
 
     if (
@@ -164,9 +169,7 @@ const getTextValue = (
             value.unitName ||
             value.accountName ||
             value.code ||
-            Object.values(
-                value
-            ).find(
+            Object.values(value).find(
                 (
                     itemValue
                 ) =>
@@ -180,9 +183,7 @@ const getTextValue = (
     return "";
 };
 
-const getBooleanValue = (
-    value: any
-) => {
+const getBooleanValue = (value: any) => {
     if (
         typeof value === "boolean"
     ) {
@@ -214,19 +215,10 @@ const getBooleanValue = (
 
 /* =====================================================
    SCHEMA isDefault FALSE
-
-   Supports:
-   false
-   "false"
-   0
-   "0"
 ===================================================== */
 
-const isSchemaDefaultFalse = (
-    field: any
-) => {
-    const value =
-        field?.isDefault;
+const isSchemaDefaultFalse = (field: any) => {
+    const value = field?.isDefault;
 
     if (
         value === false ||
@@ -237,8 +229,7 @@ const isSchemaDefaultFalse = (
     }
 
     return (
-        typeof value ===
-        "string" &&
+        typeof value === "string" &&
         value
             .trim()
             .toLowerCase() ===
@@ -248,19 +239,10 @@ const isSchemaDefaultFalse = (
 
 /* =====================================================
    SCHEMA isDefault TRUE
-
-   Supports:
-   true
-   "true"
-   1
-   "1"
 ===================================================== */
 
-const isSchemaDefaultTrue = (
-    field: any
-) => {
-    const value =
-        field?.isDefault;
+const isSchemaDefaultTrue = (field: any) => {
+    const value = field?.isDefault;
 
     if (
         value === true ||
@@ -271,8 +253,7 @@ const isSchemaDefaultTrue = (
     }
 
     return (
-        typeof value ===
-        "string" &&
+        typeof value === "string" &&
         value
             .trim()
             .toLowerCase() ===
@@ -280,9 +261,7 @@ const isSchemaDefaultTrue = (
     );
 };
 
-const normalizeUnit = (
-    value: any
-) => {
+const normalizeUnit = (value: any) => {
     if (
         typeof value === "object" &&
         value !== null
@@ -300,9 +279,7 @@ const normalizeUnit = (
     return value ?? "";
 };
 
-const getSavedUnitFromResponse = (
-    response: any
-) =>
+const getSavedUnitFromResponse = (response: any) =>
     response?.data?.unit ||
     response?.data?.data?.unit ||
     response?.data?.data ||
@@ -315,10 +292,8 @@ const areValuesEqual = (
     secondValue: any
 ) => {
     if (
-        typeof firstValue ===
-        "object" ||
-        typeof secondValue ===
-        "object"
+        typeof firstValue === "object" ||
+        typeof secondValue === "object"
     ) {
         return (
             JSON.stringify(
@@ -336,34 +311,31 @@ const areValuesEqual = (
     );
 };
 
-const getProfessionalUserFromStorage =
-    () => {
-        try {
-            const rawUser =
-                localStorage.getItem(
-                    "professionalUser"
-                );
-
-            return rawUser
-                ? JSON.parse(
-                    rawUser
-                )
-                : null;
-        } catch (
-        error
-        ) {
-            console.error(
-                "Unable to read professionalUser from localStorage:",
-                error
+const getProfessionalUserFromStorage = () => {
+    try {
+        const rawUser =
+            localStorage.getItem(
+                "professionalUser"
             );
 
-            return null;
-        }
-    };
+        return rawUser
+            ? JSON.parse(
+                rawUser
+            )
+            : null;
+    } catch (
+    error
+    ) {
+        console.error(
+            "Unable to read professionalUser from localStorage:",
+            error
+        );
 
-const resolveDataSourceApi = (
-    rawApi: string
-) => {
+        return null;
+    }
+};
+
+const resolveDataSourceApi = (rawApi: string) => {
     const storedUser =
         getProfessionalUserFromStorage();
 
@@ -393,7 +365,6 @@ const resolveDataSourceApi = (
         resolvedApi =
             resolvedApi.replace(
                 /\{userMobileNumberHash\}/g,
-
                 encodeURIComponent(
                     userMobileNumberHash
                 )
@@ -406,7 +377,6 @@ const resolveDataSourceApi = (
         resolvedApi =
             resolvedApi.replace(
                 /\{parentUserMobileNumber\}/g,
-
                 encodeURIComponent(
                     parentUserMobileNumber
                 )
@@ -416,9 +386,7 @@ const resolveDataSourceApi = (
     return resolvedApi;
 };
 
-const buildDataSourceRequestUrl = (
-    rawApi: string
-) => {
+const buildDataSourceRequestUrl = (rawApi: string) => {
     const resolvedApi =
         resolveDataSourceApi(
             rawApi
@@ -926,10 +894,117 @@ const loadSchemaReferenceOptions =
         );
     };
 
+/* =====================================================
+   NORMALIZE MASTER REFERENCE
+===================================================== */
+
 const normalizeReferenceValue = (
     field: any,
     value: any
 ) => {
+    const fieldType =
+        getFieldType(
+            field
+        );
+
+    /* =================================================
+       CUSTOM MASTER MULTI SELECT
+    ================================================= */
+
+    if (
+        isCustomMasterMultiSelectField(
+            field
+        )
+    ) {
+        if (
+            !Array.isArray(
+                value
+            )
+        ) {
+            return [];
+        }
+
+        return value
+            .map(
+                (
+                    item: any
+                ) => {
+                    if (!item) {
+                        return null;
+                    }
+
+                    if (
+                        typeof item ===
+                        "object" &&
+                        !Array.isArray(
+                            item
+                        )
+                    ) {
+                        const code =
+                            item?.code ||
+                            item?.productCode ||
+                            item?.unitCode ||
+                            item?.accountCode ||
+                            item?.voucherNumber ||
+                            item?.value ||
+                            item?._id ||
+                            "";
+
+                        const name =
+                            getTextValue(
+                                item?.name ||
+                                item?.productName ||
+                                item?.unitName ||
+                                item?.accountName ||
+                                item?.vehicle_number ||
+                                item?.label
+                            );
+
+                        if (
+                            !String(
+                                code
+                            ).trim()
+                        ) {
+                            return null;
+                        }
+
+                        return {
+                            code:
+                                String(
+                                    code
+                                ),
+
+                            name,
+                        };
+                    }
+
+                    const code =
+                        String(
+                            item ??
+                            ""
+                        ).trim();
+
+                    if (!code) {
+                        return null;
+                    }
+
+                    return {
+                        code,
+
+                        name:
+                            "",
+                    };
+                }
+            )
+            .filter(
+                Boolean
+            );
+    }
+
+    /* =================================================
+       EXISTING SINGLE SELECT
+    ================================================= */
+
     if (
         !value ||
         typeof value !==
@@ -940,11 +1015,6 @@ const normalizeReferenceValue = (
     ) {
         return null;
     }
-
-    const fieldType =
-        getFieldType(
-            field
-        );
 
     if (
         EMPLOYEE_REFERENCE_FIELD_TYPES.has(
@@ -1011,10 +1081,65 @@ const normalizeReferenceValue = (
     };
 };
 
+/* =====================================================
+   REFERENCE SELECT VALUE
+===================================================== */
+
 const getReferenceSelectValue = (
     field: any,
     value: any
 ) => {
+    /* =================================================
+       CUSTOM MASTER MULTI SELECT
+    ================================================= */
+
+    if (
+        isCustomMasterMultiSelectField(
+            field
+        )
+    ) {
+        if (
+            !Array.isArray(
+                value
+            )
+        ) {
+            return [];
+        }
+
+        return value
+            .map(
+                (
+                    item: any
+                ) => {
+                    if (
+                        item &&
+                        typeof item ===
+                        "object"
+                    ) {
+                        return String(
+                            item?.code ||
+                            item?.voucherNumber ||
+                            item?.value ||
+                            item?._id ||
+                            ""
+                        );
+                    }
+
+                    return String(
+                        item ??
+                        ""
+                    );
+                }
+            )
+            .filter(
+                Boolean
+            );
+    }
+
+    /* =================================================
+       EXISTING SINGLE SELECT
+    ================================================= */
+
     if (!value) {
         return "";
     }
@@ -1057,6 +1182,10 @@ const getReferenceSelectValue = (
         ""
     );
 };
+
+/* =====================================================
+   BUILD SELECTED REFERENCE VALUE
+===================================================== */
 
 const buildSelectedReferenceValue = (
     field: any,
@@ -1279,18 +1408,6 @@ const UnitMasterModal = ({
 
     /* =====================================================
        DYNAMIC SCHEMA FIELD CHECK
-
-       Rules:
-
-       1. Account/Product/Unit/Employee references always
-          go inside dynamicFields.
-
-       2. Any schema field where isDefault is false,
-          "false", 0 or "0" goes inside dynamicFields.
-
-       3. Default fields remain at payload root.
-
-       4. Existing dynamic flags remain supported.
     ===================================================== */
 
     const isDynamicSchemaField = (
@@ -1377,6 +1494,13 @@ const UnitMasterModal = ({
         return false;
     };
 
+    /* =====================================================
+       EMPTY FORM
+
+       Existing references => null
+       Custom Master Multiselect => []
+    ===================================================== */
+
     const buildEmptyForm = (
         fields: any[] = []
     ) =>
@@ -1402,6 +1526,14 @@ const UnitMasterModal = ({
                     accumulator[
                         field.key
                     ] = false;
+                } else if (
+                    isCustomMasterMultiSelectField(
+                        field
+                    )
+                ) {
+                    accumulator[
+                        field.key
+                    ] = [];
                 } else if (
                     isMasterReferenceField(
                         field
@@ -1727,6 +1859,10 @@ const UnitMasterModal = ({
         initialSearchValue,
     ]);
 
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
+
     const validateForm =
         () => {
             const validationErrors:
@@ -1771,7 +1907,56 @@ const UnitMasterModal = ({
                                 ] =
                                     `${field.label} required`;
                             }
-                        } else if (
+                        }
+
+                        /* ============================================
+                           CUSTOM MASTER MULTI SELECT
+                        ============================================ */
+
+                        else if (
+                            isCustomMasterMultiSelectField(
+                                field
+                            )
+                        ) {
+                            const selectedValues =
+                                Array.isArray(
+                                    value
+                                )
+                                    ? value
+                                    : [];
+
+                            const hasInvalidValue =
+                                selectedValues.length ===
+                                0 ||
+                                selectedValues.some(
+                                    (
+                                        item: any
+                                    ) =>
+                                        !String(
+                                            item?.code ||
+                                            ""
+                                        ).trim() ||
+                                        !String(
+                                            item?.name ||
+                                            ""
+                                        ).trim()
+                                );
+
+                            if (
+                                hasInvalidValue
+                            ) {
+                                validationErrors[
+                                    field.key
+                                ] =
+                                    `${field.label} required`;
+                            }
+                        }
+
+                        /* ============================================
+                           EXISTING MASTER REFERENCE VALIDATION
+                        ============================================ */
+
+                        else if (
                             isMasterReferenceField(
                                 field
                             )
@@ -1870,7 +2055,8 @@ const UnitMasterModal = ({
             return (
                 Object.keys(
                     validationErrors
-                ).length === 0
+                ).length ===
+                0
             );
         };
 
@@ -1994,6 +2180,10 @@ const UnitMasterModal = ({
         );
     };
 
+    /* =====================================================
+       RENDER SCHEMA FIELD
+    ===================================================== */
+
     const renderSchemaField = (
         field: any
     ) => {
@@ -2032,6 +2222,13 @@ const UnitMasterModal = ({
                 submitting,
         };
 
+        /* =================================================
+           MASTER REFERENCE
+
+           Custom Master + multiselect => Multi Select
+           All other references => Existing Single Select
+        ================================================= */
+
         if (
             isMasterReferenceField(
                 field
@@ -2042,11 +2239,36 @@ const UnitMasterModal = ({
                     field
                 ) as ReferenceOption[];
 
+            const isMultiSelect =
+                isCustomMasterMultiSelectField(
+                    field
+                );
+
             const selectedValue =
                 getReferenceSelectValue(
                     field,
                     value
                 );
+
+            const selectOptions =
+                isMultiSelect
+                    ? options
+                    : [
+                        {
+                            value:
+                                "",
+
+                            label:
+                                optionsLoading
+                                    ? `Loading ${field.label}...`
+                                    : options.length >
+                                        0
+                                        ? `Select ${field.label}`
+                                        : `No ${field.label} found`,
+                        },
+
+                        ...options,
+                    ];
 
             return (
                 <SelectInput
@@ -2081,6 +2303,9 @@ const UnitMasterModal = ({
                     largeData={
                         true
                     }
+                    isMulti={
+                        isMultiSelect
+                    }
                     styles={{
                         menuPortal:
                             (
@@ -2102,35 +2327,90 @@ const UnitMasterModal = ({
                                     2147483647,
                             }),
                     }}
-                    options={[
-                        {
-                            value:
-                                "",
-
-                            label:
-                                optionsLoading
-                                    ? `Loading ${field.label}...`
-                                    : options.length >
-                                        0
-                                        ? `Select ${field.label}`
-                                        : `No ${field.label} found`,
-                        },
-
-                        ...options,
-                    ]}
+                    options={
+                        selectOptions
+                    }
                     onChange={(
                         event: any
                     ) => {
                         const nextValue =
+                            event
+                                ?.target
+                                ?.value;
+
+                        /* ============================================
+                           CUSTOM MASTER MULTI SELECT
+                        ============================================ */
+
+                        if (
+                            isMultiSelect
+                        ) {
+                            const selectedValues =
+                                Array.isArray(
+                                    nextValue
+                                )
+                                    ? nextValue
+                                    : [];
+
+                            const selectedReferences =
+                                selectedValues
+                                    .map(
+                                        (
+                                            selectedCode: any
+                                        ) => {
+                                            const selectedOption =
+                                                options.find(
+                                                    (
+                                                        option
+                                                    ) =>
+                                                        String(
+                                                            option.value
+                                                        ) ===
+                                                        String(
+                                                            selectedCode
+                                                        )
+                                                );
+
+                                            return buildSelectedReferenceValue(
+                                                field,
+                                                selectedOption,
+                                                String(
+                                                    selectedCode
+                                                )
+                                            );
+                                        }
+                                    )
+                                    .filter(
+                                        (
+                                            selectedReference: any
+                                        ) =>
+                                            selectedReference &&
+                                            String(
+                                                selectedReference?.code ||
+                                                ""
+                                            ).trim()
+                                    );
+
+                            updateField(
+                                field.key,
+                                selectedReferences
+                            );
+
+                            return;
+                        }
+
+                        /* ============================================
+                           EXISTING SINGLE SELECT
+                        ============================================ */
+
+                        const singleValue =
                             String(
-                                event
-                                    ?.target
-                                    ?.value ??
+                                nextValue ??
                                 ""
                             );
 
                         if (
-                            !nextValue
+                            !singleValue
                         ) {
                             updateField(
                                 field.key,
@@ -2148,7 +2428,7 @@ const UnitMasterModal = ({
                                     String(
                                         option.value
                                     ) ===
-                                    nextValue
+                                    singleValue
                             );
 
                         updateField(
@@ -2157,13 +2437,17 @@ const UnitMasterModal = ({
                             buildSelectedReferenceValue(
                                 field,
                                 selectedOption,
-                                nextValue
+                                singleValue
                             )
                         );
                     }}
                 />
             );
         }
+
+        /* =================================================
+           NORMAL SELECT
+        ================================================= */
 
         if (
             fieldType ===
@@ -2248,6 +2532,10 @@ const UnitMasterModal = ({
             );
         }
 
+        /* =================================================
+           BOOLEAN
+        ================================================= */
+
         if (
             fieldType ===
             "boolean"
@@ -2310,6 +2598,10 @@ const UnitMasterModal = ({
             );
         }
 
+        /* =================================================
+           NUMBER
+        ================================================= */
+
         if (
             fieldType ===
             "number"
@@ -2336,6 +2628,10 @@ const UnitMasterModal = ({
             );
         }
 
+        /* =================================================
+           TEXT
+        ================================================= */
+
         return (
             <TextInput
                 key={
@@ -2357,6 +2653,10 @@ const UnitMasterModal = ({
             />
         );
     };
+
+    /* =====================================================
+       SUBMIT
+    ===================================================== */
 
     const handleSubmit =
         async () => {
@@ -2425,6 +2725,10 @@ const UnitMasterModal = ({
 
             try {
                 let response: any;
+
+                /* =================================================
+                   UPDATE UNIT
+                ================================================= */
 
                 if (
                     editingUnit
@@ -2535,7 +2839,13 @@ const UnitMasterModal = ({
                     toast.success(
                         "Unit updated successfully"
                     );
-                } else {
+                }
+
+                /* =================================================
+                   CREATE UNIT
+                ================================================= */
+
+                else {
                     const createPayload = {
                         ...rootPayload,
 

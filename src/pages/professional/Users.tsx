@@ -198,6 +198,40 @@ const isMasterReferenceField = (
     )
   );
 
+/* ===================================================
+   CUSTOM MASTER MULTI SELECT
+=================================================== */
+
+const isCustomMasterMultiSelectField = (
+  field: any
+) => {
+  const fieldType =
+    getSchemaFieldType(
+      field
+    );
+
+  const dataSource =
+    getFieldDataSource(
+      field
+    );
+
+  const selectionType =
+    String(
+      field?.selectionType ||
+      dataSource?.selectionType ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+
+  return (
+    fieldType ===
+    "custommaster" &&
+    selectionType ===
+    "multiselect"
+  );
+};
+
 const getReferenceText = (
   value: any
 ) => {
@@ -845,6 +879,99 @@ const normalizeReferenceValue = (
   field: any,
   value: any
 ) => {
+  const fieldType =
+    getSchemaFieldType(
+      field
+    );
+
+  if (
+    isCustomMasterMultiSelectField(
+      field
+    )
+  ) {
+    if (
+      !Array.isArray(
+        value
+      )
+    ) {
+      return [];
+    }
+
+    return value
+      .map(
+        (
+          item: any
+        ) => {
+          if (!item) {
+            return null;
+          }
+
+          if (
+            typeof item ===
+            "object" &&
+            !Array.isArray(
+              item
+            )
+          ) {
+            const code =
+              item?.code ||
+              item?.productCode ||
+              item?.unitCode ||
+              item?.accountCode ||
+              item?.voucherNumber ||
+              item?.value ||
+              item?._id ||
+              "";
+
+            const name =
+              getReferenceText(
+                item?.name ||
+                item?.productName ||
+                item?.unitName ||
+                item?.accountName ||
+                item?.vehicle_number ||
+                item?.label
+              );
+
+            if (
+              !String(
+                code
+              ).trim()
+            ) {
+              return null;
+            }
+
+            return {
+              code:
+                String(
+                  code
+                ),
+
+              name,
+            };
+          }
+
+          const code =
+            String(
+              item ??
+              ""
+            ).trim();
+
+          if (!code) {
+            return null;
+          }
+
+          return {
+            code,
+            name: "",
+          };
+        }
+      )
+      .filter(
+        Boolean
+      );
+  }
+
   if (
     !value ||
     typeof value !==
@@ -855,11 +982,6 @@ const normalizeReferenceValue = (
   ) {
     return null;
   }
-
-  const fieldType =
-    getSchemaFieldType(
-      field
-    );
 
   if (
     EMPLOYEE_REFERENCE_FIELD_TYPES.has(
@@ -932,6 +1054,49 @@ const getReferenceSelectValue = (
   field: any,
   value: any
 ) => {
+  if (
+    isCustomMasterMultiSelectField(
+      field
+    )
+  ) {
+    if (
+      !Array.isArray(
+        value
+      )
+    ) {
+      return [];
+    }
+
+    return value
+      .map(
+        (
+          item: any
+        ) => {
+          if (
+            item &&
+            typeof item ===
+            "object"
+          ) {
+            return String(
+              item?.code ||
+              item?.voucherNumber ||
+              item?.value ||
+              item?._id ||
+              ""
+            );
+          }
+
+          return String(
+            item ??
+            ""
+          );
+        }
+      )
+      .filter(
+        Boolean
+      );
+  }
+
   if (!value) {
     return "";
   }
@@ -1129,6 +1294,37 @@ const isReferenceValueEmpty = (
       field,
       value
     );
+
+  if (
+    isCustomMasterMultiSelectField(
+      field
+    )
+  ) {
+    const selectedValues =
+      Array.isArray(
+        normalized
+      )
+        ? normalized
+        : [];
+
+    return (
+      selectedValues.length ===
+      0 ||
+      selectedValues.some(
+        (
+          item: any
+        ) =>
+          !String(
+            item?.code ||
+            ""
+          ).trim() ||
+          !String(
+            item?.name ||
+            ""
+          ).trim()
+      )
+    );
+  }
 
   if (!normalized) {
     return true;
@@ -1912,6 +2108,14 @@ const getInitialFieldValue = (
       )
     ) {
       return "1";
+    }
+
+    if (
+      isCustomMasterMultiSelectField(
+        field
+      )
+    ) {
+      return [];
     }
 
     if (
@@ -3779,6 +3983,7 @@ const Users = () => {
          - Unit Master
          - Team / Employee Master
          - Custom Master / Vehicle Master
+         - Custom Master Multi Select
       =============================== */
 
       if (
@@ -3798,78 +4003,31 @@ const Users = () => {
             ]
           );
 
+        const isMultiSelect =
+          isCustomMasterMultiSelectField(
+            field
+          );
+
         const selectedValue =
           getReferenceSelectValue(
             field,
             value
           );
 
-        return (
-          <SelectInput
-            key={
-              field.key
-            }
-            label={
-              label
-            }
-            mandatory={
-              mandatory
-            }
-            value={
-              selectedValue
-            }
-            name={
-              field.key
-            }
-            onChange={(
-              event: any
-            ) => {
-              const nextValue =
-                String(
-                  event?.target
-                    ?.value ??
-                  ""
-                );
+        const selectOptions =
+          isMultiSelect
+            ? options.map(
+              (
+                option
+              ) => ({
+                value:
+                  option.value,
 
-              if (!nextValue) {
-                handleSchemaFieldChange(
-                  field,
-                  null
-                );
-
-                return;
-              }
-
-              const selectedOption =
-                options.find(
-                  (
-                    option
-                  ) =>
-                    String(
-                      option
-                        ?.value
-                    ) ===
-                    nextValue
-                );
-
-              handleSchemaFieldChange(
-                field,
-                buildSelectedReferenceValue(
-                  field,
-                  selectedOption,
-                  nextValue
-                )
-              );
-            }}
-            placeholder={
-              fieldLoading
-                ? `Loading ${label}...`
-                : `Select ${label}`
-            }
-            error={
-              error
-            }
-            options={[
+                label:
+                  option.label,
+              })
+            )
+            : [
               {
                 value:
                   "",
@@ -3894,7 +4052,141 @@ const Users = () => {
                     option.label,
                 })
               ),
-            ]}
+            ];
+
+        return (
+          <SelectInput
+            key={
+              field.key
+            }
+            label={
+              label
+            }
+            mandatory={
+              mandatory
+            }
+            value={
+              selectedValue
+            }
+            name={
+              field.key
+            }
+            isMulti={
+              isMultiSelect
+            }
+            onChange={(
+              event: any
+            ) => {
+              const nextValue =
+                event?.target
+                  ?.value;
+
+              if (
+                isMultiSelect
+              ) {
+                const selectedValues =
+                  Array.isArray(
+                    nextValue
+                  )
+                    ? nextValue
+                    : [];
+
+                const selectedReferences =
+                  selectedValues
+                    .map(
+                      (
+                        selectedCode: any
+                      ) => {
+                        const selectedOption =
+                          options.find(
+                            (
+                              option
+                            ) =>
+                              String(
+                                option
+                                  ?.value
+                              ) ===
+                              String(
+                                selectedCode
+                              )
+                          );
+
+                        return buildSelectedReferenceValue(
+                          field,
+                          selectedOption,
+                          String(
+                            selectedCode
+                          )
+                        );
+                      }
+                    )
+                    .filter(
+                      (
+                        selectedReference: any
+                      ) =>
+                        selectedReference &&
+                        String(
+                          selectedReference
+                            ?.code ||
+                          ""
+                        ).trim()
+                    );
+
+                handleSchemaFieldChange(
+                  field,
+                  selectedReferences
+                );
+
+                return;
+              }
+
+              const singleValue =
+                String(
+                  nextValue ??
+                  ""
+                );
+
+              if (!singleValue) {
+                handleSchemaFieldChange(
+                  field,
+                  null
+                );
+
+                return;
+              }
+
+              const selectedOption =
+                options.find(
+                  (
+                    option
+                  ) =>
+                    String(
+                      option
+                        ?.value
+                    ) ===
+                    singleValue
+                );
+
+              handleSchemaFieldChange(
+                field,
+                buildSelectedReferenceValue(
+                  field,
+                  selectedOption,
+                  singleValue
+                )
+              );
+            }}
+            placeholder={
+              fieldLoading
+                ? `Loading ${label}...`
+                : `Select ${label}`
+            }
+            error={
+              error
+            }
+            options={
+              selectOptions
+            }
             disabled={
               fieldLoading
             }
