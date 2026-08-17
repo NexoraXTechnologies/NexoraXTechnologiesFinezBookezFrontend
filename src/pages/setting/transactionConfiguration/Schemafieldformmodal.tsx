@@ -186,16 +186,15 @@ const SchemaFieldFormModal = ({
          * EDIT:
          * Existing Field Key stays unchanged.
          */
-        if (
-            !editingSchemaFieldKey
-        ) {
-            onChangeField(
-                "key",
-                value.replace(
-                    /\s+/g,
-                    ""
-                )
-            );
+       
+        if (!editingSchemaFieldKey) {
+            const key = value
+                ?.toLowerCase()
+                ?.trim()
+                ?.replace(/\s+/g, "_")
+                ?.replace(/[^\w]/g, "");
+
+            onChangeField("key", key);
         }
     };
 

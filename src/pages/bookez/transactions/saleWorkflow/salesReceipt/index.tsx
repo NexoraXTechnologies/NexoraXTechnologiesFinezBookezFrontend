@@ -1,3 +1,5 @@
+
+
 import { useEffect, useMemo, useState } from "react";
 import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,6 +24,51 @@ import Permission from "../../../../../components/PermissionGuard";
 import { getByVoucherNumberSalesInvoiceReturn, updateSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
 import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
+const isVehicleMasterField = (field: any) => {
+    const key = String(field?.key || "").trim().toLowerCase().replace(/[\s_]/g, "");
+    const name = String(field?.customMasterName || field?.label || "").trim().toLowerCase().replace(/[\s_]/g, "");
+
+    return key === "vehiclemaster" || name === "vehiclemaster";
+};
+
+const prepareReceiptSchema = (schema: any) => {
+    const prepareFields = (fields: any[] = []) => (fields || []).map((field: any) => {
+        if (!isVehicleMasterField(field)) return field;
+
+        return {
+            ...field,
+
+            // ⭐ RECEIPT VEHICLE MASTER
+            // Keep exact customMasters key used by backend/DynamicAddForm.
+            customMasterName: "Vehicle Master",
+
+            // Saved receipt code is Vehicle Master code, e.g. MP31AE8877.
+            valueField: "code",
+            labelField: "name",
+
+            // IMPORTANT:
+            // Do not let SalesReceipt/loadAllTemplateOptions preload this field.
+            // DynamicAddForm will flatten dataSource.api and load it once.
+            api: undefined,
+            options: [],
+
+            dataSource: {
+                ...(field?.dataSource || {}),
+                customMasterName: "Vehicle Master",
+                valueField: "code",
+                labelField: "name",
+            },
+        };
+    });
+
+    return {
+        ...schema,
+        header: prepareFields(schema?.header || []),
+        body: prepareFields(schema?.body || []),
+        footer: prepareFields(schema?.footer || []),
+    };
+};
+
 const HEADER_ACCOUNT_FIELD_KEYS = new Set([
     "recAccountCode",
     "recAccountName",
@@ -38,7 +85,7 @@ const emptyReceiptRow = { id: Date.now(), accountCode: "", accountName: "", amou
 
 const emptyReferenceRow = { id: Date.now(), saleInvoice: "", salesInvoice: "", docDate: "", netBillAmount: "", netReturnAmount: "", remainingBillAmount: "", adjustedAmount: "" };
 
-const getDefaultForm = () => ({ recVoucherNumber: "AUTO", recVoucherDate: todayYMD(), recAccountCode: "", recAccountName: "", recStatus: "open", recRemark: "", paymentMode: "", bankReferenceNumber: "", receivedBy: "", recBody: [{ ...emptyReceiptRow, id: Date.now() }], netAmount: "0.00", adjustedAmount: "0.00", balanceAmount: "0.00" });
+const getDefaultForm = () => ({ recVoucherNumber: "AUTO", recVoucherDate: todayYMD(), recAccountCode: "", recAccountName: "", recStatus: "open", recRemark: "", paymentMode: "", bankReferenceNumber: "", receivedBy: "", trip_order: "", lr_no: "", driver: "", vehicle_master: null, customMasters: {}, recBody: [{ ...emptyReceiptRow, id: Date.now() }], netAmount: "0.00", adjustedAmount: "0.00", balanceAmount: "0.00" });
 
 const SalesReceipt = () => {
     const dispatch = useDispatch<any>();
@@ -115,6 +162,34 @@ const SalesReceipt = () => {
             header: (templateFields?.header || []).map(
                 (field: any) => {
                     const fieldKey = String(field?.key || "");
+                    const normalizedFieldKey = fieldKey.trim().toLowerCase();
+
+                    if (isVehicleMasterField(field)) {
+                        return {
+                            ...field,
+                            customMasterName: "Vehicle Master",
+                            valueField: "code",
+                            labelField: "name",
+                            api: undefined,
+                            options: [],
+                            disabled: editingRecord ? true : field?.disabled,
+                            isReadonly: editingRecord ? true : field?.isReadonly,
+                            dataSource: {
+                                ...(field?.dataSource || {}),
+                                customMasterName: "Vehicle Master",
+                                valueField: "code",
+                                labelField: "name",
+                            },
+                        };
+                    }
+
+                    if (["trip_order", "lr_no", "driver"].includes(normalizedFieldKey)) {
+                        return {
+                            ...field,
+                            disabled: editingRecord ? true : field?.disabled,
+                            isReadonly: editingRecord ? true : field?.isReadonly,
+                        };
+                    }
 
                     if (!HEADER_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
                         return field;
@@ -141,6 +216,25 @@ const SalesReceipt = () => {
                 (field: any) => {
                     const fieldKey = String(field?.key || "");
 
+                    if (isVehicleMasterField(field)) {
+                        return {
+                            ...field,
+                            customMasterName: "Vehicle Master",
+                            valueField: "code",
+                            labelField: "name",
+                            api: undefined,
+                            options: [],
+                            disabled: editingRecord ? true : field?.disabled,
+                            isReadonly: editingRecord ? true : field?.isReadonly,
+                            dataSource: {
+                                ...(field?.dataSource || {}),
+                                customMasterName: "Vehicle Master",
+                                valueField: "code",
+                                labelField: "name",
+                            },
+                        };
+                    }
+
                     if (!BODY_ACCOUNT_FIELD_KEYS.has(fieldKey)) {
                         return field;
                     }
@@ -165,7 +259,7 @@ const SalesReceipt = () => {
                 }
             ),
         };
-    }, [templateFields]);
+    }, [templateFields, editingRecord]);
 
     const toNumber = (value: any) => Number(value || 0);
 
@@ -288,9 +382,43 @@ const SalesReceipt = () => {
     const openEditModal = (record: any) => {
         const footer = record?.recFooter || {};
         const body = record?.recBody?.length > 0 ? record.recBody.map((row: any) => ({ id: row?._id || Date.now() + Math.random(), accountCode: row?.accountCode || "", accountName: row?.accountName || "", amount: row?.amount || row?.netAmount || "", netAmount: row?.netAmount || row?.amount || "", references: Array.isArray(row?.references) ? row.references : [], remarks: row?.remarks || "" })) : [{ ...emptyReceiptRow, id: Date.now() }];
+        const vehicleMaster = record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || null;
+
         setEditingRecord(record);
         setErrors({});
-        setForm({ recVoucherNumber: record?.recVoucherNumber || record?.receiptVoucherNumber || record?.voucherNumber || "", recVoucherDate: formatDateForInput(record?.recVoucherDate || record?.receiptVoucherDate), recAccountCode: record?.recAccountCode || "", recAccountName: record?.recAccountName || "", recStatus: record?.recStatus || "open", recRemark: record?.recRemark || "", paymentMode: record?.paymentMode || "", bankReferenceNumber: record?.bankReferenceNumber || "", receivedBy: record?.receivedBy || "", recBody: body, netAmount: footer?.netAmount || "0.00", adjustedAmount: footer?.adjustedAmount || "0.00", balanceAmount: footer?.balanceAmount || "0.00" });
+        setForm({
+            recVoucherNumber: record?.recVoucherNumber || record?.receiptVoucherNumber || record?.voucherNumber || "",
+            recVoucherDate: formatDateForInput(record?.recVoucherDate || record?.receiptVoucherDate),
+            recAccountCode: record?.recAccountCode || "",
+            recAccountName: record?.recAccountName || "",
+            recStatus: record?.recStatus || "open",
+            recRemark: record?.recRemark || "",
+            paymentMode: record?.paymentMode || "",
+            bankReferenceNumber: record?.bankReferenceNumber || "",
+            receivedBy: record?.receivedBy || "",
+
+            trip_order: record?.trip_order || "",
+            lr_no: record?.lr_no || "",
+            driver: record?.driver || "",
+            vehicle_master: vehicleMaster
+                ? {
+                    code: vehicleMaster?.code || "",
+                    name: vehicleMaster?.name || "",
+                }
+                : null,
+            customMasters: {
+                ...(record?.customMasters || {}),
+                "Vehicle Master": {
+                    code: vehicleMaster?.code || "",
+                    name: vehicleMaster?.name || "",
+                },
+            },
+
+            recBody: body,
+            netAmount: footer?.netAmount || "0.00",
+            adjustedAmount: footer?.adjustedAmount || "0.00",
+            balanceAmount: footer?.balanceAmount || "0.00",
+        });
         setShowModal(true);
     };
 
@@ -298,10 +426,16 @@ const SalesReceipt = () => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
             let updated = { ...prev, [key]: value };
+
+            if (key === "customMasters") {
+                const selectedVehicle = value?.["Vehicle Master"] || value?.vehicle_master;
+                updated.vehicle_master = selectedVehicle ? { code: selectedVehicle?.code || "", name: selectedVehicle?.name || "" } : null;
+            }
+
             if (currentField?.mapFields) updated = applyMappedFields(currentField, value, updated);
             return updated;
         });
-        setErrors((prev: any) => ({ ...prev, [key]: "" }));
+        setErrors((prev: any) => ({ ...prev, [key]: "", ...(key === "customMasters" ? { vehicle_master: "" } : {}) }));
     };
 
     // ★ ADDED: Refresh Account Master, report mapping and receipt dropdowns
@@ -324,8 +458,22 @@ const SalesReceipt = () => {
             );
 
             if (transactionsSchema) {
+                // const updatedData = await loadAllTemplateOptions(
+                //     transactionsSchema,
+                //     {
+                //         header: {
+                //             accountType: "bank,cash",
+                //         },
+                //         body: {
+                //             accountType: "customer",
+                //         },
+                //     }
+                // );
+
+                const receiptSchema = prepareReceiptSchema(transactionsSchema);
+
                 const updatedData = await loadAllTemplateOptions(
-                    transactionsSchema,
+                    receiptSchema,
                     {
                         header: {
                             accountType: "bank,cash",
@@ -698,7 +846,7 @@ const SalesReceipt = () => {
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden) return;
             if (!field.isRequired) return;
-            const value = form?.[field.key];
+            const value = isVehicleMasterField(field) ? (form?.customMasters?.["Vehicle Master"] || form?.customMasters?.vehicle_master) : form?.[field.key];
             if (value === undefined || value === null || value === "") err[field.key] = `${field.label || field.key} is required`;
         });
         const filledRows = getFilledRows();
@@ -771,6 +919,32 @@ const SalesReceipt = () => {
             paymentMode: form.paymentMode,
             bankReferenceNumber: form.bankReferenceNumber,
             receivedBy: form.receivedBy,
+
+            ...(editingRecord?.sourceModule ? { sourceModule: editingRecord.sourceModule } : {}),
+            ...(editingRecord?.sourceVoucherNumber ? { sourceVoucherNumber: editingRecord.sourceVoucherNumber } : {}),
+            ...(editingRecord?.transportOrderNumber ? { transportOrderNumber: editingRecord.transportOrderNumber } : {}),
+            ...(editingRecord?.transactionPurpose ? { transactionPurpose: editingRecord.transactionPurpose } : {}),
+
+            trip_order: form?.trip_order || "",
+            lr_no: form?.lr_no || "",
+            driver: form?.driver || "",
+            customMasters: {
+                ...(form?.customMasters || {}),
+                "Vehicle Master": {
+                    code:
+                        form?.customMasters?.["Vehicle Master"]?.code ||
+                        form?.customMasters?.vehicle_master?.code ||
+                        form?.vehicle_master?.code ||
+                        form?.vehicle_master?.value ||
+                        "",
+                    name:
+                        form?.customMasters?.["Vehicle Master"]?.name ||
+                        form?.customMasters?.vehicle_master?.name ||
+                        form?.vehicle_master?.name ||
+                        form?.vehicle_master?.label ||
+                        "",
+                },
+            },
 
             recBody: rows.map((row: any) => ({
                 ...row,
@@ -1064,7 +1238,8 @@ const SalesReceipt = () => {
 
             try {
                 setFieldsLoading(true);
-                const updatedData = await loadAllTemplateOptions(transactionsSchema, { header: { accountType: "bank,cash" }, body: { accountType: "customer" } });
+                const receiptSchema = prepareReceiptSchema(transactionsSchema);
+                const updatedData = await loadAllTemplateOptions(receiptSchema, { header: { accountType: "bank,cash" }, body: { accountType: "customer" } });
                 const header = updatedData?.header?.filter((e: any) => e?.key !== "isPosPosting");
                 setTemplateFields({ ...updatedData, header });
             } catch (error) {

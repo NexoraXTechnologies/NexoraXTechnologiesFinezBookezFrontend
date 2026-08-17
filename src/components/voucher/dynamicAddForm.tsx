@@ -525,6 +525,7 @@ const DynamicAddForm = ({
     checkAccount,
     setCheckAccount,
     onAccountSaved,
+    headerChildExtraRenderer,
 }: any) => {
 
     /* =================================================
@@ -1821,16 +1822,27 @@ const DynamicAddForm = ({
                                                     }
 
                                                     return (
-                                                        <div
-                                                            key={
-                                                                field?.key ||
-                                                                index
-                                                            }
-                                                        >
-                                                            {renderInput(
-                                                                field
-                                                            )}
+                                                        // <div
+                                                        //     key={
+                                                        //         field?.key ||
+                                                        //         index
+                                                        //     }
+                                                        // >
+                                                        //     {renderInput(
+                                                        //         field
+                                                        //     )}
+                                                        // </div>
+
+
+                                                       
+                                                        <div key={field?.key || index} className="relative">
+                                                            {renderInput(field)}
+
+                                                            {typeof headerChildExtraRenderer === "function"
+                                                                ? headerChildExtraRenderer(field, form)
+                                                                : null}
                                                         </div>
+                                                   
                                                     );
                                                 }
                                             )}
