@@ -54,7 +54,7 @@ const cards: any[] = [
     description: "Create, update, and monitor e-way bills for seamless goods transportation.",
     path: "/bookEz/transportation/e-way-bill",
     icon: <ReceiptText size={22} />,
-    permissionKey: "Pass",
+    permissionKey: "eWayBill",
   },
   {
     title: "Vehicle Maintenance",
@@ -69,21 +69,21 @@ const cards: any[] = [
     description: "Calculate and settle driver advances, expenses, and final trip balance.",
     path: "/bookEz/transportation/driver-settlement",
     icon: <HandCoins size={22} />,
-    permissionKey: "Pass",
+    permissionKey: "driverSettlement",
   },
   {
     title: "Vehicle Status",
     description: "Track vehicle availability, current status, assignment state, and movement updates.",
     path: "/bookEz/transportation/vehicle-status",
     icon: <Truck size={22} />,
-    permissionKey: "Pass",
+    permissionKey: "vehicleStatus",
   },
   {
     title: "Where Is My Driver?",
     description: "View driver location, trip progress, assigned vehicle, and route tracking in real time.",
     path: "/bookEz/transportation/where-is-driver",
     icon: <MapPinned size={22} />,
-    permissionKey: "Pass",
+    permissionKey: "tripTracking",
   },
 ];
 
