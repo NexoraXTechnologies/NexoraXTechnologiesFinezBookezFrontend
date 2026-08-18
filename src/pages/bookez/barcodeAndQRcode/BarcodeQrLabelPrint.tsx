@@ -216,9 +216,8 @@ const BarcodeQrLabelPrint = () => {
             })
         );
     }, [dispatch]);
-
-    const activeAssignments = useMemo(
-        () => (assignments || []).filter((assignment: BarcodeAssignment) => assignment?.status === "active"),
+    console.log({ assignments })
+    const activeAssignments = useMemo(() => (assignments || []).filter((assignment: BarcodeAssignment) => assignment?.status === "active"),
         [assignments]
     );
 

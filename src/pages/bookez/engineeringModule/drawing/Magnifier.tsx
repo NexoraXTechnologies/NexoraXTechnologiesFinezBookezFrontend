@@ -55,22 +55,22 @@ const Magnifier = ({
     // }, [computeFitScale]);
 
     useEffect(() => {
-    const applyDefaultZoom = () => {
-        const fit = computeFitScale();
-        const defaultScale = Math.min(maxZoom, Math.max(minZoom, fit * DEFAULT_ZOOM));
+        const applyDefaultZoom = () => {
+            const fit = computeFitScale();
+            const defaultScale = Math.min(maxZoom, Math.max(minZoom, fit * DEFAULT_ZOOM));
 
-        setFitScale(fit);
-        setScale(Math.round(defaultScale * 100) / 100);
-    };
+            setFitScale(fit);
+            setScale(Math.round(defaultScale * 100) / 100);
+        };
 
-    applyDefaultZoom();
+        applyDefaultZoom();
 
-    window.addEventListener("resize", applyDefaultZoom);
+        window.addEventListener("resize", applyDefaultZoom);
 
-    return () => {
-        window.removeEventListener("resize", applyDefaultZoom);
-    };
-}, [computeFitScale, minZoom, maxZoom]);
+        return () => {
+            window.removeEventListener("resize", applyDefaultZoom);
+        };
+    }, [computeFitScale, minZoom, maxZoom]);
 
     const scaledW = contentWidth * scale;
     const scaledH = contentHeight * scale;
@@ -148,12 +148,12 @@ const Magnifier = ({
     }, [scale, fitScale]);
 
     return (
-        <div ref={wrapRef} className="relative flex h-full flex-col px-4 pb-4">
-            <div className="mt-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+        <div ref={wrapRef} className="relative flex h-full flex-col px-4 pb-4 text-foreground">
+            <div className="mt-2 flex items-center justify-center gap-1 rounded-xl border border-border bg-card px-3 py-1.5 text-card-foreground shadow-sm">
                 <button
                     type="button"
                     onClick={() => zoomBy(0.8)}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-900 transition hover:bg-slate-200"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground transition hover:bg-muted/80"
                 >
                     <Minus size={18} />
                 </button>
@@ -163,10 +163,10 @@ const Magnifier = ({
                     onClick={resetZoom}
                     className="flex min-w-16 flex-col items-center justify-center px-3"
                 >
-                    <span className="text-sm font-black text-slate-900">
+                    <span className="text-sm font-black text-foreground">
                         {zoomLabel}
                     </span>
-                    <span className="text-[10px] font-semibold text-slate-500">
+                    <span className="text-[10px] font-semibold text-muted-foreground">
                         Click to fit
                     </span>
                 </button>
@@ -174,12 +174,12 @@ const Magnifier = ({
                 <button
                     type="button"
                     onClick={() => zoomBy(1.25)}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-900 transition hover:bg-slate-200"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-foreground transition hover:bg-muted/80"
                 >
                     <Plus size={18} />
                 </button>
 
-                <div className="mx-1 h-7 w-px bg-slate-200" />
+                <div className="mx-1 h-7 w-px bg-border" />
 
                 <button
                     type="button"
@@ -187,23 +187,24 @@ const Magnifier = ({
                         setMagnifierOn((prev) => !prev);
                         setLoupe(null);
                     }}
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${magnifierOn
-                            ? "bg-primary text-white"
-                            : "bg-slate-100 text-slate-900 hover:bg-slate-200"
-                        }`}
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${
+                        magnifierOn
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-foreground hover:bg-muted/80"
+                    }`}
                 >
                     <Search size={18} />
                 </button>
             </div>
 
-            <p className="mb-1 mt-1.5 text-center text-xs font-semibold text-slate-500">
+            <p className="mb-1 mt-1.5 text-center text-xs font-semibold text-muted-foreground">
                 {magnifierOn
                     ? "Move on the drawing to magnify"
                     : "Use +/− to zoom • Scroll when zoomed in"}
             </p>
 
             <div
-                className="min-h-[420px] flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                className="min-h-[420px] flex-1 overflow-hidden rounded-2xl border border-border bg-card"
                 onMouseMove={updateLoupe}
                 onMouseLeave={() => setLoupe(null)}
             >
@@ -226,7 +227,7 @@ const Magnifier = ({
 
             {loupe ? (
                 <div
-                    className="pointer-events-none fixed z-[9999] rounded-full bg-white shadow-xl"
+                    className="pointer-events-none fixed z-[9999] rounded-full bg-card shadow-xl"
                     style={{
                         left: loupe.loupeX,
                         top: loupe.loupeY,
@@ -234,7 +235,7 @@ const Magnifier = ({
                         height: LOUPE_SIZE,
                     }}
                 >
-                    <div className="h-full w-full overflow-hidden rounded-full bg-slate-50">
+                    <div className="h-full w-full overflow-hidden rounded-full bg-muted/30">
                         <div
                             style={{
                                 width: contentWidth * LOUPE_ZOOM * scale,
