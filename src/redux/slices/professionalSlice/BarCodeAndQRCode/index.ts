@@ -103,6 +103,9 @@ type BarcodeQrState = {
     assignmentCreateLoading: boolean;
     assignmentDeleteLoading: boolean;
 
+    selectedBarcodeQrAssignment: BarcodeQrAssignment | null;
+    codeValueLoading: boolean;
+
     error: string | null;
 };
 
@@ -267,6 +270,33 @@ export const getAllBarcodeQrAssignments = createAsyncThunk(
 );
 
 /* ===================================================
+    GET ASSIGNMENT BY BARCODE VALUE
+=================================================== */
+
+export const getBarcodeQrAssignmentByCodeValue = createAsyncThunk(
+    "barcodeQr/getBarcodeQrAssignmentByCodeValue",
+    async (codeValue: string, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/barcodeQr/assignment/getByCodeValue/${encodeURIComponent(codeValue)}`
+            );
+
+            if (!res.data?.success) {
+                return rejectWithValue({
+                    message: res.data?.message || "Barcode not found",
+                });
+            }
+
+            return res.data?.data ?? null;
+        } catch (err: any) {
+            return rejectWithValue({
+                message: err?.response?.data?.message || "Barcode not found",
+            });
+        }
+    }
+);
+
+/* ===================================================
     SCREEN 2 - DELETE ASSIGNMENT
 =================================================== */
 
@@ -312,6 +342,9 @@ const initialState: BarcodeQrState = {
     assignmentCreateLoading: false,
     assignmentDeleteLoading: false,
 
+    selectedBarcodeQrAssignment: null,
+    codeValueLoading: false,
+
     error: null,
 };
 
@@ -325,6 +358,7 @@ const barcodeQrSlice = createSlice({
             state.templateCreateLoading = false;
             state.assignmentCreateLoading = false;
             state.assignmentDeleteLoading = false;
+            state.codeValueLoading = false;
         },
 
         clearBarcodeQrTemplates: (state) => {
@@ -335,6 +369,12 @@ const barcodeQrSlice = createSlice({
         clearBarcodeQrAssignments: (state) => {
             state.assignments = [];
             state.assignmentPagination = { ...defaultPagination };
+        },
+
+        clearSelectedBarcodeQrAssignment: (state) => {
+            state.selectedBarcodeQrAssignment = null;
+            state.codeValueLoading = false;
+            state.error = null;
         },
     },
 
@@ -404,14 +444,32 @@ const barcodeQrSlice = createSlice({
             })
             .addCase(getAllBarcodeQrAssignments.fulfilled, (state, action: any) => {
                 state.assignmentLoading = false;
+
                 const data = action.payload;
-                state.assignments = data ?? data?.records ?? [];
+                state.assignments = data?.items ?? data?.records ?? [];
                 state.assignmentPagination = data?.pagination ?? state.assignmentPagination;
             })
             .addCase(getAllBarcodeQrAssignments.rejected, (state, action: any) => {
                 state.assignmentLoading = false;
                 state.error = action.payload?.message || "Failed to fetch Barcode / QR assignments";
                 state.assignments = [];
+            });
+
+        /* ---------- GET ASSIGNMENT BY BARCODE VALUE ---------- */
+        builder
+            .addCase(getBarcodeQrAssignmentByCodeValue.pending, (state) => {
+                state.codeValueLoading = true;
+                state.selectedBarcodeQrAssignment = null;
+                state.error = null;
+            })
+            .addCase(getBarcodeQrAssignmentByCodeValue.fulfilled, (state, action: any) => {
+                state.codeValueLoading = false;
+                state.selectedBarcodeQrAssignment = action.payload ?? null;
+            })
+            .addCase(getBarcodeQrAssignmentByCodeValue.rejected, (state, action: any) => {
+                state.codeValueLoading = false;
+                state.selectedBarcodeQrAssignment = null;
+                state.error = action.payload?.message || "Barcode not found";
             });
 
         /* ---------- DELETE ASSIGNMENT ---------- */
@@ -445,6 +503,7 @@ export const {
     clearBarcodeQrState,
     clearBarcodeQrTemplates,
     clearBarcodeQrAssignments,
+    clearSelectedBarcodeQrAssignment,
 } = barcodeQrSlice.actions;
 
 export default barcodeQrSlice.reducer;
