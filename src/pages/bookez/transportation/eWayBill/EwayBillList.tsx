@@ -2040,8 +2040,7 @@ const EWayBillList = () => {
                             <div className="relative flex items-center gap-2">
                                 <Permission
                                     module="bookez"
-                                    permissionKey="Pass"
-                                    action={"edit" as any}
+                                    permissionKey="eWayBill"
                                 >
                                     <button
                                         type="button"

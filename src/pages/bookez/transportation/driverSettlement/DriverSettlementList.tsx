@@ -531,7 +531,7 @@ const DriverSettlementList = () => {
 
 
 
-                    <Permission module="bookez" permissionKey="Pass" action="create">
+                    <Permission module="bookez" permissionKey="driverSettlement" action="create">
                         {/* @ts-ignore */}
                         <DataCreateButton
                             {...{
@@ -553,7 +553,7 @@ const DriverSettlementList = () => {
                         <div className="flex items-center gap-2">
                             <Permission
                                 module="bookez"
-                                permissionKey="Pass"
+                                permissionKey="driverSettlement"
                                 action="update"
                             >
                                 <button
@@ -567,7 +567,7 @@ const DriverSettlementList = () => {
 
                             <Permission
                                 module="bookez"
-                                permissionKey="Pass"
+                                permissionKey="driverSettlement"
                                 action="delete"
                             >
                                 <button

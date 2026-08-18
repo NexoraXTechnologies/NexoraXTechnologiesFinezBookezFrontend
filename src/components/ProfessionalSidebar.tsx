@@ -28,7 +28,7 @@ import {
 	Settings2,
 	Workflow,
 	Factory,
-	
+
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
@@ -97,6 +97,12 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
 	const enablePOS = useMemo(() => {
 		const locationConfig = configurations?.[0]?.systemConfiguration?.posConfiguration?.enablePOSModule
+		return locationConfig === true || locationConfig === "true";
+	}, [configurations]);
+
+
+	const enableEngineering = useMemo(() => {
+		const locationConfig = configurations?.[0]?.systemConfiguration?.engineeringModuleConfiguration?.enableEngineeringModule
 		return locationConfig === true || locationConfig === "true";
 	}, [configurations]);
 
@@ -182,7 +188,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							action: "view",
 						},
 
-						...(true ? [{
+						...(enableEngineering ? [{
 							name: "Engineering Module",
 							path: "/bookEz/engineering-module",
 							icon: <Wrench size={24} />,
@@ -191,6 +197,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							action: "view",
 
 						}] : []),
+
 						{
 							name: "Transportation",
 							path: "/bookEz/transportation",

@@ -346,6 +346,11 @@ const SystemConfiguration = () => {
                 label: "Transportation Config",
                 icon: <Truck size={17} />,
             },
+            {
+                key: "engineering",
+                label: "Engineering Module Config",
+                icon: <Truck size={17} />,
+            },
             ...(localUser?.accountType !== "SUPER_ADMIN"
                 ? [
                     {
@@ -1395,6 +1400,8 @@ const SystemConfiguration = () => {
         );
     };
 
+
+
     const getExpenseAccount =
         accounts?.map(
             (e: any) => ({
@@ -1536,6 +1543,31 @@ const SystemConfiguration = () => {
             );
         };
 
+    const renderEngineeringTab = () => {
+        return (
+            <Panel
+                title="Engineering Module"
+                description="Control BookEZ engineering module availability."
+                right={
+                    <BadgeStatus active={!!systemConfig?.engineeringModuleConfiguration?.enableEngineeringModule} />
+                }
+            >
+                <SettingRow
+                    title="Enable Engineering Module"
+                    description="Allow engineering module functionality in BookEZ."
+                    value={!!systemConfig?.engineeringModuleConfiguration?.enableEngineeringModule}
+                    onChange={(value) =>
+                        updateSystemField(
+                            "engineeringModuleConfiguration",
+                            "enableEngineeringModule",
+                            value
+                        )
+                    }
+                />
+            </Panel>
+        );
+    };
+
     const renderActiveTabContent =
         () => {
             switch (
@@ -1555,6 +1587,9 @@ const SystemConfiguration = () => {
 
                 case "transportation":
                     return renderTransportationTab();
+
+                case "engineering":
+                    return renderEngineeringTab();
 
                 case "dbRequest":
                     return dbRequestTab();

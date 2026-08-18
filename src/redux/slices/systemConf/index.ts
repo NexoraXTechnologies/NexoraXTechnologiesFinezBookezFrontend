@@ -112,6 +112,10 @@ export const getEmptySystemConfiguration = () => ({
             enableTransportationModule: false,
         },
 
+        engineeringModuleConfiguration: {
+            enableEngineeringModule: false
+        },
+
         whatsAppConfiguration: {
             enableWhatsAppModule: false,
             provider: "META",
@@ -216,6 +220,14 @@ export const normalizeSystemConfiguration = (raw: any) => ({
                 raw?.systemConfiguration?.transportationModuleConfiguration
                     ?.otherCost,
         },
+
+        engineeringModuleConfiguration: {
+            enableEngineeringModule: toBool(
+                raw?.systemConfiguration?.engineeringModuleConfiguration
+                    ?.enableEngineeringModule
+            ),
+        },
+
 
         whatsAppConfiguration: {
             enableWhatsAppModule: toBool(
@@ -508,6 +520,11 @@ const buildConfigurationPayload = (
                     configuration?.systemConfiguration
                         ?.transportationModuleConfiguration
                         ?.otherCost,
+            },
+
+
+             engineeringModuleConfiguration: {
+                enableEngineeringModule: !!configuration?.systemConfiguration?.engineeringModuleConfiguration?.enableEngineeringModule,
             },
 
             whatsAppConfiguration: {
