@@ -42,7 +42,7 @@ const TransportContractList = () => {
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
     const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
-
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
         x: null,
@@ -127,24 +127,23 @@ const TransportContractList = () => {
     }, [transportContract, activeStatus]);
 
     useEffect(() => {
-        fetchTransportContracts();
-    }, [dispatch, localOffset, localLimit]);
-
-    useEffect(() => {
         const timer = setTimeout(() => {
             setLocalOffset(0);
-
-            dispatch(
-                getAllTransportContract({
-                    limit: localLimit,
-                    offset: 0,
-                    search,
-                })
-            );
+            setDebouncedSearch(search);
         }, 400);
 
         return () => clearTimeout(timer);
-    }, [search, dispatch, localLimit]);
+    }, [search]);
+
+    useEffect(() => {
+        dispatch(
+            getAllTransportContract({
+                limit: localLimit,
+                offset: localOffset,
+                search: debouncedSearch,
+            })
+        );
+    }, [dispatch, localOffset, localLimit, debouncedSearch]);
 
     const handleRefresh = () => {
         setRefreshing(true);

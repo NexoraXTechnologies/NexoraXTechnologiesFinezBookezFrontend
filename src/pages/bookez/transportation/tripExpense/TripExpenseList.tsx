@@ -36,7 +36,7 @@ import {
 
 import {
     formatDateTime,
-    
+
     formatStatusLabel,
     money,
     unwrapThunk,
@@ -795,17 +795,32 @@ const TripExpenseList = () => {
         }
     };
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
+    // const handleRefresh = async () => {
+    //     setRefreshing(true);
 
+    //     await fetchExpenses({
+    //         offset: localOffset,
+    //         limit: localLimit,
+    //         showLoader: false,
+    //     });
+
+    //     setRefreshing(false);
+    // };
+
+
+   const handleRefresh = async () => {
+    setRefreshing(true);
+
+    try {
         await fetchExpenses({
             offset: localOffset,
             limit: localLimit,
-            showLoader: false,
+            showLoader: true,
         });
-
+    } finally {
         setRefreshing(false);
-    };
+    }
+};
 
     const handleEdit = async (item: any) => {
         if (isTripClosedSafe(item)) {
@@ -1189,7 +1204,7 @@ const TripExpenseList = () => {
                         }}
                     />
 
-                    
+
 
                     {!isChildUser && (
                         <>

@@ -41,6 +41,7 @@ import {
     isAllocationClosed,
     mapTransportOrderToAllocation,
     mergeTripAllocationForm,
+    selectClassNames,
     toTripAllocationPayload,
 } from "./tripAllocationInitialState";
 
@@ -2319,6 +2320,8 @@ const CreateTripAllocation = ({
                                         handleTransportOrderSelect(option?.value || "")
                                     }
                                     classNamePrefix="rs"
+                                    classNames={selectClassNames}
+
                                 />
                             </div>
 
@@ -2724,6 +2727,7 @@ const CreateTripAllocation = ({
                                     handleDriverSelect(option?.value || "")
                                 }
                                 classNamePrefix="rs"
+                                classNames={selectClassNames}
                             />
                         </div>
 
@@ -2813,6 +2817,8 @@ const CreateTripAllocation = ({
                                                 handleHelperSelect(option?.value || "")
                                             }
                                             classNamePrefix="rs"
+                                             classNames={selectClassNames}
+                                            
                                         />
                                     </div>
 

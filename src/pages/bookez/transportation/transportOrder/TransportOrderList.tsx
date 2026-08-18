@@ -38,6 +38,7 @@ const TransportOrderList = () => {
 	} = useSelector((state: any) => state.transportOrder);
 
 	const [search, setSearch] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [refreshing, setRefreshing] = useState(false);
 
 	const [localOffset, setLocalOffset] = useState(0);
@@ -208,27 +209,29 @@ const TransportOrderList = () => {
 	};
 
 	useEffect(() => {
-		fetchTransportOrders();
-		fetchLRCollection();
-	}, [dispatch, localOffset, localLimit]);
-
-
-	useEffect(() => {
 		const timer = setTimeout(() => {
 			setLocalOffset(0);
-
-			dispatch(
-				getTransportOrders({
-					limit: localLimit,
-					offset: 0,
-					search,
-				})
-			);
+			setDebouncedSearch(search);
 		}, 400);
 
 		return () => clearTimeout(timer);
-	}, [search, dispatch]);
+	}, [search]);
 
+	useEffect(() => {
+		dispatch(
+			getTransportOrders({
+				limit: localLimit,
+				offset: localOffset,
+				search: debouncedSearch,
+			})
+		);
+	}, [dispatch, localOffset, localLimit, debouncedSearch]);
+
+	useEffect(() => {
+		fetchLRCollection();
+	}, [dispatch, localOffset, localLimit]);
+
+	
 	const handleRefresh = () => {
 		setRefreshing(true);
 

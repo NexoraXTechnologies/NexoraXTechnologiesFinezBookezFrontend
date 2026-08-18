@@ -4,7 +4,7 @@ import {
   PackageMinus,
   PackagePlus,
   CircleDollarSign,
-  BellRing,
+  
 } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import AccountsReceivable from "./AccountsReceivable";
@@ -13,7 +13,6 @@ import StockLedger from "./StockLedger";
 import AccountPayable from "./AccountPayable";
 import DrillDownReport from "./DrillDownReport";
 import CashBankReport from "./CashBankReport";
-import PaymentReminders from "./PaymentReminders";
 
 const cards: any[] = [
   {
