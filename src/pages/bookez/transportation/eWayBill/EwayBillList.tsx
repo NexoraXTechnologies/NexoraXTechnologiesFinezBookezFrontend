@@ -535,7 +535,7 @@ const EWayBillList = () => {
     } = useSelector((state: any) => state.eWayBill);
 
     const [search, setSearch] = useState("");
-
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
 
     const [localOffset, setLocalOffset] = useState(0);
@@ -612,12 +612,26 @@ const EWayBillList = () => {
     const pageTitle =
         location.state?.title || "E-Way Bill";
 
+    // const fetchEWayBills = ({
+    //     offset = localOffset,
+    //     limit = localLimit,
+    //     searchValue = search,
+    // }: any = {}) => {
+    //     dispatch(
+    //         getAllEWayBill({
+    //             limit,
+    //             offset,
+    //             search: searchValue,
+    //         })
+    //     );
+    // };
+
     const fetchEWayBills = ({
         offset = localOffset,
         limit = localLimit,
         searchValue = search,
     }: any = {}) => {
-        dispatch(
+        return dispatch(
             getAllEWayBill({
                 limit,
                 offset,
@@ -842,50 +856,40 @@ const EWayBillList = () => {
     /* ===================================================
    FETCH DATA
 =================================================== */
-
-    useEffect(() => {
-        fetchEWayBills();
-    }, [dispatch, localOffset, localLimit]);
-
-    /* ===================================================
-       SEARCH
-    =================================================== */
-
     useEffect(() => {
         const timer = setTimeout(() => {
             setLocalOffset(0);
-
-            dispatch(
-                getAllEWayBill({
-                    limit: localLimit,
-                    offset: 0,
-                    search,
-                })
-            );
+            setDebouncedSearch(search);
         }, 400);
 
         return () => clearTimeout(timer);
-    }, [search, dispatch, localLimit]);
+    }, [search]);
+
+    useEffect(() => {
+        fetchEWayBills({
+            offset: localOffset,
+            limit: localLimit,
+            searchValue: debouncedSearch,
+        });
+    }, [dispatch, localOffset, localLimit, debouncedSearch]);
 
     /* ===================================================
        REFRESH
     =================================================== */
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
         setRefreshing(true);
 
-        dispatch(
-            getAllEWayBill({
-                limit: localLimit,
+        try {
+            await fetchEWayBills({
                 offset: localOffset,
-                search,
-            })
-        ).finally(() => {
+                limit: localLimit,
+                searchValue: search,
+            });
+        } finally {
             setRefreshing(false);
-        });
+        }
     };
-
-
 
     /* ===================================================
        EDIT
@@ -2017,7 +2021,7 @@ const EWayBillList = () => {
                             ? "No open E-Way Bill found"
                             : "No closed E-Way Bill found"
                     }
-                
+
                     actions={(record: any) => {
                         const recordKey = String(
                             record?._id ||
@@ -2053,8 +2057,8 @@ const EWayBillList = () => {
                                         }}
                                         disabled={actionsDisabled}
                                         className={`rounded-md p-2 ${actionsDisabled
-                                                ? "cursor-not-allowed text-muted-foreground opacity-40"
-                                                : "text-amber-600 hover:bg-amber-100"
+                                            ? "cursor-not-allowed text-muted-foreground opacity-40"
+                                            : "text-amber-600 hover:bg-amber-100"
                                             }`}
                                         title={
                                             actionsDisabled
@@ -2080,8 +2084,8 @@ const EWayBillList = () => {
                                         isDownloading
                                     }
                                     className={`rounded-md p-2 ${actionsDisabled
-                                            ? "cursor-not-allowed text-muted-foreground opacity-40"
-                                            : "text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                        ? "cursor-not-allowed text-muted-foreground opacity-40"
+                                        : "text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-60"
                                         }`}
                                     title={
                                         actionsDisabled
@@ -2119,8 +2123,8 @@ const EWayBillList = () => {
                                     }}
                                     disabled={actionsDisabled}
                                     className={`rounded-md p-2 ${actionsDisabled
-                                            ? "cursor-not-allowed text-muted-foreground opacity-40"
-                                            : "text-muted-foreground hover:bg-muted"
+                                        ? "cursor-not-allowed text-muted-foreground opacity-40"
+                                        : "text-muted-foreground hover:bg-muted"
                                         }`}
                                     title={
                                         actionsDisabled

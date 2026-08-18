@@ -61,7 +61,9 @@ const TripAllocationList = () => {
 		deleteLoader = false,
 	} = useSelector((state: any) => state.tripAllocation);
 
+
 	const [search, setSearch] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [refreshing, setRefreshing] = useState(false);
 
 	const [localOffset, setLocalOffset] = useState(0);
@@ -120,30 +122,28 @@ const TripAllocationList = () => {
 	};
 
 	useEffect(() => {
-		fetchTripAllocations();
+		const timer = setTimeout(() => {
+			setLocalOffset(0);
+			setDebouncedSearch(search);
+		}, 400);
+
+		return () => clearTimeout(timer);
+	}, [search]);
+
+	useEffect(() => {
+		fetchTripAllocations({
+			offset: localOffset,
+			limit: localLimit,
+			searchValue: debouncedSearch,
+			statusValue: activeStatus,
+		});
 	}, [
 		dispatch,
 		localOffset,
 		localLimit,
 		activeStatus,
+		debouncedSearch,
 	]);
-
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setLocalOffset(0);
-
-			dispatch(
-				getAllTripAllocation({
-					limit: localLimit,
-					offset: 0,
-					search,
-					tripStatus: getApiStatus(activeStatus),
-				}) as any
-			);
-		}, 400);
-
-		return () => clearTimeout(timer);
-	}, [search, dispatch]);
 
 
 	const getPaginationTotal = (response: any) => {
@@ -207,12 +207,8 @@ const TripAllocationList = () => {
 	};
 
 	useEffect(() => {
-		const timer = setTimeout(() => {
-			fetchStatusCounts(search);
-		}, 400);
-
-		return () => clearTimeout(timer);
-	}, [search]);
+		fetchStatusCounts(debouncedSearch);
+	}, [debouncedSearch]);
 
 	const handleRefresh = async () => {
 		try {

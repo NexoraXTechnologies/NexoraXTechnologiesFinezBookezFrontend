@@ -120,6 +120,8 @@ const VehicleMaintenanceList = () => {
     const [rows, setRows] = useState<any[]>([]);
     const [search, setSearch] = useState("");
 
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+
     const [listingLoader, setListingLoader] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [deleteLoader, setDeleteLoader] = useState(false);
@@ -155,9 +157,9 @@ const VehicleMaintenanceList = () => {
 
     const fetchEntries = useCallback(
         async ({
-            offset = localOffset,
-            limit = localLimit,
-            searchValue = search,
+            offset = 0,
+            limit = 20,
+            searchValue = "",
             showLoader = true,
         }: any = {}) => {
             try {
@@ -208,17 +210,9 @@ const VehicleMaintenanceList = () => {
                 if (showLoader) setListingLoader(false);
             }
         },
-        [dispatch, localLimit, localOffset, search]
+        [dispatch]
     );
 
-    useEffect(() => {
-        fetchEntries({
-            offset: localOffset,
-            limit: localLimit,
-            searchValue: search,
-            showLoader: true,
-        });
-    }, [localOffset, localLimit]);
 
     useEffect(() => {
         if (searchTimerRef.current) {
@@ -227,13 +221,7 @@ const VehicleMaintenanceList = () => {
 
         searchTimerRef.current = setTimeout(() => {
             setLocalOffset(0);
-
-            fetchEntries({
-                offset: 0,
-                limit: localLimit,
-                searchValue: search,
-                showLoader: true,
-            });
+            setDebouncedSearch(search);
         }, 400);
 
         return () => {
@@ -241,7 +229,16 @@ const VehicleMaintenanceList = () => {
                 clearTimeout(searchTimerRef.current);
             }
         };
-    }, [search, fetchEntries, localLimit]);
+    }, [search]);
+
+    useEffect(() => {
+        fetchEntries({
+            offset: localOffset,
+            limit: localLimit,
+            searchValue: debouncedSearch,
+            showLoader: true,
+        });
+    }, [fetchEntries, localOffset, localLimit, debouncedSearch]);
 
     /* ===================================================
        FILTER DATA
@@ -270,14 +267,16 @@ const VehicleMaintenanceList = () => {
     const handleRefresh = async () => {
         setRefreshing(true);
 
-        await fetchEntries({
-            offset: localOffset,
-            limit: localLimit,
-            searchValue: search,
-            showLoader: false,
-        });
-
-        setRefreshing(false);
+        try {
+            await fetchEntries({
+                offset: localOffset,
+                limit: localLimit,
+                searchValue: search,
+                showLoader: true,
+            });
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     const handleCreate = () => {
@@ -452,8 +451,8 @@ const VehicleMaintenanceList = () => {
             render: (row: any) => (
                 <span
                     className={`inline-flex rounded-md px-2 py-1 text-xs font-bold ${String(row?.status || "").toLowerCase() === "active"
-                            ? "bg-success/10 text-success"
-                            : "bg-muted text-muted-foreground"
+                        ? "bg-success/10 text-success"
+                        : "bg-muted text-muted-foreground"
                         }`}
                 >
                     {formatStatus(row?.status)}

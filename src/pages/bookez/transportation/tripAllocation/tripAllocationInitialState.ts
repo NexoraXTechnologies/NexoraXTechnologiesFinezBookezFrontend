@@ -239,3 +239,33 @@ export const toTripAllocationPayload = (form: any) => ({
 					},
 			  ],
 });
+
+
+
+export const selectClassNames = {
+        control: ({ isFocused, isDisabled }: any) =>
+            `!min-h-10 !rounded-md !border !shadow-none ${isFocused
+                ? "!border-primary !ring-1 !ring-primary"
+                : "!border-border"
+            } ${isDisabled
+                ? "!bg-muted !text-muted-foreground"
+                : "!bg-card !text-foreground"
+            }`,
+        valueContainer: () => "!px-3 !py-0",
+        singleValue: () => "!text-foreground",
+        input: () => "!text-foreground",
+        placeholder: () => "!text-muted-foreground",
+        indicatorsContainer: () => "!text-muted-foreground",
+        dropdownIndicator: () => "!text-muted-foreground hover:!text-foreground",
+        indicatorSeparator: () => "!bg-border",
+        menu: () => "!z-50 !border !border-border !bg-popover !text-popover-foreground !shadow-md",
+        menuList: () => "!bg-popover !p-1",
+        option: ({ isFocused, isSelected }: any) =>
+            `!cursor-pointer !rounded-sm ${isSelected
+                ? "!bg-primary !text-primary-foreground"
+                : isFocused
+                    ? "!bg-muted !text-foreground"
+                    : "!bg-popover !text-popover-foreground"
+            }`,
+        noOptionsMessage: () => "!text-muted-foreground",
+    };

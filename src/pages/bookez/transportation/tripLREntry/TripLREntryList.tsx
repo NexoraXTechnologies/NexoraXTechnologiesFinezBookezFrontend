@@ -245,6 +245,7 @@ const TripLREntryList = () => {
 
     const [listingLoader, setListingLoader] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+
     // @ts-ignore
     const [deleteLoader, setDeleteLoader] = useState(false);
 
@@ -272,8 +273,9 @@ const TripLREntryList = () => {
         voucherNumber: null,
     });
 
-    const searchTimerRef = useRef<any>(null);
 
+    const searchTimerRef = useRef<any>(null);
+    const previousSearchRef = useRef(search);
     const pageTitle = location.state?.title || "Trip L/R Entry";
     const [pdfLoadingVoucher, setPdfLoadingVoucher] = useState<string | null>(null);
     const totalLRCount = openCount + closedCount;
@@ -404,7 +406,12 @@ const TripLREntryList = () => {
         });
     }, [localOffset, localLimit]);
 
+
     useEffect(() => {
+        if (previousSearchRef.current === search) return;
+
+        previousSearchRef.current = search;
+
         if (searchTimerRef.current) {
             clearTimeout(searchTimerRef.current);
         }
@@ -462,12 +469,16 @@ const TripLREntryList = () => {
     const handleRefresh = async () => {
         setRefreshing(true);
 
-        await loadPage({
-            offset: localOffset,
-            limit: localLimit,
-            searchValue: search,
-            showLoader: false,
-        });
+        try {
+            await loadPage({
+                offset: localOffset,
+                limit: localLimit,
+                searchValue: search,
+                showLoader: true,
+            });
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     const handleCreate = () => {
@@ -894,9 +905,9 @@ const TripLREntryList = () => {
                 error?.message ||
                 "Failed to download PDF"
             );
-        }finally {
-        setPdfLoadingVoucher(null);
-    }
+        } finally {
+            setPdfLoadingVoucher(null);
+        }
     };
 
     /* ===================================================

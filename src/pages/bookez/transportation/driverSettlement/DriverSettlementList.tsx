@@ -99,7 +99,7 @@ const getStatusClass = (status: any) => {
     }
 
     if (value === "unsettled" || value === "pending" || value === "draft") {
-       return "border-yellow-500/20 bg-yellow-500/10 text-yellow-600";
+        return "border-yellow-500/20 bg-yellow-500/10 text-yellow-600";
     }
 
     return "border-primary/20 bg-primary/10 text-primary";
@@ -120,6 +120,7 @@ const DriverSettlementList = () => {
     const [refreshing, setRefreshing] = useState(false);
 
     const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
 
@@ -190,38 +191,28 @@ const DriverSettlementList = () => {
     );
 
     useEffect(() => {
-        dispatch(
-            getAllDriverSettlement({
-                limit: localLimit,
-                offset: localOffset,
-
-            })
-        ).unwrap();
-
-    }, [localOffset, localLimit]);
-
-    useEffect(() => {
         const timer = setTimeout(() => {
             setLocalOffset(0);
-
-            dispatch(
-                getAllDriverSettlement({
-                    offset: 0,
-                    limit: localLimit,
-                    search,
-                })
-            ).unwrap();
+            setDebouncedSearch(search);
         }, 400);
 
         return () => clearTimeout(timer);
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
-    const handleRefresh = async () => {
-        try {
-            setRefreshing(true);
+    useEffect(() => {
+        dispatch(
+            getAllDriverSettlement({
+                offset: localOffset,
+                limit: localLimit,
+                search: debouncedSearch,
+            })
+        ).unwrap();
+    }, [dispatch, localOffset, localLimit, debouncedSearch]);
 
+    const handleRefresh = async () => {
+        setRefreshing(true);
+
+        try {
             await dispatch(
                 getAllDriverSettlement({
                     offset: localOffset,

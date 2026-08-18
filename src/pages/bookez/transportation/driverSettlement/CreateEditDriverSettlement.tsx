@@ -37,6 +37,7 @@ import { addPayment } from "../../../../redux/slices/professionalSlice/purchaseW
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
+import { selectClassNames } from "../tripAllocation/tripAllocationInitialState";
 
 const REMARKS_MAX = 200;
 
@@ -2491,6 +2492,9 @@ const CreateEditDriverSettlement = ({
             setPageLoading(false);
         }
     };
+
+
+   
     return (
         <div className="flex h-full w-full flex-col bg-card shadow-sm">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-4 py-3">
@@ -2524,7 +2528,7 @@ const CreateEditDriverSettlement = ({
                 </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto p-2">
+            <div className="min-h-0 flex-1 overflow-auto p-2 ">
                 <div className="space-y-4">
                     <FormSectionCard
                         index={1}
@@ -2533,7 +2537,7 @@ const CreateEditDriverSettlement = ({
                         expanded={true}
                         onToggle={() => { }}
                     >
-                        <div>
+                        <div className="">
                             <label className="mb-1 block text-sm font-medium text-card-foreground">
                                 Driver <span className="text-danger">*</span>
                             </label>
@@ -2550,6 +2554,7 @@ const CreateEditDriverSettlement = ({
                                     handleDriverSelect(option?.value || "")
                                 }
                                 classNamePrefix="rs"
+                                classNames={selectClassNames}
                             />
                         </div>
 
@@ -2578,6 +2583,7 @@ const CreateEditDriverSettlement = ({
                                     handleOrderSelect(option?.value || "")
                                 }
                                 classNamePrefix="rs"
+                                classNames={selectClassNames}
                             />
                         </div>
 
