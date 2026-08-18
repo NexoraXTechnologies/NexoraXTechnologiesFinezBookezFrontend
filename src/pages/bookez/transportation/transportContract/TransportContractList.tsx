@@ -311,7 +311,7 @@ const TransportContractList = () => {
     ];
 
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
+        <div className="flex h-full w-full flex-col  border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="transport-contract-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div id="transport-contract-summary" className="flex items-center">
                     <button

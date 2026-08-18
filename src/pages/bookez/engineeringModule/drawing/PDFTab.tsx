@@ -72,30 +72,27 @@ const PDFTab = ({ bomData = {} }: any) => {
         );
 
     return (
-        <div className="h-full overflow-y-auto px-4 pb-10">
+        <div className="h-full overflow-y-auto px-4 pb-10 text-foreground">
             {(loading || listingLoader) && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/25">
-                    <div className="flex items-center gap-3 rounded-xl bg-white px-5 py-4 shadow-lg">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70">
+                    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-4 text-card-foreground shadow-lg">
                         <Loader2
-                            className="animate-spin text-blue-500"
+                            className="animate-spin text-primary"
                             size={22}
                         />
 
-                        <span className="text-sm font-semibold text-slate-700">
+                        <span className="text-sm font-semibold text-foreground">
                             {loading ? "Generating PDF..." : "Loading company..."}
                         </span>
                     </div>
                 </div>
             )}
 
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mt-3 rounded-2xl border border-border bg-card p-4 text-card-foreground">
                 <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-
-
-                    <h2 className="text-base font-semibold text-slate-800">
+                    <h2 className="text-base font-semibold text-foreground">
                         PDF Export
                     </h2>
-
 
                     <div className="flex justify-end gap-3">
                         <Action
@@ -105,7 +102,6 @@ const PDFTab = ({ bomData = {} }: any) => {
                             onClick={handleGeneratePDF}
                             disabled={loading || listingLoader}
                         />
-
 
                         <Action
                             icon={<Download size={16} />}
@@ -121,12 +117,10 @@ const PDFTab = ({ bomData = {} }: any) => {
                             green
                             onClick={() => toast.info("Approval flow coming soon")}
                         />
-
-                    
                     </div>
-
                 </div>
-                <p className="mt-0.5 text-sm font-normal leading-5 text-slate-500">
+
+                <p className="mt-0.5 text-sm font-normal leading-5 text-muted-foreground">
                     Export engineering drawing, BOM and summary into a PDF
                     document with your company details from Company Master.
                 </p>
@@ -166,8 +160,8 @@ const PDFTab = ({ bomData = {} }: any) => {
                 />
             </div>
 
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-                <h2 className="mb-3 text-base font-semibold text-slate-800">
+            <div className="mt-3 rounded-2xl border border-border bg-card p-4 text-card-foreground">
+                <h2 className="mb-3 text-base font-semibold text-foreground">
                     PDF Includes
                 </h2>
 
@@ -184,12 +178,12 @@ const PDFTab = ({ bomData = {} }: any) => {
 
 const Info = ({ label, value }: any) => {
     return (
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0">
-            <span className="flex-1 text-sm font-medium text-slate-500">
+        <div className="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0">
+            <span className="flex-1 text-sm font-medium text-muted-foreground">
                 {label}
             </span>
 
-            <span className="flex-1 text-right text-sm font-semibold text-slate-700">
+            <span className="flex-1 text-right text-sm font-semibold text-foreground">
                 {value}
             </span>
         </div>
@@ -198,10 +192,10 @@ const Info = ({ label, value }: any) => {
 
 const Feature = ({ text }: any) => {
     return (
-        <div className="flex items-center gap-2 border-b border-slate-100 py-2 last:border-b-0">
-            <CheckCircle size={17} className="shrink-0 text-emerald-500" />
+        <div className="flex items-center gap-2 border-b border-border py-2 last:border-b-0">
+            <CheckCircle size={17} className="shrink-0 text-success" />
 
-            <span className="text-sm font-medium text-slate-600">
+            <span className="text-sm font-medium text-foreground">
                 {text}
             </span>
         </div>
@@ -221,22 +215,24 @@ const Action = ({
             type="button"
             disabled={disabled}
             onClick={onClick}
-            className={`flex h-9 items-center gap-2 rounded-lg border bg-white px-3 transition hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60 ${green
-                    ? "border-emerald-100 text-emerald-600 hover:bg-emerald-50"
-                    : "border-slate-200 text-blue-500 hover:bg-blue-50"
-                }`}
+            className={`flex h-9 items-center gap-2 rounded-lg border bg-card px-3 transition hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60 ${
+                green
+                    ? "border-success/20 text-success hover:bg-success/10"
+                    : "border-border text-primary hover:bg-primary/10"
+            }`}
         >
             <span className="shrink-0">{icon}</span>
 
             <span className="text-left leading-none">
                 <span
-                    className={`block text-xs font-semibold ${green ? "text-emerald-600" : "text-blue-500"
-                        }`}
+                    className={`block text-xs font-semibold ${
+                        green ? "text-success" : "text-primary"
+                    }`}
                 >
                     {title}
                 </span>
 
-                <span className="mt-0.5 block text-[10px] font-normal text-slate-400">
+                <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
                     {sub}
                 </span>
             </span>

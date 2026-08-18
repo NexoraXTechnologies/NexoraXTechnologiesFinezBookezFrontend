@@ -1905,7 +1905,7 @@ const EWayBillList = () => {
 
 
     return (
-        <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
+        <div className="flex h-full w-full flex-col border border-border bg-card p-4 text-card-foreground shadow-sm">
 
             {/* ========================= Header ========================= */}
 
