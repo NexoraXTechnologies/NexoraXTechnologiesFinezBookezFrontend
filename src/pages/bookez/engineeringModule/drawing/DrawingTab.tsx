@@ -51,12 +51,12 @@ const DrawingTab = ({ bomData = {} }: any) => {
     if (!TemplateComponent) {
         return (
             <div className="flex h-full items-center justify-center p-6">
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-                    <p className="text-sm font-extrabold text-slate-900">
+                <div className="rounded-2xl border border-border bg-card p-6 text-center text-card-foreground shadow-sm">
+                    <p className="text-sm font-extrabold text-foreground">
                         No drawing template found for{" "}
                         {bomData?.selectedProduct || "product"}
                     </p>
-                    <p className="mt-1 text-xs font-medium text-slate-500">
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">
                         Please create a drawing template for this product.
                     </p>
                 </div>
@@ -67,7 +67,7 @@ const DrawingTab = ({ bomData = {} }: any) => {
     return (
         <div
             ref={cardRef}
-            className="flex h-full w-full items-center justify-center overflow-hidden bg-white p-4"
+            className="flex h-full w-full items-center justify-center overflow-hidden bg-card p-4 text-card-foreground"
         >
             <div
                 style={{

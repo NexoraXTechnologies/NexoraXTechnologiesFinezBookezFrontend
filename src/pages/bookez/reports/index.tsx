@@ -4,6 +4,7 @@ import {
   PackageMinus,
   PackagePlus,
   CircleDollarSign,
+  BellRing,
 } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import AccountsReceivable from "./AccountsReceivable";
@@ -12,6 +13,7 @@ import StockLedger from "./StockLedger";
 import AccountPayable from "./AccountPayable";
 import DrillDownReport from "./DrillDownReport";
 import CashBankReport from "./CashBankReport";
+import PaymentReminders from "./PaymentReminders";
 
 const cards: any[] = [
   {
@@ -56,6 +58,15 @@ const cards: any[] = [
     icon: <PackagePlus size={22} />,
     permissionKey: "cashbankReport"
   },
+  // {
+  //   title: "Payment Reminders",
+  //   description: "Track upcoming and overdue payments and manage payment follow-ups.",
+  //   component: PaymentReminders,
+  //   icon: <BellRing size={22} />,
+  //   permissionKey: "paymentReminder"
+  // }, 
+
+
 ];
 
 const ReportsDashboard = () => {

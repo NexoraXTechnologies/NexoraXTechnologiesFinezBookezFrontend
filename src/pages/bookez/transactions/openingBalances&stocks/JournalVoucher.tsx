@@ -484,7 +484,7 @@ const JournalVoucher = () => {
 
     return (
         <>
-            <div className="flex h-full w-full flex-col border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex h-full w-full flex-col border border-border bg-card p-4 text-card-foreground shadow-sm">
                 <div
                     id="account-header"
                     className="mb-3 flex flex-wrap items-center gap-2"
@@ -594,7 +594,7 @@ const JournalVoucher = () => {
                                         setEdit(true);
                                         setShowModal(true);
                                     }}
-                                    className="cursor-pointer rounded-lg p-2 text-indigo-600 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-700"
+                                    className="cursor-pointer rounded-lg p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                                 >
                                     <Edit size={16} />
                                 </button>
@@ -623,7 +623,7 @@ const JournalVoucher = () => {
                                             voucherNumber: item?.voucherNumber || item?.voucherno,
                                         });
                                     }}
-                                    className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                                    className="cursor-pointer rounded-lg p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-60"
                                 >
                                     <Trash2 size={16} />
                                 </button>

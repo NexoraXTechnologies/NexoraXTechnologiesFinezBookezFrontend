@@ -29,19 +29,19 @@ const BOMTab = ({ bomData = {} }: any) => {
     );
 
     return (
-        <div className="h-full overflow-y-auto px-4 pb-10">
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 ">
-                <h2 className="mb-3 text-base font-semibold text-slate-800">
+        <div className="h-full overflow-y-auto px-4 pb-10 text-foreground">
+            <div className="mt-3 rounded-2xl border border-border bg-card p-4 text-card-foreground">
+                <h2 className="mb-3 text-base font-semibold text-foreground">
                     Bill of Materials
                 </h2>
 
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                    <div className="grid min-h-12 grid-cols-[8%_27%_30%_12%_23%] bg-slate-50">
+                <div className="overflow-hidden rounded-xl border border-border bg-card">
+                    <div className="grid min-h-12 grid-cols-[8%_27%_30%_12%_23%] bg-muted/50">
                         {["#", "Part Name", "Unit", "Qty", "Amount"].map(
                             (header) => (
                                 <div
                                     key={header}
-                                    className="flex items-center justify-center border-r border-slate-200 px-2 py-3 text-center text-xs font-semibold text-slate-600 last:border-r-0"
+                                    className="flex items-center justify-center border-r border-border px-2 py-3 text-center text-xs font-semibold text-muted-foreground last:border-r-0"
                                 >
                                     {header}
                                 </div>
@@ -53,12 +53,12 @@ const BOMTab = ({ bomData = {} }: any) => {
                         rows.map((row: any[], rowIndex: number) => (
                             <div
                                 key={rowIndex}
-                                className="grid min-h-12 grid-cols-[8%_27%_30%_12%_23%] border-t border-slate-100 bg-white hover:bg-slate-50"
+                                className="grid min-h-12 grid-cols-[8%_27%_30%_12%_23%] border-t border-border bg-card transition hover:bg-muted/50"
                             >
                                 {row.map((cell, cellIndex) => (
                                     <div
                                         key={cellIndex}
-                                        className="flex items-center justify-center border-r border-slate-100 px-2 py-3 text-center text-xs font-medium text-slate-700 last:border-r-0"
+                                        className="flex items-center justify-center border-r border-border px-2 py-3 text-center text-xs font-medium text-foreground last:border-r-0"
                                     >
                                         {cell}
                                     </div>
@@ -66,24 +66,24 @@ const BOMTab = ({ bomData = {} }: any) => {
                             </div>
                         ))
                     ) : (
-                        <div className="p-5 text-center text-sm font-medium text-slate-400">
+                        <div className="p-5 text-center text-sm font-medium text-muted-foreground">
                             No BOM components available
                         </div>
                     )}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
-                    <span className="text-sm font-semibold text-slate-700">
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-primary/10 px-4 py-3">
+                    <span className="text-sm font-semibold text-foreground">
                         Total Weight
                     </span>
-                    <span className="text-base font-semibold text-blue-600">
+                    <span className="text-base font-semibold text-primary">
                         {totalWeight} kg
                     </span>
                 </div>
             </div>
 
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 ">
-                <h2 className="mb-3 text-base font-semibold text-slate-800">
+            <div className="mt-3 rounded-2xl border border-border bg-card p-4 text-card-foreground">
+                <h2 className="mb-3 text-base font-semibold text-foreground">
                     Summary
                 </h2>
 
@@ -128,36 +128,34 @@ const BOMTab = ({ bomData = {} }: any) => {
 
                 <Info label="Total Weight" value={`${totalWeight} kg`} />
 
-                <div className="mt-4 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                    <span className="text-sm font-semibold text-slate-700">
+                <div className="mt-4 flex items-center justify-between rounded-xl border border-success/20 bg-success/10 px-4 py-3">
+                    <span className="text-sm font-semibold text-foreground">
                         Estimated Cost
                     </span>
 
                     <div className="text-right">
-                        <div className="text-base font-semibold text-emerald-600">
+                        <div className="text-base font-semibold text-success">
                             ₹ {totalCost.toLocaleString("en-IN")}
                         </div>
-                        <div className="text-xs font-normal text-slate-400">
+                        <div className="text-xs font-normal text-muted-foreground">
                             Excluding Tax
                         </div>
                     </div>
                 </div>
             </div>
-
-         
         </div>
     );
 };
 
 const Info = ({ label, value }: any) => (
-    <div className="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0">
-        <span className="text-sm font-medium text-slate-500">{label}</span>
-        <span className="text-right text-sm font-semibold text-slate-700">
+    <div className="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0">
+        <span className="text-sm font-medium text-muted-foreground">
+            {label}
+        </span>
+        <span className="text-right text-sm font-semibold text-foreground">
             {value}
         </span>
     </div>
 );
-
-
 
 export default BOMTab;

@@ -15,7 +15,7 @@ const dimLineHtml = (
     options: any = {}
 ) => {
     const labelY = options.labelY ?? y - 8;
-    const stroke = options.stroke || "#111";
+    const stroke = options.stroke || "currentColor";
     const fontSize = options.fontSize || 13;
     const weight = options.weight || 500;
 
@@ -45,7 +45,7 @@ const dimLineHtml = (
             font-size="${fontSize}"
             font-weight="${weight}"
             text-anchor="middle"
-            fill="#111"
+            fill="currentColor"
         >
             ${esc(label)}
         </text>
@@ -63,18 +63,18 @@ const verticalDimLineHtml = (
         y1="${y1}"
         x2="${x}"
         y2="${y2}"
-        stroke="#111"
+        stroke="currentColor"
         stroke-width="1"
     />
 
     <polygon
         points="${x},${y1} ${x - 5},${y1 + 8} ${x + 5},${y1 + 8}"
-        fill="#111"
+        fill="currentColor"
     />
 
     <polygon
         points="${x},${y2} ${x - 5},${y2 - 8} ${x + 5},${y2 - 8}"
-        fill="#111"
+        fill="currentColor"
     />
 
     <text
@@ -83,7 +83,7 @@ const verticalDimLineHtml = (
         font-size="13"
         font-weight="500"
         text-anchor="middle"
-        fill="#111"
+        fill="currentColor"
         transform="rotate(-90 ${x - 13} ${(y1 + y2) / 2})"
     >
         ${esc(label)}
@@ -183,7 +183,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${y}"
                 x2="${bodyEndX}"
                 y2="${y}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="${sw}"
             />
         `;
@@ -220,8 +220,8 @@ export function buildChassisDrawingSvgHtml(
                         y="${frameY}"
                         width="${pillarW}"
                         height="${frameH}"
-                        fill="#fff"
-                        stroke="#111"
+                        fill="none"
+                        stroke="currentColor"
                         stroke-width="1.5"
                     />
                 </g>
@@ -252,8 +252,8 @@ export function buildChassisDrawingSvgHtml(
                            L ${x - 2} ${y + 24}
                            L ${x - 6} ${y + 20}
                            Z"
-                        fill="#fff"
-                        stroke="#111"
+                        fill="none"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
 
@@ -262,7 +262,7 @@ export function buildChassisDrawingSvgHtml(
                         y1="${y + 4}"
                         x2="${x + 4}"
                         y2="${y + 22}"
-                        stroke="#111"
+                        stroke="currentColor"
                         stroke-width="0.8"
                     />
 
@@ -271,7 +271,7 @@ export function buildChassisDrawingSvgHtml(
                         y1="${y + 4}"
                         x2="${x - 4}"
                         y2="${y + 22}"
-                        stroke="#111"
+                        stroke="currentColor"
                         stroke-width="0.8"
                     />
                 </g>
@@ -301,8 +301,8 @@ export function buildChassisDrawingSvgHtml(
                 cx="${cx}"
                 cy="${cy}"
                 r="2.6"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
                 stroke-width="1"
             />
         `;
@@ -354,8 +354,9 @@ export function buildChassisDrawingSvgHtml(
                     cx="${cx}"
                     cy="${wheelY}"
                     r="${wheelR}"
-                    fill="#fff"
-                    stroke="#777"
+                    fill="none"
+                    stroke="currentColor"
+                    opacity="0.65"
                     stroke-width="1.4"
                 />
             `;
@@ -425,8 +426,8 @@ export function buildChassisDrawingSvgHtml(
                 y="${frameY}"
                 width="${frontEndW}"
                 height="${frameH + 45}"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
                 stroke-width="1.4"
             />
 
@@ -436,7 +437,7 @@ export function buildChassisDrawingSvgHtml(
                      ${frameX - 8} ${frameY + frameH + 16},
                      ${frameX + 8} ${frameY + frameH + 14}"
                 fill="none"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="1"
             />
 
@@ -444,16 +445,16 @@ export function buildChassisDrawingSvgHtml(
                 cx="${frameX - 20}"
                 cy="${frameY + 7}"
                 r="2"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
             />
 
             <circle
                 cx="${frameX - 20}"
                 cy="${frameY + frameH + 30}"
                 r="2"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
             />
 
             <line
@@ -461,7 +462,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + 9}"
                 x2="${frameX}"
                 y2="${frameY + 9}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="0.8"
             />
 
@@ -470,7 +471,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + frameH - 8}"
                 x2="${frameX}"
                 y2="${frameY + frameH - 8}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="0.8"
             />
         </g>
@@ -483,8 +484,8 @@ export function buildChassisDrawingSvgHtml(
                 y="${frameY}"
                 width="${rearEndW}"
                 height="${frameH + 45}"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
                 stroke-width="1.4"
             />
 
@@ -494,7 +495,7 @@ export function buildChassisDrawingSvgHtml(
                      ${bodyEndX + 8} ${frameY + frameH + 16},
                      ${bodyEndX - 8} ${frameY + frameH + 14}"
                 fill="none"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="1"
             />
 
@@ -503,7 +504,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + frameH + 37}"
                 x2="${bodyEndX + rearEndW + 6}"
                 y2="${frameY + frameH + 37}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="2"
             />
 
@@ -511,16 +512,16 @@ export function buildChassisDrawingSvgHtml(
                 cx="${bodyEndX + 10}"
                 cy="${frameY + 7}"
                 r="2"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
             />
 
             <circle
                 cx="${bodyEndX + 10}"
                 cy="${frameY + frameH + 30}"
                 r="2"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
             />
 
             <line
@@ -528,7 +529,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + 9}"
                 x2="${bodyEndX + rearEndW}"
                 y2="${frameY + 9}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="0.8"
             />
 
@@ -537,7 +538,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + frameH - 8}"
                 x2="${bodyEndX + rearEndW}"
                 y2="${frameY + frameH - 8}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="0.8"
             />
         </g>
@@ -555,7 +556,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${kingpinY}"
                 x2="${kingpinLabelX}"
                 y2="${kingpinLabelY}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="0.8"
             />
 
@@ -564,7 +565,7 @@ export function buildChassisDrawingSvgHtml(
                 y="${kingpinLabelY + 4}"
                 font-size="12"
                 font-weight="500"
-                fill="#111"
+                fill="currentColor"
             >
                 0
             </text>
@@ -580,13 +581,14 @@ export function buildChassisDrawingSvgHtml(
             height="100%"
             xmlns="http://www.w3.org/2000/svg"
             preserveAspectRatio="xMidYMid meet"
+            class="text-foreground"
         >
             <rect
                 x="0"
                 y="0"
                 width="${svgW}"
                 height="${svgH}"
-                fill="#fff"
+                fill="none"
             />
 
             ${dimLineHtml(
@@ -613,7 +615,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY}"
                 x2="${frameX - frontEndW}"
                 y2="${frameY}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="1"
             />
 
@@ -622,7 +624,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + frameH}"
                 x2="${frameX - frontEndW}"
                 y2="${frameY + frameH}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="1"
             />
 
@@ -634,8 +636,8 @@ export function buildChassisDrawingSvgHtml(
                 y="${frameY}"
                 width="${frameW}"
                 height="${frameH}"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
                 stroke-width="1.5"
             />
 
@@ -646,7 +648,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + 10}"
                 x2="${bodyEndX}"
                 y2="${frameY + 10}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="1.6"
             />
 
@@ -655,7 +657,7 @@ export function buildChassisDrawingSvgHtml(
                 y1="${frameY + frameH - 10}"
                 x2="${bodyEndX}"
                 y2="${frameY + frameH - 10}"
-                stroke="#111"
+                stroke="currentColor"
                 stroke-width="1.6"
             />
 
@@ -663,8 +665,8 @@ export function buildChassisDrawingSvgHtml(
 
             <path
                 d="${chassisPath}"
-                fill="#fff"
-                stroke="#111"
+                fill="none"
+                stroke="currentColor"
                 stroke-width="1.5"
             />
 
@@ -678,7 +680,8 @@ export function buildChassisDrawingSvgHtml(
                 y1="${wheelY + wheelR + 10}"
                 x2="${mmX(totalLength)}"
                 y2="${wheelY + wheelR + 10}"
-                stroke="#b7b7b7"
+                stroke="currentColor"
+                opacity="0.35"
                 stroke-width="1"
             />
 
@@ -687,7 +690,8 @@ export function buildChassisDrawingSvgHtml(
                 y1="${wheelY + wheelR + 10}"
                 x2="${mmX(0)}"
                 y2="${bottomDimY}"
-                stroke="#9ca3af"
+                stroke="currentColor"
+                opacity="0.45"
                 stroke-width="1"
             />
 
@@ -696,7 +700,8 @@ export function buildChassisDrawingSvgHtml(
                 y1="${wheelY + wheelR + 10}"
                 x2="${mmX(totalLength)}"
                 y2="${bottomDimY}"
-                stroke="#9ca3af"
+                stroke="currentColor"
+                opacity="0.45"
                 stroke-width="1"
             />
 
@@ -710,7 +715,8 @@ export function buildChassisDrawingSvgHtml(
                             y1="${wheelY + wheelR + 10}"
                             x2="${x}"
                             y2="${bottomDimY}"
-                            stroke="#9ca3af"
+                            stroke="currentColor"
+                            opacity="0.45"
                             stroke-width="1"
                         />
                     `;
@@ -724,7 +730,7 @@ export function buildChassisDrawingSvgHtml(
                 y="${noteY}"
                 font-size="13"
                 font-weight="500"
-                fill="#111"
+                fill="currentColor"
             >
                 TOTAL ORDER QUANTITY - 1 VEHICLE
             </text>
