@@ -182,7 +182,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							action: "view",
 						},
 
-						{
+						...(true ? [{
 							name: "Engineering Module",
 							path: "/bookEz/engineering-module",
 							icon: <Wrench size={24} />,
@@ -190,7 +190,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "",
 							action: "view",
 
-						},
+						}] : []),
 						{
 							name: "Transportation",
 							path: "/bookEz/transportation",
