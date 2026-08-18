@@ -23,6 +23,57 @@ const MODULE_NAME = "Issue to Production";
 const API_BASE = "/eTaxSolnMongoApiBackend/users/bookez/otherApi/issuesToProduction";
 const PRODUCT_FIELD_KEYS = new Set(["productCode", "productName", "productId", "product"]);
 
+const normalizeInventoryFieldName = (value: any) =>
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+const getInventoryBalanceApiKey = (field: any) => {
+    if (!field) return "";
+
+    const fieldNames = [
+        field?.key,
+        field?.label,
+        field?.title,
+        field?.customMasterName,
+        field?.dataSource?.customMasterName,
+    ].map(normalizeInventoryFieldName);
+
+    if (fieldNames.some((name) => name.includes("warehouse"))) return "warehouseCode";
+    if (fieldNames.some((name) => name.includes("location"))) return "locationCode";
+    if (fieldNames.some((name) => name.includes("batch"))) return "batchNumber";
+    if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
+
+    return "";
+};
+
+const getDynamicFieldType = (field: any) =>
+    String(field?.type || field?.dataSource?.type || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s/g, "");
+
+const isCustomMasterField = (field: any) => {
+    const fieldType = getDynamicFieldType(field);
+
+    return (
+        fieldType === "custommaster" ||
+        fieldType === "customemaster" ||
+        Boolean(field?.customMasterCode)
+    );
+};
+
+const getCustomMasterName = (field: any) =>
+    String(
+        field?.customMasterName ||
+        field?.dataSource?.customMasterName ||
+        field?.label ||
+        field?.title ||
+        field?.key ||
+        ""
+    ).trim();
+
 const defaultPagination = {
     offset: 0,
     limit: 10,
@@ -106,6 +157,8 @@ const IssueToProduction = () => {
             id: Date.now() + Math.random(),
             availableQuantity: null,
             productType: "",
+            customMasters: {},
+            _inventoryBalanceSelections: {},
         };
 
         (fields || []).forEach((field: any) => {
@@ -128,6 +181,7 @@ const IssueToProduction = () => {
         next.voucherDate = next.voucherDate || todayYMD();
         next.status = next.status || "open";
         next.transactionType = next.transactionType || "ISSUE_TO_PRODUCTION";
+        next.customMasters = {};
         next.rawMaterials = [buildBlankRow(schema?.body || [])];
 
         return next;
@@ -139,6 +193,165 @@ const IssueToProduction = () => {
 
     const getBodyFieldByKey = (key: string) => {
         return (templateFields?.body || []).find((field: any) => String(field?.key) === String(key));
+    };
+
+    const getHeaderFieldByKey = (key: string) => {
+        return [
+            ...(templateFields?.header || []),
+            ...(templateFields?.headerChild || []),
+        ].find((field: any) => String(field?.key) === String(key));
+    };
+
+    const isInventoryBalanceField = (field: any) =>
+        Boolean(getInventoryBalanceApiKey(field));
+
+    const getInventoryBalanceFilters = (row: any) => {
+        const filters: any = {};
+
+        const selectedFilters =
+            row?._inventoryBalanceSelections &&
+                typeof row._inventoryBalanceSelections === "object"
+                ? row._inventoryBalanceSelections
+                : {};
+
+        if (selectedFilters?.warehouseCode) filters.warehouseCode = selectedFilters.warehouseCode;
+        if (selectedFilters?.locationCode) filters.locationCode = selectedFilters.locationCode;
+        if (selectedFilters?.batchNumber) filters.batchNumber = selectedFilters.batchNumber;
+        if (selectedFilters?.binCode) filters.binCode = selectedFilters.binCode;
+
+        return filters;
+    };
+
+    const getCustomMasterSelection = (field: any, selectedValue: any) => {
+        if (
+            selectedValue === undefined ||
+            selectedValue === null ||
+            String(selectedValue).trim() === ""
+        ) {
+            return null;
+        }
+
+        if (typeof selectedValue === "object" && selectedValue?.code) {
+            return {
+                code: String(selectedValue.code || "").trim(),
+                name: String(
+                    selectedValue.name ||
+                    selectedValue.label ||
+                    selectedValue.code ||
+                    ""
+                ).trim(),
+            };
+        }
+
+        const selectedOption = getOptionByValue(field, selectedValue);
+        const raw = selectedOption?.raw || {};
+
+        const nestedData =
+            raw?.data && typeof raw.data === "object"
+                ? raw.data
+                : raw?.dynamicFields && typeof raw.dynamicFields === "object"
+                    ? raw.dynamicFields
+                    : raw?.customFields && typeof raw.customFields === "object"
+                        ? raw.customFields
+                        : {};
+
+        const code = String(
+            selectedOption?.value ||
+            raw?.code ||
+            raw?.masterCode ||
+            nestedData?.code ||
+            selectedValue ||
+            ""
+        ).trim();
+
+        const name = String(
+            selectedOption?.label ||
+            raw?.name ||
+            raw?.masterName ||
+            nestedData?.name ||
+            code
+        ).trim();
+
+        if (!code) return null;
+
+        return { code, name };
+    };
+
+    const buildCustomMastersPayload = (
+        fields: any[],
+        source: any,
+        existingCustomMasters: any = {}
+    ) => {
+        const customMasters: any = {};
+
+        (fields || []).forEach((field: any) => {
+            if (
+                !field?.key ||
+                isTrueValue(field?.isHidden) ||
+                !isCustomMasterField(field)
+            ) {
+                return;
+            }
+
+            const masterName = getCustomMasterName(field);
+            if (!masterName) return;
+
+            const existingMaster =
+                existingCustomMasters?.[masterName] ||
+                existingCustomMasters?.[field?.key];
+
+            const selectedValue =
+                source?.[field.key] ??
+                existingMaster?.code ??
+                "";
+
+            const selectedMaster =
+                getCustomMasterSelection(field, selectedValue) ||
+                (
+                    existingMaster?.code
+                        ? {
+                            code: String(existingMaster.code || ""),
+                            name: String(existingMaster.name || ""),
+                        }
+                        : null
+                );
+
+            if (selectedMaster?.code) {
+                customMasters[masterName] = selectedMaster;
+            }
+        });
+
+        return customMasters;
+    };
+
+    const applyCustomMasterValues = (
+        fields: any[],
+        source: any,
+        customMasters: any
+    ) => {
+        const updated = {
+            ...source,
+            customMasters:
+                customMasters && typeof customMasters === "object"
+                    ? { ...customMasters }
+                    : {},
+        };
+
+        (fields || []).forEach((field: any) => {
+            if (!isCustomMasterField(field)) return;
+
+            const masterName = getCustomMasterName(field);
+
+            const savedMaster =
+                customMasters?.[masterName] ||
+                customMasters?.[field?.key];
+
+            if (savedMaster?.code) {
+                updated[field.key] = savedMaster.code;
+            }
+        });
+
+        return updated;
     };
 
     const applyMappedFields = (field: any, selectedValue: any, oldData: any) => {
@@ -176,20 +389,35 @@ const IssueToProduction = () => {
     };
 
     const cleanRawMaterials = (rows: any[] = form?.rawMaterials || []) => {
-        const schemaKeys = new Set((templateFields?.body || []).map((field: any) => field?.key).filter(Boolean));
+        const bodyFields = templateFields?.body || [];
+        const schemaKeys = new Set(
+            bodyFields
+                .map((field: any) => field?.key)
+                .filter(Boolean)
+        );
 
         return (rows || [])
-            .filter((row: any) => {
-                return Array.from(schemaKeys).some((key: any) => {
+            .filter((row: any) =>
+                Array.from(schemaKeys).some((key: any) => {
                     const value = row?.[key];
                     return value !== "" && value !== null && value !== undefined;
-                });
-            })
+                })
+            )
             .map((row: any) => {
                 const calculated = calculateRow(row);
                 const cleanRow: any = {};
 
-                schemaKeys.forEach((key: any) => {
+                bodyFields.forEach((field: any) => {
+                    const key = String(field?.key || "").trim();
+
+                    if (
+                        !key ||
+                        isTrueValue(field?.isHidden) ||
+                        isCustomMasterField(field)
+                    ) {
+                        return;
+                    }
+
                     cleanRow[key] = calculated?.[key];
                 });
 
@@ -198,9 +426,20 @@ const IssueToProduction = () => {
                 if (cleanRow.productId === undefined && calculated?.productId) cleanRow.productId = calculated.productId;
                 if (cleanRow.unit === undefined && calculated?.unit) cleanRow.unit = calculated.unit;
                 if (cleanRow.uom === undefined && calculated?.uom) cleanRow.uom = calculated.uom;
+
                 if (cleanRow.quantity !== undefined) cleanRow.quantity = String(cleanRow.quantity ?? "");
                 if (cleanRow.rate !== undefined) cleanRow.rate = String(cleanRow.rate ?? "");
                 if (cleanRow.amount !== undefined) cleanRow.amount = String(num(cleanRow.amount).toFixed(2));
+
+                const customMasters = buildCustomMastersPayload(
+                    bodyFields,
+                    calculated,
+                    row?.customMasters || {}
+                );
+
+                if (Object.keys(customMasters).length) {
+                    cleanRow.customMasters = customMasters;
+                }
 
                 return cleanRow;
             });
@@ -378,6 +617,8 @@ const IssueToProduction = () => {
                         id: Date.now(),
                         availableQuantity: null,
                         productType: "",
+                        customMasters: {},
+                        _inventoryBalanceSelections: {},
                     };
 
                     (updated?.body || []).forEach((field: any) => {
@@ -385,6 +626,7 @@ const IssueToProduction = () => {
                         row[field.key] = getFieldDefaultValue(field);
                     });
 
+                    next.customMasters = {};
                     next.rawMaterials = [row];
 
                     setForm(next);
@@ -408,7 +650,8 @@ const IssueToProduction = () => {
         index: number,
         productCode: string,
         productType: string,
-        voucherDate?: string
+        voucherDate?: string,
+        rowData?: any
     ) => {
         const normalizedProductType = String(productType || "").trim().toLowerCase();
 
@@ -471,6 +714,10 @@ const IssueToProduction = () => {
                     productCode,
                     fromDate,
                     toDate,
+                    ...getInventoryBalanceFilters(
+                        rowData ||
+                        form?.rawMaterials?.[index]
+                    ),
                 }) as any
             ).unwrap();
 
@@ -490,7 +737,7 @@ const IssueToProduction = () => {
                     productType: normalizedProductType,
                     availableQuantity:
                         balance?.balanceQuantity !== undefined &&
-                        balance?.balanceQuantity !== null
+                            balance?.balanceQuantity !== null
                             ? balance.balanceQuantity
                             : null,
                 };
@@ -615,19 +862,35 @@ const IssueToProduction = () => {
         next.headerRemarks = record?.headerRemarks ?? next.headerRemarks ?? "";
         next.remarks = record?.remarks ?? next.remarks ?? "";
 
-        next.rawMaterials =
+        const hydratedHeader = applyCustomMasterValues(
+            [
+                ...(templateFields?.header || []),
+                ...(templateFields?.headerChild || []),
+            ],
+            next,
+            record?.customMasters || {}
+        );
+
+        hydratedHeader.rawMaterials =
             Array.isArray(record?.rawMaterials) &&
-            record.rawMaterials.length
-                ? record.rawMaterials.map((item: any) => ({
-                    ...buildBlankRow(templateFields?.body || []),
-                    ...item,
-                    id: item?.id || Date.now() + Math.random(),
-                    availableQuantity: null,
-                    productType: item?.productType || "rawmaterial",
-                }))
+                record.rawMaterials.length
+                ? record.rawMaterials.map((item: any) =>
+                    applyCustomMasterValues(
+                        templateFields?.body || [],
+                        {
+                            ...buildBlankRow(templateFields?.body || []),
+                            ...item,
+                            id: item?.id || Date.now() + Math.random(),
+                            availableQuantity: null,
+                            productType: item?.productType || "rawmaterial",
+                            _inventoryBalanceSelections: {},
+                        },
+                        item?.customMasters || {}
+                    )
+                )
                 : [buildBlankRow(templateFields?.body || [])];
 
-        return next;
+        return hydratedHeader;
     };
 
     const openEditModal = async (record: any) => {
@@ -666,10 +929,48 @@ const IssueToProduction = () => {
     };
 
     const handleMainChange = (key: string, value: any) => {
-        setForm((previous: any) => ({
-            ...previous,
-            [key]: value,
-        }));
+        setForm((previous: any) => {
+            const currentField = getHeaderFieldByKey(key);
+
+            let updated = {
+                ...previous,
+                [key]: value,
+            };
+
+            if (currentField?.mapFields) {
+                updated = applyMappedFields(
+                    currentField,
+                    value,
+                    updated
+                );
+            }
+
+            if (isCustomMasterField(currentField)) {
+                const masterName = getCustomMasterName(currentField);
+
+                const currentCustomMasters =
+                    updated?.customMasters &&
+                        typeof updated.customMasters === "object"
+                        ? { ...updated.customMasters }
+                        : {};
+
+                const selectedMaster =
+                    getCustomMasterSelection(
+                        currentField,
+                        value
+                    );
+
+                if (selectedMaster) {
+                    currentCustomMasters[masterName] = selectedMaster;
+                } else {
+                    delete currentCustomMasters[masterName];
+                }
+
+                updated.customMasters = currentCustomMasters;
+            }
+
+            return updated;
+        });
 
         setErrors((previous: any) => ({
             ...previous,
@@ -710,16 +1011,128 @@ const IssueToProduction = () => {
         value: any
     ) => {
         const field = getBodyFieldByKey(key);
+        const currentRow = form?.rawMaterials?.[index] || {};
+        const selectedOption = getOptionByValue(field, value);
+        const raw = selectedOption?.raw || {};
 
-        let selectedProductCode = "";
-        let selectedProductType = "";
+        let balanceRow: any = {
+            ...currentRow,
+            [key]: value,
+        };
+
+        balanceRow = applyMappedFields(
+            field,
+            value,
+            balanceRow
+        );
+
+        if (isInventoryBalanceField(field)) {
+            const apiKey = getInventoryBalanceApiKey(field);
+
+            const selectedCode =
+                selectedOption?.value ??
+                raw?.code ??
+                raw?.masterCode ??
+                value ??
+                "";
+
+            const currentSelections =
+                balanceRow?._inventoryBalanceSelections &&
+                    typeof balanceRow._inventoryBalanceSelections === "object"
+                    ? { ...balanceRow._inventoryBalanceSelections }
+                    : {};
+
+            if (
+                selectedCode !== undefined &&
+                selectedCode !== null &&
+                String(selectedCode).trim() !== ""
+            ) {
+                currentSelections[apiKey] = selectedCode;
+            } else {
+                delete currentSelections[apiKey];
+            }
+
+            balanceRow._inventoryBalanceSelections = currentSelections;
+        }
+
+        if (isCustomMasterField(field)) {
+            const masterName = getCustomMasterName(field);
+
+            const currentCustomMasters =
+                balanceRow?.customMasters &&
+                    typeof balanceRow.customMasters === "object"
+                    ? { ...balanceRow.customMasters }
+                    : {};
+
+            const selectedMaster =
+                getCustomMasterSelection(
+                    field,
+                    value
+                );
+
+            if (selectedMaster) {
+                currentCustomMasters[masterName] = selectedMaster;
+            } else {
+                delete currentCustomMasters[masterName];
+            }
+
+            balanceRow.customMasters = currentCustomMasters;
+        }
+
+        if (PRODUCT_FIELD_KEYS.has(key)) {
+            balanceRow.productCode =
+                raw?.productCode ||
+                balanceRow?.productCode ||
+                (key === "productCode" ? value : "");
+
+            balanceRow.productName =
+                raw?.productName ||
+                balanceRow?.productName ||
+                (
+                    key === "productName"
+                        ? selectedOption?.label || value
+                        : ""
+                );
+
+            balanceRow.productId =
+                raw?._id ||
+                raw?.productId ||
+                balanceRow?.productId ||
+                "";
+
+            balanceRow.unit =
+                raw?.unit ||
+                balanceRow?.unit ||
+                "";
+
+            balanceRow.uom =
+                raw?.uom ||
+                raw?.unit ||
+                balanceRow?.uom ||
+                "";
+
+            balanceRow.rate =
+                balanceRow?.rate ||
+                raw?.purchasePrice ||
+                raw?.productPurchasePrice ||
+                raw?.rate ||
+                "";
+
+            balanceRow.productType =
+                raw?.productType ||
+                raw?.dynamicFields?.productType ||
+                "rawmaterial";
+
+            balanceRow.availableQuantity = null;
+        }
 
         setForm((previous: any) => {
             const rows = [...(previous?.rawMaterials || [])];
 
             let row = {
                 ...(rows[index] ||
-                buildBlankRow(templateFields?.body || [])),
+                    buildBlankRow(templateFields?.body || [])),
+                [key]: value,
             };
 
             row = applyMappedFields(
@@ -728,68 +1141,27 @@ const IssueToProduction = () => {
                 row
             );
 
+            if (isInventoryBalanceField(field)) {
+                row._inventoryBalanceSelections = {
+                    ...(balanceRow?._inventoryBalanceSelections || {}),
+                };
+            }
+
+            if (isCustomMasterField(field)) {
+                row.customMasters = {
+                    ...(balanceRow?.customMasters || {}),
+                };
+            }
+
             if (PRODUCT_FIELD_KEYS.has(key)) {
-                const option = getOptionByValue(
-                    field,
-                    value
-                );
-
-                const raw = option?.raw || {};
-
-                row.productCode =
-                    raw?.productCode ||
-                    row?.productCode ||
-                    (key === "productCode" ? value : "");
-
-                row.productName =
-                    raw?.productName ||
-                    row?.productName ||
-                    (key === "productName"
-                        ? option?.label || value
-                        : "");
-
-                row.productId =
-                    raw?._id ||
-                    raw?.productId ||
-                    row?.productId ||
-                    "";
-
-                row.unit =
-                    raw?.unit ||
-                    row?.unit ||
-                    "";
-
-                row.uom =
-                    raw?.uom ||
-                    raw?.unit ||
-                    row?.uom ||
-                    "";
-
-                row.rate =
-                    row?.rate ||
-                    raw?.purchasePrice ||
-                    raw?.productPurchasePrice ||
-                    raw?.rate ||
-                    "";
-
-                row.productType =
-                    raw?.productType ||
-                    raw?.dynamicFields?.productType ||
-                    "rawmaterial";
-
+                row.productCode = balanceRow.productCode;
+                row.productName = balanceRow.productName;
+                row.productId = balanceRow.productId;
+                row.unit = balanceRow.unit;
+                row.uom = balanceRow.uom;
+                row.rate = balanceRow.rate;
+                row.productType = balanceRow.productType;
                 row.availableQuantity = null;
-
-                selectedProductCode =
-                    String(
-                        row.productCode ||
-                        ""
-                    );
-
-                selectedProductType =
-                    String(
-                        row.productType ||
-                        "rawmaterial"
-                    );
             }
 
             if (
@@ -814,149 +1186,149 @@ const IssueToProduction = () => {
             [`row_${index}_${key}`]: "",
         }));
 
-        if (PRODUCT_FIELD_KEYS.has(key)) {
-            const option = getOptionByValue(
-                field,
-                value
+        if (
+            PRODUCT_FIELD_KEYS.has(key) ||
+            isInventoryBalanceField(field)
+        ) {
+            const productCode = String(
+                balanceRow?.productCode ||
+                ""
+            ).trim();
+
+            const productType = String(
+                balanceRow?.productType ||
+                "rawmaterial"
             );
-
-            const raw = option?.raw || {};
-
-            const productCode =
-                selectedProductCode ||
-                raw?.productCode ||
-                (key === "productCode" ? value : "");
-
-            const productType =
-                selectedProductType ||
-                raw?.productType ||
-                raw?.dynamicFields?.productType ||
-                "rawmaterial";
 
             if (productCode) {
                 void loadAvailableQuantity(
                     index,
-                    String(productCode),
-                    String(productType),
-                    form?.voucherDate
+                    productCode,
+                    productType,
+                    form?.voucherDate,
+                    balanceRow
                 );
             }
         }
     };
 
-  const validateForm = () => {
-    const nextErrors: any = {};
-
-    [
-        ...(templateFields?.header || []),
-        ...(templateFields?.headerChild || []),
-    ].forEach((field: any) => {
-        const isRequired =
-            isTrueValue(field?.isRequired) ||
-            isTrueValue(field?.required);
-
-        const isHidden =
-            isTrueValue(field?.isHidden);
-
-        if (
-            !field?.key ||
-            isHidden ||
-            !isRequired
-        ) {
-            return;
-        }
-
-        const value = form?.[field.key];
-
-        const isEmpty =
-            value === "" ||
-            value === null ||
-            value === undefined;
-
-        if (isEmpty) {
-            nextErrors[field.key] =
-                `${field?.label || field.key} is required`;
-        }
-    });
-
-    const rows = cleanRawMaterials();
-
-    if (!rows.length) {
-        nextErrors.rawMaterials =
-            "Please add at least one raw material";
-    }
-
-    (form?.rawMaterials || []).forEach(
-        (row: any, index: number) => {
-            const hasData = (templateFields?.body || []).some(
-                (field: any) => {
-                    const value = row?.[field?.key];
-
-                    return (
-                        value !== "" &&
-                        value !== null &&
-                        value !== undefined
-                    );
-                }
-            );
-
-            if (!hasData) return;
-
-            (templateFields?.body || []).forEach(
-                (field: any) => {
-                    const isRequired =
-                        isTrueValue(field?.isRequired) ||
-                        isTrueValue(field?.required);
-
-                    const isHidden =
-                        isTrueValue(field?.isHidden);
-
-                    if (
-                        !field?.key ||
-                        isHidden ||
-                        !isRequired
-                    ) {
-                        return;
-                    }
-
-                    const value = row?.[field.key];
-
-                    const isEmpty =
-                        value === "" ||
-                        value === null ||
-                        value === undefined;
-
-                    if (isEmpty) {
-                        nextErrors[`row_${index}_${field.key}`] =
-                            `${field?.label || field.key} is required`;
-                    }
-                }
-            );
-        }
-    );
-
-    setErrors(nextErrors);
-
-    const firstError =
-        Object.values(nextErrors)?.[0];
-
-    if (firstError) {
-        toast.error(String(firstError));
-    }
-
-    return Object.keys(nextErrors).length === 0;
-};
-
-    const buildPayload = () => {
-        const payload: any = {};
+    const validateForm = () => {
+        const nextErrors: any = {};
 
         [
             ...(templateFields?.header || []),
             ...(templateFields?.headerChild || []),
         ].forEach((field: any) => {
+            const isRequired =
+                isTrueValue(field?.isRequired) ||
+                isTrueValue(field?.required);
+
+            const isHidden =
+                isTrueValue(field?.isHidden);
+
             if (
                 !field?.key ||
-                field?.key === "voucherNumber"
+                isHidden ||
+                !isRequired
+            ) {
+                return;
+            }
+
+            const value = form?.[field.key];
+
+            const isEmpty =
+                value === "" ||
+                value === null ||
+                value === undefined;
+
+            if (isEmpty) {
+                nextErrors[field.key] =
+                    `${field?.label || field.key} is required`;
+            }
+        });
+
+        const rows = cleanRawMaterials();
+
+        if (!rows.length) {
+            nextErrors.rawMaterials =
+                "Please add at least one raw material";
+        }
+
+        (form?.rawMaterials || []).forEach(
+            (row: any, index: number) => {
+                const hasData = (templateFields?.body || []).some(
+                    (field: any) => {
+                        const value = row?.[field?.key];
+
+                        return (
+                            value !== "" &&
+                            value !== null &&
+                            value !== undefined
+                        );
+                    }
+                );
+
+                if (!hasData) return;
+
+                (templateFields?.body || []).forEach(
+                    (field: any) => {
+                        const isRequired =
+                            isTrueValue(field?.isRequired) ||
+                            isTrueValue(field?.required);
+
+                        const isHidden =
+                            isTrueValue(field?.isHidden);
+
+                        if (
+                            !field?.key ||
+                            isHidden ||
+                            !isRequired
+                        ) {
+                            return;
+                        }
+
+                        const value = row?.[field.key];
+
+                        const isEmpty =
+                            value === "" ||
+                            value === null ||
+                            value === undefined;
+
+                        if (isEmpty) {
+                            nextErrors[`row_${index}_${field.key}`] =
+                                `${field?.label || field.key} is required`;
+                        }
+                    }
+                );
+            }
+        );
+
+        setErrors(nextErrors);
+
+        const firstError =
+            Object.values(nextErrors)?.[0];
+
+        if (firstError) {
+            toast.error(String(firstError));
+        }
+
+        return Object.keys(nextErrors).length === 0;
+    };
+
+    const buildPayload = () => {
+        const payload: any = {};
+
+        const headerFields = [
+            ...(templateFields?.header || []),
+            ...(templateFields?.headerChild || []),
+        ];
+
+        headerFields.forEach((field: any) => {
+            if (
+                !field?.key ||
+                field?.key === "voucherNumber" ||
+                isTrueValue(field?.isHidden) ||
+                isCustomMasterField(field)
             ) {
                 return;
             }
@@ -964,6 +1336,18 @@ const IssueToProduction = () => {
             payload[field.key] =
                 form?.[field.key];
         });
+
+        const headerCustomMasters =
+            buildCustomMastersPayload(
+                headerFields,
+                form,
+                form?.customMasters || {}
+            );
+
+        if (Object.keys(headerCustomMasters).length) {
+            payload.customMasters =
+                headerCustomMasters;
+        }
 
         (templateFields?.footer || []).forEach((field: any) => {
             if (!field?.key) return;
@@ -1164,11 +1548,10 @@ const IssueToProduction = () => {
             title: "Status",
             render: (row: any) => (
                 <span
-                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
-                        row?.status === "open"
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.status === "open"
                             ? "border-success/20 bg-success/10 text-success"
                             : "border-danger/20 bg-danger/10 text-danger"
-                    }`}
+                        }`}
                 >
                     {row?.status || "-"}
                 </span>

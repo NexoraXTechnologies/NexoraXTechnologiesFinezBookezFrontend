@@ -36,6 +36,57 @@ const MODULE_NAME = "Receipt From Production";
 const API_BASE = "/eTaxSolnMongoApiBackend/users/bookez/otherApi/receiptFromProduction";
 const PRODUCT_FIELD_KEYS = new Set(["productCode", "productName", "productId", "product"]);
 
+const normalizeInventoryFieldName = (value: any) =>
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+const getInventoryBalanceApiKey = (field: any) => {
+    if (!field) return "";
+
+    const fieldNames = [
+        field?.key,
+        field?.label,
+        field?.title,
+        field?.customMasterName,
+        field?.dataSource?.customMasterName,
+    ].map(normalizeInventoryFieldName);
+
+    if (fieldNames.some((name) => name.includes("warehouse"))) return "warehouseCode";
+    if (fieldNames.some((name) => name.includes("location"))) return "locationCode";
+    if (fieldNames.some((name) => name.includes("batch"))) return "batchNumber";
+    if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
+
+    return "";
+};
+
+const getDynamicFieldType = (field: any) =>
+    String(field?.type || field?.dataSource?.type || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s/g, "");
+
+const isCustomMasterField = (field: any) => {
+    const fieldType = getDynamicFieldType(field);
+
+    return (
+        fieldType === "custommaster" ||
+        fieldType === "customemaster" ||
+        Boolean(field?.customMasterCode)
+    );
+};
+
+const getCustomMasterName = (field: any) =>
+    String(
+        field?.customMasterName ||
+        field?.dataSource?.customMasterName ||
+        field?.label ||
+        field?.title ||
+        field?.key ||
+        ""
+    ).trim();
+
 const defaultPagination = {
     offset: 0,
     limit: 10,
@@ -125,6 +176,8 @@ const ReceiptFromProduction = () => {
             id: Date.now() + Math.random(),
             availableQuantity: null,
             productType: "",
+            customMasters: {},
+            _inventoryBalanceSelections: {},
         };
 
         (fields || []).forEach((field: any) => {
@@ -148,6 +201,7 @@ const ReceiptFromProduction = () => {
         next.status = next.status || "open";
         next.transactionType = next.transactionType || "RECEIPT_FROM_PRODUCTION";
         next.reference = { issueVoucherNumber: "", issueId: "" };
+        next.customMasters = {};
         next.finishedGoods = [buildBlankRow(schema?.body || [])];
 
         return next;
@@ -175,6 +229,158 @@ const ReceiptFromProduction = () => {
 
     const getOptionByValue = (field: any, selectedValue: any) => {
         return (field?.options || []).find((option: any) => String(option?.value) === String(selectedValue));
+    };
+
+    const isInventoryBalanceField = (field: any) =>
+        Boolean(getInventoryBalanceApiKey(field));
+
+    const getInventoryBalanceFilters = (row: any) => {
+        const filters: any = {};
+
+        const selectedFilters =
+            row?._inventoryBalanceSelections &&
+                typeof row._inventoryBalanceSelections === "object"
+                ? row._inventoryBalanceSelections
+                : {};
+
+        if (selectedFilters?.warehouseCode) filters.warehouseCode = selectedFilters.warehouseCode;
+        if (selectedFilters?.locationCode) filters.locationCode = selectedFilters.locationCode;
+        if (selectedFilters?.batchNumber) filters.batchNumber = selectedFilters.batchNumber;
+        if (selectedFilters?.binCode) filters.binCode = selectedFilters.binCode;
+
+        return filters;
+    };
+
+    const getCustomMasterSelection = (field: any, selectedValue: any) => {
+        if (
+            selectedValue === undefined ||
+            selectedValue === null ||
+            String(selectedValue).trim() === ""
+        ) {
+            return null;
+        }
+
+        if (typeof selectedValue === "object" && selectedValue?.code) {
+            return {
+                code: String(selectedValue.code || "").trim(),
+                name: String(
+                    selectedValue.name ||
+                    selectedValue.label ||
+                    selectedValue.code ||
+                    ""
+                ).trim(),
+            };
+        }
+
+        const selectedOption = getOptionByValue(field, selectedValue);
+        const raw = selectedOption?.raw || {};
+
+        const nestedData =
+            raw?.data && typeof raw.data === "object"
+                ? raw.data
+                : raw?.dynamicFields && typeof raw.dynamicFields === "object"
+                    ? raw.dynamicFields
+                    : raw?.customFields && typeof raw.customFields === "object"
+                        ? raw.customFields
+                        : {};
+
+        const code = String(
+            selectedOption?.value ||
+            raw?.code ||
+            raw?.masterCode ||
+            nestedData?.code ||
+            selectedValue ||
+            ""
+        ).trim();
+
+        const name = String(
+            selectedOption?.label ||
+            raw?.name ||
+            raw?.masterName ||
+            nestedData?.name ||
+            code
+        ).trim();
+
+        if (!code) return null;
+
+        return { code, name };
+    };
+
+    const buildCustomMastersPayload = (
+        fields: any[],
+        source: any,
+        existingCustomMasters: any = {}
+    ) => {
+        const customMasters: any = {};
+
+        (fields || []).forEach((field: any) => {
+            if (
+                !field?.key ||
+                isTrueValue(field?.isHidden) ||
+                !isCustomMasterField(field)
+            ) {
+                return;
+            }
+
+            const masterName = getCustomMasterName(field);
+            if (!masterName) return;
+
+            const existingMaster =
+                existingCustomMasters?.[masterName] ||
+                existingCustomMasters?.[field?.key];
+
+            const selectedValue =
+                source?.[field.key] ??
+                existingMaster?.code ??
+                "";
+
+            const selectedMaster =
+                getCustomMasterSelection(field, selectedValue) ||
+                (
+                    existingMaster?.code
+                        ? {
+                            code: String(existingMaster.code || ""),
+                            name: String(existingMaster.name || ""),
+                        }
+                        : null
+                );
+
+            if (selectedMaster?.code) {
+                customMasters[masterName] = selectedMaster;
+            }
+        });
+
+        return customMasters;
+    };
+
+    const applyCustomMasterValues = (
+        fields: any[],
+        source: any,
+        customMasters: any
+    ) => {
+        const updated = {
+            ...source,
+            customMasters:
+                customMasters && typeof customMasters === "object"
+                    ? { ...customMasters }
+                    : {},
+        };
+
+        (fields || []).forEach((field: any) => {
+            if (!isCustomMasterField(field)) return;
+
+            const masterName = getCustomMasterName(field);
+
+            const savedMaster =
+                customMasters?.[masterName] ||
+                customMasters?.[field?.key];
+
+            if (savedMaster?.code) {
+                updated[field.key] = savedMaster.code;
+            }
+        });
+
+        return updated;
     };
 
     const applyMappedFields = (field: any, selectedValue: any, oldData: any, fallbackKey = "") => {
@@ -210,22 +416,35 @@ const ReceiptFromProduction = () => {
     };
 
     const cleanFinishedGoods = (rows: any[] = form?.finishedGoods || []) => {
+        const bodyFields = templateFields?.body || [];
         const schemaKeys = new Set(
-            (templateFields?.body || []).map((field: any) => field?.key).filter(Boolean)
+            bodyFields
+                .map((field: any) => field?.key)
+                .filter(Boolean)
         );
 
         return (rows || [])
-            .filter((row: any) => {
-                return Array.from(schemaKeys).some((key: any) => {
+            .filter((row: any) =>
+                Array.from(schemaKeys).some((key: any) => {
                     const value = row?.[key];
                     return value !== "" && value !== null && value !== undefined;
-                });
-            })
+                })
+            )
             .map((row: any) => {
                 const calculated = calculateFinishedGoodRow(row);
                 const cleanRow: any = {};
 
-                schemaKeys.forEach((key: any) => {
+                bodyFields.forEach((field: any) => {
+                    const key = String(field?.key || "").trim();
+
+                    if (
+                        !key ||
+                        isTrueValue(field?.isHidden) ||
+                        isCustomMasterField(field)
+                    ) {
+                        return;
+                    }
+
                     cleanRow[key] = calculated?.[key];
                 });
 
@@ -234,11 +453,22 @@ const ReceiptFromProduction = () => {
                 if (cleanRow.productId === undefined && calculated?.productId) cleanRow.productId = calculated.productId;
                 if (cleanRow.unit === undefined && calculated?.unit) cleanRow.unit = calculated.unit;
                 if (cleanRow.uom === undefined && calculated?.uom) cleanRow.uom = calculated.uom;
+
                 if (cleanRow.quantity !== undefined) cleanRow.quantity = String(cleanRow.quantity ?? "");
                 if (cleanRow.rate !== undefined) cleanRow.rate = String(cleanRow.rate ?? "");
                 if (cleanRow.amount !== undefined) cleanRow.amount = String(num(cleanRow.amount).toFixed(2));
                 if (cleanRow.gross !== undefined) cleanRow.gross = String(num(cleanRow.gross).toFixed(2));
                 if (cleanRow.grossAmount !== undefined) cleanRow.grossAmount = String(num(cleanRow.grossAmount).toFixed(2));
+
+                const customMasters = buildCustomMastersPayload(
+                    bodyFields,
+                    calculated,
+                    row?.customMasters || {}
+                );
+
+                if (Object.keys(customMasters).length) {
+                    cleanRow.customMasters = customMasters;
+                }
 
                 return cleanRow;
             });
@@ -458,18 +688,34 @@ const ReceiptFromProduction = () => {
         next.locationCode = record?.locationCode ?? next.locationCode ?? "";
         next.remarks = record?.remarks ?? next.remarks ?? "";
 
-        next.finishedGoods =
+        const hydratedHeader = applyCustomMasterValues(
+            [
+                ...(templateFields?.header || []),
+                ...(templateFields?.headerChild || []),
+            ],
+            next,
+            record?.customMasters || {}
+        );
+
+        hydratedHeader.finishedGoods =
             Array.isArray(record?.finishedGoods) && record.finishedGoods.length
-                ? record.finishedGoods.map((item: any) => ({
-                    ...buildBlankRow(templateFields?.body || []),
-                    ...item,
-                    availableQuantity: null,
-                    productType: item?.productType || "finishedgoods",
-                    id: item?.id || Date.now() + Math.random(),
-                }))
+                ? record.finishedGoods.map((item: any) =>
+                    applyCustomMasterValues(
+                        templateFields?.body || [],
+                        {
+                            ...buildBlankRow(templateFields?.body || []),
+                            ...item,
+                            availableQuantity: null,
+                            productType: item?.productType || "finishedgoods",
+                            id: item?.id || Date.now() + Math.random(),
+                            _inventoryBalanceSelections: {},
+                        },
+                        item?.customMasters || {}
+                    )
+                )
                 : [buildBlankRow(templateFields?.body || [])];
 
-        return next;
+        return hydratedHeader;
     };
 
     const openEditModal = async (record: any) => {
@@ -513,7 +759,8 @@ const ReceiptFromProduction = () => {
         index: number,
         productCode: string,
         productType: string,
-        voucherDate?: string
+        voucherDate?: string,
+        rowData?: any
     ) => {
         const normalizedProductType = String(productType || "").trim().toLowerCase();
 
@@ -573,6 +820,10 @@ const ReceiptFromProduction = () => {
                     productCode,
                     fromDate,
                     toDate,
+                    ...getInventoryBalanceFilters(
+                        rowData ||
+                        form?.finishedGoods?.[index]
+                    ),
                 }) as any
             ).unwrap();
 
@@ -591,7 +842,7 @@ const ReceiptFromProduction = () => {
                     productType: normalizedProductType,
                     availableQuantity:
                         balance?.balanceQuantity !== undefined &&
-                        balance?.balanceQuantity !== null
+                            balance?.balanceQuantity !== null
                             ? balance.balanceQuantity
                             : null,
                 };
@@ -666,6 +917,30 @@ const ReceiptFromProduction = () => {
         setForm((previous: any) => {
             let updated = applyMappedFields(field, value, previous, key);
 
+            if (isCustomMasterField(field)) {
+                const masterName = getCustomMasterName(field);
+
+                const currentCustomMasters =
+                    updated?.customMasters &&
+                        typeof updated.customMasters === "object"
+                        ? { ...updated.customMasters }
+                        : {};
+
+                const selectedMaster =
+                    getCustomMasterSelection(
+                        field,
+                        value
+                    );
+
+                if (selectedMaster) {
+                    currentCustomMasters[masterName] = selectedMaster;
+                } else {
+                    delete currentCustomMasters[masterName];
+                }
+
+                updated.customMasters = currentCustomMasters;
+            }
+
             if (key === "issueVoucherNumber") {
                 updated = {
                     ...updated,
@@ -729,84 +1004,161 @@ const ReceiptFromProduction = () => {
         const field = getBodyFieldByKey(key);
         const isProductField = PRODUCT_FIELD_KEYS.has(key);
 
-        const selectedOption = isProductField
-            ? getOptionByValue(field, value)
-            : null;
-
+        const selectedOption = getOptionByValue(field, value);
         const selectedRaw = selectedOption?.raw || {};
 
-        const selectedProductCode = isProductField
-            ? String(
-                selectedRaw?.productCode ||
-                (key === "productCode" ? value : "") ||
-                ""
-            )
-            : "";
+        const currentRow = form?.finishedGoods?.[index] || {};
 
-        const selectedProductType = isProductField
-            ? String(
+        let balanceRow: any = {
+            ...currentRow,
+            [key]: value,
+        };
+
+        balanceRow = applyMappedFields(
+            field,
+            value,
+            balanceRow,
+            key
+        );
+
+        if (isInventoryBalanceField(field)) {
+            const apiKey = getInventoryBalanceApiKey(field);
+
+            const selectedCode =
+                selectedOption?.value ??
+                selectedRaw?.code ??
+                selectedRaw?.masterCode ??
+                value ??
+                "";
+
+            const currentSelections =
+                balanceRow?._inventoryBalanceSelections &&
+                    typeof balanceRow._inventoryBalanceSelections === "object"
+                    ? { ...balanceRow._inventoryBalanceSelections }
+                    : {};
+
+            if (
+                selectedCode !== undefined &&
+                selectedCode !== null &&
+                String(selectedCode).trim() !== ""
+            ) {
+                currentSelections[apiKey] = selectedCode;
+            } else {
+                delete currentSelections[apiKey];
+            }
+
+            balanceRow._inventoryBalanceSelections = currentSelections;
+        }
+
+        if (isCustomMasterField(field)) {
+            const masterName = getCustomMasterName(field);
+
+            const currentCustomMasters =
+                balanceRow?.customMasters &&
+                    typeof balanceRow.customMasters === "object"
+                    ? { ...balanceRow.customMasters }
+                    : {};
+
+            const selectedMaster =
+                getCustomMasterSelection(
+                    field,
+                    value
+                );
+
+            if (selectedMaster) {
+                currentCustomMasters[masterName] = selectedMaster;
+            } else {
+                delete currentCustomMasters[masterName];
+            }
+
+            balanceRow.customMasters = currentCustomMasters;
+        }
+
+        if (isProductField) {
+            balanceRow.productCode =
+                selectedRaw?.productCode ||
+                balanceRow?.productCode ||
+                (key === "productCode" ? value : "");
+
+            balanceRow.productName =
+                selectedRaw?.productName ||
+                balanceRow?.productName ||
+                (
+                    key === "productName"
+                        ? selectedOption?.label || value
+                        : ""
+                );
+
+            balanceRow.productId =
+                selectedRaw?._id ||
+                selectedRaw?.productId ||
+                balanceRow?.productId ||
+                "";
+
+            balanceRow.unit =
+                selectedRaw?.unit ||
+                balanceRow?.unit ||
+                "";
+
+            balanceRow.uom =
+                selectedRaw?.uom ||
+                selectedRaw?.unit ||
+                balanceRow?.uom ||
+                "";
+
+            balanceRow.rate =
+                balanceRow?.rate ||
+                selectedRaw?.sellingPrice ||
+                selectedRaw?.productSellingPrice ||
+                selectedRaw?.salesRate ||
+                selectedRaw?.saleRate ||
+                selectedRaw?.rate ||
+                "";
+
+            balanceRow.productType = String(
                 selectedRaw?.productType ||
                 selectedRaw?.dynamicFields?.productType ||
                 "finishedgoods"
-            )
-            : "";
+            );
+
+            balanceRow.availableQuantity = null;
+        }
 
         setForm((previous: any) => {
             const rows = [...(previous?.finishedGoods || [])];
 
             let row = {
                 ...(rows[index] || buildBlankRow(templateFields?.body || [])),
+                [key]: value,
             };
 
-            row = applyMappedFields(field, value, row, key);
+            row = applyMappedFields(
+                field,
+                value,
+                row,
+                key
+            );
+
+            if (isInventoryBalanceField(field)) {
+                row._inventoryBalanceSelections = {
+                    ...(balanceRow?._inventoryBalanceSelections || {}),
+                };
+            }
+
+            if (isCustomMasterField(field)) {
+                row.customMasters = {
+                    ...(balanceRow?.customMasters || {}),
+                };
+            }
 
             if (isProductField) {
-                const raw = selectedRaw;
-
-                row.productCode =
-                    raw?.productCode ||
-                    row?.productCode ||
-                    (key === "productCode" ? value : "");
-
-                row.productName =
-                    raw?.productName ||
-                    row?.productName ||
-                    (key === "productName"
-                        ? selectedOption?.label || value
-                        : "");
-
-                row.productId =
-                    raw?._id ||
-                    raw?.productId ||
-                    row?.productId ||
-                    "";
-
-                row.unit =
-                    raw?.unit ||
-                    row?.unit ||
-                    "";
-
-                row.uom =
-                    raw?.uom ||
-                    raw?.unit ||
-                    row?.uom ||
-                    "";
-
-                row.rate =
-                    row?.rate ||
-                    raw?.sellingPrice ||
-                    raw?.productSellingPrice ||
-                    raw?.salesRate ||
-                    raw?.saleRate ||
-                    raw?.rate ||
-                    "";
-
-                row.productType = String(
-                    raw?.productType ||
-                    raw?.dynamicFields?.productType ||
-                    "finishedgoods"
-                );
-
+                row.productCode = balanceRow.productCode;
+                row.productName = balanceRow.productName;
+                row.productId = balanceRow.productId;
+                row.unit = balanceRow.unit;
+                row.uom = balanceRow.uom;
+                row.rate = balanceRow.rate;
+                row.productType = balanceRow.productType;
                 row.availableQuantity = null;
             }
 
@@ -826,12 +1178,16 @@ const ReceiptFromProduction = () => {
             };
         });
 
-        if (isProductField && selectedProductCode) {
+        if (
+            (isProductField || isInventoryBalanceField(field)) &&
+            balanceRow?.productCode
+        ) {
             void loadFinishedGoodAvailableQuantity(
                 index,
-                selectedProductCode,
-                selectedProductType,
-                form?.voucherDate
+                String(balanceRow.productCode),
+                String(balanceRow.productType || "finishedgoods"),
+                form?.voucherDate,
+                balanceRow
             );
         }
 
@@ -925,11 +1281,20 @@ const ReceiptFromProduction = () => {
     const buildPayload = () => {
         const payload: any = {};
 
-        [
+        const headerFields = [
             ...(templateFields?.header || []),
             ...(templateFields?.headerChild || []),
-        ].forEach((field: any) => {
-            if (!field?.key || field?.key === "voucherNumber") return;
+        ];
+
+        headerFields.forEach((field: any) => {
+            if (
+                !field?.key ||
+                field?.key === "voucherNumber" ||
+                isTrueValue(field?.isHidden) ||
+                isCustomMasterField(field)
+            ) {
+                return;
+            }
 
             if (
                 ["issueVoucherNumber", "issueId"].includes(
@@ -941,6 +1306,18 @@ const ReceiptFromProduction = () => {
 
             payload[field.key] = form?.[field.key];
         });
+
+        const headerCustomMasters =
+            buildCustomMastersPayload(
+                headerFields,
+                form,
+                form?.customMasters || {}
+            );
+
+        if (Object.keys(headerCustomMasters).length) {
+            payload.customMasters =
+                headerCustomMasters;
+        }
 
         (templateFields?.footer || []).forEach((field: any) => {
             if (!field?.key) return;
@@ -1142,11 +1519,10 @@ const ReceiptFromProduction = () => {
             title: "Status",
             render: (row: any) => (
                 <span
-                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${
-                        row?.status === "open"
+                    className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.status === "open"
                             ? "border-success/20 bg-success/10 text-success"
                             : "border-danger/20 bg-danger/10 text-danger"
-                    }`}
+                        }`}
                 >
                     {row?.status || "-"}
                 </span>

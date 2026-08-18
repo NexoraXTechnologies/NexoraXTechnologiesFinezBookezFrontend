@@ -52,6 +52,31 @@ const PRODUCT_FIELD_KEYS = new Set([
     "product",
 ]);
 
+const normalizeInventoryFieldName = (value: any) =>
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+const getInventoryBalanceApiKey = (field: any) => {
+    if (!field) return "";
+
+    const fieldNames = [
+        field?.key,
+        field?.label,
+        field?.title,
+        field?.customMasterName,
+        field?.dataSource?.customMasterName,
+    ].map(normalizeInventoryFieldName);
+
+    if (fieldNames.some((name) => name.includes("warehouse"))) return "warehouseCode";
+    if (fieldNames.some((name) => name.includes("location"))) return "locationCode";
+    if (fieldNames.some((name) => name.includes("batch"))) return "batchNumber";
+    if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
+
+    return "";
+};
+
 const defaultPagination = {
     offset: 0,
     limit: 10,
@@ -519,6 +544,47 @@ const SalesInVoice = () => {
             (opt: any) => String(opt.value) === String(selectedValue)
         );
 
+    const isInventoryBalanceField = (field: any) =>
+        Boolean(getInventoryBalanceApiKey(field));
+
+    const getInventoryBalanceFieldValue = (row: any, field: any) => {
+        if (!row || !field) return "";
+
+        const customMasterName = getCustomMasterName(field);
+        const selectedMaster =
+            row?.customMasters?.[customMasterName] ||
+            row?.customMasters?.[field?.key];
+
+        const rawValue =
+            selectedMaster?.code ??
+            row?.[field?.key] ??
+            row?.dynamicBodyFields?.[field?.key] ??
+            "";
+
+        if (rawValue && typeof rawValue === "object") {
+            return rawValue?.code ?? rawValue?.value ?? "";
+        }
+
+        return rawValue;
+    };
+
+    const getInventoryBalanceFilters = (row: any) => {
+        const filters: any = {};
+
+        (templateFields?.body || []).forEach((field: any) => {
+            const apiKey = getInventoryBalanceApiKey(field);
+            if (!apiKey) return;
+
+            const value = getInventoryBalanceFieldValue(row, field);
+
+            if (value !== undefined && value !== null && String(value).trim() !== "") {
+                filters[apiKey] = value;
+            }
+        });
+
+        return filters;
+    };
+
     // ★ ADDED: Sales Invoice field normalization used on initial load
     // and again after creating a new Account Master record.
     const normalizeSalesInvoiceTemplateFields = (updatedData: any) => {
@@ -947,7 +1013,8 @@ const SalesInVoice = () => {
     const loadAvailableQuantity = async (
         index: number,
         productCode: string,
-        productType: string
+        productType: string,
+        rowData?: any
     ) => {
         const normalizedProductType = String(productType || "").trim().toLowerCase();
 
@@ -994,6 +1061,7 @@ const SalesInVoice = () => {
                     productCode,
                     fromDate,
                     toDate,
+                    ...getInventoryBalanceFilters(rowData || form?.products?.[index]),
                 }) as any
             ).unwrap();
 
@@ -1012,7 +1080,7 @@ const SalesInVoice = () => {
                     productType: normalizedProductType,
                     availableQuantity:
                         balance?.balanceQuantity !== undefined &&
-                        balance?.balanceQuantity !== null
+                            balance?.balanceQuantity !== null
                             ? balance.balanceQuantity
                             : null,
                 };
@@ -1198,6 +1266,7 @@ const SalesInVoice = () => {
                                 productCode,
                                 fromDate,
                                 toDate,
+                                ...getInventoryBalanceFilters(item),
                             }) as any
                         ).unwrap();
 
@@ -1206,7 +1275,7 @@ const SalesInVoice = () => {
                             productType,
                             availableQuantity:
                                 balance?.balanceQuantity !== undefined &&
-                                balance?.balanceQuantity !== null
+                                    balance?.balanceQuantity !== null
                                     ? balance.balanceQuantity
                                     : null,
                         };
@@ -1759,6 +1828,47 @@ const SalesInVoice = () => {
             return;
         }
 
+        const balanceField = getBodyFieldByKey(key);
+        const balanceSelectedOption = getOptionByValue(balanceField, value);
+        const balanceRaw = balanceSelectedOption?.raw || {};
+        let balanceRow = { ...(form?.products?.[index] || {}), [key]: value };
+
+        if (balanceField?.mapFields) {
+            balanceRow = applyMappedFields(balanceField, value, balanceRow);
+        }
+
+        if (isCustomMasterField(balanceField)) {
+            const customMasterName = getCustomMasterName(balanceField);
+            const currentCustomMasters =
+                balanceRow?.customMasters &&
+                    typeof balanceRow.customMasters === "object"
+                    ? { ...balanceRow.customMasters }
+                    : {};
+            const selectedMaster = getCustomMasterSelection(balanceField, value);
+
+            if (!selectedMaster) {
+                delete currentCustomMasters[customMasterName];
+            } else {
+                currentCustomMasters[customMasterName] = selectedMaster;
+            }
+
+            balanceRow.customMasters = currentCustomMasters;
+        }
+
+        if (PRODUCT_FIELD_KEYS.has(key)) {
+            balanceRow.productCode =
+                balanceRaw?.productCode ||
+                balanceRow?.productCode ||
+                balanceSelectedOption?.value ||
+                value ||
+                "";
+            balanceRow.productType =
+                balanceRaw?.productType ||
+                balanceRaw?.dynamicFields?.productType ||
+                balanceRow?.productType ||
+                "";
+        }
+
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
             const currentRow = updatedProducts[index] || {};
@@ -1854,29 +1964,16 @@ const SalesInVoice = () => {
             return { ...prev, products: updatedProducts };
         });
 
-        if (PRODUCT_FIELD_KEYS.has(key)) {
-            const currentField = getBodyFieldByKey(key);
-            const selectedOption = getOptionByValue(currentField, value);
-            const raw = selectedOption?.raw || {};
-
-            const productCode = String(
-                raw?.productCode ||
-                selectedOption?.value ||
-                value ||
-                ""
-            ).trim();
-
-            const productType = String(
-                raw?.productType ||
-                raw?.dynamicFields?.productType ||
-                ""
-            );
+        if (PRODUCT_FIELD_KEYS.has(key) || isInventoryBalanceField(balanceField)) {
+            const productCode = String(balanceRow?.productCode || "").trim();
+            const productType = String(balanceRow?.productType || "");
 
             if (productCode) {
                 void loadAvailableQuantity(
                     index,
                     productCode,
-                    productType
+                    productType,
+                    balanceRow
                 );
             }
         }
@@ -2369,6 +2466,7 @@ const SalesInVoice = () => {
                             productCode,
                             fromDate,
                             toDate,
+                            ...getInventoryBalanceFilters(item),
                         }) as any
                     ).unwrap();
 
@@ -2377,7 +2475,7 @@ const SalesInVoice = () => {
                         productType,
                         availableQuantity:
                             balance?.balanceQuantity !== undefined &&
-                            balance?.balanceQuantity !== null
+                                balance?.balanceQuantity !== null
                                 ? balance.balanceQuantity
                                 : null,
                     };
