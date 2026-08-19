@@ -7,8 +7,6 @@ import Badge from "../../../components/badge";
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 
-
-
 const moduleColumns = [
     {
         key: "moduleCode",
@@ -58,7 +56,6 @@ type CustomTransactionsListProps = {
     onConfigureFields: (item: TransactionModuleItem) => void;
     onEdit: (moduleCode: string) => void;
     onDeleteClick: (e: React.MouseEvent, item: TransactionModuleItem) => void;
-    // pagination
     localLimit: number;
     onChangeLimit: (limit: number) => void;
     currentPage: number;
@@ -116,11 +113,17 @@ const CustomTransactionsList = ({
                         <select
                             value={statusFilter}
                             onChange={(event) => onChangeStatusFilter(event.target.value)}
-                            className="h-10 rounded border border-input bg-background px-3 text-sm outline-none focus:border-primary"
+                            className="h-10 rounded border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary"
                         >
-                            <option value="">All Statuses</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
+                            <option value="" className="bg-card text-card-foreground">
+                                All Statuses
+                            </option>
+                            <option value="active" className="bg-card text-card-foreground">
+                                Active
+                            </option>
+                            <option value="inactive" className="bg-card text-card-foreground">
+                                Inactive
+                            </option>
                         </select>
                     </div>
 

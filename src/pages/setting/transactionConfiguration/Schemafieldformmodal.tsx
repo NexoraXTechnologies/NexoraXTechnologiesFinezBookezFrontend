@@ -178,8 +178,7 @@ const SchemaFieldFormModal = ({
         );
 
         /*
-         * Same behavior as Master Configuration:
-         *
+        
          * ADD:
          * Field Label -> automatically generates Field Key.
          *
@@ -258,7 +257,7 @@ const SchemaFieldFormModal = ({
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded border border-border bg-card shadow-2xl">
+            <div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded border border-border bg-card text-card-foreground shadow-2xl">
                 <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-4">
                     <div>
                         <h2 className="text-lg font-semibold text-card-foreground">
@@ -333,8 +332,8 @@ const SchemaFieldFormModal = ({
                                 }
                                 placeholder="Example: Department Code"
                                 className={`
-                                    h-10 w-full rounded border bg-background px-3 text-sm
-                                    outline-none focus:ring-2 focus:ring-primary/20
+                                    h-10 w-full rounded border bg-background px-3 text-sm text-foreground
+                                    outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20
                                     ${errors.label ||
                                         errors.key
                                         ? "border-danger"
@@ -380,7 +379,7 @@ const SchemaFieldFormModal = ({
                                 }
                                 className={`
                                     h-10 w-full rounded border bg-background px-3
-                                    text-sm font-semibold outline-none
+                                    text-sm font-semibold text-foreground outline-none
                                     focus:border-primary focus:ring-2 focus:ring-primary/20
                                     ${errors.type
                                         ? "border-danger"
@@ -392,6 +391,7 @@ const SchemaFieldFormModal = ({
                                     <option
                                         key={option.value}
                                         value={option.value}
+                                        className="bg-card text-card-foreground"
                                     >
                                         {option.label}
                                     </option>
@@ -425,7 +425,7 @@ const SchemaFieldFormModal = ({
                             onChange={(event) => handleCustomMasterReferenceChange(event.target.value)}
                             className={`
                                     h-10 w-full rounded border bg-background px-3
-                                    text-sm font-semibold outline-none
+                                    text-sm font-semibold text-foreground outline-none
                                     focus:border-primary focus:ring-2 focus:ring-primary/20
                                     disabled:cursor-not-allowed disabled:opacity-60
                                     ${errors.customMasterCode
@@ -434,7 +434,7 @@ const SchemaFieldFormModal = ({
                                 }
                                 `}
                         >
-                            <option value="">
+                            <option value="" className="bg-card text-card-foreground">
                                 {masterLoading
                                     ? "Loading Custom Masters..."
                                     : "Select Custom Master"}
@@ -447,6 +447,7 @@ const SchemaFieldFormModal = ({
                                     <option
                                         key={item.moduleCode}
                                         value={item.moduleCode}
+                                        className="bg-card text-card-foreground"
                                     >
                                         {item.moduleName}{" "}
                                         ({item.moduleCode}                                        )
@@ -495,10 +496,11 @@ const SchemaFieldFormModal = ({
                                     key={
                                         option.key
                                     }
-                                    className="flex cursor-pointer items-center gap-2 rounded border border-border bg-background px-3 py-3 text-sm font-bold"
+                                    className="flex cursor-pointer items-center gap-2 rounded border border-border bg-background px-3 py-3 text-sm font-bold text-foreground"
                                 >
                                     <input
                                         type="checkbox"
+                                        className="h-4 w-4 accent-primary"
                                         checked={
                                             !!(
                                                 form as any
@@ -540,7 +542,7 @@ const SchemaFieldFormModal = ({
                             disabled={
                                 submitting
                             }
-                            className="h-10 rounded border border-border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-50"
+                            className="h-10 rounded border border-border px-4 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
                         >
                             Cancel
                         </button>
