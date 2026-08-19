@@ -37,6 +37,31 @@ const PRODUCT_FIELD_KEYS = new Set([
     "product",
 ]);
 
+const normalizeInventoryFieldName = (value: any) =>
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+const getInventoryBalanceApiKey = (field: any) => {
+    if (!field) return "";
+
+    const fieldNames = [
+        field?.key,
+        field?.label,
+        field?.title,
+        field?.customMasterName,
+        field?.dataSource?.customMasterName,
+    ].map(normalizeInventoryFieldName);
+
+    if (fieldNames.some((name) => name.includes("warehouse"))) return "warehouseCode";
+    if (fieldNames.some((name) => name.includes("location"))) return "locationCode";
+    if (fieldNames.some((name) => name.includes("batch"))) return "batchNumber";
+    if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
+
+    return "";
+};
+
 const emptyProductRow = { id: Date.now(), productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", availableQuantity: null, productType: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: 0, taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0, customMasters: {} };
 const getDefaultForm = () => ({ sInvReturnVoucherNumber: "AUTO", sInvReturnVoucherDate: todayYMD(), sInvCustomerCode: "", sInvReturnCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvReturnStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, customMasters: {}, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
 
@@ -192,6 +217,37 @@ const SalesReturn = () => {
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
     const getOptionByValue = (field: any, selectedValue: any) => field?.options?.find((opt: any) => String(opt.value) === String(selectedValue));
+
+    const isInventoryBalanceField = (field: any) =>
+        Boolean(getInventoryBalanceApiKey(field));
+
+    const getInventoryBalanceFilters = (row: any) => {
+        const filters: any = {};
+
+        const selectedFilters =
+            row?._inventoryBalanceSelections &&
+                typeof row._inventoryBalanceSelections === "object"
+                ? row._inventoryBalanceSelections
+                : {};
+
+        if (selectedFilters?.warehouseCode) {
+            filters.warehouseCode = selectedFilters.warehouseCode;
+        }
+
+        if (selectedFilters?.locationCode) {
+            filters.locationCode = selectedFilters.locationCode;
+        }
+
+        if (selectedFilters?.batchNumber) {
+            filters.batchNumber = selectedFilters.batchNumber;
+        }
+
+        if (selectedFilters?.binCode) {
+            filters.binCode = selectedFilters.binCode;
+        }
+
+        return filters;
+    };
 
     const getProductMasterFromRow = (row: any) => {
         if (!row) return null;
@@ -1338,6 +1394,36 @@ const SalesReturn = () => {
                 [key]: value,
             };
 
+            if (isInventoryBalanceField(currentField)) {
+                const apiKey = getInventoryBalanceApiKey(currentField);
+                const selectedOption = getOptionByValue(currentField, value);
+
+                const selectedCode =
+                    selectedOption?.value ??
+                    selectedOption?.raw?.code ??
+                    selectedOption?.raw?.masterCode ??
+                    value ??
+                    "";
+
+                const currentSelections =
+                    updatedRow?._inventoryBalanceSelections &&
+                        typeof updatedRow._inventoryBalanceSelections === "object"
+                        ? { ...updatedRow._inventoryBalanceSelections }
+                        : {};
+
+                if (
+                    selectedCode !== undefined &&
+                    selectedCode !== null &&
+                    String(selectedCode).trim() !== ""
+                ) {
+                    currentSelections[apiKey] = selectedCode;
+                } else {
+                    delete currentSelections[apiKey];
+                }
+
+                updatedRow._inventoryBalanceSelections = currentSelections;
+            }
+
             if (
                 currentField?.mapFields
             ) {
@@ -2234,13 +2320,19 @@ const SalesReturn = () => {
     const productBalanceSignature = useMemo(
         () =>
             (form?.products || [])
-                .map((item: any) =>
-                    [
+                .map((item: any) => {
+                    const inventoryFilters = getInventoryBalanceFilters(item);
+
+                    return [
                         item?.productCode || "",
                         item?.productId || "",
                         item?.productName || "",
-                    ].join("|")
-                )
+                        inventoryFilters?.warehouseCode || "",
+                        inventoryFilters?.locationCode || "",
+                        inventoryFilters?.batchNumber || "",
+                        inventoryFilters?.binCode || "",
+                    ].join("|");
+                })
                 .join("||"),
         [form?.products]
     );
@@ -2288,6 +2380,7 @@ const SalesReturn = () => {
                                 productCode,
                                 fromDate,
                                 toDate,
+                                ...getInventoryBalanceFilters(item),
                             }) as any
                         ).unwrap();
 
@@ -2296,7 +2389,7 @@ const SalesReturn = () => {
                             productType,
                             availableQuantity:
                                 balance?.balanceQuantity !== undefined &&
-                                balance?.balanceQuantity !== null
+                                    balance?.balanceQuantity !== null
                                     ? balance.balanceQuantity
                                     : null,
                         };
@@ -2327,7 +2420,7 @@ const SalesReturn = () => {
                         if (
                             !balanceRow ||
                             String(currentRow?.productCode || "") !==
-                                String(balanceRow?.productCode || "")
+                            String(balanceRow?.productCode || "")
                         ) {
                             return currentRow;
                         }

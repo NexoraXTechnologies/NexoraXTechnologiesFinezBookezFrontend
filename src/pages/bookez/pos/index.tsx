@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Search,
@@ -10,11 +10,13 @@ import {
     Pencil,
     Trash2,
     Minus,
+    ScanLine,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { getPosProducts } from "../../../redux/slices/professionalSlice/pos";
+import { getBarcodeQrAssignmentByCodeValue } from "../../../redux/slices/professionalSlice/BarCodeAndQRCode";
 
 const toNum = (v: any) => {
     const n = Number(String(v ?? "").replace(/,/g, ""));
@@ -50,7 +52,31 @@ const getTaxPercentLabel = (cart: any[], key1: string, key2: string) => {
     return "Mixed";
 };
 
-/* No fade / no blur */
+const mapProductToPosItem = (product: any) => {
+    if (!product) return null;
+
+    const productCode = String(product?.productCode ?? product?.code ?? product?._id ?? "");
+    const productName = String(product?.productName ?? product?.name ?? "");
+    const sellingPrice = product?.sellingPrice ?? product?.price ?? 0;
+
+    if (!productCode) return null;
+
+    return {
+        id: productCode,
+        code: productCode,
+        name: productName,
+        price: sellingPrice,
+        raw: {
+            ...product,
+            productCode,
+            productName,
+            sellingPrice,
+            productHSNCode: product?.productHSNCode ?? product?.hsnCode ?? "",
+            unit: product?.unit ?? product?.uom ?? "",
+        },
+    };
+};
+
 const fadeUp = {
     hidden: {},
     show: {},
@@ -128,11 +154,18 @@ const POS = () => {
     const location = useLocation();
     const dispatch = useDispatch<any>();
 
+    const qtyInputRef = useRef<HTMLInputElement | null>(null);
+    const scannerInputRef = useRef<HTMLInputElement | null>(null);
+
     const selectedCustomer = location?.state?.selectedCustomer || null;
 
     const { productLoader, products } = useSelector((state: any) => state.pos);
+    const { codeValueLoading } = useSelector((state: any) => state.barcodeQr || {});
 
     const [searchText, setSearchText] = useState("");
+    const [scanText, setScanText] = useState("");
+    const [scanLoading, setScanLoading] = useState(false);
+    const [focusQuantityAfterScan, setFocusQuantityAfterScan] = useState(false);
     const [selectedId, setSelectedId] = useState<any>(null);
     const [cart, setCart] = useState<any[]>([]);
     const [previewProduct, setPreviewProduct] = useState<any>(null);
@@ -174,12 +207,16 @@ const POS = () => {
     }, [fetchProducts]);
 
     const selectedProduct = useMemo(() => {
-        return allProducts.find((p: any) => p.id === selectedId) || null;
-    }, [allProducts, selectedId]);
+        return allProducts.find((p: any) => p.id === selectedId) || cart.find((p: any) => p.id === selectedId) || null;
+    }, [allProducts, cart, selectedId]);
 
     const cartMap = useMemo(() => {
         const map = new Map();
-        cart.forEach((item) => map.set(item.id, item));
+
+        cart.forEach((item) => {
+            map.set(item.id, item);
+        });
+
         return map;
     }, [cart]);
 
@@ -217,10 +254,6 @@ const POS = () => {
     const cartGross = useMemo(() => {
         return cart.reduce((sum, item) => sum + toNum(item.gross), 0);
     }, [cart]);
-
-    // const cartTax = useMemo(() => {
-    //     return cart.reduce((sum, item) => sum + toNum(item.taxAmount), 0);
-    // }, [cart]);
 
     const cartCgst = useMemo(() => {
         return cart.reduce((sum, item) => sum + toNum(item.cgstAmount), 0);
@@ -271,9 +304,7 @@ const POS = () => {
 
             if (inCart) {
                 setQtyText(String(inCart.qty ?? 1));
-                setPriceText(
-                    String(inCart.basePrice ?? inCart.price ?? toNum(product.price))
-                );
+                setPriceText(String(inCart.basePrice ?? inCart.price ?? toNum(product.price)));
                 setDiscountText(String(inCart.discountPercent ?? ""));
                 setCgstText(String(inCart.cgstPercent ?? ""));
                 setSgstText(String(inCart.sgstPercent ?? ""));
@@ -308,7 +339,6 @@ const POS = () => {
         if (!selectedProduct) return null;
 
         const gross = price * qty;
-
         const discountAmountPerUnit = (price * discountPercent) / 100;
         const discountTotal = discountAmountPerUnit * qty;
         const priceAfterDiscount = price - discountAmountPerUnit;
@@ -328,9 +358,7 @@ const POS = () => {
         const totalSgstAmount = sgstAmount * qty;
         const totalIgstAmount = igstAmount * qty;
         const totalTaxAmount = totalCgstAmount + totalSgstAmount + totalIgstAmount;
-
-        const netAmount =
-            (priceAfterDiscount + cgstAmount + sgstAmount + igstAmount) * qty;
+        const netAmount = (priceAfterDiscount + cgstAmount + sgstAmount + igstAmount) * qty;
 
         return {
             id: selectedProduct.id,
@@ -338,7 +366,6 @@ const POS = () => {
             name: selectedProduct.name,
             raw: selectedProduct.raw,
             imageUrl: selectedProduct.raw?.imageUrl || "",
-
             basePrice: price,
             discountPercent,
             cgstPercent,
@@ -346,7 +373,6 @@ const POS = () => {
             igstPercent,
             price: finalUnitPrice,
             qty,
-
             sOrderNumber: null,
             productCode: selectedProduct.code,
             productName: selectedProduct.name,
@@ -356,153 +382,297 @@ const POS = () => {
             quantity: qty,
             uom: selectedProduct.raw?.unit || selectedProduct.raw?.unitName || "",
             rate: price,
-
             gross,
             discount: discountPercent,
             discountAmount: discountTotal,
-
             cgst: cgstPercent,
             cgstAmount: totalCgstAmount,
-
             sgst: sgstPercent,
             sgstAmount: totalSgstAmount,
-
             igst: igstPercent,
             igstAmount: totalIgstAmount,
-
             taxAmount: totalTaxAmount,
             netAmount,
-
             from_date: new Date().toISOString(),
             to_date: new Date().toISOString(),
         };
     };
 
-    const onAdd = () => {
-        const payload = buildCartPayload();
+    const quickAdd = useCallback(
+        (item: any) => {
+            if (!item) return;
 
-        if (!payload) {
-            toast.error("Please select product");
-            return;
-        }
+            setSelectedId(item.id);
 
-        setCart((prev) => {
-            const index = prev.findIndex((x) => x.id === payload.id);
+            const inCart = cartMap.get(item.id);
+            const basePrice = inCart?.basePrice ?? toNum(item.price);
+            const nextQty = inCart ? toNum(inCart.qty) + 1 : 1;
+            const discount = toNum(inCart?.discountPercent ?? 0);
+            const cgst = toNum(inCart?.cgstPercent ?? 0);
+            const sgst = toNum(inCart?.sgstPercent ?? 0);
+            const igst = toNum(inCart?.igstPercent ?? 0);
 
-            if (index >= 0) {
-                const next = [...prev];
-                next[index] = payload;
-                return next;
+            const gross = basePrice * nextQty;
+            const discountAmountPerUnit = (basePrice * discount) / 100;
+            const discountTotal = discountAmountPerUnit * nextQty;
+            const priceAfterDiscount = basePrice - discountAmountPerUnit;
+
+            let cgstAmount = 0;
+            let sgstAmount = 0;
+            let igstAmount = 0;
+
+            if (igst > 0) {
+                igstAmount = (priceAfterDiscount * igst) / 100;
+            } else {
+                cgstAmount = (priceAfterDiscount * cgst) / 100;
+                sgstAmount = (priceAfterDiscount * sgst) / 100;
             }
 
-            return [...prev, payload];
-        });
+            const totalCgstAmount = cgstAmount * nextQty;
+            const totalSgstAmount = sgstAmount * nextQty;
+            const totalIgstAmount = igstAmount * nextQty;
+            const totalTaxAmount = totalCgstAmount + totalSgstAmount + totalIgstAmount;
+            const netAmount = (priceAfterDiscount + cgstAmount + sgstAmount + igstAmount) * nextQty;
 
-        toast.success(`${payload.productName} added to cart`);
-    };
+            const payload = {
+                id: item.id,
+                code: item.code,
+                name: item.name,
+                raw: item.raw,
+                imageUrl: item.raw?.imageUrl || "",
+                basePrice,
+                discountPercent: discount,
+                cgstPercent: cgst,
+                sgstPercent: sgst,
+                igstPercent: igst,
+                price: netAmount / nextQty,
+                qty: nextQty,
+                sOrderNumber: null,
+                productCode: item.code,
+                productName: item.name,
+                productType: item.raw?.productType || "",
+                productDescription: item.raw?.productDescription || "",
+                productHSNCode: item.raw?.productHSNCode || "",
+                quantity: nextQty,
+                uom: item.raw?.unit || item.raw?.unitName || "",
+                rate: basePrice,
+                gross,
+                discount,
+                discountAmount: discountTotal,
+                cgst,
+                cgstAmount: totalCgstAmount,
+                sgst,
+                sgstAmount: totalSgstAmount,
+                igst,
+                igstAmount: totalIgstAmount,
+                taxAmount: totalTaxAmount,
+                netAmount,
+                from_date: new Date().toISOString(),
+                to_date: new Date().toISOString(),
+            };
 
-    const quickAdd = (item: any) => {
-        setSelectedId(item.id);
+            setCart((prev) => {
+                const index = prev.findIndex((x) => x.id === payload.id);
 
-        const inCart = cartMap.get(item.id);
+                if (index >= 0) {
+                    const next = [...prev];
+                    next[index] = payload;
+                    return next;
+                }
 
-        const basePrice = inCart?.basePrice ?? toNum(item.price);
-        const nextQty = inCart ? toNum(inCart.qty) + 1 : 1;
+                return [...prev, payload];
+            });
 
-        const product = item;
-        const discount = toNum(inCart?.discountPercent ?? 0);
-        const cgst = toNum(inCart?.cgstPercent ?? 0);
-        const sgst = toNum(inCart?.sgstPercent ?? 0);
-        const igst = toNum(inCart?.igstPercent ?? 0);
+            setQtyText(String(nextQty));
+            setPriceText(String(basePrice));
+            setDiscountText(String(discount || ""));
+            setCgstText(String(cgst || ""));
+            setSgstText(String(sgst || ""));
+            setIgstText(String(igst || ""));
+        },
+        [cartMap]
+    );
 
-        const gross = basePrice * nextQty;
-        const discountAmountPerUnit = (basePrice * discount) / 100;
-        const discountTotal = discountAmountPerUnit * nextQty;
-        const priceAfterDiscount = basePrice - discountAmountPerUnit;
+    useEffect(() => {
+        if (!focusQuantityAfterScan || !selectedProduct) return;
 
-        let cgstAmount = 0;
-        let sgstAmount = 0;
-        let igstAmount = 0;
+        const timeout = window.setTimeout(() => {
+            qtyInputRef.current?.focus();
+            qtyInputRef.current?.select();
+            setFocusQuantityAfterScan(false);
+        }, 100);
 
-        if (igst > 0) {
-            igstAmount = (priceAfterDiscount * igst) / 100;
-        } else {
-            cgstAmount = (priceAfterDiscount * cgst) / 100;
-            sgstAmount = (priceAfterDiscount * sgst) / 100;
-        }
-
-        const totalCgstAmount = cgstAmount * nextQty;
-        const totalSgstAmount = sgstAmount * nextQty;
-        const totalIgstAmount = igstAmount * nextQty;
-        const totalTaxAmount = totalCgstAmount + totalSgstAmount + totalIgstAmount;
-
-        const netAmount =
-            (priceAfterDiscount + cgstAmount + sgstAmount + igstAmount) * nextQty;
-
-        const payload = {
-            id: product.id,
-            code: product.code,
-            name: product.name,
-            raw: product.raw,
-            imageUrl: product.raw?.imageUrl || "",
-
-            basePrice,
-            discountPercent: discount,
-            cgstPercent: cgst,
-            sgstPercent: sgst,
-            igstPercent: igst,
-            price: netAmount / nextQty,
-            qty: nextQty,
-
-            sOrderNumber: null,
-            productCode: product.code,
-            productName: product.name,
-            productType: product.raw?.productType || "",
-            productDescription: product.raw?.productDescription || "",
-            productHSNCode: product.raw?.productHSNCode || "",
-            quantity: nextQty,
-            uom: product.raw?.unit || product.raw?.unitName || "",
-            rate: basePrice,
-
-            gross,
-            discount,
-            discountAmount: discountTotal,
-
-            cgst,
-            cgstAmount: totalCgstAmount,
-
-            sgst,
-            sgstAmount: totalSgstAmount,
-
-            igst,
-            igstAmount: totalIgstAmount,
-
-            taxAmount: totalTaxAmount,
-            netAmount,
-
-            from_date: new Date().toISOString(),
-            to_date: new Date().toISOString(),
+        return () => {
+            window.clearTimeout(timeout);
         };
+    }, [focusQuantityAfterScan, selectedProduct]);
 
-        setCart((prev) => {
-            const index = prev.findIndex((x) => x.id === payload.id);
+    const handleScan = async (value?: string) => {
+        const scannedValue = String(value ?? scanText).trim();
 
-            if (index >= 0) {
-                const next = [...prev];
-                next[index] = payload;
-                return next;
+        if (!scannedValue || scanLoading || codeValueLoading) return;
+
+        setScanLoading(true);
+
+        try {
+            let item: any = null;
+            let isQrCode = false;
+
+            try {
+                const qrData = JSON.parse(scannedValue);
+
+                if (qrData && typeof qrData === "object" && qrData?.productCode) {
+                    isQrCode = true;
+
+                    item = allProducts.find(
+                        (product: any) =>
+                            String(product.code || "").toLowerCase() ===
+                            String(qrData.productCode || "").toLowerCase()
+                    );
+
+                    if (!item) {
+                        item = mapProductToPosItem({
+                            ...qrData,
+                            productCode: qrData.productCode,
+                            productName: qrData.productName,
+                            productHSNCode: qrData.hsnCode,
+                            unit: qrData.uom,
+                            sellingPrice: qrData.sellingPrice,
+                        });
+                    }
+                }
+            } catch {
+                isQrCode = false;
             }
 
-            return [...prev, payload];
-        });
+            if (!isQrCode) {
+                const result = await dispatch(
+                    getBarcodeQrAssignmentByCodeValue(scannedValue)
+                ).unwrap();
 
-        setQtyText(String(nextQty));
-        setPriceText(String(basePrice));
-        setDiscountText(String(discount || ""));
-        setCgstText(String(cgst || ""));
-        setSgstText(String(sgst || ""));
-        setIgstText(String(igst || ""));
+                console.log("BARCODE GET BY CODE VALUE RESPONSE:", result);
+
+                const assignment =
+                    result?.assignment ??
+                    result?.item ??
+                    result?.record ??
+                    result?.data ??
+                    result;
+
+                const productFromApi =
+                    result?.product ??
+                    result?.productData ??
+                    assignment?.product ??
+                    assignment?.productData ??
+                    null;
+
+                const productCode = String(
+                    productFromApi?.productCode ??
+                    assignment?.productCode ??
+                    ""
+                );
+
+                if (!productCode) {
+                    throw new Error("Product code not found against Barcode");
+                }
+
+                if (productFromApi) {
+                    item = mapProductToPosItem(productFromApi);
+                }
+
+                if (!item) {
+                    item = allProducts.find(
+                        (product: any) =>
+                            String(product.code || "").toLowerCase() ===
+                            productCode.toLowerCase()
+                    );
+                }
+
+                if (!item && assignment?.productName) {
+                    item = mapProductToPosItem({
+                        ...assignment,
+                        productCode: assignment.productCode,
+                        productName: assignment.productName,
+                        sellingPrice: assignment.sellingPrice ?? assignment.price ?? 0,
+                    });
+                }
+
+                if (!item) {
+                    throw new Error(`Product ${productCode} not found in POS product list`);
+                }
+            }
+
+            if (!item) {
+                throw new Error("Product not found");
+            }
+
+            quickAdd(item);
+            setScanText("");
+            setFocusQuantityAfterScan(true);
+
+            toast.success(`${item.name || item.code} added to cart`);
+        } catch (error: any) {
+            console.error("SCAN ERROR:", error);
+
+            toast.error(
+                error?.message ||
+                error?.error?.message ||
+                "Product not found for scanned Barcode / QR Code"
+            );
+
+            window.setTimeout(() => {
+                scannerInputRef.current?.focus();
+                scannerInputRef.current?.select();
+            }, 100);
+        } finally {
+            setScanLoading(false);
+        }
     };
+
+    useEffect(() => {
+        if (!selectedProduct) return;
+
+        setCart((prev) => {
+            const index = prev.findIndex((item) => item.id === selectedProduct.id);
+
+            if (index < 0) return prev;
+
+            const payload = buildCartPayload();
+
+            if (!payload) return prev;
+
+            const current = prev[index];
+
+            const unchanged =
+                toNum(current.qty) === toNum(payload.qty) &&
+                toNum(current.basePrice) === toNum(payload.basePrice) &&
+                toNum(current.discountPercent) === toNum(payload.discountPercent) &&
+                toNum(current.cgstPercent) === toNum(payload.cgstPercent) &&
+                toNum(current.sgstPercent) === toNum(payload.sgstPercent) &&
+                toNum(current.igstPercent) === toNum(payload.igstPercent) &&
+                toNum(current.gross) === toNum(payload.gross) &&
+                toNum(current.discountAmount) === toNum(payload.discountAmount) &&
+                toNum(current.cgstAmount) === toNum(payload.cgstAmount) &&
+                toNum(current.sgstAmount) === toNum(payload.sgstAmount) &&
+                toNum(current.igstAmount) === toNum(payload.igstAmount) &&
+                toNum(current.netAmount) === toNum(payload.netAmount);
+
+            if (unchanged) return prev;
+
+            const next = [...prev];
+            next[index] = payload;
+
+            return next;
+        });
+    }, [
+        selectedId,
+        qtyText,
+        priceText,
+        discountText,
+        cgstText,
+        sgstText,
+        igstText,
+    ]);
 
     const quickMinus = (item: any) => {
         const cartItem = cartMap.get(item.id);
@@ -550,9 +720,7 @@ const POS = () => {
         const totalSgstAmount = sgstAmount * nextQty;
         const totalIgstAmount = igstAmount * nextQty;
         const totalTaxAmount = totalCgstAmount + totalSgstAmount + totalIgstAmount;
-
-        const netAmount =
-            (priceAfterDiscount + cgstAmount + sgstAmount + igstAmount) * nextQty;
+        const netAmount = (priceAfterDiscount + cgstAmount + sgstAmount + igstAmount) * nextQty;
 
         setCart((prev) =>
             prev.map((x) =>
@@ -606,39 +774,9 @@ const POS = () => {
         toast.success("Item removed");
     };
 
-    const hasUnsavedChanges = useMemo(() => {
-        if (!selectedProduct) return false;
-
-        const inCart = cart.find((p) => p.id === selectedProduct.id);
-        if (!inCart) return false;
-
-        return (
-            toNum(inCart.qty) !== toNum(qty) ||
-            toNum(inCart.basePrice) !== toNum(price) ||
-            toNum(inCart.discountPercent) !== toNum(discountPercent) ||
-            toNum(inCart.cgstPercent) !== toNum(cgstPercent) ||
-            toNum(inCart.sgstPercent) !== toNum(sgstPercent) ||
-            toNum(inCart.igstPercent) !== toNum(igstPercent)
-        );
-    }, [
-        cart,
-        selectedProduct,
-        qty,
-        price,
-        discountPercent,
-        cgstPercent,
-        sgstPercent,
-        igstPercent,
-    ]);
-
     const onNext = () => {
         if (!cart.length) {
             toast.error("Please add product");
-            return;
-        }
-
-        if (hasUnsavedChanges) {
-            toast.error("Please click Update Item before payment");
             return;
         }
 
@@ -651,8 +789,7 @@ const POS = () => {
     };
 
     return (
-        <div className=" w-full overflow-hidden bg-background p-3 text-foreground">
-            {/* TOP BAR */}
+        <div className="w-full overflow-hidden bg-background p-3 text-foreground">
             <motion.div
                 variants={fadeUp}
                 initial="hidden"
@@ -702,7 +839,55 @@ const POS = () => {
                         Refresh
                     </motion.button>
 
-                    <div className="flex h-9 w-full items-center gap-2 rounded-md border border-border bg-card px-3 shadow-sm sm:w-[320px]">
+                    <div className="flex h-9 w-full items-center gap-2 rounded-md border border-primary/50 bg-card px-3 shadow-sm sm:w-[300px]">
+                        <ScanLine size={16} className="text-primary" />
+
+                        <input
+                            ref={scannerInputRef}
+                            value={scanText}
+                            autoFocus
+                            disabled={scanLoading || codeValueLoading}
+                            onChange={(e) => setScanText(e.target.value)}
+                            onPaste={(e) => {
+                                e.preventDefault();
+
+                                const pastedValue = e.clipboardData.getData("text");
+
+                                setScanText(pastedValue);
+
+                                window.setTimeout(() => {
+                                    handleScan(pastedValue);
+                                }, 0);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleScan(e.currentTarget.value);
+                                }
+                            }}
+                            placeholder={
+                                scanLoading || codeValueLoading
+                                    ? "Checking code..."
+                                    : "Scan Barcode / QR Code"
+                            }
+                            className="h-full w-full bg-transparent text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-wait"
+                        />
+
+                        {scanText ? (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setScanText("");
+                                    scannerInputRef.current?.focus();
+                                }}
+                                className="rounded p-0.5 hover:bg-muted"
+                            >
+                                <X size={16} className="text-muted-foreground" />
+                            </button>
+                        ) : null}
+                    </div>
+
+                    <div className="flex h-9 w-full items-center gap-2 rounded-md border border-border bg-card px-3 shadow-sm sm:w-[280px]">
                         <Search size={16} className="text-muted-foreground" />
 
                         <input
@@ -731,14 +916,13 @@ const POS = () => {
                 </div>
             </motion.div>
 
-            {/* MAIN */}
             <div className="grid grid-cols-1 gap-3 overflow-hidden xl:grid-cols-[1fr_390px]">
-                {/* PRODUCTS */}
                 <div className="h-full min-h-0 overflow-y-auto pr-1">
                     {productLoader ? (
                         <div className="flex h-[420px] items-center justify-center rounded-md border border-border bg-card shadow-sm">
                             <div className="text-center">
                                 <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+
                                 <p className="text-sm font-black text-muted-foreground">
                                     Loading products...
                                 </p>
@@ -798,10 +982,7 @@ const POS = () => {
                                                     />
                                                 ) : (
                                                     <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-background">
-                                                        <Upload
-                                                            size={30}
-                                                            className="text-muted-foreground"
-                                                        />
+                                                        <Upload size={30} className="text-muted-foreground" />
                                                     </div>
                                                 )}
 
@@ -860,6 +1041,11 @@ const POS = () => {
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 onSelect(item);
+
+                                                                window.setTimeout(() => {
+                                                                    qtyInputRef.current?.focus();
+                                                                    qtyInputRef.current?.select();
+                                                                }, 100);
                                                             }}
                                                             className="h-9 rounded-md border border-border bg-muted text-sm font-black text-foreground transition hover:bg-primary/10"
                                                         >
@@ -901,10 +1087,8 @@ const POS = () => {
                     ) : (
                         <div className="flex h-[420px] items-center justify-center rounded-md border border-dashed border-border bg-card shadow-sm">
                             <div className="text-center">
-                                <Search
-                                    size={38}
-                                    className="mx-auto mb-3 text-muted-foreground"
-                                />
+                                <Search size={38} className="mx-auto mb-3 text-muted-foreground" />
+
                                 <p className="text-base font-black text-card-foreground">
                                     No products found
                                 </p>
@@ -913,7 +1097,6 @@ const POS = () => {
                     )}
                 </div>
 
-                {/* ORDER SUMMARY */}
                 <motion.div
                     layout
                     initial={{ x: 20 }}
@@ -922,7 +1105,6 @@ const POS = () => {
                     className="h-full min-h-0 overflow-y-auto pr-1"
                 >
                     <div className="flex min-h-full flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-sm">
-                        {/* Header */}
                         <div className="flex shrink-0 items-center justify-between border-b border-border bg-gradient-to-r from-card to-muted/40 px-3 py-3">
                             <div>
                                 <h2 className="text-base font-black text-card-foreground">
@@ -943,7 +1125,6 @@ const POS = () => {
                             </motion.p>
                         </div>
 
-                        {/* Edit Selected Item */}
                         <AnimatePresence>
                             {selectedProduct ? (
                                 <motion.div
@@ -980,18 +1161,14 @@ const POS = () => {
                                         <div className="grid grid-cols-2 gap-2">
                                             <input
                                                 value={priceText}
-                                                onChange={(e) =>
-                                                    setPriceText(sanitizeDecimal(e.target.value))
-                                                }
+                                                onChange={(e) => setPriceText(sanitizeDecimal(e.target.value))}
                                                 placeholder="Rate"
                                                 className="h-9 w-full rounded-md border border-border bg-input px-2.5 text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
                                             />
 
                                             <input
                                                 value={discountText}
-                                                onChange={(e) =>
-                                                    setDiscountText(sanitizeDecimal(e.target.value))
-                                                }
+                                                onChange={(e) => setDiscountText(sanitizeDecimal(e.target.value))}
                                                 placeholder="Disc %"
                                                 className="h-9 w-full rounded-md border border-border bg-input px-2.5 text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
                                             />
@@ -1001,8 +1178,12 @@ const POS = () => {
                                                 disabled={toNum(igstText) > 0}
                                                 onChange={(e) => {
                                                     const value = sanitizeDecimal(e.target.value);
+
                                                     setCgstText(value);
-                                                    if (toNum(value) > 0) setIgstText("");
+
+                                                    if (toNum(value) > 0) {
+                                                        setIgstText("");
+                                                    }
                                                 }}
                                                 placeholder="CGST %"
                                                 className="h-9 w-full rounded-md border border-border bg-input px-2.5 text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground focus:border-primary disabled:bg-muted disabled:text-muted-foreground"
@@ -1013,8 +1194,12 @@ const POS = () => {
                                                 disabled={toNum(igstText) > 0}
                                                 onChange={(e) => {
                                                     const value = sanitizeDecimal(e.target.value);
+
                                                     setSgstText(value);
-                                                    if (toNum(value) > 0) setIgstText("");
+
+                                                    if (toNum(value) > 0) {
+                                                        setIgstText("");
+                                                    }
                                                 }}
                                                 placeholder="SGST %"
                                                 className="h-9 w-full rounded-md border border-border bg-input px-2.5 text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground focus:border-primary disabled:bg-muted disabled:text-muted-foreground"
@@ -1025,7 +1210,9 @@ const POS = () => {
                                                 disabled={toNum(cgstText) > 0 || toNum(sgstText) > 0}
                                                 onChange={(e) => {
                                                     const value = sanitizeDecimal(e.target.value);
+
                                                     setIgstText(value);
+
                                                     if (toNum(value) > 0) {
                                                         setCgstText("");
                                                         setSgstText("");
@@ -1045,9 +1232,11 @@ const POS = () => {
                                                 </button>
 
                                                 <input
+                                                    ref={qtyInputRef}
                                                     value={qtyText}
                                                     onChange={(e) => onQtyChange(e.target.value)}
-                                                    className="w-full bg-input text-center text-sm font-black text-foreground outline-none"
+                                                    onFocus={(e) => e.target.select()}
+                                                    className="w-full bg-input text-center text-sm font-black text-foreground outline-none focus:bg-primary/5"
                                                 />
 
                                                 <button
@@ -1059,21 +1248,11 @@ const POS = () => {
                                                 </button>
                                             </div>
                                         </div>
-
-                                        <motion.button
-                                            whileTap={{ scale: 0.97 }}
-                                            type="button"
-                                            onClick={onAdd}
-                                            className="mt-2.5 h-9 w-full cursor-pointer rounded-md bg-primary text-sm font-black text-primary-foreground transition hover:opacity-90"
-                                        >
-                                            Update Item
-                                        </motion.button>
                                     </div>
                                 </motion.div>
                             ) : null}
                         </AnimatePresence>
 
-                        {/* Cart Items */}
                         <div className="shrink-0 border-b border-border p-3">
                             <div className="max-h-[350px] min-h-[150px] overflow-y-auto pr-1">
                                 {cart.length ? (
@@ -1103,10 +1282,7 @@ const POS = () => {
                                                                 />
                                                             ) : (
                                                                 <div className="flex h-full w-full items-center justify-center">
-                                                                    <Upload
-                                                                        size={18}
-                                                                        className="text-muted-foreground"
-                                                                    />
+                                                                    <Upload size={18} className="text-muted-foreground" />
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1116,14 +1292,14 @@ const POS = () => {
                                                                 <div className="min-w-0">
                                                                     <p className="line-clamp-1 text-sm font-black text-card-foreground">
                                                                         {item.productName || item.name}
+
                                                                         <span className="ml-1 text-muted-foreground">
                                                                             ({item.qty})
                                                                         </span>
                                                                     </p>
 
                                                                     <p className="mt-0.5 text-xs font-bold text-muted-foreground">
-                                                                        Price: ₹
-                                                                        {formatIndianNumber(item.basePrice)}
+                                                                        Price: ₹{formatIndianNumber(item.basePrice)}
                                                                     </p>
 
                                                                     <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] font-bold text-muted-foreground">
@@ -1153,7 +1329,14 @@ const POS = () => {
                                                                 <div className="flex gap-1.5">
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => onSelect(item)}
+                                                                        onClick={() => {
+                                                                            onSelect(item);
+
+                                                                            window.setTimeout(() => {
+                                                                                qtyInputRef.current?.focus();
+                                                                                qtyInputRef.current?.select();
+                                                                            }, 100);
+                                                                        }}
                                                                         className="text-muted-foreground transition hover:text-foreground"
                                                                     >
                                                                         <Pencil size={15} />
@@ -1177,10 +1360,7 @@ const POS = () => {
                                 ) : (
                                     <div className="flex h-full min-h-[250px] items-center justify-center text-center">
                                         <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-10 py-12">
-                                            <ShoppingCart
-                                                size={42}
-                                                className="mx-auto mb-3 text-muted-foreground"
-                                            />
+                                            <ShoppingCart size={42} className="mx-auto mb-3 text-muted-foreground" />
 
                                             <p className="text-sm font-black text-foreground">
                                                 No item added
@@ -1195,7 +1375,6 @@ const POS = () => {
                             </div>
                         </div>
 
-                        {/* Footer */}
                         <motion.div layout className="shrink-0 p-3">
                             <div className="rounded-md border border-border p-3 text-sm">
                                 <div className="flex justify-between">
@@ -1244,16 +1423,6 @@ const POS = () => {
                                     </div>
                                 ) : null}
 
-                                {/* <div className="mt-1.5 flex justify-between">
-                                    <span className="font-bold text-muted-foreground">
-                                        GST
-                                    </span>
-
-                                    <span className="font-black text-foreground">
-                                        ₹{formatIndianNumber(cartTax)}
-                                    </span>
-                                </div> */}
-
                                 <div className="mt-1.5 flex justify-between">
                                     <span className="font-bold text-muted-foreground">
                                         Discount
@@ -1292,7 +1461,12 @@ const POS = () => {
             </div>
 
             <ProductPreviewModal
-                {...{ quickAdd, previewProduct, cartMap, setPreviewProduct }}
+                {...{
+                    quickAdd,
+                    previewProduct,
+                    cartMap,
+                    setPreviewProduct,
+                }}
             />
         </div>
     );

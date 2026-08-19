@@ -282,6 +282,83 @@ export const getProductBalance = createAsyncThunk(
   }
 );
 
+
+/* ===================================================
+    SAVE INVENTORY BALANCE
+=================================================== */
+export const saveInventoryBalance = createAsyncThunk(
+  "productMaster/saveInventoryBalance",
+  async (payload: any, { rejectWithValue }) => {
+    try {
+      const res = await professionalAxios.post(
+        "/eTaxSolnMongoApiBackend/users/bookez/inventoryBalance/save",
+        payload
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue(
+          res.data || {
+            success: false,
+            message: "Failed to save inventory balance",
+          }
+        );
+      }
+
+      return res.data?.data ?? null;
+    } catch (err: any) {
+      return rejectWithValue(
+        err?.response?.data || {
+          success: false,
+          message: "Failed to save inventory balance",
+        }
+      );
+    }
+  }
+);
+
+
+/* ===================================================
+    UPDATE INVENTORY BALANCE
+=================================================== */
+export const updateInventoryBalance = createAsyncThunk(
+  "productMaster/updateInventoryBalance",
+  async (
+    {
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: any;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await professionalAxios.put(
+        `/eTaxSolnMongoApiBackend/users/bookez/inventoryBalance/update/${encodeURIComponent(id)}`,
+        payload
+      );
+
+      if (!res.data?.success) {
+        return rejectWithValue(
+          res.data || {
+            success: false,
+            message: "Failed to update inventory balance",
+          }
+        );
+      }
+
+      return res.data?.data ?? null;
+    } catch (err: any) {
+      return rejectWithValue(
+        err?.response?.data || {
+          success: false,
+          message: "Failed to update inventory balance",
+        }
+      );
+    }
+  }
+);
+
 /* ===================================================
     SLICE
 =================================================== */
@@ -308,6 +385,12 @@ const productMasterSlice = createSlice({
     productBalanceLoading: {},
     productBalanceError: {},
 
+    inventoryBalanceSaveLoading: false,
+    inventoryBalanceUpdateLoading: false,
+    inventoryBalanceMutationError: null,
+    savedInventoryBalance: null,
+    updatedInventoryBalance: null,
+
 
     loading: false,
     error: null,
@@ -323,6 +406,11 @@ const productMasterSlice = createSlice({
       state.createLoading = false;
       state.updateLoading = false;
       state.deleteLoading = false;
+      state.inventoryBalanceSaveLoading = false;
+      state.inventoryBalanceUpdateLoading = false;
+      state.inventoryBalanceMutationError = null;
+      state.savedInventoryBalance = null;
+      state.updatedInventoryBalance = null;
     },
   },
 
@@ -384,6 +472,40 @@ const productMasterSlice = createSlice({
           productCode,
           balanceQuantity: 0,
         };
+      });
+
+    /* ---------- SAVE INVENTORY BALANCE ---------- */
+    builder
+      .addCase(saveInventoryBalance.pending, (state: any) => {
+        state.inventoryBalanceSaveLoading = true;
+        state.inventoryBalanceMutationError = null;
+        state.savedInventoryBalance = null;
+      })
+      .addCase(saveInventoryBalance.fulfilled, (state: any, action: any) => {
+        state.inventoryBalanceSaveLoading = false;
+        state.savedInventoryBalance = action.payload ?? null;
+      })
+      .addCase(saveInventoryBalance.rejected, (state: any, action: any) => {
+        state.inventoryBalanceSaveLoading = false;
+        state.inventoryBalanceMutationError =
+          action.payload?.message || "Failed to save inventory balance";
+      });
+
+    /* ---------- UPDATE INVENTORY BALANCE ---------- */
+    builder
+      .addCase(updateInventoryBalance.pending, (state: any) => {
+        state.inventoryBalanceUpdateLoading = true;
+        state.inventoryBalanceMutationError = null;
+        state.updatedInventoryBalance = null;
+      })
+      .addCase(updateInventoryBalance.fulfilled, (state: any, action: any) => {
+        state.inventoryBalanceUpdateLoading = false;
+        state.updatedInventoryBalance = action.payload ?? null;
+      })
+      .addCase(updateInventoryBalance.rejected, (state: any, action: any) => {
+        state.inventoryBalanceUpdateLoading = false;
+        state.inventoryBalanceMutationError =
+          action.payload?.message || "Failed to update inventory balance";
       });
 
     /* ---------- GET BY PRODUCT CODE ---------- */
