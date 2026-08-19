@@ -106,6 +106,12 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		return locationConfig === true || locationConfig === "true";
 	}, [configurations]);
 
+
+	const enableTransport = useMemo(() => {
+		const locationConfig = configurations?.[0]?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule
+		return locationConfig === true || locationConfig === "true";
+	}, [configurations]);
+
 	useEffect(() => {
 		dispatch(
 			getAllSystemConfigurations({
@@ -198,7 +204,10 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
 						}] : []),
 
-						{
+
+						...(enableTransport ? [{
+
+
 							name: "Transportation",
 							path: "/bookEz/transportation",
 							icon: <Truck size={24} />,
@@ -206,7 +215,8 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "",
 							action: "view",
 
-						},
+
+						}] : []),
 						{
 							name: "Reports",
 							path: "/bookEz/reports",
