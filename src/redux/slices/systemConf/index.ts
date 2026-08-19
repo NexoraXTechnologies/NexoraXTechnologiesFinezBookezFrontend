@@ -126,6 +126,7 @@ export const getEmptySystemConfiguration = () => ({
 
     inventoryConfiguration: {
         maintainInventory: false,
+        enableQrBarcode: false,
         inventoryTagLevel: "",
         whereToAddInventory: "",
         inventoryPickMethod: "",
@@ -228,7 +229,6 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             ),
         },
 
-
         whatsAppConfiguration: {
             enableWhatsAppModule: toBool(
                 raw?.systemConfiguration?.whatsAppConfiguration
@@ -257,12 +257,20 @@ export const normalizeSystemConfiguration = (raw: any) => ({
         maintainInventory: toBool(
             raw?.inventoryConfiguration?.maintainInventory
         ),
+
+        enableQrBarcode: toBool(
+            raw?.inventoryConfiguration?.enableQrBarcode
+        ),
+
         inventoryTagLevel:
             raw?.inventoryConfiguration?.inventoryTagLevel || "",
+
         whereToAddInventory:
             raw?.inventoryConfiguration?.whereToAddInventory || "",
+
         inventoryPickMethod:
             raw?.inventoryConfiguration?.inventoryPickMethod || "",
+
         negativeStockPolicy:
             raw?.inventoryConfiguration?.negativeStockPolicy || "",
     },
@@ -522,8 +530,7 @@ const buildConfigurationPayload = (
                         ?.otherCost,
             },
 
-
-             engineeringModuleConfiguration: {
+            engineeringModuleConfiguration: {
                 enableEngineeringModule: !!configuration?.systemConfiguration?.engineeringModuleConfiguration?.enableEngineeringModule,
             },
 
@@ -554,6 +561,11 @@ const buildConfigurationPayload = (
                 !!configuration
                     ?.inventoryConfiguration
                     ?.maintainInventory,
+
+            enableQrBarcode:
+                !!configuration
+                    ?.inventoryConfiguration
+                    ?.enableQrBarcode,
 
             inventoryTagLevel:
                 configuration

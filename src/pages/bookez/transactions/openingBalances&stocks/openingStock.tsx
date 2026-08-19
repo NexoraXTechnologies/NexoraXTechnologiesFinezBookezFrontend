@@ -8,7 +8,7 @@ import DataTable from "../../../../components/DataTable";
 import Toggle from "../../../../components/toggle";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
-import { getAllProducts, getProductBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
+import { getAllProducts, getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
 import { loadAllTemplateOptions, money, num, safePercent, todayYMD, } from "../../../../utils/helperFunctions";
 import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock, } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
@@ -16,6 +16,7 @@ import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Permission from "../../../../components/PermissionGuard";
 import Badge from "../../../../components/badge";
 import InputBorderLabel from "../../../../components/common/InputBorderLabel";
+import professionalAxios from "../../../../services/professionalAxios";
 const PRODUCT_FIELD_KEYS = new Set([
     "productCode",
     "productName",
@@ -46,6 +47,41 @@ const getInventoryBalanceApiKey = (field: any) => {
     if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
 
     return "";
+};
+
+const getInventoryTransactionApiKey = (field: any) => {
+    if (!field) return "";
+
+    const fieldNames = [
+        field?.key,
+        field?.label,
+        field?.title,
+        field?.customMasterName,
+        field?.dataSource?.customMasterName,
+    ].map(normalizeInventoryFieldName);
+
+    if (fieldNames.some((name) => name.includes("warehouse"))) return "warehouseCode";
+    if (fieldNames.some((name) => name.includes("location"))) return "locationCode";
+    if (fieldNames.some((name) => name.includes("batch"))) return "batchNumber";
+    if (fieldNames.some((name) => name.includes("rack"))) return "rackCode";
+    if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
+    if (fieldNames.some((name) => name.includes("manufacturingdate") || name === "mfgon" || name.includes("mfgdate"))) return "mfgOn";
+    if (fieldNames.some((name) => name.includes("expirydate") || name.includes("expirationdate") || name === "expon" || name.includes("expdate"))) return "expOn";
+
+    return "";
+};
+
+const toInventoryIsoDate = (value: any) => {
+    if (!value) return "";
+
+    const stringValue = String(value).trim();
+    if (!stringValue) return "";
+
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(stringValue)
+        ? new Date(`${stringValue}T00:00:00.000Z`)
+        : new Date(stringValue);
+
+    return Number.isNaN(date.getTime()) ? stringValue : date.toISOString();
 };
 const BODY_STANDARD_FIELD_KEYS = new Set([
     "productCode",
@@ -122,6 +158,8 @@ const emptyProductRow = {
     netAmount: 0,
     netTotal: 0,
     customMasters: {},
+    _inventoryBalanceSelections: {},
+    _inventoryBalanceVoucherId: "",
 };
 const getDefaultForm = () => ({
     openingStockVoucherNumber: "OPSTOCK",
@@ -321,6 +359,355 @@ const OpeningStock = () => {
         }
 
         return filters;
+    };
+
+
+    const getInventoryFieldValue = (source: any, fields: any[], apiKey: string) => {
+        const directKeyMap: Record<string, string[]> = {
+            warehouseCode: ["warehouseCode", "warehouse"],
+            locationCode: ["locationCode", "location"],
+            batchNumber: ["batchNumber", "batchNo", "batch"],
+            rackCode: ["rackCode", "rack"],
+            binCode: ["binCode", "bin"],
+            mfgOn: ["mfgOn", "mfgDate", "manufacturingDate", "manufactureDate"],
+            expOn: ["expOn", "expDate", "expiryDate", "expirationDate"],
+        };
+
+        for (const key of directKeyMap[apiKey] || []) {
+            const directValue = source?.[key];
+
+            if (
+                directValue !== undefined &&
+                directValue !== null &&
+                String(directValue).trim() !== ""
+            ) {
+                return directValue;
+            }
+        }
+
+        const schemaField = (fields || []).find(
+            (field: any) => getInventoryTransactionApiKey(field) === apiKey
+        );
+
+        if (!schemaField?.key) return "";
+
+        const masterName = getCustomMasterName(schemaField);
+
+        const selectedMaster =
+            source?.customMasters?.[masterName] ||
+            source?.customMasters?.[schemaField.key];
+
+        const value =
+            selectedMaster?.code ??
+            source?.[schemaField.key] ??
+            "";
+
+        if (value && typeof value === "object") {
+            return value?.code ?? value?.value ?? "";
+        }
+
+        return value;
+    };
+
+    const getInventoryTransactionValue = (row: any, apiKey: string) => {
+        const bodyValue = getInventoryFieldValue(
+            row,
+            templateFields?.body || [],
+            apiKey
+        );
+
+        if (
+            bodyValue !== undefined &&
+            bodyValue !== null &&
+            String(bodyValue).trim() !== ""
+        ) {
+            return bodyValue;
+        }
+
+        return getInventoryFieldValue(
+            form,
+            templateFields?.header || [],
+            apiKey
+        );
+    };
+
+    const getInventoryBalanceVoucherId = (row: any) =>
+        String(
+            row?._inventoryBalanceVoucherId ||
+            row?.inventoryBalanceVoucherId ||
+            row?.inventoryBalanceId ||
+            row?.inventoryVoucherId ||
+            row?.inventoryBalance?.voucherId ||
+            ""
+        ).trim();
+
+    const getInventoryBalanceRecords = (response: any) => {
+        const data =
+            response?.data?.data ??
+            response?.data ??
+            response ??
+            {};
+
+        if (Array.isArray(data?.records)) return data.records;
+        if (Array.isArray(data?.items)) return data.items;
+        if (Array.isArray(data?.docs)) return data.docs;
+        if (Array.isArray(data)) return data;
+
+        return [];
+    };
+
+    const attachInventoryBalanceVoucherIds = (
+        rows: any[],
+        inventoryRecords: any[]
+    ) => {
+        const usedVoucherIds = new Set<string>();
+
+        return (rows || []).map((row: any) => {
+            const productCode = String(row?.productCode || "").trim();
+
+            const warehouseCode = String(
+                getInventoryFieldValue(row, templateFields?.body || [], "warehouseCode") || ""
+            );
+            const locationCode = String(
+                getInventoryFieldValue(row, templateFields?.body || [], "locationCode") || ""
+            );
+            const batchNumber = String(
+                getInventoryFieldValue(row, templateFields?.body || [], "batchNumber") || ""
+            );
+            const rackCode = String(
+                getInventoryFieldValue(row, templateFields?.body || [], "rackCode") || ""
+            );
+            const binCode = String(
+                getInventoryFieldValue(row, templateFields?.body || [], "binCode") || ""
+            );
+
+            const availableRecords = (inventoryRecords || []).filter((record: any) => {
+                const voucherId = String(record?.voucherId || "").trim();
+
+                return (
+                    voucherId &&
+                    !usedVoucherIds.has(voucherId) &&
+                    String(record?.productCode || "").trim() === productCode
+                );
+            });
+
+            const exactRecord =
+                availableRecords.find(
+                    (record: any) =>
+                        String(record?.warehouseCode || "") === warehouseCode &&
+                        String(record?.locationCode || "") === locationCode &&
+                        String(record?.batchNumber || "") === batchNumber &&
+                        String(record?.rackCode || "") === rackCode &&
+                        String(record?.binCode || "") === binCode
+                ) ||
+                availableRecords[0];
+
+            const voucherId = String(exactRecord?.voucherId || "").trim();
+
+            if (voucherId) {
+                usedVoucherIds.add(voucherId);
+            }
+
+            return {
+                ...row,
+                _inventoryBalanceVoucherId: voucherId,
+            };
+        });
+    };
+
+    const resolveSavedOpeningStockVoucherNumber = (
+        response: any,
+        fallback = ""
+    ) => {
+        const visited = new Set<any>();
+
+        const findVoucherNumber = (value: any, depth = 0): string => {
+            if (
+                value === null ||
+                value === undefined ||
+                depth > 6 ||
+                typeof value !== "object" ||
+                visited.has(value)
+            ) {
+                return "";
+            }
+
+            visited.add(value);
+
+            const directKeys = [
+                "openingStockVoucherNumber",
+                "voucherNumber",
+                "generatedVoucherNumber",
+            ];
+
+            for (const key of directKeys) {
+                const candidate = value?.[key];
+
+                if (
+                    candidate !== undefined &&
+                    candidate !== null &&
+                    String(candidate).trim() !== "" &&
+                    String(candidate).trim().toUpperCase() !== "AUTO"
+                ) {
+                    return String(candidate).trim();
+                }
+            }
+
+            for (const nestedValue of Object.values(value)) {
+                const found = findVoucherNumber(nestedValue, depth + 1);
+                if (found) return found;
+            }
+
+            return "";
+        };
+
+        const responseVoucherNumber = findVoucherNumber(response);
+
+        if (responseVoucherNumber) return responseVoucherNumber;
+
+        if (
+            fallback &&
+            String(fallback).trim() &&
+            String(fallback).trim().toUpperCase() !== "AUTO"
+        ) {
+            return String(fallback).trim();
+        }
+
+        return "";
+    };
+
+    const buildInventoryBalancePayload = (
+        row: any,
+        voucherNumber: string
+    ) => {
+        const openingStatus = String(
+            form?.openingStockStatus ||
+            status ||
+            "open"
+        )
+            .trim()
+            .toLowerCase();
+
+        const inventoryStatus =
+            ["close", "closed", "cancelled"].includes(openingStatus)
+                ? "inactive"
+                : "active";
+
+        return {
+            voucherNumber,
+            voucherNumberSnapshot:
+                form?.openingStockVoucherNumber &&
+                    form.openingStockVoucherNumber !== "AUTO"
+                    ? form.openingStockVoucherNumber
+                    : voucherNumber,
+            voucherType: "openingStock",
+            sourceModule: "openingStock",
+            voucherStatus: inventoryStatus,
+            voucherDate: toInventoryIsoDate(
+                form?.openingStockDate || todayYMD()
+            ),
+            party: "openingStock",
+            productCode: String(row?.productCode || ""),
+            productName: String(row?.productName || ""),
+            productType: String(row?.productType || ""),
+            uom: String(
+                row?.uom ||
+                row?.unit ||
+                row?.unitName ||
+                ""
+            ),
+            inwardQty: num(row?.quantity),
+            outwardQty: 0,
+            reservedQty: num(row?.reservedQty || 0),
+            warehouseCode: String(
+                getInventoryTransactionValue(row, "warehouseCode") || ""
+            ),
+            locationCode: String(
+                getInventoryTransactionValue(row, "locationCode") || ""
+            ),
+            batchNumber: String(
+                getInventoryTransactionValue(row, "batchNumber") || ""
+            ),
+            rackCode: String(
+                getInventoryTransactionValue(row, "rackCode") || ""
+            ),
+            binCode: String(
+                getInventoryTransactionValue(row, "binCode") || ""
+            ),
+            mfgOn: toInventoryIsoDate(
+                getInventoryTransactionValue(row, "mfgOn")
+            ),
+            expOn: toInventoryIsoDate(
+                getInventoryTransactionValue(row, "expOn")
+            ),
+            remarks:
+                row?.remarks ||
+                form?.remark ||
+                "Opening Stock",
+            status: inventoryStatus,
+        };
+    };
+
+    const syncInventoryBalance = async (
+        voucherNumber: string,
+        isEdit: boolean
+    ) => {
+        const rows = (form?.openingStockBody || []).filter(
+            (row: any) =>
+                String(row?.productCode || "").trim() !== ""
+        );
+
+        for (const row of rows) {
+            const inventoryPayload =
+                buildInventoryBalancePayload(
+                    row,
+                    voucherNumber
+                );
+
+            if (!isEdit) {
+                console.log(
+                    "CALLING OPENING STOCK INVENTORY BALANCE SAVE",
+                    inventoryPayload
+                );
+
+                await dispatch(
+                    saveInventoryBalance(
+                        inventoryPayload
+                    ) as any
+                ).unwrap();
+
+                continue;
+            }
+
+            const inventoryBalanceVoucherId =
+                getInventoryBalanceVoucherId(row);
+
+            if (inventoryBalanceVoucherId) {
+                console.log(
+                    "CALLING OPENING STOCK INVENTORY BALANCE UPDATE",
+                    inventoryBalanceVoucherId,
+                    inventoryPayload
+                );
+
+                await dispatch(
+                    updateInventoryBalance({
+                        id: inventoryBalanceVoucherId,
+                        payload: inventoryPayload,
+                    }) as any
+                ).unwrap();
+            } else {
+                console.log(
+                    "NO OPENING STOCK INVENTORY VID - CALLING SAVE",
+                    inventoryPayload
+                );
+
+                await dispatch(
+                    saveInventoryBalance(
+                        inventoryPayload
+                    ) as any
+                ).unwrap();
+            }
+        }
     };
     const getCustomMasterSelection = (field: any, selectedValue: any) => {
         if (selectedValue === undefined ||
@@ -1620,16 +2007,54 @@ const OpeningStock = () => {
         });
         try {
             if (edit) {
-                await dispatch(updateOpeningStock({
-                    payload,
-                    openingStockVoucherNumber: form
-                        ?.openingStockVoucherNumber,
-                }) as any).unwrap?.();
+                const result: any = await dispatch(
+                    updateOpeningStock({
+                        payload,
+                        openingStockVoucherNumber:
+                            form?.openingStockVoucherNumber,
+                    }) as any
+                ).unwrap?.();
+
+                const savedOpeningStockVoucherNumber =
+                    resolveSavedOpeningStockVoucherNumber(
+                        result,
+                        form?.openingStockVoucherNumber
+                    );
+
+                if (!savedOpeningStockVoucherNumber) {
+                    throw new Error(
+                        "Opening Stock updated but voucher number was not found, so Inventory Balance update cannot be called"
+                    );
+                }
+
+                await syncInventoryBalance(
+                    savedOpeningStockVoucherNumber,
+                    true
+                );
             }
             else {
-                await dispatch(addOpeningStock({
-                    payload,
-                }) as any).unwrap?.();
+                const result: any = await dispatch(
+                    addOpeningStock({
+                        payload,
+                    }) as any
+                ).unwrap?.();
+
+                const savedOpeningStockVoucherNumber =
+                    resolveSavedOpeningStockVoucherNumber(
+                        result,
+                        form?.openingStockVoucherNumber
+                    );
+
+                if (!savedOpeningStockVoucherNumber) {
+                    throw new Error(
+                        "Opening Stock created but voucher number was not found, so Inventory Balance save cannot be called"
+                    );
+                }
+
+                await syncInventoryBalance(
+                    savedOpeningStockVoucherNumber,
+                    false
+                );
             }
             await refreshList();
             toast.success(`Opening stock ${edit
@@ -1718,6 +2143,11 @@ const OpeningStock = () => {
                 }
                 : {},
             _inventoryBalanceSelections: {},
+            _inventoryBalanceVoucherId:
+                item?._inventoryBalanceVoucherId ||
+                item?.inventoryBalanceVoucherId ||
+                item?.inventoryBalanceId ||
+                "",
             productCode: item
                 ?.productCode ||
                 "",
@@ -1857,6 +2287,38 @@ const OpeningStock = () => {
                 },
             ];
 
+        let inventoryRecords: any[] = [];
+
+        try {
+            const inventoryResponse = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookez/inventoryBalance/getAll",
+                {
+                    params: {
+                        offset: 0,
+                        limit: 500,
+                        voucherNumber:
+                            row?.openingStockVoucherNumber || "",
+                    },
+                }
+            );
+
+            inventoryRecords =
+                getInventoryBalanceRecords(
+                    inventoryResponse
+                );
+        } catch (error) {
+            console.log(
+                "Failed to load Opening Stock inventory balance records",
+                error
+            );
+        }
+
+        const bodyWithInventoryIds =
+            attachInventoryBalanceVoucherIds(
+                body,
+                inventoryRecords
+            );
+
         const headerCustomMasterValues =
             hydrateHeaderCustomMasterValues(row);
 
@@ -1880,7 +2342,7 @@ const OpeningStock = () => {
                         ...row.customMasters,
                     }
                     : {},
-            openingStockBody: body,
+            openingStockBody: bodyWithInventoryIds,
         });
 
         setEdit(true);

@@ -2517,6 +2517,14 @@ const SalesOrder = () => {
         key: string,
         value: any
     ) => {
+        if (
+            !form
+                ?.sQuoteCustomerName
+        ) {
+            return toast.error(
+                "Please select customer first"
+            );
+        }
         const duplicate = Boolean(
             form?.products?.some(
                 (

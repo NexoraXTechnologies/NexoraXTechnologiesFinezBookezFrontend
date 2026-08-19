@@ -182,11 +182,7 @@ const SettingRow = ({
                 ) : null}
             </div>
 
-            <ToggleSwitch
-                checked={!!value}
-                onChange={onChange}
-                disabled={disabled}
-            />
+            <ToggleSwitch checked={!!value} onChange={onChange} disabled={disabled} />
         </div>
     );
 };
@@ -674,73 +670,63 @@ const SystemConfiguration = () => {
             ]
         );
 
-    const handleSave =
-        useCallback(async () => {
+    const handleSave = useCallback(async () => {
+        try {
+            const result = await dispatch(saveOrUpdateSystemConfiguration({ configuration, })).unwrap();
+
             try {
-                const result =
-                    await dispatch(
-                        saveOrUpdateSystemConfiguration(
-                            {
-                                configuration,
-                            }
-                        )
-                    ).unwrap();
+                const inventoryConfiguration =
+                    result
+                        ?.configuration
+                        ?.inventoryConfiguration ||
+                    configuration
+                        ?.inventoryConfiguration ||
+                    {};
 
-                try {
-                    const inventoryConfiguration =
-                        result
-                            ?.configuration
-                            ?.inventoryConfiguration ||
-                        configuration
-                            ?.inventoryConfiguration ||
-                        {};
-
-                    const inventoryTagLevel =
-                        resolveInventoryTagLevel(
-                            inventoryConfiguration
-                        );
-
-                    const whereToAddInventory =
+                const inventoryTagLevel =
+                    resolveInventoryTagLevel(
                         inventoryConfiguration
-                            ?.whereToAddInventory ||
-                        "";
-
-                    const inventoryMasterSync =
-                        await syncInventoryTagLevelMasters(
-                            inventoryTagLevel,
-                            whereToAddInventory
-                        );
-
-                    console.log(
-                        "Inventory Master synchronization result:",
-                        inventoryMasterSync
                     );
-                } catch (
-                syncError
-                ) {
-                    console.log(
-                        "syncInventoryTagLevelMasters error:",
-                        syncError
-                    );
-                }
 
-                toast.success(
-                    result?.message ||
-                    (configuration
-                        ?.configurationCode
-                        ? "Configuration updated successfully"
-                        : "Configuration saved successfully")
+                const whereToAddInventory =
+                    inventoryConfiguration
+                        ?.whereToAddInventory ||
+                    "";
+
+                const inventoryMasterSync =
+                    await syncInventoryTagLevelMasters(
+                        inventoryTagLevel,
+                        whereToAddInventory
+                    );
+
+                console.log(
+                    "Inventory Master synchronization result:",
+                    inventoryMasterSync
                 );
-            } catch (err: any) {
-                toast.error(
-                    err?.message ||
-                    "Failed to save configuration"
+            } catch (
+            syncError
+            ) {
+                console.log(
+                    "syncInventoryTagLevelMasters error:",
+                    syncError
                 );
             }
-        }, [
-            dispatch,
-            configuration,
-        ]);
+
+            toast.success(
+                result?.message ||
+                (configuration
+                    ?.configurationCode
+                    ? "Configuration updated successfully"
+                    : "Configuration saved successfully")
+            );
+            window.location.reload();
+        } catch (err: any) {
+            toast.error(
+                err?.message ||
+                "Failed to save configuration"
+            );
+        }
+    }, [dispatch, configuration]);
 
     const renderSystemTab = () => {
         return (
@@ -1058,25 +1044,13 @@ const SystemConfiguration = () => {
 
                                         <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                             <span className="flex items-center gap-1">
-                                                <Phone
-                                                    size={
-                                                        13
-                                                    }
-                                                />
-                                                {
-                                                    e?.requestedByAdminMobile
-                                                }
+                                                <Phone size={13} />
+                                                {e?.requestedByAdminMobile}
                                             </span>
 
                                             <span className="flex items-center gap-1 truncate">
-                                                <MessageSquareText
-                                                    size={
-                                                        13
-                                                    }
-                                                />
-                                                {
-                                                    e?.requestMessage
-                                                }
+                                                <MessageSquareText size={13} />
+                                                {e?.requestMessage}
                                             </span>
                                         </div>
                                     </div>
@@ -1084,9 +1058,7 @@ const SystemConfiguration = () => {
 
                                 <div className="ml-4 flex shrink-0 items-center gap-2">
                                     <button
-                                        disabled={
-                                            dbReqLoader
-                                        }
+                                        disabled={dbReqLoader}
                                         onClick={() =>
                                             acceptDbRequest(
                                                 {
@@ -1098,18 +1070,12 @@ const SystemConfiguration = () => {
                                         }
                                         className="flex h-8 items-center gap-1 rounded-md bg-success px-3 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
                                     >
-                                        <Check
-                                            size={
-                                                14
-                                            }
-                                        />
+                                        <Check size={14} />
                                         Accept
                                     </button>
 
                                     <button
-                                        disabled={
-                                            dbReqLoader
-                                        }
+                                        disabled={dbReqLoader}
                                         onClick={() =>
                                             acceptDbRequest(
                                                 {
@@ -1121,11 +1087,7 @@ const SystemConfiguration = () => {
                                         }
                                         className="flex h-8 items-center gap-1 rounded-md bg-danger px-3 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
                                     >
-                                        <X
-                                            size={
-                                                14
-                                            }
-                                        />
+                                        <X size={14} />
                                         Reject
                                     </button>
                                 </div>
@@ -1134,8 +1096,7 @@ const SystemConfiguration = () => {
                     )
                 ) : (
                     <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-border bg-card text-sm text-muted-foreground">
-                        No pending
-                        requests
+                        No pending requests
                     </div>
                 )}
             </div>
@@ -1235,6 +1196,19 @@ const SystemConfiguration = () => {
                     }
                     options={
                         inventoryPickMethodOptions
+                    }
+                />
+
+                {/* ⭐ ADDED — QR CODE / BARCODE CONFIGURATION */}
+                <SettingRow
+                    title="QR Code/BarCode"
+                    description="Enable QR Code and BarCode generation, assignment and printing."
+                    value={!!inventoryConfig?.enableQrBarcode}
+                    onChange={(value) =>
+                        updateInventoryField(
+                            "enableQrBarcode",
+                            value
+                        )
                     }
                 />
 
@@ -1399,8 +1373,6 @@ const SystemConfiguration = () => {
             </Panel>
         );
     };
-
-
 
     const getExpenseAccount =
         accounts?.map(

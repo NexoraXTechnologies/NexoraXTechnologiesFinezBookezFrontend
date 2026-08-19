@@ -100,7 +100,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		return locationConfig === true || locationConfig === "true";
 	}, [configurations]);
 
-
+	const enableQrBarcode = configurations?.[0]?.inventoryConfiguration?.enableQrBarcode == true || configurations?.[0]?.inventoryConfiguration?.enableQrBarcode == "true"
 	const enableEngineering = useMemo(() => {
 		const locationConfig = configurations?.[0]?.systemConfiguration?.engineeringModuleConfiguration?.enableEngineeringModule
 		return locationConfig === true || locationConfig === "true";
@@ -138,15 +138,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							permissionKey: "accountMaster",
 							action: "view",
 						},
-						// {
-						// 	name: "QR",
-						// 	path: "/bookEz/qr-and-barcode-generator",
-						// 	icon: <BrickWallShield size={20} />,
-						// 	module: "bookez",
-						// 	permissionKey: "accountMaster",
-						// 	action: "view",
-						// },
-
+						...(enableQrBarcode ? [{
+							name: "Code Generate and assign",
+							path: "/bookEz/qr-and-barcode-generator",
+							icon: <BrickWallShield size={20} />,
+							module: "bookez",
+							permissionKey: "accountMaster",
+							action: "view",
+						}] : []),
 						{
 							name: "Opening Balances / Stocks",
 							path: "/bookEz/transaction/opening-balances",

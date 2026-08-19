@@ -46,7 +46,7 @@ import { getAllReportMapping } from "../../../../redux/slices/professionalSlice/
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 import ProductMasterModal from "../../master/productMaster/ProductMasterFormModal";
-import { getProductBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
+import { getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import InputBorderLabel from "../../../../components/common/InputBorderLabel";
 
 const VENDOR_FIELD_KEYS = new Set([
@@ -84,6 +84,41 @@ const getInventoryBalanceApiKey = (field: any) => {
     if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
 
     return "";
+};
+
+const getInventoryTransactionApiKey = (field: any) => {
+    if (!field) return "";
+
+    const fieldNames = [
+        field?.key,
+        field?.label,
+        field?.title,
+        field?.customMasterName,
+        field?.dataSource?.customMasterName,
+    ].map(normalizeInventoryFieldName);
+
+    if (fieldNames.some((name) => name.includes("warehouse"))) return "warehouseCode";
+    if (fieldNames.some((name) => name.includes("location"))) return "locationCode";
+    if (fieldNames.some((name) => name.includes("batch"))) return "batchNumber";
+    if (fieldNames.some((name) => name.includes("rack"))) return "rackCode";
+    if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
+    if (fieldNames.some((name) => name.includes("manufacturingdate") || name === "mfgon" || name.includes("mfgdate"))) return "mfgOn";
+    if (fieldNames.some((name) => name.includes("expirydate") || name.includes("expirationdate") || name === "expon" || name.includes("expdate"))) return "expOn";
+
+    return "";
+};
+
+const toInventoryIsoDate = (value: any) => {
+    if (!value) return "";
+
+    const stringValue = String(value).trim();
+    if (!stringValue) return "";
+
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(stringValue)
+        ? new Date(`${stringValue}T00:00:00.000Z`)
+        : new Date(stringValue);
+
+    return Number.isNaN(date.getTime()) ? stringValue : date.toISOString();
 };
 
 const defaultPagination = {
@@ -150,6 +185,8 @@ const emptyProductRow = {
     netTotal: 0,
 
     customMasters: {},
+    _inventoryBalanceSelections: {},
+    _inventoryBalanceVoucherId: "",
 };
 
 const getDefaultForm = () => ({
@@ -740,6 +777,250 @@ const Grn = () => {
         }
 
         return filters;
+    };
+
+
+    const getInventoryFieldValue = (source: any, fields: any[], apiKey: string) => {
+        const directKeyMap: Record<string, string[]> = {
+            warehouseCode: ["warehouseCode", "warehouse"],
+            locationCode: ["locationCode", "location"],
+            batchNumber: ["batchNumber", "batchNo", "batch"],
+            rackCode: ["rackCode", "rack"],
+            binCode: ["binCode", "bin"],
+            mfgOn: ["mfgOn", "mfgDate", "manufacturingDate", "manufactureDate"],
+            expOn: ["expOn", "expDate", "expiryDate", "expirationDate"],
+        };
+
+        for (const key of directKeyMap[apiKey] || []) {
+            const directValue = source?.[key];
+
+            if (
+                directValue !== undefined &&
+                directValue !== null &&
+                String(directValue).trim() !== ""
+            ) {
+                return directValue;
+            }
+        }
+
+        const schemaField = (fields || []).find(
+            (field: any) => getInventoryTransactionApiKey(field) === apiKey
+        );
+
+        if (!schemaField?.key) return "";
+
+        const masterName = getCustomMasterName(schemaField);
+
+        const selectedMaster =
+            source?.customMasters?.[masterName] ||
+            source?.customMasters?.[schemaField.key];
+
+        const value =
+            selectedMaster?.code ??
+            source?.[schemaField.key] ??
+            "";
+
+        if (value && typeof value === "object") {
+            return value?.code ?? value?.value ?? "";
+        }
+
+        return value;
+    };
+
+    const getInventoryTransactionValue = (row: any, apiKey: string) => {
+        const bodyValue = getInventoryFieldValue(
+            row,
+            templateFields?.body || [],
+            apiKey
+        );
+
+        if (
+            bodyValue !== undefined &&
+            bodyValue !== null &&
+            String(bodyValue).trim() !== ""
+        ) {
+            return bodyValue;
+        }
+
+        return getInventoryFieldValue(
+            form,
+            templateFields?.header || [],
+            apiKey
+        );
+    };
+
+    const getInventoryBalanceVoucherId = (row: any) =>
+        String(
+            row?._inventoryBalanceVoucherId ||
+            row?.inventoryBalanceVoucherId ||
+            row?.inventoryBalanceId ||
+            row?.inventoryVoucherId ||
+            row?.inventoryBalance?.voucherId ||
+            ""
+        ).trim();
+
+    const getInventoryBalanceRecords = (response: any) => {
+        const data =
+            response?.data?.data ??
+            response?.data ??
+            response ??
+            {};
+
+        if (Array.isArray(data?.records)) return data.records;
+        if (Array.isArray(data?.items)) return data.items;
+        if (Array.isArray(data?.docs)) return data.docs;
+        if (Array.isArray(data)) return data;
+
+        return [];
+    };
+
+    const attachInventoryBalanceVoucherIds = (
+        rows: any[],
+        inventoryRecords: any[]
+    ) => {
+        const usedVoucherIds = new Set<string>();
+
+        return (rows || []).map((row: any) => {
+            const productCode = String(row?.productCode || "").trim();
+
+            const warehouseCode = String(getInventoryFieldValue(row, templateFields?.body || [], "warehouseCode") || "");
+            const locationCode = String(getInventoryFieldValue(row, templateFields?.body || [], "locationCode") || "");
+            const batchNumber = String(getInventoryFieldValue(row, templateFields?.body || [], "batchNumber") || "");
+            const rackCode = String(getInventoryFieldValue(row, templateFields?.body || [], "rackCode") || "");
+            const binCode = String(getInventoryFieldValue(row, templateFields?.body || [], "binCode") || "");
+
+            const availableRecords = (inventoryRecords || []).filter((record: any) => {
+                const voucherId = String(record?.voucherId || "").trim();
+
+                return (
+                    voucherId &&
+                    !usedVoucherIds.has(voucherId) &&
+                    String(record?.productCode || "").trim() === productCode
+                );
+            });
+
+            const exactRecord =
+                availableRecords.find(
+                    (record: any) =>
+                        String(record?.warehouseCode || "") === warehouseCode &&
+                        String(record?.locationCode || "") === locationCode &&
+                        String(record?.batchNumber || "") === batchNumber &&
+                        String(record?.rackCode || "") === rackCode &&
+                        String(record?.binCode || "") === binCode
+                ) ||
+                availableRecords[0];
+
+            const voucherId = String(exactRecord?.voucherId || "").trim();
+
+            if (voucherId) usedVoucherIds.add(voucherId);
+
+            return {
+                ...row,
+                _inventoryBalanceVoucherId: voucherId,
+            };
+        });
+    };
+
+    const buildInventoryBalancePayload = (
+        row: any,
+        voucherNumber: string
+    ) => {
+        const inventoryStatus =
+            ["close", "closed"].includes(
+                String(form?.grnStatus || "").trim().toLowerCase()
+            )
+                ? "inactive"
+                : "active";
+
+        return {
+            voucherNumber,
+            voucherNumberSnapshot:
+                form?.grnVoucherNumber && form.grnVoucherNumber !== "AUTO"
+                    ? form.grnVoucherNumber
+                    : voucherNumber,
+            voucherType: "grn",
+            sourceModule: "grn",
+            voucherStatus: inventoryStatus,
+            voucherDate: toInventoryIsoDate(
+                form?.grnVoucherDate || todayYMD()
+            ),
+            party:
+                form?.grnVendorCode ||
+                form?.grnVendorName ||
+                "vendor",
+            productCode: String(row?.productCode || ""),
+            productName: String(row?.productName || ""),
+            productType: String(row?.productType || ""),
+            uom: String(row?.uom || row?.unit || row?.unitName || ""),
+            inwardQty: num(
+                row?.acceptedQuantity !== undefined &&
+                    row?.acceptedQuantity !== null &&
+                    row?.acceptedQuantity !== ""
+                    ? row.acceptedQuantity
+                    : row?.quantity
+            ),
+            outwardQty: 0,
+            reservedQty: num(row?.reservedQty || 0),
+            warehouseCode: String(getInventoryTransactionValue(row, "warehouseCode") || ""),
+            locationCode: String(getInventoryTransactionValue(row, "locationCode") || ""),
+            batchNumber: String(getInventoryTransactionValue(row, "batchNumber") || ""),
+            rackCode: String(getInventoryTransactionValue(row, "rackCode") || ""),
+            binCode: String(getInventoryTransactionValue(row, "binCode") || ""),
+            mfgOn: toInventoryIsoDate(getInventoryTransactionValue(row, "mfgOn")),
+            expOn: toInventoryIsoDate(getInventoryTransactionValue(row, "expOn")),
+            remarks:
+                row?.remarks ||
+                form?.grnRemark ||
+                "GRN",
+            status: inventoryStatus,
+        };
+    };
+
+    const syncInventoryBalance = async (
+        voucherNumber: string,
+        isEdit: boolean
+    ) => {
+        const rows = (form?.products || []).filter(
+            (row: any) =>
+                String(row?.productCode || "").trim() !== "" &&
+                num(
+                    row?.acceptedQuantity !== undefined &&
+                        row?.acceptedQuantity !== null &&
+                        row?.acceptedQuantity !== ""
+                        ? row.acceptedQuantity
+                        : row?.quantity
+                ) > 0
+        );
+
+        for (const row of rows) {
+            const inventoryPayload = buildInventoryBalancePayload(
+                row,
+                voucherNumber
+            );
+
+            if (!isEdit) {
+                await dispatch(
+                    saveInventoryBalance(inventoryPayload) as any
+                ).unwrap();
+                continue;
+            }
+
+            const inventoryBalanceVoucherId =
+                getInventoryBalanceVoucherId(row);
+
+            if (inventoryBalanceVoucherId) {
+                await dispatch(
+                    updateInventoryBalance({
+                        id: inventoryBalanceVoucherId,
+                        payload: inventoryPayload,
+                    }) as any
+                ).unwrap();
+            } else {
+                await dispatch(
+                    saveInventoryBalance(inventoryPayload) as any
+                ).unwrap();
+            }
+        }
     };
 
     const getProductMasterFromRow = (row: any) => {
@@ -1488,6 +1769,13 @@ const Grn = () => {
                         }
                         : {},
 
+                _inventoryBalanceSelections: {},
+                _inventoryBalanceVoucherId:
+                    item?._inventoryBalanceVoucherId ||
+                    item?.inventoryBalanceVoucherId ||
+                    item?.inventoryBalanceId ||
+                    "",
+
                 ...customMasterValues,
             })
         );
@@ -1551,7 +1839,7 @@ const Grn = () => {
         setShowModal(true);
     };
 
-    const openEditModal = (record: any) => {
+    const openEditModal = async (record: any) => {
         const footer = record?.grnFooter || {};
 
         const products =
@@ -1559,57 +1847,63 @@ const Grn = () => {
                 ? record.grnBody.map((item: any) => buildGrnProductRow(item))
                 : [{ ...emptyProductRow, id: Date.now() }];
 
+        let inventoryRecords: any[] = [];
+
+        try {
+            const inventoryResponse = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookez/inventoryBalance/getAll",
+                {
+                    params: {
+                        offset: 0,
+                        limit: 500,
+                        voucherNumber: record?.grnVoucherNumber || "",
+                    },
+                }
+            );
+
+            inventoryRecords = getInventoryBalanceRecords(inventoryResponse);
+        } catch (error) {
+            console.log("Failed to load GRN inventory balance records", error);
+        }
+
+        const productsWithInventoryIds =
+            attachInventoryBalanceVoucherIds(
+                products,
+                inventoryRecords
+            );
+
         setEditingRecord(true);
         setErrors({});
 
         setForm({
             grnVoucherNumber: record?.grnVoucherNumber || "AUTO",
             grnVoucherDate: formatDateForInput(record?.grnVoucherDate),
-
             pOrdVoucherNumber: record?.pOrdVoucherNumber || "",
-
             grnVendorCode: record?.grnVendorCode || "",
             grnVendorName: record?.grnVendorName || "",
-
             grnStatus: record?.grnStatus || "open",
             grnRemark: record?.grnRemark || "",
-
             grnStatusRemark: record?.grnStatusRemark || "",
             grnStatusHistory: record?.grnStatusHistory || [],
-
             isAutoPost: record?.isAutoPost || false,
-
             customMasters:
                 record?.customMasters &&
                     typeof record.customMasters === "object"
-                    ? {
-                        ...record.customMasters,
-                    }
+                    ? { ...record.customMasters }
                     : {},
-
             ...getCustomMasterFieldValues(
                 templateFields?.header || [],
                 record?.customMasters || {}
             ),
-
-            products,
-
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-            discountAmount:
-                footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-            otherAmount:
-                footer?.otherAmount || footer?.totalOtherAmount || "0.00",
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            products: productsWithInventoryIds,
+            grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+            discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+            cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+            sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+            igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+            taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+            otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+            netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
         });
 
         setShowModal(true);
@@ -2928,6 +3222,26 @@ const Grn = () => {
                     result?.voucherNumber ||
                     form?.grnVoucherNumber;
 
+                if (savedGrnVoucherNumber) {
+                    try {
+                        await syncInventoryBalance(
+                            savedGrnVoucherNumber,
+                            true
+                        );
+                    } catch (inventoryError: any) {
+                        console.log(
+                            "GRN Inventory Balance update failed",
+                            inventoryError
+                        );
+
+                        toast.error(
+                            inventoryError?.message ||
+                            inventoryError?.response?.data?.message ||
+                            "GRN updated, but Inventory Balance update failed"
+                        );
+                    }
+                }
+
                 if (payload?.pOrdVoucherNumber) {
                     await syncPurchaseOrderStatusAfterGrn(
                         payload.pOrdVoucherNumber
@@ -2948,6 +3262,26 @@ const Grn = () => {
                     result?.grn?.grnVoucherNumber ||
                     result?.voucherNumber ||
                     payload?.grnVoucherNumber;
+
+                if (savedGrnVoucherNumber) {
+                    try {
+                        await syncInventoryBalance(
+                            savedGrnVoucherNumber,
+                            false
+                        );
+                    } catch (inventoryError: any) {
+                        console.log(
+                            "GRN Inventory Balance save failed",
+                            inventoryError
+                        );
+
+                        toast.error(
+                            inventoryError?.message ||
+                            inventoryError?.response?.data?.message ||
+                            "GRN created, but Inventory Balance save failed"
+                        );
+                    }
+                }
 
                 if (payload?.pOrdVoucherNumber) {
                     const poStatus = await syncPurchaseOrderStatusAfterGrn(
