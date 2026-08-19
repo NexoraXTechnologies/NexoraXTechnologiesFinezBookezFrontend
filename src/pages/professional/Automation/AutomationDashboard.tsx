@@ -240,27 +240,27 @@ export default function AutomationDashboard() {
 
   const runnerPill = () => {
     if (runner === 'CHECKING') {
-      return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border">CHECKING…</span>;
+      return <span className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">CHECKING…</span>;
     }
     if (runner === 'RUNNING') {
-      return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">RUNNING</span>;
+      return <span className="rounded-full border border-success/20 bg-success/10 px-2 py-1 text-xs font-semibold text-success">RUNNING</span>;
     }
     if (runner === 'STOPPED') {
-      return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-800 border border-yellow-200">STOPPED</span>;
+      return <span className="rounded-full border border-warning/20 bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">STOPPED</span>;
     }
     if (runner === 'NOT_DETECTED') {
-      return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">NOT DETECTED</span>;
+      return <span className="rounded-full border border-danger/20 bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">NOT DETECTED</span>;
     }
-    return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">{runner}</span>;
+    return <span className="rounded-full border border-border bg-muted/50 px-2 py-1 text-xs font-semibold text-muted-foreground">{runner}</span>;
   };
 
   const statusBadge = (status: any) => {
     const s = String(status || '').toUpperCase();
-    if (s === 'COMPLETED') return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">COMPLETED</span>;
-    if (s === 'IN_PROGRESS') return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">IN PROGRESS</span>;
-    if (s === 'PENDING') return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-800 border border-yellow-200">PENDING</span>;
-    if (s === 'FAILED' || s === 'ERROR') return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">{s}</span>;
-    return <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">{s || '—'}</span>;
+    if (s === 'COMPLETED') return <span className="rounded-full border border-success/20 bg-success/10 px-2 py-1 text-xs font-semibold text-success">COMPLETED</span>;
+    if (s === 'IN_PROGRESS') return <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">IN PROGRESS</span>;
+    if (s === 'PENDING') return <span className="rounded-full border border-warning/20 bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">PENDING</span>;
+    if (s === 'FAILED' || s === 'ERROR') return <span className="rounded-full border border-danger/20 bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">{s}</span>;
+    return <span className="rounded-full border border-border bg-muted/50 px-2 py-1 text-xs font-semibold text-muted-foreground">{s || '—'}</span>;
   };
 
   // ✅ variables for pagination block (same as Users)
@@ -271,26 +271,26 @@ export default function AutomationDashboard() {
   const endIndex = totalCount === 0 ? 0 : Math.min(page * limit, totalCount);
 
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col h-full min-h-0">
+    <div className="flex h-full min-h-0 w-full flex-col  border border-border bg-card p-4 text-card-foreground shadow-sm">
       {/* ================= HEADER ================= */}
       <div className="flex items-center gap-3 mb-3 flex-wrap shrink-0">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 h-8">
-            <Laptop size={16} className="text-blue-700" />
-            <span className="text-xs text-gray-600">Runner</span>
+          <div className="flex h-8 items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-2 py-1">
+            <Laptop size={16} className="text-primary" />
+            <span className="text-xs text-muted-foreground">Runner</span>
             {runnerPill()}
           </div>
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={handleRefresh} className="border px-3 h-9 rounded-md flex items-center hover:bg-gray-100" title="Refresh">
-            <RefreshCcw size={16} className={refreshing ? 'animate-spin text-blue-600' : ''} />
+          <button onClick={handleRefresh} className="flex h-9 items-center rounded-md border border-border px-3 text-foreground transition hover:bg-muted" title="Refresh">
+            <RefreshCcw size={16} className={refreshing ? 'animate-spin text-primary' : ''} />
           </button>
 
           <button
             onClick={handleStart}
             disabled={runner === 'RUNNING' || runner === 'CHECKING'}
-            className="border bg-green-600 text-white px-3 h-9 rounded-md flex items-center justify-center hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-9 items-center justify-center rounded-md border border-success bg-success px-3 text-white transition hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
             title="Start Runner">
             <Play size={16} className="mr-2" />
             Start
@@ -299,7 +299,7 @@ export default function AutomationDashboard() {
           <button
             onClick={handleStop}
             disabled={runner !== 'RUNNING'}
-            className="border bg-red-600 text-white px-3 h-9 rounded-md flex items-center justify-center hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-9 items-center justify-center rounded-md border border-danger bg-danger px-3 text-white transition hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-50"
             title="Stop Runner">
             <Square size={16} className="mr-2" />
             Stop
@@ -309,7 +309,7 @@ export default function AutomationDashboard() {
 
       {/* Runner not detected box */}
       {runner === 'NOT_DETECTED' && (
-        <div className="mb-4 border border-red-200 bg-red-50 rounded-md p-3 text-sm text-red-800 flex items-start gap-2">
+        <div className="mb-4 flex items-start gap-2 rounded-md border border-danger/20 bg-danger/10 p-3 text-sm text-danger">
           <Download size={18} className="mt-[2px]" />
           <div>
             <div className="font-semibold">Runner not detected.</div>
@@ -326,17 +326,17 @@ export default function AutomationDashboard() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={['px-4 h-9 rounded-md text-sm font-semibold border transition', tab === t.key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200'].join(' ')}>
+            className={['px-4 h-9 rounded-md text-sm font-semibold border transition', tab === t.key ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground hover:bg-muted'].join(' ')}>
             {t.label}
           </button>
         ))}
       </div>
 
       {/* ================= TABLE ================= */}
-      <div className="flex-1 min-h-0 border rounded-md overflow-hidden flex flex-col bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border bg-card">
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
-          <table className="min-w-full table-fixed text-sm text-gray-700 border-collapse">
-            <thead className="bg-gray-100 border-b sticky top-0 z-10">
+          <table className="min-w-full table-fixed border-collapse text-sm text-foreground">
+            <thead className="sticky top-0 z-10 border-b border-border bg-muted">
               <tr>
                 <th className="px-3 py-2 text-left w-[150px]">Common ID</th>
                 <th className="px-3 py-2 text-left w-[100px]">Job Type</th>
@@ -350,7 +350,7 @@ export default function AutomationDashboard() {
             <tbody>
               {loadingJobs ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-gray-500">
+                  <td colSpan={6} className="py-6 text-center text-muted-foreground">
                     Loading…
                   </td>
                 </tr>
@@ -358,7 +358,7 @@ export default function AutomationDashboard() {
                   jobs.map((j: any, idx: any) => {
                   const commonId = j.commonId || j.jobCommonId || j.jobId; // commonId fallback
                   return (
-                    <tr key={j._id || commonId || idx} className="border-b hover:bg-gray-50">
+                    <tr key={j._id || commonId || idx} className="border-b border-border transition hover:bg-muted/50">
                       <td className="px-3 py-2">{commonId || '—'}</td>
                       <td className="px-3 py-2">{j.jobType || '—'}</td>
 
@@ -372,12 +372,12 @@ export default function AutomationDashboard() {
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-3">
                           {/* View */}
-                          <button onClick={() => openDetails(j)} className="text-blue-600 hover:text-blue-800 transition" title="View Details">
+                          <button onClick={() => openDetails(j)} className="text-primary transition hover:text-primary/80" title="View Details">
                             <Eye size={18} />
                           </button>
 
                           {/* Delete */}
-                          <button onClick={(e) => openDeleteConfirm(e, j)} className="text-red-600 hover:text-red-800 transition" title="Delete Job">
+                          <button onClick={(e) => openDeleteConfirm(e, j)} className="text-danger transition hover:text-danger/80" title="Delete Job">
                             <Trash2 size={18} />
                           </button>
                         </div>
@@ -387,7 +387,7 @@ export default function AutomationDashboard() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-gray-500 italic">
+                  <td colSpan={6} className="py-6 text-center italic text-muted-foreground">
                     No {selectedTab.label.toLowerCase()} jobs found.
                   </td>
                 </tr>
@@ -400,10 +400,9 @@ export default function AutomationDashboard() {
         {totalCount > 0 && (
           <div
             id="jobs-pagination"
-            className="shrink-0 border-t bg-white px-4 py-3 flex justify-between items-center text-sm text-gray-700 flex-wrap gap-3
-                 sticky bottom-0">
+            className="sticky bottom-0 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 text-sm text-foreground">
             <div className="flex items-center gap-2">
-              <label htmlFor="limit" className="text-gray-600">
+              <label htmlFor="limit" className="text-muted-foreground">
                 Rows per page:
               </label>
               <select
@@ -413,9 +412,9 @@ export default function AutomationDashboard() {
                   setLimit(Number(e.target.value));
                   setPage(1);
                 }}
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white">
+                className="rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground">
                 {[10, 20, 50, 100].map((v) => (
-                  <option key={v} value={v}>
+                  <option key={v} value={v} className="bg-card text-card-foreground">
                     {v}
                   </option>
                 ))}
@@ -431,16 +430,16 @@ export default function AutomationDashboard() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 bg-white hover:bg-gray-50">
+              <button onClick={() => setPage(1)} disabled={page === 1} className="rounded-md border border-border bg-card px-3 py-1 text-foreground transition hover:bg-muted disabled:opacity-50">
                 First
               </button>
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 bg-white hover:bg-gray-50">
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-md border border-border bg-card px-3 py-1 text-foreground transition hover:bg-muted disabled:opacity-50">
                 Prev
               </button>
-              <button onClick={() => setPage((p) => Math.min(p + 1, totalPages))} disabled={page === totalPages} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 bg-white hover:bg-gray-50">
+              <button onClick={() => setPage((p) => Math.min(p + 1, totalPages))} disabled={page === totalPages} className="rounded-md border border-border bg-card px-3 py-1 text-foreground transition hover:bg-muted disabled:opacity-50">
                 Next
               </button>
-              <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 bg-white hover:bg-gray-50">
+              <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="rounded-md border border-border bg-card px-3 py-1 text-foreground transition hover:bg-muted disabled:opacity-50">
                 Last
               </button>
             </div>
@@ -453,21 +452,21 @@ export default function AutomationDashboard() {
 
             {/* modal */}
             <div className="absolute inset-0 flex items-center justify-center p-3">
-              <div className="w-full max-w-3xl bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+              <div className="w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-xl">
                 {/* header */}
-                <div className="flex items-start justify-between gap-3 px-4 py-3 border-b bg-gray-50">
+                <div className="flex items-start justify-between gap-3 border-b border-border bg-muted/30 px-4 py-3">
                   <div className="min-w-0">
-                    <div className="text-sm text-gray-500">Automation Job Details</div>
-                    <div className="font-semibold text-gray-900 truncate">{selectedJob?.commonId || selectedJob?.jobCommonId || '—'}</div>
+                    <div className="text-sm text-muted-foreground">Automation Job Details</div>
+                    <div className="truncate font-semibold text-foreground">{selectedJob?.commonId || selectedJob?.jobCommonId || '—'}</div>
 
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 border">{fmt(selectedJob?.jobType)}</span>
+                      <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{fmt(selectedJob?.jobType)}</span>
                       {statusBadge(selectedJob?.status)}
-                      <span className="text-xs text-gray-500">Updated: {fmtDateTime(selectedJob?.progress?.lastUpdatedOn || selectedJob?.modifiedOn || selectedJob?.updatedAt)}</span>
+                      <span className="text-xs text-muted-foreground">Updated: {fmtDateTime(selectedJob?.progress?.lastUpdatedOn || selectedJob?.modifiedOn || selectedJob?.updatedAt)}</span>
                     </div>
                   </div>
 
-                  <button onClick={closeDetails} className="p-2 border rounded-md hover:bg-gray-100 shrink-0" title="Close">
+                  <button onClick={closeDetails} className="shrink-0 rounded-md border border-border p-2 text-foreground transition hover:bg-muted" title="Close">
                     <X size={16} />
                   </button>
                 </div>
@@ -476,52 +475,52 @@ export default function AutomationDashboard() {
                 <div className="p-4 max-h-[75vh] overflow-auto space-y-4">
                   {/* Top cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="border rounded-lg p-3">
-                      <div className="text-xs text-gray-500">Job ID</div>
+                    <div className="rounded-lg border border-border p-3">
+                      <div className="text-xs text-muted-foreground">Job ID</div>
                       <div className="font-semibold text-gray-900">{fmt(selectedJob?.jobId)}</div>
-                      <div className="text-xs text-gray-500 mt-1">Stage</div>
+                      <div className="mt-1 text-xs text-muted-foreground">Stage</div>
                       <div className="text-sm font-medium">{fmt(selectedJob?.progress?.stage)}</div>
                     </div>
 
-                    <div className="border rounded-lg p-3">
-                      <div className="text-xs text-gray-500">Progress</div>
+                    <div className="rounded-lg border border-border p-3">
+                      <div className="text-xs text-muted-foreground">Progress</div>
                       <div className="flex items-center gap-2">
-                        <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-                          <div className="h-2 bg-blue-600" style={{ width: `${Math.min(100, Number(selectedJob?.progress?.percent || 0))}%` }} />
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div className="h-2 bg-primary" style={{ width: `${Math.min(100, Number(selectedJob?.progress?.percent || 0))}%` }} />
                         </div>
                         <div className="text-sm font-semibold w-12 text-right">{fmt(selectedJob?.progress?.percent)}%</div>
                       </div>
 
                       <div className="text-xs text-gray-500 mt-2">Message</div>
-                      <div className="text-sm text-gray-800">{fmt(selectedJob?.progress?.message || selectedJob?.message)}</div>
+                      <div className="text-sm text-foreground">{fmt(selectedJob?.progress?.message || selectedJob?.message)}</div>
                     </div>
                   </div>
 
                   {/* Execution */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 border-b text-sm font-semibold text-gray-800">Execution</div>
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <div className="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">Execution</div>
 
                     <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       {/* ✅ System Id - full width */}
                       <div className="md:col-span-2">
-                        <div className="text-xs text-gray-500">System Id</div>
+                        <div className="text-xs text-muted-foreground">System Id</div>
                         <div className="font-medium break-all">{fmt(selectedJob?.execution?.assignedAgentId)}</div>
                         {/* System Name */}
                         <div>
-                          <div className="text-xs text-gray-500">System Name</div>
+                          <div className="text-xs text-muted-foreground">System Name</div>
                           <div className="font-medium">{fmt(selectedJob?.execution?.targetAgentId)}</div>
                         </div>
                       </div>
 
                       {/* Assigned On */}
                       <div>
-                        <div className="text-xs text-gray-500">Assigned On</div>
+                        <div className="text-xs text-muted-foreground">Assigned On</div>
                         <div className="font-medium">{fmtDateTime(selectedJob?.execution?.assignedOn)}</div>
                       </div>
 
                       {/* Started → Ended */}
                       <div className="md:col-span-2">
-                        <div className="text-xs text-gray-500">Started → Ended</div>
+                        <div className="text-xs text-muted-foreground">Started → Ended</div>
                         <div className="font-medium">
                           {fmtDateTime(selectedJob?.execution?.startedOn)} → {fmtDateTime(selectedJob?.execution?.endedOn)}
                         </div>
@@ -530,46 +529,46 @@ export default function AutomationDashboard() {
                   </div>
 
                   {/* Input (masked) */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 border-b text-sm font-semibold text-gray-800">Input</div>
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <div className="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">Input</div>
 
                     <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       <div>
-                        <div className="text-xs text-gray-500">PAN</div>
+                        <div className="text-xs text-muted-foreground">PAN</div>
                         <div className="font-medium">{selectedJob?.input?.pan}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-gray-500">Assessment Year</div>
+                        <div className="text-xs text-muted-foreground">Assessment Year</div>
                         <div className="font-medium">{fmt(selectedJob?.input?.assessmentYear)}</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Meta */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 border-b text-sm font-semibold text-gray-800">Meta</div>
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <div className="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">Meta</div>
 
                     <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       <div>
-                        <div className="text-xs text-gray-500">Requested By (cloudUserRef)</div>
+                        <div className="text-xs text-muted-foreground">Requested By (cloudUserRef)</div>
                         <div className="font-medium">{fmt(selectedJob?.requestedBy?.cloudUserRef)}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-gray-500">Tenant Ref</div>
+                        <div className="text-xs text-muted-foreground">Tenant Ref</div>
                         <div className="font-medium">{fmt(selectedJob?.requestedBy?.tenantRef)}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-gray-500">Created On</div>
+                        <div className="text-xs text-muted-foreground">Created On</div>
                         <div className="font-medium">{fmtDateTime(selectedJob?.createdOn)}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-gray-500">Modified On</div>
+                        <div className="text-xs text-muted-foreground">Modified On</div>
                         <div className="font-medium">{fmtDateTime(selectedJob?.modifiedOn)}</div>
                       </div>
                       {selectedJob?.error ? (
                         <div className="md:col-span-2">
-                          <div className="text-xs text-gray-500">Error</div>
-                          <div className="font-medium text-red-700">{fmt(selectedJob?.error)}</div>
+                          <div className="text-xs text-muted-foreground">Error</div>
+                          <div className="font-medium text-danger">{fmt(selectedJob?.error)}</div>
                         </div>
                       ) : null}
                     </div>
@@ -577,8 +576,8 @@ export default function AutomationDashboard() {
                 </div>
 
                 {/* footer */}
-                <div className="px-4 py-3 border-t bg-white flex justify-end">
-                  <button onClick={closeDetails} className="px-4 py-2 border rounded-md text-white bg-blue-600 hover:bg-blue-800">
+                <div className="flex justify-end border-t border-border bg-card px-4 py-3">
+                  <button onClick={closeDetails} className="rounded-md border border-primary bg-primary px-4 py-2 text-primary-foreground transition hover:bg-primary/90">
                     Close
                   </button>
                 </div>

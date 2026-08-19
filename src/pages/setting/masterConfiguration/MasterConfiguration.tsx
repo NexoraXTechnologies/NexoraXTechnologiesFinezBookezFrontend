@@ -1373,16 +1373,16 @@ const MasterConfiguration = () => {
 						setStatusFilter(event.target
 							.value);
 						setLocalOffset(0);
-					}} className="h-10 rounded border border-input bg-background px-3 text-sm outline-none focus:border-primary">
-						<option value="">
+					}} className="h-10 rounded border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary">
+						<option value="" className="bg-card text-card-foreground">
 							All Statuses
 						</option>
 
-						<option value="active">
+						<option value="active" className="bg-card text-card-foreground">
 							Active
 						</option>
 
-						<option value="inactive">
+						<option value="inactive" className="bg-card text-card-foreground">
 							Inactive
 						</option>
 					</select>
@@ -1460,7 +1460,7 @@ const MasterConfiguration = () => {
 		schemaOffset,
 		schemaLimit,
 	]);
-	return (<div className="min-h-screen bg-background p-4 md:p-4">
+	return (<div className="min-h-screen bg-background p-4 text-foreground md:p-4">
 		<div className="space-y-4">
 			<header className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
 				<div className="flex items-center gap-3">
@@ -1550,7 +1550,7 @@ const MasterConfiguration = () => {
 		</div>
 
 		{showMasterForm ? (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-			<div className="w-full max-w-xl overflow-hidden rounded border border-border bg-card shadow-2xl">
+			<div className="w-full max-w-xl overflow-hidden rounded border border-border bg-card text-card-foreground shadow-2xl">
 				<div className="flex items-center justify-between border-b border-border px-5 py-4">
 					<div>
 						<h2 className="text-lg font-semibold text-card-foreground">
@@ -1586,8 +1586,8 @@ const MasterConfiguration = () => {
 
 							<input type="text" value={masterForm.moduleName} onChange={(event) => updateMasterFormField("moduleName", event.target
 								.value)} placeholder="Example: Department Master" maxLength={100} className={`
-                      h-10 w-full rounded border bg-background px-3 text-sm
-                      outline-none focus:ring-2 focus:ring-primary/20
+                      h-10 w-full rounded border bg-background px-3 text-sm text-foreground
+                      outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20
                       ${masterFormErrors.moduleName
 										? "border-danger"
 										: "border-input"}
@@ -1609,8 +1609,8 @@ const MasterConfiguration = () => {
 							<textarea value={masterForm.description} onChange={(event) => updateMasterFormField("description", event.target
 								.value)} placeholder="Describe where this master will be used" rows={4} maxLength={500} className={`
                       w-full resize-none rounded border bg-background
-                      px-3 py-2.5 text-sm outline-none
-                      focus:ring-2 focus:ring-primary/20
+                      px-3 py-2.5 text-sm text-foreground outline-none
+                      placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20
                       ${masterFormErrors.description
 										? "border-danger"
 										: "border-input"}
@@ -1637,12 +1637,12 @@ const MasterConfiguration = () => {
 							</label>
 
 							<select value={masterForm.status} onChange={(event) => updateMasterFormField("status", event.target
-								.value)} className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold outline-none focus:border-primary">
-								<option value="active">
+								.value)} className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold text-foreground outline-none focus:border-primary">
+								<option value="active" className="bg-card text-card-foreground">
 									Active
 								</option>
 
-								<option value="inactive">
+								<option value="inactive" className="bg-card text-card-foreground">
 									Inactive
 								</option>
 							</select>
@@ -1653,7 +1653,7 @@ const MasterConfiguration = () => {
 						</div>) : null}
 
 						<div className="flex justify-end gap-3 border-t border-border pt-4">
-							<button type="button" onClick={closeMasterForm} disabled={isMasterSubmitting} className="h-10 rounded border border-border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-50">
+							<button type="button" onClick={closeMasterForm} disabled={isMasterSubmitting} className="h-10 rounded border border-border px-4 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50">
 								Cancel
 							</button>
 
@@ -1671,7 +1671,7 @@ const MasterConfiguration = () => {
 
 		{showSchemaForm &&
 			schemaContext ? (<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-				<div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded border border-border bg-card shadow-2xl">
+				<div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded border border-border bg-card text-card-foreground shadow-2xl">
 					<div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-4">
 						<div>
 							<h2 className="text-lg font-semibold text-card-foreground">
@@ -1706,8 +1706,8 @@ const MasterConfiguration = () => {
 								</label>
 
 								<input value={schemaForm.label} onChange={(event) => handleSchemaLabelChange(event.target.value)} placeholder="Example: Department Code" className={`
-                    h-10 w-full rounded border bg-background px-3 text-sm
-                    outline-none
+                    h-10 w-full rounded border bg-background px-3 text-sm text-foreground
+                    outline-none placeholder:text-muted-foreground
                     ${schemaFormErrors.label ||
 										schemaFormErrors.key
 										? "border-danger"
@@ -1731,8 +1731,8 @@ const MasterConfiguration = () => {
 									</label>
 
 									<select value={schemaForm.type} onChange={(event) => updateSchemaFormField("type", event.target
-										.value)} className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold outline-none">
-										{availableFieldTypeOptions.map((option) => (<option key={option.value} value={option.value}>
+										.value)} className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold text-foreground outline-none">
+										{availableFieldTypeOptions.map((option) => (<option key={option.value} value={option.value} className="bg-card text-card-foreground">
 											{option.label}
 										</option>))}
 									</select>
@@ -1752,14 +1752,14 @@ const MasterConfiguration = () => {
 
 									<select value={schemaForm.customMasterCode} onChange={(event) => handleCustomMasterReferenceChange(event.target.value)} className={`
                       h-10 w-full rounded border bg-background px-3
-                      text-sm font-semibold outline-none
+                      text-sm font-semibold text-foreground outline-none
                       ${schemaFormErrors.customMasterCode
 											? "border-danger"
 											: "border-input"}
                     `}>
-										<option value="">Select Custom Master</option>
+										<option value="" className="bg-card text-card-foreground">Select Custom Master</option>
 
-										{masterConfigurations.filter((item: MasterConfigurationItem) => item.status === "active").map((item: MasterConfigurationItem) => (<option key={item.moduleCode} value={item.moduleCode}>
+										{masterConfigurations.filter((item: MasterConfigurationItem) => item.status === "active").map((item: MasterConfigurationItem) => (<option key={item.moduleCode} value={item.moduleCode} className="bg-card text-card-foreground">
 											{item.moduleName} ({item.moduleCode})
 										</option>))}
 									</select>
@@ -1777,9 +1777,9 @@ const MasterConfiguration = () => {
 										</span>
 									</label>
 
-									<select value={schemaForm.selectionType} onChange={(event) => updateSchemaFormField("selectionType", event.target.value)} className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold outline-none">
-										<option value="select">Select</option>
-										<option value="multiselect">Multi Select</option>
+									<select value={schemaForm.selectionType} onChange={(event) => updateSchemaFormField("selectionType", event.target.value)} className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold text-foreground outline-none">
+										<option value="select" className="bg-card text-card-foreground">Select</option>
+										<option value="multiselect" className="bg-card text-card-foreground">Multi Select</option>
 									</select>
 								</div>
 							</div>) : null}
@@ -1802,8 +1802,8 @@ const MasterConfiguration = () => {
 									key: "isHidden",
 									label: "Hidden",
 								},
-							].map((option) => (<label key={option.key} className="flex cursor-pointer items-center gap-2 rounded border border-border bg-background px-3 py-3 text-sm font-bold">
-								<input type="checkbox" checked={!!schemaForm[option.key as keyof SchemaFieldForm]} onChange={(event) => updateSchemaFormField(option.key as keyof SchemaFieldForm, event
+							].map((option) => (<label key={option.key} className="flex cursor-pointer items-center gap-2 rounded border border-border bg-background px-3 py-3 text-sm font-bold text-foreground">
+								<input type="checkbox" className="h-4 w-4 accent-primary" checked={!!schemaForm[option.key as keyof SchemaFieldForm]} onChange={(event) => updateSchemaFormField(option.key as keyof SchemaFieldForm, event
 									.target
 									.checked)} />
 
@@ -1812,7 +1812,7 @@ const MasterConfiguration = () => {
 						</div>
 
 						<div className="flex justify-end gap-3 border-t border-border pt-4">
-							<button type="button" onClick={closeSchemaForm} disabled={isSchemaSubmitting} className="h-10 rounded border border-border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-50">
+							<button type="button" onClick={closeSchemaForm} disabled={isSchemaSubmitting} className="h-10 rounded border border-border px-4 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50">
 								Cancel
 							</button>
 

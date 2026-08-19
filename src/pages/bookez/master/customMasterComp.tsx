@@ -2446,8 +2446,8 @@ const CustomMasterComp = ({
 	);
 
 	return (
-		<div className="w-full bg-white border border-gray-200 shadow-sm p-4 flex flex-col h-[100%]">
-			<div className="flex justify-end items-center mb-3">
+		<div className="flex h-[100%] w-full flex-col border border-border bg-card p-4 text-card-foreground shadow-sm">
+			<div className="mb-3 flex items-center justify-end">
 				<div className="me-2">
 					<SearchInput
 						{...{
@@ -2459,219 +2459,113 @@ const CustomMasterComp = ({
 
 				<PrimaryButton
 					{...{
-						text:
-							"Add",
-
-						callBackFn:
-							() => {
-								openEditModal();
-
-								setEdit(
-									false
-								);
-							}
+						text: "Add",
+						callBackFn: () => {
+							openEditModal();
+							setEdit(false);
+						}
 					}}
 				/>
 			</div>
 
 			<DataTable
-				columns={
-					columns
-				}
-				data={
-					listing
-				}
-				loading={
-					loading
-				}
+				columns={columns}
+				data={listing}
+				loading={loading}
 				emptyMessage="No data found"
-				actions={(
-					acc: any
-				) => (
+				actions={(acc: any) => (
 					<div className="flex items-center gap-2">
 						<button
 							id="account-edit-button"
 							onClick={() => {
-								setEdit(
-									true
-								);
-
-								openEditModal(
-									acc
-								);
+								setEdit(true);
+								openEditModal(acc);
 							}}
-							className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200 cursor-pointer"
+							className="cursor-pointer rounded-lg p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
 						>
-							<Edit
-								size={
-									16
-								}
-							/>
+							<Edit size={16} />
 						</button>
 
 						<button
 							id="account-delete-button"
-							onClick={(
-								event: any
-							) => {
-								const rect =
-									event
-										.currentTarget
-										.getBoundingClientRect();
+							onClick={(event: any) => {
+								const rect = event.currentTarget.getBoundingClientRect();
 
-								let x: any =
-									rect.left -
-									150;
+								let x: any = rect.left - 150;
 
-								if (
-									x <
-									10
-								) {
-									x =
-										10;
+								if (x < 10) {
+									x = 10;
 								}
 
-								const y: any =
-									rect.top +
-									window.scrollY -
-									5;
+								const y: any = rect.top + window.scrollY - 5;
 
 								setConfirmTooltip({
-									show:
-										true,
-
+									show: true,
 									x,
-
 									y,
-
-									voucherNumber:
-										acc
-											.voucherNumber,
+									voucherNumber: acc.voucherNumber,
 								});
 							}}
-							className="p-2 rounded-lg text-red-600 hover:bg-red-100 hover:text-red-700 transition-all duration-200 cursor-pointer"
+							className="cursor-pointer rounded-lg p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger"
 						>
-							<Trash2
-								size={
-									16
-								}
-							/>
+							<Trash2 size={16} />
 						</button>
 					</div>
 				)}
 			/>
 
-			{
-				pagination.totalDocs >
-				0 &&
+			{pagination.totalDocs > 0 &&
 				<Pagination
 					{...{
 						localLimit,
-
-						selectCb: (
-							event: any
-						) => {
-							setLocalLimit(
-								Number(
-									event
-										.target
-										.value
-								)
-							);
-
-							setLocalOffset(
-								0
-							);
+						selectCb: (event: any) => {
+							setLocalLimit(Number(event.target.value));
+							setLocalOffset(0);
 						},
-
-						preDisabled:
-							!pagination
-								.hasPrevPage,
-
-						nextDisabled:
-							!pagination
-								.hasNextPage,
-
+						preDisabled: !pagination.hasPrevPage,
+						nextDisabled: !pagination.hasNextPage,
 						setLocalOffset,
-
 						pagination
 					}}
 				/>
 			}
 
-			{
-				confirmTooltip.show &&
-				(
-					<ConfirmTooltip
-						x={
-							confirmTooltip
-								.x
-						}
-						y={
-							confirmTooltip
-								.y
-						}
-						message="Are you sure you want to delete this account?"
-						confirmText="Delete"
-						cancelText="Cancel"
-						onConfirm={
-							handleDeleteConfirm
-						}
-						onCancel={() =>
-							setConfirmTooltip({
-								show:
-									false,
-
-								x:
-									null,
-
-								y:
-									null,
-
-								voucherNumber:
-									null,
-							})
-						}
-					/>
-				)
-			}
+			{confirmTooltip.show && (
+				<ConfirmTooltip
+					x={confirmTooltip.x}
+					y={confirmTooltip.y}
+					message="Are you sure you want to delete this account?"
+					confirmText="Delete"
+					cancelText="Cancel"
+					onConfirm={handleDeleteConfirm}
+					onCancel={() =>
+						setConfirmTooltip({
+							show: false,
+							x: null,
+							y: null,
+							voucherNumber: null,
+						})
+					}
+				/>
+			)}
 
 			<Modal
 				{...{
-					show:
-						showModal,
-
-					setShow:
-						setShowModal,
-
+					show: showModal,
+					setShow: setShowModal,
 					handleSubmit,
 					loader: submitLoader,
-
-					state:
-						edit,
-
-					title:
-						`${!edit ? "Add" : ""} ${name}`,
+					state: edit,
+					title: `${!edit ? "Add" : ""} ${name}`,
 					body: (
 						<>
-							{
-								schemaLoading
-									? (
-										<div className="py-6 text-sm text-gray-500">
-											Loading account fields...
-										</div>
-									)
-									: (
-										addInput.map(
-											(
-												field: any
-											) =>
-												renderSchemaField(
-													field
-												)
-										)
-									)
-							}
+							{schemaLoading ? (
+								<div className="py-6 text-sm text-muted-foreground">
+									Loading account fields...
+								</div>
+							) : (
+								addInput.map((field: any) => renderSchemaField(field))
+							)}
 						</>
 					),
 				}}
