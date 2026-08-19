@@ -1,4 +1,4 @@
-import  { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     ArrowLeft,
     ChevronRight,
@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import {
+    getConsolidatedVehicles,
     getDriverUniqueKey,
     getTripTrackingVoucher,
     getWhereIsMyDriverList,
@@ -36,7 +37,7 @@ const pageVariants = {
     },
 };
 
-const sectionVariants:any = {
+const sectionVariants: any = {
     hidden: { opacity: 0, y: 18 },
     show: {
         opacity: 1,
@@ -58,7 +59,7 @@ const gridVariants = {
     },
 };
 
-const cardVariants:any = {
+const cardVariants: any = {
     hidden: { opacity: 0, y: 18, scale: 0.98 },
     show: {
         opacity: 1,
@@ -100,7 +101,7 @@ const formatDateTime = (value: any) => {
 };
 
 const getDriverName = (item: any) => {
-    return item?.driver?.driverName || item?.driverName || "Driver";
+    return item?.driver?.driverName || item?.driverName || "Vehicle";
 };
 
 const getVehicleNumber = (item: any) => {
@@ -123,6 +124,29 @@ const getLastUpdated = (item: any) => {
     );
 };
 
+/* ⭐ ADDED — LIVE / CLOSED STATUS HELPERS */
+const isClosedTrip = (item: any) => {
+    const status = String(item?.tripStatus || item?.status || "").toLowerCase().trim();
+
+    return (
+        status === "delivered" ||
+        status === "completed" ||
+        status === "closed" ||
+        status === "close"
+    );
+};
+
+const getTripStatusLabel = (item: any) => {
+    const status = String(item?.tripStatus || item?.status || "");
+
+    if (!status) return "Live";
+
+    return status
+        .replaceAll("_", " ")
+        .replaceAll("-", " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 /* ===================================================
    SELECT BOX
 =================================================== */
@@ -141,10 +165,10 @@ const SelectBox = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             className="
-				h-10 w-full rounded-md border border-border bg-background px-3
-				text-sm text-foreground outline-none transition
-				focus:border-primary focus:ring-2 focus:ring-primary/10
-			"
+                h-10 w-full rounded-md border border-border bg-background px-3
+                text-sm text-foreground outline-none transition
+                focus:border-primary focus:ring-2 focus:ring-primary/10
+            "
         >
             {options.map((option: any) => (
                 <option key={option.value || option.label} value={option.value}>
@@ -171,6 +195,11 @@ const DriverCard = ({
     const vehicleNumber = getVehicleNumber(item);
     const tripLabel = getTripLabel(item);
     const lastUpdated = getLastUpdated(item);
+
+    /* ⭐ ADDED — STATUS FOR CARD */
+    const closed = isClosedTrip(item);
+    const statusLabel = getTripStatusLabel(item);
+
     return (
         <motion.div
             layout
@@ -182,10 +211,10 @@ const DriverCard = ({
                 transition: { duration: 0.18 },
             }}
             className="
-				group relative overflow-hidden rounded-md border border-border
-				bg-gradient-to-br from-blue-500/10 to-card p-3 shadow-sm
-				transition-shadow duration-200 hover:shadow-md
-			"
+                group relative overflow-hidden rounded-md border border-border
+                bg-gradient-to-br from-blue-500/10 to-card p-3 shadow-sm
+                transition-shadow duration-200 hover:shadow-md
+            "
         >
             <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 transition group-hover:scale-110" />
 
@@ -210,17 +239,26 @@ const DriverCard = ({
                                 </p>
                             </div>
 
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                                <motion.span
-                                    animate={{ scale: [1, 1.3, 1] }}
-                                    transition={{
-                                        duration: 1.4,
-                                        repeat: Infinity,
-                                        ease: "easeInOut",
-                                    }}
-                                    className="h-1.5 w-1.5 rounded-full bg-emerald-500"
-                                />
-                                Live
+                            {/* ⭐ CHANGED — STATUS IS NOW DYNAMIC */}
+                            <span
+                                className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${closed
+                                    ? "border-slate-200 bg-slate-100 text-slate-700"
+                                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    }`}
+                            >
+                                {!closed && (
+                                    <motion.span
+                                        animate={{ scale: [1, 1.3, 1] }}
+                                        transition={{
+                                            duration: 1.4,
+                                            repeat: Infinity,
+                                            ease: "easeInOut",
+                                        }}
+                                        className="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                    />
+                                )}
+
+                                {statusLabel}
                             </span>
                         </div>
 
@@ -230,6 +268,7 @@ const DriverCard = ({
                                     <p className="text-xs font-medium text-muted-foreground">
                                         Vehicle
                                     </p>
+
                                     <p className="mt-1 truncate text-sm font-semibold text-card-foreground">
                                         {vehicleNumber}
                                     </p>
@@ -239,6 +278,7 @@ const DriverCard = ({
                                     <p className="text-xs font-medium text-muted-foreground">
                                         Tracking Voucher
                                     </p>
+
                                     <p className="mt-1 truncate text-sm font-semibold text-card-foreground">
                                         {getTripTrackingVoucher(item) || "-"}
                                     </p>
@@ -270,13 +310,13 @@ const DriverCard = ({
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.96 }}
                                     className="
-										inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-md
-										bg-primary px-3 text-xs font-bold text-primary-foreground
-										shadow-sm transition hover:bg-primary/90
-									"
+                                        inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-md
+                                        bg-primary px-3 text-xs font-bold text-primary-foreground
+                                        shadow-sm transition hover:bg-primary/90
+                                    "
                                 >
                                     <Navigation size={14} />
-                                    Track Driver
+                                    Track Vehicle
                                     <ChevronRight size={14} />
                                 </motion.button>
                             </div>
@@ -311,6 +351,7 @@ const SkeletonCard = ({ index }: { index: number }) => {
             >
                 <div className="flex gap-3">
                     <div className="h-11 w-11 rounded-md bg-muted" />
+
                     <div className="flex-1">
                         <div className="h-5 w-1/2 rounded-md bg-muted" />
                         <div className="mt-2 h-4 w-1/3 rounded-md bg-muted" />
@@ -336,10 +377,101 @@ const WhereIsMyDriver = () => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
 
-    const { drivers, listingLoader, error } = useSelector((state: any) => state.whereIsMyDriver);
+    const { drivers, consolidatedVehicle, listingLoader, error } = useSelector(
+        (state: any) => state.whereIsMyDriver
+    );
 
     const [selectedDriver, setSelectedDriver] = useState("all");
+
+    /* ⭐ ADDED — DEFAULT TAB IS LIVE */
+    const [activeTab, setActiveTab] = useState<"live" | "closed">("live");
+
     const [search, setSearch] = useState("");
+
+    /* ⭐ ADDED — LIVE AND CLOSED LISTS */
+    const liveDrivers = useMemo(() => {
+        return (drivers || []).filter((item: any) => !isClosedTrip(item));
+    }, [drivers]);
+
+    const closedDrivers = useMemo(() => {
+        const closedList = (drivers || []).filter((item: any) => isClosedTrip(item));
+
+        const latestMap = new Map<string, any>();
+
+        closedList.forEach((item: any) => {
+            const driverKey = String(
+                item?.driver?.driverCode ||
+                item?.driver?.mobileNumber ||
+                item?.driver?.driverMobile ||
+                item?.driverMobile ||
+                item?.mobileNumber ||
+                item?.assignedDriverMobile ||
+                item?.driver?.driverName ||
+                item?.driverName ||
+                ""
+            ).trim();
+
+            const vehicleKey = String(
+                item?.vehicle?.vehicleCode ||
+                item?.vehicle?.vehicleNumber ||
+                item?.vehicleNumber ||
+                ""
+            ).trim();
+
+            const key = `${driverKey}__${vehicleKey}`;
+
+            const existing = latestMap.get(key);
+
+            if (!existing) {
+                latestMap.set(key, item);
+                return;
+            }
+
+            const existingTime = new Date(
+                existing?.lastUpdatedAt ||
+                existing?.updatedAt ||
+                existing?.modifiedOn ||
+                existing?.currentLocation?.updatedAt ||
+                0
+            ).getTime();
+
+            const currentTime = new Date(
+                item?.lastUpdatedAt ||
+                item?.updatedAt ||
+                item?.modifiedOn ||
+                item?.currentLocation?.updatedAt ||
+                0
+            ).getTime();
+
+            if (currentTime >= existingTime) {
+                latestMap.set(key, item);
+            }
+        });
+
+        return Array.from(latestMap.values()).sort((a: any, b: any) => {
+            const aTime = new Date(
+                a?.lastUpdatedAt ||
+                a?.updatedAt ||
+                a?.modifiedOn ||
+                a?.currentLocation?.updatedAt ||
+                0
+            ).getTime();
+
+            const bTime = new Date(
+                b?.lastUpdatedAt ||
+                b?.updatedAt ||
+                b?.modifiedOn ||
+                b?.currentLocation?.updatedAt ||
+                0
+            ).getTime();
+
+            return bTime - aTime;
+        });
+    }, [drivers]);
+
+    const liveCount = liveDrivers.length;
+    const closedCount = closedDrivers.length;
+
     const fetchDrivers = () => {
         dispatch(
             getWhereIsMyDriverList({
@@ -348,6 +480,15 @@ const WhereIsMyDriver = () => {
             }) as any
         );
     };
+
+    useEffect(() => {
+        dispatch(
+            getConsolidatedVehicles({
+                limit: 100,
+                offset: 0,
+            })
+        );
+    }, [dispatch]);
 
     useEffect(() => {
         fetchDrivers();
@@ -379,22 +520,36 @@ const WhereIsMyDriver = () => {
         ];
     }, [drivers]);
 
+    /* ⭐ CHANGED — FILTER BY ACTIVE TAB FIRST */
     const filteredDrivers = useMemo(() => {
-        return (drivers || []).filter((item: any) => {
+        const tabRecords = activeTab === "live" ? liveDrivers : closedDrivers;
+
+        return tabRecords.filter((item: any) => {
             if (selectedDriver !== "all") {
                 if (getDriverUniqueKey(item) !== selectedDriver) return false;
             }
-            console.log({ item })
+
             if (search.trim()) {
-                const text = [getDriverName(item), getVehicleNumber(item), getTripLabel(item), getTripTrackingVoucher(item), item?.currentAddress].join(" ").toLowerCase();
+                const text = [
+                    getDriverName(item),
+                    getVehicleNumber(item),
+                    getTripLabel(item),
+                    getTripTrackingVoucher(item),
+                    item?.currentAddress,
+                    item?.tripStatus,
+                ]
+                    .join(" ")
+                    .toLowerCase();
 
                 if (!text.includes(search.trim().toLowerCase())) return false;
             }
 
             return true;
         });
-    }, [drivers, selectedDriver, search]);
-    console.log({ drivers })
+    }, [liveDrivers, closedDrivers, activeTab, selectedDriver, search]);
+
+    console.log({ drivers });
+
     const handleBack = () => {
         navigate(-1);
     };
@@ -404,8 +559,22 @@ const WhereIsMyDriver = () => {
         setSearch("");
     };
 
+    const handleConsolidateVehicle = () => {
+        const vehicles = consolidatedVehicle || [];
+
+        if (!vehicles.length) {
+            toast.error("No vehicle tracking data found");
+            return;
+        }
+
+        navigate("/bookEz/transportation/consolidated-vehicle-view", {
+            state: { vehicles },
+        });
+    };
+
     const openDriverMap = (item: any) => {
-        console.log({item})
+        console.log({ item });
+
         const trackingVoucher = getTripTrackingVoucher(item);
 
         if (!trackingVoucher) {
@@ -427,7 +596,8 @@ const WhereIsMyDriver = () => {
 
     const hasFilter = selectedDriver !== "all" || Boolean(search);
 
-    const totalDrivers = (drivers || []).length;
+    /* ⭐ CHANGED — COUNT BASED ON SELECTED TAB */
+    const totalDrivers = activeTab === "live" ? liveCount : closedCount;
     const showingDrivers = filteredDrivers.length;
 
     return (
@@ -437,7 +607,7 @@ const WhereIsMyDriver = () => {
             animate="show"
             className="min-h-screen bg-background p-3"
         >
-            <div className="mx-auto flex w-full  flex-col gap-3">
+            <div className="mx-auto flex w-full flex-col gap-3">
                 {/* ACTION BAR */}
                 <motion.div
                     variants={sectionVariants}
@@ -457,13 +627,13 @@ const WhereIsMyDriver = () => {
 
                         <div>
                             <h2 className="text-lg font-bold text-card-foreground">
-                                Where Is My Driver?
+                                Where Is My Vehicle?
                             </h2>
 
                             <p className="mt-1 text-sm text-muted-foreground">
                                 {listingLoader
                                     ? "Finding active drivers..."
-                                    : `Active drivers: ${totalDrivers} • Showing: ${showingDrivers}`}
+                                    : `${activeTab === "live" ? "Live" : "Closed"} trips: ${totalDrivers} • Showing: ${showingDrivers}`}
                             </p>
                         </div>
                     </div>
@@ -481,16 +651,106 @@ const WhereIsMyDriver = () => {
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.96 }}
                                     className="
-										inline-flex h-10 items-center gap-2 rounded-md border border-border
-										bg-background px-3 text-sm font-medium text-muted-foreground
-										transition hover:bg-muted
-									"
+                                        inline-flex h-10 items-center gap-2 rounded-md border border-border
+                                        bg-background px-3 text-sm font-medium text-muted-foreground
+                                        transition hover:bg-muted
+                                    "
                                 >
                                     <X size={16} />
                                     Reset Filters
                                 </motion.button>
                             )}
                         </AnimatePresence>
+
+                        {/* ⭐ ADDED — LIVE / CLOSED TABS */}
+                        <motion.div
+                            variants={sectionVariants}
+                            className="rounded-md border border-border bg-card p-1 shadow-sm"
+                        >
+                            <div className="grid grid-cols-2 rounded-md bg-muted">
+                                <motion.button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab("live");
+                                        setSelectedDriver("all");
+                                        setSearch("");
+                                    }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className={`relative flex h-9 min-w-[90px] items-center justify-center gap-1.5 rounded-md px-3 text-sm font-bold transition ${activeTab === "live"
+                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                        }`}
+                                >
+                                    {activeTab === "live" && (
+                                        <motion.span
+                                            layoutId="vehicle-status-tab"
+                                            className="absolute inset-0 rounded-md bg-primary"
+                                            transition={{
+                                                type: "spring",
+                                                stiffness: 350,
+                                                damping: 30,
+                                            }}
+                                        />
+                                    )}
+
+                                    <span className="relative z-10 flex items-center gap-1.5">
+                                        <span
+                                            className={`h-1.5 w-1.5 rounded-full ${activeTab === "live"
+                                                ? "bg-primary-foreground"
+                                                : "bg-emerald-500"
+                                                }`}
+                                        />
+                                        Live ({liveCount})
+                                    </span>
+                                </motion.button>
+
+                                <motion.button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab("closed");
+                                        setSelectedDriver("all");
+                                        setSearch("");
+                                    }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className={`relative flex h-9 min-w-[95px] items-center justify-center gap-1.5 rounded-md px-3 text-sm font-bold transition ${activeTab === "closed"
+                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                        }`}
+                                >
+                                    {activeTab === "closed" && (
+                                        <motion.span
+                                            layoutId="vehicle-status-tab"
+                                            className="absolute inset-0 rounded-md bg-primary"
+                                            transition={{
+                                                type: "spring",
+                                                stiffness: 450,
+                                                damping: 35,
+                                            }}
+                                        />
+                                    )}
+
+                                    <span className="relative z-10">
+                                        Closed ({closedCount})
+                                    </span>
+                                </motion.button>
+                            </div>
+                        </motion.div>
+
+                        <motion.button
+                            type="button"
+                            onClick={handleConsolidateVehicle}
+                            disabled={listingLoader}
+                            whileHover={!listingLoader ? { scale: 1.02 } : undefined}
+                            whileTap={!listingLoader ? { scale: 0.96 } : undefined}
+                            className="
+                                inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3
+                                text-sm font-bold text-primary-foreground shadow-sm transition
+                                hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60
+                            "
+                        >
+                            <MapPin size={16} />
+                            All Vehicles
+                        </motion.button>
 
                         <motion.button
                             type="button"
@@ -499,10 +759,10 @@ const WhereIsMyDriver = () => {
                             whileHover={!listingLoader ? { scale: 1.02 } : undefined}
                             whileTap={!listingLoader ? { scale: 0.96 } : undefined}
                             className="
-								inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3
-								text-sm font-bold text-primary-foreground shadow-sm transition
-								hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60
-							"
+                                inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3
+                                text-sm font-bold text-primary-foreground shadow-sm transition
+                                hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60
+                            "
                         >
                             <RefreshCcw
                                 size={16}
@@ -531,19 +791,23 @@ const WhereIsMyDriver = () => {
 
                                 <div>
                                     <h2 className="text-sm font-bold text-card-foreground">
-                                        Live Driver Locations
+                                        {activeTab === "live"
+                                            ? "Live Vehicle Locations"
+                                            : "Closed Vehicle Trips"}
                                     </h2>
 
                                     <div className="mt-1 flex items-center gap-2">
-                                        <motion.span
-                                            animate={{ scale: [1, 1.35, 1] }}
-                                            transition={{
-                                                duration: 1.5,
-                                                repeat: Infinity,
-                                                ease: "easeInOut",
-                                            }}
-                                            className="h-2 w-2 rounded-full bg-emerald-500"
-                                        />
+                                        {activeTab === "live" && (
+                                            <motion.span
+                                                animate={{ scale: [1, 1.35, 1] }}
+                                                transition={{
+                                                    duration: 1.5,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut",
+                                                }}
+                                                className="h-2 w-2 rounded-full bg-emerald-500"
+                                            />
+                                        )}
 
                                         <p className="text-xs text-muted-foreground">
                                             Auto-refreshing every 10 seconds
@@ -571,10 +835,10 @@ const WhereIsMyDriver = () => {
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Search driver, vehicle, trip..."
                                     className="
-										h-10 w-full rounded-md border border-border bg-background
-										pl-9 pr-3 text-sm text-foreground outline-none
-										transition focus:border-primary focus:ring-2 focus:ring-primary/10
-									"
+                                        h-10 w-full rounded-md border border-border bg-background
+                                        pl-9 pr-3 text-sm text-foreground outline-none
+                                        transition focus:border-primary focus:ring-2 focus:ring-primary/10
+                                    "
                                 />
                             </div>
                         </div>
@@ -622,12 +886,15 @@ const WhereIsMyDriver = () => {
                             </motion.div>
 
                             <h3 className="mt-4 text-lg font-bold text-foreground">
-                                No active driver location
+                                {activeTab === "live"
+                                    ? "No live vehicle location"
+                                    : "No closed vehicle trip"}
                             </h3>
 
                             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                                Driver location will appear here after a driver accepts and starts
-                                live tracking.
+                                {activeTab === "live"
+                                    ? "Vehicle location will appear here after a driver accepts and starts live tracking."
+                                    : "Closed vehicle trips will appear here after the trip is delivered, completed or closed."}
                             </p>
 
                             {hasFilter && (

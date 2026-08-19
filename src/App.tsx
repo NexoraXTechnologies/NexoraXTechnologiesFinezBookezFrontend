@@ -86,6 +86,7 @@ import CustomTransaction from './pages/bookez/transactions/customTransactions/Cu
 import EWayBillList from './pages/bookez/transportation/eWayBill/EwayBillList';
 import CreateEditEWayBill from './pages/bookez/transportation/eWayBill/Createeditewaybill';
 import BarCodeAndQrCode from './pages/bookez/barcodeAndQRcode';
+import ConsolidatedVehicleView from './pages/bookez/transportation/whereIsDriver/ConsolidatedVehicleView';
 
 function App() {
   useAppearance();
@@ -225,7 +226,8 @@ function App() {
           <Route path="/bookEz/transportation/driver-settlement/edit/:voucherNumber" element={<CreateEditDriverSettlement />} />
 
           <Route path="/bookEz/transportation/vehicle-status" element={<VehicleStatus />} />
-          <Route path="/bookEz/transportation/where-is-driver" element={<WhereIsMyDriver />} />
+          <Route path="/bookEz/transportation/where-is-vehicle" element={<WhereIsMyDriver />} />
+          <Route path="/bookEz/transportation/consolidated-vehicle-view" element={<ConsolidatedVehicleView/>} />
           <Route path="/bookEz/transportation/live-trip-tracking" element={<LiveTripTracking />} />
 
           {/* configuration */}

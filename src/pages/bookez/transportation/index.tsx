@@ -79,9 +79,9 @@ const cards: any[] = [
     permissionKey: "vehicleStatus",
   },
   {
-    title: "Where Is My Driver?",
-    description: "View driver location, trip progress, assigned vehicle, and route tracking in real time.",
-    path: "/bookEz/transportation/where-is-driver",
+    title: "Where Is My Vehicle?",
+    description: "View vehicle location, trip progress, assigned vehicle, and route tracking in real time.",
+    path: "/bookEz/transportation/where-is-vehicle",
     icon: <MapPinned size={22} />,
     permissionKey: "tripTracking",
   },
