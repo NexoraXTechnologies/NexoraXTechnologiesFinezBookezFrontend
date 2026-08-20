@@ -4,12 +4,7 @@ import { ArrowRight } from "lucide-react";
 import PageComponentModal from "./PageComponentModal";
 import Permission from "../PermissionGuard";
 
-const TransactionDashboard = ({
-  title,
-  description,
-  icon,
-  cards,
-}: any) => {
+const TransactionDashboard = ({ title, description, icon, cards, }: any) => {
   const navigate = useNavigate();
   const [activeCard, setActiveCard]: any = useState(null);
   const ActiveComponent = activeCard?.component;
@@ -54,12 +49,12 @@ const TransactionDashboard = ({
               permissionKey={card?.permissionKey}
               action="view"
             >
-              <article>
+              <article className="h-[112px]">
                 <button
                   type="button"
                   onClick={() => handleCardClick(card)}
                   className="
-                    group flex w-full cursor-pointer items-center gap-4 rounded-md border border-border
+                    group flex h-full w-full cursor-pointer items-center gap-4 rounded-md border border-border
                     bg-card p-5 text-left shadow-sm transition-all duration-200
                     hover:-translate-y-1 hover:border-primary hover:bg-muted hover:shadow-md
                   "
@@ -69,11 +64,18 @@ const TransactionDashboard = ({
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block text-base font-semibold text-card-foreground">
+                    <span className="block truncate text-base font-semibold text-card-foreground">
                       {card.title}
                     </span>
 
-                    <span className="mt-1 block text-sm leading-5 text-muted-foreground">
+                    <span
+                      className="mt-1 block overflow-hidden text-sm leading-5 text-muted-foreground"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                      }}
+                    >
                       {card.description}
                     </span>
                   </span>
