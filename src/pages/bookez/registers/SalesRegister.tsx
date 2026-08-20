@@ -13,7 +13,6 @@ import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice
 import { getByVoucherNumberSalesInvoice } from "../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import {
     loadAllTemplateOptions,
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -665,7 +664,7 @@ const SalesRegister = () => {
                 .map(
                     (filter: any) =>
                         selectedCustomFilters[
-                            filter.key
+                        filter.key
                         ] ||
                         ""
                 )
@@ -810,13 +809,8 @@ const SalesRegister = () => {
             );
 
         return {
-            fromDate:
-                fromDate ||
-                "",
-
-            toDate:
-                toDate ||
-                "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
 
             offset:
                 isExport
@@ -976,7 +970,7 @@ const SalesRegister = () => {
                                         ),
                                     ] as const;
                                 } catch (
-                                    error
+                                error
                                 ) {
                                     console.log(
                                         "Custom register filter options failed:",
@@ -1028,14 +1022,14 @@ const SalesRegister = () => {
                                 if (
                                     filter?.key &&
                                     previous[
-                                        filter.key
+                                    filter.key
                                     ]
                                 ) {
                                     nextSelected[
                                         filter.key
                                     ] =
                                         previous[
-                                            filter.key
+                                        filter.key
                                         ];
                                 }
                             }
@@ -1139,7 +1133,7 @@ const SalesRegister = () => {
                         updatedData
                     );
                 } catch (
-                    error
+                error
                 ) {
                     console.log(
                         "Failed to prepare sales invoice view fields",
@@ -1224,7 +1218,7 @@ const SalesRegister = () => {
                     ) => {
                         const rawValue =
                             viewFooterTotals?.[
-                                field.key as keyof typeof viewFooterTotals
+                            field.key as keyof typeof viewFooterTotals
                             ] ??
                             "0.00";
 
@@ -1394,7 +1388,7 @@ const SalesRegister = () => {
                     )
                 );
             } catch (
-                error
+            error
             ) {
                 console.log(
                     "Sales register view invoice failed",
@@ -1566,7 +1560,7 @@ const SalesRegister = () => {
                     true
                 );
             } catch (
-                error
+            error
             ) {
                 console.log(
                     "Sales register export columns failed",
@@ -1643,8 +1637,8 @@ const SalesRegister = () => {
                     );
                 }
             } catch (
-                error:
-                    any
+            error:
+                any
             ) {
                 console.log(
                     `Sales register ${currentExportType.toUpperCase()} download failed`,
@@ -1700,65 +1694,25 @@ const SalesRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value:
-                            fromDate
-                                ? toDateInputValue(
-                                    fromDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setFromDate(
-                                value
-                                    ? toLocalStartOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
-                            setLocalOffset(
-                                0
-                            );
-
-                            setDateError(
-                                ""
-                            );
+                        value: fromDate,
+                        onChange: (value) => {
+                            setFromDate(value || "");
+                            setLocalOffset(0);
+                            setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value:
-                            toDate
-                                ? toDateInputValue(
-                                    toDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setToDate(
-                                value
-                                    ? toLocalEndOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
-                            setLocalOffset(
-                                0
-                            );
-
-                            setDateError(
-                                ""
-                            );
+                        value: toDate,
+                        onChange: (value) => {
+                            setToDate(value || "");
+                            setLocalOffset(0);
+                            setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "customer",
@@ -1825,13 +1779,13 @@ const SalesRegister = () => {
 
                             value:
                                 selectedCustomFilters[
-                                    filter.key
+                                filter.key
                                 ] ||
                                 "",
 
                             options:
                                 customFilterOptions[
-                                    filter.key
+                                filter.key
                                 ] ||
                                 [],
 

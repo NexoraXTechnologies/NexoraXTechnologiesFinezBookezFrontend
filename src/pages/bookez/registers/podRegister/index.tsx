@@ -11,7 +11,7 @@ import { getTripLRCollectionByVoucherNumber } from "../../../../redux/slices/pro
 import Pagination from "../../../../components/pagination";
 import RegisterFilterCard from "../RegisterFilterCard";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
-import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
+import { toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
 import CreateEditTripExpense from "../TripExpenseRegister/CreateEditTripExpense";
 
 // TODO: replace with the actual route path registered for CreateEditTripLREntry
@@ -373,8 +373,8 @@ const PodRegister = () => {
     };
 
     const getPayload = (exportType: ExportType = ""): PodRegisterPayload => ({
-        fromDate: fromDate || "",
-        toDate: toDate || "",
+        fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+        toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
         offset: exportType ? 0 : localOffset,
         limit: localLimit,
         exportType,
@@ -544,9 +544,9 @@ const PodRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate ? toDateInputValue(fromDate) : "",
+                        value: fromDate,
                         onChange: (value: string) => {
-                            setFromDate(toLocalStartOfDayUtc(value));
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -556,9 +556,9 @@ const PodRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate ? toDateInputValue(toDate) : "",
+                        value: toDate,
                         onChange: (value: string) => {
-                            setToDate(toLocalEndOfDayUtc(value));
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
