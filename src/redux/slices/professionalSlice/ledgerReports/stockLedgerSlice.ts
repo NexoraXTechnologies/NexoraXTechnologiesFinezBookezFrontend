@@ -11,6 +11,10 @@ type StockLedgerPayload = {
     fromDate?: string;
     toDate?: string;
     productCode?: string;
+    warehouseCode?: string;
+    locationCode?: string;
+    batchNumber?: string;
+    binCode?: string;
     exportType?: ExportType;
 };
 
@@ -36,6 +40,10 @@ export const createStockLedger = createAsyncThunk<
             fromDate = "",
             toDate = "",
             productCode = "",
+            warehouseCode = "",
+            locationCode = "",
+            batchNumber = "",
+            binCode = "",
             exportType = "",
         }: StockLedgerPayload = {},
         { rejectWithValue }
@@ -45,6 +53,10 @@ export const createStockLedger = createAsyncThunk<
                 productCode,
                 fromDate,
                 toDate,
+                warehouseCode,
+                locationCode,
+                batchNumber,
+                binCode,
             };
 
             if (exportType) {
