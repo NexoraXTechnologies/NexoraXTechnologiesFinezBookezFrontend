@@ -301,7 +301,7 @@ const AccountsReceivable = () => {
         });
     };
 
-    const handleExport = async (exportType: "pdf" | "xlsx") => {
+    const handleExport = async (exportType: "pdf" | "excel") => {
         try {
             if (exportType === "pdf") {
                 setPdfLoading(true);
@@ -437,7 +437,7 @@ const AccountsReceivable = () => {
                     setLocalOffset(0);
                 }}
                 onDownloadPdf={() => handleExport("pdf")}
-                onDownloadExcel={() => handleExport("xlsx")}
+                onDownloadExcel={() => handleExport("excel")}
                 pdfLoading={pdfLoading}
                 excelLoading={excelLoading}
             />
