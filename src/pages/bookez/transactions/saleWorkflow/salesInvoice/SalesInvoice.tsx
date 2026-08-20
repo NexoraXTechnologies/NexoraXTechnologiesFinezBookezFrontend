@@ -1184,16 +1184,35 @@ const SalesInVoice = () => {
             : 0;
 
         const discountPercent = safePercent(
-            row.discountPercentage || row.discount
+            row.discountPercentage !== undefined &&
+                row.discountPercentage !== null &&
+                row.discountPercentage !== ""
+                ? row.discountPercentage
+                : row.discount
         );
+
         const cgstPercent = safePercent(
-            row.cgstPercentage || row.cgst
+            row.cgstPercentage !== undefined &&
+                row.cgstPercentage !== null &&
+                row.cgstPercentage !== ""
+                ? row.cgstPercentage
+                : row.cgst
         );
+
         const sgstPercent = safePercent(
-            row.sgstPercentage || row.sgst
+            row.sgstPercentage !== undefined &&
+                row.sgstPercentage !== null &&
+                row.sgstPercentage !== ""
+                ? row.sgstPercentage
+                : row.sgst
         );
+
         const igstPercent = safePercent(
-            row.igstPercentage || row.igst
+            row.igstPercentage !== undefined &&
+                row.igstPercentage !== null &&
+                row.igstPercentage !== ""
+                ? row.igstPercentage
+                : row.igst
         );
 
         const discountAmount = (gross * discountPercent) / 100;
@@ -1211,15 +1230,14 @@ const SalesInVoice = () => {
             ...row,
             quantity: row.quantity,
             rate: row.rate,
-            discount: row.discount,
-            discountPercentage:
-                row.discountPercentage || row.discount,
-            cgst: row.cgst,
-            cgstPercentage: row.cgstPercentage || row.cgst,
-            sgst: row.sgst,
-            sgstPercentage: row.sgstPercentage || row.sgst,
-            igst: row.igst,
-            igstPercentage: row.igstPercentage || row.igst,
+            discount: discountPercent,
+            discountPercentage: discountPercent,
+            cgst: cgstPercent,
+            cgstPercentage: cgstPercent,
+            sgst: sgstPercent,
+            sgstPercentage: sgstPercent,
+            igst: igstPercent,
+            igstPercentage: igstPercent,
             otherAmount: row.otherAmount,
             gross,
             grossAmount: gross,
@@ -2111,47 +2129,62 @@ const SalesInVoice = () => {
                             : "",
                 };
 
-                updatedRow.cgst =
+                const selectedCustomer =
+                    filterAccount?.find(
+                        (account: any) =>
+                            account?.accountCode ==
+                            previous?.sInvCustomerCode
+                    );
+
+                const cgstValue =
                     createdProduct?.csgst ??
                     createdProduct?.CGST ??
                     createdProduct?.cgst ??
                     createdProduct?.cgstRate ??
-                    createdProduct
-                        ?.cgstPercentage ??
+                    createdProduct?.cgstPercentage ??
+                    createdProduct?.tax?.cgstPercentage ??
+                    createdProduct?.tax?.cgst ??
                     "";
 
-                updatedRow.sgst =
+                const sgstValue =
                     createdProduct?.csgst ??
                     createdProduct?.SGST ??
                     createdProduct?.sgst ??
                     createdProduct?.sgstRate ??
-                    createdProduct
-                        ?.sgstPercentage ??
+                    createdProduct?.sgstPercentage ??
+                    createdProduct?.tax?.sgstPercentage ??
+                    createdProduct?.tax?.sgst ??
                     "";
 
-                updatedRow.igst =
+                const igstValue =
                     createdProduct?.igst ??
                     createdProduct?.IGST ??
                     createdProduct?.igstRate ??
-                    createdProduct
-                        ?.igstPercentage ??
+                    createdProduct?.igstPercentage ??
+                    createdProduct?.tax?.igstPercentage ??
+                    createdProduct?.tax?.igst ??
                     "";
 
                 if (
-                    num(updatedRow.igst) > 0
+                    company?.state?.isoCode ==
+                    selectedCustomer?.state?.isoCode
                 ) {
+                    updatedRow.cgst = cgstValue;
+                    updatedRow.cgstPercentage = cgstValue;
+                    updatedRow.sgst = sgstValue;
+                    updatedRow.sgstPercentage = sgstValue;
+                    updatedRow.igst = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                } else {
+                    updatedRow.igst = igstValue;
+                    updatedRow.igstPercentage = igstValue;
                     updatedRow.cgst = "";
+                    updatedRow.cgstPercentage = "";
                     updatedRow.sgst = "";
+                    updatedRow.sgstPercentage = "";
                     updatedRow.cgstAmount = 0;
                     updatedRow.sgstAmount = 0;
-                }
-
-                if (
-                    num(updatedRow.cgst) > 0 ||
-                    num(updatedRow.sgst) > 0
-                ) {
-                    updatedRow.igst = "";
-                    updatedRow.igstAmount = 0;
                 }
 
                 updatedRow =
@@ -2229,7 +2262,7 @@ const SalesInVoice = () => {
     }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        if (!form?.sInvCustomerCode) return toast.error("Please select customer first");    
+        if (!form?.sInvCustomerCode) return toast.error("Please select customer first");
         const duplicate = key === "productCode" && Boolean(form?.products?.some((item: any, rowIndex: number) => rowIndex !== index && String(item?.productCode || "") === String(value || "")));
 
         if (duplicate && !enableDuplicatePro) {
@@ -2307,14 +2340,42 @@ const SalesInVoice = () => {
             }
             updatedRow = normalizeRowKeys(updatedRow);
             if (key === "productCode" || key === "productName" || key === "productId") {
-                const getCustomer = filterAccount?.find((e: any) => e.accountCode == form?.sInvCustomerCode);
+                const getCustomer = filterAccount?.find((e: any) => e.accountCode == prev?.sInvCustomerCode);
                 updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || "";
                 updatedRow.availableQuantity = null;
-                updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
-                updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
-                updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
+
+                const cgstValue =
+                    raw?.csgst ??
+                    raw?.CGST ??
+                    raw?.cgst ??
+                    raw?.cgstRate ??
+                    raw?.cgstPercentage ??
+                    raw?.tax?.cgstPercentage ??
+                    raw?.tax?.cgst ??
+                    "";
+
+                const sgstValue =
+                    raw?.csgst ??
+                    raw?.SGST ??
+                    raw?.sgst ??
+                    raw?.sgstRate ??
+                    raw?.sgstPercentage ??
+                    raw?.tax?.sgstPercentage ??
+                    raw?.tax?.sgst ??
+                    "";
+
+                const igstValue =
+                    raw?.igst ??
+                    raw?.IGST ??
+                    raw?.igstRate ??
+                    raw?.igstPercentage ??
+                    raw?.tax?.igstPercentage ??
+                    raw?.tax?.igst ??
+                    "";
+
                 const marginProduct = isTrueValue(raw?.dynamicFields?.marginProduct);
                 updatedRow.marginProduct = marginProduct;
+
                 if (!marginProduct) {
                     updatedRow.taxRate = "";
                     updatedRow.nonTaxRate = "";
@@ -2322,39 +2383,60 @@ const SalesInVoice = () => {
                     updatedRow.nonTaxGross = "";
                 }
 
-                if (num(updatedRow.igst) > 0) {
+                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
+                    updatedRow.cgst = cgstValue;
+                    updatedRow.cgstPercentage = cgstValue;
+                    updatedRow.sgst = sgstValue;
+                    updatedRow.sgstPercentage = sgstValue;
+                    updatedRow.igst = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                } else {
+                    updatedRow.igst = igstValue;
+                    updatedRow.igstPercentage = igstValue;
                     updatedRow.cgst = "";
+                    updatedRow.cgstPercentage = "";
                     updatedRow.sgst = "";
+                    updatedRow.sgstPercentage = "";
                     updatedRow.cgstAmount = 0;
                     updatedRow.sgstAmount = 0;
-                }
-
-                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
-                    updatedRow.igst = "";
-                    updatedRow.igstAmount = 0;
-                }
-                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
-                    updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
-                    updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
-                    updatedRow.igst = "";
-                } else {
-                    updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
                 }
             }
 
             // ✅ Make sure Sales Order number never gets lost
             updatedRow.sOrderNumber = updatedRow.sOrderNumber || prev?.sInvSalesOrderVoucherNumber || "";
 
-            if ((key === "cgst" || key === "sgst") && num(value) > 0) {
+            const lowerKey = String(key || "").toLowerCase();
+            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
+            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
+            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
+
+            if (isCgst) {
+                updatedRow.cgst = value;
+                updatedRow.cgstPercentage = value;
+            }
+
+            if (isSgst) {
+                updatedRow.sgst = value;
+                updatedRow.sgstPercentage = value;
+            }
+
+            if (isIgst) {
+                updatedRow.igst = value;
+                updatedRow.igstPercentage = value;
+            }
+
+            if ((isCgst || isSgst) && num(value) > 0) {
                 updatedRow.igst = "";
+                updatedRow.igstPercentage = "";
                 updatedRow.igstAmount = 0;
             }
 
-            if (key === "igst" && num(value) > 0) {
+            if (isIgst && num(value) > 0) {
                 updatedRow.cgst = "";
+                updatedRow.cgstPercentage = "";
                 updatedRow.sgst = "";
+                updatedRow.sgstPercentage = "";
                 updatedRow.cgstAmount = 0;
                 updatedRow.sgstAmount = 0;
             }

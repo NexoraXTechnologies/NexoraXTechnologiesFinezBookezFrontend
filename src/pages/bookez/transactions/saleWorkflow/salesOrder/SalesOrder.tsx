@@ -892,20 +892,29 @@ const SalesOrder = () => {
 
         const cgstPercent =
             safePercent(
-                row.cgstPercentage ||
-                row.cgst
+                row.cgstPercentage !== undefined &&
+                    row.cgstPercentage !== null &&
+                    row.cgstPercentage !== ""
+                    ? row.cgstPercentage
+                    : row.cgst
             );
 
         const sgstPercent =
             safePercent(
-                row.sgstPercentage ||
-                row.sgst
+                row.sgstPercentage !== undefined &&
+                    row.sgstPercentage !== null &&
+                    row.sgstPercentage !== ""
+                    ? row.sgstPercentage
+                    : row.sgst
             );
 
         const igstPercent =
             safePercent(
-                row.igstPercentage ||
-                row.igst
+                row.igstPercentage !== undefined &&
+                    row.igstPercentage !== null &&
+                    row.igstPercentage !== ""
+                    ? row.igstPercentage
+                    : row.igst
             );
 
         const discountAmount =
@@ -961,28 +970,16 @@ const SalesOrder = () => {
             discountAmount,
             taxableAmount,
 
-            cgst: row.cgst,
-
-            cgstPercentage:
-                row.cgstPercentage ||
-                row.cgst,
-
+            cgst: cgstPercent,
+            cgstPercentage: cgstPercent,
             cgstAmount,
 
-            sgst: row.sgst,
-
-            sgstPercentage:
-                row.sgstPercentage ||
-                row.sgst,
-
+            sgst: sgstPercent,
+            sgstPercentage: sgstPercent,
             sgstAmount,
 
-            igst: row.igst,
-
-            igstPercentage:
-                row.igstPercentage ||
-                row.igst,
-
+            igst: igstPercent,
+            igstPercentage: igstPercent,
             igstAmount,
             taxAmount,
 
@@ -1805,7 +1802,7 @@ const SalesOrder = () => {
                                         productType,
                                         availableQuantity:
                                             balance?.balanceQuantity !== undefined &&
-                                            balance?.balanceQuantity !== null
+                                                balance?.balanceQuantity !== null
                                                 ? balance.balanceQuantity
                                                 : null,
                                     };
@@ -2352,44 +2349,62 @@ const SalesOrder = () => {
                             : "",
                 };
 
-                updatedRow.cgst =
+                const selectedCustomer =
+                    filterAccount?.find(
+                        (account: any) =>
+                            account?.accountCode ==
+                            previous?.sOrderCustomerCode
+                    );
+
+                const cgstValue =
                     createdProduct?.csgst ??
+                    createdProduct?.CGST ??
                     createdProduct?.cgst ??
-                    updatedRow?.cgst ??
+                    createdProduct?.cgstRate ??
+                    createdProduct?.cgstPercentage ??
+                    createdProduct?.tax?.cgstPercentage ??
+                    createdProduct?.tax?.cgst ??
                     "";
 
-                updatedRow.sgst =
+                const sgstValue =
                     createdProduct?.csgst ??
+                    createdProduct?.SGST ??
                     createdProduct?.sgst ??
-                    updatedRow?.sgst ??
+                    createdProduct?.sgstRate ??
+                    createdProduct?.sgstPercentage ??
+                    createdProduct?.tax?.sgstPercentage ??
+                    createdProduct?.tax?.sgst ??
                     "";
 
-                updatedRow.igst =
+                const igstValue =
                     createdProduct?.igst ??
-                    updatedRow?.igst ??
+                    createdProduct?.IGST ??
+                    createdProduct?.igstRate ??
+                    createdProduct?.igstPercentage ??
+                    createdProduct?.tax?.igstPercentage ??
+                    createdProduct?.tax?.igst ??
                     "";
 
                 if (
-                    num(updatedRow.igst) >
-                    0
+                    company?.state?.isoCode ==
+                    selectedCustomer?.state?.isoCode
                 ) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstAmount =
-                        0;
-                    updatedRow.sgstAmount =
-                        0;
-                }
-
-                if (
-                    num(updatedRow.cgst) >
-                    0 ||
-                    num(updatedRow.sgst) >
-                    0
-                ) {
+                    updatedRow.cgst = cgstValue;
+                    updatedRow.cgstPercentage = cgstValue;
+                    updatedRow.sgst = sgstValue;
+                    updatedRow.sgstPercentage = sgstValue;
                     updatedRow.igst = "";
-                    updatedRow.igstAmount =
-                        0;
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                } else {
+                    updatedRow.igst = igstValue;
+                    updatedRow.igstPercentage = igstValue;
+                    updatedRow.cgst = "";
+                    updatedRow.cgstPercentage = "";
+                    updatedRow.sgst = "";
+                    updatedRow.sgstPercentage = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
                 }
 
                 updatedRow =
@@ -2502,7 +2517,7 @@ const SalesOrder = () => {
     const enableDuplicatePro = useMemo(() => {
         const duplicateConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct;
         return (duplicateConfig === true || duplicateConfig === "true");
-        }, [configurations]);
+    }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
         console.log({ form })
@@ -2548,7 +2563,7 @@ const SalesOrder = () => {
             setErrors((previous: any) => ({
                 ...previous, products: "", [`row_${index}_${key}`]: "This product already added",
                 [`row_${index}_tax`]: "",
-                })
+            })
             );
             return;
         }
@@ -2573,12 +2588,8 @@ const SalesOrder = () => {
             }
 
             if (key === "productCode" || key === "productName" || key === "productId") {
-                const getCustomer = filterAccount?.find((e: any) => e.accountCode == form?.sOrderCustomerCode);
+                const getCustomer = filterAccount?.find((e: any) => e.accountCode == previous?.sOrderCustomerCode);
                 updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || ""; updatedRow.availableQuantity = null;
-
-                updatedRow.cgst = raw?.csgst;
-                updatedRow.sgst = raw?.csgst;
-                updatedRow.igst = raw?.igst;
                 updatedRow.productDescription = raw?.productDescription || "";
                 const marginProduct = isTrueValue(raw?.dynamicFields?.marginProduct);
 
@@ -2589,47 +2600,97 @@ const SalesOrder = () => {
                     updatedRow.nonTaxGross = "";
                 }
 
-                if (num(updatedRow.igst) > 0) {
+                const cgstValue =
+                    raw?.csgst ??
+                    raw?.CGST ??
+                    raw?.cgst ??
+                    raw?.cgstRate ??
+                    raw?.cgstPercentage ??
+                    raw?.tax?.cgstPercentage ??
+                    raw?.tax?.cgst ??
+                    "";
+
+                const sgstValue =
+                    raw?.csgst ??
+                    raw?.SGST ??
+                    raw?.sgst ??
+                    raw?.sgstRate ??
+                    raw?.sgstPercentage ??
+                    raw?.tax?.sgstPercentage ??
+                    raw?.tax?.sgst ??
+                    "";
+
+                const igstValue =
+                    raw?.igst ??
+                    raw?.IGST ??
+                    raw?.igstRate ??
+                    raw?.igstPercentage ??
+                    raw?.tax?.igstPercentage ??
+                    raw?.tax?.igst ??
+                    "";
+
+                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
+                    updatedRow.cgst = cgstValue;
+                    updatedRow.cgstPercentage = cgstValue;
+                    updatedRow.sgst = sgstValue;
+                    updatedRow.sgstPercentage = sgstValue;
+                    updatedRow.igst = "";
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                } else {
+                    updatedRow.igst = igstValue;
+                    updatedRow.igstPercentage = igstValue;
                     updatedRow.cgst = "";
+                    updatedRow.cgstPercentage = "";
                     updatedRow.sgst = "";
+                    updatedRow.sgstPercentage = "";
                     updatedRow.cgstAmount = 0;
                     updatedRow.sgstAmount = 0;
-                }
-
-                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
-                    updatedRow.igst = "";
-                    updatedRow.igstAmount =
-                        0;
-                }
-                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
-                    updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
-                    updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
-                    updatedRow.igst = "";
-                } else {
-                    updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
                 }
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
+
+            const lowerKey = String(key || "").toLowerCase();
+            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
+            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
+            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
+
+            if (isCgst) {
+                updatedRow.cgst = value;
+                updatedRow.cgstPercentage = value;
+            }
+
+            if (isSgst) {
+                updatedRow.sgst = value;
+                updatedRow.sgstPercentage = value;
+            }
+
+            if (isIgst) {
+                updatedRow.igst = value;
+                updatedRow.igstPercentage = value;
+            }
+
             if (
                 (
-                    key === "cgst" ||
-                    key === "sgst"
+                    isCgst ||
+                    isSgst
                 ) &&
                 num(value) > 0
             ) {
                 updatedRow.igst = "";
+                updatedRow.igstPercentage = "";
                 updatedRow.igstAmount = 0;
             }
 
             if (
-                key === "igst" &&
+                isIgst &&
                 num(value) > 0
             ) {
                 updatedRow.cgst = "";
+                updatedRow.cgstPercentage = "";
                 updatedRow.sgst = "";
+                updatedRow.sgstPercentage = "";
                 updatedRow.cgstAmount = 0;
                 updatedRow.sgstAmount = 0;
             }

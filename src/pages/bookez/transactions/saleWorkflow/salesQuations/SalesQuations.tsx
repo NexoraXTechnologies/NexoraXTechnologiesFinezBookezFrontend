@@ -161,19 +161,16 @@ const SalesQuotations = () => {
         setCheckAccount,
     ] = useState(false);
 
-    // ⭐ ADDED: Product Master modal state
     const [
         checkProduct,
         setCheckProduct,
     ] = useState(false);
 
-    // ⭐ YELLOW STAR: ADDED — REMEMBER PRODUCT ROW THAT OPENED MODAL
     const [
         productTargetRowIndex,
         setProductTargetRowIndex,
     ] = useState<number | null>(null);
 
-    // ⭐ YELLOW STAR: ADDED — SEARCH TEXT FOR PRODUCT MODAL
     const [
         productSearchValue,
         setProductSearchValue,
@@ -253,7 +250,6 @@ const SalesQuotations = () => {
     const preparedSchemaRef =
         useRef<any>(null);
 
-
     const { report } = useSelector(
         (state: any) =>
             state.reportMapping
@@ -291,8 +287,6 @@ const SalesQuotations = () => {
             );
         }, [accounts]);
 
-
-    // ⭐ YELLOW STAR: ADDED — ACCOUNT AND PRODUCT CREATE ACTIONS
     const templateFieldsWithCreateActions = useMemo(() => {
         return {
             ...templateFields,
@@ -549,17 +543,39 @@ const SalesQuotations = () => {
 
         const discountPercent =
             safePercent(
-                row.discount
+                row.discountPercentage !== undefined &&
+                    row.discountPercentage !== null &&
+                    row.discountPercentage !== ""
+                    ? row.discountPercentage
+                    : row.discount
             );
 
         const cgstPercent =
-            safePercent(row.cgst);
+            safePercent(
+                row.cgstPercentage !== undefined &&
+                    row.cgstPercentage !== null &&
+                    row.cgstPercentage !== ""
+                    ? row.cgstPercentage
+                    : row.cgst
+            );
 
         const sgstPercent =
-            safePercent(row.sgst);
+            safePercent(
+                row.sgstPercentage !== undefined &&
+                    row.sgstPercentage !== null &&
+                    row.sgstPercentage !== ""
+                    ? row.sgstPercentage
+                    : row.sgst
+            );
 
         const igstPercent =
-            safePercent(row.igst);
+            safePercent(
+                row.igstPercentage !== undefined &&
+                    row.igstPercentage !== null &&
+                    row.igstPercentage !== ""
+                    ? row.igstPercentage
+                    : row.igst
+            );
 
         const discountAmount =
             (
@@ -606,12 +622,24 @@ const SalesQuotations = () => {
             ...row,
             quantity:
                 row.quantity,
-            rate: row.rate,
+            rate:
+                row.rate,
             discount:
-                row.discount,
-            cgst: row.cgst,
-            sgst: row.sgst,
-            igst: row.igst,
+                discountPercent,
+            discountPercentage:
+                discountPercent,
+            cgst:
+                cgstPercent,
+            cgstPercentage:
+                cgstPercent,
+            sgst:
+                sgstPercent,
+            sgstPercentage:
+                sgstPercent,
+            igst:
+                igstPercent,
+            igstPercentage:
+                igstPercent,
             otherAmount:
                 row.otherAmount,
             gross,
@@ -1448,7 +1476,6 @@ const SalesQuotations = () => {
             }
         };
 
-    // ⭐ ADDED: Refresh Product Master and auto-select newly created product
     const handleProductSaved =
         async (
             savedResponse: any
@@ -1706,6 +1733,35 @@ const SalesQuotations = () => {
                                         ?.sQuoteCustomerName
                             );
 
+                        const cgstValue =
+                            createdProduct?.csgst ??
+                            createdProduct?.CGST ??
+                            createdProduct?.cgst ??
+                            createdProduct?.cgstRate ??
+                            createdProduct?.cgstPercentage ??
+                            createdProduct?.tax?.cgstPercentage ??
+                            createdProduct?.tax?.cgst ??
+                            "";
+
+                        const sgstValue =
+                            createdProduct?.csgst ??
+                            createdProduct?.SGST ??
+                            createdProduct?.sgst ??
+                            createdProduct?.sgstRate ??
+                            createdProduct?.sgstPercentage ??
+                            createdProduct?.tax?.sgstPercentage ??
+                            createdProduct?.tax?.sgst ??
+                            "";
+
+                        const igstValue =
+                            createdProduct?.igst ??
+                            createdProduct?.IGST ??
+                            createdProduct?.igstRate ??
+                            createdProduct?.igstPercentage ??
+                            createdProduct?.tax?.igstPercentage ??
+                            createdProduct?.tax?.igst ??
+                            "";
+
                         if (
                             company
                                 ?.state
@@ -1714,28 +1770,50 @@ const SalesQuotations = () => {
                                 ?.state
                                 ?.isoCode
                         ) {
-                            const csgst =
-                                createdProduct
-                                    ?.csgst ??
-                                createdProduct
-                                    ?.cgst ??
+                            updatedRow.cgst =
+                                cgstValue;
+
+                            updatedRow.cgstPercentage =
+                                cgstValue;
+
+                            updatedRow.sgst =
+                                sgstValue;
+
+                            updatedRow.sgstPercentage =
+                                sgstValue;
+
+                            updatedRow.igst =
                                 "";
 
-                            updatedRow.cgst =
-                                csgst;
-                            updatedRow.sgst =
-                                csgst;
-                            updatedRow.igst =
+                            updatedRow.igstPercentage =
                                 "";
+
+                            updatedRow.igstAmount =
+                                0;
                         } else {
                             updatedRow.igst =
-                                createdProduct
-                                    ?.igst ??
-                                "";
+                                igstValue;
+
+                            updatedRow.igstPercentage =
+                                igstValue;
+
                             updatedRow.cgst =
                                 "";
+
+                            updatedRow.cgstPercentage =
+                                "";
+
                             updatedRow.sgst =
                                 "";
+
+                            updatedRow.sgstPercentage =
+                                "";
+
+                            updatedRow.cgstAmount =
+                                0;
+
+                            updatedRow.sgstAmount =
+                                0;
                         }
 
                         updatedRow =
@@ -1864,24 +1942,27 @@ const SalesQuotations = () => {
             lowerKey ===
             "product";
 
-
-        const duplicate = isProductField && Boolean(form?.products?.filter((
-                            e: any,
-                            i: number
-                        ) =>
-                            i !==
-                            index &&
-                            String(
-                                e?.productCode ||
-                                e?.productName ||
-                                e?.productId ||
-                                ""
-                            ) ===
-                            String(
-                                value ||
-                                ""
-                            )
-                    )?.length
+        const duplicate =
+            isProductField &&
+            Boolean(
+                form?.products?.filter(
+                    (
+                        e: any,
+                        i: number
+                    ) =>
+                        i !==
+                        index &&
+                        String(
+                            e?.productCode ||
+                            e?.productName ||
+                            e?.productId ||
+                            ""
+                        ) ===
+                        String(
+                            value ||
+                            ""
+                        )
+                )?.length
             );
 
         if (
@@ -1906,13 +1987,12 @@ const SalesQuotations = () => {
 
         setForm(
             (prev: any) => {
-                const updatedProducts =
-                    [
-                        ...(
-                            prev.products ||
-                            []
-                        ),
-                    ];
+                const updatedProducts = [
+                    ...(
+                        prev.products ||
+                        []
+                    ),
+                ];
 
                 const currentRow =
                     updatedProducts[
@@ -1963,43 +2043,198 @@ const SalesQuotations = () => {
                         updatedRow
                     );
 
-                if (key === "productCode" || key === "productName" || key === "productId") {
-                    const getCustomer = filterAccount?.find((e: any) => e.accountName == form?.sQuoteCustomerName);
+                if (
+                    isProductField
+                ) {
+                    const getCustomer =
+                        filterAccount?.find(
+                            (e: any) =>
+                                e.accountName ==
+                                prev?.sQuoteCustomerName
+                        );
 
-                    if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
-                        updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
-                        updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
+                    const cgstValue =
+                        raw?.csgst ??
+                        raw?.CGST ??
+                        raw?.cgst ??
+                        raw?.cgstRate ??
+                        raw?.cgstPercentage ??
+                        raw?.tax?.cgstPercentage ??
+                        raw?.tax?.cgst ??
+                        "";
+
+                    const sgstValue =
+                        raw?.csgst ??
+                        raw?.SGST ??
+                        raw?.sgst ??
+                        raw?.sgstRate ??
+                        raw?.sgstPercentage ??
+                        raw?.tax?.sgstPercentage ??
+                        raw?.tax?.sgst ??
+                        "";
+
+                    const igstValue =
+                        raw?.igst ??
+                        raw?.IGST ??
+                        raw?.igstRate ??
+                        raw?.igstPercentage ??
+                        raw?.tax?.igstPercentage ??
+                        raw?.tax?.igst ??
+                        "";
+
+                    if (
+                        company
+                            ?.state
+                            ?.isoCode ==
+                        getCustomer
+                            ?.state
+                            ?.isoCode
+                    ) {
+                        updatedRow.cgst =
+                            cgstValue;
+
+                        updatedRow.cgstPercentage =
+                            cgstValue;
+
+                        updatedRow.sgst =
+                            sgstValue;
+
+                        updatedRow.sgstPercentage =
+                            sgstValue;
+
+                        updatedRow.igst =
+                            "";
+
+                        updatedRow.igstPercentage =
+                            "";
+
+                        updatedRow.igstAmount =
+                            0;
                     } else {
-                        updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
-                    }
+                        updatedRow.igst =
+                            igstValue;
 
-                    if (num(updatedRow.igst) > 0) {
-                        updatedRow.cgst = "";
-                        updatedRow.sgst = "";
-                        updatedRow.cgstAmount = 0;
-                        updatedRow.sgstAmount = 0;
-                    }
+                        updatedRow.igstPercentage =
+                            igstValue;
 
-                    if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
-                        updatedRow.igst = "";
-                        updatedRow.igstAmount = 0;
+                        updatedRow.cgst =
+                            "";
+
+                        updatedRow.cgstPercentage =
+                            "";
+
+                        updatedRow.sgst =
+                            "";
+
+                        updatedRow.sgstPercentage =
+                            "";
+
+                        updatedRow.cgstAmount =
+                            0;
+
+                        updatedRow.sgstAmount =
+                            0;
                     }
                 }
 
-                if ((key === "cgst" || key === "sgst") && num(value) > 0) {
-                    updatedRow.igst = "";
-                    updatedRow.igstAmount = 0;
+                const isCgst =
+                    lowerKey ===
+                    "cgst" ||
+                    lowerKey ===
+                    "cgstpercentage";
+
+                const isSgst =
+                    lowerKey ===
+                    "sgst" ||
+                    lowerKey ===
+                    "sgstpercentage";
+
+                const isIgst =
+                    lowerKey ===
+                    "igst" ||
+                    lowerKey ===
+                    "igstpercentage";
+
+                if (isCgst) {
+                    updatedRow.cgst =
+                        value;
+
+                    updatedRow.cgstPercentage =
+                        value;
                 }
 
-                if (key === "igst" && num(value) > 0) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
+                if (isSgst) {
+                    updatedRow.sgst =
+                        value;
+
+                    updatedRow.sgstPercentage =
+                        value;
                 }
-                updatedRow = calculateRow(updatedRow);
-                updatedProducts[index] = updatedRow;
-                return { ...prev, products: updatedProducts, };
+
+                if (isIgst) {
+                    updatedRow.igst =
+                        value;
+
+                    updatedRow.igstPercentage =
+                        value;
+                }
+
+                if (
+                    (
+                        isCgst ||
+                        isSgst
+                    ) &&
+                    num(value) >
+                    0
+                ) {
+                    updatedRow.igst =
+                        "";
+
+                    updatedRow.igstPercentage =
+                        "";
+
+                    updatedRow.igstAmount =
+                        0;
+                }
+
+                if (
+                    isIgst &&
+                    num(value) >
+                    0
+                ) {
+                    updatedRow.cgst =
+                        "";
+
+                    updatedRow.cgstPercentage =
+                        "";
+
+                    updatedRow.sgst =
+                        "";
+
+                    updatedRow.sgstPercentage =
+                        "";
+
+                    updatedRow.cgstAmount =
+                        0;
+
+                    updatedRow.sgstAmount =
+                        0;
+                }
+
+                updatedRow =
+                    calculateRow(
+                        updatedRow
+                    );
+
+                updatedProducts[
+                    index
+                ] = updatedRow;
+
+                return {
+                    ...prev,
+                    products:
+                        updatedProducts,
+                };
             }
         );
 
@@ -2010,6 +2245,18 @@ const SalesQuotations = () => {
                 [`row_${index}_${key}`]:
                     "",
                 [`row_${index}_tax`]:
+                    "",
+                [`row_${index}_igstPercentage`]:
+                    "",
+                [`row_${index}_cgstPercentage`]:
+                    "",
+                [`row_${index}_sgstPercentage`]:
+                    "",
+                [`row_${index}_igst`]:
+                    "",
+                [`row_${index}_cgst`]:
+                    "",
+                [`row_${index}_sgst`]:
                     "",
             })
         );
@@ -3055,8 +3302,7 @@ const SalesQuotations = () => {
         loadAccounts();
 
         if (!Object.keys(company ?? {})?.length) {
-            dispatch(getCompany({ withParent: true, limit: 100, }) as any
-            );
+            dispatch(getCompany({ withParent: true, limit: 100, }) as any);
         }
     }, [dispatch]);
 
@@ -3090,7 +3336,6 @@ const SalesQuotations = () => {
         accountListLoaded,
         filterAccount.length,
     ]);
-
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
