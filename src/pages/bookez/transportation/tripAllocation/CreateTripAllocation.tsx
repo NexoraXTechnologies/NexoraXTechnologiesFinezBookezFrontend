@@ -42,6 +42,7 @@ import {
     mapTransportOrderToAllocation,
     mergeTripAllocationForm,
     selectClassNames,
+    selectThemeStyles,
     toTripAllocationPayload,
 } from "./tripAllocationInitialState";
 
@@ -70,74 +71,7 @@ const routeTypeOptions = [
     { label: "Mixed Route", value: "Mixed Route" },
 ];
 
-const selectThemeStyles = {
-    control: (base: any, state: any) => ({
-        ...base,
-        backgroundColor: "var(--background)",
-        borderColor: state.isFocused ? "var(--primary)" : "var(--border)",
-        boxShadow: state.isFocused ? "0 0 0 1px var(--primary)" : "none",
-        "&:hover": {
-            borderColor: "var(--primary)",
-        },
-    }),
-    menu: (base: any) => ({
-        ...base,
-        zIndex: 9999,
-        backgroundColor: "var(--card)",
-        border: "1px solid var(--border)",
-        overflow: "hidden",
-    }),
-    menuList: (base: any) => ({
-        ...base,
-        backgroundColor: "var(--card)",
-        padding: "4px",
-    }),
-    option: (base: any, state: any) => ({
-        ...base,
-        cursor: "pointer",
-        backgroundColor: state.isSelected
-            ? "var(--primary)"
-            : state.isFocused
-                ? "var(--muted)"
-                : "var(--card)",
-        color: state.isSelected
-            ? "var(--primary-foreground)"
-            : "var(--card-foreground)",
-        "&:active": {
-            backgroundColor: "var(--muted)",
-        },
-    }),
-    singleValue: (base: any) => ({
-        ...base,
-        color: "var(--foreground)",
-    }),
-    input: (base: any) => ({
-        ...base,
-        color: "var(--foreground)",
-    }),
-    placeholder: (base: any) => ({
-        ...base,
-        color: "var(--muted-foreground)",
-    }),
-    dropdownIndicator: (base: any) => ({
-        ...base,
-        color: "var(--muted-foreground)",
-        "&:hover": {
-            color: "var(--primary)",
-        },
-    }),
-    clearIndicator: (base: any) => ({
-        ...base,
-        color: "var(--muted-foreground)",
-        "&:hover": {
-            color: "var(--danger)",
-        },
-    }),
-    indicatorSeparator: (base: any) => ({
-        ...base,
-        backgroundColor: "var(--border)",
-    }),
-};
+
 
 const getSavedAllocationRecord = (response: any, fallback: any = {}) => {
     return (

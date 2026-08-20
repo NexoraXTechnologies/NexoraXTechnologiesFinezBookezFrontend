@@ -142,13 +142,37 @@ const ReportFilterCard = ({
                     </label>
 
                     <div className="flex h-8 items-center rounded-md border border-border bg-input px-3">
-                        <input
+                        {/* <input
                             type="date"
                             value={field.value || ""}
                             disabled={field.disabled}
                             onChange={(e) => field.onChange(e.target.value)}
                             className="w-full bg-transparent text-xs font-semibold text-foreground outline-none disabled:cursor-not-allowed disabled:text-muted-foreground"
-                        />
+                        /> */}
+
+                        <input
+                            type="date"
+                            value={field.value || ""}
+                            min="1900-01-01"
+                            max="9999-12-31"
+                            disabled={field.disabled}
+                            onChange={(e) => {
+                                const value = e.target.value;
+
+                                if (!value) {
+                                    field.onChange("");
+                                    return;
+                                }
+
+                                const year = value.split("-")[0];
+
+                                if (year.length > 4) {
+                                    return;
+                                }
+
+                                field.onChange(value);
+                            }}
+                            className="w-full bg-transparent text-xs font-semibold text-foreground outline-none dark:[color-scheme:dark] disabled:cursor-not-allowed disabled:text-muted-foreground" />
                     </div>
                 </div>
             );

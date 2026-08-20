@@ -415,8 +415,9 @@ const formatDateTime = (value: any) => {
     });
 };
 
+
 const inputClass =
-    "h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";
+    "h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary dark:[color-scheme:dark] disabled:cursor-not-allowed disabled:opacity-60";
 
 const textareaClass =
     "min-h-[90px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60";

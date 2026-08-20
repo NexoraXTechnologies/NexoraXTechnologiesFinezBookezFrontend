@@ -1182,6 +1182,11 @@ export const renderField = ({
             key={field.key}
             {...commonProps}
             type={field.type || "text"}
+            className={
+                field.type === "date" || field.type === "datetime-local"
+                    ? "dark:[color-scheme:dark]"
+                    : ""
+            }
             placeholder={field.placeholder}
             onChange={field.disabled ? () => { } : handleInputChange(field.key)}
             disabled={isView}
