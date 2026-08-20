@@ -50,6 +50,7 @@ import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accou
 import ProductMasterModal from "../../master/productMaster/ProductMasterFormModal";
 import { getProductBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import InputBorderLabel from "../../../../components/common/InputBorderLabel";
+import { getCompany } from "../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 const VENDOR_FIELD_KEYS = new Set([
     "pInvVendorCode",
@@ -321,6 +322,15 @@ const PurchaseInvoice = () => {
                             searchValue: string,
                             rowIndex: number
                         ) => {
+                            if (!String(form?.pInvVendorCode || "").trim()) {
+                                toast.error("Please select vendor before selecting a product");
+                                setErrors((prev: any) => ({
+                                    ...prev,
+                                    pInvVendorCode: "Please select vendor first",
+                                }));
+                                return;
+                            }
+
                             setProductTargetRowIndex(rowIndex);
                             setProductSearchValue(searchValue);
                             setCheckProduct(true);
@@ -335,11 +345,12 @@ const PurchaseInvoice = () => {
                 }
             ),
         };
-    }, [templateFields]);
+    }, [templateFields, form?.pInvVendorCode]);
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null, record: null, });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const { company } = useSelector((state: any) => state.professionalCompanyMaster);
 
     const { accounts = [] } = useSelector(
         (state: any) => state.accountMaster || {}
@@ -422,6 +433,79 @@ const PurchaseInvoice = () => {
         }
 
         return null;
+    };
+
+    const applyPurchaseInvoiceTaxRule = (row: any, vendorCode: string, productSource?: any) => {
+        const selectedVendor = vendorAccounts?.find(
+            (e: any) => String(e?.accountCode || "") === String(vendorCode || "")
+        );
+
+        const companyState = company?.state?.isoCode;
+        const vendorState = selectedVendor?.state?.isoCode;
+
+        if (!companyState || !vendorState) return row;
+
+        const product = productSource || getProductMasterFromRow(row) || {};
+
+        const cgstValue =
+            product?.csgst ??
+            product?.CGST ??
+            product?.cgstRate ??
+            product?.cgstPercentage ??
+            product?.cgst ??
+            product?.tax?.cgstPercentage ??
+            product?.tax?.cgst ??
+            row?.cgst ??
+            row?.cgstPercentage ??
+            "";
+
+        const sgstValue =
+            product?.csgst ??
+            product?.SGST ??
+            product?.sgstRate ??
+            product?.sgstPercentage ??
+            product?.sgst ??
+            product?.tax?.sgstPercentage ??
+            product?.tax?.sgst ??
+            row?.sgst ??
+            row?.sgstPercentage ??
+            "";
+
+        const igstValue =
+            product?.igst ??
+            product?.IGST ??
+            product?.igstRate ??
+            product?.igstPercentage ??
+            product?.tax?.igstPercentage ??
+            product?.tax?.igst ??
+            row?.igst ??
+            row?.igstPercentage ??
+            "";
+
+        if (companyState == vendorState) {
+            return {
+                ...row,
+                cgst: cgstValue,
+                cgstPercentage: cgstValue,
+                sgst: sgstValue,
+                sgstPercentage: sgstValue,
+                igst: "",
+                igstPercentage: "",
+                igstAmount: 0,
+            };
+        }
+
+        return {
+            ...row,
+            cgst: "",
+            cgstPercentage: "",
+            sgst: "",
+            sgstPercentage: "",
+            cgstAmount: 0,
+            sgstAmount: 0,
+            igst: igstValue,
+            igstPercentage: igstValue,
+        };
     };
 
     const applyMappedFields = (
@@ -1095,7 +1179,7 @@ const PurchaseInvoice = () => {
         setSelectedGrn(grn);
     };
 
-    const buildPurchaseInvoiceProductRow = (item: any) => {
+    const buildPurchaseInvoiceProductRow = (item: any, vendorCode = "") => {
         const unitCode = item?.unit || item?.uom || "";
 
         const quantity =
@@ -1105,8 +1189,7 @@ const PurchaseInvoice = () => {
                 ? item.acceptedQuantity
                 : item?.quantity || "";
 
-        return calculateRow(
-            normalizeRowKeys({
+        const normalizedRow = normalizeRowKeys({
                 id: item?.id || Date.now() + Math.random(),
 
                 productCode: item?.productCode || "",
@@ -1171,7 +1254,13 @@ const PurchaseInvoice = () => {
 
                 netAmount: item?.netAmount || item?.netTotal || 0,
                 netTotal: item?.netTotal || item?.netAmount || 0,
-            })
+            });
+
+        return calculateRow(
+            applyPurchaseInvoiceTaxRule(
+                normalizedRow,
+                vendorCode
+            )
         );
     };
 
@@ -1246,7 +1335,10 @@ const PurchaseInvoice = () => {
             }
 
             const products = pendingRows.map((item: any) =>
-                buildPurchaseInvoiceProductRow(item)
+                buildPurchaseInvoiceProductRow(
+                    item,
+                    selectedGrn?.grnVendorCode || ""
+                )
             );
 
             setForm({
@@ -1278,7 +1370,12 @@ const PurchaseInvoice = () => {
 
         const products =
             record?.pInvBody?.length > 0
-                ? record.pInvBody.map((item: any) => buildPurchaseInvoiceProductRow(item))
+                ? record.pInvBody.map((item: any) =>
+                    buildPurchaseInvoiceProductRow(
+                        item,
+                        record?.pInvVendorCode || ""
+                    )
+                )
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setEditingRecord(true);
@@ -1737,23 +1834,11 @@ const PurchaseInvoice = () => {
                     igstPercentage: igstValue,
                 };
 
-                if (num(igstValue) > 0) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstPercentage = "";
-                    updatedRow.sgstPercentage = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
-                }
-
-                if (
-                    num(cgstValue) > 0 ||
-                    num(sgstValue) > 0
-                ) {
-                    updatedRow.igst = "";
-                    updatedRow.igstPercentage = "";
-                    updatedRow.igstAmount = 0;
-                }
+                updatedRow = applyPurchaseInvoiceTaxRule(
+                    updatedRow,
+                    form?.pInvVendorCode || "",
+                    createdProduct
+                );
 
                 updatedRow =
                     calculateRow(
@@ -1857,6 +1942,23 @@ const PurchaseInvoice = () => {
     }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const lowerKey = String(key).toLowerCase();
+        const isProductField =
+            lowerKey === "productcode" ||
+            lowerKey === "productname" ||
+            lowerKey === "productid" ||
+            lowerKey === "product";
+
+        if (isProductField && !String(form?.pInvVendorCode || "").trim()) {
+            toast.error("Please select vendor first");
+            setErrors((prev: any) => ({
+                ...prev,
+                pInvVendorCode: "Please select vendor first",
+                [`row_${index}_${key}`]: "",
+            }));
+            return;
+        }
+
         const duplicate = Boolean(form?.products?.filter((e: any, i: number) => i !== index && e?.productCode == value)?.length);
         if (!enableDuplicatePro && duplicate && (key === "productCode" || key === "productName" || key === "productId")) {
             setErrors((prev: any) => ({ ...prev, products: "", [`row_${index}_${key}`]: "This product already added", [`row_${index}_tax`]: "" }));
@@ -1885,14 +1987,6 @@ const PurchaseInvoice = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
 
-            const lowerKey = String(key).toLowerCase();
-
-            const isProductField =
-                lowerKey === "productcode" ||
-                lowerKey === "productname" ||
-                lowerKey === "productid" ||
-                lowerKey === "product";
-
             if (isProductField && selectedOption?.raw) {
                 updatedRow = fillProductDetailsFromSelectedOption(
                     updatedRow,
@@ -1905,6 +1999,12 @@ const PurchaseInvoice = () => {
                     productRaw?.dynamicFields?.productType ||
                     "";
                 updatedRow.availableQuantity = null;
+
+                updatedRow = applyPurchaseInvoiceTaxRule(
+                    updatedRow,
+                    form?.pInvVendorCode || "",
+                    productRaw
+                );
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
@@ -2422,6 +2522,10 @@ const PurchaseInvoice = () => {
                 status: "",
             }) as any
         );
+
+        if (!Object.keys(company ?? {})?.length) {
+            dispatch(getCompany({ withParent: true, limit: 100 }) as any);
+        }
     }, []);
 
     // ★ ADDED: Initial Account Master loading
