@@ -1865,13 +1865,7 @@ const SalesQuotations = () => {
             "product";
 
 
-        const duplicate =
-            isProductField &&
-            Boolean(
-                form
-                    ?.products
-                    ?.filter(
-                        (
+        const duplicate = isProductField && Boolean(form?.products?.filter((
                             e: any,
                             i: number
                         ) =>
@@ -1969,145 +1963,43 @@ const SalesQuotations = () => {
                         updatedRow
                     );
 
-                if (
-                    key ===
-                    "productCode" ||
-                    key ===
-                    "productName" ||
-                    key ===
-                    "productId"
-                ) {
-                    const getCustomer =
-                        filterAccount?.find(
-                            (
-                                e: any
-                            ) =>
-                                e.accountName ==
-                                form
-                                    ?.sQuoteCustomerName
-                        );
+                if (key === "productCode" || key === "productName" || key === "productId") {
+                    const getCustomer = filterAccount?.find((e: any) => e.accountName == form?.sQuoteCustomerName);
 
-                    if (
-                        company
-                            ?.state
-                            ?.isoCode ==
-                        getCustomer
-                            ?.state
-                            ?.isoCode
-                    ) {
-                        updatedRow.cgst =
-                            raw?.csgst ??
-                            raw?.CGST ??
-                            raw?.cgstRate ??
-                            raw?.cgstPercentage ??
-                            raw?.tax
-                                ?.cgst ??
-                            updatedRow.cgst ??
-                            "";
-
-                        updatedRow.sgst =
-                            raw?.csgst ??
-                            raw?.SGST ??
-                            raw?.sgstRate ??
-                            raw?.sgstPercentage ??
-                            raw?.tax
-                                ?.sgst ??
-                            updatedRow.sgst ??
-                            "";
+                    if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
+                        updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
+                        updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
                     } else {
-                        updatedRow.igst =
-                            raw?.igst ??
-                            raw?.IGST ??
-                            raw?.igstRate ??
-                            raw?.igstPercentage ??
-                            raw?.tax
-                                ?.igst ??
-                            updatedRow.igst ??
-                            "";
+                        updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
                     }
 
-                    if (
-                        num(
-                            updatedRow.igst
-                        ) > 0
-                    ) {
-                        updatedRow.cgst =
-                            "";
-
-                        updatedRow.sgst =
-                            "";
-
-                        updatedRow.cgstAmount =
-                            0;
-
-                        updatedRow.sgstAmount =
-                            0;
+                    if (num(updatedRow.igst) > 0) {
+                        updatedRow.cgst = "";
+                        updatedRow.sgst = "";
+                        updatedRow.cgstAmount = 0;
+                        updatedRow.sgstAmount = 0;
                     }
 
-                    if (
-                        num(
-                            updatedRow.cgst
-                        ) > 0 ||
-                        num(
-                            updatedRow.sgst
-                        ) > 0
-                    ) {
-                        updatedRow.igst =
-                            "";
-
-                        updatedRow.igstAmount =
-                            0;
+                    if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
+                        updatedRow.igst = "";
+                        updatedRow.igstAmount = 0;
                     }
                 }
 
-                if (
-                    (
-                        key ===
-                        "cgst" ||
-                        key ===
-                        "sgst"
-                    ) &&
-                    num(value) > 0
-                ) {
-                    updatedRow.igst =
-                        "";
-
-                    updatedRow.igstAmount =
-                        0;
+                if ((key === "cgst" || key === "sgst") && num(value) > 0) {
+                    updatedRow.igst = "";
+                    updatedRow.igstAmount = 0;
                 }
 
-                if (
-                    key ===
-                    "igst" &&
-                    num(value) > 0
-                ) {
-                    updatedRow.cgst =
-                        "";
-
-                    updatedRow.sgst =
-                        "";
-
-                    updatedRow.cgstAmount =
-                        0;
-
-                    updatedRow.sgstAmount =
-                        0;
+                if (key === "igst" && num(value) > 0) {
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
                 }
-
-                updatedRow =
-                    calculateRow(
-                        updatedRow
-                    );
-
-                updatedProducts[
-                    index
-                ] = updatedRow;
-
-                return {
-                    ...prev,
-                    products:
-                        updatedProducts,
-                };
+                updatedRow = calculateRow(updatedRow);
+                updatedProducts[index] = updatedRow;
+                return { ...prev, products: updatedProducts, };
             }
         );
 
@@ -2481,8 +2373,7 @@ const SalesQuotations = () => {
                             productName:
                                 item.productName,
 
-                            productId:
-                                item.productId,
+                            // productId: item.productId,
 
                             productDescription:
                                 item.productDescription ||
@@ -3163,17 +3054,8 @@ const SalesQuotations = () => {
 
         loadAccounts();
 
-        if (
-            !Object.keys(
-                company ?? {}
-            )?.length
-        ) {
-            dispatch(
-                getCompany({
-                    withParent:
-                        true,
-                    limit: 100,
-                }) as any
+        if (!Object.keys(company ?? {})?.length) {
+            dispatch(getCompany({ withParent: true, limit: 100, }) as any
             );
         }
     }, [dispatch]);

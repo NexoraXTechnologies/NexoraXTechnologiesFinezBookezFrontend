@@ -24,6 +24,7 @@ import { getAllSystemConfigurations } from "../../../../../redux/slices/systemCo
 import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
 import { getProductBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
+import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 const CUSTOMER_FIELD_KEYS = new Set([
     "sOrderCustomerCode",
@@ -433,6 +434,7 @@ const SalesOrder = () => {
     const [form, setForm] = useState<any>(
         getDefaultForm()
     );
+    const { company } = useSelector((state: any) => state.professionalCompanyMaster);
 
     const [errors, setErrors] = useState<any>({});
 
@@ -2497,30 +2499,14 @@ const SalesOrder = () => {
         });
     };
 
-    const enableDuplicatePro =
-        useMemo(() => {
-            const duplicateConfig =
-                configurations?.[0]
-                    ?.systemConfiguration
-                    ?.allowDuplicateProduct;
-
-            return (
-                duplicateConfig ===
-                true ||
-                duplicateConfig ===
-                "true"
-            );
+    const enableDuplicatePro = useMemo(() => {
+        const duplicateConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct;
+        return (duplicateConfig === true || duplicateConfig === "true");
         }, [configurations]);
 
-    const handleRowChange = (
-        index: number,
-        key: string,
-        value: any
-    ) => {
-        if (
-            !form
-                ?.sQuoteCustomerName
-        ) {
+    const handleRowChange = (index: number, key: string, value: any) => {
+        console.log({ form })
+        if (!form?.sOrderCustomerCode) {
             return toast.error(
                 "Please select customer first"
             );
@@ -2558,155 +2544,75 @@ const SalesOrder = () => {
             )
         );
 
-        if (
-            key === "productCode" &&
-            duplicate &&
-            !enableDuplicatePro
-        ) {
-            setErrors(
-                (previous: any) => ({
-                    ...previous,
-                    products: "",
-
-                    [`row_${index}_${key}`]:
-                        "This product already added",
-
-                    [`row_${index}_tax`]:
-                        "",
+        if (key === "productCode" && duplicate && !enableDuplicatePro) {
+            setErrors((previous: any) => ({
+                ...previous, products: "", [`row_${index}_${key}`]: "This product already added",
+                [`row_${index}_tax`]: "",
                 })
             );
-
             return;
         }
 
         setForm((previous: any) => {
-            const updatedProducts = [
-                ...(
-                    previous.products ||
-                    []
-                ),
-            ];
-
-            const currentRow =
-                updatedProducts[index] ||
-                {};
-
-            const currentField =
-                getBodyFieldByKey(key);
-
+            const updatedProducts = [...(previous.products || []),];
+            const currentRow = updatedProducts[index] || {};
+            const currentField = getBodyFieldByKey(key);
             let updatedRow = {
                 ...currentRow,
                 [key]: value,
             };
 
-            if (
-                currentField?.mapFields
-            ) {
-                updatedRow =
-                    applyMappedFields(
-                        currentField,
-                        value,
-                        updatedRow
-                    );
+            if (currentField?.mapFields) {
+                updatedRow = applyMappedFields(currentField, value, updatedRow);
+            }
+            const selectedOption = getOptionByValue(currentField, value);
+            const raw = selectedOption?.raw || {};
+
+            if (raw?._id && !updatedRow.productId) {
+                updatedRow.productId = raw._id;
             }
 
-            const selectedOption =
-                getOptionByValue(
-                    currentField,
-                    value
-                );
+            if (key === "productCode" || key === "productName" || key === "productId") {
+                const getCustomer = filterAccount?.find((e: any) => e.accountCode == form?.sOrderCustomerCode);
+                updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || ""; updatedRow.availableQuantity = null;
 
-            const raw =
-                selectedOption?.raw ||
-                {};
+                updatedRow.cgst = raw?.csgst;
+                updatedRow.sgst = raw?.csgst;
+                updatedRow.igst = raw?.igst;
+                updatedRow.productDescription = raw?.productDescription || "";
+                const marginProduct = isTrueValue(raw?.dynamicFields?.marginProduct);
 
-            if (
-                raw?._id &&
-                !updatedRow.productId
-            ) {
-                updatedRow.productId =
-                    raw._id;
-            }
-
-            if (
-                key ===
-                "productCode" ||
-                key ===
-                "productName" ||
-                key ===
-                "productId"
-            ) {
-                updatedRow.productType =
-                    raw?.productType ||
-                    raw?.dynamicFields?.productType ||
-                    "";
-                updatedRow.availableQuantity = null;
-
-                updatedRow.cgst =
-                    raw?.csgst;
-
-                updatedRow.sgst =
-                    raw?.csgst;
-
-                updatedRow.igst =
-                    raw?.igst;
-
-                updatedRow.productDescription =
-                    raw?.productDescription ||
-                    "";
-
-                const marginProduct =
-                    isTrueValue(
-                        raw?.dynamicFields
-                            ?.marginProduct
-                    );
-
-                updatedRow.marginProduct =
-                    marginProduct;
-
+                updatedRow.marginProduct = marginProduct;
                 if (!marginProduct) {
-                    updatedRow.nonTaxRate =
-                        "";
-
-                    updatedRow.taxGross =
-                        "";
-
-                    updatedRow.nonTaxGross =
-                        "";
+                    updatedRow.nonTaxRate = "";
+                    updatedRow.taxGross = "";
+                    updatedRow.nonTaxGross = "";
                 }
 
-                if (
-                    num(
-                        updatedRow.igst
-                    ) > 0
-                ) {
+                if (num(updatedRow.igst) > 0) {
                     updatedRow.cgst = "";
                     updatedRow.sgst = "";
-                    updatedRow.cgstAmount =
-                        0;
-                    updatedRow.sgstAmount =
-                        0;
+                    updatedRow.cgstAmount = 0;
+                    updatedRow.sgstAmount = 0;
                 }
 
-                if (
-                    num(
-                        updatedRow.cgst
-                    ) > 0 ||
-                    num(
-                        updatedRow.sgst
-                    ) > 0
-                ) {
+                if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
                     updatedRow.igst = "";
                     updatedRow.igstAmount =
                         0;
                 }
+                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
+                    updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
+                    updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
+                    updatedRow.igst = "";
+                } else {
+                    updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
+                }
             }
 
-            updatedRow =
-                normalizeRowKeys(
-                    updatedRow
-                );
-
+            updatedRow = normalizeRowKeys(updatedRow);
             if (
                 (
                     key === "cgst" ||
@@ -3147,8 +3053,7 @@ const SalesOrder = () => {
                         productName:
                             item.productName,
 
-                        productId:
-                            item.productId,
+                        // productId: item.productId,
 
                         productDescription:
                             item.productDescription ||
@@ -3977,6 +3882,11 @@ const SalesOrder = () => {
                 status: "",
             }) as any
         );
+
+        if (!Object.keys(company ?? {})?.length) {
+            dispatch(getCompany({ withParent: true, limit: 100, }) as any
+            );
+        }
     }, [dispatch]);
 
     // ★ ADDED: Initial Account Master loading

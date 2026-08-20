@@ -39,6 +39,7 @@ import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/ac
 import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
 import { getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
+import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 const CUSTOMER_FIELD_KEYS = new Set([
     "sInvCustomerCode",
@@ -461,17 +462,10 @@ const SalesInVoice = () => {
         footer: [],
     });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
-
-    const { accounts = [] } = useSelector(
-        (state: any) => state.accountMaster || {}
-    );
-
+    const { accounts = [] } = useSelector((state: any) => state.accountMaster || {});
     // ★ ADDED: Keep only customer accounts
     const filterAccount = useMemo(() => {
-        return (accounts || []).filter(
-            (account: any) =>
-                String(account?.accountType || "").toLowerCase() === "customer"
-        );
+        return (accounts || []).filter((account: any) => String(account?.accountType || "").toLowerCase() === "customer");
     }, [accounts]);
 
     // ⭐ YELLOW STAR: ADDED — ACCOUNT AND PRODUCT CREATE ACTIONS
@@ -568,6 +562,7 @@ const SalesInVoice = () => {
     });
 
     const { report } = useSelector((s: any) => s.reportMapping);
+    const { company } = useSelector((state: any) => state.professionalCompanyMaster);
 
     const getHeaderFieldByKey = (key: string) =>
         templateFields?.header?.find((field: any) => field.key === key);
@@ -1486,7 +1481,6 @@ const SalesInVoice = () => {
 
     const openEditModal = async (record: any) => {
         const footer = record?.sInvFooter || {};
-
         const products = record?.sInvBody?.length > 0
             ? record.sInvBody.map((item: any) => {
                 const unitCode = item?.unit || item?.uom || "";
@@ -1865,9 +1859,7 @@ const SalesInVoice = () => {
     };
 
     // ⭐ YELLOW STAR: ADDED — REFRESH PRODUCT OPTIONS AND SELECT NEW PRODUCT
-    const handleProductSaved = async (
-        savedResponse: any
-    ) => {
+    const handleProductSaved = async (savedResponse: any) => {
         try {
             await dispatch(
                 getAllReportMapping({
@@ -2237,11 +2229,7 @@ const SalesInVoice = () => {
     }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
-        if (!form?.sQuoteCustomerName) {
-            return toast.error(
-                "Please select customer first"
-            );
-        }
+        if (!form?.sInvCustomerCode) return toast.error("Please select customer first");    
         const duplicate = key === "productCode" && Boolean(form?.products?.some((item: any, rowIndex: number) => rowIndex !== index && String(item?.productCode || "") === String(value || "")));
 
         if (duplicate && !enableDuplicatePro) {
@@ -2265,13 +2253,8 @@ const SalesInVoice = () => {
 
         if (isCustomMasterField(balanceField)) {
             const customMasterName = getCustomMasterName(balanceField);
-            const currentCustomMasters =
-                balanceRow?.customMasters &&
-                    typeof balanceRow.customMasters === "object"
-                    ? { ...balanceRow.customMasters }
-                    : {};
+            const currentCustomMasters = balanceRow?.customMasters && typeof balanceRow.customMasters === "object" ? { ...balanceRow.customMasters } : {};
             const selectedMaster = getCustomMasterSelection(balanceField, value);
-
             if (!selectedMaster) {
                 delete currentCustomMasters[customMasterName];
             } else {
@@ -2288,11 +2271,7 @@ const SalesInVoice = () => {
                 balanceSelectedOption?.value ||
                 value ||
                 "";
-            balanceRow.productType =
-                balanceRaw?.productType ||
-                balanceRaw?.dynamicFields?.productType ||
-                balanceRow?.productType ||
-                "";
+            balanceRow.productType = balanceRaw?.productType || balanceRaw?.dynamicFields?.productType || balanceRow?.productType || "";
         }
 
         setForm((prev: any) => {
@@ -2311,16 +2290,8 @@ const SalesInVoice = () => {
 
             if (isCustomMasterField(currentField)) {
                 const customMasterName = getCustomMasterName(currentField);
-                const currentCustomMasters =
-                    updatedRow?.customMasters &&
-                        typeof updatedRow.customMasters === "object"
-                        ? { ...updatedRow.customMasters }
-                        : {};
-
-                const selectedMaster = getCustomMasterSelection(
-                    currentField,
-                    value
-                );
+                const currentCustomMasters = updatedRow?.customMasters && typeof updatedRow.customMasters === "object" ? { ...updatedRow.customMasters } : {};
+                const selectedMaster = getCustomMasterSelection(currentField, value);
 
                 if (!selectedMaster) {
                     delete currentCustomMasters[customMasterName];
@@ -2336,19 +2307,14 @@ const SalesInVoice = () => {
             }
             updatedRow = normalizeRowKeys(updatedRow);
             if (key === "productCode" || key === "productName" || key === "productId") {
-                updatedRow.productType =
-                    raw?.productType ||
-                    raw?.dynamicFields?.productType ||
-                    "";
+                const getCustomer = filterAccount?.find((e: any) => e.accountCode == form?.sInvCustomerCode);
+                updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || "";
                 updatedRow.availableQuantity = null;
                 updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
                 updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
                 updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
-
                 const marginProduct = isTrueValue(raw?.dynamicFields?.marginProduct);
-
                 updatedRow.marginProduct = marginProduct;
-
                 if (!marginProduct) {
                     updatedRow.taxRate = "";
                     updatedRow.nonTaxRate = "";
@@ -2366,6 +2332,15 @@ const SalesInVoice = () => {
                 if (num(updatedRow.cgst) > 0 || num(updatedRow.sgst) > 0) {
                     updatedRow.igst = "";
                     updatedRow.igstAmount = 0;
+                }
+                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
+                    updatedRow.cgst = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.tax?.cgst ?? updatedRow.cgst ?? "";
+                    updatedRow.sgst = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.tax?.sgst ?? updatedRow.sgst ?? "";
+                    updatedRow.igst = "";
+                } else {
+                    updatedRow.igst = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igst ?? updatedRow.igst ?? "";
+                    updatedRow.cgst = "";
+                    updatedRow.sgst = "";
                 }
             }
 
@@ -2544,7 +2519,7 @@ const SalesInVoice = () => {
                         "",
                     productCode: item.productCode,
                     productName: item.productName,
-                    productId: item.productId,
+                    // productId: item.productId,
                     productDescription:
                         item.productDescription || item.description,
                     description:
@@ -3022,6 +2997,11 @@ const SalesInVoice = () => {
 
     useEffect(() => {
         dispatch(getAllTransactionSchema("salesInvoice") as any);
+
+        if (!Object.keys(company ?? {})?.length) {
+            dispatch(getCompany({ withParent: true, limit: 100, }) as any
+            );
+        }
     }, [dispatch]);
 
     useEffect(() => {

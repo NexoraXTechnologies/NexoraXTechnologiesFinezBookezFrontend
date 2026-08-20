@@ -2803,34 +2803,18 @@ const Users = () => {
       dispatch,
     ]);
 
-  const openCreateModal =
-    () => {
-      setEditingAccount(
-        null
-      );
-
-      setShowModal(
-        true
-      );
+  const openCreateModal = () => {
+    setEditingAccount(null);
+    setShowModal(true);
     };
 
-  const openEditModal =
-    (account: any) => {
-      setEditingAccount(
-        account
-      );
-
-      setShowModal(
-        true
-      );
+  const openEditModal = (account: any) => {
+    setEditingAccount(account);
+    setShowModal(true);
     };
 
-  const closeModal =
-    () => {
-      setShowModal(
-        false
-      );
-
+  const closeModal = () => {
+    setShowModal(false);
       resetUserForm();
     };
 
