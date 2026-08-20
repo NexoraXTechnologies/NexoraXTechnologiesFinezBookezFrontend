@@ -1468,7 +1468,7 @@ const SalesOrderRegister = () => {
                         })
                     ),
                 ]}
-                gridCols="5"
+                gridCols="4"
                 onSearch={
                     handleRefresh
                 }

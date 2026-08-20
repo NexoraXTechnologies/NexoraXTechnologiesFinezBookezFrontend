@@ -189,8 +189,7 @@ const RegisterFilterCard = ({
 
                                 field.onChange(value);
                             }}
-                            className="w-full bg-transparent text-xs font-semibold text-foreground outline-none disabled:cursor-not-allowed disabled:text-muted-foreground"
-                        />
+                            className="w-full bg-transparent text-xs font-semibold text-foreground outline-none dark:[color-scheme:dark] disabled:cursor-not-allowed disabled:text-muted-foreground" />
                     </div>
                 </div>
             );
