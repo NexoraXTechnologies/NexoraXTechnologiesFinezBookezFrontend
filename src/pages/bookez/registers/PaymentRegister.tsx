@@ -1227,7 +1227,7 @@ const PaymentRegister = () => {
                         type: "select",
                         label: "Account",
                         placeholder:
-                            "Account",
+                            "--Select Account--",
                         value:
                             account,
                         options:
@@ -1260,9 +1260,7 @@ const PaymentRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                             placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

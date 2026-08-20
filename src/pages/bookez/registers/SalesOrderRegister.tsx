@@ -1375,7 +1375,7 @@ const SalesOrderRegister = () => {
                         type: "select",
                         label: "Customer",
                         placeholder:
-                            "Customer",
+                            "--Select Customer--",
                         value:
                             customer,
                         options:
@@ -1397,7 +1397,7 @@ const SalesOrderRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Product",
+                            "--Select Product--",
                         value:
                             product,
                         options:
@@ -1428,10 +1428,7 @@ const SalesOrderRegister = () => {
                             label:
                                 filter.label ||
                                 filter.key,
-
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

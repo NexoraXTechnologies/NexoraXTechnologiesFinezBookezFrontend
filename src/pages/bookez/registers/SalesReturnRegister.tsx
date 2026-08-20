@@ -1610,7 +1610,7 @@ const SalesReturnRegister = () => {
                         type: "select",
                         label: "Customer",
                         placeholder:
-                            "Select Customer",
+                            "--Select Customer--",
                         value: customer,
                         options:
                             customerOptions,
@@ -1627,7 +1627,7 @@ const SalesReturnRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Select Product",
+                            "--Select Product--",
                         value: product,
                         options:
                             productOptions,
@@ -1651,9 +1651,7 @@ const SalesReturnRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

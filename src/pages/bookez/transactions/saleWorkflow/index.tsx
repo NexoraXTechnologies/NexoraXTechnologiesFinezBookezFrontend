@@ -65,7 +65,7 @@ const SaleWorkflowDashboard = () => {
     },
     ...(enableReceipt ? [{
       title: "Receipt",
-      description: "Manage sales return transactions.",
+      description: "Manage customer receipts and incoming payment transactions.",
       component: SalesReceipt,
       icon: <ReceiptText size={22} />,
       permissionKey: "receipt"

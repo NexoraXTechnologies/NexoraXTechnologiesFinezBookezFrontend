@@ -1368,7 +1368,7 @@ const PurchaseOrderRegister = () => {
                         type: "select",
                         label: "Vendor",
                         placeholder:
-                            "Vendor",
+                            "--Select Vendor--",
                         value:
                             vendor,
                         options:
@@ -1390,7 +1390,7 @@ const PurchaseOrderRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Product",
+                            "--Select Product--",
                         value:
                             product,
                         options:
@@ -1422,9 +1422,7 @@ const PurchaseOrderRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

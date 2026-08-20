@@ -1366,7 +1366,7 @@ const OpeningStockRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Select Product",
+                            "--Select Product--",
                         value: product,
                         options:
                             productOptions,
@@ -1390,9 +1390,7 @@ const OpeningStockRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

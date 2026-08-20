@@ -1375,7 +1375,7 @@ const GrnRegister = () => {
                         type: "select",
                         label: "Vendor",
                         placeholder:
-                            "Vendor",
+                            "--Select Vendor--",
                         value:
                             vendor,
                         options:
@@ -1397,7 +1397,7 @@ const GrnRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Product",
+                            "--Select Product--",
                         value:
                             product,
                         options:
@@ -1429,9 +1429,7 @@ const GrnRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

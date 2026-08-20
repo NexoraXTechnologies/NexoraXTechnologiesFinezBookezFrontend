@@ -1474,7 +1474,7 @@ const CreditNoteRegister = () => {
                         type: "select",
                         label: "Customer",
                         placeholder:
-                            "Customer",
+                            "--Select Customer--",
 
                         value:
                             customer,
@@ -1499,7 +1499,7 @@ const CreditNoteRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Product",
+                            "--Select Product--",
 
                         value:
                             product,

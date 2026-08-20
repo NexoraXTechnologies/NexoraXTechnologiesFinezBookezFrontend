@@ -1823,7 +1823,7 @@ const PurchaseReturnRegister = () => {
                         type: "select",
                         label: "Vendor",
                         placeholder:
-                            "Select Vendor",
+                            "--Select Vendor--",
                         value: vendor,
                         options: vendorOptions,
 
@@ -1839,7 +1839,7 @@ const PurchaseReturnRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Select Product",
+                            "--Select Product--",
                         value: product,
                         options:
                             productOptions,
@@ -1863,9 +1863,7 @@ const PurchaseReturnRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

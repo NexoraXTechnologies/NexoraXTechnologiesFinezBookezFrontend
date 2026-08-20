@@ -1250,7 +1250,7 @@ const OpeningBalanceRegister = () => {
                         type: "select",
                         label: "Account",
                         placeholder:
-                            "Select Account",
+                            "--Select Account--",
                         value: account,
                         options:
                             accountOptions,
@@ -1274,9 +1274,7 @@ const OpeningBalanceRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

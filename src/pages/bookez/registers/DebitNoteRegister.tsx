@@ -1485,7 +1485,7 @@ const DebitNoteRegister = () => {
                         type: "select",
                         label: "Vendor",
                         placeholder:
-                            "Vendor",
+                            "--Select Vendor--",
 
                         value:
                             customer,
@@ -1510,7 +1510,7 @@ const DebitNoteRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Product",
+                            "--Select Product--",
 
                         value:
                             product,
