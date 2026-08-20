@@ -48,6 +48,7 @@ import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf"
 import ProductMasterModal from "../../master/productMaster/ProductMasterFormModal";
 import { getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import InputBorderLabel from "../../../../components/common/InputBorderLabel";
+import { getCompany } from "../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 const VENDOR_FIELD_KEYS = new Set([
     "grnVendorCode",
@@ -632,6 +633,7 @@ const Grn = () => {
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const { company } = useSelector((state: any) => state.professionalCompanyMaster);
 
     // ★ ADDED: Account Master records
     const { accounts = [] } = useSelector(
@@ -708,6 +710,15 @@ const Grn = () => {
                             searchValue: string,
                             rowIndex: number
                         ) => {
+                            if (!String(form?.grnVendorCode || "").trim()) {
+                                toast.error("Please select vendor before selecting a product");
+                                setErrors((prev: any) => ({
+                                    ...prev,
+                                    grnVendorCode: "Please select vendor first",
+                                }));
+                                return;
+                            }
+
                             setProductTargetRowIndex(rowIndex);
                             setProductSearchValue(searchValue);
                             setCheckProduct(true);
@@ -722,7 +733,7 @@ const Grn = () => {
                 }
             ),
         };
-    }, [templateFields]);
+    }, [templateFields, form?.grnVendorCode]);
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
@@ -1076,6 +1087,115 @@ const Grn = () => {
         }
 
         return null;
+    };
+
+    const getStateCode = (stateValue: any) => {
+        if (!stateValue) return "";
+
+        if (typeof stateValue === "string") {
+            return stateValue.trim();
+        }
+
+        return String(
+            stateValue?.isoCode ||
+            stateValue?.stateCode ||
+            stateValue?.code ||
+            stateValue?.value ||
+            ""
+        ).trim();
+    };
+
+    const applyGrnTaxRule = (
+        row: any,
+        vendorCode: string,
+        productSource?: any
+    ) => {
+        const selectedVendor = filterAccount?.find(
+            (account: any) =>
+                String(account?.accountCode || "") ===
+                String(vendorCode || "")
+        );
+
+        const companyStateCode = getStateCode(
+            company?.state ||
+            company?.companyState ||
+            company?.stateCode
+        );
+
+        const vendorStateCode = getStateCode(
+            selectedVendor?.state ||
+            selectedVendor?.vendorState ||
+            selectedVendor?.stateCode
+        );
+
+        if (!companyStateCode || !vendorStateCode) {
+            return row;
+        }
+
+        const product =
+            productSource ||
+            getProductMasterFromRow(row) ||
+            {};
+
+        const cgstValue =
+            product?.csgst ??
+            product?.CGST ??
+            product?.cgstPercentage ??
+            product?.cgst ??
+            product?.cgstRate ??
+            product?.tax?.cgstPercentage ??
+            product?.tax?.cgst ??
+            row?.cgst ??
+            row?.cgstPercentage ??
+            "";
+
+        const sgstValue =
+            product?.csgst ??
+            product?.SGST ??
+            product?.sgstPercentage ??
+            product?.sgst ??
+            product?.sgstRate ??
+            product?.tax?.sgstPercentage ??
+            product?.tax?.sgst ??
+            row?.sgst ??
+            row?.sgstPercentage ??
+            "";
+
+        const igstValue =
+            product?.igst ??
+            product?.IGST ??
+            product?.igstPercentage ??
+            product?.igstRate ??
+            product?.tax?.igstPercentage ??
+            product?.tax?.igst ??
+            row?.igst ??
+            row?.igstPercentage ??
+            "";
+
+        if (companyStateCode === vendorStateCode) {
+            return {
+                ...row,
+                cgst: cgstValue,
+                cgstPercentage: cgstValue,
+                sgst: sgstValue,
+                sgstPercentage: sgstValue,
+                igst: "",
+                igstPercentage: "",
+                igstAmount: 0,
+            };
+        }
+
+        return {
+            ...row,
+            cgst: "",
+            cgstPercentage: "",
+            sgst: "",
+            sgstPercentage: "",
+            cgstAmount: 0,
+            sgstAmount: 0,
+            igst: igstValue,
+            igstPercentage: igstValue,
+        };
     };
 
     const getCustomMasterSelection = (
@@ -1675,7 +1795,7 @@ const Grn = () => {
         setSelectedPurchaseOrder(purchaseOrder);
     };
 
-    const buildGrnProductRow = (item: any) => {
+    const buildGrnProductRow = (item: any, vendorCode = "") => {
         const unitCode = item?.unit || item?.uom || "";
 
         const customMasterValues =
@@ -1684,8 +1804,7 @@ const Grn = () => {
                 item?.customMasters || {}
             );
 
-        return calculateRow(
-            normalizeRowKeys({
+        const normalizedRow = normalizeRowKeys({
                 id: item?.id || Date.now() + Math.random(),
 
                 productCode: item?.productCode || "",
@@ -1777,7 +1896,13 @@ const Grn = () => {
                     "",
 
                 ...customMasterValues,
-            })
+            });
+
+        return calculateRow(
+            applyGrnTaxRule(
+                normalizedRow,
+                vendorCode
+            )
         );
     };
 
@@ -1804,7 +1929,12 @@ const Grn = () => {
 
         const products =
             poBody.length > 0
-                ? poBody.map((item: any) => buildGrnProductRow(item))
+                ? poBody.map((item: any) =>
+                    buildGrnProductRow(
+                        item,
+                        selectedPurchaseOrder?.pOrdVendorCode || ""
+                    )
+                )
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setForm({
@@ -1844,7 +1974,12 @@ const Grn = () => {
 
         const products =
             record?.grnBody?.length > 0
-                ? record.grnBody.map((item: any) => buildGrnProductRow(item))
+                ? record.grnBody.map((item: any) =>
+                    buildGrnProductRow(
+                        item,
+                        record?.grnVendorCode || ""
+                    )
+                )
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         let inventoryRecords: any[] = [];
@@ -2317,23 +2452,11 @@ const Grn = () => {
                     igstPercentage: igstValue,
                 };
 
-                if (num(igstValue) > 0) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstPercentage = "";
-                    updatedRow.sgstPercentage = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
-                }
-
-                if (
-                    num(cgstValue) > 0 ||
-                    num(sgstValue) > 0
-                ) {
-                    updatedRow.igst = "";
-                    updatedRow.igstPercentage = "";
-                    updatedRow.igstAmount = 0;
-                }
+                updatedRow = applyGrnTaxRule(
+                    updatedRow,
+                    form?.grnVendorCode || "",
+                    createdProduct
+                );
 
                 updatedRow =
                     calculateRow(
@@ -2577,6 +2700,26 @@ const Grn = () => {
     }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const lowerKey = String(key).toLowerCase();
+        const isProductField =
+            lowerKey === "productcode" ||
+            lowerKey === "productname" ||
+            lowerKey === "productid" ||
+            lowerKey === "product";
+
+        if (
+            isProductField &&
+            !String(form?.grnVendorCode || "").trim()
+        ) {
+            toast.error("Please select vendor first");
+            setErrors((prev: any) => ({
+                ...prev,
+                grnVendorCode: "Please select vendor first",
+                [`row_${index}_${key}`]: "",
+            }));
+            return;
+        }
+
         const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
         if (duplicate && !enableDuplicatePro) {
             setErrors((prev: any) => ({
@@ -2650,8 +2793,6 @@ const Grn = () => {
                     );
             }
 
-            const lowerKey = String(key).toLowerCase();
-            const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
             if (isProductField && selectedOption?.raw) {
                 updatedRow = fillProductDetailsFromSelectedOption(updatedRow, selectedOption);
                 updatedRow.productCode = raw?.productCode || raw?.code || updatedRow.productCode || "";
@@ -2659,29 +2800,11 @@ const Grn = () => {
                 updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
                 updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || "";
                 updatedRow.availableQuantity = null;
-                const cgstValue = raw?.cgstPercentage ?? raw?.cgst ?? raw?.csgst ?? raw?.cgstRate ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
-                const sgstValue = raw?.sgstPercentage ?? raw?.sgst ?? raw?.csgst ?? raw?.sgstRate ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
-                const igstValue = raw?.igstPercentage ?? raw?.igst ?? raw?.igstRate ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
-                updatedRow.cgst = cgstValue;
-                updatedRow.sgst = sgstValue;
-                updatedRow.igst = igstValue;
-                updatedRow.cgstPercentage = cgstValue;
-                updatedRow.sgstPercentage = sgstValue;
-                updatedRow.igstPercentage = igstValue;
-                if (num(igstValue) > 0) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstPercentage = "";
-                    updatedRow.sgstPercentage = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
-                }
-
-                if (num(cgstValue) > 0 || num(sgstValue) > 0) {
-                    updatedRow.igst = "";
-                    updatedRow.igstPercentage = "";
-                    updatedRow.igstAmount = 0;
-                }
+                updatedRow = applyGrnTaxRule(
+                    updatedRow,
+                    form?.grnVendorCode || "",
+                    raw
+                );
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
@@ -3437,6 +3560,15 @@ const Grn = () => {
                 status: "",
             }) as any
         );
+
+        if (!Object.keys(company ?? {})?.length) {
+            dispatch(
+                getCompany({
+                    withParent: true,
+                    limit: 100,
+                }) as any
+            );
+        }
     }, []);
 
     // ★ ADDED: Initial Account Master loading

@@ -21,6 +21,7 @@ import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accou
 import ProductMasterModal from "../../master/productMaster/ProductMasterFormModal";
 import { getProductBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import InputBorderLabel from "../../../../components/common/InputBorderLabel";
+import { getCompany } from "../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 const VENDOR_FIELD_KEYS = new Set([
     "pOrdVendorCode",
@@ -217,6 +218,7 @@ const PurchaseOrder = () => {
     const [errors, setErrors] = useState<any>({});
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const { company } = useSelector((state: any) => state.professionalCompanyMaster);
 
     // ★ ADDED: Account Master data
     const { accounts = [] } = useSelector(
@@ -289,6 +291,11 @@ const PurchaseOrder = () => {
                             searchValue: string,
                             rowIndex: number
                         ) => {
+                            if (!String(form?.pOrdVendorCode || "").trim()) {
+                                toast.error("Please select vendor before selecting a product");
+                                setErrors((prev: any) => ({ ...prev, pOrdVendorCode: "Please select vendor first" }));
+                                return;
+                            }
                             setProductTargetRowIndex(rowIndex);
                             setProductSearchValue(searchValue);
                             setCheckProduct(true);
@@ -303,7 +310,7 @@ const PurchaseOrder = () => {
                 }
             ),
         };
-    }, [templateFields]);
+    }, [templateFields, form?.pOrdVendorCode]);
 
     const [fieldsLoading, setFieldsLoading] = useState(false);
 
@@ -854,7 +861,11 @@ const PurchaseOrder = () => {
                 status: "",
             }) as any
         );
-    }, []);
+
+        if (!Object.keys(company ?? {})?.length) {
+            dispatch(getCompany({ withParent: true, limit: 100 }) as any);
+        }
+    }, [dispatch]);
 
     // ★ ADDED: Load Account Master data for vendor availability check
     useEffect(() => {
@@ -1079,7 +1090,7 @@ const PurchaseOrder = () => {
                             taxableAmount: item?.taxableAmount || 0,
 
                             cgst:
-                                item?.csgst ||
+                                item?.cgst ||
                                 item?.cgstPercentage ||
                                 "",
 
@@ -1524,6 +1535,8 @@ const PurchaseOrder = () => {
                     updatedRow?.igst ??
                     "";
 
+                const selectedVendor = filterVendorAccount?.find((e: any) => e.accountCode == form?.pOrdVendorCode);
+
                 updatedRow = {
                     ...updatedRow,
 
@@ -1582,32 +1595,21 @@ const PurchaseOrder = () => {
                         createdProduct?.dynamicFields?.productType ||
                         "",
 
-                    cgst: cgstValue,
-                    cgstPercentage: cgstValue,
+                    cgst: company?.state?.isoCode == selectedVendor?.state?.isoCode ? cgstValue : "",
+                    cgstPercentage: company?.state?.isoCode == selectedVendor?.state?.isoCode ? cgstValue : "",
 
-                    sgst: sgstValue,
-                    sgstPercentage: sgstValue,
+                    sgst: company?.state?.isoCode == selectedVendor?.state?.isoCode ? sgstValue : "",
+                    sgstPercentage: company?.state?.isoCode == selectedVendor?.state?.isoCode ? sgstValue : "",
 
-                    igst: igstValue,
-                    igstPercentage: igstValue,
+                    igst: company?.state?.isoCode == selectedVendor?.state?.isoCode ? "" : igstValue,
+                    igstPercentage: company?.state?.isoCode == selectedVendor?.state?.isoCode ? "" : igstValue,
                 };
 
-                if (num(igstValue) > 0) {
-                    updatedRow.cgst = "";
-                    updatedRow.sgst = "";
-                    updatedRow.cgstPercentage = "";
-                    updatedRow.sgstPercentage = "";
+                if (company?.state?.isoCode == selectedVendor?.state?.isoCode) {
+                    updatedRow.igstAmount = 0;
+                } else {
                     updatedRow.cgstAmount = 0;
                     updatedRow.sgstAmount = 0;
-                }
-
-                if (
-                    num(cgstValue) > 0 ||
-                    num(sgstValue) > 0
-                ) {
-                    updatedRow.igst = "";
-                    updatedRow.igstPercentage = "";
-                    updatedRow.igstAmount = 0;
                 }
 
                 updatedRow =
@@ -1687,6 +1689,15 @@ const PurchaseOrder = () => {
     }, [configurations]);
 
     const handleRowChange = (index: number, key: string, value: any) => {
+        const lowerKey = String(key).toLowerCase();
+        const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
+
+        if (isProductField && !String(form?.pOrdVendorCode || "").trim()) {
+            toast.error("Please select vendor first");
+            setErrors((prev: any) => ({ ...prev, pOrdVendorCode: "Please select vendor first", [`row_${index}_${key}`]: "" }));
+            return;
+        }
+
         const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
         if (duplicate && !enableDuplicatePro) {
             setErrors((prev: any) => ({
@@ -1713,8 +1724,6 @@ const PurchaseOrder = () => {
 
             const selectedOption = getOptionByValue(currentField, value);
             const raw = selectedOption?.raw || {};
-            const lowerKey = String(key).toLowerCase();
-            const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
             if (isProductField && selectedOption?.raw) {
                 updatedRow = fillProductDetailsFromSelectedOption(updatedRow, selectedOption);
                 updatedRow.productCode = raw?.productCode || raw?.code || updatedRow.productCode || "";
@@ -1722,29 +1731,28 @@ const PurchaseOrder = () => {
                 updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
                 updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || "";
                 updatedRow.availableQuantity = null;
-                const cgstValue = raw?.cgstPercentage ?? raw?.cgst ?? raw?.csgst ?? raw?.cgstRate ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
-                const sgstValue = raw?.sgstPercentage ?? raw?.sgst ?? raw?.csgst ?? raw?.sgstRate ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
-                const igstValue = raw?.igstPercentage ?? raw?.igst ?? raw?.igstRate ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
-                updatedRow.cgst = cgstValue;
-                updatedRow.sgst = sgstValue;
-                updatedRow.igst = igstValue;
-                updatedRow.cgstPercentage = cgstValue;
-                updatedRow.sgstPercentage = sgstValue;
-                updatedRow.igstPercentage = igstValue;
+                const selectedVendor = filterVendorAccount?.find((e: any) => e.accountCode == form?.pOrdVendorCode);
+                const cgstValue = raw?.csgst ?? raw?.CGST ?? raw?.cgstRate ?? raw?.cgstPercentage ?? raw?.cgst ?? raw?.tax?.cgstPercentage ?? raw?.tax?.cgst ?? "";
+                const sgstValue = raw?.csgst ?? raw?.SGST ?? raw?.sgstRate ?? raw?.sgstPercentage ?? raw?.sgst ?? raw?.tax?.sgstPercentage ?? raw?.tax?.sgst ?? "";
+                const igstValue = raw?.igst ?? raw?.IGST ?? raw?.igstRate ?? raw?.igstPercentage ?? raw?.tax?.igstPercentage ?? raw?.tax?.igst ?? "";
 
-                if (num(igstValue) > 0) {
+                if (company?.state?.isoCode == selectedVendor?.state?.isoCode) {
+                    updatedRow.cgst = cgstValue;
+                    updatedRow.sgst = sgstValue;
+                    updatedRow.igst = "";
+                    updatedRow.cgstPercentage = cgstValue;
+                    updatedRow.sgstPercentage = sgstValue;
+                    updatedRow.igstPercentage = "";
+                    updatedRow.igstAmount = 0;
+                } else {
+                    updatedRow.igst = igstValue;
                     updatedRow.cgst = "";
                     updatedRow.sgst = "";
+                    updatedRow.igstPercentage = igstValue;
                     updatedRow.cgstPercentage = "";
                     updatedRow.sgstPercentage = "";
                     updatedRow.cgstAmount = 0;
                     updatedRow.sgstAmount = 0;
-                }
-
-                if (num(cgstValue) > 0 || num(sgstValue) > 0) {
-                    updatedRow.igst = "";
-                    updatedRow.igstPercentage = "";
-                    updatedRow.igstAmount = 0;
                 }
             }
             updatedRow = normalizeRowKeys(updatedRow);
@@ -1942,9 +1950,11 @@ const PurchaseOrder = () => {
 
                 cgst: String(getTaxValue(item.cgst, item.cgstPercentage)),
                 cgstPercentage: String(getTaxValue(item.cgstPercentage, item.cgst)),
+                cgstAmount: fmtMoney(item.cgstAmount),
 
                 sgst: String(getTaxValue(item.sgst, item.sgstPercentage)),
                 sgstPercentage: String(getTaxValue(item.sgstPercentage, item.sgst)),
+                sgstAmount: fmtMoney(item.sgstAmount),
 
                 igst: String(getTaxValue(item.igst, item.igstPercentage)),
                 igstPercentage: String(getTaxValue(item.igstPercentage, item.igst)),
