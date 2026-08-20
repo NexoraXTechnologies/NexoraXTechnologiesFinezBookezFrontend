@@ -18,8 +18,6 @@ import {
 
 import professionalAxios from "../../../services/professionalAxios";
 import {
-   
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -425,9 +423,9 @@ const mainColumns = [
             </span>
         ),
     },
-   
-   
-   
+
+
+
     {
         key: "totalQuantity",
         title: "Total Qty",
@@ -583,7 +581,7 @@ const OpeningStockRegister = () => {
        CUSTOM FILTERS
     =================================================== */
 
-    const customFilters:any = useMemo<
+    const customFilters: any = useMemo<
         CustomFilterDefinition[]
     >(() => {
         return Array.isArray(
@@ -640,7 +638,7 @@ const OpeningStockRegister = () => {
             );
     }, [products]);
 
-  
+
     /* ===================================================
        TABLE DATA
     =================================================== */
@@ -716,8 +714,8 @@ const OpeningStockRegister = () => {
         return {
             productCode: product,
 
-            fromDate: fromDate || "",
-            toDate: toDate || "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
 
             customCodes:
                 selectedCustomCodes.length
@@ -910,7 +908,7 @@ const OpeningStockRegister = () => {
         );
     }, [dispatch, fromDate, toDate, product, selectedCustomCodesKey, localOffset, localLimit, refreshKey]);
 
-   
+
     /* ===================================================
        VIEW DATA
     =================================================== */
@@ -1343,17 +1341,10 @@ const OpeningStockRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate ? toDateInputValue(fromDate) : "",
+                        value: fromDate,
                         required: false,
-
-                        onChange: (
-                            value: string
-                        ) => {
-                            setFromDate(
-                                value
-                                    ? toLocalStartOfDayUtc(value)
-                                    : ""
-                            );
+                        onChange: (value: string) => {
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -1362,17 +1353,10 @@ const OpeningStockRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate ? toDateInputValue(toDate) : "",
+                        value: toDate,
                         required: false,
-
-                        onChange: (
-                            value: string
-                        ) => {
-                            setToDate(
-                                value
-                                    ? toLocalEndOfDayUtc(value)
-                                    : ""
-                            );
+                        onChange: (value: string) => {
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -1400,7 +1384,7 @@ const OpeningStockRegister = () => {
                             filter: CustomFilterDefinition
                         ) => ({
                             key: filter.key,
-                            type: "select" as const ,
+                            type: "select" as const,
 
                             label:
                                 filter.label ||
@@ -1520,15 +1504,15 @@ const OpeningStockRegister = () => {
                     setViewForm({});
                     setViewErrors({});
                 }}
-                onSubmit={() => {}}
+                onSubmit={() => { }}
                 form={viewForm}
                 errors={viewErrors}
-                handleAddRow={() => {}}
-                handleDeleteRow={() => {}}
-                handleRowChange={() => {}}
+                handleAddRow={() => { }}
+                handleDeleteRow={() => { }}
+                handleRowChange={() => { }}
                 inputData={viewInputData}
                 bodyKey="openingStockBody"
-                handleChange={() => {}}
+                handleChange={() => { }}
             />
 
             {currentPagination?.totalDocs >

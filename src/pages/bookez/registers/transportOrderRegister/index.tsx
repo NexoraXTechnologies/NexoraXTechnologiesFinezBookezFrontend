@@ -13,7 +13,7 @@ import ReadMoreText from "../../../../components/common/ReadMoreText";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
 // import CreateEditTransportOrder from "./CreateEditTransportOrder";
 import { getTransportOrderRegister } from "../../../../redux/slices/professionalSlice/bookEzRegister/transportOrderRegister";
-import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
+import { toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
 import CreateTransportOrder from "../../transportation/transportOrder/CreateTransportOrder";
 
 
@@ -485,8 +485,8 @@ const TransportOrderRegister = () => {
         exportType: "pdf" | "excel" | "" = ""
     ) => {
         return {
-            fromDate: fromDate || "",
-            toDate: toDate || "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
             offset: exportType ? 0 : localOffset,
             limit: localLimit,
             exportType,
@@ -699,13 +699,9 @@ const TransportOrderRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate ? toDateInputValue(fromDate) : "",
+                        value: fromDate,
                         onChange: (value) => {
-                            setFromDate(
-                                toLocalStartOfDayUtc(
-                                    value
-                                )
-                            );
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -715,13 +711,9 @@ const TransportOrderRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate ? toDateInputValue(toDate) : "",
+                        value: toDate,
                         onChange: (value) => {
-                            setToDate(
-                                toLocalEndOfDayUtc(
-                                    value
-                                )
-                            );
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },

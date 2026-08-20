@@ -16,7 +16,6 @@ import { getTripAllocationRegister } from "../../../../redux/slices/professional
 import {
     formatDateForInput,
     money,
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
     truncate,
@@ -398,8 +397,8 @@ const TripAllocationRegister = () => {
     const getPayload = (
         exportType: ExportType = ""
     ): RegisterPayload => ({
-        fromDate: fromDate || "",
-        toDate: toDate || "",
+        fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+        toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
         offset:
             exportType
                 ? 0
@@ -631,21 +630,9 @@ const TripAllocationRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value:
-                            fromDate
-                                ? toDateInputValue(
-                                    fromDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setFromDate(
-                                toLocalStartOfDayUtc(
-                                    value
-                                )
-                            );
-
+                        value: fromDate,
+                        onChange: (value) => {
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -655,21 +642,9 @@ const TripAllocationRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value:
-                            toDate
-                                ? toDateInputValue(
-                                    toDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setToDate(
-                                toLocalEndOfDayUtc(
-                                    value
-                                )
-                            );
-
+                        value: toDate,
+                        onChange: (value) => {
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -721,7 +696,7 @@ const TripAllocationRegister = () => {
             {registerError && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
                     {typeof registerError ===
-                    "string"
+                        "string"
                         ? registerError
                         : registerError?.message ||
                         "Failed to load trip allocation register."}
@@ -752,7 +727,7 @@ const TripAllocationRegister = () => {
 
                     const isOpening =
                         openingVoucher ===
-                            voucherNumber &&
+                        voucherNumber &&
                         detailLoader;
 
                     return (
@@ -796,41 +771,41 @@ const TripAllocationRegister = () => {
                 currentPagination?.totalDocs ||
                 0
             ) > 0 && (
-                <div className="mt-2">
-                    <Pagination
-                        localLimit={
-                            localLimit
-                        }
-                        selectCb={(
-                            event: any
-                        ) => {
-                            setLocalLimit(
-                                Number(
-                                    event
-                                        .target
-                                        .value
-                                )
-                            );
+                    <div className="mt-2">
+                        <Pagination
+                            localLimit={
+                                localLimit
+                            }
+                            selectCb={(
+                                event: any
+                            ) => {
+                                setLocalLimit(
+                                    Number(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                );
 
-                            setLocalOffset(
-                                0
-                            );
-                        }}
-                        preDisabled={
-                            !currentPagination?.hasPrevPage
-                        }
-                        nextDisabled={
-                            !currentPagination?.hasNextPage
-                        }
-                        setLocalOffset={
-                            setLocalOffset
-                        }
-                        pagination={
-                            currentPagination
-                        }
-                    />
-                </div>
-            )}
+                                setLocalOffset(
+                                    0
+                                );
+                            }}
+                            preDisabled={
+                                !currentPagination?.hasPrevPage
+                            }
+                            nextDisabled={
+                                !currentPagination?.hasNextPage
+                            }
+                            setLocalOffset={
+                                setLocalOffset
+                            }
+                            pagination={
+                                currentPagination
+                            }
+                        />
+                    </div>
+                )}
 
             <PageComponentModal
                 show={

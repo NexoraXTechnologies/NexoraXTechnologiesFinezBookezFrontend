@@ -12,7 +12,6 @@ import { getAllProducts } from "../../../redux/slices/professionalSlice/productM
 // import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
 import {
     loadAllTemplateOptions,
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -113,272 +112,6 @@ const mainColumns = [
 /* ===================================================
    HELPERS
 =================================================== */
-
-// const getVoucherRecordFromResponse = (res: any, voucherNumber: string) => {
-//     if (res?.salesOrder) return res.salesOrder;
-//     if (res?.data?.salesOrder) return res.data.salesOrder;
-
-//     if (res?.order) return res.order;
-//     if (res?.data?.order) return res.data.order;
-
-//     if (res?.record) return res.record;
-//     if (res?.data?.record) return res.data.record;
-
-//     if (
-//         res &&
-//         typeof res === "object" &&
-//         res?.sOrderVoucherNumber === voucherNumber
-//     ) {
-//         return res;
-//     }
-
-//     if (
-//         res?.data &&
-//         typeof res.data === "object" &&
-//         res.data?.sOrderVoucherNumber === voucherNumber
-//     ) {
-//         return res.data;
-//     }
-
-//     const records =
-//         Array.isArray(res)
-//             ? res
-//             : Array.isArray(res?.records)
-//                 ? res.records
-//                 : Array.isArray(res?.orders)
-//                     ? res.orders
-//                     : Array.isArray(res?.salesOrders)
-//                         ? res.salesOrders
-//                         : Array.isArray(res?.data)
-//                             ? res.data
-//                             : Array.isArray(res?.data?.records)
-//                                 ? res.data.records
-//                                 : Array.isArray(res?.data?.orders)
-//                                     ? res.data.orders
-//                                     : Array.isArray(res?.data?.salesOrders)
-//                                         ? res.data.salesOrders
-//                                         : [];
-
-//     return (
-//         records.find(
-//             (item: any) =>
-//                 item?.sOrderVoucherNumber === voucherNumber ||
-//                 item?.voucherNumber === voucherNumber
-//         ) ||
-//         records[0] ||
-//         null
-//     );
-// };
-
-// const normalizeSalesOrderForView = (record: any) => {
-//     const footer = record?.sOrderFooter || {};
-
-//     const products = (record?.sOrderBody || []).map((item: any) => ({
-//         ...item,
-
-//         productCode: item?.productCode || "",
-//         productName: item?.productName || "",
-//         productId: item?.productId || "",
-
-//         productDescription:
-//             item?.productDescription || item?.description || "",
-
-//         description:
-//             item?.description || item?.productDescription || "",
-
-//         productHSNCode: item?.productHSNCode || "",
-
-//         quantity: item?.quantity || "",
-
-//         uom: item?.uom || item?.unit || "",
-
-//         unit: item?.unit || item?.uom || "",
-
-//         unitName: item?.unitName || "",
-
-//         rate: item?.rate || "",
-
-//         gross:
-//             item?.gross ||
-//             item?.grossAmount ||
-//             "",
-
-//         grossAmount:
-//             item?.grossAmount ||
-//             item?.gross ||
-//             "",
-
-//         discount:
-//             item?.discount ||
-//             item?.discountPercentage ||
-//             "",
-
-//         discountPercentage:
-//             item?.discountPercentage ||
-//             item?.discount ||
-//             "",
-
-//         discountAmount:
-//             item?.discountAmount ||
-//             "0.00",
-
-//         taxableAmount:
-//             item?.taxableAmount ||
-//             "0.00",
-
-//         cgst:
-//             item?.cgst ||
-//             item?.cgstPercentage ||
-//             "",
-
-//         cgstPercentage:
-//             item?.cgstPercentage ||
-//             item?.cgst ||
-//             "",
-
-//         cgstAmount:
-//             item?.cgstAmount ||
-//             "0.00",
-
-//         sgst:
-//             item?.sgst ||
-//             item?.sgstPercentage ||
-//             "",
-
-//         sgstPercentage:
-//             item?.sgstPercentage ||
-//             item?.sgst ||
-//             "",
-
-//         sgstAmount:
-//             item?.sgstAmount ||
-//             "0.00",
-
-//         igst:
-//             item?.igst ||
-//             item?.igstPercentage ||
-//             "",
-
-//         igstPercentage:
-//             item?.igstPercentage ||
-//             item?.igst ||
-//             "",
-
-//         igstAmount:
-//             item?.igstAmount ||
-//             "0.00",
-
-//         taxAmount:
-//             item?.taxAmount ||
-//             "0.00",
-
-//         otherAmount:
-//             item?.otherAmount ||
-//             "0.00",
-
-//         netAmount:
-//             item?.netAmount ||
-//             item?.netTotal ||
-//             "",
-
-//         netTotal:
-//             item?.netTotal ||
-//             item?.netAmount ||
-//             "",
-//     }));
-
-//     return {
-//         ...record,
-
-//         sOrderVoucherNumber:
-//             record?.sOrderVoucherNumber ||
-//             record?.voucherNumber ||
-//             "",
-
-//         sOrderVoucherDate:
-//             record?.sOrderVoucherDate ||
-//             record?.voucherDate ||
-//             "",
-
-//         sOrderCustomerCode:
-//             record?.sOrderCustomerCode ||
-//             record?.customerCode ||
-//             "",
-
-//         sOrderCustomerName:
-//             record?.sOrderCustomerName ||
-//             record?.customerName ||
-//             "",
-
-//         sOrderStatus:
-//             record?.sOrderStatus ||
-//             record?.sOrderDocStatus ||
-//             "open",
-
-//         sOrderRemark:
-//             record?.sOrderRemark ||
-//             record?.remark ||
-//             "",
-
-//         products,
-
-//         sOrderBody: products,
-
-//         grossAmount:
-//             footer?.grossAmount ||
-//             footer?.totalGrossAmount ||
-//             "0.00",
-
-//         discountAmount:
-//             footer?.discountAmount ||
-//             footer?.totalDiscountAmount ||
-//             "0.00",
-
-//         cgstAmount:
-//             footer?.cgstAmount ||
-//             footer?.totalCgstAmount ||
-//             "0.00",
-
-//         sgstAmount:
-//             footer?.sgstAmount ||
-//             footer?.totalSgstAmount ||
-//             "0.00",
-
-//         igstAmount:
-//             footer?.igstAmount ||
-//             footer?.totalIgstAmount ||
-//             "0.00",
-
-//         taxAmount:
-//             footer?.taxAmount ||
-//             footer?.totalTaxAmount ||
-//             "0.00",
-
-//         otherAmount:
-//             footer?.otherAmount ||
-//             footer?.totalOtherAmount ||
-//             "0.00",
-
-//         netAmount:
-//             footer?.netAmount ||
-//             footer?.totalNetAmount ||
-//             "0.00",
-
-//         adjustedAmount:
-//             footer?.adjustedAmount ||
-//             "0.00",
-
-//         balanceAmount:
-//             footer?.balanceAmount ||
-//             footer?.netAmount ||
-//             footer?.totalNetAmount ||
-//             "0.00",
-
-//         totalQuantity:
-//             footer?.totalQuantity ||
-//             "0",
-//     };
-// };
 
 type CustomFilterDefinition = {
     key: string;
@@ -820,13 +553,8 @@ const SalesOrderRegister = () => {
             );
 
         return {
-            fromDate:
-                fromDate ||
-                "",
-
-            toDate:
-                toDate ||
-                "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
 
             offset:
                 isExport
@@ -1349,102 +1077,6 @@ const SalesOrderRegister = () => {
         };
 
 
-    // const handleViewVoucher =
-    //     async (
-    //         row: any
-    //     ) => {
-    //         const voucherNumber =
-    //             row
-    //                 ?.sOrderVoucherNumber ||
-    //             row
-    //                 ?.voucherNumber ||
-    //             "";
-
-    //         if (
-    //             !voucherNumber
-    //         ) {
-    //             console.log(
-    //                 "Sales order voucher number missing:",
-    //                 row
-    //             );
-
-    //             return;
-    //         }
-
-    //         try {
-    //             setViewModal(
-    //                 true
-    //             );
-
-    //             setViewLoading(
-    //                 true
-    //             );
-
-    //             setViewErrors(
-    //                 {}
-    //             );
-
-    //             setViewForm(
-    //                 {}
-    //             );
-
-    //             await dispatch(
-    //                 getAllTransactionSchema(
-    //                     "salesOrder"
-    //                 ) as any
-    //             );
-
-    //             const res =
-    //                 await dispatch(
-    //                     getSalesOrderByVoucherNumber(
-    //                         voucherNumber
-    //                     ) as any
-    //                 ).unwrap();
-
-    //             const record =
-    //                 getVoucherRecordFromResponse(
-    //                     res,
-    //                     voucherNumber
-    //                 );
-
-    //             if (
-    //                 !record
-    //             ) {
-    //                 console.log(
-    //                     "Sales order not found:",
-    //                     voucherNumber,
-    //                     res
-    //                 );
-
-    //                 setViewForm(
-    //                     {}
-    //                 );
-
-    //                 return;
-    //             }
-
-    //             setViewForm(
-    //                 normalizeSalesOrderForView(
-    //                     record
-    //                 )
-    //             );
-    //         } catch (
-    //             error
-    //         ) {
-    //             console.log(
-    //                 "Sales order register view order failed",
-    //                 error
-    //             );
-
-    //             setViewForm(
-    //                 {}
-    //             );
-    //         } finally {
-    //             setViewLoading(
-    //                 false
-    //             );
-    //         }
-    //     };
 
     const downloadBlobFile = (
         blob: Blob,
@@ -1718,65 +1350,25 @@ const SalesOrderRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value:
-                            fromDate
-                                ? toDateInputValue(
-                                    fromDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setFromDate(
-                                value
-                                    ? toLocalStartOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
-                            setLocalOffset(
-                                0
-                            );
-
-                            setDateError(
-                                ""
-                            );
+                        value: fromDate,
+                        onChange: (value) => {
+                            setFromDate(value || "");
+                            setLocalOffset(0);
+                            setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value:
-                            toDate
-                                ? toDateInputValue(
-                                    toDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setToDate(
-                                value
-                                    ? toLocalEndOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
-                            setLocalOffset(
-                                0
-                            );
-
-                            setDateError(
-                                ""
-                            );
+                        value: toDate,
+                        onChange: (value) => {
+                            setToDate(value || "");
+                            setLocalOffset(0);
+                            setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "customer",

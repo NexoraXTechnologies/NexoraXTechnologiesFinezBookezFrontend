@@ -8,7 +8,7 @@ import {
 import Pagination from "../../../../components/pagination";
 import RegisterFilterCard from "../RegisterFilterCard";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
-import { toDateInputValue, toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
+import { toLocalEndOfDayUtc, toLocalStartOfDayUtc } from "../../../../utils/helperFunctions";
 import CreateEditDriverSettlement from "../../transportation/driverSettlement/CreateEditDriverSettlement";
 
 
@@ -312,8 +312,8 @@ const DriverSettlementRegister = () => {
     const getPayload = (
         exportType: ExportType = ""
     ): DriverSettlementRegisterPayload => ({
-        fromDate: fromDate || "",
-        toDate: toDate || "",
+        fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+        toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
         offset: exportType ? 0 : localOffset,
         limit: localLimit,
         exportType,
@@ -440,9 +440,9 @@ const DriverSettlementRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate ? toDateInputValue(fromDate) : "",
+                        value: fromDate,
                         onChange: (value: string) => {
-                            setFromDate(toLocalStartOfDayUtc(value));
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -452,9 +452,9 @@ const DriverSettlementRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate ? toDateInputValue(toDate) : "",
+                        value: toDate,
                         onChange: (value: string) => {
-                            setToDate(toLocalEndOfDayUtc(value));
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
