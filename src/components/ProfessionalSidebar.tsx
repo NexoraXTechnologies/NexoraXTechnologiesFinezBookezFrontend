@@ -245,16 +245,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 				},
 			]
 			: []),
-		{
-			name: "Company Master",
-			path: "/master/company",
-			icon: <Building2 size={20} />,
-		},
-		{
-			name: "Add Team/Employee",
-			path: "/users",
-			icon: <Users size={20} />,
-		},
+
 		// {
 		// 	name: "Subscription",
 		// 	path: "/subscription",
@@ -264,6 +255,16 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			name: "Settings",
 			icon: <Settings size={20} />,
 			children: [
+				{
+					name: "Company Master",
+					path: "/master/company",
+					icon: <Building2 size={20} />,
+				},
+				{
+					name: "Add Team/Employee",
+					path: "/users",
+					icon: <Users size={20} />,
+				},
 				{
 					name: "Profile",
 					path: "/profile",
