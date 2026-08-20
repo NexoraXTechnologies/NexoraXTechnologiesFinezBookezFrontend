@@ -13,7 +13,7 @@ import { addContraVoucherRegister } from "../../../redux/slices/professionalSlic
 import { getContraVoucherByVoucherNumber } from "../../../redux/slices/professionalSlice/openingBalancesStocks/contraVoucherSlice";
 
 import {
-    toDateInputValue,
+    
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -46,7 +46,7 @@ const mainColumns = [
             );
         },
     },
-  
+
     {
         key: "totalDebit",
         title: "Total Debit",
@@ -76,11 +76,10 @@ const mainColumns = [
 
             return (
                 <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${
-                        isOpen
-                            ? "bg-success/10 text-success"
-                            : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${isOpen
+                        ? "bg-success/10 text-success"
+                        : "bg-muted text-muted-foreground"
+                        }`}
                 >
                     {value}
                 </span>
@@ -247,14 +246,14 @@ const ContraVoucherRegister = () => {
         return true;
     };
 
-    const getPayload:any = (
+    const getPayload: any = (
         exportType: "pdf" | "excel" | "" = ""
     ) => {
         const isExport = Boolean(exportType);
 
         return {
-            fromDate: fromDate || "",
-            toDate: toDate || "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
             offset: isExport ? 0 : localOffset,
             limit: isExport ? 120000 : localLimit,
             exportType: exportType || "",
@@ -547,13 +546,9 @@ const ContraVoucherRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate ? toDateInputValue(fromDate) : "",
+                        value: fromDate,
                         onChange: (value) => {
-                            setFromDate(
-                                value
-                                    ? toLocalStartOfDayUtc(value)
-                                    : ""
-                            );
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -563,13 +558,9 @@ const ContraVoucherRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate ? toDateInputValue(toDate) : "",
+                        value: toDate,
                         onChange: (value) => {
-                            setToDate(
-                                value
-                                    ? toLocalEndOfDayUtc(value)
-                                    : ""
-                            );
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -641,15 +632,15 @@ const ContraVoucherRegister = () => {
                     setViewForm({});
                     setViewErrors({});
                 }}
-                onSubmit={() => {}}
+                onSubmit={() => { }}
                 form={viewForm}
                 errors={viewErrors}
-                handleAddRow={() => {}}
-                handleDeleteRow={() => {}}
-                handleRowChange={() => {}}
+                handleAddRow={() => { }}
+                handleDeleteRow={() => { }}
+                handleRowChange={() => { }}
                 inputData={viewInputData}
                 bodyKey="entries"
-                handleChange={() => {}}
+                handleChange={() => { }}
                 footerTotals={viewFooterTotals}
             />
 

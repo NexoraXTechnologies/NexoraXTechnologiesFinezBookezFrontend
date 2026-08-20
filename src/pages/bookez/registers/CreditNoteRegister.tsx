@@ -10,7 +10,6 @@ import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountM
 import { getAllProducts } from "../../../redux/slices/professionalSlice/productMasterSlice";
 
 import {
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -722,13 +721,8 @@ const CreditNoteRegister = () => {
             );
 
         return {
-            fromDate:
-                fromDate ||
-                "",
-
-            toDate:
-                toDate ||
-                "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
 
             offset:
                 isExport
@@ -1455,41 +1449,32 @@ const CreditNoteRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-
-                        value: fromDate ? toDateInputValue(fromDate) : "",
-
+                        value: fromDate,
                         onChange: (value) => {
-                            setFromDate(value ? toLocalStartOfDayUtc(value) : "");
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
-
                         required: false,
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-
-                        value: toDate ? toDateInputValue(toDate) : "",
-
-                        onChange: (
-                            value
-                        ) => {
-                            setToDate(value ? toLocalEndOfDayUtc(value) : "" );
+                        value: toDate,
+                        onChange: (value) => {
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
-
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "customer",
                         type: "select",
                         label: "Customer",
                         placeholder:
-                            "Customer",
+                            "--Select Customer--",
 
                         value:
                             customer,
@@ -1514,7 +1499,7 @@ const CreditNoteRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Product",
+                            "--Select Product--",
 
                         value:
                             product,

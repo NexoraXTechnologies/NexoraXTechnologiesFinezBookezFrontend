@@ -25,7 +25,6 @@ import { getByVoucherNumberSalesReceiptList } from "../../../redux/slices/profes
 
 import {
     loadAllTemplateOptions,
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -475,9 +474,8 @@ const ReceiptRegister = () => {
             ) as string[];
 
             return {
-                fromDate: fromDate || "",
-                toDate: toDate || "",
-
+                fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+                toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
                 offset: isExport ? 0 : localOffset,
                 limit: isExport ? 120000 : localLimit,
 
@@ -1200,62 +1198,32 @@ const ReceiptRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value:
-                            fromDate
-                                ? toDateInputValue(
-                                    fromDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setFromDate(
-                                value
-                                    ? toLocalStartOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
+                        value: fromDate,
+                        onChange: (value) => {
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value:
-                            toDate
-                                ? toDateInputValue(
-                                    toDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setToDate(
-                                value
-                                    ? toLocalEndOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
+                        value: toDate,
+                        onChange: (value) => {
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "account",
                         type: "select",
                         label: "Account",
                         placeholder:
-                            "Account",
+                            "--Select Account--",
                         value:
                             account,
                         options:
@@ -1288,9 +1256,7 @@ const ReceiptRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                           placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

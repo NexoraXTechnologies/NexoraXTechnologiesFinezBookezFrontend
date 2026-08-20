@@ -8,7 +8,6 @@ import Pagination from "../../../../components/pagination";
 import PageComponentModal from "../../../../components/mainPage/PageComponentModal";
 
 import {
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../../utils/helperFunctions";
@@ -350,8 +349,8 @@ const TripLrEntryRegister = () => {
     const getPayload = (
         exportType: ExportType = ""
     ): RegisterPayload => ({
-        fromDate: fromDate || "",
-        toDate: toDate || "",
+        fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+        toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
         customerCode: customerCode || undefined,
         productCode: productCode || undefined,
         offset: exportType ? 0 : localOffset,
@@ -573,14 +572,9 @@ const TripLrEntryRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value: fromDate ? toDateInputValue(fromDate) : "",
+                        value: fromDate,
                         onChange: (value) => {
-                            setFromDate(
-                                toLocalStartOfDayUtc(
-                                    value
-                                )
-                            );
-
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -590,14 +584,9 @@ const TripLrEntryRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value: toDate ? toDateInputValue(toDate) : "",
+                        value: toDate,
                         onChange: (value) => {
-                            setToDate(
-                                toLocalEndOfDayUtc(
-                                    value
-                                )
-                            );
-
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -637,10 +626,10 @@ const TripLrEntryRegister = () => {
             {registerError && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
                     {typeof registerError ===
-                    "string"
+                        "string"
                         ? registerError
                         : registerError?.message ||
-                          "Failed to load Trip LR register."}
+                        "Failed to load Trip LR register."}
                 </div>
             )}
 
@@ -661,7 +650,7 @@ const TripLrEntryRegister = () => {
 
                     const isOpening =
                         openingVoucher ===
-                            voucherNumber &&
+                        voucherNumber &&
                         (detailLoader ||
                             viewLoading);
 
@@ -704,43 +693,43 @@ const TripLrEntryRegister = () => {
 
             {Number(
                 currentPagination?.totalDocs ||
-                    0
+                0
             ) > 0 && (
-                <div className="mt-2">
-                    <Pagination
-                        localLimit={
-                            localLimit
-                        }
-                        selectCb={(
-                            event: any
-                        ) => {
-                            setLocalLimit(
-                                Number(
-                                    event
-                                        .target
-                                        .value
-                                )
-                            );
+                    <div className="mt-2">
+                        <Pagination
+                            localLimit={
+                                localLimit
+                            }
+                            selectCb={(
+                                event: any
+                            ) => {
+                                setLocalLimit(
+                                    Number(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                );
 
-                            setLocalOffset(
-                                0
-                            );
-                        }}
-                        preDisabled={
-                            !currentPagination?.hasPrevPage
-                        }
-                        nextDisabled={
-                            !currentPagination?.hasNextPage
-                        }
-                        setLocalOffset={
-                            setLocalOffset
-                        }
-                        pagination={
-                            currentPagination
-                        }
-                    />
-                </div>
-            )}
+                                setLocalOffset(
+                                    0
+                                );
+                            }}
+                            preDisabled={
+                                !currentPagination?.hasPrevPage
+                            }
+                            nextDisabled={
+                                !currentPagination?.hasNextPage
+                            }
+                            setLocalOffset={
+                                setLocalOffset
+                            }
+                            pagination={
+                                currentPagination
+                            }
+                        />
+                    </div>
+                )}
 
             <PageComponentModal
                 show={viewModal}

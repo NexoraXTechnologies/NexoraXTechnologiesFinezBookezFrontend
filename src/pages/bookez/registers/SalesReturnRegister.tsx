@@ -22,7 +22,6 @@ import {
 import professionalAxios from "../../../services/professionalAxios";
 import {
     loadAllTemplateOptions,
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -927,8 +926,8 @@ const SalesReturnRegister = () => {
             accountCode: customer,
             productCode: product,
 
-            fromDate: fromDate || "",
-            toDate: toDate || "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
 
             customCodes:
                 selectedCustomCodes.length
@@ -1586,24 +1585,10 @@ const SalesReturnRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value:
-                            fromDate
-                                ? toDateInputValue(
-                                    fromDate
-                                )
-                                : "",
+                        value: fromDate,
                         required: false,
-
-                        onChange: (
-                            value: string
-                        ) => {
-                            setFromDate(
-                                value
-                                    ? toLocalStartOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
+                        onChange: (value: string) => {
+                            setFromDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -1612,24 +1597,10 @@ const SalesReturnRegister = () => {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value:
-                            toDate
-                                ? toDateInputValue(
-                                    toDate
-                                )
-                                : "",
+                        value: toDate,
                         required: false,
-
-                        onChange: (
-                            value: string
-                        ) => {
-                            setToDate(
-                                value
-                                    ? toLocalEndOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
+                        onChange: (value: string) => {
+                            setToDate(value || "");
                             setLocalOffset(0);
                             setDateError("");
                         },
@@ -1639,7 +1610,7 @@ const SalesReturnRegister = () => {
                         type: "select",
                         label: "Customer",
                         placeholder:
-                            "Select Customer",
+                            "--Select Customer--",
                         value: customer,
                         options:
                             customerOptions,
@@ -1656,7 +1627,7 @@ const SalesReturnRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Select Product",
+                            "--Select Product--",
                         value: product,
                         options:
                             productOptions,
@@ -1680,9 +1651,7 @@ const SalesReturnRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[

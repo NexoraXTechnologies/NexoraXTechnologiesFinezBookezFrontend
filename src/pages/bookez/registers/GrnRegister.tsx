@@ -12,7 +12,6 @@ import { getAllProducts } from "../../../redux/slices/professionalSlice/productM
 // import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
 import {
     loadAllTemplateOptions,
-    toDateInputValue,
     toLocalEndOfDayUtc,
     toLocalStartOfDayUtc,
 } from "../../../utils/helperFunctions";
@@ -321,7 +320,7 @@ const GrnRegister = () => {
     ] = useState(false);
 
     // @ts-ignore
-    const [viewLoading,setViewLoading,] = useState(false);
+    const [viewLoading, setViewLoading,] = useState(false);
 
     const [
         viewForm,
@@ -409,7 +408,7 @@ const GrnRegister = () => {
                 .map(
                     (filter: any) =>
                         selectedCustomFilters[
-                            filter.key
+                        filter.key
                         ] ||
                         ""
                 )
@@ -554,13 +553,8 @@ const GrnRegister = () => {
             );
 
         return {
-            fromDate:
-                fromDate ||
-                "",
-
-            toDate:
-                toDate ||
-                "",
+            fromDate: fromDate ? toLocalStartOfDayUtc(fromDate) : "",
+            toDate: toDate ? toLocalEndOfDayUtc(toDate) : "",
 
             offset:
                 isExport
@@ -737,7 +731,7 @@ const GrnRegister = () => {
                                         ),
                                     ] as const;
                                 } catch (
-                                    error
+                                error
                                 ) {
                                     console.log(
                                         "Custom register filter options failed:",
@@ -789,14 +783,14 @@ const GrnRegister = () => {
                                 if (
                                     filter?.key &&
                                     previous[
-                                        filter.key
+                                    filter.key
                                     ]
                                 ) {
                                     nextSelected[
                                         filter.key
                                     ] =
                                         previous[
-                                            filter.key
+                                        filter.key
                                         ];
                                 }
                             }
@@ -907,7 +901,7 @@ const GrnRegister = () => {
                         updatedData
                     );
                 } catch (
-                    error
+                error
                 ) {
                     console.log(
                         "Failed to prepare GRN view fields",
@@ -992,7 +986,7 @@ const GrnRegister = () => {
                     ) => {
                         const rawValue =
                             viewFooterTotals?.[
-                                field.key as keyof typeof viewFooterTotals
+                            field.key as keyof typeof viewFooterTotals
                             ] ??
                             "0.00";
 
@@ -1082,8 +1076,8 @@ const GrnRegister = () => {
             );
         };
 
-        
-  
+
+
     const downloadBlobFile = (
         blob: Blob,
         fileName: string
@@ -1223,7 +1217,7 @@ const GrnRegister = () => {
                     true
                 );
             } catch (
-                error
+            error
             ) {
                 console.log(
                     "GRN register export columns failed",
@@ -1299,8 +1293,8 @@ const GrnRegister = () => {
                     );
                 }
             } catch (
-                error:
-                    any
+            error:
+                any
             ) {
                 console.log(
                     `GRN register ${currentExportType.toUpperCase()} download failed`,
@@ -1356,72 +1350,32 @@ const GrnRegister = () => {
                         key: "fromDate",
                         type: "date",
                         label: "From Date",
-                        value:
-                            fromDate
-                                ? toDateInputValue(
-                                    fromDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setFromDate(
-                                value
-                                    ? toLocalStartOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
-                            setLocalOffset(
-                                0
-                            );
-
-                            setDateError(
-                                ""
-                            );
+                        value: fromDate,
+                        onChange: (value) => {
+                            setFromDate(value || "");
+                            setLocalOffset(0);
+                            setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "toDate",
                         type: "date",
                         label: "To Date",
-                        value:
-                            toDate
-                                ? toDateInputValue(
-                                    toDate
-                                )
-                                : "",
-                        onChange: (
-                            value
-                        ) => {
-                            setToDate(
-                                value
-                                    ? toLocalEndOfDayUtc(
-                                        value
-                                    )
-                                    : ""
-                            );
-
-                            setLocalOffset(
-                                0
-                            );
-
-                            setDateError(
-                                ""
-                            );
+                        value: toDate,
+                        onChange: (value) => {
+                            setToDate(value || "");
+                            setLocalOffset(0);
+                            setDateError("");
                         },
-                        required:
-                            false,
+                        required: false,
                     },
                     {
                         key: "vendor",
                         type: "select",
                         label: "Vendor",
                         placeholder:
-                            "Vendor",
+                            "--Select Vendor--",
                         value:
                             vendor,
                         options:
@@ -1443,7 +1397,7 @@ const GrnRegister = () => {
                         type: "select",
                         label: "Product",
                         placeholder:
-                            "Product",
+                            "--Select Product--",
                         value:
                             product,
                         options:
@@ -1475,19 +1429,17 @@ const GrnRegister = () => {
                                 filter.label ||
                                 filter.key,
 
-                            placeholder:
-                                filter.label ||
-                                filter.key,
+                            placeholder: `--Select ${filter.label || filter.key}--`,
 
                             value:
                                 selectedCustomFilters[
-                                    filter.key
+                                filter.key
                                 ] ||
                                 "",
 
                             options:
                                 customFilterOptions[
-                                    filter.key
+                                filter.key
                                 ] ||
                                 [],
 
@@ -1582,34 +1534,34 @@ const GrnRegister = () => {
                 showFieldSelector={
                     false
                 }
-                // actions={(
-                //     row:
-                //         any
-                // ) => (
-                //     <button
-                //         type="button"
-                //         onClick={(
-                //             e
-                //         ) => {
-                //             e.stopPropagation();
+            // actions={(
+            //     row:
+            //         any
+            // ) => (
+            //     <button
+            //         type="button"
+            //         onClick={(
+            //             e
+            //         ) => {
+            //             e.stopPropagation();
 
-                //             handleViewVoucher(
-                //                 row
-                //             );
-                //         }}
-                //         className="
-                //             inline-flex cursor-pointer items-center gap-1 rounded-lg
-                //             bg-primary/10 px-3 py-1.5 text-xs font-bold
-                //             text-primary transition hover:bg-primary/20
-                //         "
-                //     >
-                //         <Eye
-                //             size={
-                //                 15
-                //             }
-                //         />
-                //     </button>
-                // )}
+            //             handleViewVoucher(
+            //                 row
+            //             );
+            //         }}
+            //         className="
+            //             inline-flex cursor-pointer items-center gap-1 rounded-lg
+            //             bg-primary/10 px-3 py-1.5 text-xs font-bold
+            //             text-primary transition hover:bg-primary/20
+            //         "
+            //     >
+            //         <Eye
+            //             size={
+            //                 15
+            //             }
+            //         />
+            //     </button>
+            // )}
             />
 
             <ExportColumnsModal
