@@ -1881,7 +1881,7 @@ const SystemConfiguration = () => {
                 submitDisabled={!whereToAddConfirmed}
                 body={
                     <div className="space-y-5">
-                        <div className="rounded-md border border-warning/30 bg-warning/10 p-4">
+                        {/* <div className="rounded-md border border-warning/30 bg-warning/10 p-4">
                             <div className="flex items-start gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
                                     <ShieldCheck size={18} />
@@ -1897,9 +1897,9 @@ const SystemConfiguration = () => {
                                     </p>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
-                        <div className="rounded-md border border-border bg-card p-4">
+                        {/* <div className="rounded-md border border-border bg-card p-4">
                             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 Placement Change
                             </p>
@@ -1929,7 +1929,7 @@ const SystemConfiguration = () => {
                                     </p>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         <div className="rounded-md border border-border bg-muted/20 p-4">
                             <p className="text-sm font-semibold text-card-foreground">

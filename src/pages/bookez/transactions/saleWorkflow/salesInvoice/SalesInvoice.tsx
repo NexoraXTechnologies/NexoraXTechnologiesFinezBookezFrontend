@@ -623,13 +623,55 @@ const SalesInVoice = () => {
     const getInventoryBalanceFilters = (row: any) => {
         const filters: any = {};
 
-        (templateFields?.body || []).forEach((field: any) => {
-            const apiKey = getInventoryBalanceApiKey(field);
-            if (!apiKey) return;
+        const visibleBodyFields = (templateFields?.body || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
+        );
 
-            const value = getInventoryBalanceFieldValue(row, field);
+        const visibleHeaderFields = (templateFields?.header || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
+        );
 
-            if (value !== undefined && value !== null && String(value).trim() !== "") {
+        const inventoryApiKeys = new Set(
+            [
+                ...visibleBodyFields,
+                ...visibleHeaderFields,
+            ]
+                .map((field: any) => getInventoryBalanceApiKey(field))
+                .filter(Boolean)
+        );
+
+        inventoryApiKeys.forEach((apiKey: any) => {
+            const bodyField = visibleBodyFields.find(
+                (field: any) => getInventoryBalanceApiKey(field) === apiKey
+            );
+
+            if (bodyField) {
+                const value = getInventoryBalanceFieldValue(row, bodyField);
+
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    String(value).trim() !== ""
+                ) {
+                    filters[apiKey] = value;
+                }
+
+                return;
+            }
+
+            const headerField = visibleHeaderFields.find(
+                (field: any) => getInventoryBalanceApiKey(field) === apiKey
+            );
+
+            if (!headerField) return;
+
+            const value = getInventoryBalanceFieldValue(form, headerField);
+
+            if (
+                value !== undefined &&
+                value !== null &&
+                String(value).trim() !== ""
+            ) {
                 filters[apiKey] = value;
             }
         });
@@ -687,25 +729,39 @@ const SalesInVoice = () => {
     };
 
     const getInventoryTransactionValue = (row: any, apiKey: string) => {
-        const bodyValue = getInventoryFieldValue(
-            row,
-            templateFields?.body || [],
-            apiKey
+        const visibleBodyFields = (templateFields?.body || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
         );
 
-        if (
-            bodyValue !== undefined &&
-            bodyValue !== null &&
-            String(bodyValue).trim() !== ""
-        ) {
-            return bodyValue;
+        const visibleHeaderFields = (templateFields?.header || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
+        );
+
+        const bodyField = visibleBodyFields.find(
+            (field: any) => getInventoryTransactionApiKey(field) === apiKey
+        );
+
+        if (bodyField) {
+            return getInventoryFieldValue(
+                row,
+                visibleBodyFields,
+                apiKey
+            );
         }
 
-        return getInventoryFieldValue(
-            form,
-            templateFields?.header || [],
-            apiKey
+        const headerField = visibleHeaderFields.find(
+            (field: any) => getInventoryTransactionApiKey(field) === apiKey
         );
+
+        if (headerField) {
+            return getInventoryFieldValue(
+                form,
+                visibleHeaderFields,
+                apiKey
+            );
+        }
+
+        return "";
     };
 
     const getInventoryBalanceVoucherId = (row: any) =>
@@ -1812,6 +1868,50 @@ const SalesInVoice = () => {
 
         setErrors((prev: any) => ({ ...prev, [key]: "" }));
     };
+
+
+    const headerInventoryBalanceSignature = useMemo(() => {
+        return (templateFields?.header || [])
+            .filter(
+                (field: any) =>
+                    !isTrueValue(field?.isHidden) &&
+                    Boolean(getInventoryBalanceApiKey(field))
+            )
+            .map((field: any) => {
+                const apiKey = getInventoryBalanceApiKey(field);
+                const value = getInventoryBalanceFieldValue(form, field);
+
+                return `${apiKey}:${String(value || "")}`;
+            })
+            .join("|");
+    }, [form, templateFields?.header]);
+
+    useEffect(() => {
+        if (!showModal) return;
+
+        const headerInventoryFields = (templateFields?.header || []).filter(
+            (field: any) =>
+                !isTrueValue(field?.isHidden) &&
+                Boolean(getInventoryBalanceApiKey(field))
+        );
+
+        if (!headerInventoryFields.length) return;
+
+        (form?.products || []).forEach((row: any, index: number) => {
+            const productCode = String(row?.productCode || "").trim();
+
+            if (!productCode) return;
+
+            const productType = String(row?.productType || "");
+
+            void loadAvailableQuantity(
+                index,
+                productCode,
+                productType,
+                row
+            );
+        });
+    }, [headerInventoryBalanceSignature]);
 
     // ★ ADDED: Refresh Sales Invoice customer options after
     // creating a customer from the shared Account Master modal.
