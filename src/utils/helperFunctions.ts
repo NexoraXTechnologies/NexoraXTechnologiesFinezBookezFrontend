@@ -8,6 +8,9 @@ export const todayYMD = () => {
     return now.toISOString().slice(0, 10);
 };
 
+export const isTrueValue = (value: any) =>
+    value === true ||
+    String(value ?? "").trim().toLowerCase() === "true";
 
 
 export const getFirstDateOfCurrentMonth = () => {
