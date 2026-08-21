@@ -46,6 +46,8 @@ type ModalProps = {
     modalClassName?: string;
     overlayClassName?: string;
     hideFooter?: boolean;
+    submitText?: string;
+    submitDisabled?: boolean;
 };
 
 const gridColsClass: Record<number, string> = {
@@ -89,6 +91,8 @@ const Modal = ({
     modalClassName = "",
     overlayClassName = "",
     hideFooter = false,
+    submitText = "",
+    submitDisabled = false,
 }: ModalProps) => {
     return (
         <AnimatePresence>
@@ -170,14 +174,17 @@ const Modal = ({
                                 />
 
                                 <PrimaryButton
-                                    disabled={loader}
+                                    disabled={loader || submitDisabled}
                                     callBackFn={handleSubmit}
                                     text={
                                         loader
                                             ? "Loading.."
-                                            : state
-                                                ? "Update"
-                                                : "Save"
+                                            : submitText ||
+                                            (
+                                                state
+                                                    ? "Update"
+                                                    : "Save"
+                                            )
                                     }
                                 />
                             </div>

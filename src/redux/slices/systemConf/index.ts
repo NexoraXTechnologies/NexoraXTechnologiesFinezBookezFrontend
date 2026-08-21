@@ -31,6 +31,24 @@ const toBool = (value: any) => {
     return value === true || value === "true" || value === 1 || value === "1";
 };
 
+const normalizeWhereToAddInventory = (value: any) => {
+    const rawValue =
+        value && typeof value === "object"
+            ? value?.value ?? value?.code ?? value?.key ?? value?.name ?? value?.label ?? ""
+            : value;
+
+    const normalized = String(rawValue || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ");
+
+    if (["header", "transaction header", "header level", "transaction level"].includes(normalized)) return "header";
+    if (["body", "transaction body", "transaction body (line item)", "line item", "lineitem", "body level"].includes(normalized)) return "body";
+
+    return "";
+};
+
 const createModuleConfigurationTemplate = (enabledDefault: boolean) => {
     return Object.fromEntries(
         WHATSAPP_MODULE_ORDER.map((key) => [
@@ -265,8 +283,13 @@ export const normalizeSystemConfiguration = (raw: any) => ({
         inventoryTagLevel:
             raw?.inventoryConfiguration?.inventoryTagLevel || "",
 
-        whereToAddInventory:
-            raw?.inventoryConfiguration?.whereToAddInventory || "",
+        whereToAddInventory: normalizeWhereToAddInventory(
+            raw?.inventoryConfiguration?.whereToAddInventory ??
+            raw?.inventoryConfiguration?.whereToAdd ??
+            raw?.inventoryConfiguration?.inventoryFieldPlacement ??
+            raw?.inventoryConfiguration?.inventoryTrackingFieldPlacement ??
+            ""
+        ),
 
         inventoryPickMethod:
             raw?.inventoryConfiguration?.inventoryPickMethod || "",
@@ -582,10 +605,11 @@ const buildConfigurationPayload = (
                         ?.inventoryConfiguration
                         ?.inventoryTagLevel ===
                     "WAREHOUSE_LOCATION"
-                    ? configuration
-                        ?.inventoryConfiguration
-                        ?.whereToAddInventory ||
-                    ""
+                    ? normalizeWhereToAddInventory(
+                        configuration
+                            ?.inventoryConfiguration
+                            ?.whereToAddInventory
+                    )
                     : "",
 
             inventoryPickMethod:
