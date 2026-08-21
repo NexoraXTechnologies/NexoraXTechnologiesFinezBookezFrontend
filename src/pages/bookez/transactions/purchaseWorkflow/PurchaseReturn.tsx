@@ -269,18 +269,32 @@ const getCustomMasterName = (field: any) =>
         ""
     ).trim();
 
-const renderPurchaseReturnCellExtra = (column: any, row: any) => {
+const renderPurchaseReturnCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
 
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -299,6 +313,12 @@ const PurchaseReturn = () => {
         (state: any) => state.getAllTransactionSchema
     );
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const purchaseReturns =
         purchaseReturnState?.purchaseReturns ||
         purchaseReturnState?.purchaseReturnList ||
@@ -702,10 +722,25 @@ const PurchaseReturn = () => {
         voucherNumber: string,
         isEdit: boolean
     ) => {
-        const rows = (form?.products || []).filter(
-            (row: any) =>
-                String(row?.productCode || "").trim() !== ""
-        );
+        // const rows = (form?.products || []).filter(
+        //     (row: any) =>
+        //         String(row?.productCode || "").trim() !== ""
+        // );
+
+        const rows = (form?.products || []).filter((row: any) => {
+            const productType = String(row?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks") return false;
+
+            if (
+                productType === "serviceproduct" &&
+                !enableServiceProductInventory
+            ) {
+                return false;
+            }
+
+            return String(row?.productCode || "").trim() !== "";
+        });
 
         for (const row of rows) {
             const inventoryPayload = buildInventoryBalancePayload(
@@ -1318,7 +1353,13 @@ const PurchaseReturn = () => {
                         .trim()
                         .toLowerCase();
 
-                    if (["serviceproduct", "nonstocks"].includes(productType)) {
+                    if (
+                        productType === "nonstocks" ||
+                        (
+                            productType === "serviceproduct" &&
+                            !enableServiceProductInventory
+                        )
+                    ) {
                         return {
                             productCode,
                             productType,
@@ -1400,6 +1441,7 @@ const PurchaseReturn = () => {
         productBalanceSignature,
         templateFields,
         dispatch,
+        enableServiceProductInventory,
     ]);
 
     useEffect(() => {
@@ -2819,7 +2861,13 @@ const PurchaseReturn = () => {
                         },
                         bodyKey: "products",
                         handleChange: handleMainChange,
-                        bodyCellExtraRenderer: renderPurchaseReturnCellExtra,
+
+                        bodyCellExtraRenderer: (column: any, row: any) =>
+                            renderPurchaseReturnCellExtra(
+                                column,
+                                row,
+                                enableServiceProductInventory
+                            ),
                     }}
                 />
             )}

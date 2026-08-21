@@ -17,6 +17,7 @@ import { getAllTransactionSchema } from "../../../../../redux/slices/professiona
 import { getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
+import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const MODULE_CODE = "issueToProduction";
 const MODULE_NAME = "Issue to Production";
@@ -154,18 +155,32 @@ const getFieldDefaultValue = (field: any) => {
     return "";
 };
 
-const renderIssueToProductionCellExtra = (column: any, row: any) => {
+const renderIssueToProductionCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
 
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -193,12 +208,29 @@ const IssueToProduction = () => {
     const [templateFields, setTemplateFields] = useState<any>({ header: [], headerChild: [], body: [], footer: [] });
     const [form, setForm] = useState<any>({});
     const [errors, setErrors] = useState<any>({});
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
         show: false,
         x: null,
         y: null,
         voucherNumber: null,
     });
+
+
+    useEffect(() => {
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
+    }, [dispatch]);
 
     const buildBlankRow = (fields: any[] = templateFields?.body || []) => {
         const row: any = {
@@ -251,8 +283,7 @@ const IssueToProduction = () => {
         ].find((field: any) => String(field?.key) === String(key));
     };
 
-    const isInventoryBalanceField = (field: any) =>
-        Boolean(getInventoryBalanceApiKey(field));
+    const isInventoryBalanceField = (field: any) => Boolean(getInventoryBalanceApiKey(field));
 
     const getInventoryBalanceFilters = (row: any) => {
         const filters: any = {};
@@ -567,10 +598,20 @@ const IssueToProduction = () => {
         voucherNumber: string,
         isEdit: boolean
     ) => {
-        const rows = (form?.rawMaterials || []).filter(
-            (row: any) =>
-                String(row?.productCode || "").trim() !== ""
-        );
+        const rows = (form?.rawMaterials || []).filter((row: any) => {
+            const productType = String(row?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks") return false;
+
+            if (
+                productType === "serviceproduct" &&
+                !enableServiceProductInventory
+            ) {
+                return false;
+            }
+
+            return String(row?.productCode || "").trim() !== "";
+        });
 
         for (const row of rows) {
             const inventoryPayload =
@@ -1048,7 +1089,11 @@ const IssueToProduction = () => {
 
         if (
             !productCode ||
-            ["serviceproduct", "nonstocks"].includes(normalizedProductType)
+            normalizedProductType === "nonstocks" ||
+            (
+                normalizedProductType === "serviceproduct" &&
+                !enableServiceProductInventory
+            )
         ) {
             setForm((previous: any) => {
                 const updatedRows = [...(previous?.rawMaterials || [])];
@@ -1187,7 +1232,7 @@ const IssueToProduction = () => {
                 form?.voucherDate
             );
         });
-    }, [showModal, editingVoucherNumber, form?.voucherNumber]);
+    }, [showModal, editingVoucherNumber, form?.voucherNumber, enableServiceProductInventory]);
 
     const handleStatusChange = (nextStatus: string) => {
         setStatus(nextStatus);
@@ -2189,7 +2234,13 @@ const IssueToProduction = () => {
                 bodyTitle="Raw Materials"
                 addButtonText="Add Raw Material"
                 handleChange={handleMainChange}
-                bodyCellExtraRenderer={renderIssueToProductionCellExtra}
+                bodyCellExtraRenderer={(column: any, row: any) =>
+                    renderIssueToProductionCellExtra(
+                        column,
+                        row,
+                        enableServiceProductInventory
+                    )
+                }
             />
         </div>
     );

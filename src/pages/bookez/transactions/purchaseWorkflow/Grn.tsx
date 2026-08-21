@@ -522,7 +522,11 @@ const removeEmptyValues = (obj: any) => {
     );
 };
 
-const renderGrnCellExtra = (column: any, row: any) => {
+const renderGrnCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (
         !["quantity", "acceptedQuantity"].includes(String(column?.key || "")) ||
         !row?.productCode
@@ -532,13 +536,23 @@ const renderGrnCellExtra = (column: any, row: any) => {
 
     const productType = String(row?.productType || "").trim().toLowerCase();
 
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -633,6 +647,12 @@ const Grn = () => {
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const { company } = useSelector((state: any) => state.professionalCompanyMaster);
 
     // ★ ADDED: Account Master records
@@ -991,8 +1011,31 @@ const Grn = () => {
         voucherNumber: string,
         isEdit: boolean
     ) => {
-        const rows = (form?.products || []).filter(
-            (row: any) =>
+        // const rows = (form?.products || []).filter(
+        //     (row: any) =>
+        //         String(row?.productCode || "").trim() !== "" &&
+        //         num(
+        //             row?.acceptedQuantity !== undefined &&
+        //                 row?.acceptedQuantity !== null &&
+        //                 row?.acceptedQuantity !== ""
+        //                 ? row.acceptedQuantity
+        //                 : row?.quantity
+        //         ) > 0
+        // );
+
+        const rows = (form?.products || []).filter((row: any) => {
+            const productType = String(row?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks") return false;
+
+            if (
+                productType === "serviceproduct" &&
+                !enableServiceProductInventory
+            ) {
+                return false;
+            }
+
+            return (
                 String(row?.productCode || "").trim() !== "" &&
                 num(
                     row?.acceptedQuantity !== undefined &&
@@ -1001,7 +1044,8 @@ const Grn = () => {
                         ? row.acceptedQuantity
                         : row?.quantity
                 ) > 0
-        );
+            );
+        });
 
         for (const row of rows) {
             const inventoryPayload = buildInventoryBalancePayload(
@@ -1749,8 +1793,8 @@ const Grn = () => {
 
             return nextPoStatus;
         } catch (error) {
-            console.log("Failed to sync Purchase Order status after GRN", error);
-            toast.error("GRN saved but failed to update purchase order status");
+            console.error("Failed to sync Purchase Order status after GRN", error);
+            // toast.error("GRN saved but failed to update purchase order status");
             return "";
         }
     };
@@ -1805,98 +1849,98 @@ const Grn = () => {
             );
 
         const normalizedRow = normalizeRowKeys({
-                id: item?.id || Date.now() + Math.random(),
+            id: item?.id || Date.now() + Math.random(),
 
-                productCode: item?.productCode || "",
-                productName: item?.productName || "",
-                productId: item?.productId || "",
+            productCode: item?.productCode || "",
+            productName: item?.productName || "",
+            productId: item?.productId || "",
 
-                productDescription:
-                    item?.productDescription || item?.description || "",
+            productDescription:
+                item?.productDescription || item?.description || "",
 
-                description:
-                    item?.description || item?.productDescription || "",
+            description:
+                item?.description || item?.productDescription || "",
 
-                productHSNCode: item?.productHSNCode || "",
-                remarks: item?.remarks || "",
+            productHSNCode: item?.productHSNCode || "",
+            remarks: item?.remarks || "",
 
-                quantity: item?.quantity || "",
+            quantity: item?.quantity || "",
 
-                availableQuantity: null,
+            availableQuantity: null,
 
-                productType:
-                    item?.productType ||
-                    getProductMasterFromRow(item)?.productType ||
-                    getProductMasterFromRow(item)?.dynamicFields?.productType ||
-                    "",
+            productType:
+                item?.productType ||
+                getProductMasterFromRow(item)?.productType ||
+                getProductMasterFromRow(item)?.dynamicFields?.productType ||
+                "",
 
-                acceptedQuantity:
-                    item?.acceptedQuantity !== undefined &&
-                        item?.acceptedQuantity !== null &&
-                        item?.acceptedQuantity !== ""
-                        ? item.acceptedQuantity
-                        : item?.quantity || "",
+            acceptedQuantity:
+                item?.acceptedQuantity !== undefined &&
+                    item?.acceptedQuantity !== null &&
+                    item?.acceptedQuantity !== ""
+                    ? item.acceptedQuantity
+                    : item?.quantity || "",
 
-                rejectedQuantity:
-                    item?.rejectedQuantity !== undefined &&
-                        item?.rejectedQuantity !== null &&
-                        item?.rejectedQuantity !== ""
-                        ? item.rejectedQuantity
-                        : " ",
+            rejectedQuantity:
+                item?.rejectedQuantity !== undefined &&
+                    item?.rejectedQuantity !== null &&
+                    item?.rejectedQuantity !== ""
+                    ? item.rejectedQuantity
+                    : " ",
 
-                rejectedReason: item?.rejectedReason || "",
+            rejectedReason: item?.rejectedReason || "",
 
-                unit: unitCode,
-                uom: unitCode,
-                unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
+            unit: unitCode,
+            uom: unitCode,
+            unitName: item?.unitName || getUnitLabelFromSchema(unitCode),
 
-                rate: item?.rate || "",
+            rate: item?.rate || "",
 
-                gross: item?.gross || item?.grossAmount || 0,
-                grossAmount: item?.grossAmount || item?.gross || 0,
+            gross: item?.gross || item?.grossAmount || 0,
+            grossAmount: item?.grossAmount || item?.gross || 0,
 
-                discount: item?.discount || item?.discountPercentage || "",
-                discountPercentage:
-                    item?.discountPercentage || item?.discount || "",
-                discountAmount: item?.discountAmount || 0,
+            discount: item?.discount || item?.discountPercentage || "",
+            discountPercentage:
+                item?.discountPercentage || item?.discount || "",
+            discountAmount: item?.discountAmount || 0,
 
-                taxableAmount: item?.taxableAmount || 0,
+            taxableAmount: item?.taxableAmount || 0,
 
-                cgst: item?.cgst || item?.cgstPercentage || "",
-                cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-                cgstAmount: item?.cgstAmount || 0,
+            cgst: item?.cgst || item?.cgstPercentage || "",
+            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
+            cgstAmount: item?.cgstAmount || 0,
 
-                sgst: item?.sgst || item?.sgstPercentage || "",
-                sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-                sgstAmount: item?.sgstAmount || 0,
+            sgst: item?.sgst || item?.sgstPercentage || "",
+            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
+            sgstAmount: item?.sgstAmount || 0,
 
-                igst: item?.igst || item?.igstPercentage || "",
-                igstPercentage: item?.igstPercentage || item?.igst || "",
-                igstAmount: item?.igstAmount || 0,
+            igst: item?.igst || item?.igstPercentage || "",
+            igstPercentage: item?.igstPercentage || item?.igst || "",
+            igstAmount: item?.igstAmount || 0,
 
-                taxAmount: item?.taxAmount || 0,
-                otherAmount: item?.otherAmount || 0,
+            taxAmount: item?.taxAmount || 0,
+            otherAmount: item?.otherAmount || 0,
 
-                netAmount: item?.netAmount || item?.netTotal || 0,
-                netTotal: item?.netTotal || item?.netAmount || 0,
+            netAmount: item?.netAmount || item?.netTotal || 0,
+            netTotal: item?.netTotal || item?.netAmount || 0,
 
-                customMasters:
-                    item?.customMasters &&
-                        typeof item.customMasters === "object"
-                        ? {
-                            ...item.customMasters,
-                        }
-                        : {},
+            customMasters:
+                item?.customMasters &&
+                    typeof item.customMasters === "object"
+                    ? {
+                        ...item.customMasters,
+                    }
+                    : {},
 
-                _inventoryBalanceSelections: {},
-                _inventoryBalanceVoucherId:
-                    item?._inventoryBalanceVoucherId ||
-                    item?.inventoryBalanceVoucherId ||
-                    item?.inventoryBalanceId ||
-                    "",
+            _inventoryBalanceSelections: {},
+            _inventoryBalanceVoucherId:
+                item?._inventoryBalanceVoucherId ||
+                item?.inventoryBalanceVoucherId ||
+                item?.inventoryBalanceId ||
+                "",
 
-                ...customMasterValues,
-            });
+            ...customMasterValues,
+        });
 
         return calculateRow(
             applyGrnTaxRule(
@@ -3670,8 +3714,10 @@ const Grn = () => {
                         .toLowerCase();
 
                     if (
-                        ["serviceproduct", "nonstocks"].includes(
-                            productType
+                        productType === "nonstocks" ||
+                        (
+                            productType === "serviceproduct" &&
+                            !enableServiceProductInventory
                         )
                     ) {
                         return {
@@ -3756,6 +3802,7 @@ const Grn = () => {
         productBalanceSignature,
         templateFields,
         dispatch,
+        enableServiceProductInventory,
     ]);
 
     useEffect(() => {
@@ -4124,7 +4171,13 @@ const Grn = () => {
                     }}
                     bodyKey="products"
                     handleChange={handleMainChange}
-                    bodyCellExtraRenderer={renderGrnCellExtra}
+                    bodyCellExtraRenderer={(column: any, row: any) =>
+                        renderGrnCellExtra(
+                            column,
+                            row,
+                            enableServiceProductInventory
+                        )
+                    }
 
                     // ★ ADDED: Common Account Master modal props
                     checkAccount={checkAccount}

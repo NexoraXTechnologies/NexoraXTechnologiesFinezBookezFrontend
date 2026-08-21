@@ -110,17 +110,32 @@ const getFinancialYearRange = (dateValue?: string) => {
     };
 };
 
-const renderSalesReturnCellExtra = (column: any, row: any) => {
+const renderSalesReturnCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -168,6 +183,10 @@ const SalesReturn = () => {
     const [downlaodPDF, setDownlaodPDF] = useState({ show: false, x: null, y: null, type: "" });
     const { report } = useSelector((s: any) => s.reportMapping);
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
 
     const { accounts = [] } = useSelector(
         (state: any) => state.accountMaster || {}
@@ -581,10 +600,21 @@ const SalesReturn = () => {
         voucherNumber: string,
         isEdit: boolean
     ) => {
-        const rows = (form?.products || []).filter(
-            (row: any) =>
-                String(row?.productCode || "").trim() !== ""
-        );
+
+        const rows = (form?.products || []).filter((row: any) => {
+            const productType = String(row?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks") return false;
+
+            if (
+                productType === "serviceproduct" &&
+                !enableServiceProductInventory
+            ) {
+                return false;
+            }
+
+            return String(row?.productCode || "").trim() !== "";
+        });
 
         for (const row of rows) {
             const inventoryPayload =
@@ -2831,7 +2861,13 @@ const SalesReturn = () => {
                         .trim()
                         .toLowerCase();
 
-                    if (["serviceproduct", "nonstocks"].includes(productType)) {
+                    if (
+                        productType === "nonstocks" ||
+                        (
+                            productType === "serviceproduct" &&
+                            !enableServiceProductInventory
+                        )
+                    ) {
                         return {
                             productCode,
                             productType,
@@ -2910,7 +2946,7 @@ const SalesReturn = () => {
         return () => {
             cancelled = true;
         };
-    }, [showModal, productBalanceSignature, templateFields, dispatch]);
+    }, [showModal, productBalanceSignature, templateFields, dispatch, enableServiceProductInventory,]);
 
     useEffect(() => { dispatch(getAllTransactionSchema("salesReturn") as any); }, [dispatch]);
 
@@ -3115,7 +3151,12 @@ const SalesReturn = () => {
                         },
                         bodyKey: "products",
                         handleChange: handleMainChange,
-                        bodyCellExtraRenderer: renderSalesReturnCellExtra,
+                        bodyCellExtraRenderer: (column: any, row: any) =>
+                            renderSalesReturnCellExtra(
+                                column,
+                                row,
+                                enableServiceProductInventory
+                            ),
 
                         // ★ ADDED: Common Account Master modal props
                         checkAccount,

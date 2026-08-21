@@ -17,6 +17,7 @@ import Permission from "../../../../components/PermissionGuard";
 import Badge from "../../../../components/badge";
 import InputBorderLabel from "../../../../components/common/InputBorderLabel";
 import professionalAxios from "../../../../services/professionalAxios";
+import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
 const PRODUCT_FIELD_KEYS = new Set([
     "productCode",
     "productName",
@@ -246,22 +247,37 @@ const normalizeCustomMasterValue = (value: any) => {
 };
 
 
-const renderOpeningStockCellExtra = (column: any, row: any) => {
+const renderOpeningStockCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
 
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
 };
+
 const OpeningStock = () => {
     const dispatch = useDispatch<any>();
     const { products } = useSelector((s: any) => s.productMaster);
@@ -287,6 +303,13 @@ const OpeningStock = () => {
         y: null,
         openingStockVoucherNumber: null,
     });
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const [form, setForm] = useState<any>(getDefaultForm());
     const productOptions = useMemo(() => {
         return (products || []).map((item: any) => ({
@@ -317,6 +340,20 @@ const OpeningStock = () => {
         });
         return Array.from(unitMap.values());
     }, [products]);
+
+
+    useEffect(() => {
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
+    }, [dispatch]);
+
+
+
     const getHeaderFieldByKey = (key: string) => {
         return templateFields?.header?.find((field: any) => String(field?.key) ===
             String(key));
@@ -652,10 +689,26 @@ const OpeningStock = () => {
         voucherNumber: string,
         isEdit: boolean
     ) => {
-        const rows = (form?.openingStockBody || []).filter(
-            (row: any) =>
-                String(row?.productCode || "").trim() !== ""
-        );
+        // const rows = (form?.openingStockBody || []).filter(
+        //     (row: any) =>
+        //         String(row?.productCode || "").trim() !== ""
+        // );
+
+
+        const rows = (form?.openingStockBody || []).filter((row: any) => {
+            const productType = String(row?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks") return false;
+
+            if (
+                productType === "serviceproduct" &&
+                !enableServiceProductInventory
+            ) {
+                return false;
+            }
+
+            return String(row?.productCode || "").trim() !== "";
+        });
 
         for (const row of rows) {
             const inventoryPayload =
@@ -2427,7 +2480,13 @@ const OpeningStock = () => {
                         .trim()
                         .toLowerCase();
 
-                    if (["serviceproduct", "nonstocks"].includes(productType)) {
+                    if (
+                        productType === "nonstocks" ||
+                        (
+                            productType === "serviceproduct" &&
+                            !enableServiceProductInventory
+                        )
+                    ) {
                         return {
                             productCode,
                             productType,
@@ -2510,6 +2569,7 @@ const OpeningStock = () => {
         form?.openingStockDate,
         productOptions,
         dispatch,
+        enableServiceProductInventory,
     ]);
 
     useEffect(() => {
@@ -2657,11 +2717,24 @@ const OpeningStock = () => {
             })} />)}
 
         {!fieldsLoading && (<DynamicAddForm show={showModal} setShow={setShowModal} edit={edit} title="Opening Stock" subtitle="Fill in the opening stock details below" loading={addLoader ||
-            updateLoader} onClose={() => {
-
-                setShowModal(false);
-                resetMainForm();
-            }} onSubmit={handleSubmit} form={form} errors={errors} handleAddRow={handleAddRow} handleDeleteRow={handleDeleteRow} handleRowChange={handleRowChange} inputData={dynamicInputData} bodyKey="openingStockBody" handleChange={handleChange} footerTotals={footerTotals} bodyCellExtraRenderer={renderOpeningStockCellExtra} />)}
+            updateLoader} onClose={() => { setShowModal(false); resetMainForm(); }}
+            onSubmit={handleSubmit}
+            form={form}
+            errors={errors}
+            handleAddRow={handleAddRow}
+            handleDeleteRow={handleDeleteRow}
+            handleRowChange={handleRowChange}
+            inputData={dynamicInputData}
+            bodyKey="openingStockBody"
+            handleChange={handleChange}
+            footerTotals={footerTotals}
+            bodyCellExtraRenderer={(column: any, row: any) =>
+                renderOpeningStockCellExtra(
+                    column,
+                    row,
+                    enableServiceProductInventory
+                )
+            } />)}
     </>);
 };
 export default OpeningStock;
