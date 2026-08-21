@@ -30,6 +30,7 @@ import {
     num,
     todayYMD,
 } from "../../../../../utils/helperFunctions";
+import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const MODULE_CODE = "receiptFromProduction";
 const MODULE_NAME = "Receipt From Production";
@@ -167,18 +168,32 @@ const getFinancialYearRange = (dateValue?: string) => {
     };
 };
 
-const renderReceiptProductionCellExtra = (column: any, row: any) => {
+const renderReceiptProductionCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
 
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -210,6 +225,13 @@ const ReceiptFromProduction = () => {
         body: [],
         footer: [],
     });
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const [form, setForm] = useState<any>({});
     const [errors, setErrors] = useState<any>({});
     const [confirmTooltip, setConfirmTooltip] = useState<any>({
@@ -218,6 +240,17 @@ const ReceiptFromProduction = () => {
         y: null,
         voucherNumber: null,
     });
+
+
+    useEffect(() => {
+        dispatch(
+            getAllSystemConfigurations({
+                offset: 0,
+                limit: 100000,
+                status: "",
+            }) as any
+        );
+    }, [dispatch]);
 
     const buildBlankRow = (fields: any[] = templateFields?.body || []) => {
         const row: any = {
@@ -599,10 +632,20 @@ const ReceiptFromProduction = () => {
         voucherNumber: string,
         isEdit: boolean
     ) => {
-        const rows = (form?.finishedGoods || []).filter(
-            (row: any) =>
-                String(row?.productCode || "").trim() !== ""
-        );
+        const rows = (form?.finishedGoods || []).filter((row: any) => {
+            const productType = String(row?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks") return false;
+
+            if (
+                productType === "serviceproduct" &&
+                !enableServiceProductInventory
+            ) {
+                return false;
+            }
+
+            return String(row?.productCode || "").trim() !== "";
+        });
 
         for (const row of rows) {
             const inventoryPayload =
@@ -1196,7 +1239,11 @@ const ReceiptFromProduction = () => {
 
         if (
             !productCode ||
-            ["serviceproduct", "nonstocks"].includes(normalizedProductType)
+            normalizedProductType === "nonstocks" ||
+            (
+                normalizedProductType === "serviceproduct" &&
+                !enableServiceProductInventory
+            )
         ) {
             setForm((previous: any) => {
                 const rows = [...(previous?.finishedGoods || [])];
@@ -1339,7 +1386,7 @@ const ReceiptFromProduction = () => {
                 form?.voucherDate
             );
         });
-    }, [showModal, editingVoucherNumber]);
+    }, [showModal, editingVoucherNumber, enableServiceProductInventory]);
 
     const handleMainChange = (key: string, value: any) => {
         const field = getHeaderFieldByKey(key);
@@ -2175,7 +2222,13 @@ const ReceiptFromProduction = () => {
                 bodyTitle="Finished Goods"
                 addButtonText="Add Finished Good"
                 handleChange={handleMainChange}
-                bodyCellExtraRenderer={renderReceiptProductionCellExtra}
+                bodyCellExtraRenderer={(column: any, row: any) =>
+                    renderReceiptProductionCellExtra(
+                        column,
+                        row,
+                        enableServiceProductInventory
+                    )
+                }
             />
         </div>
     );
