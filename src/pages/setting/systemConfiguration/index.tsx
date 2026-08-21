@@ -124,14 +124,6 @@ const normalizeWhereToAddValue = (value: any) => {
     return "";
 };
 
-const getWhereToAddLabel = (value: any) => {
-    const normalized = normalizeWhereToAddValue(value);
-
-    if (normalized === "header") return "Header";
-    if (normalized === "body") return "Body";
-
-    return "Not Selected";
-};
 
 const inventoryPickMethodOptions = [
     { label: "FIFO", value: "FIFO" },
@@ -392,7 +384,7 @@ const SystemConfiguration = () => {
     const [waModulesExpanded, setWaModulesExpanded] = useState(true);
     const [dbReqLoader, setDbReqLoader] = useState(false);
     const [showWhereToAddWarning, setShowWhereToAddWarning] = useState(false);
-    const [currentWhereToAdd, setCurrentWhereToAdd] = useState("");
+    // const [currentWhereToAdd, setCurrentWhereToAdd] = useState("");
     const [pendingWhereToAdd, setPendingWhereToAdd] = useState("");
     const [whereToAddConfirmed, setWhereToAddConfirmed] = useState(false);
 
@@ -577,7 +569,7 @@ const SystemConfiguration = () => {
         const nextValue = normalizeWhereToAddValue(value);
 
         if (currentValue && nextValue && currentValue !== nextValue) {
-            setCurrentWhereToAdd(currentValue);
+            // setCurrentWhereToAdd(currentValue);
             setPendingWhereToAdd(nextValue);
             setWhereToAddConfirmed(false);
             setShowWhereToAddWarning(true);
@@ -589,7 +581,7 @@ const SystemConfiguration = () => {
 
     const closeWhereToAddWarning = useCallback(() => {
         setShowWhereToAddWarning(false);
-        setCurrentWhereToAdd("");
+        // setCurrentWhereToAdd("");
         setPendingWhereToAdd("");
         setWhereToAddConfirmed(false);
     }, []);
