@@ -392,17 +392,32 @@ const getFinancialYearRange = (dateValue?: string) => {
     };
 };
 
-const renderSalesInvoiceCellExtra = (column: any, row: any) => {
+const renderSalesInvoiceCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -462,6 +477,12 @@ const SalesInVoice = () => {
         footer: [],
     });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const { accounts = [] } = useSelector((state: any) => state.accountMaster || {});
     // ★ ADDED: Keep only customer accounts
     const filterAccount = useMemo(() => {
@@ -914,10 +935,20 @@ const SalesInVoice = () => {
         voucherNumber: string,
         isEdit: boolean
     ) => {
-        const rows = (form?.products || []).filter(
-            (row: any) =>
-                String(row?.productCode || "").trim() !== ""
-        );
+        const rows = (form?.products || []).filter((row: any) => {
+            const productType = String(row?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks") return false;
+
+            if (
+                productType === "serviceproduct" &&
+                !enableServiceProductInventory
+            ) {
+                return false;
+            }
+
+            return String(row?.productCode || "").trim() !== "";
+        });
 
         for (const row of rows) {
             const inventoryPayload =
@@ -1423,7 +1454,14 @@ const SalesInVoice = () => {
     ) => {
         const normalizedProductType = String(productType || "").trim().toLowerCase();
 
-        if (!productCode || ["serviceproduct", "nonstocks"].includes(normalizedProductType)) {
+        if (
+            !productCode ||
+            normalizedProductType === "nonstocks" ||
+            (
+                normalizedProductType === "serviceproduct" &&
+                !enableServiceProductInventory
+            )
+        ) {
             setForm((previous: any) => {
                 const updatedProducts = [...(previous.products || [])];
                 if (!updatedProducts[index]) return previous;
@@ -1694,7 +1732,13 @@ const SalesInVoice = () => {
                         ""
                     ).trim().toLowerCase();
 
-                    if (["serviceproduct", "nonstocks"].includes(productType)) {
+                    if (
+                        productType === "nonstocks" ||
+                        (
+                            productType === "serviceproduct" &&
+                            !enableServiceProductInventory
+                        )
+                    ) {
                         return {
                             ...item,
                             productType,
@@ -1751,6 +1795,7 @@ const SalesInVoice = () => {
         editingRecord,
         form?.sInvVoucherNumber,
         dispatch,
+        enableServiceProductInventory,
     ]);
 
     const handleMainChange = (key: string, value: any) => {
@@ -2979,15 +3024,19 @@ const SalesInVoice = () => {
                     productMaster?.dynamicFields?.productType ||
                     ""
                 ).trim().toLowerCase();
-
-                if (["serviceproduct", "nonstocks"].includes(productType)) {
+                if (
+                    productType === "nonstocks" ||
+                    (
+                        productType === "serviceproduct" &&
+                        !enableServiceProductInventory
+                    )
+                ) {
                     return {
                         ...item,
                         productType,
                         availableQuantity: null,
                     };
                 }
-
                 try {
                     const balance: any = await dispatch(
                         getProductBalance({
@@ -3338,8 +3387,12 @@ const SalesInVoice = () => {
                         handleChange: handleMainChange,
                         isBodyColumnVisible,
                         isBodyCellVisible,
-                        bodyCellExtraRenderer: renderSalesInvoiceCellExtra,
-
+                        bodyCellExtraRenderer: (column: any, row: any) =>
+                            renderSalesInvoiceCellExtra(
+                                column,
+                                row,
+                                enableServiceProductInventory
+                            ),
                         // ★ ADDED: Shared Account Master modal props
                         checkAccount,
                         setCheckAccount,

@@ -156,18 +156,32 @@ const getDefaultForm = () => ({
 });
 
 
-const renderPurchaseInvoiceCellExtra = (column: any, row: any) => {
+const renderPurchaseInvoiceCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
 
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -350,6 +364,12 @@ const PurchaseInvoice = () => {
     const [fieldsLoading, setFieldsLoading] = useState(false);
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, voucherNumber: null, grnVoucherNumber: null, record: null, });
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const { company } = useSelector((state: any) => state.professionalCompanyMaster);
 
     const { accounts = [] } = useSelector(
@@ -927,8 +947,10 @@ const PurchaseInvoice = () => {
                         .toLowerCase();
 
                     if (
-                        ["serviceproduct", "nonstocks"].includes(
-                            productType
+                        productType === "nonstocks" ||
+                        (
+                            productType === "serviceproduct" &&
+                            !enableServiceProductInventory
                         )
                     ) {
                         return {
@@ -952,7 +974,7 @@ const PurchaseInvoice = () => {
                             productType,
                             availableQuantity:
                                 balance?.balanceQuantity !== undefined &&
-                                balance?.balanceQuantity !== null
+                                    balance?.balanceQuantity !== null
                                     ? balance.balanceQuantity
                                     : null,
                         };
@@ -981,7 +1003,7 @@ const PurchaseInvoice = () => {
                         if (
                             !balanceRow ||
                             String(currentRow?.productCode || "") !==
-                                String(balanceRow?.productCode || "")
+                            String(balanceRow?.productCode || "")
                         ) {
                             return currentRow;
                         }
@@ -1012,6 +1034,7 @@ const PurchaseInvoice = () => {
         productBalanceSignature,
         templateFields,
         dispatch,
+        enableServiceProductInventory,
     ]);
 
     useEffect(() => {
@@ -1190,71 +1213,71 @@ const PurchaseInvoice = () => {
                 : item?.quantity || "";
 
         const normalizedRow = normalizeRowKeys({
-                id: item?.id || Date.now() + Math.random(),
+            id: item?.id || Date.now() + Math.random(),
 
-                productCode: item?.productCode || "",
-                productName: item?.productName || "",
-                productId: item?.productId || item?.productCode || "",
+            productCode: item?.productCode || "",
+            productName: item?.productName || "",
+            productId: item?.productId || item?.productCode || "",
 
-                productDescription:
-                    item?.productDescription ||
-                    item?.description ||
-                    "",
+            productDescription:
+                item?.productDescription ||
+                item?.description ||
+                "",
 
-                description:
-                    item?.description ||
-                    item?.productDescription ||
-                    "",
+            description:
+                item?.description ||
+                item?.productDescription ||
+                "",
 
-                productHSNCode: item?.productHSNCode || "",
-                remarks: item?.remarks || "",
+            productHSNCode: item?.productHSNCode || "",
+            remarks: item?.remarks || "",
 
-                quantity,
+            quantity,
 
-                availableQuantity: null,
+            availableQuantity: null,
 
-                productType:
-                    item?.productType ||
-                    getProductMasterFromRow(item)?.productType ||
-                    getProductMasterFromRow(item)?.dynamicFields?.productType ||
-                    "",
+            productType:
+                item?.productType ||
+                getProductMasterFromRow(item)?.productType ||
+                getProductMasterFromRow(item)?.dynamicFields?.productType ||
+                "",
 
-                unit: unitCode,
-                uom: unitCode,
-                unitName:
-                    item?.unitName ||
-                    getUnitLabelFromSchema(unitCode),
+            unit: unitCode,
+            uom: unitCode,
+            unitName:
+                item?.unitName ||
+                getUnitLabelFromSchema(unitCode),
 
-                rate: item?.rate || "",
+            rate: item?.rate || "",
 
-                gross: item?.gross || item?.grossAmount || 0,
-                grossAmount: item?.grossAmount || item?.gross || 0,
+            gross: item?.gross || item?.grossAmount || 0,
+            grossAmount: item?.grossAmount || item?.gross || 0,
 
-                discount: item?.discount || item?.discountPercentage || "",
-                discountPercentage:
-                    item?.discountPercentage || item?.discount || "",
-                discountAmount: item?.discountAmount || 0,
+            discount: item?.discount || item?.discountPercentage || "",
+            discountPercentage:
+                item?.discountPercentage || item?.discount || "",
+            discountAmount: item?.discountAmount || 0,
 
-                taxableAmount: item?.taxableAmount || 0,
+            taxableAmount: item?.taxableAmount || 0,
 
-                cgst: item?.cgst || item?.cgstPercentage || "",
-                cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-                cgstAmount: item?.cgstAmount || 0,
+            cgst: item?.cgst || item?.cgstPercentage || "",
+            cgstPercentage: item?.cgstPercentage || item?.cgst || "",
+            cgstAmount: item?.cgstAmount || 0,
 
-                sgst: item?.sgst || item?.sgstPercentage || "",
-                sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-                sgstAmount: item?.sgstAmount || 0,
+            sgst: item?.sgst || item?.sgstPercentage || "",
+            sgstPercentage: item?.sgstPercentage || item?.sgst || "",
+            sgstAmount: item?.sgstAmount || 0,
 
-                igst: item?.igst || item?.igstPercentage || "",
-                igstPercentage: item?.igstPercentage || item?.igst || "",
-                igstAmount: item?.igstAmount || 0,
+            igst: item?.igst || item?.igstPercentage || "",
+            igstPercentage: item?.igstPercentage || item?.igst || "",
+            igstAmount: item?.igstAmount || 0,
 
-                taxAmount: item?.taxAmount || 0,
-                otherAmount: item?.otherAmount || 0,
+            taxAmount: item?.taxAmount || 0,
+            otherAmount: item?.otherAmount || 0,
 
-                netAmount: item?.netAmount || item?.netTotal || 0,
-                netTotal: item?.netTotal || item?.netAmount || 0,
-            });
+            netAmount: item?.netAmount || item?.netTotal || 0,
+            netTotal: item?.netTotal || item?.netAmount || 0,
+        });
 
         return calculateRow(
             applyPurchaseInvoiceTaxRule(
@@ -1358,7 +1381,7 @@ const PurchaseInvoice = () => {
             setGrnLoaded(false);
             setShowModal(true);
         } catch (error) {
-            console.log("Failed to prepare GRN for purchase invoice", error);
+            console.error("Failed to prepare GRN for purchase invoice", error);
             toast.error("Failed to load pending GRN quantity");
         } finally {
             setGrnModalLoading(false);
@@ -1569,7 +1592,7 @@ const PurchaseInvoice = () => {
                 }));
             }
         } catch (error: any) {
-            console.log(
+            console.error(
                 "Failed to refresh Purchase Invoice vendor options:",
                 error
             );
@@ -1863,7 +1886,7 @@ const PurchaseInvoice = () => {
                 products: "",
             }));
         } catch (error: any) {
-            console.log(
+            console.error(
                 "Failed to refresh Purchase Invoice product options:",
                 error
             );
@@ -2836,7 +2859,13 @@ const PurchaseInvoice = () => {
                         },
                         bodyKey: "products",
                         handleChange: handleMainChange,
-                        bodyCellExtraRenderer: renderPurchaseInvoiceCellExtra,
+                       
+                        bodyCellExtraRenderer: (column: any, row: any) =>
+                            renderPurchaseInvoiceCellExtra(
+                                column,
+                                row,
+                                enableServiceProductInventory
+                            ),
 
                         // ★ ADDED: Common Account Master modal props
                         checkAccount,

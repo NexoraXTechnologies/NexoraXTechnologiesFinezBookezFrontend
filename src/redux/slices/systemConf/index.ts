@@ -127,6 +127,7 @@ export const getEmptySystemConfiguration = () => ({
     inventoryConfiguration: {
         maintainInventory: false,
         enableQrBarcode: false,
+        enableServiceProductInventory: false,
         inventoryTagLevel: "",
         whereToAddInventory: "",
         inventoryPickMethod: "",
@@ -260,6 +261,10 @@ export const normalizeSystemConfiguration = (raw: any) => ({
 
         enableQrBarcode: toBool(
             raw?.inventoryConfiguration?.enableQrBarcode
+        ),
+
+        enableServiceProductInventory: toBool(
+            raw?.inventoryConfiguration?.enableServiceProductInventory
         ),
 
         inventoryTagLevel:
@@ -566,6 +571,9 @@ const buildConfigurationPayload = (
                 !!configuration
                     ?.inventoryConfiguration
                     ?.enableQrBarcode,
+
+            enableServiceProductInventory:
+                !!configuration?.inventoryConfiguration?.enableServiceProductInventory,
 
             inventoryTagLevel:
                 configuration

@@ -125,18 +125,50 @@ const getDefaultForm = () => ({
     netAmount: "0.00",
 });
 
-const renderPurchaseOrderCellExtra = (column: any, row: any) => {
+// const renderPurchaseOrderCellExtra = (column: any, row: any) => {
+//     if (column?.key !== "quantity" || !row?.productCode) return null;
+
+//     const productType = String(row?.productType || "").trim().toLowerCase();
+
+//     if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+//     return (
+//         <InputBorderLabel
+//             label="Avl Qty"
+//             value={row?.availableQuantity}
+//             loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+//             successWhenPositive
+//         />
+//     );
+// };
+
+
+const renderPurchaseOrderCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
 
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -238,6 +270,13 @@ const PurchaseOrder = () => {
         body: [],
         footer: [],
     });
+
+
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
 
     // ⭐ YELLOW STAR: ADDED — VENDOR AND PRODUCT CREATE ACTIONS
     const templateFieldsWithCreateActions = useMemo(() => {
@@ -747,8 +786,10 @@ const PurchaseOrder = () => {
                         .toLowerCase();
 
                     if (
-                        ["serviceproduct", "nonstocks"].includes(
-                            productType
+                        productType === "nonstocks" ||
+                        (
+                            productType === "serviceproduct" &&
+                            !enableServiceProductInventory
                         )
                     ) {
                         return {
@@ -772,7 +813,7 @@ const PurchaseOrder = () => {
                             productType,
                             availableQuantity:
                                 balance?.balanceQuantity !== undefined &&
-                                balance?.balanceQuantity !== null
+                                    balance?.balanceQuantity !== null
                                     ? balance.balanceQuantity
                                     : null,
                         };
@@ -801,7 +842,7 @@ const PurchaseOrder = () => {
                         if (
                             !balanceRow ||
                             String(currentRow?.productCode || "") !==
-                                String(balanceRow?.productCode || "")
+                            String(balanceRow?.productCode || "")
                         ) {
                             return currentRow;
                         }
@@ -832,6 +873,8 @@ const PurchaseOrder = () => {
         productBalanceSignature,
         templateFields,
         dispatch,
+        enableServiceProductInventory,
+
     ]);
 
     useEffect(() => {
@@ -1688,6 +1731,7 @@ const PurchaseOrder = () => {
         return locationConfig === true || locationConfig === "true";
     }, [configurations]);
 
+
     const handleRowChange = (index: number, key: string, value: any) => {
         const lowerKey = String(key).toLowerCase();
         const isProductField = lowerKey === "productcode" || lowerKey === "productname" || lowerKey === "productid" || lowerKey === "product";
@@ -2306,7 +2350,13 @@ const PurchaseOrder = () => {
 
                         bodyKey: "products",
                         handleChange: handleMainChange,
-                        bodyCellExtraRenderer: renderPurchaseOrderCellExtra,
+                        // bodyCellExtraRenderer: renderPurchaseOrderCellExtra,
+                        bodyCellExtraRenderer: (column: any, row: any) =>
+                            renderPurchaseOrderCellExtra(
+                                column,
+                                row,
+                                enableServiceProductInventory
+                            ),
 
                         // ★ ADDED: Shared Account Master modal props
                         checkAccount,

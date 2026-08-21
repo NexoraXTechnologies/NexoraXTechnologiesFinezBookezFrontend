@@ -359,17 +359,32 @@ const getFinancialYearRange = (dateValue?: string) => {
     };
 };
 
-const renderSalesOrderCellExtra = (column: any, row: any) => {
+const renderSalesOrderCellExtra = (
+    column: any,
+    row: any,
+    enableServiceProductInventory: boolean
+) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
 
     const productType = String(row?.productType || "").trim().toLowerCase();
-    if (["serviceproduct", "nonstocks"].includes(productType)) return null;
+
+    if (productType === "nonstocks") return null;
+
+    if (
+        productType === "serviceproduct" &&
+        !enableServiceProductInventory
+    ) {
+        return null;
+    }
 
     return (
         <InputBorderLabel
             label="Avl Qty"
             value={row?.availableQuantity}
-            loading={row?.availableQuantity === null || row?.availableQuantity === undefined}
+            loading={
+                row?.availableQuantity === null ||
+                row?.availableQuantity === undefined
+            }
             successWhenPositive
         />
     );
@@ -489,17 +504,16 @@ const SalesOrder = () => {
         type: "",
     });
 
-    const { report } = useSelector(
-        (state: any) => state.reportMapping
-    );
+    const { report } = useSelector((state: any) => state.reportMapping);
 
-    const { configurations } = useSelector(
-        (state: any) => state.systemConfiguration
-    );
+    const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
-    const { accounts = [] } = useSelector(
-        (state: any) => state.accountMaster || {}
-    );
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
+    const { accounts = [] } = useSelector((state: any) => state.accountMaster || {});
 
     // ★ ADDED: Customer accounts
     const filterAccount = useMemo(() => {
@@ -1298,7 +1312,14 @@ const SalesOrder = () => {
     ) => {
         const normalizedProductType = String(productType || "").trim().toLowerCase();
 
-        if (!productCode || ["serviceproduct", "nonstocks"].includes(normalizedProductType)) {
+        if (
+            !productCode ||
+            normalizedProductType === "nonstocks" ||
+            (
+                normalizedProductType === "serviceproduct" &&
+                !enableServiceProductInventory
+            )
+        ) {
             setForm((previous: any) => {
                 const updatedProducts = [...(previous.products || [])];
                 if (!updatedProducts[index]) return previous;
@@ -1772,11 +1793,10 @@ const SalesOrder = () => {
                                         .toLowerCase();
 
                                 if (
-                                    [
-                                        "serviceproduct",
-                                        "nonstocks",
-                                    ].includes(
-                                        productType
+                                    productType === "nonstocks" ||
+                                    (
+                                        productType === "serviceproduct" &&
+                                        !enableServiceProductInventory
                                     )
                                 ) {
                                     return {
@@ -1850,6 +1870,7 @@ const SalesOrder = () => {
         editingRecord,
         form?.sOrderVoucherNumber,
         dispatch,
+        enableServiceProductInventory,
     ]);
 
     const handleMainChange = (
@@ -4423,8 +4444,12 @@ const SalesOrder = () => {
                         isBodyCellDisabled:
                             isSalesOrderBodyCellDisabled,
 
-                        bodyCellExtraRenderer:
-                            renderSalesOrderCellExtra,
+                        bodyCellExtraRenderer: (column: any, row: any) =>
+                            renderSalesOrderCellExtra(
+                                column,
+                                row,
+                                enableServiceProductInventory
+                            ),
 
                         // ★ ADDED: Common Account Master modal props
                         checkAccount,
