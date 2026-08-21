@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 import {
-    resolveTransportationEnabled,
     syncVehicleMasterCustomMaster,
 } from "./syncVehicleMasterCustomMaster";
 
@@ -25,6 +24,8 @@ const WHATSAPP_MODULE_ORDER = [
 const BOOKEZ_API_PREFIX = "eTaxSolnMongoApiBackend";
 const POS_POSTING_API = `${BOOKEZ_API_PREFIX}/users/bookez/posPosting`;
 const ACCOUNT_MASTER_API = `${BOOKEZ_API_PREFIX}/accountMaster/getAllAccounts`;
+const TRANSACTION_SCHEMA_ADD_FIELD_API = `${BOOKEZ_API_PREFIX}/users/bookez/transactionSchema/addField`;
+const CUSTOM_MASTER_MODULES_API = `${BOOKEZ_API_PREFIX}/users/customMaster/module/getAll`;
 const POS_POSTING_KEYS = ["sales", "cash", "upi"] as const;
 
 const toBool = (value: any) => {
@@ -409,6 +410,195 @@ const extractAccountItems = (apiData: any) =>
         "records",
         "accounts",
     ]);
+
+
+/* ===================================================
+   TRANSPORTATION -> RECEIPT / PAYMENT FIELDS
+
+   IMPORTANT:
+   Vehicle Master creation is NOT handled here.
+   Existing syncVehicleMasterCustomMaster remains the
+   only Vehicle Master creation/synchronization flow.
+=================================================== */
+
+const normalizeTransportMasterName = (value: any) =>
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, "");
+
+const extractCustomMasterModules = (apiData: any) =>
+    extractApiArray(apiData, [
+        "items",
+        "records",
+        "modules",
+        "masters",
+    ]);
+
+const getVehicleMasterCodeFromSyncResult = (syncResult: any) => {
+    const candidates = [
+        syncResult?.moduleCode,
+        syncResult?.customMasterCode,
+        syncResult?.data?.moduleCode,
+        syncResult?.data?.customMasterCode,
+        syncResult?.record?.moduleCode,
+        syncResult?.record?.customMasterCode,
+        syncResult?.master?.moduleCode,
+        syncResult?.master?.customMasterCode,
+        syncResult?.module?.moduleCode,
+        syncResult?.module?.customMasterCode,
+    ];
+
+    return String(
+        candidates.find((value) => String(value || "").trim()) || ""
+    ).trim();
+};
+
+const getVehicleMasterModuleCode = async (vehicleMasterSync?: any) => {
+    const codeFromSync = getVehicleMasterCodeFromSyncResult(vehicleMasterSync);
+    if (codeFromSync) return codeFromSync;
+
+    /*
+       Use the SAME professionalAxios setup already used by the
+       working application. Do not replace/mutate tenant headers.
+    */
+    const res = await professionalAxios.get(CUSTOM_MASTER_MODULES_API, {
+        params: {
+            offset: 0,
+            limit: 500,
+            search: "",
+            status: "",
+        },
+    });
+
+    if (res?.data?.success === false) {
+        throw new Error(
+            res?.data?.message ||
+            "Failed to load Vehicle Master configuration."
+        );
+    }
+
+    const modules = extractCustomMasterModules(res?.data);
+    const vehicleMaster = modules.find((item: any) => {
+        const moduleName =
+            item?.moduleName ||
+            item?.customMasterName ||
+            item?.name ||
+            "";
+
+        return normalizeTransportMasterName(moduleName) === "vehiclemaster";
+    });
+
+    const moduleCode = String(
+        vehicleMaster?.moduleCode ||
+        vehicleMaster?.customMasterCode ||
+        ""
+    ).trim();
+
+    if (!moduleCode) {
+        throw new Error(
+            "Vehicle Master module code not found after Vehicle Master synchronization."
+        );
+    }
+
+    return moduleCode;
+};
+
+const buildTransportationAccountingFields = (vehicleMasterCode: string) => [
+    {
+        key: "trip_order",
+        label: "Trip Order",
+        type: "string",
+        isRequired: false,
+        isSearchable: true,
+        isFilterable: true,
+        isSystemGenerated: true,
+    },
+    {
+        key: "lr_no",
+        label: "LR No",
+        type: "string",
+        isRequired: false,
+        isSearchable: true,
+        isFilterable: true,
+        isSystemGenerated: true,
+    },
+    {
+        key: "driver",
+        label: "Driver",
+        type: "string",
+        isRequired: false,
+        isSearchable: true,
+        isFilterable: true,
+        isSystemGenerated: true,
+    },
+    {
+        key: "vehicle_master",
+        label: "Vehicle Master",
+        type: "custommaster",
+        customMasterCode: vehicleMasterCode,
+        customMasterName: "Vehicle Master",
+        isRequired: false,
+        isSearchable: true,
+        isFilterable: true,
+        isSystemGenerated: true,
+    },
+];
+
+const syncTransportationReceiptPaymentFields = async ({
+    enabled,
+    vehicleMasterSync,
+}: {
+    enabled: boolean;
+    vehicleMasterSync?: any;
+}) => {
+    if (!enabled) {
+        return {
+            skipped: true,
+            reason: "Maintain Inventory is disabled.",
+        };
+    }
+
+    const vehicleMasterCode = await getVehicleMasterModuleCode(vehicleMasterSync);
+    const fields = buildTransportationAccountingFields(vehicleMasterCode);
+    const modules = ["receipt", "payment"] as const;
+    const results: any[] = [];
+
+    /*
+       addField already merges fields by key in backend, so we do
+       not need GET -> compare -> UPDATE. This keeps the new flow
+       completely separate from Vehicle Master creation.
+    */
+    for (const module of modules) {
+        const res = await professionalAxios.post(
+            TRANSACTION_SCHEMA_ADD_FIELD_API,
+            {
+                module,
+                section: "header",
+                fields,
+            }
+        );
+
+        if (res?.data?.success === false) {
+            throw new Error(
+                res?.data?.message ||
+                `Failed to add transportation fields in ${module}.`
+            );
+        }
+
+        results.push({
+            module,
+            success: true,
+            response: res?.data?.data || null,
+        });
+    }
+
+    return {
+        skipped: false,
+        vehicleMasterCode,
+        results,
+    };
+};
 
 export const whatsAppMetaCredentialsHasData = (
     apiResponse: any
@@ -1067,6 +1257,19 @@ export const saveOrUpdateSystemConfiguration =
                     configuration
                         ?.configurationCode;
 
+                /*
+                 * IMPORTANT:
+                 * Vehicle Master + Receipt/Payment transportation fields
+                 * are controlled by Inventory Configuration -> Maintain Inventory.
+                 *
+                 * Use the payload being submitted as the source of truth
+                 * so the sync runs immediately when Maintain Inventory is enabled.
+                 */
+                const submittedPayload =
+                    buildConfigurationPayload(
+                        configuration
+                    );
+
                 let result: any;
 
                 let latestConfiguration: any;
@@ -1135,7 +1338,10 @@ export const saveOrUpdateSystemConfiguration =
                 }
 
                 /* ==========================================
-                   ⭐ ADDED: VEHICLE MASTER SYNCHRONIZATION
+                   ⭐ VEHICLE MASTER SYNCHRONIZATION
+
+                   Trigger:
+                   inventoryConfiguration.maintainInventory
 
                    Configuration save/update remains primary.
                    Vehicle Master failure does not reject the
@@ -1147,17 +1353,21 @@ export const saveOrUpdateSystemConfiguration =
                 };
 
                 try {
-                    const transportationEnabled =
-                        resolveTransportationEnabled(
-                            latestConfiguration
-                                ?.systemConfiguration ||
-                            configuration
-                                ?.systemConfiguration
+                    const maintainInventoryEnabled =
+                        toBool(
+                            submittedPayload
+                                ?.inventoryConfiguration
+                                ?.maintainInventory
                         );
+
+                    console.log(
+                        "Vehicle Master sync maintainInventoryEnabled:",
+                        maintainInventoryEnabled
+                    );
 
                     vehicleMasterSync =
                         await syncVehicleMasterCustomMaster(
-                            transportationEnabled
+                            maintainInventoryEnabled
                         );
 
                     console.log(
@@ -1181,6 +1391,53 @@ export const saveOrUpdateSystemConfiguration =
                     };
                 }
 
+
+                /* ==========================================
+                   ⭐ RECEIPT / PAYMENT TRANSPORT FIELDS
+
+                   Trigger:
+                   inventoryConfiguration.maintainInventory
+
+                   This runs AFTER Vehicle Master synchronization.
+                ========================================== */
+
+                let transportationTransactionFieldSync: any = {
+                    skipped: true,
+                };
+
+                try {
+                    const maintainInventoryEnabled =
+                        toBool(
+                            submittedPayload
+                                ?.inventoryConfiguration
+                                ?.maintainInventory
+                        );
+
+                    transportationTransactionFieldSync =
+                        await syncTransportationReceiptPaymentFields({
+                            enabled: maintainInventoryEnabled,
+                            vehicleMasterSync,
+                        });
+
+                    console.log(
+                        "Receipt / Payment transportation field synchronization result:",
+                        transportationTransactionFieldSync
+                    );
+                } catch (syncError: any) {
+                    console.log(
+                        "syncTransportationReceiptPaymentFields error:",
+                        syncError
+                    );
+
+                    transportationTransactionFieldSync = {
+                        failed: true,
+                        message:
+                            syncError?.response?.data?.message ||
+                            syncError?.message ||
+                            "Receipt / Payment transportation field synchronization failed.",
+                    };
+                }
+
                 /* ==========================================
                    STEP 3: RETURN SUCCESSFUL CONFIGURATION
                 ========================================== */
@@ -1201,6 +1458,8 @@ export const saveOrUpdateSystemConfiguration =
                     mode,
 
                     vehicleMasterSync,
+
+                    transportationTransactionFieldSync,
                 };
             } catch (err: any) {
                 return rejectWithValue({

@@ -781,6 +781,32 @@ const SystemConfiguration = () => {
                 );
             }
 
+            if (result?.vehicleMasterSync?.failed) {
+                toast.error(
+                    result?.vehicleMasterSync?.message ||
+                    "Configuration saved, but Vehicle Master synchronization failed."
+                );
+            }
+
+            if (result?.transportationTransactionFieldSync?.failed) {
+                toast.error(
+                    result?.transportationTransactionFieldSync?.message ||
+                    "Configuration saved, but Receipt / Payment transportation fields synchronization failed."
+                );
+            }
+
+            if (
+                configuration?.systemConfiguration
+                    ?.transportationModuleConfiguration
+                    ?.enableTransportationModule &&
+                result?.transportationTransactionFieldSync?.skipped &&
+                result?.transportationTransactionFieldSync?.reason
+            ) {
+                toast.warning(
+                    result.transportationTransactionFieldSync.reason
+                );
+            }
+
             toast.success(
                 result?.message ||
                 (configuration
@@ -788,7 +814,7 @@ const SystemConfiguration = () => {
                     ? "Configuration updated successfully"
                     : "Configuration saved successfully")
             );
-            window.location.reload();
+            // window.location.reload();
         } catch (err: any) {
             toast.error(
                 err?.message ||
@@ -1843,7 +1869,25 @@ const SystemConfiguration = () => {
                 submitDisabled={!whereToAddConfirmed}
                 body={
                     <div className="space-y-5">
-                        {/* <div className="rounded-md border border-border bg-card p-4">
+                        <div className="rounded-md border border-warning/30 bg-warning/10 p-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
+                                    <ShieldCheck size={18} />
+                                </div>
+
+                                <div>
+                                    <p className="text-sm font-bold text-card-foreground">
+                                        Confirm placement change
+                                    </p>
+
+                                    <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+                                        This changes where inventory tracking values are stored in transactions and may affect existing saved data.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-md border border-border bg-card p-4">
                             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 Placement Change
                             </p>
@@ -1873,7 +1917,7 @@ const SystemConfiguration = () => {
                                     </p>
                                 </div>
                             </div>
-                        </div> */}
+                        </div>
 
                         <div className="rounded-md border border-border bg-muted/20 p-4">
                             <p className="text-sm font-semibold text-card-foreground">
@@ -1887,8 +1931,8 @@ const SystemConfiguration = () => {
 
                         <div
                             className={`rounded-md border p-4 transition ${whereToAddConfirmed
-                                ? "border-primary/40 bg-primary/5"
-                                : "border-border bg-card"
+                                    ? "border-primary/40 bg-primary/5"
+                                    : "border-border bg-card"
                                 }`}
                         >
                             <Checkbox
