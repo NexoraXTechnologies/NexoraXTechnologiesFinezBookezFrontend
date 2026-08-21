@@ -14,6 +14,7 @@ import {
     fmtMoney,
     formatDateForInput,
     formatDateForList,
+    isTrueValue,
     money,
     num,
     safePercent,
@@ -220,10 +221,6 @@ const getRecords = (res: any) => {
                                     ? res
                                     : [];
 };
-
-const isTrueValue = (value: any) =>
-    value === true ||
-    String(value ?? "").trim().toLowerCase() === "true";
 
 const CONDITIONAL_MARGIN_FIELD_KEYS = new Set([
     "taxRate",

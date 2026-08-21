@@ -10,7 +10,7 @@ import SearchInput from "../../../../../components/searchInput";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
-import { fmtMoney, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForList, isTrueValue, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
@@ -279,27 +279,74 @@ const SalesReturn = () => {
     const getInventoryBalanceFilters = (row: any) => {
         const filters: any = {};
 
-        const selectedFilters =
-            row?._inventoryBalanceSelections &&
-                typeof row._inventoryBalanceSelections === "object"
-                ? row._inventoryBalanceSelections
-                : {};
+        const visibleBodyFields = (templateFields?.body || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
+        );
 
-        if (selectedFilters?.warehouseCode) {
-            filters.warehouseCode = selectedFilters.warehouseCode;
-        }
+        const visibleHeaderFields = (templateFields?.header || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
+        );
 
-        if (selectedFilters?.locationCode) {
-            filters.locationCode = selectedFilters.locationCode;
-        }
+        const inventoryApiKeys = new Set(
+            [
+                ...visibleBodyFields,
+                ...visibleHeaderFields,
+            ]
+                .map((field: any) => getInventoryBalanceApiKey(field))
+                .filter(Boolean)
+        );
 
-        if (selectedFilters?.batchNumber) {
-            filters.batchNumber = selectedFilters.batchNumber;
-        }
+        inventoryApiKeys.forEach((apiKey: any) => {
+            const bodyField = visibleBodyFields.find(
+                (field: any) => getInventoryBalanceApiKey(field) === apiKey
+            );
 
-        if (selectedFilters?.binCode) {
-            filters.binCode = selectedFilters.binCode;
-        }
+            if (bodyField) {
+                const selectedFilters =
+                    row?._inventoryBalanceSelections &&
+                        typeof row._inventoryBalanceSelections === "object"
+                        ? row._inventoryBalanceSelections
+                        : {};
+
+                const value =
+                    selectedFilters?.[apiKey] ??
+                    getInventoryFieldValue(
+                        row,
+                        visibleBodyFields,
+                        apiKey
+                    );
+
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    String(value).trim() !== ""
+                ) {
+                    filters[apiKey] = value;
+                }
+
+                return;
+            }
+
+            const headerField = visibleHeaderFields.find(
+                (field: any) => getInventoryBalanceApiKey(field) === apiKey
+            );
+
+            if (!headerField) return;
+
+            const value = getInventoryFieldValue(
+                form,
+                visibleHeaderFields,
+                apiKey
+            );
+
+            if (
+                value !== undefined &&
+                value !== null &&
+                String(value).trim() !== ""
+            ) {
+                filters[apiKey] = value;
+            }
+        });
 
         return filters;
     };
@@ -353,25 +400,39 @@ const SalesReturn = () => {
     };
 
     const getInventoryTransactionValue = (row: any, apiKey: string) => {
-        const bodyValue = getInventoryFieldValue(
-            row,
-            templateFields?.body || [],
-            apiKey
+        const visibleBodyFields = (templateFields?.body || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
         );
 
-        if (
-            bodyValue !== undefined &&
-            bodyValue !== null &&
-            String(bodyValue).trim() !== ""
-        ) {
-            return bodyValue;
+        const visibleHeaderFields = (templateFields?.header || []).filter(
+            (field: any) => !isTrueValue(field?.isHidden)
+        );
+
+        const bodyField = visibleBodyFields.find(
+            (field: any) => getInventoryTransactionApiKey(field) === apiKey
+        );
+
+        if (bodyField) {
+            return getInventoryFieldValue(
+                row,
+                visibleBodyFields,
+                apiKey
+            );
         }
 
-        return getInventoryFieldValue(
-            form,
-            templateFields?.header || [],
-            apiKey
+        const headerField = visibleHeaderFields.find(
+            (field: any) => getInventoryTransactionApiKey(field) === apiKey
         );
+
+        if (headerField) {
+            return getInventoryFieldValue(
+                form,
+                visibleHeaderFields,
+                apiKey
+            );
+        }
+
+        return "";
     };
 
     const getInventoryBalanceVoucherId = (row: any) =>
@@ -2812,6 +2873,27 @@ const SalesReturn = () => {
 
     useEffect(() => { fetchSalesInvoices(); }, [localOffset, localLimit, debouncedSearch, status]);
 
+    const headerInventoryBalanceSignature = useMemo(() => {
+        return (templateFields?.header || [])
+            .filter(
+                (field: any) =>
+                    !isTrueValue(field?.isHidden) &&
+                    Boolean(getInventoryBalanceApiKey(field))
+            )
+            .map((field: any) => {
+                const apiKey = getInventoryBalanceApiKey(field);
+
+                const value = getInventoryFieldValue(
+                    form,
+                    templateFields?.header || [],
+                    apiKey
+                );
+
+                return `${apiKey}:${String(value || "")}`;
+            })
+            .join("|");
+    }, [form, templateFields?.header]);
+
     const productBalanceSignature = useMemo(
         () =>
             (form?.products || [])
@@ -2829,7 +2911,7 @@ const SalesReturn = () => {
                     ].join("|");
                 })
                 .join("||"),
-        [form?.products]
+        [form?.products, headerInventoryBalanceSignature]
     );
 
     useEffect(() => {

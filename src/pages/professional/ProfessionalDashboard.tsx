@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import {
 	Area,
 	AreaChart,
@@ -694,7 +695,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 							{/* <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
 							API Data
 						</span> */}
-
 						</>
 					}
 				>
@@ -1041,7 +1041,7 @@ const TransportAnalyticsView = ({
 	const tripAllocation = data?.tripAllocation || {};
 	const vehicleMaintenance = data?.vehicleMaintenance || {};
 	const driverSettlement = data?.driverSettlement || {};
-	const ewayBill = data?.ewayBill || {};
+	const ewayBill = data?.ewaybill || data?.ewayBill || {};
 
 	const ownedList = vehicles?.ownedList || [];
 	const marketList = vehicles?.marketList || [];
@@ -1400,6 +1400,7 @@ const TransportAnalyticsView = ({
 
 const ProfessionalDashboard = () => {
 	const dispatch = useDispatch();
+	const location = useLocation();
 
 	const [openChat, setOpenChat] = useState(false);
 	const [activeTab, setActiveTab] = useState<TabType>("taxez");
@@ -1461,13 +1462,13 @@ const ProfessionalDashboard = () => {
 
 	useEffect(() => {
 		dispatch(fetchProfessionalDashboardAnalytics() as any);
-	}, [dispatch]);
+	}, [dispatch, location.key]);
 
 	useEffect(() => {
-		if (dashboardSection === "analytics" && !transportAnalytics && !transportLoading) {
+		if (dashboardSection === "analytics") {
 			dispatch(fetchTransportDashboardAnalytics() as any);
 		}
-	}, [dashboardSection, dispatch, transportAnalytics, transportLoading]);
+	}, [dashboardSection, dispatch, location.key]);
 
 	useEffect(() => {
 		if (visibleTabs.length > 0) {
@@ -1537,8 +1538,8 @@ const ProfessionalDashboard = () => {
 					type="button"
 					onClick={() => setDashboardSection("dashboard")}
 					className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "dashboard"
-							? "bg-primary text-primary-foreground shadow-sm"
-							: "text-muted-foreground hover:bg-muted hover:text-foreground"
+						? "bg-primary text-primary-foreground shadow-sm"
+						: "text-muted-foreground hover:bg-muted hover:text-foreground"
 						}`}
 				>
 					BookEZ
@@ -1548,8 +1549,8 @@ const ProfessionalDashboard = () => {
 					type="button"
 					onClick={() => setDashboardSection("analytics")}
 					className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "analytics"
-							? "bg-primary text-primary-foreground shadow-sm"
-							: "text-muted-foreground hover:bg-muted hover:text-foreground"
+						? "bg-primary text-primary-foreground shadow-sm"
+						: "text-muted-foreground hover:bg-muted hover:text-foreground"
 						}`}
 				>
 					TransportEZ
