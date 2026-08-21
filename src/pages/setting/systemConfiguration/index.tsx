@@ -1203,6 +1203,18 @@ const SystemConfiguration = () => {
                     }
                 />
 
+                <SettingRow
+                    title="Service Product Inventory"
+                    description="Enable stock inward, outward and available quantity tracking for Service Products."
+                    value={!!inventoryConfig?.enableServiceProductInventory}
+                    onChange={(value) =>
+                        updateInventoryField(
+                            "enableServiceProductInventory",
+                            value
+                        )
+                    }
+                />
+
                 <SelectRow
                     title="Inventory Tag Level"
                     description="Choose how deeply inventory should be tracked."
