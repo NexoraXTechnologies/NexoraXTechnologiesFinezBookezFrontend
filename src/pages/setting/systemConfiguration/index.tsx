@@ -102,8 +102,8 @@ const inventoryTagLevelOptions = [
 ];
 
 const whereToAdd = [
-    { label: "Transaction Header", value: "header" },
-    { label: "Transaction Body (Line Item)", value: "body" },
+    { label: "Header", value: "header" },
+    { label: "Body (Line Item)", value: "body" },
 ];
 
 const normalizeWhereToAddValue = (value: any) => {
@@ -127,8 +127,8 @@ const normalizeWhereToAddValue = (value: any) => {
 const getWhereToAddLabel = (value: any) => {
     const normalized = normalizeWhereToAddValue(value);
 
-    if (normalized === "header") return "Transaction Header";
-    if (normalized === "body") return "Transaction Body (Line Item)";
+    if (normalized === "header") return "Header";
+    if (normalized === "body") return "Body";
 
     return "Not Selected";
 };
