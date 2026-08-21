@@ -41,7 +41,8 @@ import {
     getDbAccessRequestsUser
 } from "../../../redux/slices/userExplorer";
 import { getAllAccounts } from "../../../redux/slices/professionalSlice/accountMasterSlice";
-import { SelectInput } from "../../../components/inputs";
+import { Checkbox, SelectInput } from "../../../components/inputs";
+import Modal from "../../../components/modal";
 import {
     resolveInventoryTagLevel,
     syncInventoryTagLevelMasters
@@ -101,9 +102,36 @@ const inventoryTagLevelOptions = [
 ];
 
 const whereToAdd = [
-    { label: "Header", value: "header" },
-    { label: "body", value: "body" },
+    { label: "Transaction Header", value: "header" },
+    { label: "Transaction Body (Line Item)", value: "body" },
 ];
+
+const normalizeWhereToAddValue = (value: any) => {
+    const rawValue =
+        value && typeof value === "object"
+            ? value?.value ?? value?.code ?? value?.key ?? value?.name ?? value?.label ?? ""
+            : value;
+
+    const normalized = String(rawValue || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ");
+
+    if (["header", "transaction header", "header level", "transaction level"].includes(normalized)) return "header";
+    if (["body", "transaction body", "transaction body (line item)", "line item", "lineitem", "body level"].includes(normalized)) return "body";
+
+    return "";
+};
+
+const getWhereToAddLabel = (value: any) => {
+    const normalized = normalizeWhereToAddValue(value);
+
+    if (normalized === "header") return "Transaction Header";
+    if (normalized === "body") return "Transaction Body (Line Item)";
+
+    return "Not Selected";
+};
 
 const inventoryPickMethodOptions = [
     { label: "FIFO", value: "FIFO" },
@@ -363,6 +391,10 @@ const SystemConfiguration = () => {
     const [activeTab, setActiveTab] = useState("system");
     const [waModulesExpanded, setWaModulesExpanded] = useState(true);
     const [dbReqLoader, setDbReqLoader] = useState(false);
+    const [showWhereToAddWarning, setShowWhereToAddWarning] = useState(false);
+    const [currentWhereToAdd, setCurrentWhereToAdd] = useState("");
+    const [pendingWhereToAdd, setPendingWhereToAdd] = useState("");
+    const [whereToAddConfirmed, setWhereToAddConfirmed] = useState(false);
 
     const saving = saveLoading;
     const whatsAppVerifying = whatsappVerifyLoading;
@@ -536,6 +568,43 @@ const SystemConfiguration = () => {
             },
             [dispatch]
         );
+
+    const handleWhereToAddChange = useCallback((value: string) => {
+        const currentValue = normalizeWhereToAddValue(
+            inventoryConfig?.whereToAddInventory
+        );
+
+        const nextValue = normalizeWhereToAddValue(value);
+
+        if (currentValue && nextValue && currentValue !== nextValue) {
+            setCurrentWhereToAdd(currentValue);
+            setPendingWhereToAdd(nextValue);
+            setWhereToAddConfirmed(false);
+            setShowWhereToAddWarning(true);
+            return;
+        }
+
+        updateInventoryField("whereToAddInventory", nextValue);
+    }, [inventoryConfig?.whereToAddInventory, updateInventoryField]);
+
+    const closeWhereToAddWarning = useCallback(() => {
+        setShowWhereToAddWarning(false);
+        setCurrentWhereToAdd("");
+        setPendingWhereToAdd("");
+        setWhereToAddConfirmed(false);
+    }, []);
+
+    const confirmWhereToAddChange = useCallback(() => {
+        if (!whereToAddConfirmed) {
+            toast.warning("Please confirm that you understand this change may affect existing transaction data.");
+            return;
+        }
+
+        if (!pendingWhereToAdd) return;
+
+        updateInventoryField("whereToAddInventory", pendingWhereToAdd);
+        closeWhereToAddWarning();
+    }, [whereToAddConfirmed, pendingWhereToAdd, updateInventoryField, closeWhereToAddWarning]);
 
     const updateFinanceField =
         useCallback(
@@ -1157,21 +1226,12 @@ const SystemConfiguration = () => {
 
                 {showWhereToAdd ? (
                     <SelectRow
-                        title="Where to add"
-                        description="Choose where inventory tracking fields should be added."
-                        value={
-                            inventoryConfig
-                                ?.whereToAddInventory ||
-                            ""
-                        }
-                        onChange={(
-                            value
-                        ) =>
-                            updateInventoryField(
-                                "whereToAddInventory",
-                                value
-                            )
-                        }
+                        title="Inventory Tracking Field Placement"
+                        description="Choose whether inventory tracking fields should be stored once at transaction level (Header) or separately for each line item (Body)."
+                        value={normalizeWhereToAddValue(
+                            inventoryConfig?.whereToAddInventory
+                        )}
+                        onChange={handleWhereToAddChange}
                         options={
                             whereToAdd
                         }
@@ -1768,6 +1828,83 @@ const SystemConfiguration = () => {
                     </main>
                 </div>
             </div>
+
+            <Modal
+                show={showWhereToAddWarning}
+                setShow={(value) => {
+                    if (!value) closeWhereToAddWarning();
+                }}
+                handleClose={closeWhereToAddWarning}
+                handleSubmit={confirmWhereToAddChange}
+                title="Inventory Field Placement"
+                maxWidth="md"
+                gridCols={1}
+                submitText="Confirm"
+                submitDisabled={!whereToAddConfirmed}
+                body={
+                    <div className="space-y-5">
+                        {/* <div className="rounded-md border border-border bg-card p-4">
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                Placement Change
+                            </p>
+
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                <div className="min-w-0 rounded-md border border-border bg-muted/30 p-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        Current
+                                    </p>
+
+                                    <p className="mt-1 break-words text-sm font-bold text-card-foreground">
+                                        {getWhereToAddLabel(currentWhereToAdd)}
+                                    </p>
+                                </div>
+
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <ChevronRight size={18} />
+                                </div>
+
+                                <div className="min-w-0 rounded-md border border-primary/30 bg-primary/5 p-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                        New
+                                    </p>
+
+                                    <p className="mt-1 break-words text-sm font-bold text-primary">
+                                        {getWhereToAddLabel(pendingWhereToAdd)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div> */}
+
+                        <div className="rounded-md border border-border bg-muted/20 p-4">
+                            <p className="text-sm font-semibold text-card-foreground">
+                                What happens after this change?
+                            </p>
+
+                            <p className="mt-1.5 text-xs font-medium leading-5 text-muted-foreground">
+                                New transaction entries will use the selected placement. Existing values will not automatically move between Transaction Header and Transaction Body.
+                            </p>
+                        </div>
+
+                        <div
+                            className={`rounded-md border p-4 transition ${whereToAddConfirmed
+                                ? "border-primary/40 bg-primary/5"
+                                : "border-border bg-card"
+                                }`}
+                        >
+                            <Checkbox
+                                checked={whereToAddConfirmed}
+                                onChange={setWhereToAddConfirmed}
+                                iconSize={22}
+                                label={
+                                    <span className="leading-5">
+                                        I understand that changing this setting may affect existing transaction data.
+                                    </span>
+                                }
+                            />
+                        </div>
+                    </div>
+                }
+            />
         </div>
     );
 };

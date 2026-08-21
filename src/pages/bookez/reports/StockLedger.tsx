@@ -27,6 +27,10 @@ import { getByVoucherNumberPurchaseInvoiceList } from "../../../redux/slices/pro
 import { getByVoucherNumberPurchaseReturnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseReturnSlice";
 import { getByVoucharNumberGrnList } from "../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
 import { getOpeningStockList } from "../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
+import {
+    getCustomMasterListing,
+    getCustomMasterModules,
+} from "../../../redux/slices/professionalSlice/customMasterModuleSlice";
 import { toast } from "react-toastify";
 
 type StockLedgerProps = {
@@ -341,6 +345,95 @@ const getLedgerDetails = (data: any) => {
     return [];
 };
 
+const INVENTORY_MASTER_NAMES = {
+    warehouse: "Warehouse",
+    location: "Location",
+    bin: "Bin",
+    batch: "Batch",
+} as const;
+
+type InventoryFilterKey = keyof typeof INVENTORY_MASTER_NAMES;
+
+type InventoryFilterOption = {
+    label: string;
+    value: string;
+    raw?: any;
+};
+
+const getArrayRecords = (response: any): any[] => {
+    const roots = [
+        response,
+        response?.data,
+        response?.data?.data,
+        response?.result,
+        response?.payload,
+    ];
+
+    for (const root of roots) {
+        if (Array.isArray(root)) return root;
+        if (Array.isArray(root?.records)) return root.records;
+        if (Array.isArray(root?.items)) return root.items;
+        if (Array.isArray(root?.docs)) return root.docs;
+        if (Array.isArray(root?.modules)) return root.modules;
+    }
+
+    return [];
+};
+
+const normalizeInventoryMasterName = (value: any) =>
+    String(value || "").trim().toLowerCase();
+
+const getInventoryRecordValue = (record: any, keys: string[]) => {
+    const nested =
+        record?.data && typeof record.data === "object"
+            ? record.data
+            : record?.dynamicFields && typeof record.dynamicFields === "object"
+                ? record.dynamicFields
+                : record?.customFields && typeof record.customFields === "object"
+                    ? record.customFields
+                    : {};
+
+    const source = { ...record, ...nested };
+
+    for (const key of keys) {
+        const value = source?.[key];
+
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+            return String(value).trim();
+        }
+    }
+
+    return "";
+};
+
+const buildInventoryMasterOptions = (records: any[], key: InventoryFilterKey): InventoryFilterOption[] => {
+    const valueKeys: Record<InventoryFilterKey, string[]> = {
+        warehouse: ["warehouseCode", "code", "warehouse", "warehouseName"],
+        location: ["locationCode", "code", "location", "locationName"],
+        bin: ["binCode", "code", "bin", "binName"],
+        batch: ["batchNumber", "batchCode", "code", "batch", "batchName"],
+    };
+
+    const labelKeys: Record<InventoryFilterKey, string[]> = {
+        warehouse: ["name", "warehouseName", "warehouse", "warehouseCode", "code"],
+        location: ["name", "locationName", "location", "locationCode", "code"],
+        bin: ["name", "binName", "bin", "binCode", "code"],
+        batch: ["name", "batchName", "batch", "batchNumber", "batchCode", "code"],
+    };
+
+    const seen = new Set<string>();
+
+    return (records || []).reduce((options: InventoryFilterOption[], record: any) => {
+        const value = getInventoryRecordValue(record, valueKeys[key]);
+        if (!value || seen.has(value)) return options;
+
+        const label = getInventoryRecordValue(record, labelKeys[key]) || value;
+        seen.add(value);
+        options.push({ label, value, raw: record });
+        return options;
+    }, []);
+};
+
 const StockLedger = ({ show = true }: StockLedgerProps) => {
     const dispatch = useDispatch<any>();
 
@@ -352,11 +445,29 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
         (s: any) => s.productMaster
     );
 
+    const [inventoryModules, setInventoryModules] = useState<Partial<Record<InventoryFilterKey, any>>>({});
+
+    const showWarehouse = Boolean(inventoryModules.warehouse);
+    const showLocation = Boolean(inventoryModules.location);
+    const showBin = Boolean(inventoryModules.bin);
+    const showBatch = Boolean(inventoryModules.batch);
+
     const [fromDate, setFromDate] = useState<string>(
         getFirstDateOfCurrentMonth()
     );
     const [toDate, setToDate] = useState<string>(todayYMD());
     const [productCode, setProductCode] = useState<string>("");
+    const [warehouseCode, setWarehouseCode] = useState<string>("");
+    const [locationCode, setLocationCode] = useState<string>("");
+    const [binCode, setBinCode] = useState<string>("");
+    const [batchNumber, setBatchNumber] = useState<string>("");
+    const [inventoryFiltersLoading, setInventoryFiltersLoading] = useState(false);
+    const [inventoryFilterOptions, setInventoryFilterOptions] = useState<Record<InventoryFilterKey, InventoryFilterOption[]>>({
+        warehouse: [],
+        location: [],
+        bin: [],
+        batch: [],
+    });
 
     const [pdfLoading, setPdfLoading] = useState(false);
     const [excelLoading, setExcelLoading] = useState(false);
@@ -378,7 +489,7 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
 
     const [viewBodyKey, setViewBodyKey] = useState("products");
 
- 
+
     const getVoucherRecordFromResponse = (
         res: any,
         voucherNumber: string,
@@ -1088,158 +1199,158 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
         );
     };
 
-  const stockViewConfig: any = {
-    OPENING_STOCK: {
-        title: "View Opening Stock",
-        notFoundMessage: "Opening stock not found",
-        manualSchema: true,
-        inputData: openingStockViewInputData,
-        bodyKey: "openingStockBody",
-        action: getOpeningStockList,
-        params: (voucherNumber: string) => ({
-            offset: 0,
-            limit: 10,
-            search: voucherNumber,
-            status: "",
-        }),
-        voucherKeys: [
-            "openingStockVoucherNumber",
-            "voucherNumber",
-            "voucherNo",
-        ],
-        normalize: normalizeOpeningStockForView,
-    },
+    const stockViewConfig: any = {
+        OPENING_STOCK: {
+            title: "View Opening Stock",
+            notFoundMessage: "Opening stock not found",
+            manualSchema: true,
+            inputData: openingStockViewInputData,
+            bodyKey: "openingStockBody",
+            action: getOpeningStockList,
+            params: (voucherNumber: string) => ({
+                offset: 0,
+                limit: 10,
+                search: voucherNumber,
+                status: "",
+            }),
+            voucherKeys: [
+                "openingStockVoucherNumber",
+                "voucherNumber",
+                "voucherNo",
+            ],
+            normalize: normalizeOpeningStockForView,
+        },
 
-    SALES_RETURN: {
-        title: "View Sales Return",
-        notFoundMessage: "Sales return not found",
-        schemaKey: "salesReturn",
-        bodyKey: "products",
-        action: getByVoucherNumberSalesInvoiceReturn,
-        params: (voucherNumber: string) => ({
-            voucherNumber,
-        }),
-        voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
-        normalize: normalizeSalesReturnForView,
-    },
+        SALES_RETURN: {
+            title: "View Sales Return",
+            notFoundMessage: "Sales return not found",
+            schemaKey: "salesReturn",
+            bodyKey: "products",
+            action: getByVoucherNumberSalesInvoiceReturn,
+            params: (voucherNumber: string) => ({
+                voucherNumber,
+            }),
+            voucherKeys: ["sInvReturnVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeSalesReturnForView,
+        },
 
-    SALES_INVOICE: {
-        title: "View Sales Invoice",
-        notFoundMessage: "Sales invoice not found",
-        schemaKey: "salesInvoice",
-        bodyKey: "products",
-        action: getByVoucherNumberSalesInvoice,
-        params: (voucherNumber: string) => ({
-            voucherNumber,
-        }),
-        voucherKeys: ["sInvVoucherNumber", "voucherNumber", "voucherNo"],
-        normalize: normalizeInvoiceForView,
-    },
+        SALES_INVOICE: {
+            title: "View Sales Invoice",
+            notFoundMessage: "Sales invoice not found",
+            schemaKey: "salesInvoice",
+            bodyKey: "products",
+            action: getByVoucherNumberSalesInvoice,
+            params: (voucherNumber: string) => ({
+                voucherNumber,
+            }),
+            voucherKeys: ["sInvVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeInvoiceForView,
+        },
 
-    PURCHASE_INVOICE: {
-        title: "View Purchase Invoice",
-        notFoundMessage: "Purchase invoice not found",
-        schemaKey: "purchaseInvoice",
-        bodyKey: "products",
-        action: getByVoucherNumberPurchaseInvoiceList,
-        params: (voucherNumber: string) => voucherNumber,
-        voucherKeys: ["pInvVoucherNumber", "voucherNumber", "voucherNo"],
-        normalize: normalizePurchaseInvoiceForView,
-    },
+        PURCHASE_INVOICE: {
+            title: "View Purchase Invoice",
+            notFoundMessage: "Purchase invoice not found",
+            schemaKey: "purchaseInvoice",
+            bodyKey: "products",
+            action: getByVoucherNumberPurchaseInvoiceList,
+            params: (voucherNumber: string) => voucherNumber,
+            voucherKeys: ["pInvVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizePurchaseInvoiceForView,
+        },
 
-    PURCHASE_RETURN: {
-        title: "View Purchase Return",
-        notFoundMessage: "Purchase return not found",
-        schemaKey: "purchaseReturn",
-        bodyKey: "products",
-        action: getByVoucherNumberPurchaseReturnList,
-        params: (voucherNumber: string) => ({
-            voucherNumber,
-        }),
-        voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
-        normalize: normalizePurchaseReturnForView,
-    },
+        PURCHASE_RETURN: {
+            title: "View Purchase Return",
+            notFoundMessage: "Purchase return not found",
+            schemaKey: "purchaseReturn",
+            bodyKey: "products",
+            action: getByVoucherNumberPurchaseReturnList,
+            params: (voucherNumber: string) => ({
+                voucherNumber,
+            }),
+            voucherKeys: ["pRetVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizePurchaseReturnForView,
+        },
 
-    GRN: {
-        title: "View GRN",
-        notFoundMessage: "GRN not found",
-        schemaKey: "grn",
-        bodyKey: "products",
-        action: getByVoucharNumberGrnList,
-        params: (voucherNumber: string) => ({
-            voucherNumber,
-        }),
-        voucherKeys: ["grnVoucherNumber", "voucherNumber", "voucherNo"],
-        normalize: normalizeGrnForView,
-    },
-};
+        GRN: {
+            title: "View GRN",
+            notFoundMessage: "GRN not found",
+            schemaKey: "grn",
+            bodyKey: "products",
+            action: getByVoucharNumberGrnList,
+            params: (voucherNumber: string) => ({
+                voucherNumber,
+            }),
+            voucherKeys: ["grnVoucherNumber", "voucherNumber", "voucherNo"],
+            normalize: normalizeGrnForView,
+        },
+    };
 
-  const handleViewVoucher = async (row: any) => {
-    const voucherNumber = getStockVoucherNumber(row);
-    const voucherKind = resolveStockVoucherKind(voucherNumber);
+    const handleViewVoucher = async (row: any) => {
+        const voucherNumber = getStockVoucherNumber(row);
+        const voucherKind = resolveStockVoucherKind(voucherNumber);
 
-    if (!voucherNumber) {
-        toast.error("Voucher number not found");
-        return;
-    }
-
-    const config = stockViewConfig[voucherKind];
-
-    if (!config) {
-        toast.error("Voucher type not supported");
-        return;
-    }
-
-    try {
-        setViewLoading(true);
-        setViewErrors({});
-        setViewForm({});
-        setViewTitle(config.title);
-        setViewBodyKey(config.bodyKey);
-
-        if (config.manualSchema) {
-            setViewTemplateFields(config.inputData);
-        } else {
-            await dispatch(getAllTransactionSchema(config.schemaKey) as any);
-        }
-
-        const res = await dispatch(
-            config.action(config.params(voucherNumber)) as any
-        ).unwrap();
-
-        const record = getVoucherRecordFromResponse(
-            res,
-            voucherNumber,
-            config.voucherKeys
-        );
-
-        // ✅ Do not open view modal if voucher not found
-        if (!record) {
-            toast.error(config.notFoundMessage || "Voucher not found");
-            setViewModal(false);
-            setViewForm({});
+        if (!voucherNumber) {
+            toast.error("Voucher number not found");
             return;
         }
 
-        // ✅ Open modal only after record exists
-        setViewForm(config.normalize(record));
-        setViewModal(true);
-    } catch (error: any) {
-        console.log("Stock ledger view voucher failed", error);
+        const config = stockViewConfig[voucherKind];
 
-        const errorMessage =
-            error?.message ||
-            error?.payload?.message ||
-            config.notFoundMessage ||
-            "Voucher not found";
+        if (!config) {
+            toast.error("Voucher type not supported");
+            return;
+        }
 
-        toast.error(errorMessage);
-        setViewModal(false);
-        setViewForm({});
-    } finally {
-        setViewLoading(false);
-    }
-};
+        try {
+            setViewLoading(true);
+            setViewErrors({});
+            setViewForm({});
+            setViewTitle(config.title);
+            setViewBodyKey(config.bodyKey);
+
+            if (config.manualSchema) {
+                setViewTemplateFields(config.inputData);
+            } else {
+                await dispatch(getAllTransactionSchema(config.schemaKey) as any);
+            }
+
+            const res = await dispatch(
+                config.action(config.params(voucherNumber)) as any
+            ).unwrap();
+
+            const record = getVoucherRecordFromResponse(
+                res,
+                voucherNumber,
+                config.voucherKeys
+            );
+
+            // ✅ Do not open view modal if voucher not found
+            if (!record) {
+                toast.error(config.notFoundMessage || "Voucher not found");
+                setViewModal(false);
+                setViewForm({});
+                return;
+            }
+
+            // ✅ Open modal only after record exists
+            setViewForm(config.normalize(record));
+            setViewModal(true);
+        } catch (error: any) {
+            console.log("Stock ledger view voucher failed", error);
+
+            const errorMessage =
+                error?.message ||
+                error?.payload?.message ||
+                config.notFoundMessage ||
+                "Voucher not found";
+
+            toast.error(errorMessage);
+            setViewModal(false);
+            setViewForm({});
+        } finally {
+            setViewLoading(false);
+        }
+    };
 
     useEffect(() => {
         const prepareViewFields = async () => {
@@ -1280,6 +1391,10 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
         setFromDate(getFirstDateOfCurrentMonth());
         setToDate(todayYMD());
         setProductCode("");
+        setWarehouseCode("");
+        setLocationCode("");
+        setBinCode("");
+        setBatchNumber("");
         dispatch(clearStockLedgerData());
     };
 
@@ -1291,6 +1406,95 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                 search: "",
             }) as any
         );
+    }, [dispatch]);
+
+    useEffect(() => {
+        const loadInventoryMasters = async () => {
+            try {
+                setInventoryFiltersLoading(true);
+
+                const moduleResponse = await dispatch(
+                    getCustomMasterModules({
+                        offset: 0,
+                        limit: 1000,
+                        search: "",
+                        status:"active"
+                    })
+                ).unwrap();
+
+                const modules = getArrayRecords(moduleResponse);
+                const foundModules: Partial<Record<InventoryFilterKey, any>> = {};
+
+                (Object.keys(INVENTORY_MASTER_NAMES) as InventoryFilterKey[]).forEach((key) => {
+                    const expectedName = normalizeInventoryMasterName(INVENTORY_MASTER_NAMES[key]);
+                    const module = modules.find((item: any) => {
+                        const moduleKey = normalizeInventoryMasterName(item?.key);
+                        const moduleName = normalizeInventoryMasterName(item?.moduleName);
+                        return moduleKey === key || moduleName === expectedName;
+                    });
+
+                    if (module?.moduleCode) foundModules[key] = module;
+                });
+
+                setInventoryModules(foundModules);
+
+                const loadedEntries = await Promise.all(
+                    (Object.keys(foundModules) as InventoryFilterKey[]).map(async (key) => {
+                        const moduleCode = String(foundModules[key]?.moduleCode || "").trim();
+                        if (!moduleCode) return [key, []] as const;
+
+                        try {
+                            const listingResponse = await dispatch(
+                                getCustomMasterListing({
+                                    moduleCode,
+                                    offset: 0,
+                                    limit: 1000,
+                                    search: "",
+                                })
+                            ).unwrap();
+
+                            return [
+                                key,
+                                buildInventoryMasterOptions(getArrayRecords(listingResponse), key),
+                            ] as const;
+                        } catch (error) {
+                            console.log(`Failed to load ${key} master data`, error);
+                            return [key, []] as const;
+                        }
+                    })
+                );
+
+                const nextOptions: Record<InventoryFilterKey, InventoryFilterOption[]> = {
+                    warehouse: [],
+                    location: [],
+                    bin: [],
+                    batch: [],
+                };
+
+                loadedEntries.forEach(([key, options]) => {
+                    nextOptions[key] = options;
+                });
+
+                setInventoryFilterOptions(nextOptions);
+
+                if (!foundModules.warehouse) setWarehouseCode("");
+                if (!foundModules.location) setLocationCode("");
+                if (!foundModules.bin) setBinCode("");
+                if (!foundModules.batch) setBatchNumber("");
+            } catch (error) {
+                console.log("Failed to load stock ledger inventory masters", error);
+                setInventoryModules({});
+                setInventoryFilterOptions({ warehouse: [], location: [], bin: [], batch: [] });
+                setWarehouseCode("");
+                setLocationCode("");
+                setBinCode("");
+                setBatchNumber("");
+            } finally {
+                setInventoryFiltersLoading(false);
+            }
+        };
+
+        loadInventoryMasters();
     }, [dispatch]);
 
     useEffect(() => {
@@ -1314,9 +1518,13 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                 productCode,
                 fromDate: formatDateWithCurrentTime(fromDate),
                 toDate: formatDateWithCurrentTime(toDate),
+                warehouseCode,
+                locationCode,
+                batchNumber,
+                binCode,
             }) as any
         );
-    }, [dispatch, productCode, fromDate, toDate]);
+    }, [dispatch, productCode, fromDate, toDate, warehouseCode, locationCode, batchNumber, binCode]);
 
     const downloadBlobFile = (blob: Blob, fileName: string) => {
         const url = window.URL.createObjectURL(blob);
@@ -1343,6 +1551,10 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                     productCode,
                     fromDate,
                     toDate,
+                    warehouseCode,
+                    locationCode,
+                    batchNumber,
+                    binCode,
                     exportType: "pdf",
                 }) as any
             ).unwrap();
@@ -1368,6 +1580,10 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                     productCode,
                     fromDate,
                     toDate,
+                    warehouseCode,
+                    locationCode,
+                    batchNumber,
+                    binCode,
                     exportType: "excel",
                 }) as any
             ).unwrap();
@@ -1527,6 +1743,58 @@ const StockLedger = ({ show = true }: StockLedgerProps) => {
                             required: true,
                             colSpan: "full",
                         },
+                        ...(showWarehouse ? [{
+                            key: "warehouseCode",
+                            type: "select",
+                            label: "Warehouse",
+                            placeholder: inventoryFiltersLoading ? "Loading warehouses..." : "All Warehouses",
+                            value: warehouseCode,
+                            options: inventoryFilterOptions.warehouse,
+                            disabled: inventoryFiltersLoading,
+                            onChange: (value: string) => {
+                                setWarehouseCode(value);
+                            },
+                            required: false,
+                        }] : []),
+                        ...(showLocation ? [{
+                            key: "locationCode",
+                            type: "select",
+                            label: "Location",
+                            placeholder: inventoryFiltersLoading ? "Loading locations..." : "All Locations",
+                            value: locationCode,
+                            options: inventoryFilterOptions.location,
+                            disabled: inventoryFiltersLoading,
+                            onChange: (value: string) => {
+                                setLocationCode(value);
+                            },
+                            required: false,
+                        }] : []),
+                        ...(showBin ? [{
+                            key: "binCode",
+                            type: "select",
+                            label: "Bin",
+                            placeholder: inventoryFiltersLoading ? "Loading bins..." : "All Bins",
+                            value: binCode,
+                            options: inventoryFilterOptions.bin,
+                            disabled: inventoryFiltersLoading,
+                            onChange: (value: string) => {
+                                setBinCode(value);
+                            },
+                            required: false,
+                        }] : []),
+                        ...(showBatch ? [{
+                            key: "batchNumber",
+                            type: "select",
+                            label: "Batch",
+                            placeholder: inventoryFiltersLoading ? "Loading batches..." : "All Batches",
+                            value: batchNumber,
+                            options: inventoryFilterOptions.batch,
+                            disabled: inventoryFiltersLoading,
+                            onChange: (value: string) => {
+                                setBatchNumber(value);
+                            },
+                            required: false,
+                        }] : []),
                     ]}
                     gridCols="2"
                     onDownloadPdf={handleDownloadPdf}

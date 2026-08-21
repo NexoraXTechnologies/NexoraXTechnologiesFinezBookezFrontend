@@ -116,11 +116,11 @@ export const getCustomMasterSchema = createAsyncThunk(
 export const getCustomMasterModules = createAsyncThunk(
   "customMasterModule/getCustomMasterModules",
   async (
-    { offset = 0, limit = 10, search = "" } : { offset?: number; limit?: number; search?: string },
+    { offset = 0, limit = 10, search = "", status = "" }: { offset?: number; limit?: number; search?: string, status?: string },
     { rejectWithValue }
   ) => {
     try {
-      const params = { offset, limit, search };
+      const params = { offset, limit, search, status };
 
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/users/customMaster/module/getAll",
