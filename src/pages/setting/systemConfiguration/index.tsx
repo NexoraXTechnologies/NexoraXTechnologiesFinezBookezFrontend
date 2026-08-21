@@ -795,6 +795,20 @@ const SystemConfiguration = () => {
                 );
             }
 
+            if (result?.scrapProductMasterFieldSync?.failed) {
+                toast.error(
+                    result?.scrapProductMasterFieldSync?.message ||
+                    "Configuration saved, but Margin Product field synchronization failed."
+                );
+            }
+
+            if (result?.scrapTransactionFieldSync?.failed) {
+                toast.error(
+                    result?.scrapTransactionFieldSync?.message ||
+                    "Configuration saved, but Scrap transaction fields synchronization failed."
+                );
+            }
+
             if (
                 configuration?.systemConfiguration
                     ?.transportationModuleConfiguration
