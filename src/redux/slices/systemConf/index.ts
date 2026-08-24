@@ -3,6 +3,11 @@ import professionalAxios from "../../../services/professionalAxios";
 import {
     syncVehicleMasterCustomMaster,
 } from "./syncVehicleMasterCustomMaster";
+import {
+    getProductMasterSchema,
+    saveProductMasterSchema,
+    updateProductMasterSchema,
+} from "../professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
 
 /* ===================================================
    CONSTANTS
@@ -25,6 +30,8 @@ const BOOKEZ_API_PREFIX = "eTaxSolnMongoApiBackend";
 const POS_POSTING_API = `${BOOKEZ_API_PREFIX}/users/bookez/posPosting`;
 const ACCOUNT_MASTER_API = `${BOOKEZ_API_PREFIX}/accountMaster/getAllAccounts`;
 const TRANSACTION_SCHEMA_ADD_FIELD_API = `${BOOKEZ_API_PREFIX}/users/bookez/transactionSchema/addField`;
+const TRANSACTION_SCHEMA_GET_ALL_API = `${BOOKEZ_API_PREFIX}/users/bookez/transactionSchema/getAll`;
+const TRANSACTION_SCHEMA_UPDATE_FIELD_API = `${BOOKEZ_API_PREFIX}/users/bookez/transactionSchema/updateField`;
 const CUSTOM_MASTER_MODULES_API = `${BOOKEZ_API_PREFIX}/users/customMaster/module/getAll`;
 const POS_POSTING_KEYS = ["sales", "cash", "upi"] as const;
 
@@ -601,6 +608,329 @@ const syncTransportationReceiptPaymentFields = async ({
     return {
         skipped: false,
         vehicleMasterCode,
+        results,
+    };
+};
+
+/* ===================================================
+   SCRAP MANAGEMENT -> PRODUCT MASTER FIELD
+=================================================== */
+
+const MARGIN_PRODUCT_FIELD = {
+    key: "marginProduct",
+    label: "Margin Product",
+    type: "boolean",
+    isRequired: false,
+    isSearchable: false,
+    isFilterable: true,
+    isHidden: false,
+};
+
+const syncScrapProductMasterField = async ({
+    enabled,
+    dispatch,
+}: {
+    enabled: boolean;
+    dispatch: any;
+}) => {
+    const schemaData = await dispatch(
+        getProductMasterSchema({
+            offset: 0,
+            limit: 1000,
+            isSearchable: "",
+            isRequired: "",
+        }) as any
+    ).unwrap();
+
+    const fields =
+        schemaData?.fields ??
+        schemaData?.items ??
+        schemaData?.schema?.fields ??
+        [];
+
+    const marginProductField =
+        Array.isArray(fields)
+            ? fields.find(
+                (field: any) =>
+                    String(field?.key || "")
+                        .trim()
+                        .toLowerCase() === MARGIN_PRODUCT_FIELD.key.toLowerCase()
+            )
+            : null;
+
+    if (!enabled) {
+        if (!marginProductField) {
+            return {
+                skipped: true,
+                reason: "Scrap Management is disabled and Margin Product field does not exist.",
+            };
+        }
+
+        if (toBool(marginProductField?.isHidden)) {
+            return {
+                skipped: true,
+                reason: "Margin Product field is already hidden.",
+            };
+        }
+
+        const result = await dispatch(
+            updateProductMasterSchema({
+                updates: [
+                    {
+                        key: MARGIN_PRODUCT_FIELD.key,
+                        updateData: {
+                            isHidden: true,
+                        },
+                    },
+                ],
+            }) as any
+        ).unwrap();
+
+        return {
+            skipped: false,
+            hidden: true,
+            response: result || null,
+        };
+    }
+
+    if (marginProductField) {
+        if (!toBool(marginProductField?.isHidden)) {
+            return {
+                skipped: true,
+                reason: "Margin Product field already exists and is visible.",
+            };
+        }
+
+        const result = await dispatch(
+            updateProductMasterSchema({
+                updates: [
+                    {
+                        key: MARGIN_PRODUCT_FIELD.key,
+                        updateData: {
+                            isHidden: false,
+                        },
+                    },
+                ],
+            }) as any
+        ).unwrap();
+
+        return {
+            skipped: false,
+            hidden: false,
+            response: result || null,
+        };
+    }
+
+    const result = await dispatch(
+        saveProductMasterSchema({
+            fields: [MARGIN_PRODUCT_FIELD],
+        }) as any
+    ).unwrap();
+
+    return {
+        skipped: false,
+        added: true,
+        field: MARGIN_PRODUCT_FIELD,
+        response: result || null,
+    };
+};
+
+
+/* ===================================================
+   SCRAP MANAGEMENT -> SALES ORDER / SALES INVOICE BODY
+=================================================== */
+
+const SCRAP_TRANSACTION_MODULES = ["salesOrder", "salesInvoice"] as const;
+
+const SCRAP_TRANSACTION_FIELDS = [
+    {
+        key: "taxRate",
+        label: "Tax Rate",
+        type: "number",
+        isRequired: true,
+        isSearchable: false,
+        isFilterable: false,
+        isReadonly: false,
+        isHidden: false,
+        isSystemGenerated: false,
+        defaultValue: null,
+    },
+    {
+        key: "nonTaxRate",
+        label: "Non-Tax Rate",
+        type: "number",
+        isRequired: true,
+        isSearchable: false,
+        isFilterable: false,
+        isReadonly: false,
+        isHidden: false,
+        isSystemGenerated: false,
+        defaultValue: null,
+    },
+    {
+        key: "taxGross",
+        label: "Tax Gross",
+        type: "number",
+        isRequired: true,
+        isSearchable: false,
+        isFilterable: false,
+        isReadonly: true,
+        isHidden: false,
+        isSystemGenerated: false,
+        defaultValue: null,
+    },
+    {
+        key: "nonTaxGross",
+        label: "Non-Tax Gross",
+        type: "number",
+        isRequired: true,
+        isSearchable: false,
+        isFilterable: false,
+        isReadonly: true,
+        isHidden: false,
+        isSystemGenerated: false,
+        defaultValue: null,
+    },
+];
+
+const syncScrapTransactionFields = async ({
+    enabled,
+}: {
+    enabled: boolean;
+}) => {
+    const results: any[] = [];
+    const desiredHidden = !enabled;
+
+    for (const module of SCRAP_TRANSACTION_MODULES) {
+        const schemaResponse = await professionalAxios.get(
+            TRANSACTION_SCHEMA_GET_ALL_API,
+            {
+                params: {
+                    module,
+                },
+            }
+        );
+
+        if (schemaResponse?.data?.success === false) {
+            throw new Error(
+                schemaResponse?.data?.message ||
+                `Failed to load ${module} transaction schema.`
+            );
+        }
+
+        const schemaData =
+            schemaResponse?.data?.data ||
+            schemaResponse?.data ||
+            {};
+
+        const bodyFields =
+            Array.isArray(schemaData?.body)
+                ? schemaData.body
+                : Array.isArray(schemaData?.schema?.body)
+                    ? schemaData.schema.body
+                    : [];
+
+        const existingFieldsByKey = new Map(
+            bodyFields.map((field: any) => [
+                String(field?.key || "").trim().toLowerCase(),
+                field,
+            ])
+        );
+
+        const missingFields = SCRAP_TRANSACTION_FIELDS.filter(
+            (field) =>
+                !existingFieldsByKey.has(
+                    field.key.toLowerCase()
+                )
+        );
+
+        if (enabled && missingFields.length > 0) {
+            const addResponse = await professionalAxios.post(
+                TRANSACTION_SCHEMA_ADD_FIELD_API,
+                {
+                    module,
+                    section: "body",
+                    fields: missingFields.map((field) => ({
+                        ...field,
+                        isHidden: false,
+                    })),
+                }
+            );
+
+            if (addResponse?.data?.success === false) {
+                throw new Error(
+                    addResponse?.data?.message ||
+                    `Failed to add Scrap Management fields in ${module}.`
+                );
+            }
+        }
+
+        const updatedFields: string[] = [];
+        const skippedFields: string[] = [];
+
+        for (const fieldDefinition of SCRAP_TRANSACTION_FIELDS) {
+            const existingField = existingFieldsByKey.get(
+                fieldDefinition.key.toLowerCase()
+            );
+
+            if (!existingField) {
+                if (!enabled) {
+                    skippedFields.push(fieldDefinition.key);
+                }
+                continue;
+            }
+
+            const currentHidden = toBool(
+                (existingField as any)?.isHidden
+            );
+
+            if (currentHidden === desiredHidden) {
+                skippedFields.push(fieldDefinition.key);
+                continue;
+            }
+
+            const updateResponse = await professionalAxios.put(
+                TRANSACTION_SCHEMA_UPDATE_FIELD_API,
+                {
+                    module,
+                    section: "body",
+                    key: fieldDefinition.key,
+                    updates: {
+                        isHidden: desiredHidden,
+                    },
+                }
+            );
+
+            if (updateResponse?.data?.success === false) {
+                throw new Error(
+                    updateResponse?.data?.message ||
+                    `Failed to update ${fieldDefinition.label} visibility in ${module}.`
+                );
+            }
+
+            updatedFields.push(fieldDefinition.key);
+        }
+
+        results.push({
+            module,
+            addedFields:
+                enabled
+                    ? missingFields.map((field) => field.key)
+                    : [],
+            updatedFields,
+            skippedFields,
+            isHidden: desiredHidden,
+        });
+    }
+
+    return {
+        skipped: results.every(
+            (item) =>
+                item.addedFields.length === 0 &&
+                item.updatedFields.length === 0
+        ),
+        enabled,
+        isHidden: desiredHidden,
         results,
     };
 };
@@ -1447,6 +1777,105 @@ export const saveOrUpdateSystemConfiguration =
                 }
 
                 /* ==========================================
+                   ⭐ SCRAP MANAGEMENT -> PRODUCT MASTER FIELD
+
+                   Trigger:
+                   systemConfiguration.scrapManagement.enableScrapManagement
+
+                   Adds Margin Product as a boolean field only
+                   when it does not already exist.
+                ========================================== */
+
+                let scrapProductMasterFieldSync: any = {
+                    skipped: true,
+                };
+
+                try {
+                    const scrapManagementEnabled =
+                        toBool(
+                            submittedPayload
+                                ?.systemConfiguration
+                                ?.scrapManagement
+                                ?.enableScrapManagement
+                        );
+
+                    scrapProductMasterFieldSync =
+                        await syncScrapProductMasterField({
+                            enabled: scrapManagementEnabled,
+                            dispatch,
+                        });
+
+                    console.log(
+                        "Scrap Product Master field synchronization result:",
+                        scrapProductMasterFieldSync
+                    );
+                } catch (syncError: any) {
+                    console.log(
+                        "syncScrapProductMasterField error:",
+                        syncError
+                    );
+
+                    scrapProductMasterFieldSync = {
+                        failed: true,
+                        message:
+                            syncError?.response?.data?.message ||
+                            syncError?.message ||
+                            "Margin Product field synchronization failed.",
+                    };
+                }
+
+
+                /* ==========================================
+                   ⭐ SCRAP MANAGEMENT -> TRANSACTION FIELDS
+
+                   Trigger:
+                   systemConfiguration.scrapManagement.enableScrapManagement
+
+                   Sales Order / Sales Invoice Body:
+                   taxRate, nonTaxRate, taxGross, nonTaxGross
+
+                   ON  -> add missing fields / show existing fields
+                   OFF -> hide existing fields, never delete them
+                ========================================== */
+
+                let scrapTransactionFieldSync: any = {
+                    skipped: true,
+                };
+
+                try {
+                    const scrapManagementEnabled =
+                        toBool(
+                            submittedPayload
+                                ?.systemConfiguration
+                                ?.scrapManagement
+                                ?.enableScrapManagement
+                        );
+
+                    scrapTransactionFieldSync =
+                        await syncScrapTransactionFields({
+                            enabled: scrapManagementEnabled,
+                        });
+
+                    console.log(
+                        "Scrap transaction field synchronization result:",
+                        scrapTransactionFieldSync
+                    );
+                } catch (syncError: any) {
+                    console.log(
+                        "syncScrapTransactionFields error:",
+                        syncError
+                    );
+
+                    scrapTransactionFieldSync = {
+                        failed: true,
+                        message:
+                            syncError?.response?.data?.message ||
+                            syncError?.message ||
+                            "Scrap transaction fields synchronization failed.",
+                    };
+                }
+
+                /* ==========================================
                    STEP 3: RETURN SUCCESSFUL CONFIGURATION
                 ========================================== */
 
@@ -1468,6 +1897,10 @@ export const saveOrUpdateSystemConfiguration =
                     vehicleMasterSync,
 
                     transportationTransactionFieldSync,
+
+                    scrapProductMasterFieldSync,
+
+                    scrapTransactionFieldSync,
                 };
             } catch (err: any) {
                 return rejectWithValue({
