@@ -87,6 +87,7 @@ const emptyProductRow = {
     // Margin-product fields
     marginProduct: false,
     nonTaxRate: "",
+    taxRate: "",
     taxGross: "",
     nonTaxGross: "",
 };
@@ -877,7 +878,7 @@ const SalesOrder = () => {
         return updated;
     };
 
-    const calculateRow = (row: any) => {
+    const calculateRow = (row: any, changedKey = "") => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
 
@@ -898,11 +899,40 @@ const SalesOrder = () => {
             ? num(row.nonTaxRate) * quantity
             : 0;
 
-        const discountPercent =
-            safePercent(
-                row.discountPercentage ||
-                row.discount
-            );
+        const changedDiscountKey =
+            String(changedKey || "")
+                .trim()
+                .toLowerCase();
+
+        const isDiscountPercentChanged =
+            changedDiscountKey === "discount" ||
+            changedDiscountKey === "discountpercentage";
+
+        const discountPercentSource =
+            changedDiscountKey === "discount"
+                ? row.discount
+                : changedDiscountKey === "discountpercentage"
+                    ? row.discountPercentage
+                    : row.discountPercentage !== undefined &&
+                        row.discountPercentage !== null &&
+                        row.discountPercentage !== ""
+                        ? row.discountPercentage
+                        : row.discount;
+
+        const hasDiscountPercent =
+            discountPercentSource !== undefined &&
+            discountPercentSource !== null &&
+            discountPercentSource !== "";
+
+        const hasDiscountAmount =
+            row.discountAmount !== undefined &&
+            row.discountAmount !== null &&
+            row.discountAmount !== "";
+
+        let discountPercent =
+            hasDiscountPercent
+                ? safePercent(discountPercentSource)
+                : 0;
 
         const cgstPercent =
             safePercent(
@@ -931,12 +961,71 @@ const SalesOrder = () => {
                     : row.igst
             );
 
-        const discountAmount =
-            (gross * discountPercent) /
-            100;
+        const discountBase =
+            marginProduct
+                ? taxGross
+                : gross;
+
+        const isDiscountAmountChanged =
+            changedDiscountKey === "discountamount";
+
+        let discountAmountValue: any = "";
+        let calculatedDiscountAmount = 0;
+
+        if (isDiscountAmountChanged) {
+            if (hasDiscountAmount) {
+                calculatedDiscountAmount =
+                    num(row.discountAmount);
+
+                discountPercent =
+                    discountBase > 0
+                        ? (calculatedDiscountAmount / discountBase) * 100
+                        : 0;
+
+                discountAmountValue =
+                    row.discountAmount;
+            } else {
+                calculatedDiscountAmount = 0;
+                discountPercent = 0;
+                discountAmountValue = "";
+            }
+        } else if (isDiscountPercentChanged) {
+            if (hasDiscountPercent) {
+                calculatedDiscountAmount =
+                    (discountBase * discountPercent) /
+                    100;
+
+                discountAmountValue =
+                    calculatedDiscountAmount;
+            } else {
+                calculatedDiscountAmount = 0;
+                discountPercent = 0;
+                discountAmountValue = "";
+            }
+        } else if (hasDiscountPercent) {
+            calculatedDiscountAmount =
+                (discountBase * discountPercent) /
+                100;
+
+            discountAmountValue =
+                calculatedDiscountAmount;
+        } else if (hasDiscountAmount) {
+            calculatedDiscountAmount =
+                num(row.discountAmount);
+
+            discountPercent =
+                discountBase > 0
+                    ? (calculatedDiscountAmount / discountBase) * 100
+                    : 0;
+
+            discountAmountValue =
+                row.discountAmount;
+        }
 
         const taxableAmount =
-            gross - discountAmount;
+            marginProduct
+                ? gross
+                : gross - calculatedDiscountAmount;
 
         const cgstAmount =
             (taxableAmount *
@@ -961,10 +1050,21 @@ const SalesOrder = () => {
             sgstAmount +
             igstAmount;
 
+        const netBaseAmount =
+            marginProduct
+                ? taxGross - calculatedDiscountAmount
+                : taxableAmount;
+
         const netAmount =
-            taxableAmount +
+            netBaseAmount +
             taxAmount +
             otherAmount;
+
+        const discountPercentageValue =
+            hasDiscountPercent ||
+                hasDiscountAmount
+                ? discountPercent
+                : "";
 
         return {
             ...row,
@@ -975,13 +1075,15 @@ const SalesOrder = () => {
             gross,
             grossAmount: gross,
 
-            discount: row.discount,
+            discount:
+                discountPercentageValue,
 
             discountPercentage:
-                row.discountPercentage ||
-                row.discount,
+                discountPercentageValue,
 
-            discountAmount,
+            discountAmount:
+                discountAmountValue,
+
             taxableAmount,
 
             cgst: cgstPercent,
@@ -1597,6 +1699,13 @@ const SalesOrder = () => {
                                     isTrueValue(
                                         item?.marginProduct
                                     ),
+
+                                taxRate:
+                                    item?.taxRate ??
+                                    item
+                                        ?.dynamicBodyFields
+                                        ?.taxRate ??
+                                    "",
 
                                 nonTaxRate:
                                     item?.nonTaxRate ??
@@ -2327,6 +2436,20 @@ const SalesOrder = () => {
                         "",
                     availableQuantity: null,
 
+                    taxRate:
+                        marginProduct
+                            ? (
+                                createdProduct
+                                    ?.taxRate ??
+                                createdProduct
+                                    ?.dynamicFields
+                                    ?.taxRate ??
+                                updatedRow
+                                    ?.taxRate ??
+                                ""
+                            )
+                            : "",
+
                     nonTaxRate:
                         marginProduct
                             ? (
@@ -2616,6 +2739,7 @@ const SalesOrder = () => {
 
                 updatedRow.marginProduct = marginProduct;
                 if (!marginProduct) {
+                    updatedRow.taxRate = "";
                     updatedRow.nonTaxRate = "";
                     updatedRow.taxGross = "";
                     updatedRow.nonTaxGross = "";
@@ -2717,7 +2841,7 @@ const SalesOrder = () => {
             }
 
             updatedRow =
-                calculateRow(updatedRow);
+                calculateRow(updatedRow, key);
 
             updatedProducts[index] =
                 updatedRow;
@@ -3287,6 +3411,14 @@ const SalesOrder = () => {
 
                         marginProduct,
 
+                        taxRate:
+                            marginProduct
+                                ? String(
+                                    item.taxRate ??
+                                    ""
+                                )
+                                : "",
+
                         nonTaxRate:
                             marginProduct
                                 ? String(
@@ -3325,6 +3457,12 @@ const SalesOrder = () => {
                             ...(
                                 marginProduct
                                     ? {
+                                        taxRate:
+                                            String(
+                                                item.taxRate ??
+                                                ""
+                                            ),
+
                                         nonTaxRate:
                                             String(
                                                 item.nonTaxRate ??
@@ -3687,8 +3825,8 @@ const SalesOrder = () => {
                                         "",
 
                                     discountAmount:
-                                        item?.discountAmount ||
-                                        0,
+                                        item?.discountAmount ??
+                                        "",
 
                                     taxableAmount:
                                         item?.taxableAmount ||
@@ -3759,6 +3897,13 @@ const SalesOrder = () => {
                                             item
                                                 ?.marginProduct
                                         ),
+
+                                    taxRate:
+                                        item?.taxRate ??
+                                        item
+                                            ?.dynamicBodyFields
+                                            ?.taxRate ??
+                                        "",
 
                                     nonTaxRate:
                                         item?.nonTaxRate ??

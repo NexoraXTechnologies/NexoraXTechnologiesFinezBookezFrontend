@@ -21,6 +21,7 @@ type GetPermissionsParams = {
     limit?: number;
     parentMobile: string;
     childMobile: string;
+    storeInLocal:boolean;
 };
 
 type RejectValue = {
