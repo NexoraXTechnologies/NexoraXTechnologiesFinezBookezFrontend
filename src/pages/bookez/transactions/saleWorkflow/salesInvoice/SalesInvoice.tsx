@@ -1252,7 +1252,7 @@ const SalesInVoice = () => {
         return updated;
     };
 
-    const calculateRow = (row: any) => {
+    const calculateRow = (row: any, changedKey = "") => {
         const quantity = num(row.quantity);
         const rate = num(row.rate);
         const gross = quantity * rate;
@@ -1267,13 +1267,43 @@ const SalesInVoice = () => {
             ? num(row.nonTaxRate) * quantity
             : 0;
 
-        const discountPercent = safePercent(
-            row.discountPercentage !== undefined &&
-                row.discountPercentage !== null &&
-                row.discountPercentage !== ""
-                ? row.discountPercentage
-                : row.discount
-        );
+        const changedDiscountKey =
+            String(changedKey || "")
+                .trim()
+                .toLowerCase();
+
+        const isDiscountPercentChanged =
+            changedDiscountKey === "discount" ||
+            changedDiscountKey === "discountpercentage";
+
+        const isDiscountAmountChanged =
+            changedDiscountKey === "discountamount";
+
+        const discountPercentSource =
+            changedDiscountKey === "discount"
+                ? row.discount
+                : changedDiscountKey === "discountpercentage"
+                    ? row.discountPercentage
+                    : row.discountPercentage !== undefined &&
+                        row.discountPercentage !== null &&
+                        row.discountPercentage !== ""
+                        ? row.discountPercentage
+                        : row.discount;
+
+        const hasDiscountPercent =
+            discountPercentSource !== undefined &&
+            discountPercentSource !== null &&
+            discountPercentSource !== "";
+
+        const hasDiscountAmount =
+            row.discountAmount !== undefined &&
+            row.discountAmount !== null &&
+            row.discountAmount !== "";
+
+        let discountPercent =
+            hasDiscountPercent
+                ? safePercent(discountPercentSource)
+                : 0;
 
         const cgstPercent = safePercent(
             row.cgstPercentage !== undefined &&
@@ -1299,8 +1329,46 @@ const SalesInVoice = () => {
                 : row.igst
         );
 
-        const discountAmount = (gross * discountPercent) / 100;
-        const taxableAmount = gross - discountAmount;
+        let discountAmountValue: any = "";
+        let calculatedDiscountAmount = 0;
+
+        if (isDiscountAmountChanged) {
+            if (hasDiscountAmount) {
+                calculatedDiscountAmount = num(row.discountAmount);
+                discountPercent =
+                    gross > 0
+                        ? (calculatedDiscountAmount / gross) * 100
+                        : 0;
+                discountAmountValue = row.discountAmount;
+            } else {
+                calculatedDiscountAmount = 0;
+                discountPercent = 0;
+                discountAmountValue = "";
+            }
+        } else if (isDiscountPercentChanged) {
+            if (hasDiscountPercent) {
+                calculatedDiscountAmount =
+                    (gross * discountPercent) / 100;
+                discountAmountValue = calculatedDiscountAmount;
+            } else {
+                calculatedDiscountAmount = 0;
+                discountPercent = 0;
+                discountAmountValue = "";
+            }
+        } else if (hasDiscountPercent) {
+            calculatedDiscountAmount =
+                (gross * discountPercent) / 100;
+            discountAmountValue = calculatedDiscountAmount;
+        } else if (hasDiscountAmount) {
+            calculatedDiscountAmount = num(row.discountAmount);
+            discountPercent =
+                gross > 0
+                    ? (calculatedDiscountAmount / gross) * 100
+                    : 0;
+            discountAmountValue = row.discountAmount;
+        }
+
+        const taxableAmount = gross - calculatedDiscountAmount;
 
         const cgstAmount = (taxableAmount * cgstPercent) / 100;
         const sgstAmount = (taxableAmount * sgstPercent) / 100;
@@ -1310,12 +1378,18 @@ const SalesInVoice = () => {
         const taxAmount = cgstAmount + sgstAmount + igstAmount;
         const netAmount = taxableAmount + taxAmount + otherAmount;
 
+        const discountPercentageValue =
+            hasDiscountPercent ||
+                hasDiscountAmount
+                ? discountPercent
+                : "";
+
         return {
             ...row,
             quantity: row.quantity,
             rate: row.rate,
-            discount: discountPercent,
-            discountPercentage: discountPercent,
+            discount: discountPercentageValue,
+            discountPercentage: discountPercentageValue,
             cgst: cgstPercent,
             cgstPercentage: cgstPercent,
             sgst: sgstPercent,
@@ -1325,7 +1399,7 @@ const SalesInVoice = () => {
             otherAmount: row.otherAmount,
             gross,
             grossAmount: gross,
-            discountAmount,
+            discountAmount: discountAmountValue,
             taxableAmount,
             cgstAmount,
             sgstAmount,
@@ -2583,7 +2657,7 @@ const SalesInVoice = () => {
                 updatedRow.sgstAmount = 0;
             }
 
-            updatedRow = calculateRow(updatedRow);
+            updatedRow = calculateRow(updatedRow, key);
             updatedProducts[index] = updatedRow;
 
             return { ...prev, products: updatedProducts };
@@ -3061,7 +3135,7 @@ const SalesInVoice = () => {
                     grossAmount: item?.grossAmount || item?.gross || 0,
                     discount: item?.discount || item?.discountPercentage || "",
                     discountPercentage: item?.discountPercentage || item?.discount || "",
-                    discountAmount: item?.discountAmount || 0,
+                    discountAmount: item?.discountAmount ?? "",
                     taxableAmount: item?.taxableAmount || 0,
                     cgst: item?.cgst || item?.cgstPercentage || "",
                     cgstPercentage: item?.cgstPercentage || item?.cgst || "",
