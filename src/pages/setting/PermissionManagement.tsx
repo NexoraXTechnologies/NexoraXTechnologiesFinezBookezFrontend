@@ -10,126 +10,6 @@ type ActionKey = "view" | "create" | "update" | "delete";
 
 const actions: ActionKey[] = ["view", "create", "update", "delete"];
 
-const moduleTabs = [
-    { label: "BookEZ", key: "bookez" },
-    { label: "TaxEZ", key: "taxez" },
-    { label: "PayrollEZ", key: "payrollEz" },
-];
-
-const permissionSections: any = {
-    bookez: [
-        {
-            title: "Masters",
-            items: [
-                { label: "Account Master", key: "accountMaster" },
-                { label: "Product Master", key: "productMaster" },
-                { label: "Unit Master", key: "unitMaster" },
-                { label: "Report Mapping", key: "reportMappingMaster" },
-            ],
-        },
-        {
-            title: "Opening / Other Vouchers",
-            items: [
-                { label: "Opening Balance", key: "openingBalance" },
-                { label: "Opening Stock", key: "openingStock" },
-                { label: "Journal Voucher", key: "journalVouchar" },
-                { label: "Contra Voucher", key: "contraVoucher" },
-                { label: "Credit Note", key: "creditNote" },
-                { label: "Debit Notes", key: "debitNotes" },
-            ],
-        },
-        {
-            title: "Sales Workflow",
-            items: [
-                { label: "Sales Quotation", key: "salesQuotation" },
-                { label: "Sales Order", key: "salesOrder" },
-                { label: "Sales Invoice", key: "salesInvoice" },
-                { label: "Sales Return", key: "salesReturn" },
-                { label: "Receipt", key: "receipt" },
-            ],
-        },
-        {
-            title: "Purchase Workflow",
-            items: [
-                { label: "Purchase Order", key: "purchaseOrder" },
-                { label: "GRN", key: "grn" },
-                { label: "Purchase Invoice", key: "purchaseInvoice" },
-                { label: "Purchase Return", key: "purchaseReturn" },
-                { label: "Payment", key: "payment" },
-            ],
-        },
-        {
-            title: "Reports",
-            items: [
-                { label: "Account Receivable", key: "accountReceivable" },
-                { label: "Account Payable", key: "accountPayable" },
-                { label: "Account Ledger", key: "accountLedger" },
-                { label: "Stock Ledger", key: "stockLedger" },
-                { label: "Profit And Loss", key: "profitAndLoss" },
-                { label: "Balance Sheet", key: "balanceSheet" },
-                { label: "Cash Bank Report", key: "cashbankReport" },
-                { label: "SO Drill Down Report", key: "soDrillDownReport" },
-            ],
-        },
-        {
-            title: "Registers",
-            items: [
-                { label: "All Registers", key: "allRegisters" },
-                { label: "Sales Register", key: "registers.salesRegister" },
-                { label: "Purchase Register", key: "registers.purchaseRegister" },
-                { label: "Receipt Register", key: "registers.receiptRegister" },
-                { label: "Payment Register", key: "registers.paymentRegister" },
-                { label: "Quotation Register", key: "registers.quotationRegister" },
-                { label: "Sales Return Register", key: "registers.salesReturnRegister" },
-                { label: "Purchase Return Register", key: "registers.purchaseReturnRegister" },
-                { label: "Opening Balance Register", key: "registers.openingBalanceRegister" },
-                { label: "Opening Stock Register", key: "registers.openingStockRegister" },
-                { label: "Credit Note Register", key: "registers.creditNoteRegister" },
-                { label: "Debit Note Register", key: "registers.debitNoteRegister" },
-            ],
-        },
-        {
-            title: "Productions",
-            items: [
-                { label: "All Productions", key: "AllProductions" },
-                { label: "Assembly Production", key: "productions.assemblyProduction" },
-                { label: "Issues To Production", key: "productions.issuesToProduction" },
-                { label: "Receipt From Production", key: "productions.receiptFromProduction" },
-            ],
-        },
-    ],
-
-    taxez: [
-        {
-            title: "TaxEZ",
-            items: [
-                { label: "Document Management", key: "documentManagement" },
-                { label: "Refund Status", key: "refundStatus" },
-                { label: "Reset ITR Password", key: "resetITRPassword" },
-                { label: "Form 26AS", key: "form26AS" },
-                { label: "AIS", key: "ais" },
-                { label: "TIS", key: "tis" },
-                { label: "Tax Payer", key: "taxPayer" },
-                { label: "File ITR 1", key: "fileITR1" },
-                { label: "File ITR 4", key: "fileITR4" },
-                { label: "Upload Form 16", key: "uploadForm16" },
-                { label: "Download ITR", key: "downloadITR" },
-            ],
-        },
-    ],
-
-    payrollEz: [
-        {
-            title: "PayrollEZ",
-            items: [
-                { label: "Attendance", key: "attendance" },
-                { label: "Holiday Calendar", key: "holidayCalendar" },
-                { label: "Attendance Register", key: "attendanceRegister" },
-            ],
-        },
-    ],
-};
-
 const defaultPermissionAction = {
     view: false,
     create: false,
@@ -137,45 +17,153 @@ const defaultPermissionAction = {
     delete: false,
 };
 
+const isToggleOnlyModule = (moduleData: any) => {
+    return typeof moduleData === "object" && moduleData !== null && !("enabled" in moduleData) && !("permissions" in moduleData) && "view" in moduleData;
+};
+
+const isCrudPermission = (value: any) => {
+    return typeof value === "object" && value !== null && !Array.isArray(value) && ("view" in value || "create" in value || "update" in value || "delete" in value);
+};
+
+const formatLabel = (value: string) => {
+    if (!value) return "";
+
+    return value
+        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .split(" ")
+        .map((word) => /^[A-Z0-9]+$/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+};
+
+const formatModuleLabel = (key: string, moduleData?: any) => {
+    if (moduleData?.label) return moduleData.label;
+    if (moduleData?.title) return moduleData.title;
+    if (moduleData?.name) return moduleData.name;
+
+    const spaced = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+
+    if (/ez$/i.test(spaced)) {
+        const base = spaced.replace(/\s*ez$/i, "");
+        return `${formatLabel(base)}EZ`;
+    }
+
+    return formatLabel(key);
+};
+
+const flattenPermissionItems = (permissionObject: any, parentPath = ""): any[] => {
+    const items: any[] = [];
+
+    Object.entries(permissionObject || {}).forEach(([key, value]: any) => {
+        const currentPath = parentPath ? `${parentPath}.${key}` : key;
+
+        if (isCrudPermission(value)) {
+            items.push({
+                key: currentPath,
+                label: value?.label || value?.title || value?.name || formatLabel(key),
+            });
+            return;
+        }
+
+        if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+            items.push(...flattenPermissionItems(value, currentPath));
+        }
+    });
+
+    return items;
+};
+
+const buildPermissionSections = (permissionObject: any) => {
+    const directItems: any[] = [];
+    const nestedSections: any[] = [];
+
+    Object.entries(permissionObject || {}).forEach(([key, value]: any) => {
+        if (isCrudPermission(value)) {
+            directItems.push({
+                key,
+                label: value?.label || value?.title || value?.name || formatLabel(key),
+            });
+            return;
+        }
+
+        if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+            const items = flattenPermissionItems(value, key);
+
+            if (items.length > 0) {
+                nestedSections.push({
+                    title: value?.label || value?.title || value?.name || formatLabel(key),
+                    items,
+                });
+            }
+        }
+    });
+
+    const sections: any[] = [];
+
+    if (directItems.length > 0) {
+        sections.push({
+            title: "Permissions",
+            items: directItems,
+        });
+    }
+
+    sections.push(...nestedSections);
+
+    return sections;
+};
+
 const getChangedPermissions = (oldData: any, newData: any) => {
     const changes: any = {};
+
     Object.keys(newData || {}).forEach((moduleKey) => {
         const oldModule = oldData?.[moduleKey];
         const newModule = newData?.[moduleKey];
+
+        if (isToggleOnlyModule(newModule)) {
+            if (oldModule?.view !== newModule?.view) {
+                changes[moduleKey] = {
+                    view: newModule?.view === true,
+                };
+            }
+
+            return;
+        }
+
         if (oldModule?.enabled !== newModule?.enabled) {
             changes[moduleKey] = {
                 ...(changes[moduleKey] || {}),
                 enabled: newModule?.enabled,
             };
         }
+
         const oldPermissions = oldModule?.permissions || {};
         const newPermissions = newModule?.permissions || {};
-        const comparePermissionObject = (
-            oldObj: any,
-            newObj: any,
-            path: string[] = []
-        ) => {
+
+        const comparePermissionObject = (oldObj: any, newObj: any, path: string[] = []) => {
             Object.keys(newObj || {}).forEach((key) => {
                 const oldValue = oldObj?.[key];
                 const newValue = newObj?.[key];
                 const currentPath = [...path, key];
+
                 const isCrudObject = typeof newValue === "object" && newValue !== null && ("view" in newValue || "create" in newValue || "update" in newValue || "delete" in newValue);
+
                 if (isCrudObject) {
                     const changedActions: any = {};
-                    ["view", "create", "update", "delete"].forEach((action) => {
+
+                    actions.forEach((action) => {
                         if (oldValue?.[action] !== newValue?.[action]) {
                             changedActions[action] = newValue?.[action];
                         }
                     });
 
                     if (Object.keys(changedActions).length > 0) {
-                        if (!changes[moduleKey]) {
-                            changes[moduleKey] = {};
-                        }
-                        if (!changes[moduleKey].permissions) {
-                            changes[moduleKey].permissions = {};
-                        }
+                        if (!changes[moduleKey]) changes[moduleKey] = {};
+                        if (!changes[moduleKey].permissions) changes[moduleKey].permissions = {};
+
                         let current = changes[moduleKey].permissions;
+
                         currentPath.forEach((pathKey, index) => {
                             if (index === currentPath.length - 1) {
                                 current[pathKey] = changedActions;
@@ -190,85 +178,113 @@ const getChangedPermissions = (oldData: any, newData: any) => {
                 }
             });
         };
+
         comparePermissionObject(oldPermissions, newPermissions);
     });
+
     return changes;
 };
 
 const getValueByPath = (obj: any, path: string, action: ActionKey) => {
     const keys = path.split(".");
     let current = obj;
+
     for (const key of keys) {
         current = current?.[key];
         if (!current) return false;
     }
+
     return current?.[action] === true;
 };
 
-const setValueByPath = (
-    obj: any,
-    path: string,
-    action: ActionKey,
-    value: boolean
-) => {
+const setValueByPath = (obj: any, path: string, action: ActionKey, value: boolean) => {
     const keys = path.split(".");
     let current = obj;
+
     keys.forEach((key, index) => {
         if (!current[key]) current[key] = index === keys.length - 1 ? { ...defaultPermissionAction } : {};
         current = current[key];
     });
+
     current[action] = value;
 };
 
-const createDefaultPermissionData = () => {
-    return {
-        bookez: {
-            enabled: false,
-            permissions: {},
-        },
-        taxez: {
-            enabled: false,
-            permissions: {},
-        },
-        payrollEz: {
-            enabled: false,
-            permissions: {},
-        },
-    };
-};
-
 const PermissionManagement = () => {
-    const [activeModule, setActiveModule] = useState("bookez");
     const dispatch = useDispatch();
     const { users } = useSelector((s: any) => s.professionalUser || {});
-    const [userOption, setUserOption] = useState([]);
-    const [selectUser, setSelectUser]: any = useState();
-    const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
     const { permissions, loader } = useSelector((s: any) => s.permissions || {});
-    const [permissionData, setPermissionData] = useState<any>(
-        createDefaultPermissionData()
-    );
+
+    const [activeModule, setActiveModule] = useState("");
+    const [userOption, setUserOption] = useState<any[]>([]);
+    const [selectUser, setSelectUser]: any = useState();
+    const [permissionData, setPermissionData] = useState<any>({});
+
+    const moduleTabs = useMemo(() => {
+        return Object.entries(permissionData || {}).map(([key, value]: any) => ({
+            key,
+            label: formatModuleLabel(key, value),
+        }));
+    }, [permissionData]);
+
+    const activeModuleData = permissionData?.[activeModule];
+    const activeIsToggleOnly = isToggleOnlyModule(activeModuleData);
 
     const activeSections = useMemo(() => {
-        return permissionSections?.[activeModule] || [];
-    }, [activeModule]);
+        if (isToggleOnlyModule(permissionData?.[activeModule])) return [];
+        return buildPermissionSections(permissionData?.[activeModule]?.permissions || {});
+    }, [activeModule, permissionData]);
 
-    const handleModuleToggle = (moduleKey: string) => {
-        setPermissionData((prev: any) => ({
-            ...prev,
-            [moduleKey]: {
-                ...prev[moduleKey],
-                enabled: !prev?.[moduleKey]?.enabled,
-                permissions: prev?.[moduleKey]?.permissions || {},
-            },
-        }));
+    const totalPermissions = useMemo(() => {
+        return activeSections.reduce((total: number, section: any) => total + (section?.items?.length || 0), 0);
+    }, [activeSections]);
+
+    const handleUserChange = (e: any) => {
+        const selectedValue = e?.target?.value ?? e?.value;
+        const selected = userOption.find((user: any) => user?.value === selectedValue || user?.userMobileNumberHash === selectedValue);
+
+        if (selected) {
+            setSelectUser(selected);
+            return;
+        }
+
+        if (e?.target?.userMobileNumberHash) {
+            setSelectUser(e.target);
+            return;
+        }
+
+        if (e?.userMobileNumberHash) {
+            setSelectUser(e);
+        }
     };
 
-    const handlePermissionToggle = (
-        moduleKey: string,
-        permissionKey: string,
-        action: ActionKey
-    ) => {
+    const handleModuleToggle = (moduleKey: string) => {
+        if (!moduleKey) return;
+
+        setPermissionData((prev: any) => {
+            const moduleData = prev?.[moduleKey];
+
+            if (isToggleOnlyModule(moduleData)) {
+                return {
+                    ...prev,
+                    [moduleKey]: {
+                        ...moduleData,
+                        view: !moduleData?.view,
+                    },
+                };
+            }
+
+            return {
+                ...prev,
+                [moduleKey]: {
+                    ...moduleData,
+                    enabled: !moduleData?.enabled,
+                    permissions: moduleData?.permissions || {},
+                },
+            };
+        });
+    };
+
+    const handlePermissionToggle = (moduleKey: string, permissionKey: string, action: ActionKey) => {
         setPermissionData((prev: any) => {
             const updated = structuredClone(prev);
 
@@ -279,32 +295,17 @@ const PermissionManagement = () => {
                 };
             }
 
-            if (!updated[moduleKey].permissions) {
-                updated[moduleKey].permissions = {};
-            }
+            if (!updated[moduleKey].permissions) updated[moduleKey].permissions = {};
 
-            const currentValue = getValueByPath(
-                updated[moduleKey].permissions,
-                permissionKey,
-                action
-            );
+            const currentValue = getValueByPath(updated[moduleKey].permissions, permissionKey, action);
 
-            setValueByPath(
-                updated[moduleKey].permissions,
-                permissionKey,
-                action,
-                !currentValue
-            );
+            setValueByPath(updated[moduleKey].permissions, permissionKey, action, !currentValue);
 
             return updated;
         });
     };
 
-    const handleRowToggle = (
-        moduleKey: string,
-        permissionKey: string,
-        checked: boolean
-    ) => {
+    const handleRowToggle = (moduleKey: string, permissionKey: string, checked: boolean) => {
         setPermissionData((prev: any) => {
             const updated = structuredClone(prev);
 
@@ -315,17 +316,10 @@ const PermissionManagement = () => {
                 };
             }
 
-            if (!updated[moduleKey].permissions) {
-                updated[moduleKey].permissions = {};
-            }
+            if (!updated[moduleKey].permissions) updated[moduleKey].permissions = {};
 
             actions.forEach((action) => {
-                setValueByPath(
-                    updated[moduleKey].permissions,
-                    permissionKey,
-                    action,
-                    checked
-                );
+                setValueByPath(updated[moduleKey].permissions, permissionKey, action, checked);
             });
 
             return updated;
@@ -333,34 +327,29 @@ const PermissionManagement = () => {
     };
 
     const isFullRowChecked = (moduleKey: string, permissionKey: string) => {
-        return actions.every((action) =>
-            getValueByPath(
-                permissionData?.[moduleKey]?.permissions,
-                permissionKey,
-                action
-            )
-        );
+        return actions.every((action) => getValueByPath(permissionData?.[moduleKey]?.permissions, permissionKey, action));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         try {
-            const changedPermissions = getChangedPermissions(
-                permissions,
-                permissionData
-            );
+            const changedPermissions = getChangedPermissions(permissions, permissionData);
 
             if (Object.keys(changedPermissions).length === 0) {
                 toast.warn("No change found");
                 return;
             }
+
             const payload: any = {
                 parentMobile: selectUser?.parentUserMobileNumber,
                 childMobile: selectUser?.userMobileNumberHash,
                 permissions: changedPermissions,
             };
+
             // @ts-ignore
-            dispatch(updatePermission({ payload }) as any);
+            await dispatch(updatePermission({ payload }) as any).unwrap();
+
             toast.success("Permission Updated");
+
             if (selectUser?.parentUserMobileNumber === selectUser?.userMobileNumberHash) {
                 localStorage.setItem("permissions", JSON.stringify(permissionData));
             }
@@ -376,51 +365,80 @@ const PermissionManagement = () => {
     }, []);
 
     useEffect(() => {
-        const _ = users?.reduce((a: any, c: any) => {
-            a.push({ label: (c?.parentUserMobileNumber !== c?.userMobileNumberHash) ? `${c?.userFirstName} ${c?.userLastName}` : "Me (Parent Account)", value: c?.userMobileNumberHash, ...c });
+        const options = users?.reduce((a: any, c: any) => {
+            a.push({
+                label: c?.parentUserMobileNumber !== c?.userMobileNumberHash ? `${c?.userFirstName} ${c?.userLastName}` : "Me (Parent Account)",
+                value: c?.userMobileNumberHash,
+                ...c,
+            });
+
             return a;
         }, []);
-        setUserOption(_);
-        setSelectUser(_?.[0]);
+
+        setUserOption(options || []);
+
+        setSelectUser((currentUser: any) => {
+            if (currentUser?.userMobileNumberHash) {
+                const existingUser = options?.find((user: any) => user?.userMobileNumberHash === currentUser?.userMobileNumberHash);
+                if (existingUser) return existingUser;
+            }
+
+            return options?.[0];
+        });
     }, [users]);
 
     useEffect(() => {
+        if (!selectUser?.parentUserMobileNumber || !selectUser?.userMobileNumberHash) return;
+
+        setPermissionData({});
+
         // @ts-ignore
-        dispatch(getAllPermissions({ parentMobile: selectUser?.parentUserMobileNumber || localUser?.parentUserMobileNumber, childMobile: selectUser?.userMobileNumberHash || localUser?.userMobileNumberHash, storeInLocal: false }));
-    }, [selectUser]);
+        dispatch(getAllPermissions({
+            parentMobile: selectUser.parentUserMobileNumber,
+            childMobile: selectUser.userMobileNumberHash,
+            storeInLocal: false,
+        }));
+    }, [selectUser?.parentUserMobileNumber, selectUser?.userMobileNumberHash]);
 
     useEffect(() => {
-        if (permissions && Object.keys(permissions)?.length > 0) setPermissionData(permissions);
+        const apiPermissions = permissions && typeof permissions === "object" ? permissions : {};
+
+        setPermissionData(apiPermissions);
+
+        const availableModules = Object.keys(apiPermissions);
+
+        setActiveModule((currentModule) => {
+            if (currentModule && availableModules.includes(currentModule)) return currentModule;
+            return availableModules?.[0] || "";
+        });
     }, [permissions]);
 
     return (
-        <div className="min-h-screen w-full bg-background p-4 text-foreground">
-            <div className="mx-auto space-y-4">
-                {/* Header */}
-                <div className="rounded-md border border-border bg-card p-3 text-card-foreground shadow-sm">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                                    <ShieldCheck size={22} />
-                                </div>
+        <div className="min-h-screen bg-muted/20 p-4 text-foreground">
+            <div className="mx-auto max-w-[1700px] space-y-4">
+                <div className="rounded-xl border border-border bg-card shadow-sm">
+                    <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <ShieldCheck size={23} />
+                            </div>
 
-                                <div>
-                                    <h1 className="text-xl font-bold text-card-foreground">
-                                        Permission Management
-                                    </h1>
-                                    <p className="text-sm text-muted-foreground">
-                                        Manage module access and CRUD permissions for users.
-                                    </p>
-                                </div>
+                            <div>
+                                <h1 className="text-xl font-bold leading-tight text-card-foreground">
+                                    Permission Management
+                                </h1>
+
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Manage module access and CRUD permissions for users.
+                                </p>
                             </div>
                         </div>
 
                         <button
                             type="button"
                             onClick={handleSave}
-                            disabled={loader}
-                            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={loader || !selectUser || !activeModule}
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <Save size={16} />
                             {loader ? "Loading..." : "Save Permissions"}
@@ -428,216 +446,339 @@ const PermissionManagement = () => {
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex justify-between rounded-md border border-border bg-card p-3 text-card-foreground shadow-sm">
-                    <div className="w-100 flex items-center">
-                        <label className="me-2 text-nowrap text-sm font-medium text-card-foreground" htmlFor="">
-                            Select User
-                        </label>
-                        <SelectInput  {...{ name: "Hello", label: "", value: selectUser?.value, onChange: (e: any) => setSelectUser(e?.target), options: userOption, placeholder: "Select User" }} />
-                    </div>
+                <div className="rounded-xl border border-border bg-card shadow-sm">
+                    <div className="p-4">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+                            <div className="shrink-0">
+                                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Select User
+                                </p>
 
-                    <div className="flex flex-wrap gap-2">
-                        {moduleTabs.map((tab) => {
-                            const isActive = activeModule === tab.key;
-                            const enabled = permissionData?.[tab.key]?.enabled === true;
+                                <div className="w-full lg:w-[280px]">
+                                    <SelectInput
+                                        {...{
+                                            name: "user",
+                                            label: "",
+                                            value: selectUser?.value,
+                                            onChange: handleUserChange,
+                                            options: userOption,
+                                            placeholder: "Select User",
+                                        }}
+                                    />
+                                </div>
+                            </div>
 
-                            return (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    onClick={() => setActiveModule(tab.key)}
-                                    className={`cursor-pointer rounded-md border px-4 py-2 text-sm font-semibold transition ${isActive
-                                        ? "border-primary bg-primary/10 text-primary"
-                                        : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-                                        }`}
-                                >
-                                    {tab.label}
+                            <div className="hidden h-10 w-px bg-border lg:block" />
 
-                                    <span
-                                        className={`ml-2 rounded-md px-2 py-0.5 text-[11px] ${enabled
-                                            ? "bg-success/10 text-success"
-                                            : "bg-muted text-muted-foreground"
-                                            }`}
-                                    >
-                                        {enabled ? "Enabled" : "Disabled"}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                            <div className="min-w-0 flex-1">
+                                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Modules
+                                </p>
+
+                                <div className="overflow-x-auto pb-1">
+                                    <div className="flex min-w-max gap-2">
+                                        {moduleTabs.map((tab: any) => {
+                                            const moduleData = permissionData?.[tab.key];
+                                            const isActive = activeModule === tab.key;
+                                            const toggleOnly = isToggleOnlyModule(moduleData);
+                                            const enabled = toggleOnly ? moduleData?.view === true : moduleData?.enabled === true;
+
+                                            return (
+                                                <button
+                                                    key={tab.key}
+                                                    type="button"
+                                                    onClick={() => setActiveModule(tab.key)}
+                                                    className={`flex h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition ${isActive
+                                                            ? "border-primary bg-primary/10 text-primary shadow-sm"
+                                                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground"
+                                                        }`}
+                                                >
+                                                    <span>{tab.label}</span>
+
+                                                    <span
+                                                        className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${enabled ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+                                                            }`}
+                                                    >
+                                                        <span className={`h-1.5 w-1.5 rounded-full ${enabled ? "bg-success" : "bg-muted-foreground/60"}`} />
+                                                        {enabled ? "ON" : "OFF"}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Active module card */}
-                <div className="rounded-md border border-border bg-card text-card-foreground shadow-sm">
-                    <div className="flex flex-col gap-3 border-b border-border p-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-card-foreground">
-                                {moduleTabs.find((m) => m.key === activeModule)?.label}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Enable this module first, then manage permission checkboxes.
-                            </p>
-                        </div>
-
-                        <label className="flex cursor-pointer items-center gap-3">
-                            <span className="text-sm font-semibold text-card-foreground">
-                                Module Enabled
-                            </span>
-
-                            <button
-                                type="button"
-                                onClick={() => handleModuleToggle(activeModule)}
-                                className={`relative h-7 w-12 cursor-pointer rounded-full transition ${permissionData?.[activeModule]?.enabled
-                                    ? "bg-success"
-                                    : "bg-muted-foreground/40"
-                                    }`}
-                            >
-                                <span
-                                    className={`absolute top-1 h-5 w-5 rounded-full bg-card shadow transition ${permissionData?.[activeModule]?.enabled
-                                        ? "left-6"
-                                        : "left-1"
-                                        }`}
-                                />
-                            </button>
-                        </label>
-                    </div>
-
-                    {/* If disabled */}
-                    {permissionData?.[activeModule]?.enabled !== true ? (
-                        <div className="p-8 text-center">
-                            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                    {!activeModule ? (
+                        <div className="p-12 text-center">
+                            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                                 <ShieldCheck size={26} />
                             </div>
+
                             <h3 className="text-base font-bold text-card-foreground">
-                                Module is disabled
+                                No permission modules found
                             </h3>
+
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Enable this module to show it in sidebar and allow access.
+                                No permission configuration was returned by the API.
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-5 p-5">
-                            {activeSections.map((section: any) => (
-                                <div
-                                    key={section.title}
-                                    className="overflow-hidden rounded-md border border-border"
-                                >
-                                    <div className="bg-muted px-4 py-3">
-                                        <h3 className="text-sm font-bold uppercase tracking-wide text-card-foreground">
-                                            {section.title}
-                                        </h3>
+                        <>
+                            <div className="flex flex-col gap-3 border-b border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${activeIsToggleOnly
+                                                ? activeModuleData?.view
+                                                    ? "bg-success/10 text-success"
+                                                    : "bg-muted text-muted-foreground"
+                                                : activeModuleData?.enabled
+                                                    ? "bg-success/10 text-success"
+                                                    : "bg-muted text-muted-foreground"
+                                            }`}
+                                    >
+                                        <ShieldCheck size={20} />
                                     </div>
 
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full text-sm">
-                                            <thead className="bg-card">
-                                                <tr className="border-b border-border">
-                                                    <th className="w-[45%] px-4 py-3 text-left font-semibold text-muted-foreground">
-                                                        Permission
-                                                    </th>
-                                                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">
-                                                        All
-                                                    </th>
-                                                    {actions.map((action) => (
-                                                        <th
-                                                            key={action}
-                                                            className="px-4 py-3 text-center font-semibold capitalize text-muted-foreground"
-                                                        >
-                                                            {action}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h2 className="text-lg font-bold text-card-foreground">
+                                                {moduleTabs.find((module: any) => module.key === activeModule)?.label}
+                                            </h2>
 
-                                            <tbody>
-                                                {section.items.map((permission: any) => {
-                                                    const allChecked = isFullRowChecked(activeModule, permission.key);
-                                                    return (
-                                                        <tr
-                                                            key={permission.key}
-                                                            className="border-b border-border last:border-b-0 hover:bg-muted"
-                                                        >
-                                                            <td className="px-4 py-3 font-medium text-card-foreground">
-                                                                {permission.label}
-                                                                {/* <p className="text-xs text-muted-foreground">
-                                                                    {permission.key}
-                                                                </p> */}
-                                                            </td>
+                                            {!activeIsToggleOnly && (
+                                                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                                                    {totalPermissions} Permissions
+                                                </span>
+                                            )}
+                                        </div>
 
-                                                            <td className="px-4 py-3 text-center">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={allChecked}
-                                                                    onChange={(e) =>
-                                                                        handleRowToggle(
-                                                                            activeModule,
-                                                                            permission.key,
-                                                                            e.target.checked
-                                                                        )
-                                                                    }
-                                                                    className="h-4 w-4 cursor-pointer accent-primary"
-                                                                />
-                                                            </td>
-
-                                                            {actions.map((action) => (
-                                                                <td
-                                                                    key={action}
-                                                                    className="px-4 py-3 text-center"
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={getValueByPath(
-                                                                            permissionData?.[activeModule]
-                                                                                ?.permissions,
-                                                                            permission.key,
-                                                                            action
-                                                                        )}
-                                                                        onChange={() =>
-                                                                            handlePermissionToggle(
-                                                                                activeModule,
-                                                                                permission.key,
-                                                                                action
-                                                                            )
-                                                                        }
-                                                                        className="h-4 w-4 cursor-pointer accent-primary"
-                                                                    />
-                                                                </td>
-                                                            ))}
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
+                                        <p className="mt-0.5 text-sm text-muted-foreground">
+                                            {activeIsToggleOnly
+                                                ? `Enable or disable ${moduleTabs.find((module: any) => module.key === activeModule)?.label} access for this user.`
+                                                : "Configure access permissions for this module."}
+                                        </p>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+
+                                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 sm:justify-start">
+                                    <div>
+                                        <p className="text-sm font-semibold text-card-foreground">
+                                            {activeIsToggleOnly ? "Access" : "Module Access"}
+                                        </p>
+
+                                        <p className="text-xs text-muted-foreground">
+                                            {activeIsToggleOnly
+                                                ? activeModuleData?.view
+                                                    ? "Enabled for this user"
+                                                    : "Disabled for this user"
+                                                : activeModuleData?.enabled
+                                                    ? "Enabled for this user"
+                                                    : "Disabled for this user"}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModuleToggle(activeModule)}
+                                        aria-pressed={activeIsToggleOnly ? activeModuleData?.view === true : activeModuleData?.enabled === true}
+                                        className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition ${activeIsToggleOnly
+                                                ? activeModuleData?.view
+                                                    ? "bg-success"
+                                                    : "bg-muted-foreground/30"
+                                                : activeModuleData?.enabled
+                                                    ? "bg-success"
+                                                    : "bg-muted-foreground/30"
+                                            }`}
+                                    >
+                                        <span
+                                            className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${activeIsToggleOnly
+                                                    ? activeModuleData?.view
+                                                        ? "left-6"
+                                                        : "left-1"
+                                                    : activeModuleData?.enabled
+                                                        ? "left-6"
+                                                        : "left-1"
+                                                }`}
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {activeIsToggleOnly ? (
+                                <div className="flex min-h-[250px] items-center justify-center bg-muted/20 p-8">
+                                    <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+                                        <div
+                                            className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl ${activeModuleData?.view
+                                                    ? "bg-success/10 text-success"
+                                                    : "bg-muted text-muted-foreground"
+                                                }`}
+                                        >
+                                            <ShieldCheck size={26} />
+                                        </div>
+
+                                        <h3 className="text-lg font-bold text-card-foreground">
+                                            {moduleTabs.find((module: any) => module.key === activeModule)?.label}
+                                        </h3>
+
+                                        <p className="mt-2 text-sm text-muted-foreground">
+                                            {activeModuleData?.view
+                                                ? "This feature is currently enabled for the selected user."
+                                                : "This feature is currently disabled for the selected user."}
+                                        </p>
+
+                                        <div className="mt-5 flex items-center justify-center gap-3">
+                                            <span className="text-sm font-semibold text-card-foreground">
+                                                {activeModuleData?.view ? "Enabled" : "Disabled"}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleModuleToggle(activeModule)}
+                                                className={`relative h-7 w-12 cursor-pointer rounded-full transition ${activeModuleData?.view ? "bg-success" : "bg-muted-foreground/30"
+                                                    }`}
+                                            >
+                                                <span
+                                                    className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${activeModuleData?.view ? "left-6" : "left-1"
+                                                        }`}
+                                                />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : activeModuleData?.enabled !== true ? (
+                                <div className="flex min-h-[320px] items-center justify-center p-8">
+                                    <div className="max-w-md text-center">
+                                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+                                            <ShieldCheck size={29} />
+                                        </div>
+
+                                        <h3 className="text-lg font-bold text-card-foreground">
+                                            Module access is disabled
+                                        </h3>
+
+                                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                            Enable this module to configure individual view, create, update and delete permissions.
+                                        </p>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleModuleToggle(activeModule)}
+                                            className="mt-5 inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+                                        >
+                                            Enable Module
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 bg-muted/20 p-4">
+                                    {activeSections.length > 0 ? (
+                                        activeSections.map((section: any) => (
+                                            <div key={section.title} className="overflow-hidden rounded-xl border border-border bg-card">
+                                                <div className="flex items-center justify-between border-b border-border bg-muted/50 px-4 py-3">
+                                                    <div>
+                                                        <h3 className="text-sm font-bold text-card-foreground">
+                                                            {section.title}
+                                                        </h3>
+
+                                                        <p className="mt-0.5 text-xs text-muted-foreground">
+                                                            {section.items?.length || 0} permission{section.items?.length === 1 ? "" : "s"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full min-w-[720px] table-fixed text-sm">
+                                                        <thead>
+                                                            <tr className="border-b border-border bg-background">
+                                                                <th className="w-[46%] px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                                                    Permission
+                                                                </th>
+
+                                                                <th className="w-[10.8%] px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                                                    All
+                                                                </th>
+
+                                                                {actions.map((action) => (
+                                                                    <th
+                                                                        key={action}
+                                                                        className="w-[10.8%] px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                                                                    >
+                                                                        {action}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+
+                                                        <tbody className="divide-y divide-border">
+                                                            {section.items.map((permission: any) => {
+                                                                const allChecked = isFullRowChecked(activeModule, permission.key);
+
+                                                                return (
+                                                                    <tr key={permission.key} className="bg-card transition-colors hover:bg-muted/40">
+                                                                        <td className="px-5 py-3">
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/5 text-xs font-bold text-primary">
+                                                                                    {permission.label?.charAt(0)?.toUpperCase()}
+                                                                                </div>
+
+                                                                                <span className="font-medium text-card-foreground">
+                                                                                    {permission.label}
+                                                                                </span>
+                                                                            </div>
+                                                                        </td>
+
+                                                                        <td className="px-2 py-3 text-center">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={allChecked}
+                                                                                onChange={(e) => handleRowToggle(activeModule, permission.key, e.target.checked)}
+                                                                                className="h-[18px] w-[18px] cursor-pointer rounded border-border accent-primary"
+                                                                            />
+                                                                        </td>
+
+                                                                        {actions.map((action) => (
+                                                                            <td key={action} className="px-2 py-3 text-center">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={getValueByPath(activeModuleData?.permissions, permission.key, action)}
+                                                                                    onChange={() => handlePermissionToggle(activeModule, permission.key, action)}
+                                                                                    className="h-[18px] w-[18px] cursor-pointer rounded border-border accent-primary"
+                                                                                />
+                                                                            </td>
+                                                                        ))}
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="rounded-xl border border-dashed border-border bg-card py-14 text-center">
+                                            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                                                <ShieldCheck size={22} />
+                                            </div>
+
+                                            <p className="text-sm font-semibold text-card-foreground">
+                                                No permissions found
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                No permission configuration is available for this module.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
-
-                {/* JSON Preview */}
-                {/* <div className="rounded-2xl border border-border bg-slate-950 p-4 shadow-sm">
-                    <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-white">JSON Preview</h3>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                navigator.clipboard.writeText(
-                                    JSON.stringify(permissionData, null, 2)
-                                )
-                            }
-                            className="rounded-md bg-white/10 px-3 py-1 text-xs font-semibold text-white hover:bg-white/20"
-                        >
-                            Copy JSON
-                        </button>
-                    </div>
-
-                    <pre className="max-h-80 overflow-auto rounded-lg bg-black/30 p-3 text-xs text-emerald-300">
-                        {JSON.stringify(permissionData, null, 2)}
-                    </pre>
-                </div> */}
             </div>
         </div>
     );
