@@ -43,28 +43,28 @@ const INVENTORY_MASTERS: Record<
 > = {
     warehouse: {
         key: "warehouse",
-        fieldKey: "WarehouseMaster",
+        fieldKey: "Warehouse",
         moduleName: "Warehouse",
         description: "Warehouse inventory tracking for BookEZ.",
     },
 
     location: {
         key: "location",
-        fieldKey: "LocationMaster",
+        fieldKey: "Location",
         moduleName: "Location",
         description: "Location inventory tracking for BookEZ.",
     },
 
     bin: {
         key: "bin",
-        fieldKey: "BinMaster",
+        fieldKey: "Bin",
         moduleName: "Bin",
         description: "Bin inventory tracking for BookEZ.",
     },
 
     batch: {
         key: "batch",
-        fieldKey: "BatchMaster",
+        fieldKey: "Batch",
         moduleName: "Batch",
         description: "Batch inventory tracking for BookEZ.",
     },
@@ -92,10 +92,10 @@ const FULL_TRACKING_DATE_FIELDS = [
 ];
 
 const INVENTORY_TRANSACTION_FIELD_KEYS = [
-    "WarehouseMaster",
-    "LocationMaster",
-    "BinMaster",
-    "BatchMaster",
+    "Warehouse",
+    "Location",
+    "Bin",
+    "Batch",
     "manufacturingDate",
     "expiryDate",
 ];

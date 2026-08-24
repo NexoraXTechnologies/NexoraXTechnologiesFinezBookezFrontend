@@ -820,7 +820,7 @@ const SystemConfiguration = () => {
                     ? "Configuration updated successfully"
                     : "Configuration saved successfully")
             );
-            // window.location.reload();
+            window.location.reload();
         } catch (err: any) {
             toast.error(
                 err?.message ||
