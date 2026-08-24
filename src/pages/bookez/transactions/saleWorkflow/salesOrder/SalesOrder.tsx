@@ -68,7 +68,7 @@ const emptyProductRow = {
     grossAmount: 0,
     discount: "",
     discountPercentage: "",
-    discountAmount: 0,
+    discountAmount: "",
     taxableAmount: 0,
     cgst: "",
     cgstPercentage: "",
@@ -689,6 +689,7 @@ const SalesOrder = () => {
             getProductMasterFromRow(row);
 
         return isTrueValue(
+            productMaster?.dynamicFields?.marginProduct ??
             productMaster?.marginProduct
         );
     };
@@ -697,7 +698,7 @@ const SalesOrder = () => {
         field: any,
         row: any
     ) => {
-        if (!field?.key) return false;
+        if (!field?.key || isTrueValue(field?.isHidden)) return false;
 
         if (
             CONDITIONAL_MARGIN_FIELD_KEYS.has(
@@ -707,14 +708,14 @@ const SalesOrder = () => {
             return isMarginProductRow(row);
         }
 
-        return !isTrueValue(field?.isHidden);
+        return true;
     };
 
     const isBodyColumnVisible = (
         field: any,
         rows: any[]
     ) => {
-        if (!field?.key) return false;
+        if (!field?.key || isTrueValue(field?.isHidden)) return false;
 
         if (
             CONDITIONAL_MARGIN_FIELD_KEYS.has(
@@ -727,7 +728,7 @@ const SalesOrder = () => {
             );
         }
 
-        return !isTrueValue(field?.isHidden);
+        return true;
     };
 
     const isBodyCellVisible = (
@@ -1628,8 +1629,8 @@ const SalesOrder = () => {
                                     "",
 
                                 discountAmount:
-                                    item?.discountAmount ||
-                                    0,
+                                    item?.discountAmount ??
+                                    "",
 
                                 taxableAmount:
                                     item?.taxableAmount ||
@@ -1697,41 +1698,38 @@ const SalesOrder = () => {
 
                                 marginProduct:
                                     isTrueValue(
-                                        item?.marginProduct
+                                        item?.marginProduct ??
+                                        item?.dynamicBodyFields?.marginProduct ??
+                                        productMaster?.dynamicFields?.marginProduct ??
+                                        productMaster?.marginProduct
                                     ),
 
                                 taxRate:
                                     item?.taxRate ??
-                                    item
-                                        ?.dynamicBodyFields
-                                        ?.taxRate ??
+                                    item?.dynamicBodyFields?.taxRate ??
+                                    item?.customMasters?.taxRate ??
                                     "",
 
                                 nonTaxRate:
                                     item?.nonTaxRate ??
-                                    item
-                                        ?.dynamicBodyFields
-                                        ?.nonTaxRate ??
+                                    item?.dynamicBodyFields?.nonTaxRate ??
+                                    item?.customMasters?.nonTaxRate ??
                                     "",
 
                                 taxGross:
                                     item?.taxGross ??
-                                    item
-                                        ?.dynamicBodyFields
-                                        ?.taxGross ??
+                                    item?.dynamicBodyFields?.taxGross ??
+                                    item?.customMasters?.taxGross ??
                                     "",
 
                                 nonTaxGross:
                                     item?.nonTaxGross ??
-                                    item
-                                        ?.dynamicBodyFields
-                                        ?.nonTaxGross ??
+                                    item?.dynamicBodyFields?.nonTaxGross ??
+                                    item?.customMasters?.nonTaxGross ??
                                     "",
                             });
 
-                        return calculateRow(
-                            row
-                        );
+                        return row;
                     }
                 )
                 : [
