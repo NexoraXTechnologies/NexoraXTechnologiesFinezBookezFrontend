@@ -148,7 +148,7 @@ const emptyProductRow = {
     grossAmount: 0,
     discount: "",
     discountPercentage: "",
-    discountAmount: 0,
+    discountAmount: "",
     taxableAmount: 0,
     cgst: "",
     cgstPercentage: "",
@@ -1162,29 +1162,27 @@ const SalesInVoice = () => {
         if (isTrueValue(row?.marginProduct)) return true;
 
         const productMaster = getProductMasterFromRow(row);
-        return isTrueValue(productMaster?.marginProduct);
+        return isTrueValue(productMaster?.dynamicFields?.marginProduct ?? productMaster?.marginProduct);
     };
 
     const isBodyFieldVisibleForRow = (field: any, row: any) => {
-        if (!field?.key) return false;
+        if (!field?.key || isTrueValue(field?.isHidden)) return false;
 
         if (CONDITIONAL_MARGIN_FIELD_KEYS.has(field.key)) {
             return isMarginProductRow(row);
         }
 
-        return !isTrueValue(field?.isHidden);
+        return true;
     };
 
     const isBodyColumnVisible = (field: any, rows: any[]) => {
-        if (!field?.key) return false;
+        if (!field?.key || isTrueValue(field?.isHidden)) return false;
 
         if (CONDITIONAL_MARGIN_FIELD_KEYS.has(field.key)) {
-            return (rows || []).some((row: any) =>
-                isMarginProductRow(row)
-            );
+            return (rows || []).some((row: any) => isMarginProductRow(row));
         }
 
-        return !isTrueValue(field?.isHidden);
+        return true;
     };
 
     const isBodyCellVisible = (field: any, row: any) =>
@@ -1685,8 +1683,7 @@ const SalesInVoice = () => {
                         })
                 );
 
-                return calculateRow(
-                    normalizeRowKeys({
+                return normalizeRowKeys({
                         id: item?.id || Date.now() + Math.random(),
                         ...bodyCustomMasterValues,
                         customMasters:
@@ -1731,7 +1728,7 @@ const SalesInVoice = () => {
                             item?.discount || item?.discountPercentage || "",
                         discountPercentage:
                             item?.discountPercentage || item?.discount || "",
-                        discountAmount: item?.discountAmount || 0,
+                        discountAmount: item?.discountAmount ?? "",
                         taxableAmount: item?.taxableAmount || 0,
                         cgst: item?.cgst || item?.cgstPercentage || "",
                         cgstPercentage:
@@ -1750,7 +1747,12 @@ const SalesInVoice = () => {
                         netAmount: item?.netAmount || item?.netTotal || 0,
                         netTotal: item?.netTotal || item?.netAmount || 0,
 
-                        marginProduct: isTrueValue(item?.marginProduct),
+                        marginProduct: isTrueValue(
+                            item?.marginProduct ??
+                            item?.dynamicBodyFields?.marginProduct ??
+                            productMaster?.dynamicFields?.marginProduct ??
+                            productMaster?.marginProduct
+                        ),
                         taxRate:
                             item?.taxRate ??
                             item?.dynamicBodyFields?.taxRate ??
@@ -1767,8 +1769,7 @@ const SalesInVoice = () => {
                             item?.nonTaxGross ??
                             item?.dynamicBodyFields?.nonTaxGross ??
                             "",
-                    })
-                );
+                    });
             })
             : [{ ...emptyProductRow, id: Date.now() }];
 
