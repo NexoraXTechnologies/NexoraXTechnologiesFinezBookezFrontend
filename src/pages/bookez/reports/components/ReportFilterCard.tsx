@@ -134,7 +134,7 @@ const ReportFilterCard = ({
         if (field.type === "date") {
             return (
                 <div key={field.key} className={wrapperClass}>
-                    <label className="absolute -top-2.5 left-3 z-10 bg-card px-1 text-xs font-medium text-muted-foreground">
+                    <label className=" -top-2.5 left-3 z-10 bg-card px-1 text-xs font-medium text-muted-foreground">
                         {field.label}
                         {field.required && (
                             <span className="ml-1 text-danger">*</span>
