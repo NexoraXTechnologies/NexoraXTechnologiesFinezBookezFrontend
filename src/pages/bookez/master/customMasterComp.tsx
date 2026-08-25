@@ -801,7 +801,7 @@ const CustomMasterComp = ({
 		// 		true
 		// },
 
-		...inputSchema
+		...inputSchema.filter((field: any) => !getBooleanValue(field?.isHidden))
 	];
 
 	const columns = [

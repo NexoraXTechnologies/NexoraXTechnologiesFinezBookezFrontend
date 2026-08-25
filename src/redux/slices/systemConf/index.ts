@@ -8,6 +8,7 @@ import {
     saveProductMasterSchema,
     updateProductMasterSchema,
 } from "../professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
+import { updateTransactionSchema } from "../professionalSlice/transactionSchema";
 
 /* ===================================================
    CONSTANTS
@@ -560,53 +561,95 @@ const buildTransportationAccountingFields = (vehicleMasterCode: string) => [
 const syncTransportationReceiptPaymentFields = async ({
     enabled,
     vehicleMasterSync,
+    dispatch,
 }: {
     enabled: boolean;
     vehicleMasterSync?: any;
+    dispatch: any;
 }) => {
-    if (!enabled) {
-        return {
-            skipped: true,
-            reason: "Maintain Inventory is disabled.",
-        };
-    }
-
-    const vehicleMasterCode = await getVehicleMasterModuleCode(vehicleMasterSync);
-    const fields = buildTransportationAccountingFields(vehicleMasterCode);
     const modules = ["receipt", "payment"] as const;
     const results: any[] = [];
+    const desiredHidden = !enabled;
+    const vehicleMasterCode = enabled
+        ? await getVehicleMasterModuleCode(vehicleMasterSync)
+        : "";
+    const fields = buildTransportationAccountingFields(vehicleMasterCode);
 
-    /*
-       addField already merges fields by key in backend, so we do
-       not need GET -> compare -> UPDATE. This keeps the new flow
-       completely separate from Vehicle Master creation.
-    */
     for (const module of modules) {
-        const res = await professionalAxios.post(
-            TRANSACTION_SCHEMA_ADD_FIELD_API,
-            {
-                module,
-                section: "header",
-                fields,
-            }
-        );
-
-        if (res?.data?.success === false) {
-            throw new Error(
-                res?.data?.message ||
-                `Failed to add transportation fields in ${module}.`
+        if (enabled) {
+            const addResponse = await professionalAxios.post(
+                TRANSACTION_SCHEMA_ADD_FIELD_API,
+                {
+                    module,
+                    section: "header",
+                    fields: fields.map((field) => ({
+                        ...field,
+                        isHidden: false,
+                    })),
+                }
             );
+
+            if (addResponse?.data?.success === false) {
+                throw new Error(
+                    addResponse?.data?.message ||
+                    `Failed to add transportation fields in ${module}.`
+                );
+            }
+        }
+
+        const updatedFields: string[] = [];
+        const skippedFields: string[] = [];
+
+        for (const fieldDefinition of fields) {
+            try {
+                await dispatch(
+                    updateTransactionSchema({
+                        module,
+                        section: "header",
+                        key: fieldDefinition.key,
+                        updates: {
+                            isHidden: desiredHidden,
+                        },
+                    }) as any
+                ).unwrap();
+
+                updatedFields.push(fieldDefinition.key);
+            } catch (updateError: any) {
+                const updateMessage = String(
+                    updateError?.message ||
+                    updateError?.payload?.message ||
+                    ""
+                ).toLowerCase();
+
+                if (!enabled && updateMessage.includes("field not found")) {
+                    skippedFields.push(fieldDefinition.key);
+                    continue;
+                }
+
+                throw updateError;
+            }
         }
 
         results.push({
             module,
-            success: true,
-            response: res?.data?.data || null,
+            addedFields:
+                enabled
+                    ? fields.map((field) => field.key)
+                    : [],
+            updatedFields,
+            skippedFields,
+            isHidden: desiredHidden,
         });
     }
 
     return {
-        skipped: false,
+        skipped: results.every(
+            (item) =>
+                item.addedFields.length === 0 &&
+                item.updatedFields.length === 0
+        ),
+        enabled,
+        isHidden: desiredHidden,
         vehicleMasterCode,
         results,
     };
@@ -1038,9 +1081,11 @@ const buildConfigurationPayload = (
 
             transportationModuleConfiguration: {
                 enableTransportationModule:
-                    !!configuration?.systemConfiguration
-                        ?.transportationModuleConfiguration
-                        ?.enableTransportationModule,
+                    toBool(
+                        configuration?.systemConfiguration
+                            ?.transportationModuleConfiguration
+                            ?.enableTransportationModule
+                    ),
 
                 advanceReceive:
                     configuration?.systemConfiguration
@@ -1597,11 +1642,12 @@ export const saveOrUpdateSystemConfiguration =
 
                 /*
                  * IMPORTANT:
-                 * Vehicle Master + Receipt/Payment transportation fields
-                 * are controlled by Inventory Configuration -> Maintain Inventory.
+                 * Vehicle Master synchronization is controlled by Maintain Inventory
+                 * or Enable Transportation Module. Receipt/Payment transportation
+                 * fields are controlled by Enable Transportation Module.
                  *
                  * Use the payload being submitted as the source of truth
-                 * so the sync runs immediately when Maintain Inventory is enabled.
+                 * so synchronization runs immediately from the submitted settings.
                  */
                 const submittedPayload =
                     buildConfigurationPayload(
@@ -1679,7 +1725,8 @@ export const saveOrUpdateSystemConfiguration =
                    ⭐ VEHICLE MASTER SYNCHRONIZATION
 
                    Trigger:
-                   inventoryConfiguration.maintainInventory
+                   inventoryConfiguration.maintainInventory OR
+                   systemConfiguration.transportationModuleConfiguration.enableTransportationModule
 
                    Configuration save/update remains primary.
                    Vehicle Master failure does not reject the
@@ -1698,14 +1745,27 @@ export const saveOrUpdateSystemConfiguration =
                                 ?.maintainInventory
                         );
 
-                    console.log(
-                        "Vehicle Master sync maintainInventoryEnabled:",
-                        maintainInventoryEnabled
-                    );
+                    const transportationEnabled =
+                        toBool(
+                            submittedPayload
+                                ?.systemConfiguration
+                                ?.transportationModuleConfiguration
+                                ?.enableTransportationModule
+                        );
+
+                    const shouldSyncVehicleMaster =
+                        maintainInventoryEnabled ||
+                        transportationEnabled;
+
+                    console.log("Vehicle Master sync:", {
+                        maintainInventoryEnabled,
+                        transportationEnabled,
+                        shouldSyncVehicleMaster,
+                    });
 
                     vehicleMasterSync =
                         await syncVehicleMasterCustomMaster(
-                            maintainInventoryEnabled
+                            shouldSyncVehicleMaster
                         );
 
                     console.log(
@@ -1734,7 +1794,7 @@ export const saveOrUpdateSystemConfiguration =
                    ⭐ RECEIPT / PAYMENT TRANSPORT FIELDS
 
                    Trigger:
-                   inventoryConfiguration.maintainInventory
+                   systemConfiguration.transportationModuleConfiguration.enableTransportationModule
 
                    This runs AFTER Vehicle Master synchronization.
                 ========================================== */
@@ -1744,17 +1804,19 @@ export const saveOrUpdateSystemConfiguration =
                 };
 
                 try {
-                    const maintainInventoryEnabled =
+                    const transportationEnabled =
                         toBool(
                             submittedPayload
-                                ?.inventoryConfiguration
-                                ?.maintainInventory
+                                ?.systemConfiguration
+                                ?.transportationModuleConfiguration
+                                ?.enableTransportationModule
                         );
 
                     transportationTransactionFieldSync =
                         await syncTransportationReceiptPaymentFields({
-                            enabled: maintainInventoryEnabled,
+                            enabled: transportationEnabled,
                             vehicleMasterSync,
+                            dispatch,
                         });
 
                     console.log(

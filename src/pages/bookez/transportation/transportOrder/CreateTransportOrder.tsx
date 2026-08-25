@@ -953,43 +953,6 @@ const CreateTransportOrder = ({
 	};
 
 
-	/* ===================================================
-   FREIGHT STEP MANDATORY FIELD VALIDATION
-=================================================== */
-
-	const validateFreightStep = () => {
-		const freightDetails =
-			form?.freightDetails || {};
-
-		if (
-			freightDetails?.freightPerTon === "" ||
-			freightDetails?.freightPerTon === null ||
-			freightDetails?.freightPerTon === undefined ||
-			Number(freightDetails?.freightPerTon) <= 0
-		) {
-			toast.warn(
-				"Please enter Freight Per Ton"
-			);
-
-			return false;
-		}
-
-		if (
-			freightDetails?.expectedFreight === "" ||
-			freightDetails?.expectedFreight === null ||
-			freightDetails?.expectedFreight === undefined ||
-			Number(freightDetails?.expectedFreight) <= 0
-		) {
-			toast.warn(
-				"Please enter Expected Freight"
-			);
-
-			return false;
-		}
-
-		return true;
-	};
-
 	const next = () => {
 		/* ===================================================
 		   LOAD STEP
@@ -1040,13 +1003,6 @@ const CreateTransportOrder = ({
 
 
 		if (
-			step === 5 &&
-			!validateFreightStep()
-		) {
-			return;
-		}
-
-		if (
 			!validateCurrentStep(
 				step,
 				form
@@ -1087,15 +1043,6 @@ const CreateTransportOrder = ({
 			!validateVehicleStep()
 		) {
 			setStep(4);
-			return;
-		}
-
-
-		if (
-			!isView &&
-			!validateFreightStep()
-		) {
-			setStep(5);
 			return;
 		}
 

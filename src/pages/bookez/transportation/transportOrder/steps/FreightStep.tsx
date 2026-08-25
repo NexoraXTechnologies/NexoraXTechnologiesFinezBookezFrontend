@@ -60,14 +60,14 @@ const FreightStep = ({ form, update, balanceAmount,isView }: any) => {
 		label: "Freight Per Ton",
 		type: "number",
 		placeholder: "Enter freight per ton",
-		mandatory: true,
+		
 	},
 	{
 		key: "freightDetails.expectedFreight",
 		label: "Expected Freight",
 		type: "number",
 		placeholder: "Enter expected freight",
-		mandatory: true,
+		
 	},
 	{
 		key: "freightDetails.advanceAmount",
