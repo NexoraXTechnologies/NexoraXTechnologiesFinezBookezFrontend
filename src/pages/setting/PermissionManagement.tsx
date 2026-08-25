@@ -114,6 +114,7 @@ const buildPermissionSections = (permissionObject: any) => {
     return sections;
 };
 
+// ⭐ CHANGED — IF ANYTHING INSIDE MODULE CHANGES, SEND COMPLETE MODULE
 const getChangedPermissions = (oldData: any, newData: any) => {
     const changes: any = {};
 
@@ -121,65 +122,9 @@ const getChangedPermissions = (oldData: any, newData: any) => {
         const oldModule = oldData?.[moduleKey];
         const newModule = newData?.[moduleKey];
 
-        if (isToggleOnlyModule(newModule)) {
-            if (oldModule?.view !== newModule?.view) {
-                changes[moduleKey] = {
-                    view: newModule?.view === true,
-                };
-            }
-
-            return;
+        if (JSON.stringify(oldModule) !== JSON.stringify(newModule)) {
+            changes[moduleKey] = structuredClone(newModule);
         }
-
-        if (oldModule?.enabled !== newModule?.enabled) {
-            changes[moduleKey] = {
-                ...(changes[moduleKey] || {}),
-                enabled: newModule?.enabled,
-            };
-        }
-
-        const oldPermissions = oldModule?.permissions || {};
-        const newPermissions = newModule?.permissions || {};
-
-        const comparePermissionObject = (oldObj: any, newObj: any, path: string[] = []) => {
-            Object.keys(newObj || {}).forEach((key) => {
-                const oldValue = oldObj?.[key];
-                const newValue = newObj?.[key];
-                const currentPath = [...path, key];
-
-                const isCrudObject = typeof newValue === "object" && newValue !== null && ("view" in newValue || "create" in newValue || "update" in newValue || "delete" in newValue);
-
-                if (isCrudObject) {
-                    const changedActions: any = {};
-
-                    actions.forEach((action) => {
-                        if (oldValue?.[action] !== newValue?.[action]) {
-                            changedActions[action] = newValue?.[action];
-                        }
-                    });
-
-                    if (Object.keys(changedActions).length > 0) {
-                        if (!changes[moduleKey]) changes[moduleKey] = {};
-                        if (!changes[moduleKey].permissions) changes[moduleKey].permissions = {};
-
-                        let current = changes[moduleKey].permissions;
-
-                        currentPath.forEach((pathKey, index) => {
-                            if (index === currentPath.length - 1) {
-                                current[pathKey] = changedActions;
-                            } else {
-                                current[pathKey] = current[pathKey] || {};
-                                current = current[pathKey];
-                            }
-                        });
-                    }
-                } else if (typeof newValue === "object" && newValue !== null) {
-                    comparePermissionObject(oldValue || {}, newValue, currentPath);
-                }
-            });
-        };
-
-        comparePermissionObject(oldPermissions, newPermissions);
     });
 
     return changes;
@@ -339,23 +284,29 @@ const PermissionManagement = () => {
                 return;
             }
 
-            const payload: any = {
+            const payload = {
                 parentMobile: selectUser?.parentUserMobileNumber,
                 childMobile: selectUser?.userMobileNumberHash,
                 permissions: changedPermissions,
             };
 
+            console.log("UPDATE PERMISSION PAYLOAD:", payload);
+
             // @ts-ignore
             await dispatch(updatePermission({ payload }) as any).unwrap();
+
+            // ⭐ AFTER UPDATE GET LATEST PERMISSIONS
+            // @ts-ignore
+            await dispatch(getAllPermissions({ parentMobile: selectUser?.parentUserMobileNumber, childMobile: selectUser?.userMobileNumberHash, storeInLocal: false }) as any).unwrap();
 
             toast.success("Permission Updated");
 
             if (selectUser?.parentUserMobileNumber === selectUser?.userMobileNumberHash) {
                 localStorage.setItem("permissions", JSON.stringify(permissionData));
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error("Getting error when submit");
+            toast.error(error?.message || "Getting error when submit");
         }
     };
 
@@ -416,6 +367,7 @@ const PermissionManagement = () => {
     return (
         <div className="min-h-screen bg-muted/20 p-4 text-foreground">
             <div className="mx-auto max-w-[1700px] space-y-4">
+
                 <div className="rounded-xl border border-border bg-card shadow-sm">
                     <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-center gap-3">
@@ -495,10 +447,7 @@ const PermissionManagement = () => {
                                                 >
                                                     <span>{tab.label}</span>
 
-                                                    <span
-                                                        className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${enabled ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                                                            }`}
-                                                    >
+                                                    <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${enabled ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                                                         <span className={`h-1.5 w-1.5 rounded-full ${enabled ? "bg-success" : "bg-muted-foreground/60"}`} />
                                                         {enabled ? "ON" : "OFF"}
                                                     </span>
@@ -613,9 +562,7 @@ const PermissionManagement = () => {
                                 <div className="flex min-h-[250px] items-center justify-center bg-muted/20 p-8">
                                     <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 text-center shadow-sm">
                                         <div
-                                            className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl ${activeModuleData?.view
-                                                    ? "bg-success/10 text-success"
-                                                    : "bg-muted text-muted-foreground"
+                                                className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl ${activeModuleData?.view ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
                                                 }`}
                                         >
                                             <ShieldCheck size={26} />
@@ -642,10 +589,7 @@ const PermissionManagement = () => {
                                                 className={`relative h-7 w-12 cursor-pointer rounded-full transition ${activeModuleData?.view ? "bg-success" : "bg-muted-foreground/30"
                                                     }`}
                                             >
-                                                <span
-                                                    className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${activeModuleData?.view ? "left-6" : "left-1"
-                                                        }`}
-                                                />
+                                                    <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${activeModuleData?.view ? "left-6" : "left-1"}`} />
                                             </button>
                                         </div>
                                     </div>
