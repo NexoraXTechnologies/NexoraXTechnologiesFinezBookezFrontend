@@ -44,6 +44,7 @@ import TripRoutePlannerCard from "./TripRoutePlannerCard";
 import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
 import { formatStatusLabel } from "../../../../utils/helperFunctions";
 import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
+import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import {
     getAllEWayBill,
     getEWayBillPdfByNumber,
@@ -452,6 +453,18 @@ const getProfessionalUserFromLocalStorage = () => {
     );
 };
 
+const extractAccountRecords = (response: any) => {
+    const data = response?.data || response || {};
+    const candidates = [data?.accounts, data?.records, data?.items, data?.data?.accounts, data?.data?.records, data?.data?.items, data?.data, data];
+    return candidates.find(Array.isArray) || [];
+};
+
+const buildAccountOptions = (records: any[]) => (records || []).map((account: any) => {
+    const value = String(account?.accountCode || account?.code || "").trim();
+    const name = String(account?.accountName || account?.name || "").trim();
+    return { value, label: name || value };
+}).filter((option: any) => option.value);
+
 const Field = ({ label, mandatory = false, children, className = "" }: any) => (
     <label className={`flex min-w-0 flex-col gap-1 ${className}`}>
         <span className="text-sm font-medium text-card-foreground">
@@ -463,14 +476,14 @@ const Field = ({ label, mandatory = false, children, className = "" }: any) => (
     </label>
 );
 
-const SelectInput = ({ value, onChange, options, disabled = false }: any) => (
+const SelectInput = ({ value, onChange, options, disabled = false, placeholder = "Select" }: any) => (
     <select
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className={inputClass}
     >
-        <option value="">Select</option>
+        <option value="">{placeholder}</option>
 
         {options.map((opt: any) => (
             <option key={opt.value} value={opt.value}>
@@ -505,8 +518,12 @@ const SummaryBox = ({ title, value, danger = false }: any) => {
    CATEGORY DETAILS
 =================================================== */
 
-const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
+const CategoryDetails = ({ category, form, setForm, readOnly, vendorAccountOptions = [], expenseAccountOptions = [] }: any) => {
     const entries = form.expenses?.[category.key]?.entries || [];
+    const getAccountOptions = (options: any[], value: any) => {
+        const currentValue = String(value || "").trim();
+        return !currentValue || options.some((option: any) => String(option.value) === currentValue) ? options : [{ value: currentValue, label: currentValue }, ...options];
+    };
 
     const patchEntry = (index: number, patch: any) => {
         if (readOnly) return;
@@ -637,13 +654,12 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                             />
                         </Field>
                         <Field label="Fuel Station">
-                            <input
+                            <SelectInput
                                 disabled={readOnly}
-                                className={inputClass}
                                 value={entry.fuelStation || ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { fuelStation: e.target.value })
-                                }
+                                options={getAccountOptions(vendorAccountOptions, entry.fuelStation)}
+                                placeholder="Select Fuel Station"
+                                onChange={(value: string) => patchEntry(index, { fuelStation: value })}
                             />
                         </Field>
 
@@ -716,14 +732,11 @@ const CategoryDetails = ({ category, form, setForm, readOnly }: any) => {
                             />
                         </Field>
                         <Field label={typeLabel}>
-                            <input
-                                disabled={readOnly}
-                                className={inputClass}
-                                value={entry[typeKey] || ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { [typeKey]: e.target.value })
-                                }
-                            />
+                            {typeLabel === "Expense Type" ? (
+                                <SelectInput disabled={readOnly} value={entry[typeKey] || ""} options={getAccountOptions(expenseAccountOptions, entry[typeKey])} placeholder={`Select ${typeLabel}`} onChange={(value: string) => patchEntry(index, { [typeKey]: value })} />
+                            ) : (
+                                <input disabled={readOnly} className={inputClass} value={entry[typeKey] || ""} onChange={(e) => patchEntry(index, { [typeKey]: e.target.value })} />
+                            )}
                         </Field>
 
                         <Field label="Amount">
@@ -1120,6 +1133,8 @@ const CreateEditTripExpence = () => {
     const serverExpenseRef = useRef<any>(null);
     const parentStartedPromptRef = useRef(new Set<string>());
     const [statusUpdating, setStatusUpdating] = useState(false);
+    const [vendorAccountOptions, setVendorAccountOptions] = useState<any[]>([]);
+    const [expenseAccountOptions, setExpenseAccountOptions] = useState<any[]>([]);
 
     const visibleCategories = useMemo(() => {
         if (!isChildUser) return CATEGORIES;
@@ -1317,6 +1332,23 @@ const CreateEditTripExpence = () => {
     useEffect(() => {
         loadAllocations();
     }, [loadAllocations]);
+
+    useEffect(() => {
+        let active = true;
+        const loadAccountOptions = async () => {
+            const [vendorResponse, expenseResponse] = await Promise.all([
+                dispatch(getAllAccounts({ accountType: "vendor", limit: 500, offset: 0 })).unwrap().catch(() => null),
+                dispatch(getAllAccounts({ accountType: "expense", limit: 500, offset: 0 })).unwrap().catch(() => null),
+            ]);
+            if (!active) return;
+            setVendorAccountOptions(buildAccountOptions(extractAccountRecords(vendorResponse)));
+            setExpenseAccountOptions(buildAccountOptions(extractAccountRecords(expenseResponse)));
+        };
+        loadAccountOptions();
+        return () => {
+            active = false;
+        };
+    }, [dispatch]);
 
     useEffect(() => {
         if (!isEdit && isChildUser) {
@@ -2539,6 +2571,8 @@ const CreateEditTripExpence = () => {
                                     form={form}
                                     setForm={setForm}
                                     readOnly={readOnly}
+                                    vendorAccountOptions={vendorAccountOptions}
+                                    expenseAccountOptions={expenseAccountOptions}
                                 />
                             </SectionCard>
                         );

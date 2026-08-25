@@ -493,6 +493,15 @@ export const VEHICLE_MASTER_SCHEMA_FIELDS = [
                 "state"
             ),
     }),
+
+    baseVehicleField({
+        key: "available_from",
+        label: "Available From",
+        type: "date",
+        isRequired: false,
+        isSearchable: false,
+        isFilterable: false,
+    }),
 ];
 
 export const VEHICLE_MASTER_SCHEMA_FIELD_KEYS =
