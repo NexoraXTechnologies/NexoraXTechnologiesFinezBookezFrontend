@@ -236,6 +236,8 @@ const getRawVehicleData = (item: any = {}, mapped: any = {}) => {
 const buildVehicleAutofillData = (selected: any, prevForm: any) => {
     const raw = selected?.rawData || {};
     const mapped = selected?.mappedVehicle || {};
+    const employee = raw?.customemployeemaster || mapped?.customemployeemaster || {};
+    const employeeName = getFullName(employee);
 
     return mergeVehicleMaintenanceForm({
         ...prevForm,
@@ -247,21 +249,28 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
             mapped?.voucherNumber,
             raw?.vehicleCode,
             raw?.voucherNumber,
+            raw?.code,
             selected?.value
         ),
 
         vehicleNumber: pickValue(
             selected?.vehicleNumber,
             mapped?.vehicleNumber,
+            mapped?.vehicle_number,
             raw?.vehicleNumber,
+            raw?.vehicle_number,
             raw?.registrationNumber,
+            raw?.code,
+            raw?.name,
             prevForm?.vehicleNumber
         ),
 
         vehicleType: pickValue(
             selected?.vehicleType,
             mapped?.vehicleType,
+            mapped?.vehicle_type,
             raw?.vehicleType,
+            raw?.vehicle_type,
             raw?.type,
             prevForm?.vehicleType
         ),
@@ -271,12 +280,14 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
             raw?.driverId,
             raw?.driver?.driverCode,
             raw?.driver?.driverId,
+            employee?.userMobileNumberHash,
             prevForm?.driverCode
         ),
 
         driverName: pickValue(
             raw?.driverName,
             raw?.driver?.driverName,
+            employeeName,
             prevForm?.driverName
         ),
 
@@ -297,6 +308,7 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
                 raw?.pucDetails?.expiryDate,
                 raw?.puc?.expiryDate,
                 raw?.puc?.validTill,
+                raw?.puc_expiry,
                 prevForm.pucDetails?.expiryDate
             ),
         },
@@ -324,6 +336,7 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
                 raw?.insuranceDetails?.expiryDate,
                 raw?.insurance?.expiryDate,
                 raw?.insurance?.validTill,
+                raw?.insurance_expiry,
                 prevForm.insuranceDetails?.expiryDate
             ),
         },
@@ -358,6 +371,7 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
             ),
             expiryDate: pickValue(
                 raw?.fitnessCertificateDetails?.expiryDate,
+                raw?.fitness_expiry,
                 prevForm.fitnessCertificateDetails?.expiryDate
             ),
         },
@@ -380,6 +394,7 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
             ),
             expiryDate: pickValue(
                 raw?.permitDetails?.expiryDate,
+                raw?.permit_expiry,
                 prevForm.permitDetails?.expiryDate
             ),
         },
@@ -421,6 +436,16 @@ const buildVehicleAutofillData = (selected: any, prevForm: any) => {
             batteryExpiryDate: pickValue(
                 raw?.batteryDetails?.batteryExpiryDate,
                 prevForm.batteryDetails?.batteryExpiryDate
+            ),
+        },
+
+        lastMaintenance: {
+            ...prevForm.lastMaintenance,
+            odometerReading: pickValue(
+                raw?.lastMaintenance?.odometerReading,
+                raw?.current_odometer,
+                raw?.currentOdometer,
+                prevForm.lastMaintenance?.odometerReading
             ),
         },
 
@@ -606,28 +631,36 @@ const CreateEditVehicleMaintenance = ({
                 }) as any
             ).unwrap();
 
-            const vehicles = Array.isArray(res?.vehicles) ? res.vehicles : [];
+            const vehicles = Array.isArray(res?.vehicles)
+                ? res.vehicles
+                : Array.isArray(res?.data?.items)
+                    ? res.data.items
+                    : Array.isArray(res?.items)
+                        ? res.items
+                        : [];
 
             const options = vehicles
                 .map((vehicle: any) => {
+                    const rawVehicle = getRawVehicleData(vehicle?.rawRecord || vehicle, vehicle);
                     const vehicleCode =
                         vehicle?.selectedVehicleId ||
                         vehicle?.vehicleCode ||
                         vehicle?.voucherNumber ||
                         vehicle?.vehicleNumber ||
+                        vehicle?.vehicle_number ||
+                        vehicle?.code ||
                         "";
 
+                    const vehicleNumber = vehicle?.vehicleNumber || vehicle?.vehicle_number || vehicle?.registrationNumber || vehicle?.code || vehicle?.name || "";
+                    const vehicleType = vehicle?.vehicleType || vehicle?.vehicle_type || vehicle?.type || "";
+
                     return {
-                        label: `${vehicle?.vehicleNumber || "-"} - ${vehicle?.vehicleType || "Vehicle"
-                            }`,
+                        label: `${vehicleNumber || "-"} - ${vehicleType || "Vehicle"}`,
                         value: vehicleCode,
                         vehicleCode,
-                        vehicleNumber: vehicle?.vehicleNumber || "",
-                        vehicleType: vehicle?.vehicleType || "",
-                        rawData: getRawVehicleData(
-                            vehicle?.rawRecord || vehicle,
-                            vehicle
-                        ),
+                        vehicleNumber,
+                        vehicleType,
+                        rawData: rawVehicle,
                         mappedVehicle: vehicle,
                     };
                 })
@@ -1720,7 +1753,7 @@ const CreateEditVehicleMaintenance = ({
                         {renderFields(documentFields)}
                     </SectionCard>
 
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    {/* <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"> */}
                         <SectionCard
                             index={13}
                             title="Next Maintenance"
@@ -1748,7 +1781,7 @@ const CreateEditVehicleMaintenance = ({
                                 {(form.remarks || "").length}/{REMARKS_MAX}
                             </p>
                         </SectionCard>
-                    </div>
+                    {/* </div> */}
                 </div>
             </div>
 

@@ -24,6 +24,10 @@ const mainColumns = [
         title: "Vendor Code",
     },
     {
+        key: "customerNumber",
+        title: "Mobile No.",
+    },
+    {
         key: "totalBalanceAmount",
         title: "Total Amount",
         render: (row: any) => (
