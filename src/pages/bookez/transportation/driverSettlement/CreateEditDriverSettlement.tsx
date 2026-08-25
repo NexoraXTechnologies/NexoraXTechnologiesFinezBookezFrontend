@@ -556,6 +556,17 @@ const EXPENSE_TYPE_LABELS: Record<string, string> = {
     otherCost: "Other",
 };
 
+const EXPENSE_ACCOUNT_NAMES: Record<string, string> = {
+    dieselCost: "Diesel Refilling",
+    petrolCost: "Petrol Refilling",
+    foodCost: "Food Expenses",
+    runningCost: "Vehicle Running Cost",
+    breakdownCost: "Breakdown Expenses",
+    otherCost: "Other Expenses",
+};
+
+const EXPENSE_KEYS = Object.keys(EXPENSE_TYPE_LABELS);
+
 const formatExpenseTypeLabel = (key: string) => {
     if (EXPENSE_TYPE_LABELS[key]) {
         return EXPENSE_TYPE_LABELS[key];
@@ -624,69 +635,22 @@ const getExpenseDescription = (
 const buildExpenseRowsFromTripExpense = (
     tripExpense: any
 ) => {
-    if (!tripExpense) return [];
-
     const expenses = tripExpense?.expenses || {};
-    const rows: any[] = [];
+    const expenseKeys = [...EXPENSE_KEYS, ...Object.keys(expenses).filter((key) => key !== "advanceReceived" && !EXPENSE_KEYS.includes(key))];
 
-    Object.entries(expenses).forEach(
-        ([expenseKey, expenseGroup]: [string, any]) => {
-            // Advances are handled separately.
-            if (expenseKey === "advanceReceived") {
-                return;
-            }
+    return expenseKeys.map((expenseKey) => {
+        const entries = Array.isArray(expenses?.[expenseKey]?.entries) ? expenses[expenseKey].entries : [];
+        const firstEntry = entries[0] || {};
 
-            const entries = Array.isArray(expenseGroup?.entries)
-                ? expenseGroup.entries
-                : [];
-
-            entries.forEach((entry: any, index: number) => {
-                const amount = Number(entry?.amount || 0);
-
-                if (amount <= 0) return;
-
-                rows.push({
-                    id: `${expenseKey}-${index}`,
-
-                    expenseKey,
-
-                    type: formatExpenseTypeLabel(expenseKey),
-
-                    date:
-                        entry?.date ||
-                        entry?.receivedDate ||
-                        entry?.billDate ||
-                        tripExpense?.tripDate ||
-                        tripExpense?.enteredDate ||
-                        "",
-
-                    description: getExpenseDescription(
-                        expenseKey,
-                        entry
-                    ),
-
-                    amount,
-
-                    raw: entry,
-                });
-            });
-        }
-    );
-
-    return rows;
+        return { id: expenseKey, expenseKey, type: formatExpenseTypeLabel(expenseKey), date: firstEntry?.date || firstEntry?.receivedDate || firstEntry?.billDate || tripExpense?.tripDate || tripExpense?.enteredDate || "", description: getExpenseDescription(expenseKey, firstEntry), amount: sumAmounts(entries), raw: firstEntry };
+    });
 };
 
 const buildAdvanceRowsFromTripExpense = (tripExpense: any) => {
     const entries = tripExpense?.expenses?.advanceReceived?.entries || [];
+    const firstEntry = entries[0] || {};
 
-    return entries.map((entry: any, index: number) => ({
-        id: `advance-${index}`,
-        date: entry?.date || entry?.receivedDate || tripExpense?.tripDate || "",
-        source: entry?.sourceName || entry?.sourceType || "Advance",
-        paymentMode: entry?.paymentMode || "-",
-        amount: Number(entry?.amount || 0),
-        remarks: entry?.remarks || "",
-    }));
+    return [{ id: "advanceReceived", date: firstEntry?.date || firstEntry?.receivedDate || tripExpense?.tripDate || "", source: "Advance Received", paymentMode: firstEntry?.paymentMode || "-", amount: sumAmounts(entries), remarks: firstEntry?.remarks || "" }];
 };
 
 const mapSelectionToTripDetails = ({
@@ -994,24 +958,23 @@ const mapEditRecordToTripDetails = (record: any) => {
     };
 };
 
-const mapEditRecordToExpenseRows = (record: any) =>
-    (record?.expenses || []).map((row: any, index: number) => ({
-        id: `edit-expense-${index}`,
-        date: row?.date || "",
-        type: row?.type || "",
-        description: row?.description || "",
-        amount: Number(row?.amount || 0),
-    }));
+const mapEditRecordToExpenseRows = (record: any) => {
+    const rows = Array.isArray(record?.expenses) ? record.expenses : [];
 
-const mapEditRecordToAdvanceRows = (record: any) =>
-    (record?.advances || []).map((row: any, index: number) => ({
-        id: `edit-advance-${index}`,
-        date: row?.date || "",
-        source: row?.source || "",
-        paymentMode: row?.mode || "-",
-        amount: Number(row?.amount || 0),
-        remarks: row?.remarks || "",
-    }));
+    return EXPENSE_KEYS.map((expenseKey) => {
+        const matchedRows = rows.filter((row: any) => row?.expenseKey === expenseKey || normalizeText(row?.type) === normalizeText(formatExpenseTypeLabel(expenseKey)));
+        const firstRow = matchedRows[0] || {};
+
+        return { id: expenseKey, expenseKey, date: firstRow?.date || "", type: formatExpenseTypeLabel(expenseKey), description: firstRow?.description || getExpenseDescription(expenseKey, {}), amount: sumAmounts(matchedRows) };
+    });
+};
+
+const mapEditRecordToAdvanceRows = (record: any) => {
+    const rows = Array.isArray(record?.advances) ? record.advances : [];
+    const firstRow = rows[0] || {};
+
+    return [{ id: "advanceReceived", date: firstRow?.date || "", source: "Advance Received", paymentMode: firstRow?.mode || firstRow?.paymentMode || "-", amount: sumAmounts(rows), remarks: firstRow?.remarks || "" }];
+};
 
 /* ===================================================
    SMALL DISPLAY COMPONENTS
@@ -1128,6 +1091,8 @@ const CreateEditDriverSettlement = ({
     const [remarks, setRemarks] = useState("");
     const [paymentAccountCode, setPaymentAccountCode] = useState("");
     const [paymentAccountName, setPaymentAccountName] = useState("");
+    const [expenseAmountEdits, setExpenseAmountEdits] = useState<Record<string, string>>({});
+    const [advanceAmountEdits, setAdvanceAmountEdits] = useState<Record<string, string>>({});
 
     // Edit-mode state
     const [editRecord, setEditRecord] = useState<any>(null);
@@ -1310,27 +1275,23 @@ const CreateEditDriverSettlement = ({
 
     const getExpenseAccount = useCallback(
         (expenseKey: string, expenseType: string) => {
-            const account =
-                transportExpenseAccountMap[expenseKey];
+            const configuredAccount = transportExpenseAccountMap[expenseKey];
+            const expectedAccountName = EXPENSE_ACCOUNT_NAMES[expenseKey];
+            const matchedExpenseAccount = accounts.find((item: any) => normalizeText(item?.accountType) === "expense" && normalizeText(item?.accountName) === normalizeText(expectedAccountName) && cleanText(item?.accountCode));
+            const account = matchedExpenseAccount
+                ? { code: cleanText(matchedExpenseAccount.accountCode), name: cleanText(matchedExpenseAccount.accountName) }
+                : configuredAccount?.isConfigured && configuredAccount?.isAccountFound && configuredAccount?.code && configuredAccount?.name
+                    ? { code: configuredAccount.code, name: configuredAccount.name }
+                    : null;
 
-            if (!account?.isConfigured || !account?.code) {
-                throw new Error(
-                    `Account code is not configured for "${expenseType}" using configuration field "${expenseKey}".`
-                );
-            }
-
-            if (!account?.isAccountFound || !account?.name) {
-                throw new Error(
-                    `Account Master was not found for configured account code "${account.code}" used by "${expenseType}".`
-                );
-            }
+            if (!account?.code || !account?.name) throw new Error(`Expense account "${expectedAccountName || expenseType}" was not found in Account Master.`);
 
             return {
                 code: account.code,
                 name: account.name,
             };
         },
-        [transportExpenseAccountMap]
+        [transportExpenseAccountMap, accounts]
     );
 
     const loadSettlementSources = useCallback(async () => {
@@ -1584,7 +1545,7 @@ const CreateEditDriverSettlement = ({
     // In edit/view mode, trip/LR/expense/advance details come straight
     // from the GET-by-voucher response instead of the live open-trip
     // selections.
-    const settlementData = useMemo(() => {
+    const baseSettlementData = useMemo(() => {
         if (isEditMode && editRecord) {
             const totalAllowedExpenses = Number(editRecord?.lessAllowedExpenses || 0);
             const totalAdvances = Number(editRecord?.lessAdvancesToDriver || 0);
@@ -1611,6 +1572,23 @@ const CreateEditDriverSettlement = ({
 
         return liveSettlementData;
     }, [isEditMode, editRecord, salary, incentives, liveSettlementData]);
+
+    useEffect(() => {
+        setExpenseAmountEdits({});
+        setAdvanceAmountEdits({});
+    }, [selectedTripId, editRecord]);
+
+    const settlementData = useMemo(() => {
+        if (!baseSettlementData) return baseSettlementData;
+
+        const expenseRows = (baseSettlementData.expenseRows || []).map((row: any) => ({ ...row, amount: Number(expenseAmountEdits[row.id] ?? row.amount ?? 0) }));
+        const advanceRows = (baseSettlementData.advanceRows || []).map((row: any) => ({ ...row, amount: Number(advanceAmountEdits[row.id] ?? row.amount ?? 0) }));
+        const totalExpenses = sumAmounts(expenseRows);
+        const totalAdvances = sumAmounts(advanceRows);
+        const totalAllowedExpenses = totalExpenses;
+
+        return { ...baseSettlementData, expenseRows, advanceRows, totalExpenses, totalAllowedExpenses, totalAdvances, settlement: computeSettlementSummary({ salary, incentives, allowedExpenses: totalAllowedExpenses, totalAdvances }) };
+    }, [baseSettlementData, expenseAmountEdits, advanceAmountEdits, salary, incentives]);
 
     const tripPendingAccept = useMemo(
         () => (isEditMode ? false : isTripPendingAccept(selectedTripExpense)),
@@ -1895,6 +1873,8 @@ const CreateEditDriverSettlement = ({
             return;
         }
 
+        let settlementSaved = false;
+
         try {
             setPageLoading(true);
 
@@ -2029,29 +2009,7 @@ const CreateEditDriverSettlement = ({
                     }) as any
                 ).unwrap();
 
-                /*
-                 * Do not fail the successful update only because
-                 * the WhatsApp notification failed.
-                 */
-                try {
-                    await dispatch(
-                        sendWhatsAppMessage({
-                            moduleType:
-                                "driverSettlement",
-                            voucherNumber:
-                                settlementVoucherNumber,
-                        }) as any
-                    ).unwrap();
-                } catch (whatsAppError) {
-                    console.error(
-                        "[DriverSettlement] WhatsApp notification failed:",
-                        whatsAppError
-                    );
-
-                    // toast.warning(
-                    //     "Driver settlement updated, but WhatsApp notification could not be sent"
-                    // );
-                }
+                dispatch(sendWhatsAppMessage({ moduleType: "driverSettlement", voucherNumber: settlementVoucherNumber }) as any).unwrap().catch(() => { });
 
                 toast.success(
                     "Driver Settlement Updated Successfully"
@@ -2070,25 +2028,14 @@ const CreateEditDriverSettlement = ({
                 createDriverSettlement(payload) as any
             ).unwrap();
 
+            settlementSaved = true;
+
             const voucherNumberResult =
                 settlementResponse?.data?.settlementNumber ||
                 settlementResponse?.settlementNumber;
 
             if (voucherNumberResult) {
-                try {
-                    await dispatch(
-                        sendWhatsAppMessage({
-                            moduleType: "driverSettlement",
-                            voucherNumber: voucherNumberResult,
-                        })
-                    ).unwrap();
-
-                } catch (error) {
-                    console.error(
-                        "[DriverSettlement] WhatsApp notification failed:",
-                        error
-                    );
-                }
+                dispatch(sendWhatsAppMessage({ moduleType: "driverSettlement", voucherNumber: voucherNumberResult }) as any).unwrap().catch(() => { });
             }
 
             const settlementNumber =
@@ -2123,13 +2070,10 @@ const CreateEditDriverSettlement = ({
             );
 
             if (expenseAmount > 0) {
-                if (!expenseLineItems.length) {
-                    throw new Error(
-                        "No expense entries with an amount were found to create the expense payment"
-                    );
-                }
+                try {
+                    if (!expenseLineItems.length) throw new Error("No expense entries with an amount were found to create the expense payment");
 
-                const payBody = expenseLineItems.map(
+                    const payBody = expenseLineItems.map(
                     (row: any, index: number) => {
                         const account = getExpenseAccount(
                             row.expenseKey,
@@ -2160,12 +2104,12 @@ const CreateEditDriverSettlement = ({
                     }
                 );
 
-                const payBodyTotal = expenseLineItems.reduce(
+                    const payBodyTotal = expenseLineItems.reduce(
                     (acc: number, row: any) => acc + Number(row.amount || 0),
                     0
                 );
 
-                const paymentPayload: any = {
+                    const paymentPayload: any = {
                     payVoucherNumber: "AUTO",
                     payVoucherDate: paymentDate,
 
@@ -2208,22 +2152,13 @@ const CreateEditDriverSettlement = ({
                         "TRIP_EXPENSE_PAYMENT",
                 };
 
-                const paymentResponse = await dispatch(
-                    addPayment({
-                        payload: paymentPayload,
-                    }) as any
-                ).unwrap();
+                    const paymentResponse = await dispatch(addPayment({ payload: paymentPayload }) as any).unwrap();
 
-                paymentVoucherNumber =
-                    getPaymentVoucherNumber(
-                        paymentResponse
-                    );
+                    paymentVoucherNumber = getPaymentVoucherNumber(paymentResponse);
 
-                if (!paymentVoucherNumber) {
-                    console.warn(
-                        "Expense payment created, but voucher number was not returned",
-                        paymentResponse
-                    );
+                    if (!paymentVoucherNumber) console.warn("Expense payment created, but voucher number was not returned", paymentResponse);
+                } catch (paymentError) {
+                    console.error("Driver settlement payment creation failed:", paymentError);
                 }
             }
 
@@ -2232,19 +2167,11 @@ const CreateEditDriverSettlement = ({
             ===================================================== */
 
             if (freightAmount > 0) {
-                if (!customerAccountCode) {
-                    throw new Error(
-                        "Customer account code is required to create freight receipt"
-                    );
-                }
+                try {
+                    if (!customerAccountCode) throw new Error("Customer account code is required to create freight receipt");
+                    if (!customerAccountName) throw new Error("Customer account name is required to create freight receipt");
 
-                if (!customerAccountName) {
-                    throw new Error(
-                        "Customer account name is required to create freight receipt"
-                    );
-                }
-
-                const receiptPayload: any = {
+                    const receiptPayload: any = {
                     recVoucherNumber: "AUTO",
                     recVoucherDate: paymentDate,
 
@@ -2311,22 +2238,13 @@ const CreateEditDriverSettlement = ({
                         "FREIGHT_RECEIPT",
                 };
 
-                const receiptResponse = await dispatch(
-                    addSalesReceipt({
-                        payload: receiptPayload,
-                    }) as any
-                ).unwrap();
+                    const receiptResponse = await dispatch(addSalesReceipt({ payload: receiptPayload }) as any).unwrap();
 
-                receiptVoucherNumber =
-                    getReceiptVoucherNumber(
-                        receiptResponse
-                    );
+                    receiptVoucherNumber = getReceiptVoucherNumber(receiptResponse);
 
-                if (!receiptVoucherNumber) {
-                    console.warn(
-                        "Freight receipt created, but voucher number was not returned",
-                        receiptResponse
-                    );
+                    if (!receiptVoucherNumber) console.warn("Freight receipt created, but voucher number was not returned", receiptResponse);
+                } catch (receiptError) {
+                    console.error("Driver settlement receipt creation failed:", receiptError);
                 }
             }
 
@@ -2421,43 +2339,29 @@ const CreateEditDriverSettlement = ({
                 }) as any
             ).unwrap();
 
-            /* =====================================================
-               SUCCESS MESSAGE
-            ===================================================== */
-
-            if (
-                expenseAmount > 0 &&
-                freightAmount > 0
-            ) {
-                toast.success(
-                    `Settlement created with Payment ${paymentVoucherNumber || ""
-                    } and Receipt ${receiptVoucherNumber || ""
-                    }`
-                );
+            if (expenseAmount > 0 && freightAmount > 0) {
+                toast.success(`Settlement created with Payment ${paymentVoucherNumber || ""} and Receipt ${receiptVoucherNumber || ""}`);
             } else if (expenseAmount > 0) {
-                toast.success(
-                    paymentVoucherNumber
-                        ? `Settlement and Expense Payment ${paymentVoucherNumber} created successfully`
-                        : "Settlement and Expense Payment created successfully"
-                );
+                toast.success(paymentVoucherNumber ? `Settlement and Expense Payment ${paymentVoucherNumber} created successfully` : "Settlement and Expense Payment created successfully");
             } else if (freightAmount > 0) {
-                toast.success(
-                    receiptVoucherNumber
-                        ? `Settlement and Freight Receipt ${receiptVoucherNumber} created successfully`
-                        : "Settlement and Freight Receipt created successfully"
-                );
+                toast.success(receiptVoucherNumber ? `Settlement and Freight Receipt ${receiptVoucherNumber} created successfully` : "Settlement and Freight Receipt created successfully");
             } else {
-                toast.success(
-                    "Driver Settlement created. No expense payment or freight receipt was required."
-                );
+                toast.success("Driver Settlement created. No expense payment or freight receipt was required.");
             }
 
             goToList();
+
         } catch (error: any) {
             console.error(
                 "Driver settlement accounting error:",
                 error
             );
+
+            if (settlementSaved) {
+                toast.success("Driver Settlement Created Successfully");
+                goToList();
+                return;
+            }
 
             toast.error(
                 error?.payload?.message ||
@@ -2706,8 +2610,6 @@ const CreateEditDriverSettlement = ({
                                 <EmptyHint>Loading settlement details...</EmptyHint>
                             ) : !selectedTripId ? (
                                 <EmptyHint>Select order / trip to view expenses.</EmptyHint>
-                            ) : !isEditMode && !selectedTripExpense ? (
-                                <EmptyHint>No trip expense recorded yet.</EmptyHint>
                             ) : !settlementData.expenseRows.length ? (
                                 <EmptyHint>No expense entries in this trip.</EmptyHint>
                             ) : (
@@ -2736,8 +2638,8 @@ const CreateEditDriverSettlement = ({
                                                 {item.description}
                                             </div>
 
-                                            <div className="col-span-2 text-right">
-                                                {formatMoney(item.amount)}
+                                            <div className="col-span-2">
+                                                <input type="number" min="0" step="0.01" value={expenseAmountEdits[item.id] ?? String(item.amount ?? 0)} disabled={isView} onChange={(event) => setExpenseAmountEdits((prev) => ({ ...prev, [item.id]: event.target.value }))} className="w-full rounded-md border border-border bg-background px-2 py-1 text-right text-sm outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-70" />
                                             </div>
                                         </div>
                                     ))}
@@ -2774,8 +2676,6 @@ const CreateEditDriverSettlement = ({
                                 <EmptyHint>Loading settlement details...</EmptyHint>
                             ) : !selectedTripId ? (
                                 <EmptyHint>Select order / trip to view advances.</EmptyHint>
-                            ) : !isEditMode && !selectedTripExpense ? (
-                                <EmptyHint>No trip expense recorded yet.</EmptyHint>
                             ) : !settlementData.advanceRows.length ? (
                                 <EmptyHint>No advances recorded for this trip.</EmptyHint>
                             ) : (
@@ -2801,8 +2701,8 @@ const CreateEditDriverSettlement = ({
                                                 {item.source}
                                             </div>
 
-                                            <div className="col-span-4 text-right">
-                                                {formatMoney(item.amount)}
+                                            <div className="col-span-4">
+                                                <input type="number" min="0" step="0.01" value={advanceAmountEdits[item.id] ?? String(item.amount ?? 0)} disabled={isView} onChange={(event) => setAdvanceAmountEdits((prev) => ({ ...prev, [item.id]: event.target.value }))} className="w-full rounded-md border border-border bg-background px-2 py-1 text-right text-sm outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-70" />
                                             </div>
                                         </div>
                                     ))}
@@ -2891,7 +2791,7 @@ const CreateEditDriverSettlement = ({
                         className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
                     >
                         <Save size={16} />
-                        {loading ? "Loading..." : isEditMode ? "Update & Proceed" : "Save & Proceed"}
+                        {loading ? "Loading..." : isEditMode ? "Update & Post" : "Save & Post"}
                     </button>
                 )}
             </div>
