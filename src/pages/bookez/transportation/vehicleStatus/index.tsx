@@ -40,7 +40,7 @@ const pageVariants = {
     },
 };
 
-const sectionVariants:any = {
+const sectionVariants: any = {
     hidden: { opacity: 0, y: 18 },
     show: {
         opacity: 1,
@@ -62,7 +62,7 @@ const gridVariants = {
     },
 };
 
-const cardVariants:any = {
+const cardVariants: any = {
     hidden: { opacity: 0, y: 18, scale: 0.98 },
     show: {
         opacity: 1,
@@ -239,7 +239,7 @@ const FleetSummaryCard = ({
                 <motion.div
                     layout
                     className={`
-                        flex h-9 w-9 items-center justify-center rounded-md shadow-sm
+                        flex h-6 w-6 items-center justify-center rounded-md shadow-sm
                         ${selected ? "bg-white/20" : "bg-muted"}
                     `}
                     animate={{
@@ -248,7 +248,7 @@ const FleetSummaryCard = ({
                     transition={{ duration: 0.45 }}
                 >
                     <Icon
-                        size={18}
+                        size={15}
                         style={{ color: selected ? "#FFFFFF" : item.color }}
                     />
                 </motion.div>
@@ -267,7 +267,7 @@ const FleetSummaryCard = ({
                 </motion.span>
             </div>
 
-            <div className="relative mt-3">
+            <div className="relative flex items-center justify-between gap-2 mt-2">
                 <motion.h3
                     key={`${item.key}-${value}`}
                     initial={{ opacity: 0, y: 6 }}
@@ -316,6 +316,14 @@ const CompactInfoTile = ({
             </p>
         </motion.div>
     );
+};
+
+const getVehicleCityName = (vehicle: any) => String(vehicle?.citymaster?.name || vehicle?.cityMaster?.name || vehicle?.currentLocation || "").trim();
+
+const formatVehicleDate = (value: any) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
 /* ===================================================
@@ -410,19 +418,21 @@ const VehicleCard = ({ vehicle }: { vehicle: any }) => {
                             value={`${vehicle.vehicleCapacityTon || 0} Ton`}
                         />
 
-                        <CompactInfoTile
-                            label="Available"
-                            value={`${vehicle.availableCapacityTon || 0} Ton`}
-                        />
+                    
 
                         <CompactInfoTile
                             label="Location"
-                            value={vehicle.currentLocation || "-"}
+                            value={getVehicleCityName(vehicle) || "-"}
                         />
 
                         <CompactInfoTile
                             label="Load Type"
                             value={vehicle.loadType || "FTL"}
+                        />
+
+                        <CompactInfoTile
+                            label="Available From"
+                            value={formatVehicleDate(vehicle.available_from || vehicle.availableFrom)}
                         />
                     </div>
                 </div>
@@ -521,7 +531,7 @@ const VehicleStatus = () => {
         ];
 
         return [
-            { label: "Vehicle Type", value: "" },
+            { label: "Select Vehicle Type", value: "" },
             ...values.map((value: any) => ({ label: value, value })),
         ];
     }, [vehicles]);
@@ -536,7 +546,7 @@ const VehicleStatus = () => {
         ];
 
         return [
-            { label: "Capacity", value: "" },
+            { label: "Select Capacity", value: "" },
             ...values.map((value: any) => ({
                 label: `${value} Ton`,
                 value,
@@ -548,13 +558,13 @@ const VehicleStatus = () => {
         const values = [
             ...new Set(
                 (vehicles || [])
-                    .map((vehicle: any) => vehicle.currentLocation)
+                    .map((vehicle: any) => getVehicleCityName(vehicle))
                     .filter(Boolean)
             ),
         ];
 
         return [
-            { label: "Location", value: "" },
+            { label: "Select Location", value: "" },
             ...values.map((value: any) => ({ label: value, value })),
         ];
     }, [vehicles]);
@@ -600,7 +610,7 @@ const VehicleStatus = () => {
                 return false;
             }
 
-            if (locationFilter && vehicle.currentLocation !== locationFilter) {
+            if (locationFilter && getVehicleCityName(vehicle) !== locationFilter) {
                 return false;
             }
 
@@ -609,7 +619,7 @@ const VehicleStatus = () => {
                     vehicle.vehicleNumber,
                     vehicle.vehicleType,
                     vehicle.vehicleBodyType,
-                    vehicle.currentLocation,
+                    getVehicleCityName(vehicle),
                     vehicle.availabilityStatus,
                     vehicle.voucherNumber,
                 ]
@@ -658,38 +668,30 @@ const VehicleStatus = () => {
             animate="show"
             className="min-h-screen bg-background p-3"
         >
-            <div className="mx-auto flex w-full  flex-col gap-3">
+           <div className="sticky top-0 z-40 mx-auto flex w-full flex-col gap-3  bg-background/95 py-3  backdrop-blur supports-[backdrop-filter]:bg-background/80">
                 {/* ACTION BAR */}
-                <motion.div
-                    variants={sectionVariants}
-                    className="flex flex-col gap-3 rounded-md border border-border bg-card p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between"
-                >
-                    <div className="flex items-center">
+                <motion.div variants={sectionVariants} className="flex flex-col gap-3 rounded-md border border-border bg-card p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-center">
                         <motion.button
                             type="button"
                             onClick={handleBack}
                             whileHover={{ x: -2, scale: 1.05 }}
                             whileTap={{ scale: 0.94 }}
-                            className="me-3 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition hover:bg-primary/20"
+                            className="me-3 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 transition-colors hover:bg-primary/20"
                             title="Go back"
                         >
                             <ArrowLeft size={20} />
                         </motion.button>
 
-                        <div>
-                            <h2 className="text-lg font-bold text-card-foreground">
-                                Fleet Overview
-                            </h2>
-
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                {listingLoader
-                                    ? "Updating fleet summary..."
-                                    : `Total vehicles in master: ${totalVehicles}`}
+                        <div className="min-w-0">
+                            <h2 className="truncate text-lg font-bold text-card-foreground">Fleet Overview</h2>
+                            <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                                {listingLoader ? "Updating fleet summary..." : `Total vehicles in master: ${totalVehicles}`}
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto lg:justify-end">
                         <AnimatePresence>
                             {hasFilter && (
                                 <motion.button
@@ -701,11 +703,7 @@ const VehicleStatus = () => {
                                     exit={{ opacity: 0, scale: 0.95, x: 8 }}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.96 }}
-                                    className="
-                                        inline-flex h-10 items-center gap-2 rounded-md border border-border
-                                        bg-background px-3 text-sm font-medium text-muted-foreground
-                                        transition hover:bg-muted
-                                    "
+                                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
                                 >
                                     <X size={16} />
                                     Reset Filters
@@ -713,24 +711,30 @@ const VehicleStatus = () => {
                             )}
                         </AnimatePresence>
 
-                        <motion.button
-                            type="button"
-                            onClick={fetchVehicles}
-                            disabled={listingLoader}
-                            whileHover={!listingLoader ? { scale: 1.02 } : undefined}
-                            whileTap={!listingLoader ? { scale: 0.96 } : undefined}
-                            className="
-                                inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3
-                                text-sm font-bold text-primary-foreground shadow-sm transition
-                                hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60
-                            "
-                        >
-                            <RefreshCcw
-                                size={16}
-                                className={listingLoader ? "animate-spin" : ""}
-                            />
-                            Refresh
-                        </motion.button>
+                        <div className="flex min-w-0 flex-1 items-center gap-2 lg:flex-none">
+                            <motion.div whileFocus={{ scale: 1.01 }} className="relative min-w-0 flex-1 sm:min-w-72 lg:w-80 lg:flex-none">
+                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+
+                                <input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search vehicle number, type, location..."
+                                    className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                />
+                            </motion.div>
+
+                            <motion.button
+                                type="button"
+                                onClick={fetchVehicles}
+                                disabled={listingLoader}
+                                whileHover={!listingLoader ? { scale: 1.02 } : undefined}
+                                whileTap={!listingLoader ? { scale: 0.96 } : undefined}
+                                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <RefreshCcw size={16} className={listingLoader ? "animate-spin" : ""} />
+                                <span className="hidden sm:inline">Refresh</span>
+                            </motion.button>
+                        </div>
                     </div>
                 </motion.div>
 
@@ -754,180 +758,132 @@ const VehicleStatus = () => {
                 <motion.div
                     variants={sectionVariants}
                     layout
-                    className="rounded-md border border-border bg-card p-3 shadow-sm"
+                    className="grid grid-cols-1 gap-3 rounded-md border border-border bg-card p-3 shadow-sm lg:grid-cols-[minmax(200px,auto)_minmax(0,1fr)] lg:items-center"
                 >
-                    <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <motion.div
-                                    whileHover={{ rotate: 8, scale: 1.05 }}
-                                    className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary"
-                                >
-                                    <SlidersHorizontal size={18} />
-                                </motion.div>
+                    <div className="flex min-w-0 items-center gap-2">
+                        <motion.div
+                            whileHover={{ rotate: 8, scale: 1.05 }}
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
+                        >
+                            <SlidersHorizontal size={18} />
+                        </motion.div>
 
-                                <div>
-                                    <h2 className="text-sm font-bold text-card-foreground">
-                                        Available Vehicles
-                                    </h2>
+                        <div className="min-w-0">
+                            <h2 className="truncate text-sm font-bold text-card-foreground">Available Vehicles</h2>
 
-                                    <div className="mt-1 flex items-center gap-2">
-                                        <motion.span
-                                            animate={{ scale: [1, 1.35, 1] }}
-                                            transition={{
-                                                duration: 1.5,
-                                                repeat: Infinity,
-                                                ease: "easeInOut",
-                                            }}
-                                            className="h-2 w-2 rounded-full bg-emerald-500"
-                                        />
+                            <div className="mt-1 flex min-w-0 items-center gap-2">
+                                <motion.span
+                                    animate={{ scale: [1, 1.35, 1] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                    className="h-2 w-2 shrink-0 rounded-full bg-emerald-500"
+                                />
 
-                                        <p className="text-xs text-muted-foreground">
-                                            {listStatusText}
-                                        </p>
-                                    </div>
-                                </div>
+                                <p className="truncate text-xs text-muted-foreground">{listStatusText}</p>
                             </div>
                         </div>
-
-                        <motion.div
-                            whileFocus={{ scale: 1.01 }}
-                            className="relative w-full xl:max-w-sm"
-                        >
-                            <Search
-                                size={16}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                            />
-
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search vehicle number, type, location..."
-                                className="
-                                    h-10 w-full rounded-md border border-border bg-background
-                                    pl-9 pr-3 text-sm text-foreground outline-none
-                                    transition focus:border-primary focus:ring-2 focus:ring-primary/10
-                                "
-                            />
-                        </motion.div>
                     </div>
 
-                    <motion.div
-                        variants={gridVariants}
-                        className="grid grid-cols-1 gap-2 md:grid-cols-3"
-                    >
-                        <motion.div variants={cardVariants}>
-                            <SelectBox
-                                value={vehicleTypeFilter}
-                                onChange={setVehicleTypeFilter}
-                                options={vehicleTypeOptions}
-                            />
+                    <motion.div variants={gridVariants} className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+                        <motion.div variants={cardVariants} className="min-w-0">
+                            <SelectBox value={vehicleTypeFilter} onChange={setVehicleTypeFilter} options={vehicleTypeOptions} />
                         </motion.div>
 
-                        <motion.div variants={cardVariants}>
-                            <SelectBox
-                                value={capacityFilter}
-                                onChange={setCapacityFilter}
-                                options={capacityOptions}
-                            />
+                        <motion.div variants={cardVariants} className="min-w-0">
+                            <SelectBox value={capacityFilter} onChange={setCapacityFilter} options={capacityOptions} />
                         </motion.div>
 
-                        <motion.div variants={cardVariants}>
-                            <SelectBox
-                                value={locationFilter}
-                                onChange={setLocationFilter}
-                                options={locationOptions}
-                            />
+                        <motion.div variants={cardVariants} className="min-w-0">
+                            <SelectBox value={locationFilter} onChange={setLocationFilter} options={locationOptions} />
                         </motion.div>
                     </motion.div>
                 </motion.div>
-
-                {/* VEHICLE LIST */}
-                <AnimatePresence mode="wait">
-                    {listingLoader ? (
-                        <motion.div
-                            key="vehicle-loader"
-                            variants={gridVariants}
-                            initial="hidden"
-                            animate="show"
-                            exit={{ opacity: 0, y: 10 }}
-                            className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
-                        >
-                            {Array.from({ length: 6 }).map((_, index) => (
-                                <SkeletonCard key={index} index={index} />
-                            ))}
-                        </motion.div>
-                    ) : filteredVehicles.length === 0 ? (
-                        <motion.div
-                            key="vehicle-empty"
-                            initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                            transition={{ duration: 0.25 }}
-                            className="flex min-h-[240px] flex-col items-center justify-center rounded-md border border-dashed border-border bg-card p-8 text-center shadow-sm"
-                        >
-                            <motion.div
-                                initial={{ scale: 0.9 }}
-                                animate={{
-                                    scale: [1, 1.05, 1],
-                                    rotate: [0, -3, 3, 0],
-                                }}
-                                transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    ease: "easeInOut",
-                                }}
-                                className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-muted-foreground"
-                            >
-                                <Truck size={30} />
-                            </motion.div>
-
-                            <h3 className="mt-4 text-lg font-bold text-foreground">
-                                No vehicles found
-                            </h3>
-
-                            <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                                Try changing your filters or refresh Vehicle Master data.
-                            </p>
-
-                            {hasFilter && (
-                                <motion.button
-                                    type="button"
-                                    onClick={resetFilters}
-                                    whileHover={{ scale: 1.03 }}
-                                    whileTap={{ scale: 0.96 }}
-                                    className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
-                                >
-                                    Clear Filters
-                                </motion.button>
-                            )}
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="vehicle-list"
-                            variants={gridVariants}
-                            initial="hidden"
-                            animate="show"
-                            exit={{ opacity: 0, y: 10 }}
-                            layout
-                            className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
-                        >
-                            <AnimatePresence>
-                                {filteredVehicles.map((vehicle: any) => (
-                                    <VehicleCard
-                                        key={
-                                            vehicle.selectedVehicleId ||
-                                            vehicle.voucherNumber ||
-                                            vehicle.vehicleNumber
-                                        }
-                                        vehicle={vehicle}
-                                    />
-                                ))}
-                            </AnimatePresence>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
+            {/* VEHICLE LIST */}
+            <AnimatePresence mode="wait">
+                {listingLoader ? (
+                    <motion.div
+                        key="vehicle-loader"
+                        variants={gridVariants}
+                        initial="hidden"
+                        animate="show"
+                        exit={{ opacity: 0, y: 10 }}
+                        className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    >
+                        {Array.from({ length: 6 }).map((_, index) => (
+                            <SkeletonCard key={index} index={index} />
+                        ))}
+                    </motion.div>
+                ) : filteredVehicles.length === 0 ? (
+                    <motion.div
+                        key="vehicle-empty"
+                        initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                        transition={{ duration: 0.25 }}
+                        className="flex min-h-[240px] flex-col items-center justify-center rounded-md border border-dashed border-border bg-card p-8 text-center shadow-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{
+                                scale: [1, 1.05, 1],
+                                rotate: [0, -3, 3, 0],
+                            }}
+                            transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                            }}
+                            className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-muted-foreground"
+                        >
+                            <Truck size={30} />
+                        </motion.div>
+
+                        <h3 className="mt-4 text-lg font-bold text-foreground">
+                            No vehicles found
+                        </h3>
+
+                        <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                            Try changing your filters or refresh Vehicle Master data.
+                        </p>
+
+                        {hasFilter && (
+                            <motion.button
+                                type="button"
+                                onClick={resetFilters}
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.96 }}
+                                className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+                            >
+                                Clear Filters
+                            </motion.button>
+                        )}
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="vehicle-list"
+                        variants={gridVariants}
+                        initial="hidden"
+                        animate="show"
+                        exit={{ opacity: 0, y: 10 }}
+                        layout
+                        className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    >
+                        <AnimatePresence>
+                            {filteredVehicles.map((vehicle: any) => (
+                                <VehicleCard
+                                    key={
+                                        vehicle.selectedVehicleId ||
+                                        vehicle.voucherNumber ||
+                                        vehicle.vehicleNumber
+                                    }
+                                    vehicle={vehicle}
+                                />
+                            ))}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
         </motion.div>
     );
 };

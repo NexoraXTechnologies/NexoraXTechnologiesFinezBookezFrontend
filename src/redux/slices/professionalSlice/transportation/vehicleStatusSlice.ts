@@ -187,9 +187,17 @@ export const mapCustomMasterRecordToVehicle = (
         ) || vehicleCapacityTon;
 
     const currentLocation = getRecordValue(record, [
+        "citymaster",
+        "cityMaster",
         "currentLocation",
         "location",
         "city",
+    ]);
+
+    const availableFrom = getRecordValue(record, [
+        "available_from",
+        "availableFrom",
+        "availableFromDate",
     ]);
 
     const availabilityStatus = normalizeVehicleAvailabilityStatus(
@@ -218,6 +226,7 @@ export const mapCustomMasterRecordToVehicle = (
         vehicleCapacityTon,
         availableCapacityTon,
         currentLocation,
+        availableFrom,
         availabilityStatus,
         availabilityLabel: availabilityStatus,
         loadType: getRecordValue(record, ["loadType"]) || order?.loadType || "FTL",

@@ -150,7 +150,7 @@ const normalizeOwnershipKey = (value: any) => {
 
     if (
         [
-            "market",
+            "hired",
             "marketvehicle",
             "hire",
             "hired",
@@ -160,10 +160,19 @@ const normalizeOwnershipKey = (value: any) => {
             "thirdpartyvehicle",
         ].includes(key)
     ) {
-        return "market";
+        return "hired";
     }
 
     return key;
+};
+
+const getOwnershipLabel = (value: any) => {
+    const key = normalizeOwnershipKey(value);
+
+    if (key === "owned") return "Owned";
+    if (key === "hired") return "Hired";
+
+    return String(value || "").trim();
 };
 
 const getReferenceName = (value: any) => {
@@ -195,6 +204,38 @@ const getReferenceCode = (value: any) => {
         value?.value ||
         ""
     ).trim();
+};
+
+const getVehicleCityName = (vehicle: any = {}) => {
+    const candidates = [
+        vehicle?.citymaster,
+        vehicle?.cityMaster,
+        vehicle?.city_master,
+        vehicle?.currentLocation,
+        vehicle?.current_location,
+        vehicle?.location,
+        vehicle?.city,
+        vehicle?.rawRecord?.citymaster,
+        vehicle?.rawRecord?.cityMaster,
+        vehicle?.rawRecord?.city_master,
+        vehicle?.rawRecord?.currentLocation,
+        vehicle?.rawRecord?.current_location,
+        vehicle?.rawRecord?.location,
+        vehicle?.rawRecord?.city,
+        vehicle?.rawRecord?.data?.citymaster,
+        vehicle?.rawRecord?.data?.cityMaster,
+        vehicle?.rawRecord?.data?.city_master,
+        vehicle?.rawRecord?.data?.location,
+        vehicle?.rawRecord?.data?.city,
+    ];
+
+    for (const candidate of candidates) {
+        const cityName = getReferenceName(candidate);
+
+        if (cityName && cityName !== "-") return cityName;
+    }
+
+    return "";
 };
 
 const getStatusKey = (value: any) =>
@@ -369,15 +410,22 @@ const normalizeVehicle = (vehicle: any = {}) => {
         vehicle?.vehicleNumber ||
         "";
 
-    const vehicleOwnership =
-        vehicle?.vehicleOwnership ||
-        vehicle?.ownership ||
-        vehicle?.ownershipType ||
-        vehicle?.ownership_type ||
-        vehicle?.owner_type ||
-        vehicle?.vehicle_ownership ||
-        vehicle?.rawRecord?.ownership_type ||
-        "";
+    const ownershipType = [
+        vehicle?.vehicleOwnership,
+        vehicle?.ownership,
+        vehicle?.ownershipType,
+        vehicle?.ownership_type,
+        vehicle?.owner_type,
+        vehicle?.vehicle_ownership,
+        vehicle?.rawRecord?.ownership_type,
+        vehicle?.rawRecord?.ownershipType,
+        vehicle?.rawRecord?.vehicleOwnership,
+        vehicle?.rawRecord?.data?.ownership_type,
+        vehicle?.rawRecord?.data?.ownershipType,
+        vehicle?.rawRecord?.data?.vehicleOwnership,
+    ]
+        .map(normalizeOwnershipKey)
+        .find(Boolean) || "";
 
     const vehicleNumber =
         vehicle?.vehicleNumber ||
@@ -444,8 +492,6 @@ const normalizeVehicle = (vehicle: any = {}) => {
         vehicle?.rawRecord?.data?.customCustomerMaster ||
         null;
 
-    const ownershipType = normalizeOwnershipKey(vehicleOwnership);
-
     const vendorName = String(
         vehicle?.vendorName ||
         vehicle?.rawRecord?.vendorName ||
@@ -490,16 +536,11 @@ const normalizeVehicle = (vehicle: any = {}) => {
         vehicleCapacityTon,
         availableCapacityTon,
 
-        currentLocation:
-            vehicle?.currentLocation ||
-            vehicle?.current_location ||
-            vehicle?.location ||
-            vehicle?.rawRecord?.location ||
-            "",
+        currentLocation: getVehicleCityName(vehicle),
 
         availabilityStatus,
-        vehicleOwnership: ownershipType,
-        ownershipType,
+        ownershipType: ownershipType,
+        // ownershipType,
         vendorCode,
         vendorName,
         customerCode,
@@ -617,7 +658,6 @@ const filterVehicles = ({
     vehicles,
     transportOrder,
     vehicleTypeFilter,
-    vehicleOwnershipFilter,
     capacityFilter,
     locationFilter,
 }: any) => {
@@ -643,14 +683,6 @@ const filterVehicles = ({
             if (
                 vehicleTypeFilter &&
                 !vehicleTypeMatch(vehicle?.vehicleType, vehicleTypeFilter)
-            ) {
-                return false;
-            }
-
-            if (
-                vehicleOwnershipFilter &&
-                normalizeOwnershipKey(vehicle?.vehicleOwnership) !==
-                normalizeOwnershipKey(vehicleOwnershipFilter)
             ) {
                 return false;
             }
@@ -1073,9 +1105,9 @@ const CreateTripAllocation = ({
     );
 
     const vehicleOwnershipOptions = [
-        { label: "All Vehicles", value: "" },
-        { label: "Owned Vehicle", value: "owned" },
-        { label: "Market Vehicle", value: "market" },
+        { label: "Select a vehicle", value: "" },
+        { label: "Owned", value: "owned" },
+        { label: "Hired", value: "hired" },
     ];
 
     const vehicleTypeOptions = useMemo(() => {
@@ -1108,7 +1140,9 @@ const CreateTripAllocation = ({
             if (value) set.add(String(value));
         });
 
-        if (capacityFilter) set.add(String(capacityFilter));
+        // if (capacityFilter) set.add(String(capacityFilter));
+        const selectedCapacity = parseNumber(capacityFilter);
+        if (selectedCapacity) set.add(String(selectedCapacity));
         if (requiredCapacity) set.add(String(requiredCapacity));
 
         return [
@@ -1511,6 +1545,11 @@ const CreateTripAllocation = ({
         } = options;
 
         const normalized = normalizeVehicle(vehicle);
+        const selectedOwnership = normalizeOwnershipKey(
+            normalized?.ownershipType || normalized?.vehicleOwnership
+        );
+
+        setVehicleOwnershipFilter(selectedOwnership);
 
         // Update vehicle immediately
         setForm((prev: any) => ({
@@ -2036,9 +2075,9 @@ const CreateTripAllocation = ({
             return false;
         }
 
-        // ⭐ ADDED — React Native parity: market vehicle must have its vendor from Vehicle Master.
+        // ⭐ ADDED — React Native parity: hired vehicle must have its vendor from Vehicle Master.
         if (
-            ownershipType === "market" &&
+            ownershipType === "hired" &&
             !String(form.vehicleSelection?.vendorName || "").trim()
         ) {
             toast.warn("Market vehicle requires Vendor from Vehicle Master");
@@ -2337,8 +2376,7 @@ const CreateTripAllocation = ({
 
                                     <Meta
                                         label="Required Capacity"
-                                        value={`Min. ${form.transportOrder.requiredCapacityTon || 0
-                                            } Ton`}
+                                        value={`Min. ${parseNumber(form.transportOrder.requiredCapacityTon)} Ton`}
                                     />
 
                                     <Meta
@@ -2431,29 +2469,13 @@ const CreateTripAllocation = ({
 
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-card-foreground">
-                                            Vehicle Ownership
+                                           Ownership Type
                                         </label>
 
                                         <select
                                             value={vehicleOwnershipFilter}
-                                            disabled={isView || vehicleLocked}
-                                            onChange={(e) => {
-                                                const ownershipType = normalizeOwnershipKey(
-                                                    e.target.value
-                                                );
-
-                                                setVehicleOwnershipFilter(ownershipType);
-
-                                                setForm((prev: any) => ({
-                                                    ...prev,
-                                                    vehicleSelection: {
-                                                        ...prev.vehicleSelection,
-                                                        ownershipType,
-                                                        vehicleOwnership: ownershipType,
-                                                    },
-                                                }));
-                                            }}
-                                            className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                                            //    disabled
+                                            className="h-10 w-full  rounded-md border border-border bg-muted px-3 text-sm text-muted-foreground"
                                         >
                                             {vehicleOwnershipOptions.map((o) => (
                                                 <option key={o.value} value={o.value}>
@@ -2469,7 +2491,7 @@ const CreateTripAllocation = ({
                                                 vehicleOwnershipFilter ||
                                                 selectedVehicleDetails.ownershipType ||
                                                 selectedVehicleDetails.vehicleOwnership
-                                            ) === "market" && (
+                                            ) === "hired" && (
                                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                                         <div className="min-w-0">
                                                             <p className="text-xs font-medium text-muted-foreground">
@@ -2601,7 +2623,7 @@ const CreateTripAllocation = ({
                                     </div>
 
                                     {searchedVehicles.length > 0 ? (
-                                        <div className="max-h-[270px] overflow-y-auto rounded-md border border-border bg-background p-2">
+                                        <div className="max-h-[320px] overflow-y-auto rounded-md border border-border bg-background p-2">
                                             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                                                 {searchedVehicles.map((vehicle: any) => {
                                                     const isSelected =
@@ -2685,6 +2707,16 @@ const CreateTripAllocation = ({
                                                                     Loc:{" "}
                                                                     <b className="text-card-foreground">
                                                                         {vehicle.currentLocation || "-"}
+                                                                    </b>
+                                                                </span>
+
+                                                                <span className="text-muted-foreground">
+                                                                    Ownership:{" "}
+                                                                    <b className="text-card-foreground">
+                                                                        {getOwnershipLabel(
+                                                                            vehicle.ownershipType ||
+                                                                            vehicle.vehicleOwnership
+                                                                        ) || "-"}
                                                                     </b>
                                                                 </span>
 
@@ -2823,7 +2855,7 @@ const CreateTripAllocation = ({
                                             classNamePrefix="rs"
                                             classNames={selectClassNames}
                                             styles={selectThemeStyles}
-                                            
+
                                         />
                                     </div>
 
@@ -3052,13 +3084,16 @@ const VehicleSummary = ({ form, showMarketNames = true }: any) => {
                             {vehicle.vehicleType || "-"} ·{" "}
                             {vehicle.availableCapacityTon || 0} Ton ·{" "}
                             {vehicle.currentLocation || "-"} ·{" "}
+                            {getOwnershipLabel(
+                                vehicle.ownershipType || vehicle.vehicleOwnership
+                            ) || "-"} ·{" "}
                             {vehicle.loadType || "FTL"}
                         </p>
 
                         {showMarketNames &&
                             normalizeOwnershipKey(
                                 vehicle.ownershipType || vehicle.vehicleOwnership
-                            ) === "market" && (
+                            ) === "hired" && (
                                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     <div className="rounded-md border border-border bg-background px-3 py-2">
                                         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

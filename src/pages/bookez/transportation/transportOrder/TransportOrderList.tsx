@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Eye, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { formatDateTime, money, truncate } from "../../../../utils/helperFunctions";
 import DataTable from "../../../../components/DataTable";
@@ -20,6 +20,7 @@ import {
 	getTransportOrders,
 } from "../../../../redux/slices/professionalSlice/transportation/transportOrderSlice";
 import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
+import { getActiveTripAllocations } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 
 /* ===================================================
    TRANSPORT ORDER LIST
@@ -57,6 +58,10 @@ const TransportOrderList = () => {
 		tripLRCollection = [],
 		listingLoader: lrListingLoader = false,
 	} = useSelector((state: any) => state.tripLRCollection || {});
+
+	const { activeAllocations = [] } = useSelector(
+		(state: any) => state.tripAllocation || {}
+	);
 
 
 	const pageTitle = location.state?.title || "Transport Order";
@@ -114,6 +119,34 @@ const TransportOrderList = () => {
 		if (!orderNumber) return null;
 
 		return allocatedLRMap[orderNumber] || null;
+	};
+
+	const allocatedTripMap = useMemo(() => {
+		const map: any = {};
+
+		for (const allocation of Array.isArray(activeAllocations) ? activeAllocations : []) {
+			const orderNumber = String(
+				allocation?.transportOrder?.transportOrderNumber ||
+				allocation?.transportOrder?.orderNumber ||
+				allocation?.transportOrder?.voucherNumber ||
+				allocation?.transportOrderNumber ||
+				allocation?.orderNumber ||
+				allocation?.tOrderNumber ||
+				""
+			).trim();
+
+			if (orderNumber) map[orderNumber] = allocation;
+		}
+
+		return map;
+	}, [activeAllocations]);
+
+	const getAllocatedTrip = (record: any) => {
+		const orderNumber = String(getOrderNumber(record) || "").trim();
+
+		if (!orderNumber) return null;
+
+		return allocatedTripMap[orderNumber] || null;
 	};
 
 	// const isOrderAllocatedInLR = (record: any) => {
@@ -231,6 +264,10 @@ const TransportOrderList = () => {
 		fetchLRCollection();
 	}, [dispatch, localOffset, localLimit]);
 
+	useEffect(() => {
+		dispatch(getActiveTripAllocations({ limit: 100000, offset: 0 }) as any);
+	}, [dispatch]);
+
 	
 	const handleRefresh = () => {
 		setRefreshing(true);
@@ -243,12 +280,15 @@ const TransportOrderList = () => {
 					search,
 				}) as any
 			),
-			dispatch(
+			 dispatch(
 				getAllLRCollection({
 					limit: 100000,
 					offset: 0,
 					search: "",
 				}) as any
+			),
+			dispatch(
+				getActiveTripAllocations({ limit: 100000, offset: 0 }) as any
 			),
 		]).finally(() => {
 			setRefreshing(false);
@@ -565,6 +605,8 @@ const TransportOrderList = () => {
 
 							actions: (record: any) => {
 								const allocatedLR = getAllocatedLR(record);
+								const allocatedTrip = getAllocatedTrip(record);
+								const isAllocated = Boolean(allocatedTrip || allocatedLR);
 
 								return (
 									<div className="flex items-center gap-2">
@@ -573,7 +615,7 @@ const TransportOrderList = () => {
 
 
 
-										{!allocatedLR && !isClosedOrder(record) && (
+										{!isAllocated && !isClosedOrder(record) && (
 											<>
 												<Permission
 													module="bookez"
@@ -606,6 +648,23 @@ const TransportOrderList = () => {
 													</button>
 												</Permission>
 											</>
+										)}
+
+										{allocatedTrip && !allocatedLR && (
+											<Permission
+												module="bookez"
+												permissionKey="transportOrder"
+												action="view"
+											>
+												<button
+													type="button"
+													onClick={() => handleViewOrder(record)}
+													className="cursor-pointer rounded-md p-2 text-info transition-all duration-200 hover:bg-info/10"
+													title="View"
+												>
+													<Eye size={16} />
+												</button>
+											</Permission>
 										)}
 
 										{allocatedLR && (
