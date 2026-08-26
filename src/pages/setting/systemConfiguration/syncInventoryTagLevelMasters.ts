@@ -34,7 +34,8 @@ const INVENTORY_TRANSACTION_MODULES = [
     "salesReturn",
     "openingStock",
     "issueToProduction",
-    "receiptFromProduction"
+    "receiptFromProduction",
+    "assemblyProduction"
 ];
 
 const INVENTORY_MASTERS: Record<

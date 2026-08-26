@@ -1077,14 +1077,86 @@ const TransportAnalyticsView = ({
 		{ name: "E-Way Bills", value: totalEwayBills },
 	];
 
-	const maintenanceData = [
-		{ name: "PUC", value: toNumber(vehicleMaintenance?.totalPuc) },
-		{ name: "Insurance", value: toNumber(vehicleMaintenance?.totalInsurance) },
-		{ name: "Fitness", value: toNumber(vehicleMaintenance?.totalFitness) },
-	];
+	const [maintenanceFilter, setMaintenanceFilter] = useState<"all" | "overdue" | "dueSoon" | "upcoming">("all");
+	const [maintenancePage, setMaintenancePage] = useState(1);
+	const maintenancePageSize = 5;
+
+	const maintenanceVehicleRows = useMemo(() => {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		const buildDateDetail = (value: any) => {
+			if (!value) return null;
+			const dueDate = new Date(String(value).length === 10 ? `${value}T00:00:00` : value);
+			if (Number.isNaN(dueDate.getTime())) return null;
+			dueDate.setHours(0, 0, 0, 0);
+			const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / 86400000);
+			const dateLabel = new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(dueDate);
+			const status = daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? "Due today" : daysLeft === 1 ? "Tomorrow" : daysLeft <= 30 ? `${daysLeft}d left` : "Valid";
+			const tone = daysLeft < 0 ? "overdue" : daysLeft <= 30 ? "dueSoon" : "upcoming";
+			return { dateLabel, daysLeft, status, tone };
+		};
+
+		const groupedVehicles = Object.values([...(vehicleMaintenance?.list || [])].reduce((acc: any, vehicle: any) => {
+			const key = String(vehicle?.vehicleNumber || vehicle?.vehicleCode || vehicle?._id || "").trim();
+			if (!key) return acc;
+			if (!acc[key]) acc[key] = [];
+			acc[key].push(vehicle);
+			return acc;
+		}, {})) as any[];
+
+		return groupedVehicles.map((records: any[]) => {
+			const sortedRecords = [...records].sort((a: any, b: any) => new Date(b?.modifiedOn || b?.createdOn || 0).getTime() - new Date(a?.modifiedOn || a?.createdOn || 0).getTime());
+			const vehicle = sortedRecords[0] || {};
+			const firstValue = (getter: (record: any) => any) => sortedRecords.map(getter).find((value: any) => value !== null && value !== undefined && value !== "");
+			const details = {
+				puc: buildDateDetail(firstValue((record: any) => record?.pucDetails?.expiryDate)),
+				insurance: buildDateDetail(firstValue((record: any) => record?.insuranceDetails?.expiryDate)),
+				passing: buildDateDetail(firstValue((record: any) => record?.passingDetails?.expiryDate)),
+				fitness: buildDateDetail(firstValue((record: any) => record?.fitnessCertificateDetails?.expiryDate)),
+				permit: buildDateDetail(firstValue((record: any) => record?.permitDetails?.expiryDate)),
+				nextMaintenance: buildDateDetail(firstValue((record: any) => record?.nextMaintenance?.dueDate)),
+			};
+			const datedItems = Object.values(details).filter(Boolean) as any[];
+			const overdueItems = datedItems.filter((item: any) => item.daysLeft < 0);
+			const dueSoonItems = datedItems.filter((item: any) => item.daysLeft >= 0 && item.daysLeft <= 30);
+			const upcomingItems = datedItems.filter((item: any) => item.daysLeft > 30);
+			const category = overdueItems.length > 0 ? "overdue" : dueSoonItems.length > 0 ? "dueSoon" : "upcoming";
+			const priorityDays = overdueItems.length > 0 ? Math.max(...overdueItems.map((item: any) => item.daysLeft)) : dueSoonItems.length > 0 ? Math.min(...dueSoonItems.map((item: any) => item.daysLeft)) : upcomingItems.length > 0 ? Math.min(...upcomingItems.map((item: any) => item.daysLeft)) : Number.MAX_SAFE_INTEGER;
+			return { ...vehicle, maintenanceDetails: details, maintenanceCategory: category, maintenancePriorityDays: priorityDays, attention: overdueItems.length + dueSoonItems.length };
+		}).sort((a: any, b: any) => {
+			const rank: any = { overdue: 0, dueSoon: 1, upcoming: 2 };
+			if (rank[a.maintenanceCategory] !== rank[b.maintenanceCategory]) return rank[a.maintenanceCategory] - rank[b.maintenanceCategory];
+			if (a.maintenanceCategory === "overdue") return b.maintenancePriorityDays - a.maintenancePriorityDays;
+			return a.maintenancePriorityDays - b.maintenancePriorityDays;
+		});
+	}, [vehicleMaintenance?.list]);
+
+	const maintenanceCounts = useMemo(() => ({
+		all: maintenanceVehicleRows.length,
+		overdue: maintenanceVehicleRows.filter((item: any) => item.maintenanceCategory === "overdue").length,
+		dueSoon: maintenanceVehicleRows.filter((item: any) => item.maintenanceCategory === "dueSoon").length,
+		upcoming: maintenanceVehicleRows.filter((item: any) => item.maintenanceCategory === "upcoming").length,
+		attention: maintenanceVehicleRows.filter((item: any) => item.attention > 0).length,
+	}), [maintenanceVehicleRows]);
+
+	const filteredMaintenanceData = useMemo(() => maintenanceVehicleRows.filter((item: any) => maintenanceFilter === "all" || item.maintenanceCategory === maintenanceFilter), [maintenanceVehicleRows, maintenanceFilter]);
+	const maintenanceTotalPages = Math.max(1, Math.ceil(filteredMaintenanceData.length / maintenancePageSize));
+	const filteredMaintenanceList = useMemo(() => {
+		const start = (maintenancePage - 1) * maintenancePageSize;
+		return filteredMaintenanceData.slice(start, start + maintenancePageSize);
+	}, [filteredMaintenanceData, maintenancePage]);
+
+	useEffect(() => { setMaintenancePage(1); }, [maintenanceFilter]);
+	useEffect(() => { if (maintenancePage > maintenanceTotalPages) setMaintenancePage(maintenanceTotalPages); }, [maintenancePage, maintenanceTotalPages]);
+
+	const renderMaintenanceDate = (detail: any) => {
+		if (!detail) return <span className="text-muted-foreground">-</span>;
+		const toneClass = detail.tone === "overdue" ? "text-danger" : detail.tone === "dueSoon" ? "text-orange-600" : "text-foreground";
+		return <div className="whitespace-nowrap"><p className={`text-xs font-black ${toneClass}`}>{detail.dateLabel}</p>{detail.tone !== "upcoming" && <p className={`mt-0.5 text-[10px] font-bold ${toneClass}`}>{detail.status}</p>}</div>;
+	};
 
 	const hasActivityData = activityData.some((item) => item.value > 0);
-	const hasMaintenanceData = maintenanceData.some((item) => item.value > 0);
 
 	if (loading) {
 		return (
@@ -1241,24 +1313,65 @@ const TransportAnalyticsView = ({
 			</div>
 
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-				<CompactWidgetCard
-					title="Vehicle Maintenance"
-					className="xl:col-span-2"
-					accent="sales"
-				>
-					{!hasMaintenanceData ? (
-						<EmptyData text="No maintenance data found" />
+				<CompactWidgetCard title="Vehicle Maintenance" className="xl:col-span-2" accent="sales" right={<span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-black text-primary">{formatNumber(maintenanceCounts.attention)} vehicles need attention</span>}>
+					{maintenanceVehicleRows.length === 0 ? (
+						<EmptyData text="No vehicle maintenance data found" />
 					) : (
-						<div className="h-[230px]">
-							<ResponsiveContainer width="100%" height="100%">
-								<BarChart data={maintenanceData}>
-									<CartesianGrid strokeDasharray="4 4" vertical={false} />
-									<XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
-									<YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
-									<Tooltip content={<CompactTooltip />} />
-									<Bar dataKey="value" fill="#c084fc" radius={[10, 10, 10, 10]} maxBarSize={60} />
-								</BarChart>
-							</ResponsiveContainer>
+						<div className="space-y-3">
+							<div className="flex flex-wrap gap-2">
+								{[
+									{ key: "all", label: `All ${maintenanceCounts.all}` },
+									{ key: "overdue", label: `Overdue ${maintenanceCounts.overdue}` },
+									{ key: "dueSoon", label: `Due Soon ${maintenanceCounts.dueSoon}` },
+									{ key: "upcoming", label: `Upcoming ${maintenanceCounts.upcoming}` },
+								].map((item: any) => (
+									<button key={item.key} type="button" onClick={() => setMaintenanceFilter(item.key)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-black transition ${maintenanceFilter === item.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>{item.label}</button>
+								))}
+							</div>
+
+							{filteredMaintenanceList.length === 0 ? (
+								<EmptyData text="No vehicles found" />
+							) : (
+								<div className="overflow-x-auto rounded-xl border border-border">
+									<table className="w-full min-w-[900px] border-collapse text-left">
+										<thead className="bg-muted/50">
+											<tr className="border-b border-border">
+												<th className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground">Vehicle</th>
+												<th className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground">PUC</th>
+												<th className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground">Insurance</th>
+												<th className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground">Passing</th>
+												<th className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground">Fitness</th>
+												<th className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground">Permit</th>
+												<th className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground">Next Maintenance</th>
+											</tr>
+										</thead>
+										<tbody>
+											{filteredMaintenanceList.map((item: any, index: number) => (
+												<tr key={`${item?.maintenanceNumber || item?.vehicleNumber || "maintenance"}-${index}`} className="border-b border-border last:border-b-0 hover:bg-muted/30">
+													<td className="px-3 py-2.5"><p className="whitespace-nowrap text-sm font-black text-foreground">{item?.vehicleNumber || "-"}</p>{item?.vehicleType && <p className="mt-0.5 text-[10px] font-bold text-muted-foreground">{item.vehicleType}</p>}</td>
+													<td className="px-3 py-2.5">{renderMaintenanceDate(item?.maintenanceDetails?.puc)}</td>
+													<td className="px-3 py-2.5">{renderMaintenanceDate(item?.maintenanceDetails?.insurance)}</td>
+													<td className="px-3 py-2.5">{renderMaintenanceDate(item?.maintenanceDetails?.passing)}</td>
+													<td className="px-3 py-2.5">{renderMaintenanceDate(item?.maintenanceDetails?.fitness)}</td>
+													<td className="px-3 py-2.5">{renderMaintenanceDate(item?.maintenanceDetails?.permit)}</td>
+													<td className="px-3 py-2.5">{renderMaintenanceDate(item?.maintenanceDetails?.nextMaintenance)}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							)}
+
+							{filteredMaintenanceData.length > maintenancePageSize && (
+								<div className="flex items-center justify-between border-t border-border pt-2">
+									<p className="text-[11px] font-bold text-muted-foreground">{(maintenancePage - 1) * maintenancePageSize + 1}-{Math.min(maintenancePage * maintenancePageSize, filteredMaintenanceData.length)} of {filteredMaintenanceData.length} vehicles</p>
+									<div className="flex items-center gap-2">
+										<button type="button" disabled={maintenancePage === 1} onClick={() => setMaintenancePage((page) => Math.max(1, page - 1))} className="cursor-pointer rounded-md border border-border bg-card px-2.5 py-1 text-xs font-black text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+										<span className="text-[11px] font-black text-muted-foreground">{maintenancePage}/{maintenanceTotalPages}</span>
+										<button type="button" disabled={maintenancePage === maintenanceTotalPages} onClick={() => setMaintenancePage((page) => Math.min(maintenanceTotalPages, page + 1))} className="cursor-pointer rounded-md border border-border bg-card px-2.5 py-1 text-xs font-black text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+									</div>
+								</div>
+							)}
 						</div>
 					)}
 				</CompactWidgetCard>

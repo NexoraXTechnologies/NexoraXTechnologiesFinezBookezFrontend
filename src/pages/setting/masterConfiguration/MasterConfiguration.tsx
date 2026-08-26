@@ -16,11 +16,13 @@ import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 import { BooleanBadge, Panel, StatusPill, } from "../components/Configui";
+
 type MasterConfigurationForm = {
 	moduleName: string;
 	description: string;
 	status: "active" | "inactive";
 };
+
 type MasterConfigurationItem = MasterConfigurationForm & {
 	_id?: string;
 	moduleCode: string;
@@ -29,7 +31,9 @@ type MasterConfigurationItem = MasterConfigurationForm & {
 	modifiedOn?: string;
 	modifiedBy?: string;
 };
+
 type StandardMasterKey = "accountMaster" | "productMaster" | "unitMeasurement" | "teamEmployeeMaster";
+
 type StandardMasterItem = {
 	key: StandardMasterKey;
 	name: string;
@@ -37,6 +41,7 @@ type StandardMasterItem = {
 	icon: ReactNode;
 	schemaEnabled: boolean;
 };
+
 type SchemaField = {
 	key: string;
 	label: string;
@@ -63,17 +68,23 @@ type SchemaField = {
 	};
 	[key: string]: any;
 };
+
 type SchemaFieldPayload = Omit<SchemaField, "isRequired" | "isSearchable" | "isFilterable" | "isHidden"> & {
 	isRequired: boolean;
 	isSearchable: boolean;
 	isFilterable: boolean;
 	isHidden: boolean;
 };
+
 type SchemaFieldForm = {
 	key: string;
 	label: string;
 	type: string;
 	ref: string;
+	valueField: string;
+	labelField: string;
+	optionsText: string;
+	originalOptions: any[];
 	isRequired: boolean;
 	isSearchable: boolean;
 	isFilterable: boolean;
@@ -82,6 +93,7 @@ type SchemaFieldForm = {
 	customMasterName: string;
 	selectionType: "select" | "multiselect";
 };
+
 type SchemaContext = {
 	kind: "standard";
 	standardKey: StandardMasterKey;
@@ -93,16 +105,22 @@ type SchemaContext = {
 	title: string;
 	moduleCode: string;
 };
+
 const INITIAL_MASTER_FORM: MasterConfigurationForm = {
 	moduleName: "",
 	description: "",
 	status: "active",
 };
+
 const INITIAL_SCHEMA_FIELD_FORM: SchemaFieldForm = {
 	key: "",
 	label: "",
 	type: "string",
 	ref: "",
+	valueField: "",
+	labelField: "",
+	optionsText: "",
+	originalOptions: [],
 	isRequired: false,
 	isSearchable: false,
 	isFilterable: false,
@@ -111,6 +129,7 @@ const INITIAL_SCHEMA_FIELD_FORM: SchemaFieldForm = {
 	customMasterName: "",
 	selectionType: "select",
 };
+
 const STANDARD_MASTERS: StandardMasterItem[] = [
 	{
 		key: "accountMaster",
@@ -141,6 +160,7 @@ const STANDARD_MASTERS: StandardMasterItem[] = [
 		schemaEnabled: true,
 	},
 ];
+
 const FIELD_TYPE_OPTIONS = [
 	{
 		value: "string",
@@ -195,10 +215,12 @@ const FIELD_TYPE_OPTIONS = [
 		label: "Custom Master",
 	},
 ];
+
 // const SELF_MASTER_FIELD_TYPE_MAP: Partial<Record<StandardMasterKey, string>> = {
 // 	accountMaster: "accountmaster",
 // 	productMaster: "productmaster",
 // };
+
 const MasterConfiguration = () => {
 	const dispatch = useDispatch<any>();
 	const { masterConfigurations = [], pagination = {}, selectedMasterConfiguration, loading: moduleLoading, createLoading, updateLoading, error: moduleError, } = useSelector((state: any) => state.masterConfiguration || {});
@@ -207,6 +229,7 @@ const MasterConfiguration = () => {
 	const { fields: productSchemaFields = [], pagination: productSchemaPagination = {}, loading: productSchemaLoading, saveLoading: productSchemaSaveLoading, updateLoading: productSchemaUpdateLoading, error: productSchemaError, } = useSelector((state: any) => state.productMasterSchema || {});
 	const { fields: unitSchemaFields = [], pagination: unitSchemaPagination = {}, loading: unitSchemaLoading, saveLoading: unitSchemaSaveLoading, updateLoading: unitSchemaUpdateLoading, error: unitSchemaError, } = useSelector((state: any) => state.unitMeasurementSchema || {});
 	const { fields: teamEmployeeSchemaFields = [], pagination: teamEmployeeSchemaPagination = {}, loading: teamEmployeeSchemaLoading, saveLoading: teamEmployeeSchemaSaveLoading, updateLoading: teamEmployeeSchemaUpdateLoading, error: teamEmployeeSchemaError, } = useSelector((state: any) => state.teamEmployeeSchema || {});
+
 	const [activeTab, setActiveTab,] = useState<string>("overview");
 	const [selectedCustomSchemaMaster, setSelectedCustomSchemaMaster,] = useState<MasterConfigurationItem | null>(null);
 	const [search, setSearch,] = useState("");
@@ -233,11 +256,13 @@ const MasterConfiguration = () => {
 		item: null,
 		moduleCode: null,
 	});
+
 	const currentPage = Number(pagination?.currentPage || 1);
 	const totalPages = Math.max(1, Number(pagination?.totalPages || 1));
 	const totalDocs = Number(pagination?.totalDocs || 0);
 	const isMasterSubmitting = createLoading ||
 		updateLoading;
+
 	const tabs = useMemo(() => [
 		{
 			key: "overview",
@@ -255,13 +280,16 @@ const MasterConfiguration = () => {
 			icon: <ShieldCheck size={17} />,
 		},
 	], []);
+
 	const selectedStandardMaster = useMemo(() => STANDARD_MASTERS.find((master) => master.key === activeTab) || null, [activeTab]);
+
 	const fetchMasterConfigurations = (nextOffset = localOffset, { showLoader = true, }: {
 		showLoader?: boolean;
 	} = {}) => {
 		if (!showLoader) {
 			setRefreshing(true);
 		}
+
 		dispatch(getAllMasterConfigurations({
 			offset: nextOffset,
 			limit: localLimit,
@@ -273,6 +301,7 @@ const MasterConfiguration = () => {
 			}
 		});
 	};
+
 	useEffect(() => {
 		fetchMasterConfigurations(localOffset);
 	}, [
@@ -281,16 +310,19 @@ const MasterConfiguration = () => {
 		localLimit,
 		localOffset,
 	]);
+
 	const handleRefreshMasters = () => {
 		fetchMasterConfigurations(localOffset, {
 			showLoader: false,
 		});
 	};
+
 	useEffect(() => {
 		if (!selectedStandardMaster
 			?.schemaEnabled) {
 			return;
 		}
+
 		if (selectedStandardMaster.key ===
 			"accountMaster") {
 			dispatch(clearAccountMasterSchemaState());
@@ -303,6 +335,7 @@ const MasterConfiguration = () => {
 			}));
 			return;
 		}
+
 		if (selectedStandardMaster.key ===
 			"productMaster") {
 			dispatch(clearProductMasterSchemaState());
@@ -314,6 +347,7 @@ const MasterConfiguration = () => {
 			}));
 			return;
 		}
+
 		if (selectedStandardMaster.key ===
 			"unitMeasurement") {
 			dispatch(clearUnitMeasurementSchemaState());
@@ -327,6 +361,7 @@ const MasterConfiguration = () => {
 			}));
 			return;
 		}
+
 		if (selectedStandardMaster.key ===
 			"teamEmployeeMaster") {
 			dispatch(clearTeamEmployeeSchemaState());
@@ -347,11 +382,13 @@ const MasterConfiguration = () => {
 		schemaOffset,
 		schemaLimit,
 	]);
+
 	useEffect(() => {
 		if (!moduleError ||
 			showMasterForm) {
 			return;
 		}
+
 		toast.error(moduleError);
 		dispatch(clearMasterConfigurationState());
 	}, [
@@ -359,66 +396,79 @@ const MasterConfiguration = () => {
 		showMasterForm,
 		dispatch,
 	]);
+
 	useEffect(() => {
 		if (!customSchemaError) {
 			return;
 		}
+
 		toast.error(customSchemaError);
 		dispatch(clearMasterSchemaError());
 	}, [
 		customSchemaError,
 		dispatch,
 	]);
+
 	useEffect(() => {
 		if (!accountSchemaError) {
 			return;
 		}
+
 		toast.error(accountSchemaError);
 		dispatch(clearAccountMasterSchemaError());
 	}, [
 		accountSchemaError,
 		dispatch,
 	]);
+
 	useEffect(() => {
 		if (!productSchemaError) {
 			return;
 		}
+
 		toast.error(productSchemaError);
 		dispatch(clearProductMasterSchemaError());
 	}, [
 		productSchemaError,
 		dispatch,
 	]);
+
 	useEffect(() => {
 		if (!unitSchemaError) {
 			return;
 		}
+
 		toast.error(unitSchemaError);
 		dispatch(clearUnitMeasurementSchemaError());
 	}, [
 		unitSchemaError,
 		dispatch,
 	]);
+
 	useEffect(() => {
 		if (!teamEmployeeSchemaError) {
 			return;
 		}
+
 		toast.error(teamEmployeeSchemaError);
 		dispatch(clearTeamEmployeeSchemaError());
 	}, [
 		teamEmployeeSchemaError,
 		dispatch,
 	]);
+
 	useEffect(() => {
 		if (!editingModuleCode ||
 			!selectedMasterConfiguration) {
 			return;
 		}
+
 		if (selectedMasterConfiguration
 			.moduleCode !==
 			editingModuleCode) {
 			return;
 		}
+
 		setMasterForm({
 			moduleName: selectedMasterConfiguration
 				.moduleName || "",
@@ -433,6 +483,7 @@ const MasterConfiguration = () => {
 		editingModuleCode,
 		selectedMasterConfiguration,
 	]);
+
 	const closeMasterForm = () => {
 		setShowMasterForm(false);
 		setEditingModuleCode(null);
@@ -441,6 +492,7 @@ const MasterConfiguration = () => {
 		dispatch(clearSelectedMasterConfiguration());
 		dispatch(clearMasterConfigurationState());
 	};
+
 	const openCreateMasterForm = () => {
 		setEditingModuleCode(null);
 		setMasterForm(INITIAL_MASTER_FORM);
@@ -449,65 +501,82 @@ const MasterConfiguration = () => {
 		dispatch(clearMasterConfigurationState());
 		setShowMasterForm(true);
 	};
+
 	const openEditMasterForm = async (moduleCode: string) => {
 		setEditingModuleCode(moduleCode);
 		setMasterForm(INITIAL_MASTER_FORM);
 		setMasterFormErrors({});
 		dispatch(clearMasterConfigurationState());
 		setShowMasterForm(true);
+
 		try {
 			await dispatch(getMasterConfigurationByCode(moduleCode)).unwrap();
 		}
 		catch {
 		}
 	};
+
 	const updateMasterFormField = (field: keyof MasterConfigurationForm, value: string) => {
 		setMasterForm((previous) => ({
 			...previous,
 			[field]: value,
 		}));
+
 		setMasterFormErrors((previous) => ({
 			...previous,
 			[field]: "",
 		}));
 	};
+
 	const validateMasterForm = () => {
 		const errors: Partial<Record<keyof MasterConfigurationForm, string>> = {};
+
 		if (!masterForm.moduleName.trim()) {
 			errors.moduleName =
 				"Module name is required.";
 		}
+
 		if (!masterForm.description.trim()) {
 			errors.description =
 				"Description is required.";
 		}
+
 		setMasterFormErrors(errors);
+
 		return (Object.keys(errors).length ===
 			0);
 	};
+
 	const handleMasterSubmit: FormEventHandler<HTMLFormElement> = async (event) => {
 		event.preventDefault();
+
 		if (!validateMasterForm()) {
 			return;
 		}
+
 		const payload = {
 			moduleName: masterForm.moduleName.trim(),
 			description: masterForm.description.trim(),
 			status: masterForm.status,
 		};
+
 		try {
 			if (editingModuleCode) {
 				await dispatch(updateMasterConfiguration({
 					moduleCode: editingModuleCode,
 					data: payload,
 				})).unwrap();
+
 				toast.success("Custom master updated successfully.");
 			}
 			else {
 				await dispatch(createMasterConfiguration(payload)).unwrap();
+
 				toast.success("Custom master created successfully.");
 			}
+
 			closeMasterForm();
+
 			fetchMasterConfigurations(localOffset, {
 				showLoader: false,
 			});
@@ -515,15 +584,20 @@ const MasterConfiguration = () => {
 		catch {
 		}
 	};
+
 	const handleDeleteConfirm = async () => {
 		const item: MasterConfigurationItem | null = confirmTooltip?.item;
+
 		if (!item?.moduleCode) {
 			toast.warn("Module code not found");
 			return;
 		}
+
 		try {
 			await dispatch(deleteMasterConfiguration(item.moduleCode)).unwrap();
+
 			toast.success("Custom master deleted successfully.");
+
 			if (selectedCustomSchemaMaster
 				?.moduleCode ===
 				item.moduleCode) {
@@ -531,6 +605,7 @@ const MasterConfiguration = () => {
 				dispatch(clearMasterSchemaState());
 				setActiveTab("customMasters");
 			}
+
 			setConfirmTooltip({
 				show: false,
 				x: null,
@@ -538,13 +613,16 @@ const MasterConfiguration = () => {
 				item: null,
 				moduleCode: null,
 			});
+
 			const remainingItems = masterConfigurations.length -
 				1;
+
 			const nextOffset = remainingItems === 0 &&
 				localOffset > 0
 				? Math.max(0, localOffset -
 					localLimit)
 				: localOffset;
+
 			if (nextOffset !==
 				localOffset) {
 				setLocalOffset(nextOffset);
@@ -558,12 +636,14 @@ const MasterConfiguration = () => {
 		catch {
 		}
 	};
+
 	const openCustomMasterSchema = async (item: MasterConfigurationItem) => {
 		setSelectedCustomSchemaMaster(item);
 		setActiveTab("customMasterSchema");
 		setSchemaSearch("");
 		setSchemaOffset(0);
 		dispatch(clearMasterSchemaState());
+
 		try {
 			await dispatch(getMasterSchema({
 				moduleCode: item.moduleCode,
@@ -574,11 +654,13 @@ const MasterConfiguration = () => {
 		catch {
 		}
 	};
+
 	const reloadCustomMasterSchema = async () => {
 		if (!selectedCustomSchemaMaster
 			?.moduleCode) {
 			return;
 		}
+
 		await dispatch(getMasterSchema({
 			moduleCode: selectedCustomSchemaMaster
 				.moduleCode,
@@ -586,6 +668,7 @@ const MasterConfiguration = () => {
 			limit: schemaLimit,
 		})).unwrap();
 	};
+
 	const schemaContext = useMemo<SchemaContext | null>(() => {
 		if (activeTab ===
 			"customMasterSchema" &&
@@ -598,6 +681,7 @@ const MasterConfiguration = () => {
 					.moduleCode,
 			};
 		}
+
 		if (selectedStandardMaster
 			?.schemaEnabled) {
 			return {
@@ -606,37 +690,59 @@ const MasterConfiguration = () => {
 				title: selectedStandardMaster.name,
 			};
 		}
+
 		return null;
 	}, [
 		activeTab,
 		selectedCustomSchemaMaster,
 		selectedStandardMaster,
 	]);
+
+	const showStaticSelectOptions = schemaForm.type ===
+		"select";
+
+	const showSelectReferenceFields = schemaContext?.kind ===
+		"standard" &&
+		[
+			"productMaster",
+			"unitMeasurement",
+			"teamEmployeeMaster",
+		].includes(schemaContext.standardKey) &&
+		schemaForm.type ===
+		"select";
+
 	const availableFieldTypeOptions = useMemo(() => {
 		if (!schemaContext) {
 			return FIELD_TYPE_OPTIONS;
 		}
+
 		if (schemaContext.kind ===
 			"custom") {
 			return FIELD_TYPE_OPTIONS;
 		}
+
 		const blockedTypes = new Set<string>();
+
 		if (schemaContext.standardKey ===
 			"accountMaster") {
 			blockedTypes.add("accountmaster");
 		}
+
 		if (schemaContext.standardKey ===
 			"productMaster") {
 			blockedTypes.add("productmaster");
 		}
+
 		if (schemaContext.standardKey ===
 			"unitMeasurement") {
 			blockedTypes.add("unitmaster");
 		}
+
 		if (schemaContext.standardKey ===
 			"teamEmployeeMaster") {
 			blockedTypes.add("employeemaster");
 		}
+
 		if (schemaContext.standardKey ===
 			"accountMaster" ||
 			schemaContext.standardKey ===
@@ -646,13 +752,16 @@ const MasterConfiguration = () => {
 			blockedTypes.add("statemaster");
 			blockedTypes.add("citymaster");
 		}
+
 		return FIELD_TYPE_OPTIONS.filter((option) => {
 			const isExistingEditType = Boolean(editingSchemaFieldKey) &&
 				schemaForm.type ===
 				option.value;
+
 			if (isExistingEditType) {
 				return true;
 			}
+
 			return !blockedTypes.has(option.value);
 		});
 	}, [
@@ -660,6 +769,7 @@ const MasterConfiguration = () => {
 		editingSchemaFieldKey,
 		schemaForm.type,
 	]);
+
 	const activeSchemaState = useMemo(() => {
 		if (!schemaContext) {
 			return {
@@ -670,6 +780,7 @@ const MasterConfiguration = () => {
 				updateLoading: false,
 			};
 		}
+
 		if (schemaContext.kind ===
 			"custom") {
 			return {
@@ -680,6 +791,7 @@ const MasterConfiguration = () => {
 				updateLoading: !!customSchemaUpdateLoading,
 			};
 		}
+
 		if (schemaContext.standardKey ===
 			"accountMaster") {
 			return {
@@ -690,6 +802,7 @@ const MasterConfiguration = () => {
 				updateLoading: !!accountSchemaUpdateLoading,
 			};
 		}
+
 		if (schemaContext.standardKey ===
 			"productMaster") {
 			return {
@@ -700,6 +813,7 @@ const MasterConfiguration = () => {
 				updateLoading: !!productSchemaUpdateLoading,
 			};
 		}
+
 		if (schemaContext.standardKey ===
 			"teamEmployeeMaster") {
 			return {
@@ -710,6 +824,7 @@ const MasterConfiguration = () => {
 				updateLoading: !!teamEmployeeSchemaUpdateLoading,
 			};
 		}
+
 		return {
 			fields: unitSchemaFields as SchemaField[],
 			pagination: unitSchemaPagination,
@@ -745,13 +860,17 @@ const MasterConfiguration = () => {
 		teamEmployeeSchemaSaveLoading,
 		teamEmployeeSchemaUpdateLoading,
 	]);
+
 	const isSchemaSubmitting = activeSchemaState.saveLoading ||
 		activeSchemaState.updateLoading;
+
 	const filteredSchemaFields = useMemo(() => {
 		if (!schemaSearch.trim()) {
 			return (activeSchemaState.fields);
 		}
+
 		const query = schemaSearch.toLowerCase();
+
 		return activeSchemaState.fields.filter((field) => String(field.key || "")
 			.toLowerCase()
 			.includes(query) ||
@@ -776,6 +895,7 @@ const MasterConfiguration = () => {
 		activeSchemaState.fields,
 		schemaSearch,
 	]);
+
 	useEffect(() => {
 		setSchemaOffset(0);
 	}, [
@@ -783,8 +903,10 @@ const MasterConfiguration = () => {
 		schemaContext?.standardKey,
 		schemaContext?.moduleCode,
 	]);
+
 	const handleRefreshSchema = async () => {
 		setSchemaRefreshing(true);
+
 		try {
 			if (schemaContext?.kind ===
 				"custom") {
@@ -801,23 +923,28 @@ const MasterConfiguration = () => {
 			setSchemaRefreshing(false);
 		}
 	};
+
 	const closeSchemaForm = () => {
 		setShowSchemaForm(false);
 		setEditingSchemaFieldKey(null);
 		setSchemaForm(INITIAL_SCHEMA_FIELD_FORM);
 		setSchemaFormErrors({});
 	};
+
 	const openAddSchemaForm = () => {
 		if (!schemaContext) {
 			return;
 		}
+
 		setEditingSchemaFieldKey(null);
 		setSchemaForm(INITIAL_SCHEMA_FIELD_FORM);
 		setSchemaFormErrors({});
 		setShowSchemaForm(true);
 	};
+
 	const openEditSchemaForm = (field: SchemaField) => {
 		setEditingSchemaFieldKey(field.key);
+
 		setSchemaForm({
 			key: field.key || "",
 			label: field.label || "",
@@ -825,6 +952,16 @@ const MasterConfiguration = () => {
 				? "string"
 				: field.type || "string",
 			ref: String(field.ref || ""),
+			valueField: String(field.valueField || ""),
+			labelField: String(field.labelField || ""),
+			optionsText: Array.isArray(field.options)
+				? field.options.map((option: any) => option && typeof option === "object"
+					? String(option.label ?? option.name ?? option.value ?? option.code ?? "")
+					: String(option ?? "")).filter(Boolean).join(", ")
+				: "",
+			originalOptions: Array.isArray(field.options)
+				? field.options
+				: [],
 			isRequired: field.isRequired === true ||
 				field.isRequired === "true" ||
 				field.isRequired === 1 ||
@@ -849,9 +986,11 @@ const MasterConfiguration = () => {
 				? "multiselect"
 				: "select",
 		});
+
 		setSchemaFormErrors({});
 		setShowSchemaForm(true);
 	};
+
 	const updateSchemaFormField = (field: keyof SchemaFieldForm, value: string | boolean) => {
 		setSchemaForm((previous) => ({
 			...previous,
@@ -865,11 +1004,13 @@ const MasterConfiguration = () => {
 				}
 				: {}),
 		}));
+
 		setSchemaFormErrors((previous) => ({
 			...previous,
 			[field]: "",
 		}));
 	};
+
 	const handleSchemaLabelChange = (value: string) => {
 		setSchemaForm((previous) => ({
 			...previous,
@@ -878,54 +1019,67 @@ const MasterConfiguration = () => {
 				? previous.key
 				: value.replace(/\s+/g, ""),
 		}));
+
 		setSchemaFormErrors((previous) => ({
 			...previous,
 			key: "",
 			label: "",
 		}));
 	};
+
 	const handleCustomMasterReferenceChange = (moduleCode: string) => {
 		const selected = masterConfigurations.find((item: MasterConfigurationItem) => item.moduleCode ===
 			moduleCode);
+
 		setSchemaForm((previous) => ({
 			...previous,
 			customMasterCode: moduleCode,
 			customMasterName: selected?.moduleName ||
 				"",
 		}));
+
 		setSchemaFormErrors((previous) => ({
 			...previous,
 			customMasterCode: "",
 		}));
 	};
+
 	const validateSchemaForm = () => {
 		const errors: Partial<Record<keyof SchemaFieldForm, string>> = {};
+
 		if (!schemaForm.key.trim()) {
 			errors.key =
 				"Field key is required.";
 		}
+
 		if (!schemaForm.label.trim()) {
 			errors.label =
 				"Field label is required.";
 		}
+
 		if (!schemaForm.type.trim()) {
 			errors.type =
 				"Field type is required.";
 		}
+
 		if (schemaForm.type ===
 			"custommaster" &&
 			!schemaForm.customMasterCode.trim()) {
 			errors.customMasterCode =
 				"Select a custom master.";
 		}
+
 		setSchemaFormErrors(errors);
+
 		return (Object.keys(errors).length ===
 			0);
 	};
+
 	const buildSchemaFieldPayload = (): SchemaFieldPayload => {
 		const normalizedType = String(schemaForm.type || "")
 			.trim()
 			.toLowerCase();
+
 		const payload: SchemaFieldPayload = {
 			key: schemaForm.key.trim(),
 			label: schemaForm.label.trim(),
@@ -935,6 +1089,7 @@ const MasterConfiguration = () => {
 			isFilterable: schemaForm.isFilterable,
 			isHidden: schemaForm.isHidden,
 		};
+
 		if ([
 			"accountmaster",
 			"productmaster",
@@ -948,11 +1103,44 @@ const MasterConfiguration = () => {
 			payload.ref =
 				schemaForm.ref.trim();
 		}
+
+		if (normalizedType ===
+			"select") {
+			const parsedOptions = schemaForm.optionsText
+				.split(",")
+				.map((option) => option.trim())
+				.filter(Boolean);
+
+			const originalOptionsText = schemaForm.originalOptions
+				.map((option: any) => option && typeof option === "object"
+					? String(option.label ?? option.name ?? option.value ?? option.code ?? "")
+					: String(option ?? ""))
+				.filter(Boolean)
+				.join(", ");
+
+			payload.options = editingSchemaFieldKey &&
+				schemaForm.optionsText.trim() ===
+				originalOptionsText.trim()
+				? schemaForm.originalOptions
+				: parsedOptions;
+
+			if (schemaForm.valueField.trim()) {
+				payload.valueField =
+					schemaForm.valueField.trim();
+			}
+
+			if (schemaForm.labelField.trim()) {
+				payload.labelField =
+					schemaForm.labelField.trim();
+			}
+		}
+
 		if (normalizedType ===
 			"statemaster") {
 			payload.masterSource =
 				"stateMaster";
 		}
+
 		if (normalizedType ===
 			"citymaster") {
 			payload.masterSource =
@@ -960,6 +1148,7 @@ const MasterConfiguration = () => {
 			payload.dependsOn =
 				"state";
 		}
+
 		if (normalizedType ===
 			"custommaster") {
 			payload.customMasterCode =
@@ -969,8 +1158,10 @@ const MasterConfiguration = () => {
 			payload.selectionType =
 				schemaForm.selectionType;
 		}
+
 		return payload;
 	};
+
 	const reloadStandardSchema = async (standardKey: StandardMasterKey) => {
 		if (standardKey ===
 			"accountMaster") {
@@ -983,6 +1174,7 @@ const MasterConfiguration = () => {
 			})).unwrap();
 			return;
 		}
+
 		if (standardKey ===
 			"productMaster") {
 			await dispatch(getProductMasterSchema({
@@ -993,6 +1185,7 @@ const MasterConfiguration = () => {
 			})).unwrap();
 			return;
 		}
+
 		if (standardKey ===
 			"unitMeasurement") {
 			await dispatch(getUnitMeasurementSchema({
@@ -1005,6 +1198,7 @@ const MasterConfiguration = () => {
 			})).unwrap();
 			return;
 		}
+
 		if (standardKey ===
 			"teamEmployeeMaster") {
 			await dispatch(getTeamEmployeeSchema({
@@ -1017,18 +1211,23 @@ const MasterConfiguration = () => {
 			})).unwrap();
 		}
 	};
+
 	const handleSchemaSubmit: FormEventHandler<HTMLFormElement> = async (event) => {
 		event.preventDefault();
+
 		if (!schemaContext ||
 			!validateSchemaForm()) {
 			return;
 		}
+
 		const fieldPayload: any = buildSchemaFieldPayload();
+
 		try {
 			if (schemaContext.kind ===
 				"custom") {
 				if (editingSchemaFieldKey) {
 					const { key: _ignoredKey, ...updateData } = fieldPayload;
+
 					await dispatch(updateMasterSchema({
 						moduleCode: schemaContext.moduleCode,
 						updates: [
@@ -1038,6 +1237,7 @@ const MasterConfiguration = () => {
 							},
 						],
 					})).unwrap();
+
 					toast.success("Custom-master schema field updated successfully.");
 				}
 				else {
@@ -1047,16 +1247,20 @@ const MasterConfiguration = () => {
 							fieldPayload,
 						],
 					})).unwrap();
+
 					toast.success("Custom-master schema field added successfully.");
 				}
+
 				closeSchemaForm();
 				await reloadCustomMasterSchema();
 				return;
 			}
+
 			if (schemaContext.standardKey ===
 				"accountMaster") {
 				if (editingSchemaFieldKey) {
 					const { key: _ignoredKey, ...updateData } = fieldPayload;
+
 					await dispatch(updateAccountMasterSchema({
 						updates: [
 							{
@@ -1065,6 +1269,7 @@ const MasterConfiguration = () => {
 							},
 						],
 					})).unwrap();
+
 					toast.success("Account-master schema field updated successfully.");
 				}
 				else {
@@ -1073,13 +1278,16 @@ const MasterConfiguration = () => {
 							fieldPayload,
 						],
 					})).unwrap();
+
 					toast.success("Account-master schema field added successfully.");
 				}
 			}
+
 			if (schemaContext.standardKey ===
 				"productMaster") {
 				if (editingSchemaFieldKey) {
 					const { key: _ignoredKey, ...updateData } = fieldPayload;
+
 					await dispatch(updateProductMasterSchema({
 						updates: [
 							{
@@ -1088,6 +1296,7 @@ const MasterConfiguration = () => {
 							},
 						],
 					})).unwrap();
+
 					toast.success("Product-master schema field updated successfully.");
 				}
 				else {
@@ -1096,13 +1305,16 @@ const MasterConfiguration = () => {
 							fieldPayload,
 						],
 					})).unwrap();
+
 					toast.success("Product-master schema field added successfully.");
 				}
 			}
+
 			if (schemaContext.standardKey ===
 				"unitMeasurement") {
 				if (editingSchemaFieldKey) {
 					const { key: _ignoredKey, ...updateData } = fieldPayload;
+
 					await dispatch(updateUnitMeasurementSchema({
 						updates: [
 							{
@@ -1111,6 +1323,7 @@ const MasterConfiguration = () => {
 							},
 						],
 					})).unwrap();
+
 					toast.success("Unit-master schema field updated successfully.");
 				}
 				else {
@@ -1119,13 +1332,16 @@ const MasterConfiguration = () => {
 							fieldPayload,
 						],
 					})).unwrap();
+
 					toast.success("Unit-master schema field added successfully.");
 				}
 			}
+
 			if (schemaContext.standardKey ===
 				"teamEmployeeMaster") {
 				if (editingSchemaFieldKey) {
 					const { key: _ignoredKey, ...updateData } = fieldPayload;
+
 					await dispatch(updateTeamEmployeeSchema({
 						updates: [
 							{
@@ -1134,6 +1350,7 @@ const MasterConfiguration = () => {
 							},
 						],
 					})).unwrap();
+
 					toast.success("Team/Employee schema field updated successfully.");
 				}
 				else {
@@ -1142,15 +1359,18 @@ const MasterConfiguration = () => {
 							fieldPayload,
 						],
 					})).unwrap();
+
 					toast.success("Team/Employee schema field added successfully.");
 				}
 			}
+
 			closeSchemaForm();
 			await reloadStandardSchema(schemaContext.standardKey);
 		}
 		catch {
 		}
 	};
+
 	const schemaColumns = [
 		{
 			key: "key",
@@ -1204,28 +1424,28 @@ const MasterConfiguration = () => {
 				field.isHidden === "1"} />),
 		},
 	];
+
 	const schemaCurrentPage = Number(activeSchemaState
 		.pagination?.currentPage ||
 		1);
+
 	const schemaTotalPages = Math.max(1, Number(activeSchemaState
 		.pagination?.totalPages ||
 		1));
+
 	const schemaTotalDocs = Number(activeSchemaState
 		.pagination?.totalDocs ||
 		0);
+
 	// @ts-ignore
 	const renderSchemaBuilder = (title: string, description: string, badgeText?: string) => (<>
 		<Panel title={title} description={description} right={<div className="flex flex-wrap items-center gap-2">
-
-
 			<SearchInput search={schemaSearch} setSearch={setSchemaSearch} />
 
 			<DataREfreshButton callBackFn={handleRefreshSchema} loading={schemaRefreshing} />
 
 			<DataCreateButton callBackFn={openAddSchemaForm} text=" Add Field" />
 		</div>}>
-
-
 			<div className="min-h-0 flex-1 overflow-hidden">
 				<DataTable columns={schemaColumns} data={filteredSchemaFields} loading={activeSchemaState
 					.loading} emptyMessage="No schema fields found. Click Add Field to create the first field." actions={(field: SchemaField) => (<div className="flex justify-start">
@@ -1249,6 +1469,7 @@ const MasterConfiguration = () => {
 				schemaTotalPages} setLocalOffset={setSchemaOffset} pagination={activeSchemaState
 					.pagination} />) : null}
 	</>);
+
 	const renderOverview = () => (<div className="space-y-4">
 		<Panel title="Standard Masters" description="Configure fields for the standard masters supported by their dedicated schema APIs.">
 			<div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
@@ -1302,6 +1523,7 @@ const MasterConfiguration = () => {
 			</div>
 		</Panel>
 	</div>);
+
 	const renderStandardMaster = (master: StandardMasterItem) => {
 		if (!master.schemaEnabled) {
 			return (<Panel title={master.name} description={master.description} right={<span className="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
@@ -1325,8 +1547,10 @@ const MasterConfiguration = () => {
 				</div>
 			</Panel>);
 		}
+
 		return renderSchemaBuilder(`${master.name} Schema`, master.description, "Standard Master");
 	};
+
 	const masterColumns = [
 		{
 			key: "moduleCode",
@@ -1356,6 +1580,7 @@ const MasterConfiguration = () => {
 			render: (row: MasterConfigurationItem) => (<StatusPill status={row.status} />),
 		},
 	];
+
 	const renderCustomMasters = () => (<>
 		<Panel title="Custom Masters" description="Create modules, edit module information, delete unused modules and configure fields for each module." right={<div className="flex items-center gap-2">
 			<DataREfreshButton callBackFn={handleRefreshMasters} loading={refreshing} />
@@ -1415,14 +1640,17 @@ const MasterConfiguration = () => {
 				currentPage >=
 				totalPages} setLocalOffset={setLocalOffset} pagination={pagination} />) : null}
 	</>);
+
 	const renderActiveContent = () => {
 		if (activeTab === "overview") {
 			return renderOverview();
 		}
+
 		if (activeTab ===
 			"customMasters") {
 			return renderCustomMasters();
 		}
+
 		if (activeTab === "customMasterSchema" && selectedCustomSchemaMaster) {
 			return (<div className="space-y-4">
 				<button type="button" onClick={() => {
@@ -1431,18 +1659,20 @@ const MasterConfiguration = () => {
 					dispatch(clearMasterSchemaState());
 				}} className="inline-flex h-9 items-center gap-2 rounded border border-border bg-card px-3 text-sm font-semibold text-card-foreground transition hover:bg-muted">
 					<ArrowLeft size={16} />
-
 					Back to Custom Masters
 				</button>
 
 				{renderSchemaBuilder(`${selectedCustomSchemaMaster.moduleName} Schema`, `Configure fields for ${selectedCustomSchemaMaster.moduleName}.`, selectedCustomSchemaMaster.moduleCode)}
 			</div>);
 		}
+
 		if (selectedStandardMaster) {
 			return renderStandardMaster(selectedStandardMaster);
 		}
+
 		return renderOverview();
 	};
+
 	useEffect(() => {
 		if (activeTab !==
 			"customMasterSchema" ||
@@ -1450,6 +1680,7 @@ const MasterConfiguration = () => {
 				?.moduleCode) {
 			return;
 		}
+
 		dispatch(getMasterSchema({
 			moduleCode: selectedCustomSchemaMaster
 				.moduleCode,
@@ -1460,6 +1691,7 @@ const MasterConfiguration = () => {
 		schemaOffset,
 		schemaLimit,
 	]);
+
 	return (<div className="min-h-screen bg-background p-4 text-foreground md:p-4">
 		<div className="space-y-4">
 			<header className="flex flex-col gap-3 rounded border border-border bg-card px-5 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
@@ -1512,26 +1744,28 @@ const MasterConfiguration = () => {
 									"customMasters" &&
 									activeTab ===
 									"customMasterSchema");
+
 							return (<button key={tab.key} type="button" onClick={() => {
 								setActiveTab(tab.key);
+
 								if (tab.key !==
 									"customMasters") {
 									setSelectedCustomSchemaMaster(null);
 									dispatch(clearMasterSchemaState());
 								}
 							}} className={`
-                        flex w-full items-center gap-3 rounded px-3 py-2.5
-                        text-left text-sm font-bold transition
-                        ${isActive
+								flex w-full items-center gap-3 rounded px-3 py-2.5
+								text-left text-sm font-bold transition
+								${isActive
 									? "bg-primary text-primary-foreground shadow-sm"
 									: "text-muted-foreground hover:bg-muted hover:text-card-foreground"}
-                      `}>
+							`}>
 								<span className={`
-                          flex h-8 w-8 items-center justify-center rounded
-                          ${isActive
+									flex h-8 w-8 items-center justify-center rounded
+									${isActive
 										? "bg-white/15"
 										: "bg-background text-primary"}
-                        `}>
+								`}>
 									{tab.icon}
 								</span>
 
@@ -1586,12 +1820,12 @@ const MasterConfiguration = () => {
 
 							<input type="text" value={masterForm.moduleName} onChange={(event) => updateMasterFormField("moduleName", event.target
 								.value)} placeholder="Example: Department Master" maxLength={100} className={`
-                      h-10 w-full rounded border bg-background px-3 text-sm text-foreground
-                      outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20
-                      ${masterFormErrors.moduleName
+									h-10 w-full rounded border bg-background px-3 text-sm text-foreground
+									outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20
+									${masterFormErrors.moduleName
 										? "border-danger"
 										: "border-input"}
-                    `} />
+								`} />
 
 							{masterFormErrors.moduleName ? (<p className="mt-1 text-xs font-semibold text-danger">
 								{masterFormErrors.moduleName}
@@ -1608,13 +1842,13 @@ const MasterConfiguration = () => {
 
 							<textarea value={masterForm.description} onChange={(event) => updateMasterFormField("description", event.target
 								.value)} placeholder="Describe where this master will be used" rows={4} maxLength={500} className={`
-                      w-full resize-none rounded border bg-background
-                      px-3 py-2.5 text-sm text-foreground outline-none
-                      placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20
-                      ${masterFormErrors.description
+									w-full resize-none rounded border bg-background
+									px-3 py-2.5 text-sm text-foreground outline-none
+									placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20
+									${masterFormErrors.description
 										? "border-danger"
 										: "border-input"}
-                    `} />
+								`} />
 
 							<div className="mt-1 flex items-center justify-between">
 								<span className="text-xs font-semibold text-danger">
@@ -1667,8 +1901,6 @@ const MasterConfiguration = () => {
 			</div>
 		</div>) : null}
 
-
-
 		{showSchemaForm &&
 			schemaContext ? (<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
 				<div className="max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded border border-border bg-card text-card-foreground shadow-2xl">
@@ -1706,13 +1938,13 @@ const MasterConfiguration = () => {
 								</label>
 
 								<input value={schemaForm.label} onChange={(event) => handleSchemaLabelChange(event.target.value)} placeholder="Example: Department Code" className={`
-                    h-10 w-full rounded border bg-background px-3 text-sm text-foreground
-                    outline-none placeholder:text-muted-foreground
-                    ${schemaFormErrors.label ||
+									h-10 w-full rounded border bg-background px-3 text-sm text-foreground
+									outline-none placeholder:text-muted-foreground
+									${schemaFormErrors.label ||
 										schemaFormErrors.key
 										? "border-danger"
 										: "border-input"}
-                  `} />
+								`} />
 
 								{schemaFormErrors.label ||
 									schemaFormErrors.key ? (<p className="mt-1 text-xs font-semibold text-danger">
@@ -1740,6 +1972,42 @@ const MasterConfiguration = () => {
 							</div>
 						</div>
 
+						{showStaticSelectOptions ? (<div className="space-y-3">
+							<div>
+								<label className="mb-1.5 block text-sm font-bold text-card-foreground">
+									Static Options (comma separated)
+								</label>
+
+								<input type="text" value={schemaForm.optionsText} onChange={(event) => updateSchemaFormField("optionsText", event.target.value)} placeholder="Example: Cash, Bank, Credit, UPI" className="h-10 w-full rounded border border-input bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" />
+							</div>
+
+							{showSelectReferenceFields ? (<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+								<div>
+									<label className="mb-1.5 block text-sm font-bold text-card-foreground">
+										Reference Collection
+									</label>
+
+									<input type="text" value={schemaForm.ref} onChange={(event) => updateSchemaFormField("ref", event.target.value)} placeholder="Enter Reference Collection" className="h-10 w-full rounded border border-input bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" />
+								</div>
+
+								<div>
+									<label className="mb-1.5 block text-sm font-bold text-card-foreground">
+										Reference Value Field
+									</label>
+
+									<input type="text" value={schemaForm.valueField} onChange={(event) => updateSchemaFormField("valueField", event.target.value)} placeholder="Enter Reference Value Field" className="h-10 w-full rounded border border-input bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" />
+								</div>
+
+								<div>
+									<label className="mb-1.5 block text-sm font-bold text-card-foreground">
+										Reference Label Field
+									</label>
+
+									<input type="text" value={schemaForm.labelField} onChange={(event) => updateSchemaFormField("labelField", event.target.value)} placeholder="Enter Reference Label Field" className="h-10 w-full rounded border border-input bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" />
+								</div>
+							</div>) : null}
+						</div>) : null}
+
 						{schemaForm.type ===
 							"custommaster" ? (<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 								<div>
@@ -1751,12 +2019,12 @@ const MasterConfiguration = () => {
 									</label>
 
 									<select value={schemaForm.customMasterCode} onChange={(event) => handleCustomMasterReferenceChange(event.target.value)} className={`
-                      h-10 w-full rounded border bg-background px-3
-                      text-sm font-semibold text-foreground outline-none
-                      ${schemaFormErrors.customMasterCode
+										h-10 w-full rounded border bg-background px-3
+										text-sm font-semibold text-foreground outline-none
+										${schemaFormErrors.customMasterCode
 											? "border-danger"
 											: "border-input"}
-                    `}>
+									`}>
 										<option value="" className="bg-card text-card-foreground">Select Custom Master</option>
 
 										{masterConfigurations.filter((item: MasterConfigurationItem) => item.status === "active").map((item: MasterConfigurationItem) => (<option key={item.moduleCode} value={item.moduleCode} className="bg-card text-card-foreground">
@@ -1840,4 +2108,5 @@ const MasterConfiguration = () => {
 				})} />) : null}
 	</div>);
 };
+
 export default MasterConfiguration;

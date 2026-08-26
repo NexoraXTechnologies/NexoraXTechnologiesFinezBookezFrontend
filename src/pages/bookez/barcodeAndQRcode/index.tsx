@@ -1,6 +1,6 @@
 
 import { useMemo } from "react";
-import { BrickWallShield, Wallet } from "lucide-react";
+import { BrickWallShield, LayoutTemplate, Printer, ScanBarcode, ScanLine, SquareDashedKanban, Wallet } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import AssignBarcodeQrTemplate from "./BarcodeQrTemplate";
 import AssignBarcodeQrCode from "./AssignBarcodeQrCode";
@@ -13,21 +13,21 @@ const BarCodeAndQrCode = () => {
             {
                 title: "Barcode / QR Code Template",
                 description: "Create and manage Barcode/QR Code label templates, formats and print settings.",
-                icon: <Wallet size={22} />,
+                icon: <LayoutTemplate size={22} />,
                 component: AssignBarcodeQrTemplate,
                 permissionKey: "accountMaster"
             },
             {
                 title: "Assign Barcode / QR Code",
                 description: "Generate and assign Barcode/QR Codes to products using configured templates.",
-                icon: <Wallet size={22} />,
+                icon: <ScanBarcode size={22} />,
                 component: AssignBarcodeQrCode,
                 permissionKey: "accountMaster"
             },
             {
                 title: "Print Barcode / QR Code",
                 description: "Preview and print assigned Barcode/QR Code labels for products.",
-                icon: <Wallet size={22} />,
+                icon: <Printer size={22} />,
                 component: BarcodeQrLabelPrint,
                 permissionKey: "accountMaster"
             }
@@ -39,7 +39,7 @@ const BarCodeAndQrCode = () => {
         <TransactionDashboard
             title="BarCode And QR Code"
             description="Generate BarCode/QR Code and assign to product"
-            icon={<BrickWallShield size={24} />}
+            icon={<ScanLine size={24} />}
             cards={masterCards}
         />
     );
