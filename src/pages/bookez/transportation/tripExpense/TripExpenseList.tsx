@@ -210,6 +210,8 @@ const StatusBadge = ({ item }: { item: any }) => {
    ACCEPT ASSIGNMENT MODAL
 =================================================== */
 
+// DISABLED: pending driver trips are now accepted automatically on page entry.
+/*
 const AcceptAssignmentModal = ({
     item,
     loading,
@@ -319,6 +321,7 @@ const AcceptAssignmentModal = ({
         </div>
     );
 };
+*/
 
 /* ===================================================
    TRIP EXPENSE LIST
@@ -335,7 +338,7 @@ const TripExpenseList = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [listingLoader, setListingLoader] = useState(false);
     const [deleteLoader, setDeleteLoader] = useState(false);
-    const [acceptPromptItem, setAcceptPromptItem] = useState<any>(null);
+    // const [acceptPromptItem, setAcceptPromptItem] = useState<any>(null);
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
@@ -931,6 +934,8 @@ const TripExpenseList = () => {
         }
     };
 
+    // DISABLED: the assignment popup is replaced by automatic acceptance.
+    /*
     const showAcceptAssignmentModal = useCallback(
         (item: any, { skipDedup = false }: any = {}) => {
             if (!canChildAcceptTripSafe(item)) return;
@@ -946,6 +951,7 @@ const TripExpenseList = () => {
         },
         []
     );
+    */
 
     const handleDeleteClick = (e: any, item: any) => {
         if (isTripClosedSafe(item)) {
@@ -1013,9 +1019,11 @@ const TripExpenseList = () => {
     };
 
     /* ===================================================
-       CHILD USER ASSIGNMENT PROMPT
+       CHILD USER AUTO ACCEPT
     =================================================== */
 
+    // DISABLED: original popup trigger is kept here for future use.
+    /*
     useEffect(() => {
         if (listingLoader || !isChildUser || acceptPromptItem) return;
 
@@ -1036,6 +1044,33 @@ const TripExpenseList = () => {
         visibleRows,
         acceptPromptItem,
         showAcceptAssignmentModal,
+    ]);
+    */
+
+    // NEW: automatically accept the first eligible assigned trip.
+    useEffect(() => {
+        if (listingLoader || !isChildUser) return;
+
+        const pendingItem = visibleRows.find((item) => {
+            if (!canChildAcceptTripSafe(item)) return false;
+
+            const key = getAssignmentPromptKey(item);
+
+            return key && !promptedAssignmentsRef.current.has(key);
+        });
+
+        if (!pendingItem) return;
+
+        const key = getAssignmentPromptKey(pendingItem);
+
+        if (!key || promptedAssignmentsRef.current.has(key)) return;
+
+        promptedAssignmentsRef.current.add(key);
+        performAccept(pendingItem);
+    }, [
+        listingLoader,
+        isChildUser,
+        visibleRows,
     ]);
 
     /* ===================================================
@@ -1264,17 +1299,29 @@ const TripExpenseList = () => {
                                 return (
                                     <div className="flex items-center gap-2">
                                         {childCanAccept ? (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    showAcceptAssignmentModal(record, {
-                                                        skipDedup: true,
-                                                    })
-                                                }
-                                                className="rounded-md border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition hover:bg-success/20"
-                                            >
-                                                Accept
-                                            </button>
+                                            <>
+                                                {/* DISABLED: original popup Accept button is kept for future use.
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        showAcceptAssignmentModal(record, {
+                                                            skipDedup: true,
+                                                        })
+                                                    }
+                                                    className="rounded-md border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition hover:bg-success/20"
+                                                >
+                                                    Accept
+                                                </button>
+                                                */}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => performAccept(record)}
+                                                    className="rounded-md border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition hover:bg-success/20"
+                                                >
+                                                    Accept
+                                                </button>
+                                            </>
                                         ) : (
                                             <>
                                                 {(isChildUser ? childCanEdit : true) && (
@@ -1356,6 +1403,7 @@ const TripExpenseList = () => {
                 />
             )}
 
+            {/* DISABLED: original popup render is kept for future use.
             {acceptPromptItem && (
                 <AcceptAssignmentModal
                     item={acceptPromptItem}
@@ -1368,6 +1416,7 @@ const TripExpenseList = () => {
                     }}
                 />
             )}
+            */}
         </div>
     );
 };

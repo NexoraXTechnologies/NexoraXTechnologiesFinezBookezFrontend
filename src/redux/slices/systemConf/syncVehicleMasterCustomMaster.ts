@@ -247,7 +247,7 @@ const BODY_TYPE_OPTIONS = [
 
 const OWNERSHIP_TYPE_OPTIONS = [
     "Owned",
-    "Market",
+    "Hired",
 ];
 
 export const VEHICLE_MASTER_SCHEMA_FIELDS = [
