@@ -500,6 +500,7 @@ const ensureServiceProduct = async ({ productName }: any) => {
         productType: String(product?.productType || product?.dynamicFields?.productType || "serviceproduct").trim() || "serviceproduct",
         productDescription: String(product?.productDescription || product?.description || product?.dynamicFields?.productDescription || product?.productName || productName).trim(),
         productHSNCode: String(product?.productHSNCode || product?.hsnCode || product?.hsnSacCode || product?.dynamicFields?.productHSNCode || "").trim(),
+        sellingPrice: toPositiveAmount(product?.sellingPrice || product?.salePrice || product?.salesPrice || product?.productSellingPrice || product?.dynamicFields?.sellingPrice || product?.dynamicFields?.salePrice || product?.dynamicFields?.salesPrice || product?.dynamicFields?.productSellingPrice),
         uom: String(product?.uom || product?.unit || product?.dynamicFields?.unit || TRIP_BILLING_UNIT).trim() || TRIP_BILLING_UNIT,
     };
 };
@@ -594,19 +595,20 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
 
     const context = await resolveTripBillingContext({ dispatch, tripExpense });
     if (!context.shouldBill) return null;
-    if (!Number.isFinite(context.freightAmount) || context.freightAmount <= 0) throw new Error(`Freight amount must be greater than zero for trip ${context.tripId}`);
 
     if (context.ownership === "owned") {
         if (!context.customerCode || !context.customerName) throw new Error(`Customer is required to create the Sales Invoice for trip ${context.tripId}`);
         const product = await ensureServiceProduct({ productName: TRIP_SALES_PRODUCT_NAME });
-        const voucherNumber = await createTripSalesInvoice({ dispatch, context, product });
+        const invoiceContext = { ...context, freightAmount: context.freightAmount > 0 ? context.freightAmount : product.sellingPrice || 0 };
+        const voucherNumber = await createTripSalesInvoice({ dispatch, context: invoiceContext, product });
         return { invoiceType: "sales", voucherNumber, alreadyCreated: false };
     }
 
     if (context.ownership === "market") {
         if (!context.vendorCode || !context.vendorName) throw new Error(`Vendor is required to create the Purchase Invoice for trip ${context.tripId}`);
         const product = await ensureServiceProduct({ productName: TRIP_PURCHASE_PRODUCT_NAME });
-        const voucherNumber = await createTripPurchaseInvoice({ dispatch, context, product });
+        const invoiceContext = { ...context, freightAmount: context.freightAmount > 0 ? context.freightAmount : product.sellingPrice || 0 };
+        const voucherNumber = await createTripPurchaseInvoice({ dispatch, context: invoiceContext, product });
         return { invoiceType: "purchase", voucherNumber, alreadyCreated: false };
     }
 
