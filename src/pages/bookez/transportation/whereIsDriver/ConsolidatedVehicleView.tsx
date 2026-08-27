@@ -480,7 +480,7 @@ const ConsolidatedVehicleView = () => {
                             </motion.button>
                         </div>
 
-                        <div className="absolute bottom-4 right-4 z-30">
+                       <div className="absolute bottom-4 left-4 z-30">
                             <AnimatePresence>
                                 {showVehicles && (
                                     <motion.div
@@ -488,8 +488,7 @@ const ConsolidatedVehicleView = () => {
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
                                         transition={{ duration: 0.18 }}
-                                        className="absolute bottom-[58px] right-0 w-[310px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
-                                    >
+className="absolute bottom-[58px] left-0 w-[310px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl"                                    >
                                         <div className="flex items-center justify-between border-b border-border px-3 py-3">
                                             <div>
                                                 <h3 className="text-sm font-bold text-card-foreground">

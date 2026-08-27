@@ -1524,6 +1524,25 @@ const SystemConfiguration = () => {
                                 )
                             }
                         />
+
+                        {/* <SettingRow
+                            title="Enable GPS Tracker"
+                            description="Add required Tracking No field in Vehicle Master for GPS tracking."
+                            value={
+                                !!systemConfig
+                                    ?.transportationModuleConfiguration
+                                    ?.enableGpsTracker
+                            }
+                            onChange={(
+                                value
+                            ) =>
+                                updateSystemField(
+                                    "transportationModuleConfiguration",
+                                    "enableGpsTracker",
+                                    value
+                                )
+                            }
+                        /> */}
                     </Panel>
 
                     <Panel

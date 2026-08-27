@@ -69,6 +69,16 @@ const CASH_IN_HAND_ACCOUNT_NAME = "Cash In Hand";
 
 const cleanText = (value: any) => String(value || "").trim();
 
+const toDateTimeInputValue = (value: any) => {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const dateTimeInputToIso = (value: string) => value ? new Date(value).toISOString() : "";
+
 const normalizeText = (value: any) =>
     String(value || "")
         .trim()
@@ -632,25 +642,21 @@ const getExpenseDescription = (
     );
 };
 
-const buildExpenseRowsFromTripExpense = (
-    tripExpense: any
-) => {
+const buildExpenseRowsFromTripExpense = (tripExpense: any) => {
     const expenses = tripExpense?.expenses || {};
     const expenseKeys = [...EXPENSE_KEYS, ...Object.keys(expenses).filter((key) => key !== "advanceReceived" && !EXPENSE_KEYS.includes(key))];
 
-    return expenseKeys.map((expenseKey) => {
+    return expenseKeys.flatMap((expenseKey) => {
         const entries = Array.isArray(expenses?.[expenseKey]?.entries) ? expenses[expenseKey].entries : [];
-        const firstEntry = entries[0] || {};
-
-        return { id: expenseKey, expenseKey, type: formatExpenseTypeLabel(expenseKey), date: firstEntry?.date || firstEntry?.receivedDate || firstEntry?.billDate || tripExpense?.tripDate || tripExpense?.enteredDate || "", description: getExpenseDescription(expenseKey, firstEntry), amount: sumAmounts(entries), raw: firstEntry };
+        const rows = entries.length ? entries : [{}];
+        return rows.map((entry: any, index: number) => ({ ...entry, id: `${expenseKey}-${index}`, expenseKey, entryIndex: index, type: formatExpenseTypeLabel(expenseKey), date: entry?.date || entry?.receivedDate || entry?.billDate || "", description: getExpenseDescription(expenseKey, entry), amount: Number(entry?.amount || 0) }));
     });
 };
 
 const buildAdvanceRowsFromTripExpense = (tripExpense: any) => {
-    const entries = tripExpense?.expenses?.advanceReceived?.entries || [];
-    const firstEntry = entries[0] || {};
-
-    return [{ id: "advanceReceived", date: firstEntry?.date || firstEntry?.receivedDate || tripExpense?.tripDate || "", source: "Advance Received", paymentMode: firstEntry?.paymentMode || "-", amount: sumAmounts(entries), remarks: firstEntry?.remarks || "" }];
+    const entries = Array.isArray(tripExpense?.expenses?.advanceReceived?.entries) ? tripExpense.expenses.advanceReceived.entries : [];
+    const rows = entries.length ? entries : [{}];
+    return rows.map((entry: any, index: number) => ({ ...entry, id: `advanceReceived-${index}`, entryIndex: index, date: entry?.date || entry?.receivedDate || "", source: entry?.sourceName || entry?.source || "Advance Received", paymentMode: entry?.paymentMode || "-", amount: Number(entry?.amount || 0), remarks: entry?.remarks || "" }));
 };
 
 const mapSelectionToTripDetails = ({
@@ -960,20 +966,17 @@ const mapEditRecordToTripDetails = (record: any) => {
 
 const mapEditRecordToExpenseRows = (record: any) => {
     const rows = Array.isArray(record?.expenses) ? record.expenses : [];
-
-    return EXPENSE_KEYS.map((expenseKey) => {
+    return EXPENSE_KEYS.flatMap((expenseKey) => {
         const matchedRows = rows.filter((row: any) => row?.expenseKey === expenseKey || normalizeText(row?.type) === normalizeText(formatExpenseTypeLabel(expenseKey)));
-        const firstRow = matchedRows[0] || {};
-
-        return { id: expenseKey, expenseKey, date: firstRow?.date || "", type: formatExpenseTypeLabel(expenseKey), description: firstRow?.description || getExpenseDescription(expenseKey, {}), amount: sumAmounts(matchedRows) };
+        const sourceRows = matchedRows.length ? matchedRows : [{}];
+        return sourceRows.map((row: any, index: number) => ({ ...row, id: row?.id || `${expenseKey}-${index}`, expenseKey, entryIndex: row?.entryIndex ?? index, type: row?.type || formatExpenseTypeLabel(expenseKey), date: row?.date || "", description: row?.description || getExpenseDescription(expenseKey, row), amount: Number(row?.amount || 0) }));
     });
 };
 
 const mapEditRecordToAdvanceRows = (record: any) => {
     const rows = Array.isArray(record?.advances) ? record.advances : [];
-    const firstRow = rows[0] || {};
-
-    return [{ id: "advanceReceived", date: firstRow?.date || "", source: "Advance Received", paymentMode: firstRow?.mode || firstRow?.paymentMode || "-", amount: sumAmounts(rows), remarks: firstRow?.remarks || "" }];
+    const sourceRows = rows.length ? rows : [{}];
+    return sourceRows.map((row: any, index: number) => ({ ...row, id: row?.id || `advanceReceived-${index}`, entryIndex: row?.entryIndex ?? index, date: row?.date || "", source: row?.source || row?.sourceName || "Advance Received", paymentMode: row?.mode || row?.paymentMode || "-", amount: Number(row?.amount || 0), remarks: row?.remarks || "" }));
 };
 
 /* ===================================================
@@ -1091,8 +1094,8 @@ const CreateEditDriverSettlement = ({
     const [remarks, setRemarks] = useState("");
     const [paymentAccountCode, setPaymentAccountCode] = useState("");
     const [paymentAccountName, setPaymentAccountName] = useState("");
-    const [expenseAmountEdits, setExpenseAmountEdits] = useState<Record<string, string>>({});
-    const [advanceAmountEdits, setAdvanceAmountEdits] = useState<Record<string, string>>({});
+    const [expenseRowEdits, setExpenseRowEdits] = useState<Record<string, any>>({});
+    const [advanceRowEdits, setAdvanceRowEdits] = useState<Record<string, any>>({});
 
     // Edit-mode state
     const [editRecord, setEditRecord] = useState<any>(null);
@@ -1167,6 +1170,9 @@ const CreateEditDriverSettlement = ({
 
         return map;
     }, [accounts]);
+
+    const vendorAccountOptions = useMemo(() => accounts.filter((account: any) => normalizeText(account?.accountType) === "vendor" && cleanText(account?.accountCode)).map((account: any) => ({ value: cleanText(account?.accountCode), label: cleanText(account?.accountName) || cleanText(account?.accountCode) })), [accounts]);
+    const expenseAccountOptions = useMemo(() => accounts.filter((account: any) => normalizeText(account?.accountType) === "expense" && cleanText(account?.accountCode)).map((account: any) => ({ value: cleanText(account?.accountCode), label: cleanText(account?.accountName) || cleanText(account?.accountCode) })), [accounts]);
 
     useEffect(() => {
         dispatch(
@@ -1574,21 +1580,37 @@ const CreateEditDriverSettlement = ({
     }, [isEditMode, editRecord, salary, incentives, liveSettlementData]);
 
     useEffect(() => {
-        setExpenseAmountEdits({});
-        setAdvanceAmountEdits({});
+        setExpenseRowEdits({});
+        setAdvanceRowEdits({});
     }, [selectedTripId, editRecord]);
+
+    const patchExpenseRow = (id: string, patch: any) => {
+        if (isView) return;
+        setExpenseRowEdits((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
+    };
+
+    const patchAdvanceRow = (id: string, patch: any) => {
+        if (isView) return;
+        setAdvanceRowEdits((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
+    };
 
     const settlementData = useMemo(() => {
         if (!baseSettlementData) return baseSettlementData;
 
-        const expenseRows = (baseSettlementData.expenseRows || []).map((row: any) => ({ ...row, amount: Number(expenseAmountEdits[row.id] ?? row.amount ?? 0) }));
-        const advanceRows = (baseSettlementData.advanceRows || []).map((row: any) => ({ ...row, amount: Number(advanceAmountEdits[row.id] ?? row.amount ?? 0) }));
+        const expenseRows = (baseSettlementData.expenseRows || []).map((row: any) => {
+            const merged = { ...row, ...(expenseRowEdits[row.id] || {}) };
+            return { ...merged, amount: Number(merged.amount || 0), description: getExpenseDescription(merged.expenseKey, merged) };
+        });
+        const advanceRows = (baseSettlementData.advanceRows || []).map((row: any) => {
+            const merged = { ...row, ...(advanceRowEdits[row.id] || {}) };
+            return { ...merged, amount: Number(merged.amount || 0) };
+        });
         const totalExpenses = sumAmounts(expenseRows);
         const totalAdvances = sumAmounts(advanceRows);
         const totalAllowedExpenses = totalExpenses;
 
         return { ...baseSettlementData, expenseRows, advanceRows, totalExpenses, totalAllowedExpenses, totalAdvances, settlement: computeSettlementSummary({ salary, incentives, allowedExpenses: totalAllowedExpenses, totalAdvances }) };
-    }, [baseSettlementData, expenseAmountEdits, advanceAmountEdits, salary, incentives]);
+    }, [baseSettlementData, expenseRowEdits, advanceRowEdits, salary, incentives]);
 
     const tripPendingAccept = useMemo(
         () => (isEditMode ? false : isTripPendingAccept(selectedTripExpense)),
@@ -2613,52 +2635,72 @@ const CreateEditDriverSettlement = ({
                             ) : !settlementData.expenseRows.length ? (
                                 <EmptyHint>No expense entries in this trip.</EmptyHint>
                             ) : (
-                                <div className="overflow-hidden rounded-lg border border-border">
-                                    <div className="grid grid-cols-12 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
-                                        <div className="col-span-3">Date</div>
-                                        <div className="col-span-2">Type</div>
-                                        <div className="col-span-5">Description</div>
-                                        <div className="col-span-2 text-right">
-                                            Amount
-                                        </div>
-                                    </div>
+                                <div className="space-y-3">
+                                    {settlementData.expenseRows.map((item: any, index: number) => {
+                                        const accountOptions = item.expenseKey === "dieselCost" || item.expenseKey === "petrolCost" ? vendorAccountOptions : expenseAccountOptions;
+                                        const getOption = (value: any) => {
+                                            const current = cleanText(value);
+                                            if (!current) return null;
+                                            return accountOptions.find((option: any) => option.value === current) || { value: current, label: current };
+                                        };
+                                        return (
+                                            <div key={item.id} className="rounded-md border border-border bg-muted/30 p-3">
+                                                <div className="mb-3 flex items-center justify-between gap-3">
+                                                    <h3 className="text-sm font-bold text-card-foreground">{item.type} - Entry {index + 1}</h3>
+                                                </div>
 
-                                    {settlementData.expenseRows.map((item: any) => (
-                                        <div
-                                            key={item.id}
-                                            className="grid grid-cols-12 border-t border-border px-3 py-2 text-sm text-foreground"
-                                        >
-                                            <div className="col-span-3 text-muted-foreground">
-                                                {formatDateTime(item.date)}
+                                                <div className={`grid grid-cols-1 gap-4 md:grid-cols-3 ${item.expenseKey === "dieselCost" || item.expenseKey === "petrolCost" ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
+                                                    <label className="flex min-w-0 flex-col gap-1">
+                                                        <span className="text-sm font-medium text-card-foreground">Date</span>
+                                                        <input disabled={isView} type="datetime-local" value={toDateTimeInputValue(item.date)} onChange={(e) => patchExpenseRow(item.id, { date: dateTimeInputToIso(e.target.value) })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary dark:[color-scheme:dark] disabled:cursor-not-allowed disabled:opacity-60" />
+                                                    </label>
+
+                                                    {(item.expenseKey === "dieselCost" || item.expenseKey === "petrolCost") && (
+                                                        <label className="flex min-w-0 flex-col gap-1">
+                                                            <span className="text-sm font-medium text-card-foreground">Fuel Station</span>
+                                                            <Select value={getOption(item.fuelStation)} options={accountOptions} placeholder="Select Fuel Station" isDisabled={isView} isSearchable onChange={(option: any) => patchExpenseRow(item.id, { fuelStation: option?.value || "" })} classNamePrefix="rs" classNames={selectClassNames} styles={selectThemeStyles} />
+                                                        </label>
+                                                    )}
+
+                                                    {item.expenseKey === "foodCost" && (
+                                                        <label className="flex min-w-0 flex-col gap-1">
+                                                            <span className="text-sm font-medium text-card-foreground">Meal Type</span>
+                                                            <input disabled={isView} value={item.mealType || ""} onChange={(e) => patchExpenseRow(item.id, { mealType: e.target.value })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
+                                                        </label>
+                                                    )}
+
+                                                    {item.expenseKey === "breakdownCost" && (
+                                                        <label className="flex min-w-0 flex-col gap-1">
+                                                            <span className="text-sm font-medium text-card-foreground">Issue Type</span>
+                                                            <input disabled={isView} value={item.issueType || ""} onChange={(e) => patchExpenseRow(item.id, { issueType: e.target.value })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
+                                                        </label>
+                                                    )}
+
+                                                    {(item.expenseKey === "runningCost" || item.expenseKey === "otherCost") && (
+                                                        <label className="flex min-w-0 flex-col gap-1">
+                                                            <span className="text-sm font-medium text-card-foreground">Expense Type</span>
+                                                            <Select value={getOption(item.expenseType)} options={accountOptions} placeholder="Select Expense Type" isDisabled={isView} isSearchable onChange={(option: any) => patchExpenseRow(item.id, { expenseType: option?.value || "" })} classNamePrefix="rs" classNames={selectClassNames} styles={selectThemeStyles} />
+                                                        </label>
+                                                    )}
+
+                                                    <label className="flex min-w-0 flex-col gap-1">
+                                                        <span className="text-sm font-medium text-card-foreground">Amount</span>
+                                                        <input disabled={isView} type="number" min="0" step="0.01" value={expenseRowEdits[item.id]?.amount ?? String(item.amount ?? 0)} onChange={(e) => patchExpenseRow(item.id, { amount: e.target.value })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
+                                                    </label>
+
+                                                    {(item.expenseKey === "dieselCost" || item.expenseKey === "petrolCost") && (
+                                                        <label className="flex min-w-0 flex-col gap-1">
+                                                            <span className="text-sm font-medium text-card-foreground">Odometer</span>
+                                                            <input disabled={isView} type="number" value={item.odometerReading ?? ""} onChange={(e) => patchExpenseRow(item.id, { odometerReading: e.target.value })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
+                                                        </label>
+                                                    )}
+                                                </div>
                                             </div>
+                                        );
+                                    })}
 
-                                            <div className="col-span-2">{item.type}</div>
-
-                                            <div className="col-span-5">
-                                                {item.description}
-                                            </div>
-
-                                            <div className="col-span-2">
-                                                <input type="number" min="0" step="0.01" value={expenseAmountEdits[item.id] ?? String(item.amount ?? 0)} disabled={isView} onChange={(event) => setExpenseAmountEdits((prev) => ({ ...prev, [item.id]: event.target.value }))} className="w-full rounded-md border border-border bg-background px-2 py-1 text-right text-sm outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-70" />
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    <div className="flex items-center justify-between border-t border-border bg-background px-3 py-2 text-sm font-semibold text-foreground">
-                                        <span>Total Expenses</span>
-                                        <span>
-                                            {formatMoney(settlementData.totalExpenses)}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between border-t border-border bg-background px-3 py-2 text-sm font-semibold text-foreground">
-                                        <span>Total Allowed Expenses</span>
-                                        <span>
-                                            {formatMoney(
-                                                settlementData.totalAllowedExpenses
-                                            )}
-                                        </span>
-                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground"><span>Total Expenses</span><span>{formatMoney(settlementData.totalExpenses)}</span></div>
+                                    <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground"><span>Total Allowed Expenses</span><span>{formatMoney(settlementData.totalAllowedExpenses)}</span></div>
                                 </div>
                             )}
                         </div>
@@ -2679,40 +2721,27 @@ const CreateEditDriverSettlement = ({
                             ) : !settlementData.advanceRows.length ? (
                                 <EmptyHint>No advances recorded for this trip.</EmptyHint>
                             ) : (
-                                <div className="overflow-hidden rounded-lg border border-border">
-                                    <div className="grid grid-cols-12 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
-                                        <div className="col-span-4">Date</div>
-                                        <div className="col-span-4">Source</div>
-                                        <div className="col-span-4 text-right">
-                                            Amount
-                                        </div>
-                                    </div>
-
-                                    {settlementData.advanceRows.map((item: any) => (
-                                        <div
-                                            key={item.id}
-                                            className="grid grid-cols-12 border-t border-border px-3 py-2 text-sm text-foreground"
-                                        >
-                                            <div className="col-span-4 text-muted-foreground">
-                                                {formatDateTime(item.date)}
-                                            </div>
-
-                                            <div className="col-span-4">
-                                                {item.source}
-                                            </div>
-
-                                            <div className="col-span-4">
-                                                <input type="number" min="0" step="0.01" value={advanceAmountEdits[item.id] ?? String(item.amount ?? 0)} disabled={isView} onChange={(event) => setAdvanceAmountEdits((prev) => ({ ...prev, [item.id]: event.target.value }))} className="w-full rounded-md border border-border bg-background px-2 py-1 text-right text-sm outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-70" />
+                                <div className="space-y-3">
+                                    {settlementData.advanceRows.map((item: any, index: number) => (
+                                        <div key={item.id} className="rounded-md border border-border bg-muted/30 p-3">
+                                            <div className="mb-3 text-sm font-bold text-card-foreground">Advance Entry {index + 1}</div>
+                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                                <label className="flex min-w-0 flex-col gap-1">
+                                                    <span className="text-sm font-medium text-card-foreground">Date</span>
+                                                    <input disabled={isView} type="datetime-local" value={toDateTimeInputValue(item.date)} onChange={(e) => patchAdvanceRow(item.id, { date: dateTimeInputToIso(e.target.value) })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary dark:[color-scheme:dark] disabled:cursor-not-allowed disabled:opacity-60" />
+                                                </label>
+                                                <label className="flex min-w-0 flex-col gap-1">
+                                                    <span className="text-sm font-medium text-card-foreground">Source</span>
+                                                    <input disabled={isView} value={item.source || ""} onChange={(e) => patchAdvanceRow(item.id, { source: e.target.value, sourceName: e.target.value })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
+                                                </label>
+                                                <label className="flex min-w-0 flex-col gap-1">
+                                                    <span className="text-sm font-medium text-card-foreground">Amount</span>
+                                                    <input disabled={isView} type="number" min="0" step="0.01" value={advanceRowEdits[item.id]?.amount ?? String(item.amount ?? 0)} onChange={(e) => patchAdvanceRow(item.id, { amount: e.target.value })} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
+                                                </label>
                                             </div>
                                         </div>
                                     ))}
-
-                                    <div className="flex items-center justify-between border-t border-border bg-background px-3 py-2 text-sm font-semibold text-foreground">
-                                        <span>Total Advances</span>
-                                        <span>
-                                            {formatMoney(settlementData.totalAdvances)}
-                                        </span>
-                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground"><span>Total Advances</span><span>{formatMoney(settlementData.totalAdvances)}</span></div>
                                 </div>
                             )}
                         </div>

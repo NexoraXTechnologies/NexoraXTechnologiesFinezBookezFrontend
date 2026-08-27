@@ -17,7 +17,6 @@ import { toast } from "react-toastify";
 
 import {
     getConsolidatedVehicles,
-    getDriverUniqueKey,
     getTripTrackingVoucher,
     getWhereIsMyDriverList,
 } from "../../../../redux/slices/professionalSlice/transportation/whereIsMyDriverSlice";
@@ -122,6 +121,35 @@ const getLastUpdated = (item: any) => {
         item?.currentLocation?.timestamp ||
         ""
     );
+};
+
+const getDriverIdentity = (item: any) => String(
+    item?.driver?.driverCode ||
+    item?.driver?.mobileNumber ||
+    item?.driver?.driverMobile ||
+    item?.driverMobile ||
+    item?.mobileNumber ||
+    item?.assignedDriverMobile ||
+    item?.driver?.driverName ||
+    item?.driverName ||
+    ""
+).trim().toLowerCase();
+
+const getTrackingTime = (item: any) => new Date(
+    item?.lastUpdatedAt ||
+    item?.updatedAt ||
+    item?.modifiedOn ||
+    item?.currentLocation?.updatedAt ||
+    item?.currentLocation?.timestamp ||
+    0
+).getTime();
+
+const hasCurrentLatLng = (item: any) => {
+    const lat = item?.currentLocation?.lat;
+    const lng = item?.currentLocation?.lng;
+    if (lat === undefined || lat === null || lat === "") return false;
+    if (lng === undefined || lng === null || lng === "") return false;
+    return !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
 };
 
 /* ⭐ ADDED — LIVE / CLOSED STATUS HELPERS */
@@ -388,86 +416,25 @@ const WhereIsMyDriver = () => {
 
     const [search, setSearch] = useState("");
 
-    /* ⭐ ADDED — LIVE AND CLOSED LISTS */
-    const liveDrivers = useMemo(() => {
-        return (drivers || []).filter((item: any) => !isClosedTrip(item));
-    }, [drivers]);
-
-    const closedDrivers = useMemo(() => {
-        const closedList = (drivers || []).filter((item: any) => isClosedTrip(item));
-
+    /* ⭐ CHANGED — LATEST VALID GPS RECORD PER DRIVER */
+    const latestDriverRecords = useMemo(() => {
         const latestMap = new Map<string, any>();
 
-        closedList.forEach((item: any) => {
-            const driverKey = String(
-                item?.driver?.driverCode ||
-                item?.driver?.mobileNumber ||
-                item?.driver?.driverMobile ||
-                item?.driverMobile ||
-                item?.mobileNumber ||
-                item?.assignedDriverMobile ||
-                item?.driver?.driverName ||
-                item?.driverName ||
-                ""
-            ).trim();
+        (drivers || [])
+            .filter((item: any) => hasCurrentLatLng(item))
+            .forEach((item: any, index: number) => {
+                const driverKey = getDriverIdentity(item);
+                const key = driverKey || `unknown-${getTripTrackingVoucher(item) || index}`;
+                const existing = latestMap.get(key);
 
-            const vehicleKey = String(
-                item?.vehicle?.vehicleCode ||
-                item?.vehicle?.vehicleNumber ||
-                item?.vehicleNumber ||
-                ""
-            ).trim();
+                if (!existing || getTrackingTime(item) >= getTrackingTime(existing)) latestMap.set(key, item);
+            });
 
-            const key = `${driverKey}__${vehicleKey}`;
-
-            const existing = latestMap.get(key);
-
-            if (!existing) {
-                latestMap.set(key, item);
-                return;
-            }
-
-            const existingTime = new Date(
-                existing?.lastUpdatedAt ||
-                existing?.updatedAt ||
-                existing?.modifiedOn ||
-                existing?.currentLocation?.updatedAt ||
-                0
-            ).getTime();
-
-            const currentTime = new Date(
-                item?.lastUpdatedAt ||
-                item?.updatedAt ||
-                item?.modifiedOn ||
-                item?.currentLocation?.updatedAt ||
-                0
-            ).getTime();
-
-            if (currentTime >= existingTime) {
-                latestMap.set(key, item);
-            }
-        });
-
-        return Array.from(latestMap.values()).sort((a: any, b: any) => {
-            const aTime = new Date(
-                a?.lastUpdatedAt ||
-                a?.updatedAt ||
-                a?.modifiedOn ||
-                a?.currentLocation?.updatedAt ||
-                0
-            ).getTime();
-
-            const bTime = new Date(
-                b?.lastUpdatedAt ||
-                b?.updatedAt ||
-                b?.modifiedOn ||
-                b?.currentLocation?.updatedAt ||
-                0
-            ).getTime();
-
-            return bTime - aTime;
-        });
+        return Array.from(latestMap.values()).sort((a: any, b: any) => getTrackingTime(b) - getTrackingTime(a));
     }, [drivers]);
+
+    const liveDrivers = useMemo(() => latestDriverRecords.filter((item: any) => !isClosedTrip(item)), [latestDriverRecords]);
+    const closedDrivers = useMemo(() => latestDriverRecords.filter((item: any) => isClosedTrip(item)), [latestDriverRecords]);
 
     const liveCount = liveDrivers.length;
     const closedCount = closedDrivers.length;
@@ -512,13 +479,13 @@ const WhereIsMyDriver = () => {
                 label: "All Assigned Drivers",
                 value: "all",
             },
-            ...(drivers || []).map((item: any) => ({
+            ...latestDriverRecords.map((item: any) => ({
                 label: getDriverName(item),
-                value: getDriverUniqueKey(item),
+                value: getDriverIdentity(item),
                 subtitle: getVehicleNumber(item),
             })),
         ];
-    }, [drivers]);
+    }, [latestDriverRecords]);
 
     /* ⭐ CHANGED — FILTER BY ACTIVE TAB FIRST */
     const filteredDrivers = useMemo(() => {
@@ -526,7 +493,7 @@ const WhereIsMyDriver = () => {
 
         return tabRecords.filter((item: any) => {
             if (selectedDriver !== "all") {
-                if (getDriverUniqueKey(item) !== selectedDriver) return false;
+                if (getDriverIdentity(item) !== selectedDriver) return false;
             }
 
             if (search.trim()) {
@@ -923,9 +890,8 @@ const WhereIsMyDriver = () => {
                                 {filteredDrivers.map((item: any, index: number) => (
                                     <DriverCard
                                         key={
-                                            getDriverUniqueKey(item) ||
                                             getTripTrackingVoucher(item) ||
-                                            `driver-${index}`
+                                            `${getDriverIdentity(item)}-${getVehicleNumber(item)}-${index}`
                                         }
                                         item={item}
                                         onTrack={openDriverMap}
