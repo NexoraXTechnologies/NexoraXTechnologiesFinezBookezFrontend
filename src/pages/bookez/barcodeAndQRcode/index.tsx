@@ -1,6 +1,6 @@
 
 import { useMemo } from "react";
-import { BrickWallShield, LayoutTemplate, Printer, ScanBarcode, ScanLine, SquareDashedKanban, Wallet } from "lucide-react";
+import { LayoutTemplate, Printer, ScanBarcode, ScanLine } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import AssignBarcodeQrTemplate from "./BarcodeQrTemplate";
 import AssignBarcodeQrCode from "./AssignBarcodeQrCode";
