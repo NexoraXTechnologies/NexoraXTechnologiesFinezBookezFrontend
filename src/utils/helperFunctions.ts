@@ -134,7 +134,6 @@ export const formatDateWithCurrentTime = (dateValue: string) => {
     return `${dateValue}T${hours}:${minutes}:${seconds}Z`;
 };
 
-
 export const formatProductType = (value: any) => {
     if (!value) return "-";
 
@@ -165,9 +164,14 @@ export const formatProductType = (value: any) => {
         .join(" ");
 };
 
-
-
-
+export const getFinancialYearRange = (dateValue?: string) => {
+    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
+    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
+    return {
+        fromDate: new Date(Date.UTC(financialYear, 3, 1, 0, 0, 0, 0)).toISOString(),
+        toDate: selectedDate.toISOString(),
+    };
+};
 
 export const formatIndianNumber = (value: any) =>
     Number(value || 0).toLocaleString("en-IN", {

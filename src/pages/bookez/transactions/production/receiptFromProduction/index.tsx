@@ -25,6 +25,7 @@ import professionalAxios from "../../../../../services/professionalAxios";
 import {
     formatDateForInput,
     formatDateForList,
+    getFinancialYearRange,
     loadAllTemplateOptions,
     money,
     num,
@@ -156,16 +157,6 @@ const getFieldDefaultValue = (field: any) => {
     if (field?.defaultValue !== undefined && field?.defaultValue !== null) return field.defaultValue;
 
     return "";
-};
-
-const getFinancialYearRange = (dateValue?: string) => {
-    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
-    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
-
-    return {
-        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
-        toDate: selectedDate.toISOString(),
-    };
 };
 
 const renderReceiptProductionCellExtra = (

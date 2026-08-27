@@ -10,7 +10,7 @@ import SearchInput from "../../../../../components/searchInput";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
-import { fmtMoney, formatDateForInput, formatDateForList, isTrueValue, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { createSalesInvoice, deleteSalesInvoice, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
@@ -189,14 +189,8 @@ const loadAllTemplateOptions = async (templateData: any) => {
         footer: updatedFooter,
     };
 };
-const getFinancialYearRange = (dateValue?: string) => {
-    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
-    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
-    return {
-        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
-        toDate: selectedDate.toISOString(),
-    };
-};
+
+
 const renderSalesInvoiceCellExtra = (column: any, row: any, enableServiceProductInventory: boolean) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;
     const productType = String(row?.productType || "").trim().toLowerCase();

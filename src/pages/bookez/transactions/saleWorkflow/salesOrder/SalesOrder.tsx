@@ -13,7 +13,7 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { createSalesOrder, deleteSalesOrder, getAllSalesOrder, updateSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import professionalAxios from "../../../../../services/professionalAxios";
-import { fmtMoney, formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import Modal, { ListingModel } from "../../../../../components/modal";
 import { clearSelectedSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
@@ -348,15 +348,6 @@ const loadAllTemplateOptions = async (templateData: any) => {
         header: updatedHeader,
         body: updatedBody,
         footer: updatedFooter,
-    };
-};
-
-const getFinancialYearRange = (dateValue?: string) => {
-    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
-    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
-    return {
-        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
-        toDate: selectedDate.toISOString(),
     };
 };
 

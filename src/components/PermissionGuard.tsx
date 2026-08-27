@@ -1,36 +1,35 @@
-import React from "react";
+
+import type { ReactNode } from "react";
 import {
+    checkCustomMasterPermissionFromData,
     checkPermissionFromData,
+    getStoredPermissions,
     type PermissionAction,
 } from "../utils/permissionUtils";
 
-type PermissionGuardProps = {
-    module: string;
-    permissionKey: string;
+type PermissionProps = {
+    children: ReactNode;
+    module?: string;
+    permissionKey?: string;
+    moduleCode?: string;
     action?: PermissionAction;
-    children: React.ReactNode;
-    fallback?: React.ReactNode;
 };
 
-export const getStoredPermissions = () => {
-    try {
-        return JSON.parse(localStorage.getItem("permissions") || "{}");
-    } catch {
-        return {};
-    }
-};
-
-const Permission = ({ module, permissionKey, action = "view", children, fallback = null }: PermissionGuardProps) => {
-
+const Permission = ({
+    children,
+    module = "bookez",
+    permissionKey = "",
+    moduleCode = "",
+    action = "view",
+}: PermissionProps) => {
     const permissions = getStoredPermissions();
-    const isAllowed = checkPermissionFromData(
-        permissions,
-        module,
-        permissionKey,
-        action
-    );
-    if(permissionKey == "Pass") return children
-    if (!isAllowed) return <>{fallback}</>;
+
+    const hasPermission = moduleCode
+        ? checkCustomMasterPermissionFromData(permissions, moduleCode, action)
+        : checkPermissionFromData(permissions, module, permissionKey, action);
+
+    if (!hasPermission) return null;
+
     return <>{children}</>;
 };
 
@@ -39,4 +38,5 @@ const isModuleEnabled = (moduleName: string) => {
     return permissions?.[moduleName]?.enabled === true;
 };
 export { isModuleEnabled }
+
 export default Permission;

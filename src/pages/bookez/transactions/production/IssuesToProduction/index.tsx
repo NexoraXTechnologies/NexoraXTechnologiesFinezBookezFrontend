@@ -16,7 +16,7 @@ import InputBorderLabel from "../../../../../components/common/InputBorderLabel"
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import professionalAxios from "../../../../../services/professionalAxios";
-import { formatDateForInput, formatDateForList, isTrueValue, loadAllTemplateOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
+import { formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadAllTemplateOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 
 const MODULE_CODE = "issueToProduction";
@@ -132,17 +132,6 @@ const defaultPagination = {
     hasNextPage: false,
     hasPrevPage: false,
 };
-
-const getFinancialYearRange = (dateValue?: string) => {
-    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
-    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
-
-    return {
-        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
-        toDate: selectedDate.toISOString(),
-    };
-};
-
 
 const getFieldDefaultValue = (field: any) => {
     const type = String(field?.type || "").trim().toLowerCase();

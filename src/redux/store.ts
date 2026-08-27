@@ -124,6 +124,7 @@ import cashBankReportReducer from "./slices/professionalSlice/cashBankReportSlic
 import teamEmployeeSchemaReducer from "./slices/systemConf/teamEmployeeSchemaSlice";
 import kitCollectionReducer from "./slices/professionalSlice/kitCollection";
 import barcodeQrReducer from "./slices/professionalSlice/BarCodeAndQRCode";
+import gstVerifyReducer from "./slices/professionalSlice/gstVerify";
 
 export const store = configureStore({
   reducer: {
@@ -254,6 +255,8 @@ export const store = configureStore({
     kitCollection: kitCollectionReducer,
 
     barcodeQr: barcodeQrReducer,
+
+    gstVerify: gstVerifyReducer
   },
 });
 

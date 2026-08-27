@@ -23,7 +23,7 @@ import {
     getAssemblyProductionList,
     updateAssemblyProduction,
 } from "../../../../../redux/slices/professionalSlice/production/assemblyProductionSlice";
-import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, loadAllTemplateOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
 import Permission from "../../../../../components/PermissionGuard";
 import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
 import { getAllUnits } from "../../../../../redux/slices/professionalSlice/unitMasterSlice";
@@ -67,14 +67,6 @@ const getSchemaDefaultValue = (field: any) => {
     return "";
 };
 
-const getFinancialYearRange = (dateValue?: string) => {
-    const selectedDate = dateValue ? new Date(`${dateValue}T23:59:59.999`) : new Date();
-    const financialYear = selectedDate.getMonth() >= 3 ? selectedDate.getFullYear() : selectedDate.getFullYear() - 1;
-    return {
-        fromDate: new Date(financialYear, 3, 1, 0, 0, 0, 0).toISOString(),
-        toDate: selectedDate.toISOString(),
-    };
-};
 
 const renderAssemblyRawMaterialCellExtra = (column: any, row: any) => {
     if (column?.key !== "quantity" || !row?.productCode) return null;

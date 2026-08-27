@@ -4,7 +4,12 @@ import { ArrowRight } from "lucide-react";
 import PageComponentModal from "./PageComponentModal";
 import Permission from "../PermissionGuard";
 
-const TransactionDashboard = ({ title, description, icon, cards, }: any) => {
+const TransactionDashboard = ({
+  title,
+  description,
+  icon,
+  cards,
+}: any) => {
   const navigate = useNavigate();
   const [activeCard, setActiveCard]: any = useState(null);
   const ActiveComponent = activeCard?.component;
@@ -44,9 +49,10 @@ const TransactionDashboard = ({ title, description, icon, cards, }: any) => {
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {cards.map((card: any) => (
             <Permission
-              key={card.title}
+              key={`${card?.moduleCode || card?.permissionKey}-${card?.title}`}
               module="bookez"
               permissionKey={card?.permissionKey}
+              moduleCode={card?.moduleCode}
               action="view"
             >
               <article className="h-[112px]">
@@ -54,10 +60,10 @@ const TransactionDashboard = ({ title, description, icon, cards, }: any) => {
                   type="button"
                   onClick={() => handleCardClick(card)}
                   className="
-                    group flex h-full w-full cursor-pointer items-center gap-4 rounded-md border border-border
-                    bg-card p-5 text-left shadow-sm transition-all duration-200
-                    hover:-translate-y-1 hover:border-primary hover:bg-muted hover:shadow-md
-                  "
+                                        group flex h-full w-full cursor-pointer items-center gap-4 rounded-md border border-border
+                                        bg-card p-5 text-left shadow-sm transition-all duration-200
+                                        hover:-translate-y-1 hover:border-primary hover:bg-muted hover:shadow-md
+                                    "
                 >
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                     {card.icon}
@@ -98,7 +104,9 @@ const TransactionDashboard = ({ title, description, icon, cards, }: any) => {
         onClose={() => setActiveCard(null)}
       >
         {ActiveComponent && (
-          <ActiveComponent {...(activeCard?.componentProps || {})} />
+          <ActiveComponent
+            {...(activeCard?.componentProps || {})}
+          />
         )}
       </PageComponentModal>
     </>
