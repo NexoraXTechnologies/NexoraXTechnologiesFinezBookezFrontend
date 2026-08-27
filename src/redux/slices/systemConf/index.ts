@@ -137,6 +137,7 @@ export const getEmptySystemConfiguration = () => ({
 
         transportationModuleConfiguration: {
             enableTransportationModule: false,
+            enableGpsTracker: false,
         },
 
         engineeringModuleConfiguration: {
@@ -226,6 +227,10 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             enableTransportationModule: toBool(
                 raw?.systemConfiguration?.transportationModuleConfiguration
                     ?.enableTransportationModule
+            ),
+            enableGpsTracker: toBool(
+                raw?.systemConfiguration?.transportationModuleConfiguration
+                    ?.enableGpsTracker
             ),
             advanceReceive:
                 raw?.systemConfiguration?.transportationModuleConfiguration
@@ -1087,6 +1092,13 @@ const buildConfigurationPayload = (
                             ?.enableTransportationModule
                     ),
 
+                enableGpsTracker:
+                    toBool(
+                        configuration?.systemConfiguration
+                            ?.transportationModuleConfiguration
+                            ?.enableGpsTracker
+                    ),
+
                 advanceReceive:
                     configuration?.systemConfiguration
                         ?.transportationModuleConfiguration
@@ -1757,15 +1769,25 @@ export const saveOrUpdateSystemConfiguration =
                         maintainInventoryEnabled ||
                         transportationEnabled;
 
+                    const gpsTrackerEnabled =
+                        toBool(
+                            submittedPayload
+                                ?.systemConfiguration
+                                ?.transportationModuleConfiguration
+                                ?.enableGpsTracker
+                        );
+
                     console.log("Vehicle Master sync:", {
                         maintainInventoryEnabled,
                         transportationEnabled,
+                        gpsTrackerEnabled,
                         shouldSyncVehicleMaster,
                     });
 
                     vehicleMasterSync =
                         await syncVehicleMasterCustomMaster(
-                            shouldSyncVehicleMaster
+                            shouldSyncVehicleMaster,
+                            gpsTrackerEnabled
                         );
 
                     console.log(

@@ -9,6 +9,8 @@ import {
   PackagePlus,
   MapPinned,
   ReceiptText,
+  MapPinPlus,
+  ClipboardList,
 } from "lucide-react";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 
@@ -22,11 +24,25 @@ const cards: any[] = [
     permissionKey: "transportContract",
   },
   {
+    title: "Create Indent",
+    description: "Create and manage transport indents for vehicle placement and goods movement.",
+    path: "/bookEz/transportation/indent",
+    icon: <ClipboardList size={22} />,
+    permissionKey: "Pass",
+  },
+  {
     title: "Create Transport Order",
     description: "Create and manage transport orders for customer goods movement.",
     path: "/bookEz/transportation/transport-order",
     icon: <PackagePlus size={22} />,
     permissionKey: "transportOrder",
+  },
+  {
+    title: "Touch Up",
+    description: "Create and manage touch-up points for transport orders.",
+    path: "/bookEz/transportation/touch-up",
+    icon: <MapPinPlus size={22} />,
+    permissionKey: "Pass",
   },
   {
     title: "Trip Allocation",

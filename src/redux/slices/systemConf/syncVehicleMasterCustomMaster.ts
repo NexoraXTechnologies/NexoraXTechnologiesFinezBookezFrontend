@@ -177,7 +177,7 @@ const EMPTY_MASTER_REF = {
 
 const baseVehicleField = (
     overrides: Record<string, any> = {}
-) => ({
+): Record<string, any> => ({
     isHidden: false,
     options: [],
     ...EMPTY_MASTER_REF,
@@ -503,6 +503,15 @@ export const VEHICLE_MASTER_SCHEMA_FIELDS = [
         isFilterable: false,
     }),
 ];
+
+const VEHICLE_MASTER_GPS_TRACKING_FIELD = baseVehicleField({
+    key: "tracking_no",
+    label: "Tracking No",
+    type: "string",
+    isRequired: true,
+    isSearchable: true,
+    isFilterable: true,
+});
 
 export const VEHICLE_MASTER_SCHEMA_FIELD_KEYS =
     new Set(
@@ -862,7 +871,8 @@ const fetchModuleSchemaFields =
 const saveMissingVehicleSchemaFields =
     async (
         moduleCode: string,
-        existingFields: any[] = []
+        existingFields: any[] = [],
+        gpsTrackerEnabled = false
     ) => {
         const existingKeys =
             new Set(
@@ -886,6 +896,27 @@ const saveMissingVehicleSchemaFields =
                         field.key
                     )
             );
+
+        if (gpsTrackerEnabled) {
+            const existingTrackingField =
+                (Array.isArray(existingFields) ? existingFields : [])
+                    .find((field: any) =>
+                        String(field?.key || "").trim() ===
+                        VEHICLE_MASTER_GPS_TRACKING_FIELD.key
+                    );
+
+            const trackingRequired =
+                existingTrackingField?.isRequired === true ||
+                existingTrackingField?.isRequired === "true";
+
+            if (!existingTrackingField || !trackingRequired) {
+                missingFields.push(
+                    buildVehicleMasterSchemaFields([
+                        VEHICLE_MASTER_GPS_TRACKING_FIELD
+                    ])[0]
+                );
+            }
+        }
 
         if (!missingFields.length) {
             return {
@@ -1067,11 +1098,16 @@ const saveMissingTeamEmployeeTransportFields =
  */
 export const syncVehicleMasterCustomMaster =
     async (
-        enabled: boolean | string
+        enabled: boolean | string,
+        gpsTrackerEnabled: boolean | string = false
     ) => {
         const shouldEnable =
             enabled === true ||
             enabled === "true";
+
+        const shouldEnableGpsTracker =
+            gpsTrackerEnabled === true ||
+            gpsTrackerEnabled === "true";
 
         if (!shouldEnable) {
             return {
@@ -1111,7 +1147,8 @@ export const syncVehicleMasterCustomMaster =
         const vehicleSchemaResult =
             await saveMissingVehicleSchemaFields(
                 moduleCode,
-                existingVehicleFields
+                existingVehicleFields,
+                shouldEnableGpsTracker
             );
 
         const teamEmployeeSchemaResult =

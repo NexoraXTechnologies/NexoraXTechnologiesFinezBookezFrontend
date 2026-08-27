@@ -87,6 +87,10 @@ import EWayBillList from './pages/bookez/transportation/eWayBill/EwayBillList';
 import CreateEditEWayBill from './pages/bookez/transportation/eWayBill/Createeditewaybill';
 import BarCodeAndQrCode from './pages/bookez/barcodeAndQRcode';
 import ConsolidatedVehicleView from './pages/bookez/transportation/whereIsDriver/ConsolidatedVehicleView';
+import TouchUPList from './pages/bookez/transportation/touchUP/TouchUPList';
+import CreateEditTouchUP from './pages/bookez/transportation/touchUP/CreateEditTouchUP';
+import IndentList from './pages/bookez/transportation/indent/IndentList';
+import CreateEditIndent from './pages/bookez/transportation/indent/CreateEditIndent';
 
 function App() {
   useAppearance();
@@ -193,11 +197,16 @@ function App() {
           <Route path="/bookEz/transportation/transport-contract/create" element={<CreateEditTransportContract />} />
           <Route path="/bookEz/transportation/transport-contract/edit/:contractNumber" element={<CreateEditTransportContract />} />
 
+          <Route path='/bookEz/transportation/indent' element={<IndentList />} />
+          <Route path='/bookEz/transportation/indent/create' element={<CreateEditIndent/>} />
 
           <Route path="/bookEz/transportation/transport-order" element={<TransportOrderList />} />
           <Route path="/bookEz/transportation/transport-order/create" element={<CreateTransportOrder />} />
           <Route path="/bookEz/transportation/transport-order/edit/:orderNumber" element={<CreateTransportOrder />} />
           <Route path="/bookEz/transportation/transport-order/view/:orderNumber" element={<CreateTransportOrder />} />
+
+          <Route path='/bookEz/transportation/touch-up' element={<TouchUPList />} />
+          <Route path='/bookEz/transportation/touch-up/create' element={<CreateEditTouchUP />} />
 
           <Route path='/bookEz/transportation/trip-allocation' element={<TripAllocationList />} />
           <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />} />
@@ -214,7 +223,7 @@ function App() {
 
           <Route path='/bookEz/transportation/e-way-bill' element={<EWayBillList />} />
           <Route path='bookEz/transportation/e-way-bill/view/:ewayBillNo' element={<CreateEditEWayBill />} />
-          <Route path="/bookEz/transportation/e-way-bill/edit/:ewayBillNo"element={<CreateEditEWayBill />}/>
+          <Route path="/bookEz/transportation/e-way-bill/edit/:ewayBillNo" element={<CreateEditEWayBill />} />
 
 
           <Route path="/bookEz/transportation/vehicle-maintenance" element={<VehicleMaintenanceList />} />
@@ -227,7 +236,7 @@ function App() {
 
           <Route path="/bookEz/transportation/vehicle-status" element={<VehicleStatus />} />
           <Route path="/bookEz/transportation/where-is-vehicle" element={<WhereIsMyDriver />} />
-          <Route path="/bookEz/transportation/consolidated-vehicle-view" element={<ConsolidatedVehicleView/>} />
+          <Route path="/bookEz/transportation/consolidated-vehicle-view" element={<ConsolidatedVehicleView />} />
           <Route path="/bookEz/transportation/live-trip-tracking" element={<LiveTripTracking />} />
 
           {/* configuration */}
