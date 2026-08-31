@@ -23,7 +23,7 @@ const Permission = ({
     action = "view",
 }: PermissionProps) => {
     const permissions = getStoredPermissions();
-
+    // console.log({permissions})
     const hasPermission = moduleCode
         ? checkCustomMasterPermissionFromData(permissions, moduleCode, action)
         : checkPermissionFromData(permissions, module, permissionKey, action);

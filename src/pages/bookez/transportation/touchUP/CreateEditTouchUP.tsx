@@ -9,6 +9,9 @@ import { FormSectionCard } from "../../../../components/SectionCards";
 import GoogleAddressAutocompleteWeb from "../../../../components/common/GoogleAddressAutocompleteWeb";
 import { getCitiesByState, getStates } from "../../../../redux/slices/professionalSlice/stateCitySlice";
 import { getTransportOrders } from "../../../../redux/slices/professionalSlice/transportation/transportOrderSlice";
+import { createTransportTouchup, getAllTransportTouchup, updateTransportTouchup } from "../../../../redux/slices/professionalSlice/transportation/touchUpSlice";
+import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
+import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 
 const getDisplayName = (name: any) => {
     if (!name) return "";
@@ -33,6 +36,7 @@ const createEmptyLocation = () => ({
 
 const createEmptyTouchUp = () => ({
     id: `${Date.now()}-${Math.random()}`,
+    touchUpId: "",
     pickupLocation: createEmptyLocation(),
     deliveryLocation: createEmptyLocation(),
     material: "",
@@ -50,23 +54,49 @@ const createInitialForm = () => ({
     touchUps: [createEmptyTouchUp()]
 });
 
+const normalizePOD = (value: any) => {
+    if (!value) return "";
+    if (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0) return "";
+    return value;
+};
+
+const normalizeLocationForEdit = (data: any = {}) => ({
+    ...createEmptyLocation(),
+    location: data?.location || data?.name || data?.address || "",
+    address: data?.address || data?.location || "",
+    stateCode: data?.stateCode || "",
+    stateName: data?.stateName || data?.state || "",
+    cityName: data?.cityName || data?.city || "",
+    pincode: data?.pincode || data?.postalCode || "",
+    latitude: data?.latitude ?? data?.lat ?? "",
+    longitude: data?.longitude ?? data?.lng ?? "",
+    placeId: data?.placeId || ""
+});
+
 const normalizeTouchUp = (data: any = {}, index: number) => ({
     ...createEmptyTouchUp(),
-    id: data?.id || data?._id || `touch-up-${index}`,
-    pickupLocation: { ...createEmptyLocation(), ...(data?.pickupLocation || {}) },
-    deliveryLocation: { ...createEmptyLocation(), ...(data?.deliveryLocation || {}) },
+    id: data?.id || data?._id || data?.touchUpId || `touch-up-${index}`,
+    touchUpId: data?.touchUpId || "",
+    pickupLocation: normalizeLocationForEdit(data?.pickupLocation),
+    deliveryLocation: normalizeLocationForEdit(data?.deliveryLocation),
     material: data?.material || "",
     unit: data?.unit || "",
     quantity: data?.quantity ?? "",
     invoiceNumber: data?.invoiceNumber || "",
     consignor: data?.consignor || "",
     consignee: data?.consignee || "",
-    touchUpPOD: data?.touchUpPOD || "",
+    touchUpPOD: normalizePOD(data?.touchUpPOD),
     touchUpStatus: data?.touchUpStatus || "pending"
 });
 
 const normalizeFormForEdit = (data: any = {}) => {
-    const existingTouchUps = Array.isArray(data?.touchUps) ? data.touchUps : data?.pickupLocation || data?.deliveryLocation ? [data] : [];
+    const existingTouchUps = Array.isArray(data?.touchUp)
+        ? data.touchUp
+        : Array.isArray(data?.touchUps)
+            ? data.touchUps
+            : data?.pickupLocation || data?.deliveryLocation
+                ? [data]
+                : [];
 
     return {
         tripOrder: data?.tripOrder || "",
@@ -80,17 +110,6 @@ const touchUpStatusOptions = [
     { label: "In Progress", value: "inProgress" },
     { label: "Completed", value: "completed" },
     { label: "Cancelled", value: "cancelled" }
-];
-
-const unitOptions = [
-    { label: "Select Unit", value: "" },
-    { label: "Nos", value: "Nos" },
-    { label: "Kg", value: "Kg" },
-    { label: "Ton", value: "Ton" },
-    { label: "Box", value: "Box" },
-    { label: "Bag", value: "Bag" },
-    { label: "Bundle", value: "Bundle" },
-    { label: "Litre", value: "Litre" }
 ];
 
 const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: any) => {
@@ -220,12 +239,12 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
                     handleInputChange: () => handleCityChange
                 })}
 
-                {renderField({
+                {/* {renderField({
                     field: { key: "pincode", label: `${label} Pincode`, type: "text" },
                     form: location,
                     handleInputChange: () => (e: any) => onFieldChange("pincode", e?.target?.value ?? ""),
                     handleSelectChange: () => (e: any) => onFieldChange("pincode", e?.target?.value ?? "")
-                })}
+                })} */}
 
                 <div />
 
@@ -242,10 +261,36 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
     );
 };
 
-const TouchUpCard = ({ index, touchUp, totalTouchUps, states, updateTouchUpField, updateTouchUpLocation, removeTouchUp, handlePODChange }: any) => {
+const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, unitMasterOptions, updateTouchUpField, updateTouchUpLocation, removeTouchUp, handlePODChange }: any) => {
+    const materialOptions = useMemo(() => {
+        const options = [...(productOptions || [])];
+
+        if (touchUp?.material && !options.some((item: any) => String(item?.value) === String(touchUp.material))) {
+            options.push({ label: touchUp.material, value: touchUp.material });
+        }
+
+        return options;
+    }, [productOptions, touchUp?.material]);
+
+    const resolvedUnitOptions = useMemo(() => {
+        const options = [...(unitMasterOptions || [])];
+
+        if (touchUp?.unit) {
+            const matchedUnit = options.find((item: any) => String(item?.value || "").toLowerCase() === String(touchUp.unit).toLowerCase());
+
+            if (matchedUnit && String(matchedUnit.value) !== String(touchUp.unit)) {
+                options.push({ label: matchedUnit.label, value: touchUp.unit });
+            } else if (!matchedUnit) {
+                options.push({ label: touchUp.unit, value: touchUp.unit });
+            }
+        }
+
+        return options;
+    }, [unitMasterOptions, touchUp?.unit]);
+
     const materialFields = [
-        { key: "material", label: "Material", type: "text", mandatory: true },
-        { key: "unit", label: "Unit", type: "select", options: unitOptions, mandatory: true },
+        { key: "material", label: "Material", type: "select", options: materialOptions, mandatory: true },
+        { key: "unit", label: "Unit", type: "select", options: resolvedUnitOptions, mandatory: true },
         { key: "quantity", label: "Quantity", type: "number", mandatory: true },
         { key: "invoiceNumber", label: "Invoice Number", type: "text" }
     ];
@@ -259,35 +304,31 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, updateTouchUpField
     const handleInputChange = (key: string) => (e: any) => updateTouchUpField(index, key, e?.target?.value ?? "");
     const handleSelectChange = (key: string) => (e: any) => updateTouchUpField(index, key, e?.target?.value ?? "");
 
-    const renderTouchUpFields = (fields: any[]) =>
-        fields.map((field: any) =>
-            renderField({
-                field,
-                form: touchUp,
-                handleInputChange,
-                handleSelectChange,
-                updateField: (key: string, value: any) => updateTouchUpField(index, key, value)
-            })
-        );
+    const renderTouchUpFields = (fields: any[]) => fields.map((field: any) => renderField({
+        field,
+        form: touchUp,
+        handleInputChange,
+        handleSelectChange,
+        updateField: (key: string, value: any) => updateTouchUpField(index, key, value)
+    }));
 
     return (
         <div className="w-full min-w-0 overflow-hidden rounded-md border border-border bg-background">
             <div className="flex w-full items-center justify-between border-b border-border bg-muted/30 px-3 py-2.5">
                 <div className="flex items-center gap-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-                        {index + 1}
-                    </span>
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">{index + 1}</span>
 
                     <div>
-                        <h3 className="text-sm font-bold text-card-foreground">Touch Up {index + 1}</h3>
+                        <h3 className="text-sm font-bold text-card-foreground">
+                            {touchUp?.touchUpId ? `${touchUp.touchUpId}` : `Touch Up ${index + 1}`}
+                        </h3>
                         <p className="text-xs text-muted-foreground">Pickup, delivery, material and POD details</p>
                     </div>
                 </div>
 
                 {totalTouchUps > 1 && (
                     <button type="button" onClick={() => removeTouchUp(index)} className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-danger transition hover:bg-danger/10">
-                        <Trash2 size={14} />
-                        Remove
+                        <Trash2 size={14} /> Remove
                     </button>
                 )}
             </div>
@@ -295,7 +336,6 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, updateTouchUpField
             <div className="flex w-full flex-col gap-4 p-3">
                 <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-2">
                     <TouchUpLocationBlock type="pickup" label="Pickup" location={touchUp.pickupLocation} states={states} onFieldChange={(key: string, value: any) => updateTouchUpLocation(index, "pickupLocation", key, value)} />
-
                     <TouchUpLocationBlock type="delivery" label="Delivery" location={touchUp.deliveryLocation} states={states} onFieldChange={(key: string, value: any) => updateTouchUpLocation(index, "deliveryLocation", key, value)} />
                 </div>
 
@@ -305,9 +345,7 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, updateTouchUpField
                         <h4 className="text-sm font-semibold text-card-foreground">Material Details</h4>
                     </div>
 
-                    <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        {renderTouchUpFields(materialFields)}
-                    </div>
+                    <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">{renderTouchUpFields(materialFields)}</div>
                 </div>
 
                 <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
@@ -317,9 +355,7 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, updateTouchUpField
                             <h4 className="text-sm font-semibold text-card-foreground">Party & Status</h4>
                         </div>
 
-                        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
-                            {renderTouchUpFields(partyFields)}
-                        </div>
+                        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">{renderTouchUpFields(partyFields)}</div>
                     </div>
 
                     <div className="w-full rounded-md border border-border bg-card p-3">
@@ -339,10 +375,9 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, updateTouchUpField
                             <div className="flex min-h-[86px] w-full items-center justify-between rounded-md border border-success/20 bg-success/5 px-3">
                                 <div className="flex min-w-0 items-center gap-2">
                                     <FileText size={18} className="shrink-0 text-success" />
-
                                     <div className="min-w-0">
                                         <p className="truncate text-xs font-semibold text-card-foreground">POD Attached</p>
-                                        <p className="text-[11px] text-muted-foreground">Ready to save</p>
+                                        <p className="text-[11px] text-muted-foreground">Existing POD</p>
                                     </div>
                                 </div>
 
@@ -368,6 +403,9 @@ const CreateEditTouchUP = () => {
 
     const { states = [] } = useSelector((state: any) => state.stateCity || {});
     const { transportOrders = [] } = useSelector((state: any) => state.transportOrder || {});
+    const { transportTouchups = [] } = useSelector((state: any) => state.transportTouchup || {});
+    const { products = [] } = useSelector((state: any) => state.productMaster || {});
+    const { units = [] } = useSelector((state: any) => state.unitMaster || {});
 
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState<any>(routeState?.touchUpData ? normalizeFormForEdit(routeState.touchUpData) : createInitialForm());
@@ -375,27 +413,112 @@ const CreateEditTouchUP = () => {
     const pageTitle = routeState?.title || (isEdit ? "Edit Touch Up" : "Create Touch Up");
     const pageDescription = routeState?.description || (isEdit ? "Update touch up points for this transport order." : "Create pickup or delivery touch up against a transport trip order.");
 
+    const productOptions = useMemo(() => {
+        return [
+            { label: "Select Material", value: "" },
+            ...(products || [])
+                .map((product: any) => {
+                    const productName = product?.productName || product?.name || "";
+                    const productCode = product?.productCode || product?.code || "";
+
+                    if (!productName && !productCode) return null;
+
+                    return {
+                        label: productCode && productName ? `${productName}` : productName || productCode,
+                        value: productCode || productName
+                    };
+                })
+                .filter(Boolean)
+        ];
+    }, [products]);
+
+    const unitMasterOptions = useMemo(() => [
+        { label: "Select Unit", value: "" },
+        ...(units || []).map((item: any) => {
+            const unitName = item?.unitName || item?.name || item?.unit || "";
+            const unitCode = item?.unitCode || item?.code || "";
+            const value = unitName || unitCode;
+            if (!value) return null;
+            return { label: unitName || unitCode, value };
+        }).filter(Boolean)
+    ], [units]);
+
     useEffect(() => {
         // @ts-ignore
         dispatch(getStates());
+        dispatch(getAllProducts({ limit: 200, offset: 0 }));
+        dispatch(getAllUnits({ limit: 200, offset: 0 }));
         dispatch(getTransportOrders({ limit: 200, offset: 0, status: "open" }));
+        dispatch(getAllTransportTouchup({ limit: 500, offset: 0, search: "" }));
     }, [dispatch]);
 
-    const transportOrderOptions = useMemo(
-        () =>
-            (transportOrders || [])
-                .map((order: any) => {
-                    const value = order?.transportOrderNumber || order?.voucherNumber || "";
-                    if (!value) return null;
+    // RESOLVE BACKEND STATE NAME TO STATE CODE FOR EDIT PREFILL
+    useEffect(() => {
+        if (!isEdit || !states?.length) return;
 
-                    return {
-                        label: `${value} - ${order?.customerDetails?.customerName || order?.customerName || "-"}`,
-                        value
-                    };
-                })
-                .filter(Boolean),
-        [transportOrders]
-    );
+        setForm((prev: any) => {
+            let changed = false;
+
+            const resolveLocationState = (locationData: any) => {
+                if (!locationData || locationData?.stateCode || !locationData?.stateName) return locationData;
+
+                const matchedState = states.find((item: any) => {
+                    const stateName = getDisplayName(item?.name || item?.stateName);
+                    return normalizeText(stateName) === normalizeText(locationData.stateName);
+                });
+
+                const stateCode = matchedState?.isoCode || matchedState?.stateCode || matchedState?.code || "";
+                if (!stateCode) return locationData;
+
+                changed = true;
+                return { ...locationData, stateCode };
+            };
+
+            const touchUps = (prev.touchUps || []).map((touchUp: any) => ({
+                ...touchUp,
+                pickupLocation: resolveLocationState(touchUp?.pickupLocation),
+                deliveryLocation: resolveLocationState(touchUp?.deliveryLocation)
+            }));
+
+            return changed ? { ...prev, touchUps } : prev;
+        });
+    }, [isEdit, states]);
+
+    const usedTransportOrders = useMemo(() => {
+        return new Set(
+            (transportTouchups || [])
+                .map((item: any) => item?.tripOrder)
+                .filter(Boolean)
+                .map((value: any) => String(value))
+        );
+    }, [transportTouchups]);
+
+    const transportOrderOptions = useMemo(() => {
+        const currentEditOrder = isEdit ? String(form.tripOrder || "") : "";
+
+        const options = (transportOrders || [])
+            .map((order: any) => {
+                const value = order?.transportOrderNumber || order?.voucherNumber || "";
+                if (!value) return null;
+
+                const alreadyUsed = usedTransportOrders.has(String(value));
+                const isCurrentEditOrder = isEdit && String(value) === currentEditOrder;
+                const disabled = alreadyUsed && !isCurrentEditOrder;
+
+                return {
+                    label: `${value} - ${order?.customerDetails?.customerName || order?.customerName || "-"}${disabled ? " (Touch Up Created)" : ""}`,
+                    value,
+                    isDisabled: disabled
+                };
+            })
+            .filter(Boolean) as any[];
+
+        if (form.tripOrder && !options.some((item: any) => String(item?.value) === String(form.tripOrder))) {
+            options.unshift({ label: form.tripOrder, value: form.tripOrder, isDisabled: false });
+        }
+
+        return options;
+    }, [transportOrders, usedTransportOrders, form.tripOrder, isEdit]);
 
     const selectedOrderOption = transportOrderOptions.find((item: any) => item?.value === form.tripOrder) || null;
 
@@ -412,25 +535,12 @@ const CreateEditTouchUP = () => {
     const updateTouchUpLocation = (index: number, locationKey: "pickupLocation" | "deliveryLocation", key: string, value: any) => {
         setForm((prev: any) => {
             const touchUps = [...(prev.touchUps || [])];
-
-            touchUps[index] = {
-                ...touchUps[index],
-                [locationKey]: {
-                    ...(touchUps[index]?.[locationKey] || {}),
-                    [key]: value
-                }
-            };
-
+            touchUps[index] = { ...touchUps[index], [locationKey]: { ...(touchUps[index]?.[locationKey] || {}), [key]: value } };
             return { ...prev, touchUps };
         });
     };
 
-    const addTouchUp = () => {
-        setForm((prev: any) => ({
-            ...prev,
-            touchUps: [...(prev.touchUps || []), createEmptyTouchUp()]
-        }));
-    };
+    const addTouchUp = () => setForm((prev: any) => ({ ...prev, touchUps: [...(prev.touchUps || []), createEmptyTouchUp()] }));
 
     const removeTouchUp = (index: number) => {
         if ((form.touchUps || []).length <= 1) {
@@ -438,10 +548,7 @@ const CreateEditTouchUP = () => {
             return;
         }
 
-        setForm((prev: any) => ({
-            ...prev,
-            touchUps: (prev.touchUps || []).filter((_: any, i: number) => i !== index)
-        }));
+        setForm((prev: any) => ({ ...prev, touchUps: (prev.touchUps || []).filter((_: any, i: number) => i !== index) }));
     };
 
     const handlePODChange = (index: number, e: any) => {
@@ -470,7 +577,8 @@ const CreateEditTouchUP = () => {
 
     const toPayload = () => ({
         tripOrder: String(form.tripOrder || "").trim(),
-        touchUps: (form.touchUps || []).map((touchUp: any) => ({
+        touchUp: (form.touchUps || []).map((touchUp: any) => ({
+            ...(touchUp?.touchUpId ? { touchUpId: touchUp.touchUpId } : {}),
             pickupLocation: { ...(touchUp.pickupLocation || {}) },
             deliveryLocation: { ...(touchUp.deliveryLocation || {}) },
             material: String(touchUp.material || "").trim(),
@@ -489,13 +597,23 @@ const CreateEditTouchUP = () => {
 
         try {
             setLoading(true);
-
             const payload = toPayload();
-            console.log("TOUCH UP PAYLOAD:", payload);
 
-            // API CALL HERE
+            if (isEdit) {
+                const transportTouchupNumber = routeState?.touchUpData?.transportTouchupNumber || routeState?.transportTouchupNumber;
 
-            toast.success(isEdit ? "Touch Up updated successfully" : "Touch Up created successfully");
+                if (!transportTouchupNumber) {
+                    toast.warn("Transport Touch Up number not found");
+                    return;
+                }
+
+                await dispatch(updateTransportTouchup({ voucherNumber: transportTouchupNumber, payload })).unwrap();
+                toast.success("Touch Up updated successfully");
+            } else {
+                await dispatch(createTransportTouchup(payload)).unwrap();
+                toast.success("Touch Up created successfully");
+            }
+
             navigate(-1);
         } catch (error: any) {
             toast.error(error?.message || "Failed to save Touch Up");
@@ -534,6 +652,7 @@ const CreateEditTouchUP = () => {
                                         options={transportOrderOptions}
                                         placeholder="Select Transport Order"
                                         isSearchable
+                                        isOptionDisabled={(option: any) => option?.isDisabled === true}
                                         onChange={(option: any) => updateField("tripOrder", option?.value || "")}
                                         classNamePrefix="rs"
                                     />
@@ -553,7 +672,6 @@ const CreateEditTouchUP = () => {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-sm font-semibold text-card-foreground">Route Touch Ups</h3>
-
                                         <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {(form.touchUps || []).length} {(form.touchUps || []).length === 1 ? "Point" : "Points"}
                                         </span>
@@ -563,19 +681,20 @@ const CreateEditTouchUP = () => {
                                 </div>
 
                                 <button type="button" onClick={addTouchUp} className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90">
-                                    <Plus size={15} />
-                                    Add Touch Up
+                                    <Plus size={15} /> Add Touch Up
                                 </button>
                             </div>
 
                             <div className="flex w-full flex-col gap-4">
                                 {(form.touchUps || []).map((touchUp: any, index: number) => (
                                     <TouchUpCard
-                                        key={touchUp.id || index}
+                                        key={touchUp.id || touchUp.touchUpId || index}
                                         index={index}
                                         touchUp={touchUp}
                                         totalTouchUps={form.touchUps.length}
                                         states={states}
+                                        productOptions={productOptions}
+                                        unitMasterOptions={unitMasterOptions}
                                         updateTouchUpField={updateTouchUpField}
                                         updateTouchUpLocation={updateTouchUpLocation}
                                         removeTouchUp={removeTouchUp}
@@ -585,8 +704,7 @@ const CreateEditTouchUP = () => {
                             </div>
 
                             <button type="button" onClick={addTouchUp} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 text-xs font-semibold text-primary transition hover:bg-primary/10">
-                                <Plus size={15} />
-                                Add Another Touch Up
+                                <Plus size={15} /> Add Another Touch Up
                             </button>
                         </div>
                     </FormSectionCard>

@@ -1,371 +1,230 @@
-// import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-// import professionalAxios from "../../../../services/professionalAxios";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import professionalAxios from "../../../../services/professionalAxios";
 
-// type TransportContractState = {
-// 	limit?: number;
-// 	offset?: number;
-// 	search?: string;
-// 	status?: string;
-// 	priority?: string;
-// };
+type TransportIndentState = {
+	limit?: number;
+	offset?: number;
+	search?: string;
+	status?: string;
+	priority?: string;
+};
 
-// /* ===================================================
-//     CREATE INDENT
-// =================================================== */
+// CREATE INDENT
+export const createIndent = createAsyncThunk(
+	"transportIndent/createIndent",
+	async (payload: any, { rejectWithValue }) => {
+		try {
+			const response = await professionalAxios.post("/eTaxSolnMongoApiBackend/users/bookEZ/transportIndent/save", payload);
 
-// export const createIndent = createAsyncThunk(
-// 	"intendSlice/createTransportContract",
-// 	async (payload: any, { rejectWithValue }) => {
-// 		try {
-// 			const response = await professionalAxios.post(
-// 				"/eTaxSolnMongoApiBackend/users/bookEZ/transportContract/save",
-// 				payload
-// 			);
+			if (!response?.data?.success) {
+				return rejectWithValue({ message: response?.data?.message || "Failed to create Transport Indent" });
+			}
 
-// 			if (!response?.data?.success) {
-// 				return rejectWithValue({
-// 					message:
-// 						response?.data?.message || "Failed to create Transport Contract",
-// 				});
-// 			}
+			return response?.data || null;
+		} catch (error: any) {
+			return rejectWithValue({ message: error?.response?.data?.message || error?.message || "Failed to create Transport Indent" });
+		}
+	}
+);
 
-// 			return response?.data || null;
-// 		} catch (error: any) {
-// 			return rejectWithValue({
-// 				message:
-// 					error?.response?.data?.message ||
-// 					error?.message ||
-// 					"Failed to create Transport Contract",
-// 			});
-// 		}
-// 	}
-// );
+// GET ALL
+export const getAllTransportIndent = createAsyncThunk(
+	"transportIndent/getAllTransportIndent",
+	async ({ limit = 10, offset = 0, search = "", status = "", priority = "" }: TransportIndentState = {}, { rejectWithValue }) => {
+		try {
+			const response = await professionalAxios.get("/eTaxSolnMongoApiBackend/users/bookEZ/transportIndent/getAll", {
+				params: { limit, offset, search, status, priority },
+			});
 
-// /* ===================================================
-//     GET ALL Transport Contract
-// =================================================== */
+			return response?.data || null;
+		} catch (error: any) {
+			return rejectWithValue({ message: error?.response?.data?.message || error?.message || "Failed to get all Transport Indents" });
+		}
+	}
+);
 
-// export const getAllTransportContract = createAsyncThunk(
-// 	"intendSlice/getAllTransportContract",
-// 	async (
-// 		{
-// 			limit = 10,
-// 			offset = 0,
-// 			search = "",
-// 			status = "",
-// 			priority = "",
-// 		}: TransportContractState = {},
-// 		{ rejectWithValue }
-// 	) => {
-// 		try {
-// 			const response = await professionalAxios.get(
-// 				"/eTaxSolnMongoApiBackend/users/bookEZ/transportContract/getAll",
-// 				{
-// 					params: {
-// 						limit,
-// 						offset,
-// 						search,
-// 						status,
-// 						priority,
-// 					},
-// 				}
-// 			);
+// GET BY INDENT NUMBER
+export const getTransportIndentByVoucherNumber = createAsyncThunk(
+	"transportIndent/getTransportIndentByVoucherNumber",
+	async (voucherNumber: string, { rejectWithValue }) => {
+		try {
+			const response = await professionalAxios.get(`/eTaxSolnMongoApiBackend/users/bookEZ/transportIndent/getByVoucherNumber/${voucherNumber}`);
+			return response?.data || null;
+		} catch (error: any) {
+			return rejectWithValue({ message: error?.response?.data?.message || error?.message || "Failed to get Transport Indent" });
+		}
+	}
+);
 
-// 			return response?.data || null;
-// 		} catch (error: any) {
-// 			return rejectWithValue({
-// 				message:
-// 					error?.response?.data?.message ||
-// 					error?.message ||
-// 					"Failed to get all Transport Contract",
-// 			});
-// 		}
-// 	}
-// );
+// DELETE BY INDENT NUMBER
+export const deleteTransportIndent = createAsyncThunk(
+	"transportIndent/deleteTransportIndent",
+	async (voucherNumber: string, { rejectWithValue }) => {
+		try {
+			const response = await professionalAxios.delete(`/eTaxSolnMongoApiBackend/users/bookEZ/transportIndent/delete/${voucherNumber}`);
+			return response?.data || null;
+		} catch (error: any) {
+			return rejectWithValue({ message: error?.response?.data?.message || error?.message || "Failed to delete Transport Indent" });
+		}
+	}
+);
 
-// /* ===================================================
-//     GET Transport Contract BY VOUCHER NUMBER
-// =================================================== */
+// UPDATE BY INDENT NUMBER
+export const updateTransportIndent = createAsyncThunk(
+	"transportIndent/updateTransportIndent",
+	async ({ voucherNumber, payload }: { voucherNumber: string; payload: any }, { rejectWithValue }) => {
+		try {
+			const response = await professionalAxios.put(`/eTaxSolnMongoApiBackend/users/bookEZ/transportIndent/update/${voucherNumber}`, payload);
+			return response?.data || null;
+		} catch (error: any) {
+			return rejectWithValue({ message: error?.response?.data?.message || error?.message || "Failed to update Transport Indent" });
+		}
+	}
+);
 
-// export const getTransportContractByVoucherNumber = createAsyncThunk(
-// 	"intendSlice/getTransportContractByVoucherNumber",
-// 	async (voucherNumber: string, { rejectWithValue }) => {
-// 		try {
-// 			const response = await professionalAxios.get(
-// 				`/eTaxSolnMongoApiBackend/users/bookEZ/transportContract/getByVoucherNumber/${voucherNumber}`
-// 			);
+// SLICE
+const initialState: any = {
+	transportIndents: [],
+	selectedTransportIndent: null,
+	pagination: null,
+	createLoader: false,
+	updateLoader: false,
+	deleteLoader: false,
+	listingLoader: false,
+	detailLoader: false,
+	error: null,
+};
 
-// 			return response?.data || null;
-// 		} catch (error: any) {
-// 			return rejectWithValue({
-// 				message:
-// 					error?.response?.data?.message ||
-// 					error?.message ||
-// 					"Failed to get Transport Contract",
-// 			});
-// 		}
-// 	}
-// );
+const transportIndentSlice = createSlice({
+	name: "transportIndent",
+	initialState,
+	reducers: {
+		clearTransportIndentError: (state) => {
+			state.error = null;
+		},
+		clearSelectedTransportIndent: (state) => {
+			state.selectedTransportIndent = null;
+			state.detailLoader = false;
+			state.error = null;
+		},
+		clearTransportIndentState: (state) => {
+			state.transportIndents = [];
+			state.selectedTransportIndent = null;
+			state.pagination = null;
+			state.createLoader = false;
+			state.updateLoader = false;
+			state.deleteLoader = false;
+			state.listingLoader = false;
+			state.detailLoader = false;
+			state.error = null;
+		},
+	},
+	extraReducers: (builder) => {
+		builder
+			// CREATE
+			.addCase(createIndent.pending, (state) => {
+				state.createLoader = true;
+				state.error = null;
+			})
+			.addCase(createIndent.fulfilled, (state, action) => {
+				state.createLoader = false;
+				const createdIndent = action.payload?.data;
+				if (createdIndent && Array.isArray(state.transportIndents)) state.transportIndents.unshift(createdIndent);
+				state.error = null;
+			})
+			.addCase(createIndent.rejected, (state, action: any) => {
+				state.createLoader = false;
+				state.error = action.payload?.message || "Failed to create Transport Indent";
+			})
 
-// /* ===================================================
-//     DELETE Transport Contract Entry BY VOUCHER NUMBER
-// =================================================== */
+			// GET ALL
+			.addCase(getAllTransportIndent.pending, (state) => {
+				state.listingLoader = true;
+				state.error = null;
+			})
+			.addCase(getAllTransportIndent.fulfilled, (state, action) => {
+				state.listingLoader = false;
+				const records = action.payload?.data?.records;
+				state.transportIndents = Array.isArray(records) ? records : [];
+				state.pagination = action.payload?.data?.pagination || null;
+				state.error = null;
+			})
+			.addCase(getAllTransportIndent.rejected, (state, action: any) => {
+				state.listingLoader = false;
+				state.transportIndents = [];
+				state.pagination = null;
+				state.error = action.payload?.message || "Failed to get Transport Indents";
+			})
 
-// export const deleteTransportContract = createAsyncThunk(
-// 	"intendSlice/deleteTransportContract",
-// 	async (voucherNumber: string, { rejectWithValue }) => {
-// 		try {
-// 			const response = await professionalAxios.delete(
-// 				`/eTaxSolnMongoApiBackend/users/bookEZ/transportContract/delete/${voucherNumber}`
-// 			);
+			// GET BY INDENT NUMBER
+			.addCase(getTransportIndentByVoucherNumber.pending, (state) => {
+				state.detailLoader = true;
+				state.error = null;
+			})
+			.addCase(getTransportIndentByVoucherNumber.fulfilled, (state, action) => {
+				state.detailLoader = false;
+				state.selectedTransportIndent = action.payload?.data || null;
+				state.error = null;
+			})
+			.addCase(getTransportIndentByVoucherNumber.rejected, (state, action: any) => {
+				state.detailLoader = false;
+				state.selectedTransportIndent = null;
+				state.error = action.payload?.message || "Failed to get Transport Indent";
+			})
 
-// 			return response?.data || null;
-// 		} catch (error: any) {
-// 			return rejectWithValue({
-// 				message:
-// 					error?.response?.data?.message ||
-// 					error?.message ||
-// 					"Failed to delete Transport Contract",
-// 			});
-// 		}
-// 	}
-// );
+			// DELETE
+			.addCase(deleteTransportIndent.pending, (state) => {
+				state.deleteLoader = true;
+				state.error = null;
+			})
+			.addCase(deleteTransportIndent.fulfilled, (state, action) => {
+				state.deleteLoader = false;
 
-// /* ===================================================
-//     UPDATE Transport Contract BY VOUCHER NUMBER
-// =================================================== */
+				const deletedIndent = action.payload?.data;
+				const deletedIndentNumber = deletedIndent?.indentNumber || deletedIndent?.voucherNumber;
 
-// export const updateTransportContract = createAsyncThunk(
-// 	"intendSlice/updateTransportContract",
-// 	async (
-// 		{
-// 			voucherNumber,
-// 			payload,
-// 		}: {
-// 			voucherNumber: string;
-// 			payload: any;
-// 		},
-// 		{ rejectWithValue }
-// 	) => {
-// 		try {
-// 			const response = await professionalAxios.put(
-// 				`/eTaxSolnMongoApiBackend/users/bookEZ/transportContract/update/${voucherNumber}`,
-// 				payload
-// 			);
+				if (deletedIndentNumber && Array.isArray(state.transportIndents)) {
+					state.transportIndents = state.transportIndents.filter(
+						(indent: any) => indent?.indentNumber !== deletedIndentNumber && indent?.voucherNumber !== deletedIndentNumber
+					);
+				}
 
-// 			return response?.data || null;
-// 		} catch (error: any) {
-// 			return rejectWithValue({
-// 				message:
-// 					error?.response?.data?.message ||
-// 					error?.message ||
-// 					"Failed to Update Transport Contract",
-// 			});
-// 		}
-// 	}
-// );
+				state.error = null;
+			})
+			.addCase(deleteTransportIndent.rejected, (state, action: any) => {
+				state.deleteLoader = false;
+				state.error = action.payload?.message || "Failed to delete Transport Indent";
+			})
 
-// /* ===================================================
-//     SLICE
-// =================================================== */
+			// UPDATE
+			.addCase(updateTransportIndent.pending, (state) => {
+				state.updateLoader = true;
+				state.error = null;
+			})
+			.addCase(updateTransportIndent.fulfilled, (state, action) => {
+				state.updateLoader = false;
 
-// const initialState: any = {
-// 	transportContract: [],
-// 	selectedTransportContract: null,
-// 	pagination: null,
+				const updatedIndent = action.payload?.data;
+				const updatedIndentNumber = updatedIndent?.indentNumber || updatedIndent?.voucherNumber;
 
-// 	createLoader: false,
-// 	updateLoader: false,
-// 	deleteLoader: false,
-// 	listingLoader: false,
-// 	detailLoader: false,
+				state.selectedTransportIndent = updatedIndent || null;
 
-// 	error: null,
-// };
+				if (updatedIndent && updatedIndentNumber && Array.isArray(state.transportIndents)) {
+					state.transportIndents = state.transportIndents.map((indent: any) => {
+						const currentIndentNumber = indent?.indentNumber || indent?.voucherNumber;
+						return currentIndentNumber === updatedIndentNumber ? updatedIndent : indent;
+					});
+				}
 
-// const transportContractSlice = createSlice({
-// 	name: "transportContract",
-// 	initialState,
-// 	reducers: {
-// 		clearTransportContractError: (state) => {
-// 			state.error = null;
-// 		},
+				state.error = null;
+			})
+			.addCase(updateTransportIndent.rejected, (state, action: any) => {
+				state.updateLoader = false;
+				state.error = action.payload?.message || "Failed to update Transport Indent";
+			});
+	},
+});
 
-// 		clearSelectedTransportContract: (state) => {
-// 			state.selectedTransportContract = null;
-// 			state.detailLoader = false;
-// 			state.error = null;
-// 		},
+export const { clearTransportIndentError, clearTransportIndentState, clearSelectedTransportIndent } = transportIndentSlice.actions;
 
-// 		clearTransportContractState: (state) => {
-// 			state.transportContract = [];
-// 			state.selectedTransportContract = null;
-// 			state.pagination = null;
-
-// 			state.createLoader = false;
-// 			state.updateLoader = false;
-// 			state.deleteLoader = false;
-// 			state.listingLoader = false;
-// 			state.detailLoader = false;
-
-// 			state.error = null;
-// 		},
-// 	},
-
-// 	extraReducers: (builder) => {
-// 		builder
-
-// 			/* ===================================================
-// 			   CREATE
-// 			=================================================== */
-
-// 			.addCase(createTransportContract.pending, (state) => {
-// 				state.createLoader = true;
-// 				state.error = null;
-// 			})
-// 			.addCase(createTransportContract.fulfilled, (state, action) => {
-// 				state.createLoader = false;
-
-// 				const createdTC = action.payload?.data;
-
-// 				if (createdTC && Array.isArray(state.transportContract)) {
-// 					state.transportContract.unshift(createdTC);
-// 				}
-
-// 				state.error = null;
-// 			})
-// 			.addCase(createTransportContract.rejected, (state, action: any) => {
-// 				state.createLoader = false;
-// 				state.error =
-// 					action.payload?.message || "Failed to create transport contract";
-// 			})
-
-// 			/* ===================================================
-// 			   GET ALL
-// 			=================================================== */
-
-// 			.addCase(getAllTransportContract.pending, (state) => {
-// 				state.listingLoader = true;
-// 				state.error = null;
-// 			})
-// 			.addCase(getAllTransportContract.fulfilled, (state, action) => {
-// 				state.listingLoader = false;
-
-// 				const records = action.payload?.data?.records;
-
-// 				state.transportContract = Array.isArray(records) ? records : [];
-// 				state.pagination = action.payload?.data?.pagination || null;
-
-// 				state.error = null;
-// 			})
-// 			.addCase(getAllTransportContract.rejected, (state, action: any) => {
-// 				state.listingLoader = false;
-// 				state.transportContract = [];
-// 				state.pagination = null;
-// 				state.error =
-// 					action.payload?.message || "Failed to get transport contract";
-// 			})
-
-// 			/* ===================================================
-// 			   GET BY VOUCHER NUMBER
-// 			=================================================== */
-
-// 			.addCase(getTransportContractByVoucherNumber.pending, (state) => {
-// 				state.detailLoader = true;
-// 				state.error = null;
-// 			})
-// 			.addCase(getTransportContractByVoucherNumber.fulfilled, (state, action) => {
-// 				state.detailLoader = false;
-
-// 				// ✅ Do not overwrite transportContract array here
-// 				state.selectedTransportContract = action.payload?.data || null;
-
-// 				state.error = null;
-// 			})
-// 			.addCase(getTransportContractByVoucherNumber.rejected, (state, action: any) => {
-// 				state.detailLoader = false;
-// 				state.selectedTransportContract = null;
-// 				state.error =
-// 					action.payload?.message || "Failed to get transport contract";
-// 			})
-
-// 			/* ===================================================
-// 			   DELETE
-// 			=================================================== */
-
-// 			.addCase(deleteTransportContract.pending, (state) => {
-// 				state.deleteLoader = true;
-// 				state.error = null;
-// 			})
-// 			.addCase(deleteTransportContract.fulfilled, (state, action) => {
-// 				state.deleteLoader = false;
-
-// 				const deletedTC = action.payload?.data;
-// 				const deletedContractNumber =
-// 					deletedTC?.contractNumber || deletedTC?.voucherNumber;
-
-// 				if (deletedContractNumber && Array.isArray(state.transportContract)) {
-// 					state.transportContract = state.transportContract.filter(
-// 						(t: any) =>
-// 							t?.contractNumber !== deletedContractNumber &&
-// 							t?.voucherNumber !== deletedContractNumber
-// 					);
-// 				}
-
-// 				state.error = null;
-// 			})
-// 			.addCase(deleteTransportContract.rejected, (state, action: any) => {
-// 				state.deleteLoader = false;
-// 				state.error =
-// 					action.payload?.message || "Failed to delete transport contract";
-// 			})
-
-// 			/* ===================================================
-// 			   UPDATE
-// 			=================================================== */
-
-// 			.addCase(updateTransportContract.pending, (state) => {
-// 				state.updateLoader = true;
-// 				state.error = null;
-// 			})
-// 			.addCase(updateTransportContract.fulfilled, (state, action) => {
-// 				state.updateLoader = false;
-
-// 				const updatedTC = action.payload?.data;
-// 				const updatedContractNumber =
-// 					updatedTC?.contractNumber || updatedTC?.voucherNumber;
-
-// 				state.selectedTransportContract = updatedTC || null;
-
-// 				if (
-// 					updatedTC &&
-// 					updatedContractNumber &&
-// 					Array.isArray(state.transportContract)
-// 				) {
-// 					state.transportContract = state.transportContract.map((t: any) => {
-// 						const currentContractNumber =
-// 							t?.contractNumber || t?.voucherNumber;
-
-// 						return currentContractNumber === updatedContractNumber
-// 							? updatedTC
-// 							: t;
-// 					});
-// 				}
-
-// 				state.error = null;
-// 			})
-// 			.addCase(updateTransportContract.rejected, (state, action: any) => {
-// 				state.updateLoader = false;
-// 				state.error =
-// 					action.payload?.message || "Failed to update transport contract";
-// 			});
-// 	},
-// });
-
-// export const {
-// 	clearTransportContractError,
-// 	clearTransportContractState,
-// 	clearSelectedTransportContract,
-// } = transportContractSlice.actions;
-
-// export default transportContractSlice.reducer;
+export default transportIndentSlice.reducer;

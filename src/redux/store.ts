@@ -73,6 +73,8 @@ import whereIsMyDriverReducer from "./slices/professionalSlice/transportation/wh
 import driverSettlementReducer from "./slices/professionalSlice/transportation/driverSettlementSlice";
 import transportRouteReducer from "./slices/professionalSlice/transportation/transportRoutes";
 import eWayBillReducer from "./slices/professionalSlice/transportation/eWayBillSlice";
+import transportIndentReducer from "./slices/professionalSlice/transportation/intendSlice";
+import transportTouchupReducer from "./slices/professionalSlice/transportation/touchUpSlice";
 
 // transport register
 import transportOrderRegisterReducer from "./slices/professionalSlice/bookEzRegister/transportOrderRegister";
@@ -202,6 +204,8 @@ export const store = configureStore({
     driverSettlement: driverSettlementReducer,
     transportRoute: transportRouteReducer,
     eWayBill: eWayBillReducer,
+    transportIndent:transportIndentReducer,
+    transportTouchup: transportTouchupReducer,
 
     // transport register
     transportOrderRegister: transportOrderRegisterReducer,

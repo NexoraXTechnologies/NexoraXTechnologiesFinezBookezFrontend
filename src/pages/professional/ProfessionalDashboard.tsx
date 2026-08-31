@@ -1673,9 +1673,9 @@ const ProfessionalDashboard = () => {
 			{dashboardSection === "dashboard" && (
 				<>
 					<AnimatePresence mode="wait">
-						{activeTab === "taxez" && canShowTaxEz && (
+						{/* {activeTab === "taxez" && canShowTaxEz && (
 							<TaxEzDashboardView analytics={analytics} />
-						)}
+						)} */}
 
 						{/* {activeTab === "bookez" && canShowBookEz && (
 							<BookEzDashboardView analytics={bookEzAnalytics} />

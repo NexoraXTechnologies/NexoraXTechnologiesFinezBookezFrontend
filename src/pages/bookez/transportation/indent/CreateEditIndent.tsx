@@ -9,16 +9,17 @@ import GoogleAddressAutocompleteWeb from "../../../../components/common/GoogleAd
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
+import { createIndent, updateTransportIndent } from "../../../../redux/slices/professionalSlice/transportation/intendSlice";
 
 const vehicleTypeOptions = [
-    { label: 'Mini Truck', value: 'Mini Truck' },
-    { label: 'Pick Up', value: 'Pick Up' },
-    { label: 'LCV', value: 'LCV' },
-    { label: 'MCV', value: 'MCV' },
-    { label: 'HCV', value: 'HCV' },
-    { label: 'Trailer', value: 'Trailer' },
-    { label: 'Container', value: 'Container' },
-    { label: 'Tipper', value: 'Tipper' },
+    { label: "Mini Truck", value: "Mini Truck" },
+    { label: "Pick Up", value: "Pick Up" },
+    { label: "LCV", value: "LCV" },
+    { label: "MCV", value: "MCV" },
+    { label: "HCV", value: "HCV" },
+    { label: "Trailer", value: "Trailer" },
+    { label: "Container", value: "Container" },
+    { label: "Tipper", value: "Tipper" }
 ];
 
 const indentStatusOptions = [
@@ -49,7 +50,7 @@ const createInitialIndent = () => ({
 
 const normalizeIndentForEdit = (data: any = {}) => ({
     ...createInitialIndent(),
-    indentNumber: data?.indentNumber || "AUTO",
+    indentNumber: data?.indentNumber || data?.voucherNumber || "AUTO",
     indentDate: data?.indentDate ? String(data.indentDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
     customer: data?.customer || "",
     pickupLocation: data?.pickupLocation || "",
@@ -91,51 +92,48 @@ const CreateEditIndent = () => {
 
     const customerOptions = useMemo(() => [
         { label: "Select Customer", value: "" },
-        ...(accounts || [])
-            .filter((item: any) => item?.accountCode)
-            .map((item: any) => ({
-                label: item?.accountName || item?.accountCode,
-                value: item.accountCode
-            }))
+        ...(accounts || []).filter((item: any) => item?.accountCode).map((item: any) => ({
+            label: item?.accountName || item?.accountCode,
+            value: item.accountCode
+        }))
     ], [accounts]);
 
-    const unitOptions = useMemo(() => [
+    const unitOptions = useMemo(() => {
+    const options: any[] = [
         { label: "Select Weight Unit", value: "" },
-        ...(units || [])
-            .map((item: any) => {
-                const unitName = item?.unitName || item?.name || item?.unit || "";
-                const unitCode = item?.unitCode || item?.code || "";
-                const value = unitName || unitCode;
+        ...(units || []).map((item: any) => {
+            const unitName = item?.unitName || item?.name || item?.unit || "";
+            const unitCode = item?.unitCode || item?.code || "";
+            const value = unitName || unitCode;
+            if (!value) return null;
+            return { label: unitName || unitCode, value };
+        }).filter(Boolean)
+    ];
 
-                if (!value) return null;
+    if (form.weightUnit) {
+        const matchedUnit = options.find((item: any) => String(item?.value || "").toLowerCase() === String(form.weightUnit).toLowerCase());
 
-                return {
-                    label: unitName || unitCode,
-                    value
-                };
-            })
-            .filter(Boolean)
-    ], [units]);
+        if (matchedUnit && String(matchedUnit.value) !== String(form.weightUnit)) {
+            options.push({ label: matchedUnit.label, value: form.weightUnit });
+        } else if (!matchedUnit) {
+            options.push({ label: form.weightUnit, value: form.weightUnit });
+        }
+    }
+
+    return options;
+}, [units, form.weightUnit]);
 
     const productOptions = useMemo(() => [
         { label: "Select Material", value: "" },
-        ...(products || [])
-            .map((item: any) => {
-                const productName = item?.productName || item?.name || "";
-                const productCode = item?.productCode || item?.code || "";
-
-                if (!productName && !productCode) return null;
-
-                return {
-                    label: productName || productCode,
-                    value: productName || productCode
-                };
-            })
-            .filter(Boolean)
+        ...(products || []).map((item: any) => {
+            const productName = item?.productName || item?.name || "";
+            const productCode = item?.productCode || item?.code || "";
+            if (!productName && !productCode) return null;
+            return { label: productName || productCode, value: productName || productCode };
+        }).filter(Boolean)
     ], [products]);
 
     const updateField = (key: string, value: any) => setForm((prev: any) => ({ ...prev, [key]: value }));
-
     const handleInputChange = (key: string) => (e: any) => updateField(key, e?.target?.value ?? "");
     const handleSelectChange = (key: string) => (e: any) => updateField(key, e?.target?.value ?? "");
 
@@ -150,7 +148,7 @@ const CreateEditIndent = () => {
     };
 
     const indentDetailsFields = [
-        { key: "indentNumber", label: "Indent No", type: "text", disabled: true ,},
+        { key: "indentNumber", label: "Indent No", type: "text", disabled: true },
         { key: "indentDate", label: "Indent Date", type: "date", mandatory: true },
         { key: "customer", label: "Customer", type: "select", options: customerOptions, mandatory: true },
         { key: "indentStatus", label: "Indent Status", type: "select", options: indentStatusOptions, mandatory: true }
@@ -178,13 +176,7 @@ const CreateEditIndent = () => {
 
     const renderFields = (fields: any[]) =>
         fields.map((field: any) =>
-            renderField({
-                field,
-                form,
-                handleInputChange,
-                handleSelectChange,
-                updateField
-            })
+            renderField({ field, form, handleInputChange, handleSelectChange, updateField })
         );
 
     const validateForm = () => {
@@ -248,17 +240,17 @@ const CreateEditIndent = () => {
 
         try {
             setLoading(true);
-
             const payload = toPayload();
-            console.log("INDENT PAYLOAD:", payload);
 
-            // CREATE
-            // await dispatch(createTransportIndent(payload)).unwrap();
+            if (isEdit) {
+                const voucherNumber = routeState?.indentData?.voucherNumber || routeState?.indentData?.indentNumber || form.indentNumber;
+                await dispatch(updateTransportIndent({ voucherNumber, payload })).unwrap();
+                toast.success("Indent updated successfully");
+            } else {
+                await dispatch(createIndent(payload)).unwrap();
+                toast.success("Indent created successfully");
+            }
 
-            // UPDATE
-            // await dispatch(updateTransportIndent({ indentNumber: form.indentNumber, payload })).unwrap();
-
-            toast.success(isEdit ? "Indent updated successfully" : "Indent created successfully");
             navigate(-1);
         } catch (error: any) {
             toast.error(error?.message || "Failed to save Indent");

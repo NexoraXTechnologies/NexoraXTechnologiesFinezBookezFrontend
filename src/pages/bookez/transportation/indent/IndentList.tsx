@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import DataTable from "../../../../components/DataTable";
@@ -10,20 +11,18 @@ import Badge from "../../../../components/badge";
 import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import { formatDateTime, formatDateForList } from "../../../../utils/helperFunctions";
+import { deleteTransportIndent, getAllTransportIndent } from "../../../../redux/slices/professionalSlice/transportation/intendSlice";
 
 const IndentList = () => {
+    const dispatch = useDispatch<any>();
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Replace with Redux selector after Indent slice integration
-    const indents: any[] = [];
-    const pagination: any = {};
-    const listingLoader = false;
-    const deleteLoader = false;
+    const { transportIndents: indents = [], pagination = null, listingLoader = false, deleteLoader = false } = useSelector((state: any) => state.transportIndent || {});
 
     const [search, setSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
-    // const [localOffset, setLocalOffset] = useState(0);
+    const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
     const [activeStatus, setActiveStatus] = useState<"open" | "closed">("open");
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, indentNumber: null });
@@ -31,11 +30,28 @@ const IndentList = () => {
     const pageTitle = location.state?.title || "Transport Indent";
 
     const normalizeStatus = (value: any) => String(value || "draft").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const getIndentNumber = (row: any) => row?.indentNumber || row?.voucherNumber || "";
 
     const isClosedIndent = (row: any) => {
         const status = normalizeStatus(row?.indentStatus || row?.status);
         return ["completed", "complete", "cancelled", "closed", "close"].includes(status);
     };
+
+    const loadIndents = async () => {
+        try {
+            await dispatch(getAllTransportIndent({ offset: localOffset, limit: localLimit, search })).unwrap();
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to load transport indents");
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadIndents();
+        }, search ? 300 : 0);
+
+        return () => clearTimeout(timer);
+    }, [dispatch, localOffset, localLimit, search]);
 
     const openCount = useMemo(() => indents.filter((item: any) => !isClosedIndent(item)).length, [indents]);
     const closedCount = useMemo(() => indents.filter((item: any) => isClosedIndent(item)).length, [indents]);
@@ -48,11 +64,10 @@ const IndentList = () => {
 
             if (activeStatus === "open" && closed) return false;
             if (activeStatus === "closed" && !closed) return false;
-
             if (!searchValue) return true;
 
             return [
-                item?.indentNumber,
+                getIndentNumber(item),
                 item?.customer,
                 item?.pickupLocation,
                 item?.deliveryLocation,
@@ -65,14 +80,20 @@ const IndentList = () => {
         });
     }, [indents, activeStatus, search]);
 
-    const handleRefresh = () => {
-        setRefreshing(true);
+    const handleSearchChange = (value: any) => {
+        setSearch(value);
+        setLocalOffset(0);
+    };
 
-        // API CALL
-        // dispatch(getAllTransportIndent({ offset: localOffset, limit: localLimit, search }))
-        //     .finally(() => setRefreshing(false));
-
-        setTimeout(() => setRefreshing(false), 300);
+    const handleRefresh = async () => {
+        try {
+            setRefreshing(true);
+            await dispatch(getAllTransportIndent({ offset: localOffset, limit: localLimit, search })).unwrap();
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to refresh transport indents");
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     const openCreateIndent = () => {
@@ -86,24 +107,28 @@ const IndentList = () => {
     };
 
     const handleEditIndent = (record: any) => {
-        if (!record?.indentNumber) {
+        const indentNumber = getIndentNumber(record);
+
+        if (!indentNumber) {
             toast.warn("Indent number not found");
             return;
         }
 
-        navigate(`/bookEz/transportation/indent/edit/${record.indentNumber}`, {
+        navigate(`/bookEz/transportation/indent/edit/${indentNumber}`, {
             state: {
                 title: "Edit Indent",
                 description: "Update transport indent details.",
                 mode: "edit",
-                indentNumber: record.indentNumber,
+                indentNumber,
                 indentData: record
             }
         });
     };
 
     const handleDeleteClick = (e: any, record: any) => {
-        if (!record?.indentNumber) {
+        const indentNumber = getIndentNumber(record);
+
+        if (!indentNumber) {
             toast.warn("Indent number not found");
             return;
         }
@@ -114,7 +139,7 @@ const IndentList = () => {
 
         const y = rect.top + window.scrollY - 5;
 
-        setConfirmTooltip({ show: true, x, y, indentNumber: record.indentNumber });
+        setConfirmTooltip({ show: true, x, y, indentNumber });
     };
 
     const handleDeleteConfirm = async () => {
@@ -124,14 +149,12 @@ const IndentList = () => {
                 return;
             }
 
-            // API CALL
-            // await dispatch(deleteTransportIndent(confirmTooltip.indentNumber)).unwrap();
+            await dispatch(deleteTransportIndent(confirmTooltip.indentNumber)).unwrap();
 
             toast.success("Transport indent deleted successfully");
-
             setConfirmTooltip({ show: false, x: null, y: null, indentNumber: null });
 
-            handleRefresh();
+            await handleRefresh();
         } catch (error: any) {
             toast.error(error?.message || "Failed to delete transport indent");
         }
@@ -150,7 +173,7 @@ const IndentList = () => {
         {
             key: "indentNumber",
             title: "Indent No",
-            render: (row: any) => <span className="font-medium text-primary">{row?.indentNumber || "-"}</span>
+            render: (row: any) => <span >{getIndentNumber(row) || "-"}</span>
         },
         {
             key: "indentDate",
@@ -243,15 +266,9 @@ const IndentList = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
-                    <Badge
-                        {...{
-                            count: pagination?.totalDocs ?? pagination?.totalRecords ?? indents?.length ?? 0,
-                            text: "Total Indents:",
-                            varient: "primary"
-                        }}
-                    />
+                    <Badge {...{ count: pagination?.totalDocs ?? indents.length, text: "Total Indents:", varient: "primary" }} />
 
-                    <div className="flex rounded-md border border-border bg-background p-1">
+                    {/* <div className="flex rounded-md border border-border bg-background p-1">
                         <button type="button" onClick={() => setActiveStatus("open")} className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
                             Open ({openCount})
                         </button>
@@ -259,13 +276,13 @@ const IndentList = () => {
                         <button type="button" onClick={() => setActiveStatus("closed")} className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "closed" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
                             Closed ({closedCount})
                         </button>
-                    </div>
+                    </div> */}
 
                     <DataREfreshButton {...{ callBackFn: handleRefresh, loading: refreshing }} />
 
-                    <SearchInput {...{ search, setSearch }} />
+                    <SearchInput search={search} setSearch={handleSearchChange} />
 
-                    <Permission module="bookez" permissionKey="Pass" action="create">
+                    <Permission module="bookez" permissionKey="createIndent" action="create">
                         {/* @ts-ignore */}
                         <DataCreateButton {...{ callBackFn: openCreateIndent, text: "Create Indent" }} />
                     </Permission>
@@ -280,13 +297,13 @@ const IndentList = () => {
                     emptyMessage={activeStatus === "open" ? "No open transport indent found" : "No closed transport indent found"}
                     actions={(record: any) => (
                         <div className="flex items-center gap-2">
-                            <Permission module="bookez" permissionKey="transportIndent" action="update">
+                            <Permission module="bookez" permissionKey="createIndent" action="update">
                                 <button type="button" onClick={() => handleEditIndent(record)} className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10" title="Edit Indent">
                                     <Edit size={16} />
                                 </button>
                             </Permission>
 
-                            <Permission module="bookez" permissionKey="transportIndent" action="delete">
+                            <Permission module="bookez" permissionKey="createIndent" action="delete">
                                 <button type="button" disabled={deleteLoader} onClick={e => handleDeleteClick(e, record)} className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 disabled:opacity-50" title="Delete Indent">
                                     <Trash2 size={16} />
                                 </button>
@@ -301,11 +318,11 @@ const IndentList = () => {
                     localLimit={localLimit}
                     selectCb={(e: any) => {
                         setLocalLimit(Number(e.target.value));
-                        // setLocalOffset(0);
+                        setLocalOffset(0);
                     }}
                     preDisabled={!pagination?.hasPrevPage}
                     nextDisabled={!pagination?.hasNextPage}
-                    // setLocalOffset={setLocalOffset}
+                    setLocalOffset={setLocalOffset}
                     pagination={pagination}
                 />
             )}
