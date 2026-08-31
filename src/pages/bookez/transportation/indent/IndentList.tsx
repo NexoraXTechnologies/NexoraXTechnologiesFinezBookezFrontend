@@ -23,7 +23,7 @@ const IndentList = () => {
 
     const [search, setSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
-    const [localOffset, setLocalOffset] = useState(0);
+    // const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
     const [activeStatus, setActiveStatus] = useState<"open" | "closed">("open");
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, indentNumber: null });
@@ -301,11 +301,11 @@ const IndentList = () => {
                     localLimit={localLimit}
                     selectCb={(e: any) => {
                         setLocalLimit(Number(e.target.value));
-                        setLocalOffset(0);
+                        // setLocalOffset(0);
                     }}
                     preDisabled={!pagination?.hasPrevPage}
                     nextDisabled={!pagination?.hasNextPage}
-                    setLocalOffset={setLocalOffset}
+                    // setLocalOffset={setLocalOffset}
                     pagination={pagination}
                 />
             )}

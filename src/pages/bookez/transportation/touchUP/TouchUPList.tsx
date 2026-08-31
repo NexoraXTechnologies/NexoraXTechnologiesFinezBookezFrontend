@@ -22,7 +22,7 @@ const TouchUPList = () => {
 
     const [search, setSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
-    const [localOffset, setLocalOffset] = useState(0);
+    // const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
     const [activeStatus, setActiveStatus] = useState<"pending" | "completed">("pending");
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, touchUpNumber: null });
@@ -331,11 +331,11 @@ const TouchUPList = () => {
                     localLimit={localLimit}
                     selectCb={(e: any) => {
                         setLocalLimit(Number(e.target.value));
-                        setLocalOffset(0);
+                        // setLocalOffset(0);
                     }}
                     preDisabled={!pagination?.hasPrevPage}
                     nextDisabled={!pagination?.hasNextPage}
-                    setLocalOffset={setLocalOffset}
+                    // setLocalOffset={setLocalOffset}
                     pagination={pagination}
                 />
             )}

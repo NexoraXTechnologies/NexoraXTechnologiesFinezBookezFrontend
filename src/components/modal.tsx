@@ -1023,6 +1023,7 @@ const AccountMasterModal = ({ show, setShow, editingAccount = null, onSaved, tit
         if (!show) return;
 
         dispatch(getAllAccountMasterSchema({ offset: 0, limit: 500 }) as any);
+        // @ts-ignore 
         dispatch(getStates() as any);
     }, [dispatch, show]);
 
