@@ -11,7 +11,7 @@ import ConfirmTooltip, { ListTooltip } from "../../../../../components/common/Co
 import Toggle from "../../../../../components/toggle";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { addSalesQuotation, deleteSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
-import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
@@ -21,6 +21,8 @@ import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/ac
 import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
 import ProductMasterModal from "../../../master/productMaster/ProductMasterFormModal";
+import { getProductBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
+import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
 
 const CUSTOMER_FIELD_KEYS = new Set([
     "sQuoteCustomerCode",
@@ -33,6 +35,25 @@ const PRODUCT_FIELD_KEYS = new Set([
     "productId",
     "product",
 ]);
+
+const normalizeInventoryFieldName = (value: any) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+const getInventoryBalanceApiKey = (field: any) => {
+    if (!field) return "";
+    const fieldNames = [field?.key, field?.label, field?.title, field?.customMasterName, field?.dataSource?.customMasterName].map(normalizeInventoryFieldName);
+    if (fieldNames.some((name) => name.includes("warehouse"))) return "warehouseCode";
+    if (fieldNames.some((name) => name.includes("location"))) return "locationCode";
+    if (fieldNames.some((name) => name.includes("batch"))) return "batchNumber";
+    if (fieldNames.some((name) => name.includes("bin"))) return "binCode";
+    return "";
+};
+const getCustomMasterName = (field: any) => String(field?.customMasterName || field?.dataSource?.customMasterName || field?.label || field?.key || "").trim();
+const renderSalesQuotationCellExtra = (column: any, row: any, enableServiceProductInventory: boolean) => {
+    if (column?.key !== "quantity" || !row?.productCode) return null;
+    const productType = String(row?.productType || "").trim().toLowerCase();
+    if (productType === "nonstocks") return null;
+    if (productType === "serviceproduct" && !enableServiceProductInventory) return null;
+    return <InputBorderLabel label="Avl Qty" value={row?.availableQuantity} loading={row?.availableQuantity === null || row?.availableQuantity === undefined} successWhenPositive />;
+};
 
 const defaultPagination = {
     offset: 0,
@@ -54,6 +75,8 @@ const emptyProductRow = {
     productHSNCode: "",
     remarks: "",
     quantity: "",
+    availableQuantity: null,
+    productType: "",
     uom: "",
     unit: "",
     unitName: "",
@@ -266,6 +289,11 @@ const SalesQuotations = () => {
                 state.systemConfiguration
         );
 
+    const enableServiceProductInventory = useMemo(() => {
+        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
+        return value === true || value === "true";
+    }, [configurations]);
+
     const {
         accounts = [],
     } = useSelector(
@@ -380,6 +408,35 @@ const SalesQuotations = () => {
                 String(selectedValue)
         );
 
+    const isInventoryBalanceField = (field: any) => Boolean(getInventoryBalanceApiKey(field));
+    const getInventoryBalanceFieldValue = (source: any, field: any) => {
+        if (!source || !field) return "";
+        const customMasterName = getCustomMasterName(field);
+        const selectedMaster = source?.customMasters?.[customMasterName] || source?.customMasters?.[field?.key];
+        const rawValue = selectedMaster?.code ?? source?.[field?.key] ?? source?.dynamicBodyFields?.[field?.key] ?? "";
+        if (rawValue && typeof rawValue === "object") return rawValue?.code ?? rawValue?.value ?? "";
+        return rawValue;
+    };
+    const getInventoryBalanceFilters = (row: any) => {
+        const filters: any = {};
+        const visibleBodyFields = (templateFields?.body || []).filter((field: any) => !isTrueValue(field?.isHidden));
+        const visibleHeaderFields = (templateFields?.header || []).filter((field: any) => !isTrueValue(field?.isHidden));
+        const inventoryApiKeys = new Set([...visibleBodyFields, ...visibleHeaderFields].map((field: any) => getInventoryBalanceApiKey(field)).filter(Boolean));
+        inventoryApiKeys.forEach((apiKey: any) => {
+            const bodyField = visibleBodyFields.find((field: any) => getInventoryBalanceApiKey(field) === apiKey);
+            if (bodyField) {
+                const value = getInventoryBalanceFieldValue(row, bodyField);
+                if (value !== undefined && value !== null && String(value).trim() !== "") filters[apiKey] = value;
+                return;
+            }
+            const headerField = visibleHeaderFields.find((field: any) => getInventoryBalanceApiKey(field) === apiKey);
+            if (!headerField) return;
+            const value = getInventoryBalanceFieldValue(form, headerField);
+            if (value !== undefined && value !== null && String(value).trim() !== "") filters[apiKey] = value;
+        });
+        return filters;
+    };
+
     const applyMappedFields = (
         field: any,
         selectedValue: any,
@@ -447,6 +504,21 @@ const SalesQuotations = () => {
             unitCode ||
             ""
         );
+    };
+
+    const getProductMasterFromRow = (row: any) => {
+        if (!row) return null;
+        const rowProductValues = [row?.productCode, row?.productId, row?.productName].filter((value) => value !== undefined && value !== null && value !== "").map((value) => String(value));
+        if (!rowProductValues.length) return null;
+        const productFields = (templateFields?.body || []).filter((field: any) => ["productCode", "productId", "productName"].includes(field?.key));
+        for (const field of productFields) {
+            const selectedOption = (field?.options || []).find((option: any) => {
+                const optionValues = [option?.value, option?.raw?._id, option?.raw?.productId, option?.raw?.productCode, option?.raw?.productName].filter((value) => value !== undefined && value !== null && value !== "").map((value) => String(value));
+                return optionValues.some((value) => rowProductValues.includes(value));
+            });
+            if (selectedOption?.raw) return selectedOption.raw;
+        }
+        return null;
     };
 
     const normalizeRowKeys = (
@@ -975,6 +1047,37 @@ const SalesQuotations = () => {
         setShowModal(true);
     };
 
+    const loadAvailableQuantity = async (index: number, productCode: string, productType: string, rowData?: any) => {
+        const normalizedProductType = String(productType || "").trim().toLowerCase();
+        if (!productCode || normalizedProductType === "nonstocks" || (normalizedProductType === "serviceproduct" && !enableServiceProductInventory)) {
+            setForm((previous: any) => {
+                const updatedProducts = [...(previous.products || [])];
+                if (!updatedProducts[index]) return previous;
+                updatedProducts[index] = { ...updatedProducts[index], productType: normalizedProductType, availableQuantity: null };
+                return { ...previous, products: updatedProducts };
+            });
+            return;
+        }
+        setForm((previous: any) => {
+            const updatedProducts = [...(previous.products || [])];
+            if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+            updatedProducts[index] = { ...updatedProducts[index], productType: normalizedProductType, availableQuantity: null };
+            return { ...previous, products: updatedProducts };
+        });
+        try {
+            const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+            const balance: any = await dispatch(getProductBalance({ productCode, fromDate, toDate, ...getInventoryBalanceFilters(rowData || form?.products?.[index]) }) as any).unwrap();
+            setForm((previous: any) => {
+                const updatedProducts = [...(previous.products || [])];
+                if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+                updatedProducts[index] = { ...updatedProducts[index], productType: normalizedProductType, availableQuantity: balance?.balanceQuantity !== undefined && balance?.balanceQuantity !== null ? balance.balanceQuantity : null };
+                return { ...previous, products: updatedProducts };
+            });
+        } catch (error) {
+            console.log(`Failed to fetch available quantity for ${productCode}`, error);
+        }
+    };
+
     const openEditModal = (
         record: any
     ) => {
@@ -993,6 +1096,7 @@ const SalesQuotations = () => {
                             item?.unit ||
                             item?.uom ||
                             "";
+                        const productMaster = getProductMasterFromRow(item) || {};
 
                         return calculateRow(
                             normalizeRowKeys(
@@ -1034,6 +1138,14 @@ const SalesQuotations = () => {
 
                                     quantity:
                                         item?.quantity ||
+                                        "",
+
+                                    availableQuantity: null,
+
+                                    productType:
+                                        item?.productType ||
+                                        productMaster?.productType ||
+                                        productMaster?.dynamicFields?.productType ||
                                         "",
 
                                     unit:
@@ -1262,6 +1374,32 @@ const SalesQuotations = () => {
         setShowModal(true);
     };
 
+    useEffect(() => {
+        if (!showModal || !editingRecord || !form?.products?.length) return;
+        let cancelled = false;
+        const fetchEditAvailableQuantities = async () => {
+            const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+            const productsWithBalance = await Promise.all((form.products || []).map(async (item: any) => {
+                const productCode = String(item?.productCode || "").trim();
+                if (!productCode) return item;
+                const productMaster = getProductMasterFromRow(item) || {};
+                const productType = String(item?.productType || productMaster?.productType || productMaster?.dynamicFields?.productType || "").trim().toLowerCase();
+                if (productType === "nonstocks" || (productType === "serviceproduct" && !enableServiceProductInventory)) return { ...item, productType, availableQuantity: null };
+                try {
+                    const balance: any = await dispatch(getProductBalance({ productCode, fromDate, toDate, ...getInventoryBalanceFilters(item) }) as any).unwrap();
+                    return { ...item, productType, availableQuantity: balance?.balanceQuantity !== undefined && balance?.balanceQuantity !== null ? balance.balanceQuantity : null };
+                } catch (error) {
+                    console.log(`Failed to fetch available quantity for ${productCode}`, error);
+                    return { ...item, productType, availableQuantity: item?.availableQuantity ?? null };
+                }
+            }));
+            if (cancelled) return;
+            setForm((previous: any) => ({ ...previous, products: productsWithBalance }));
+        };
+        void fetchEditAvailableQuantities();
+        return () => { cancelled = true; };
+    }, [showModal, editingRecord, form?.sQuoteVoucherNumber, dispatch, enableServiceProductInventory]);
+
     const handleMainChange = (
         key: string,
         value: any
@@ -1300,6 +1438,25 @@ const SalesQuotations = () => {
             })
         );
     };
+
+    const headerInventoryBalanceSignature = useMemo(() => {
+        return (templateFields?.header || []).filter((field: any) => !isTrueValue(field?.isHidden) && Boolean(getInventoryBalanceApiKey(field))).map((field: any) => {
+            const apiKey = getInventoryBalanceApiKey(field);
+            const value = getInventoryBalanceFieldValue(form, field);
+            return `${apiKey}:${String(value || "")}`;
+        }).join("|");
+    }, [form, templateFields?.header]);
+
+    useEffect(() => {
+        if (!showModal) return;
+        const headerInventoryFields = (templateFields?.header || []).filter((field: any) => !isTrueValue(field?.isHidden) && Boolean(getInventoryBalanceApiKey(field)));
+        if (!headerInventoryFields.length) return;
+        (form?.products || []).forEach((row: any, index: number) => {
+            const productCode = String(row?.productCode || "").trim();
+            if (!productCode) return;
+            void loadAvailableQuantity(index, productCode, String(row?.productType || ""), row);
+        });
+    }, [headerInventoryBalanceSignature]);
 
     const handleAccountSaved =
         async (
@@ -1722,6 +1879,13 @@ const SalesQuotations = () => {
                                 updatedRow
                                     ?.rate ??
                                 "",
+
+                            productType:
+                                createdProduct?.productType ||
+                                createdProduct?.dynamicFields?.productType ||
+                                "",
+
+                            availableQuantity: null,
                         };
 
                         const selectedCustomer =
@@ -1985,6 +2149,16 @@ const SalesQuotations = () => {
             return;
         }
 
+        const balanceField = getBodyFieldByKey(key);
+        const balanceSelectedOption = getOptionByValue(balanceField, value);
+        const balanceRaw = balanceSelectedOption?.raw || {};
+        let balanceRow = { ...(form?.products?.[index] || {}), [key]: value };
+        if (balanceField?.mapFields) balanceRow = applyMappedFields(balanceField, value, balanceRow);
+        if (PRODUCT_FIELD_KEYS.has(key)) {
+            balanceRow.productCode = balanceRaw?.productCode || balanceRow?.productCode || balanceSelectedOption?.value || value || "";
+            balanceRow.productType = balanceRaw?.productType || balanceRaw?.dynamicFields?.productType || balanceRow?.productType || "";
+        }
+
         setForm(
             (prev: any) => {
                 const updatedProducts = [
@@ -2046,6 +2220,8 @@ const SalesQuotations = () => {
                 if (
                     isProductField
                 ) {
+                    updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || "";
+                    updatedRow.availableQuantity = null;
                     const getCustomer =
                         filterAccount?.find(
                             (e: any) =>
@@ -2237,6 +2413,12 @@ const SalesQuotations = () => {
                 };
             }
         );
+
+        if (PRODUCT_FIELD_KEYS.has(key) || isInventoryBalanceField(balanceField)) {
+            const productCode = String(balanceRow?.productCode || "").trim();
+            const productType = String(balanceRow?.productType || "");
+            if (productCode) void loadAvailableQuantity(index, productCode, productType, balanceRow);
+        }
 
         setErrors(
             (prev: any) => ({
@@ -3668,6 +3850,7 @@ const SalesQuotations = () => {
                         handleAddRow,
                         handleDeleteRow,
                         handleRowChange,
+                        bodyCellExtraRenderer: (column: any, row: any) => renderSalesQuotationCellExtra(column, row, enableServiceProductInventory),
                         footerTotals,
 
                         inputData: {

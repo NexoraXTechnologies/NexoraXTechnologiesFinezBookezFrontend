@@ -213,6 +213,8 @@ const EmptyData = ({ text = "No data available" }: { text?: string }) => {
 	);
 };
 
+const scrollableCardListClass = "max-h-[320px] space-y-2 overflow-y-auto pr-1";
+
 const ModuleAreaTooltip = ({ active, payload, label }: any) => {
 	if (!active || !payload?.length) return null;
 
@@ -1317,7 +1319,7 @@ const TransportAnalyticsView = ({
 					{maintenanceVehicleRows.length === 0 ? (
 						<EmptyData text="No vehicle maintenance data found" />
 					) : (
-						<div className="space-y-3">
+						<div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
 							<div className="flex flex-wrap gap-2">
 								{[
 									{ key: "all", label: `All ${maintenanceCounts.all}` },
@@ -1377,7 +1379,7 @@ const TransportAnalyticsView = ({
 				</CompactWidgetCard>
 
 				<CompactWidgetCard title="E-Way Bills" accent="payable">
-					<div className="space-y-2">
+					<div className={scrollableCardListClass}>
 						{ewayBillList.length === 0 && <EmptyData text="No E-Way Bills available" />}
 
 						{ewayBillList.map((item: any, index: number) => (
@@ -1396,7 +1398,7 @@ const TransportAnalyticsView = ({
 
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
 				<CompactWidgetCard title="Owned Vehicles" accent="sales">
-					<div className="space-y-2">
+					<div className={scrollableCardListClass}>
 						{ownedList.length === 0 && <EmptyData text="No owned vehicles available" />}
 
 						{ownedList.map((item: any, index: number) => (
@@ -1413,7 +1415,7 @@ const TransportAnalyticsView = ({
 				</CompactWidgetCard>
 
 				<CompactWidgetCard title="Market Vehicles" accent="purchase">
-					<div className="space-y-2">
+					<div className={scrollableCardListClass}>
 						{marketList.length === 0 && <EmptyData text="No market vehicles available" />}
 
 						{marketList.map((item: any, index: number) => (
@@ -1430,7 +1432,7 @@ const TransportAnalyticsView = ({
 				</CompactWidgetCard>
 
 				<CompactWidgetCard title="Transport Orders" accent="receivable">
-					<div className="space-y-2">
+					<div className={scrollableCardListClass}>
 						{transportOrderList.length === 0 && <EmptyData text="No transport orders available" />}
 
 						{transportOrderList.map((item: any, index: number) => (
@@ -1447,7 +1449,7 @@ const TransportAnalyticsView = ({
 				</CompactWidgetCard>
 
 				<CompactWidgetCard title="Trip Allocation" accent="payable">
-					<div className="space-y-2">
+					<div className={scrollableCardListClass}>
 						{tripAllocationList.length === 0 && <EmptyData text="No trip allocations available" />}
 
 						{tripAllocationList.map((item: any, index: number) => (
@@ -1466,7 +1468,7 @@ const TransportAnalyticsView = ({
 
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 				<CompactWidgetCard title="Driver Settlement" accent="sales">
-					<div className="space-y-2">
+					<div className={scrollableCardListClass}>
 						{driverSettlementList.length === 0 && <EmptyData text="No driver settlements available" />}
 
 						{driverSettlementList.map((item: any, index: number) => (
