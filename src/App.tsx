@@ -198,7 +198,8 @@ function App() {
           <Route path="/bookEz/transportation/transport-contract/edit/:contractNumber" element={<CreateEditTransportContract />} />
 
           <Route path='/bookEz/transportation/indent' element={<IndentList />} />
-          <Route path='/bookEz/transportation/indent/create' element={<CreateEditIndent/>} />
+          <Route path='/bookEz/transportation/indent/create' element={<CreateEditIndent />} />
+          <Route path='/bookEz/transportation/indent/edit/:indentNumber' element={<CreateEditIndent />} />
 
           <Route path="/bookEz/transportation/transport-order" element={<TransportOrderList />} />
           <Route path="/bookEz/transportation/transport-order/create" element={<CreateTransportOrder />} />
@@ -207,6 +208,7 @@ function App() {
 
           <Route path='/bookEz/transportation/touch-up' element={<TouchUPList />} />
           <Route path='/bookEz/transportation/touch-up/create' element={<CreateEditTouchUP />} />
+          <Route path='/bookEz/transportation/touch-up/edit/:voucherNumber' element={<CreateEditTouchUP />} />
 
           <Route path='/bookEz/transportation/trip-allocation' element={<TripAllocationList />} />
           <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />} />

@@ -149,7 +149,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							path: "/bookEz/qr-and-barcode-generator",
 							icon: <BrickWallShield size={20} />,
 							module: "bookez",
-							permissionKey: "accountMaster",
+							permissionKey: "Pass",
 							action: "view",
 						}] : []),
 						{

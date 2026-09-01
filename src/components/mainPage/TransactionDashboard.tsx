@@ -47,7 +47,9 @@ const TransactionDashboard = ({
         </section>
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card: any) => (
+          {cards.map((card: any) =>{ 
+         console.log(card?.permissionKey) 
+          return(
             <Permission
               key={`${card?.moduleCode || card?.permissionKey}-${card?.title}`}
               module="bookez"
@@ -93,7 +95,7 @@ const TransactionDashboard = ({
                 </button>
               </article>
             </Permission>
-          ))}
+          )})}
         </section>
       </main>
 

@@ -28,7 +28,7 @@ const cards: any[] = [
     description: "Create and manage transport indents for vehicle placement and goods movement.",
     path: "/bookEz/transportation/indent",
     icon: <ClipboardList size={22} />,
-    permissionKey: "Pass",
+    permissionKey: "createIndent",
   },
   {
     title: "Create Transport Order",
@@ -38,18 +38,18 @@ const cards: any[] = [
     permissionKey: "transportOrder",
   },
   {
-    title: "Touch Up",
-    description: "Create and manage touch-up points for transport orders.",
-    path: "/bookEz/transportation/touch-up",
-    icon: <MapPinPlus size={22} />,
-    permissionKey: "Pass",
-  },
-  {
     title: "Trip Allocation",
     description: "Assign vehicles, drivers, and routes to planned transport trips.",
     path: "/bookEz/transportation/trip-allocation",
     icon: <Route size={22} />,
     permissionKey: "tripAllocation",
+  },
+  {
+    title: "Touch Up",
+    description: "Create and manage touch-up points for transport orders.",
+    path: "/bookEz/transportation/touch-up",
+    icon: <MapPinPlus size={22} />,
+    permissionKey: "touchUp",
   },
   {
     title: "Trip Expense",

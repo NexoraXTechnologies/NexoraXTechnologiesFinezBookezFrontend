@@ -5,20 +5,40 @@ import { renderField } from "../../../../../components/inputs";
 import { computeRemainingTrips } from "../transportOrderCalculations";
 import { orderTypeOptions } from "../transportOrderOptions";
 
+const CustomerStep = ({
+	form,
+	setForm,
+	update,
+	accounts = [],
+	transportContract = [],
+	transportIndent = [],
+	onContractSelect,
+	onIndentSelect,
+	isView
+}: any) => {
 
-const CustomerStep = ({ form, setForm, update, accounts = [], transportContract = [], onContractSelect,isView}: any) => {
-	
 	const isContractOrder = form.orderType === "contract";
+	const isIndentOrder = form.orderType === "indent";
 
-	
-const contractOptions = [
+	const contractOptions = [
 		{ label: "Select Contract", value: "", contractNumber: "" },
 		...transportContract
 			.filter((item: any) => item?.contractNumber || item?.voucherNumber)
 			.map((item: any) => ({
 				label: `${item?.contractNumber || item?.voucherNumber}${item?.customer?.customerName ? ` - ${item.customer.customerName}` : ""}`,
 				value: item?.contractNumber || item?.voucherNumber,
-				raw: item, // keep the full raw record so the parent can use it
+				raw: item,
+			})),
+	];
+
+	const indentOptions = [
+		{ label: "Select Indent", value: "", indentNumber: "" },
+		...transportIndent
+			.filter((item: any) => item?.indentNumber || item?.voucherNumber)
+			.map((item: any) => ({
+				label: `${item?.indentNumber || item?.voucherNumber}${item?.customerName ? ` - ${item.customerName}` : item?.customer ? ` - ${item.customer}` : ""}`,
+				value: item?.indentNumber || item?.voucherNumber,
+				raw: item,
 			})),
 	];
 
@@ -26,17 +46,23 @@ const contractOptions = [
 		const selected = contractOptions.find((item: any) => String(item?.value) === String(value));
 
 		if (!selected?.raw) {
-			// cleared selection — still let the local contractDetails reset happen
 			update("contractDetails", "contractNumber", "");
 			return;
 		}
 
-		onContractSelect?.(selected.raw); // parent now owns filling every section
+		onContractSelect?.(selected.raw);
 	};
 
+	const handleIndentSelect = (value: any) => {
+		const selected = indentOptions.find((item: any) => String(item?.value) === String(value));
 
+		if (!selected?.raw) {
+			update("indentDetails", "indentNumber", "");
+			return;
+		}
 
-
+		onIndentSelect?.(selected.raw);
+	};
 
 	const customerOption = [
 		{
@@ -52,29 +78,11 @@ const contractOptions = [
 				value: item?.accountCode || "",
 				accountCode: item?.accountCode || "",
 				accountName: item?.accountName || "",
-
-				gstNumber:
-					item?.gstNumber ||
-					item?.gst ||
-					item?.accountGSTNumber ||
-					"",
-
-				mobileNumber:
-					item?.mobileNumber ||
-					item?.mobile ||
-					item?.accountMobile ||
-					item?.accountMobileNumber ||
-					"",
-
-				email:
-					item?.email ||
-					item?.accountEmail ||
-					item?.accountEmailId ||
-					"",
+				gstNumber: item?.gstNumber || item?.gst || item?.accountGSTNumber || "",
+				mobileNumber: item?.mobileNumber || item?.mobile || item?.accountMobile || item?.accountMobileNumber || "",
+				email: item?.email || item?.accountEmail || item?.accountEmailId || "",
 			})),
 	];
-
-
 
 	const handleOrderTypeChange = (value: string) => {
 		setForm((prev: any) => ({
@@ -84,51 +92,21 @@ const contractOptions = [
 				value === "contract"
 					? prev.contractDetails
 					: {
-							contractNumber: "",
-							validityFrom: "",
-							validityTo: "",
-							totalTrips: "",
-							completedTrips: 0,
-							remainingTrips: 0,
-					  },
+						contractNumber: "",
+						validityFrom: "",
+						validityTo: "",
+						totalTrips: "",
+						completedTrips: 0,
+						remainingTrips: 0,
+					},
+			indentDetails:
+				value === "indent"
+					? prev.indentDetails
+					: {
+						indentNumber: "",
+					},
 		}));
 	};
-
-	// const handleContractSelect = (value: any) => {
-	// 	const selectedContract = contractOptions.find(
-	// 		(item: any) => String(item?.value) === String(value)
-	// 	);
-
-	// 	setForm((prev: any) => ({
-	// 		...prev,
-
-	// 		contractDetails: {
-	// 			...prev.contractDetails,
-	// 			contractNumber: selectedContract?.contractNumber || value || "",
-	// 			validityFrom: selectedContract?.validityFrom || "",
-	// 			validityTo: selectedContract?.validityTo || "",
-	// 			totalTrips: selectedContract?.totalTrips || "",
-	// 			completedTrips: selectedContract?.completedTrips || 0,
-	// 			remainingTrips: selectedContract?.remainingTrips || 0,
-	// 		},
-
-	// 		customerDetails: {
-	// 			...prev.customerDetails,
-	// 			customerCode:
-	// 				selectedContract?.customerCode ||
-	// 				prev.customerDetails?.customerCode ||
-	// 				"",
-	// 			customerName:
-	// 				selectedContract?.customerName ||
-	// 				prev.customerDetails?.customerName ||
-	// 				"",
-	// 			contactPerson:
-	// 				selectedContract?.customerName ||
-	// 				prev.customerDetails?.contactPerson ||
-	// 				"",
-	// 		},
-	// 	}));
-	// };
 
 	const handleContractTripsChange = (key: string, value: any) => {
 		setForm((prev: any) => {
@@ -159,30 +137,12 @@ const contractOptions = [
 				...prev,
 				customerDetails: {
 					...prev.customerDetails,
-
-					customerCode:
-						selectedCustomer?.accountCode || value || "",
-
-					customerName:
-						selectedCustomer?.accountName || "",
-
-					contactPerson:
-						selectedCustomer?.accountName || "",
-
-					gstNumber:
-						selectedCustomer?.gstNumber ||
-						prev.customerDetails?.gstNumber ||
-						"",
-
-					mobileNumber:
-						selectedCustomer?.mobileNumber ||
-						prev.customerDetails?.mobileNumber ||
-						"",
-
-					email:
-						selectedCustomer?.email ||
-						prev.customerDetails?.email ||
-						"",
+					customerCode: selectedCustomer?.accountCode || value || "",
+					customerName: selectedCustomer?.accountName || "",
+					contactPerson: selectedCustomer?.accountName || "",
+					gstNumber: selectedCustomer?.gstNumber || prev.customerDetails?.gstNumber || "",
+					mobileNumber: selectedCustomer?.mobileNumber || prev.customerDetails?.mobileNumber || "",
+					email: selectedCustomer?.email || prev.customerDetails?.email || "",
 				},
 			}));
 
@@ -211,6 +171,11 @@ const contractOptions = [
 			return;
 		}
 
+		if (key === "indentDetails.indentNumber") {
+			handleIndentSelect(value);
+			return;
+		}
+
 		if (key.startsWith("contractDetails.")) {
 			const contractKey = key.replace("contractDetails.", "");
 			handleContractTripsChange(contractKey, value);
@@ -236,6 +201,11 @@ const contractOptions = [
 			return;
 		}
 
+		if (key === "indentDetails.indentNumber") {
+			handleIndentSelect(value);
+			return;
+		}
+
 		if (key.startsWith("customerDetails.")) {
 			const customerKey = key.replace("customerDetails.", "");
 			updateCustomerField(customerKey, value);
@@ -256,6 +226,11 @@ const contractOptions = [
 			return;
 		}
 
+		if (key === "indentDetails.indentNumber") {
+			handleIndentSelect(value);
+			return;
+		}
+
 		if (key.startsWith("contractDetails.")) {
 			const contractKey = key.replace("contractDetails.", "");
 			handleContractTripsChange(contractKey, value);
@@ -271,31 +246,21 @@ const contractOptions = [
 	const fieldForm = {
 		orderType: form.orderType,
 
-		"contractDetails.contractNumber":
-			form.contractDetails?.contractNumber || "",
-		"contractDetails.validityFrom":
-			form.contractDetails?.validityFrom || "",
-		"contractDetails.validityTo":
-			form.contractDetails?.validityTo || "",
-		"contractDetails.totalTrips":
-			form.contractDetails?.totalTrips || "",
-		"contractDetails.completedTrips":
-			form.contractDetails?.completedTrips || 0,
-		"contractDetails.remainingTrips":
-			form.contractDetails?.remainingTrips || 0,
+		"contractDetails.contractNumber": form.contractDetails?.contractNumber || "",
+		"contractDetails.validityFrom": form.contractDetails?.validityFrom || "",
+		"contractDetails.validityTo": form.contractDetails?.validityTo || "",
+		"contractDetails.totalTrips": form.contractDetails?.totalTrips || "",
+		"contractDetails.completedTrips": form.contractDetails?.completedTrips || 0,
+		"contractDetails.remainingTrips": form.contractDetails?.remainingTrips || 0,
 
-		"customerDetails.customerCode":
-			form.customerDetails?.customerCode || "",
-		"customerDetails.customerName":
-			form.customerDetails?.customerName || "",
-		"customerDetails.gstNumber":
-			form.customerDetails?.gstNumber || "",
-		"customerDetails.contactPerson":
-			form.customerDetails?.contactPerson || "",
-		"customerDetails.mobileNumber":
-			form.customerDetails?.mobileNumber || "",
-		"customerDetails.email":
-			form.customerDetails?.email || "",
+		"indentDetails.indentNumber": form.indentDetails?.indentNumber || "",
+
+		"customerDetails.customerCode": form.customerDetails?.customerCode || "",
+		"customerDetails.customerName": form.customerDetails?.customerName || "",
+		"customerDetails.gstNumber": form.customerDetails?.gstNumber || "",
+		"customerDetails.contactPerson": form.customerDetails?.contactPerson || "",
+		"customerDetails.mobileNumber": form.customerDetails?.mobileNumber || "",
+		"customerDetails.email": form.customerDetails?.email || "",
 	};
 
 	const orderTypeFields = [
@@ -348,6 +313,16 @@ const contractOptions = [
 		},
 	];
 
+	const indentFields = [
+		{
+			key: "indentDetails.indentNumber",
+			label: "Indent",
+			type: "select",
+			mandatory: true,
+			options: indentOptions,
+		},
+	];
+
 	const customerFields = [
 		{
 			key: "customerDetails.customerCode",
@@ -355,7 +330,6 @@ const contractOptions = [
 			type: "select",
 			mandatory: true,
 			options: customerOption,
-			// disabled: isContractOrder && Boolean(form.contractDetails?.contractNumber),
 		},
 		{
 			key: "customerDetails.gstNumber",
@@ -398,6 +372,8 @@ const contractOptions = [
 			{renderFields(orderTypeFields)}
 
 			{isContractOrder && renderFields(contractFields)}
+
+			{isIndentOrder && renderFields(indentFields)}
 
 			{renderFields(customerFields)}
 		</FormSectionCard>

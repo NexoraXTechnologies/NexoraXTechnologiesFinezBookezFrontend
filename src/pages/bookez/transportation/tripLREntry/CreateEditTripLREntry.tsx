@@ -40,6 +40,7 @@ import {
 import {
     buildEWayBillPayload,
 } from "../eWayBill/ewaybillservice";
+import { getAllTransportTouchup } from "../../../../redux/slices/professionalSlice/transportation/touchUpSlice";
 
 // E-Way Bill: fire-and-forget background generation. This must NEVER block or
 // affect the existing "Save & Start Trip" -> Create LR -> Navigate Back flow.
@@ -194,6 +195,46 @@ const sanitizeFileName = (name: any, fallback = "document") => {
     return cleaned || fallback;
 };
 
+const mapTouchUpLocation = (location: any = {}) => ({
+    name: location?.name || "",
+    address: location?.address || "",
+    city: location?.city || "",
+    state: location?.state || "",
+});
+
+const getTouchUpImageSource = (touchUpLr: any = {}) => String(
+    typeof touchUpLr === "string"
+        ? touchUpLr
+        : touchUpLr?.base64 || touchUpLr?.fullUrl || touchUpLr?.filePath || touchUpLr?.relativePath || touchUpLr?.url || touchUpLr?.fileUrl || touchUpLr?.imageUrl || touchUpLr?.documentUrl || ""
+).trim();
+
+const TouchUpImagePreview = ({ source, alt }: { source: string; alt: string }) => {
+    const [imageFailed, setImageFailed] = useState(!source);
+
+    useEffect(() => {
+        setImageFailed(!source);
+    }, [source]);
+
+    if (!source || imageFailed) {
+        return (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                <Upload size={17} />
+                <span className="text-[10px] font-semibold">No Photo</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="absolute inset-0 z-10 overflow-hidden bg-background">
+            <img src={source} alt={alt} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" onError={() => setImageFailed(true)} />
+
+            <button type="button" onClick={() => window.open(source, "_blank", "noopener,noreferrer")} className="absolute inset-0 h-full w-full cursor-zoom-in" title="View attached photo">
+                <span className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-[9px] font-bold text-white opacity-0 transition group-hover:opacity-100">View Photo</span>
+            </button>
+        </div>
+    );
+};
+
 /* ===================================================
    INITIAL FORM
 =================================================== */
@@ -201,6 +242,8 @@ const sanitizeFileName = (name: any, fallback = "document") => {
 const createInitialTripLRCollection = () => ({
     tripNumber: "",
     transportOrderNumber: "",
+    transportTouchUp: "",
+    lrTouchUp: [],
     lrNumber: "",
     lrDate: new Date().toISOString(),
     ewayBillGeneratedBy: "",
@@ -341,6 +384,19 @@ const mergeTripLRCollectionForm = (data: any = {}) => {
             ...base.delivery,
             ...(data.delivery || {}),
         },
+        lrTouchUp: Array.isArray(data.lrTouchUp)
+            ? data.lrTouchUp.map((item: any) => ({
+                touchUpId: item?.touchUpId || "",
+                pickupDetails: item?.pickupDetails && typeof item.pickupDetails === "object" ? { ...item.pickupDetails } : {},
+                deliveryDetails: item?.deliveryDetails && typeof item.deliveryDetails === "object" ? { ...item.deliveryDetails } : {},
+                material: item?.material || "",
+                touchUpLr: typeof item?.touchUpLr === "string"
+                    ? item.touchUpLr
+                    : item?.touchUpLr && typeof item.touchUpLr === "object"
+                        ? { ...item.touchUpLr }
+                        : {},
+            }))
+            : [],
         documents: Array.isArray(data.documents)
             ? data.documents.map(normalizeDocumentRecord)
             : [],
@@ -637,6 +693,29 @@ const toTripLRCollectionPayload = (form: any, overrides: any = {}) => {
                 new Date().toISOString(),
         },
 
+        lrTouchUp: (merged.lrTouchUp || []).map((item: any) => {
+            const touchUpLr = item?.touchUpLr;
+            const newImageBase64 = typeof touchUpLr === "string" && touchUpLr.startsWith("data:image/")
+                ? touchUpLr
+                : typeof touchUpLr?.base64 === "string" && touchUpLr.base64.startsWith("data:image/")
+                    ? touchUpLr.base64
+                    : "";
+            const existingTouchUpLr = typeof touchUpLr === "string"
+                ? touchUpLr.trim()
+                    ? touchUpLr
+                    : {}
+                : touchUpLr && typeof touchUpLr === "object" && Object.keys(touchUpLr).length
+                    ? { ...touchUpLr }
+                    : {};
+            return {
+                touchUpId: item?.touchUpId || "",
+                pickupDetails: mapTouchUpLocation(item?.pickupDetails),
+                deliveryDetails: mapTouchUpLocation(item?.deliveryDetails),
+                material: item?.material || "",
+                touchUpLr: newImageBase64 || existingTouchUpLr,
+            };
+        }),
+
         documents: (merged.documents || []).map((doc: any) => ({
             documentType: doc.documentType || "",
             fileName: doc.fileName || "",
@@ -676,7 +755,8 @@ const CreateEditTripLREntry = () => {
 
     const [loading, setLoading] = useState(false);
     const [transportOrders, setTransportOrders] = useState<any[]>([]);
-   
+    const [transportTouchups, setTransportTouchups] = useState<any[]>([]);
+
     const [lrEntries, setLrEntries] = useState<any[]>([]);
     const [allocationLoading, setAllocationLoading] = useState(false);
     const [driverPickError, setDriverPickError] = useState("");
@@ -707,6 +787,23 @@ const CreateEditTripLREntry = () => {
             ),
         [form.freight?.agreedFreight, form.freight?.advancePaid]
     );
+
+    const fetchTransportTouchups = useCallback(async () => {
+        try {
+            const res = await dispatch(
+                getAllTransportTouchup({
+                    limit: 1000,
+                    offset: 0,
+                    search: ""
+                }) as any
+            ).unwrap();
+
+            setTransportTouchups(getApiList(res));
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to load Transport Touch Ups");
+            setTransportTouchups([]);
+        }
+    }, [dispatch]);
 
     const transportOrderOptions = useMemo(() => {
         const usedOrderSet = new Set(
@@ -763,6 +860,126 @@ const CreateEditTripLREntry = () => {
         form.transportOrderNumber,
         form.tripNumber,
     ]);
+
+
+    const allTransportTouchUpOptions = useMemo(() => {
+        const selectedOrder = normalizeVoucher(form.transportOrderNumber || form.tripNumber);
+        return (transportTouchups || [])
+            .filter((item: any) => {
+                if (!selectedOrder) return false;
+                return normalizeVoucher(item?.tripOrder || item?.transportOrderNumber || "") === selectedOrder;
+            })
+            .flatMap((item: any) => (Array.isArray(item?.touchUp) ? item.touchUp : []).map((touchUp: any, index: number) => {
+                const touchUpId = touchUp?.touchUpId || `TouchUp-${String(index + 1).padStart(3, "0")}`;
+                const pickup = touchUp?.pickupLocation?.name || touchUp?.pickupLocation?.city || "-";
+                const delivery = touchUp?.deliveryLocation?.name || touchUp?.deliveryLocation?.city || "-";
+                const material = touchUp?.material || "-";
+                return { label: `${touchUpId} - ${pickup} → ${delivery} | ${material}`, value: touchUpId, raw: touchUp };
+            }));
+    }, [transportTouchups, form.transportOrderNumber, form.tripNumber]);
+
+    const transportTouchUpOptions = useMemo(() => {
+        const selectedIds = new Set((form.lrTouchUp || []).map((item: any) => String(item?.touchUpId || "")));
+        return allTransportTouchUpOptions.filter((option: any) => !selectedIds.has(String(option.value)));
+    }, [allTransportTouchUpOptions, form.lrTouchUp]);
+
+    const getTouchUpOption = (touchUpId: any) => allTransportTouchUpOptions.find((option: any) => String(option?.value || "") === String(touchUpId || ""));
+
+    const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+    });
+
+    const handleTransportTouchUpSelect = (touchUpId: string) => {
+        if (!touchUpId) return;
+        const selected = getTouchUpOption(touchUpId);
+        if (!selected?.raw) return;
+
+        setForm((prev: any) => {
+            const existing = Array.isArray(prev.lrTouchUp) ? prev.lrTouchUp : [];
+            if (existing.some((item: any) => String(item?.touchUpId || "") === String(touchUpId))) return { ...prev, transportTouchUp: "" };
+            return {
+                ...prev,
+                transportTouchUp: "",
+                lrTouchUp: [
+                    ...existing,
+                    {
+                        touchUpId,
+                        pickupDetails: mapTouchUpLocation(selected.raw?.pickupLocation),
+                        deliveryDetails: mapTouchUpLocation(selected.raw?.deliveryLocation),
+                        material: selected.raw?.material || "",
+                        touchUpLr: {},
+                    },
+                ],
+            };
+        });
+    };
+
+    const handleRemoveLRTouchUp = (touchUpId: string) => {
+        setForm((prev: any) => ({
+            ...prev,
+            lrTouchUp: (prev.lrTouchUp || []).filter((item: any) => String(item?.touchUpId || "") !== String(touchUpId || "")),
+        }));
+    };
+
+    const handleTouchUpImageChange = async (index: number, file: File | undefined) => {
+        if (!file) return;
+        if (!String(file.type || "").startsWith("image/")) {
+            toast.warn("Please select an image file");
+            return;
+        }
+
+        try {
+            const base64 = await fileToBase64(file);
+            if (!base64.startsWith("data:image/")) {
+                toast.error("Failed to convert Touch Up image");
+                return;
+            }
+
+            setForm((prev: any) => {
+                const lrTouchUp = [...(prev.lrTouchUp || [])];
+                const current = lrTouchUp[index];
+                if (!current) return prev;
+                lrTouchUp[index] = {
+                    ...current,
+                    touchUpLr: base64,
+                };
+                return { ...prev, lrTouchUp };
+            });
+        } catch (error) {
+            console.error("[TOUCH UP IMAGE] Base64 conversion failed:", error);
+            toast.error("Failed to read Touch Up image");
+        }
+    };
+
+    useEffect(() => {
+        if (!allTransportTouchUpOptions.length) return;
+
+        setForm((prev: any) => {
+            const currentTouchUps = Array.isArray(prev.lrTouchUp) ? prev.lrTouchUp : [];
+            let changed = false;
+            const nextTouchUps = currentTouchUps.map((item: any) => {
+                const option = allTransportTouchUpOptions.find((entry: any) => String(entry?.value || "") === String(item?.touchUpId || ""));
+                if (!option?.raw) return item;
+
+                const hasPickupDetails = Boolean(item?.pickupDetails?.name || item?.pickupDetails?.address || item?.pickupDetails?.city || item?.pickupDetails?.state);
+                const hasDeliveryDetails = Boolean(item?.deliveryDetails?.name || item?.deliveryDetails?.address || item?.deliveryDetails?.city || item?.deliveryDetails?.state);
+                const nextItem = {
+                    ...item,
+                    pickupDetails: hasPickupDetails ? item.pickupDetails : mapTouchUpLocation(option.raw?.pickupLocation),
+                    deliveryDetails: hasDeliveryDetails ? item.deliveryDetails : mapTouchUpLocation(option.raw?.deliveryLocation),
+                    material: item?.material || option.raw?.material || "",
+                };
+
+                if (!hasPickupDetails || !hasDeliveryDetails || (!item?.material && option.raw?.material)) changed = true;
+                return nextItem;
+            });
+
+            return changed ? { ...prev, lrTouchUp: nextTouchUps } : prev;
+        });
+    }, [allTransportTouchUpOptions]);
 
     const update = (section: string, key: string, value: any) => {
         const nextValue =
@@ -895,25 +1112,28 @@ const CreateEditTripLREntry = () => {
         if (!isEdit) return;
 
         const passedData = location.state?.lrData;
+        const editVoucher = voucherNumber || getLRVoucher(passedData);
 
-        if (passedData) {
-            setForm(mergeTripLRCollectionForm(passedData));
+        if (!editVoucher) {
+            if (passedData) setForm(mergeTripLRCollectionForm(passedData));
             return;
         }
-
-        if (!voucherNumber) return;
 
         try {
             setLoading(true);
 
             const res = await dispatch(
-                getTripLRCollectionByVoucherNumber(voucherNumber) as any
+                getTripLRCollectionByVoucherNumber(editVoucher) as any
             ).unwrap();
 
             const record = getSingleRecord(res);
 
             setForm(mergeTripLRCollectionForm(record));
         } catch (error: any) {
+            if (passedData) {
+                setForm(mergeTripLRCollectionForm(passedData));
+                return;
+            }
             toast.error(error?.message || "Failed to load LR collection");
             navigate(-1);
         } finally {
@@ -923,6 +1143,7 @@ const CreateEditTripLREntry = () => {
 
     useEffect(() => {
         fetchTransportOrders("");
+        fetchTransportTouchups();
         fetchLREntries();
         loadEntry();
 
@@ -931,7 +1152,7 @@ const CreateEditTripLREntry = () => {
                 clearTimeout(tripSearchTimerRef.current);
             }
         };
-    }, [fetchTransportOrders, fetchLREntries, loadEntry]);
+    }, [fetchTransportOrders, fetchTransportTouchups, fetchLREntries, loadEntry]);
 
     const handleTripSearchChange = (text: string) => {
         if (tripSearchTimerRef.current) {
@@ -1040,12 +1261,11 @@ const CreateEditTripLREntry = () => {
                 return;
             }
 
-            setForm((prev: any) =>
-                mapTransportOrderToLRCollection(
-                    selected,
-                    prev
-                )
-            );
+            setForm((prev: any) => ({
+                ...mapTransportOrderToLRCollection(selected, prev),
+                transportTouchUp: "",
+                lrTouchUp: isEdit ? prev.lrTouchUp || [] : [],
+            }));
 
             const allocationResult =
                 await fetchAllocationForOrder(
@@ -1100,6 +1320,11 @@ const CreateEditTripLREntry = () => {
 
         if (key === "lrDate") {
             updateRootField(key, value);
+            return;
+        }
+
+        if (key === "transportTouchUp") {
+            handleTransportTouchUpSelect(value);
             return;
         }
 
@@ -1602,6 +1827,7 @@ const CreateEditTripLREntry = () => {
 
     const fieldForm = {
         transportOrderNumber: form.transportOrderNumber || form.tripNumber || "",
+        transportTouchUp: form.transportTouchUp || "",
         lrDate: toDateTimeLocalValue(form.lrDate),
 
         "customer.customerCode": form.customer?.customerCode || "",
@@ -1640,6 +1866,7 @@ const CreateEditTripLREntry = () => {
         "delivery.expectedDeliveryDateTime": toDateTimeLocalValue(
             form.delivery?.expectedDeliveryDateTime
         ),
+
 
         remarks: form.remarks || "",
         tripStatus: form.tripStatus || "in_transit",
@@ -1911,9 +2138,116 @@ const CreateEditTripLREntry = () => {
                         title="1. Basic Information"
                         icon={<FileText size={18} />}
                     >
-                        <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-2 gap-4">
+                        <div className="w-full md:col-span-2 xl:col-span-4">
+                            <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+                                {renderFields(basicFields)}
+                            </div>
 
-                            {renderFields(basicFields)}
+                            {(form.lrTouchUp || []).length > 0 && (
+                                <div className="mt-4 overflow-hidden rounded-xl border border-border bg-muted/20">
+                                    <div className="flex items-center justify-between border-b border-border bg-background/80 px-3 py-2.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><MapPin size={15} /></span>
+                                            <div>
+                                                <p className="text-sm font-bold text-card-foreground">Touch Up Stops</p>
+                                                <p className="text-[11px] text-muted-foreground">Individual documents for the selected route</p>
+                                            </div>
+                                        </div>
+                                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
+                                            {(form.lrTouchUp || []).length} Selected
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-3 p-3 xl:grid-cols-2">
+                                        {(form.lrTouchUp || []).map((item: any, index: number) => {
+                                            const option = getTouchUpOption(item?.touchUpId);
+                                            const touchUp = option?.raw || {};
+                                            const pickupDetails = item?.pickupDetails || mapTouchUpLocation(touchUp?.pickupLocation);
+                                            const deliveryDetails = item?.deliveryDetails || mapTouchUpLocation(touchUp?.deliveryLocation);
+                                            const pickup = pickupDetails?.name || pickupDetails?.city || "-";
+                                            const delivery = deliveryDetails?.name || deliveryDetails?.city || "-";
+                                            const material = item?.material || touchUp?.material || "-";
+                                            const imageSource = getTouchUpImageSource(item?.touchUpLr);
+                                            const hasNewPhoto = Boolean(
+                                                (typeof item?.touchUpLr === "string" && item.touchUpLr.startsWith("data:image/")) ||
+                                                item?.touchUpLr?.base64
+                                            );
+                                            const hasPhoto = Boolean(imageSource);
+
+                                            return (
+                                                <div key={`${item?.touchUpId || index}-${index}`} className="group relative flex min-w-0 gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition hover:border-primary/30 hover:shadow-md">
+                                                    <div className="relative h-[82px] w-[98px] shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                                                        <TouchUpImagePreview source={imageSource} alt={`${item?.touchUpId || `Touch Up ${index + 1}`} LR`} />
+
+                                                        <span className="absolute left-1.5 top-1.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-md bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-sm">
+                                                            {index + 1}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="min-w-0">
+                                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                                    <p className="truncate text-sm font-bold text-card-foreground">{item?.touchUpId || `Touch Up ${index + 1}`}</p>
+                                                                    <span className="max-w-[180px] truncate rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{material}</span>
+                                                                </div>
+                                                                <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                                                    <span className="truncate">{pickup}</span>
+                                                                    <span className="shrink-0 font-bold text-primary">→</span>
+                                                                    <span className="truncate">{delivery}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <button type="button" onClick={() => handleRemoveLRTouchUp(item?.touchUpId || "")} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger/20" title="Remove Touch Up">
+                                                                <X size={13} />
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                                                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${hasPhoto ? "text-emerald-600" : "text-muted-foreground"}`}>
+                                                                <span className={`h-1.5 w-1.5 rounded-full ${hasPhoto ? "bg-emerald-500" : "bg-muted-foreground/50"}`} />
+                                                                {hasNewPhoto ? "New document Selected" : hasPhoto ? "Loading Slip" : "Document Required"}
+                                                            </span>
+
+                                                            <label className="inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary/5 px-2.5 text-[11px] font-bold text-primary transition hover:border-primary/40 hover:bg-primary/10">
+                                                                <Upload size={12} />
+                                                                {hasPhoto ? "Change" : "Upload / Camera"}
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/png,image/jpeg"
+                                                                    capture="environment"
+                                                                    className="hidden"
+                                                                    onChange={(e) => {
+                                                                        handleTouchUpImageChange(index, e.target.files?.[0]);
+                                                                        e.target.value = "";
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-3 max-w-xl rounded-lg border border-dashed border-primary/25 bg-primary/[0.025] p-3">
+                                {renderField({
+                                    field: {
+                                        key: "transportTouchUp",
+                                        label: (form.lrTouchUp || []).length ? "Add Another Touch Up" : "Touch Up",
+                                        type: "select",
+                                        options: transportTouchUpOptions,
+                                        placeholder: transportTouchUpOptions.length ? "Select Touch Up" : "No Touch Up available",
+                                        disabled: !String(form.transportOrderNumber || form.tripNumber || "").trim() || !transportTouchUpOptions.length,
+                                    },
+                                    form: fieldForm,
+                                    handleInputChange,
+                                    handleSelectChange,
+                                    updateField,
+                                })}
+                            </div>
                         </div>
                     </FormSectionCard>
 

@@ -1,6 +1,7 @@
 export const orderTypeOptions = [
   {label: 'Market', value: 'market'},
   {label: 'Contract', value: 'contract'},
+  {label: 'Indent', value: 'indent'},
 ];
 
 export const loadTypeOptions = [
