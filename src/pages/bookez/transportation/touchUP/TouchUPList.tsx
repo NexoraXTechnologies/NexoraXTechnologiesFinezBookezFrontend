@@ -23,6 +23,7 @@ const TouchUPList = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
+    // @ts-ignore
     const [activeStatus, setActiveStatus] = useState<"pending" | "completed">("pending");
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, transportTouchupNumber: null });
 
@@ -52,8 +53,8 @@ const TouchUPList = () => {
         return () => clearTimeout(timer);
     }, [dispatch, localOffset, localLimit, search]);
 
-    const pendingCount = useMemo(() => transportTouchups.filter((item: any) => !isCompleted(item)).length, [transportTouchups]);
-    const completedCount = useMemo(() => transportTouchups.filter((item: any) => isCompleted(item)).length, [transportTouchups]);
+    // const pendingCount = useMemo(() => transportTouchups.filter((item: any) => !isCompleted(item)).length, [transportTouchups]);
+    // const completedCount = useMemo(() => transportTouchups.filter((item: any) => isCompleted(item)).length, [transportTouchups]);
 
     const filteredTouchUps = useMemo(() => {
         const searchValue = String(search || "").trim().toLowerCase();

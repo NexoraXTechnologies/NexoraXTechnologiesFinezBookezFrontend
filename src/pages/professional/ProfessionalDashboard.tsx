@@ -34,9 +34,7 @@ import {
 
 import AiTaxCopilotDrawer from "./AiChat/AiTaxCopilotDrawer";
 import AiChatBox from "./AiChat/AiChatBox";
-import ProQuickLinks from "../../components/professionalDashboard/ProQuickLinks";
-import ProStatDonutChart from "../../components/professionalDashboard/ProStatDonutChart";
-import ProDashboardCart from "../../components/professionalDashboard/ProDashboardCard";
+
 import { formatMoney } from "../../utils/helperFunctions";
 import {
 	CHART_COLORS,
@@ -228,159 +226,159 @@ const ModuleAreaTooltip = ({ active, payload, label }: any) => {
 	);
 };
 
-const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
-	const cards = useMemo(() => {
-		return [
-			{
-				title: "Total Taxpayers",
-				value: analytics?.incomeTax?.totalTaxPayers ?? 0,
-				stats: {
-					active: analytics?.incomeTax?.active ?? 0,
-					inactive: analytics?.incomeTax?.inactive ?? 0,
-				},
-				color: "bg-primary/10",
-				delay: 0.05,
-				icon: "👤",
-			},
-			{
-				title: "ITR",
-				value:
-					(analytics?.itr?.filedSuccessfully ?? 0) +
-					(analytics?.itr?.draft ?? 0),
-				stats: {
-					filed: analytics?.itr?.filedSuccessfully ?? 0,
-					draft: analytics?.itr?.draft ?? 0,
-				},
-				color: "bg-primary/10",
-				delay: 0.1,
-				icon: "📄",
-			},
-			{
-				title: "Tasks",
-				value: analytics?.tasks?.total ?? 0,
-				stats: {
-					inProgress: analytics?.tasks?.inProgress ?? 0,
-					partial: analytics?.tasks?.partiallyCompleted ?? 0,
-					completed: analytics?.tasks?.completed ?? 0,
-				},
-				color: "bg-success/10",
-				delay: 0.15,
-				icon: "✅",
-			},
-			{
-				title: "Documents",
-				value: analytics?.documents?.total ?? 0,
-				stats: {
-					active: analytics?.documents?.active ?? 0,
-					deleted: analytics?.documents?.deleted ?? 0,
-				},
-				color: "bg-muted",
-				delay: 0.2,
-				icon: "📁",
-			},
-			{
-				title: "Employees",
-				value: analytics?.employees?.total ?? 0,
-				stats: {
-					active: analytics?.employees?.active ?? 0,
-					inactive: analytics?.employees?.inactive ?? 0,
-				},
-				color: "bg-primary/10",
-				delay: 0.25,
-				icon: "👥",
-			},
-			{
-				title: "Masters",
-				value:
-					(analytics?.accountMaster?.total ?? 0) +
-					(analytics?.productMaster?.total ?? 0),
-				stats: {
-					accounts: analytics?.accountMaster?.total ?? 0,
-					products: analytics?.productMaster?.total ?? 0,
-				},
-				color: "bg-muted",
-				delay: 0.3,
-				icon: "📦",
-			},
-		];
-	}, [analytics]);
+// const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
+// 	const cards = useMemo(() => {
+// 		return [
+// 			{
+// 				title: "Total Taxpayers",
+// 				value: analytics?.incomeTax?.totalTaxPayers ?? 0,
+// 				stats: {
+// 					active: analytics?.incomeTax?.active ?? 0,
+// 					inactive: analytics?.incomeTax?.inactive ?? 0,
+// 				},
+// 				color: "bg-primary/10",
+// 				delay: 0.05,
+// 				icon: "👤",
+// 			},
+// 			{
+// 				title: "ITR",
+// 				value:
+// 					(analytics?.itr?.filedSuccessfully ?? 0) +
+// 					(analytics?.itr?.draft ?? 0),
+// 				stats: {
+// 					filed: analytics?.itr?.filedSuccessfully ?? 0,
+// 					draft: analytics?.itr?.draft ?? 0,
+// 				},
+// 				color: "bg-primary/10",
+// 				delay: 0.1,
+// 				icon: "📄",
+// 			},
+// 			{
+// 				title: "Tasks",
+// 				value: analytics?.tasks?.total ?? 0,
+// 				stats: {
+// 					inProgress: analytics?.tasks?.inProgress ?? 0,
+// 					partial: analytics?.tasks?.partiallyCompleted ?? 0,
+// 					completed: analytics?.tasks?.completed ?? 0,
+// 				},
+// 				color: "bg-success/10",
+// 				delay: 0.15,
+// 				icon: "✅",
+// 			},
+// 			{
+// 				title: "Documents",
+// 				value: analytics?.documents?.total ?? 0,
+// 				stats: {
+// 					active: analytics?.documents?.active ?? 0,
+// 					deleted: analytics?.documents?.deleted ?? 0,
+// 				},
+// 				color: "bg-muted",
+// 				delay: 0.2,
+// 				icon: "📁",
+// 			},
+// 			{
+// 				title: "Employees",
+// 				value: analytics?.employees?.total ?? 0,
+// 				stats: {
+// 					active: analytics?.employees?.active ?? 0,
+// 					inactive: analytics?.employees?.inactive ?? 0,
+// 				},
+// 				color: "bg-primary/10",
+// 				delay: 0.25,
+// 				icon: "👥",
+// 			},
+// 			{
+// 				title: "Masters",
+// 				value:
+// 					(analytics?.accountMaster?.total ?? 0) +
+// 					(analytics?.productMaster?.total ?? 0),
+// 				stats: {
+// 					accounts: analytics?.accountMaster?.total ?? 0,
+// 					products: analytics?.productMaster?.total ?? 0,
+// 				},
+// 				color: "bg-muted",
+// 				delay: 0.3,
+// 				icon: "📦",
+// 			},
+// 		];
+// 	}, [analytics]);
 
-	const taskDonut = useMemo(() => {
-		const t = analytics?.tasks || {};
+// 	const taskDonut = useMemo(() => {
+// 		const t = analytics?.tasks || {};
 
-		return [
-			{ name: "In Progress", value: t.inProgress ?? 0 },
-			{ name: "Partial", value: t.partiallyCompleted ?? 0 },
-			{ name: "Completed", value: t.completed ?? 0 },
-		];
-	}, [analytics]);
+// 		return [
+// 			{ name: "In Progress", value: t.inProgress ?? 0 },
+// 			{ name: "Partial", value: t.partiallyCompleted ?? 0 },
+// 			{ name: "Completed", value: t.completed ?? 0 },
+// 		];
+// 	}, [analytics]);
 
-	const itrDonut = useMemo(() => {
-		const i = analytics?.itr || {};
+// 	const itrDonut = useMemo(() => {
+// 		const i = analytics?.itr || {};
 
-		return [
-			{ name: "Filed", value: i.filedSuccessfully ?? 0 },
-			{ name: "Draft", value: i.draft ?? 0 },
-		];
-	}, [analytics]);
+// 		return [
+// 			{ name: "Filed", value: i.filedSuccessfully ?? 0 },
+// 			{ name: "Draft", value: i.draft ?? 0 },
+// 		];
+// 	}, [analytics]);
 
-	const taxpayerDonut = useMemo(() => {
-		const it = analytics?.incomeTax || {};
+// 	const taxpayerDonut = useMemo(() => {
+// 		const it = analytics?.incomeTax || {};
 
-		return [
-			{ name: "Active", value: it.active ?? 0 },
-			{ name: "Inactive", value: it.inactive ?? 0 },
-		];
-	}, [analytics]);
+// 		return [
+// 			{ name: "Active", value: it.active ?? 0 },
+// 			{ name: "Inactive", value: it.inactive ?? 0 },
+// 		];
+// 	}, [analytics]);
 
-	return (
-		<motion.div
-			key="taxez-dashboard"
-			variants={pageAnimation}
-			initial="hidden"
-			animate="visible"
-			exit="exit"
-		>
-			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-foreground">TaxEz Dashboard</h1>
-					<p className="mt-1 text-sm text-muted-foreground">
-						Filing overview, compliance status, and workload summary.
-					</p>
-				</div>
+// 	return (
+// 		<motion.div
+// 			key="taxez-dashboard"
+// 			variants={pageAnimation}
+// 			initial="hidden"
+// 			animate="visible"
+// 			exit="exit"
+// 		>
+// 			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+// 				<div>
+// 					<h1 className="text-2xl font-bold text-foreground">TaxEz Dashboard</h1>
+// 					<p className="mt-1 text-sm text-muted-foreground">
+// 						Filing overview, compliance status, and workload summary.
+// 					</p>
+// 				</div>
 
-				<ProQuickLinks
-					links={[
-						{
-							label: "Add Taxpayer",
-							to: "/professional/incometax/addtaxpayer",
-						},
-						{
-							label: "File ITR",
-							to: "/professional/incometax/fileitrlist",
-						},
-						{
-							label: "Add Team/Employee",
-							to: "/professional/users",
-						},
-					]}
-				/>
-			</div>
+// 				<ProQuickLinks
+// 					links={[
+// 						{
+// 							label: "Add Taxpayer",
+// 							to: "/professional/incometax/addtaxpayer",
+// 						},
+// 						{
+// 							label: "File ITR",
+// 							to: "/professional/incometax/fileitrlist",
+// 						},
+// 						{
+// 							label: "Add Team/Employee",
+// 							to: "/professional/users",
+// 						},
+// 					]}
+// 				/>
+// 			</div>
 
-			<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-				{cards.map((c) => (
-					<ProDashboardCart key={c.title} {...c} />
-				))}
-			</div>
+// 			<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+// 				{cards.map((c) => (
+// 					<ProDashboardCart key={c.title} {...c} />
+// 				))}
+// 			</div>
 
-			<div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-				<ProStatDonutChart title="Tasks Status" items={taskDonut} />
-				<ProStatDonutChart title="ITR Status" items={itrDonut} />
-				<ProStatDonutChart title="Taxpayer Status" items={taxpayerDonut} />
-			</div>
-		</motion.div>
-	);
-};
+// 			<div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+// 				<ProStatDonutChart title="Tasks Status" items={taskDonut} />
+// 				<ProStatDonutChart title="ITR Status" items={itrDonut} />
+// 				<ProStatDonutChart title="Taxpayer Status" items={taxpayerDonut} />
+// 			</div>
+// 		</motion.div>
+// 	);
+// };
 
 const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 	const dashboardData = analytics || {};
@@ -1520,7 +1518,7 @@ const ProfessionalDashboard = () => {
 	const [openChat, setOpenChat] = useState(false);
 	const [activeTab, setActiveTab] = useState<TabType>("taxez");
 	const [dashboardSection, setDashboardSection] = useState<"dashboard" | "analytics">("dashboard");
-
+// @ts-ignore
 	const { analytics, bookEzAnalytics, loading, error } = useSelector(
 		(s: any) => s.professionalDashboard
 	);

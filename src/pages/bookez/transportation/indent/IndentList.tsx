@@ -24,6 +24,7 @@ const IndentList = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(20);
+    // @ts-ignore
     const [activeStatus, setActiveStatus] = useState<"open" | "closed">("open");
     const [confirmTooltip, setConfirmTooltip] = useState<any>({ show: false, x: null, y: null, indentNumber: null });
 
