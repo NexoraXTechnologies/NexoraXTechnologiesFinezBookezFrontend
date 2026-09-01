@@ -109,9 +109,9 @@ const normalizeFormForEdit = (data: any = {}) => {
 const touchUpStatusOptions = [
     { label: "Select Status", value: "" },
     { label: "Pending", value: "pending" },
-   
+
     { label: "Completed", value: "completed" },
-   
+
 ];
 
 // LOCATION BLOCK
@@ -268,7 +268,7 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
                     })
                 )}
 
-               
+
             </div>
         </div>
     );
@@ -688,9 +688,17 @@ const CreateEditTouchUP = () => {
                                         options={transportOrderOptions}
                                         placeholder="Select Transport Order"
                                         isSearchable
-                                        // isOptionDisabled={(option: any) => option?.isDisabled === true}
                                         onChange={(option: any) => updateField("tripOrder", option?.value || "")}
                                         classNamePrefix="rs"
+                                        styles={{
+                                            option: (base: any, state: any) => ({
+                                                ...base,
+                                                color: state.isDisabled ? "#64748b" : base.color,
+                                                opacity: 1,
+                                                fontWeight: state.isDisabled ? 500 : base.fontWeight,
+                                                cursor: state.isDisabled ? "not-allowed" : "pointer"
+                                            })
+                                        }}
                                     />
                                 </div>
 
