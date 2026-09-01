@@ -58,6 +58,8 @@ const emptyProductRow = {
     productHSNCode: "",
     remarks: "",
     quantity: "",
+    quotationPendingQuantity: null,
+    quotationQuotedQuantity: null,
     availableQuantity: null,
     productType: "",
     uom: "",
@@ -95,6 +97,7 @@ const emptyProductRow = {
 const getDefaultForm = () => ({
     sOrderVoucherNumber: "AUTO",
     sOrderVoucherDate: todayYMD(),
+    sOrderQuotationVoucherNumber: "",
     sOrderCustomerCode: "",
     sOrderCustomerName: "",
     sOrderSalesAccount: "SA021",
@@ -441,7 +444,11 @@ const SalesOrder = () => {
     const [form, setForm] = useState<any>(
         getDefaultForm()
     );
-    const { company } = useSelector((state: any) => state.professionalCompanyMaster);
+
+    const { company } = useSelector(
+        (state: any) =>
+            state.professionalCompanyMaster
+    );
 
     const [errors, setErrors] = useState<any>({});
 
@@ -496,16 +503,32 @@ const SalesOrder = () => {
         type: "",
     });
 
-    const { report } = useSelector((state: any) => state.reportMapping);
+    const { report } = useSelector(
+        (state: any) =>
+            state.reportMapping
+    );
 
-    const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const { configurations } = useSelector(
+        (state: any) =>
+            state.systemConfiguration
+    );
 
     const enableServiceProductInventory = useMemo(() => {
-        const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
-        return value === true || value === "true";
+        const value =
+            configurations?.[0]?.inventoryConfiguration
+                ?.enableServiceProductInventory;
+
+        return (
+            value === true ||
+            value === "true"
+        );
     }, [configurations]);
 
-    const { accounts = [] } = useSelector((state: any) => state.accountMaster || {});
+    const { accounts = [] } = useSelector(
+        (state: any) =>
+            state.accountMaster ||
+            {}
+    );
 
     // ★ ADDED: Customer accounts
     const filterAccount = useMemo(() => {
@@ -1392,6 +1415,7 @@ const SalesOrder = () => {
 
     const openAddModal = () => {
         resetMainForm();
+
         setShowPurchaseOrderModal(
             true
         );
@@ -1404,7 +1428,12 @@ const SalesOrder = () => {
         // @ts-ignore
         voucherDate: string = form.sOrderVoucherDate
     ) => {
-        const normalizedProductType = String(productType || "").trim().toLowerCase();
+        const normalizedProductType =
+            String(
+                productType || ""
+            )
+                .trim()
+                .toLowerCase();
 
         if (
             !productCode ||
@@ -1415,80 +1444,174 @@ const SalesOrder = () => {
             )
         ) {
             setForm((previous: any) => {
-                const updatedProducts = [...(previous.products || [])];
-                if (!updatedProducts[index]) return previous;
+                const updatedProducts =
+                    [
+                        ...(previous.products || []),
+                    ];
+
+                if (!updatedProducts[index]) {
+                    return previous;
+                }
 
                 updatedProducts[index] = {
                     ...updatedProducts[index],
-                    productType: normalizedProductType,
-                    availableQuantity: null,
+
+                    productType:
+                        normalizedProductType,
+
+                    availableQuantity:
+                        null,
                 };
 
                 return {
                     ...previous,
-                    products: updatedProducts,
+
+                    products:
+                        updatedProducts,
                 };
             });
+
             return;
         }
 
         setForm((previous: any) => {
-            const updatedProducts = [...(previous.products || [])];
-            if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+            const updatedProducts =
+                [
+                    ...(previous.products || []),
+                ];
+
+            if (
+                !updatedProducts[index] ||
+                String(
+                    updatedProducts[index]
+                        ?.productCode ||
+                    ""
+                ) !==
+                String(productCode)
+            ) {
+                return previous;
+            }
 
             updatedProducts[index] = {
                 ...updatedProducts[index],
-                productType: normalizedProductType,
-                availableQuantity: null,
+
+                productType:
+                    normalizedProductType,
+
+                availableQuantity:
+                    null,
             };
 
             return {
                 ...previous,
-                products: updatedProducts,
+
+                products:
+                    updatedProducts,
             };
         });
 
         try {
-            const { fromDate, toDate } = getFinancialYearRange(todayYMD());
-            const balance: any = await dispatch(
-                getProductBalance({
-                    productCode,
-                    fromDate,
-                    toDate,
-                }) as any
-            ).unwrap();
+            const {
+                fromDate,
+                toDate,
+            } =
+                getFinancialYearRange(
+                    todayYMD()
+                );
+
+            const balance: any =
+                await dispatch(
+                    getProductBalance({
+                        productCode,
+                        fromDate,
+                        toDate,
+                    }) as any
+                ).unwrap();
 
             setForm((previous: any) => {
-                const updatedProducts = [...(previous.products || [])];
-                if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+                const updatedProducts =
+                    [
+                        ...(previous.products || []),
+                    ];
+
+                if (
+                    !updatedProducts[index] ||
+                    String(
+                        updatedProducts[index]
+                            ?.productCode ||
+                        ""
+                    ) !==
+                    String(productCode)
+                ) {
+                    return previous;
+                }
 
                 updatedProducts[index] = {
                     ...updatedProducts[index],
-                    productType: normalizedProductType,
-                    availableQuantity: balance?.balanceQuantity !== undefined && balance?.balanceQuantity !== null ? balance.balanceQuantity : null,
+
+                    productType:
+                        normalizedProductType,
+
+                    availableQuantity:
+                        balance
+                            ?.balanceQuantity !==
+                            undefined &&
+                            balance
+                                ?.balanceQuantity !==
+                            null
+                            ? balance
+                                .balanceQuantity
+                            : null,
                 };
 
                 return {
                     ...previous,
-                    products: updatedProducts,
+
+                    products:
+                        updatedProducts,
                 };
             });
         } catch (error) {
-            console.log(`Failed to fetch available quantity for ${productCode}`, error);
+            console.log(
+                `Failed to fetch available quantity for ${productCode}`,
+                error
+            );
 
             setForm((previous: any) => {
-                const updatedProducts = [...(previous.products || [])];
-                if (!updatedProducts[index] || String(updatedProducts[index]?.productCode || "") !== String(productCode)) return previous;
+                const updatedProducts =
+                    [
+                        ...(previous.products || []),
+                    ];
+
+                if (
+                    !updatedProducts[index] ||
+                    String(
+                        updatedProducts[index]
+                            ?.productCode ||
+                        ""
+                    ) !==
+                    String(productCode)
+                ) {
+                    return previous;
+                }
 
                 updatedProducts[index] = {
                     ...updatedProducts[index],
-                    productType: normalizedProductType,
-                    availableQuantity: updatedProducts[index]?.availableQuantity ?? null,
+
+                    productType:
+                        normalizedProductType,
+
+                    availableQuantity:
+                        updatedProducts[index]
+                            ?.availableQuantity ??
+                        null,
                 };
 
                 return {
                     ...previous,
-                    products: updatedProducts,
+
+                    products:
+                        updatedProducts,
                 };
             });
         }
@@ -1740,6 +1863,10 @@ const SalesOrder = () => {
 
             sOrderVoucherDate:
                 voucherDate,
+
+            sOrderQuotationVoucherNumber:
+                record?.sOrderQuotationVoucherNumber ||
+                "",
 
             sOrderCustomerCode:
                 record?.sOrderCustomerCode ||
@@ -2009,6 +2136,7 @@ const SalesOrder = () => {
         try {
             const accountResponse = await dispatch(getAllAccounts({ offset: 0, limit: 100, search: "", }) as any).unwrap();
             setAccountListLoaded(true);
+
             // ★ REFRESH SALES ORDER REPORT MAPPING
             await dispatch(getAllReportMapping({ moduleType: "salesOrder", }) as any);
 
@@ -2243,6 +2371,7 @@ const SalesOrder = () => {
                                 !row?.productName &&
                                 !row?.productId
                         );
+
                         return emptyRowIndex >= 0
                             ? emptyRowIndex
                             : (form.products || []).length;
@@ -2401,7 +2530,9 @@ const SalesOrder = () => {
                         createdProduct?.productType ||
                         createdProduct?.dynamicFields?.productType ||
                         "",
-                    availableQuantity: null,
+
+                    availableQuantity:
+                        null,
 
                     taxRate:
                         marginProduct
@@ -2500,22 +2631,50 @@ const SalesOrder = () => {
                     company?.state?.isoCode ==
                     selectedCustomer?.state?.isoCode
                 ) {
-                    updatedRow.cgst = cgstValue;
-                    updatedRow.cgstPercentage = cgstValue;
-                    updatedRow.sgst = sgstValue;
-                    updatedRow.sgstPercentage = sgstValue;
-                    updatedRow.igst = "";
-                    updatedRow.igstPercentage = "";
-                    updatedRow.igstAmount = 0;
+                    updatedRow.cgst =
+                        cgstValue;
+
+                    updatedRow.cgstPercentage =
+                        cgstValue;
+
+                    updatedRow.sgst =
+                        sgstValue;
+
+                    updatedRow.sgstPercentage =
+                        sgstValue;
+
+                    updatedRow.igst =
+                        "";
+
+                    updatedRow.igstPercentage =
+                        "";
+
+                    updatedRow.igstAmount =
+                        0;
                 } else {
-                    updatedRow.igst = igstValue;
-                    updatedRow.igstPercentage = igstValue;
-                    updatedRow.cgst = "";
-                    updatedRow.cgstPercentage = "";
-                    updatedRow.sgst = "";
-                    updatedRow.sgstPercentage = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
+                    updatedRow.igst =
+                        igstValue;
+
+                    updatedRow.igstPercentage =
+                        igstValue;
+
+                    updatedRow.cgst =
+                        "";
+
+                    updatedRow.cgstPercentage =
+                        "";
+
+                    updatedRow.sgst =
+                        "";
+
+                    updatedRow.sgstPercentage =
+                        "";
+
+                    updatedRow.cgstAmount =
+                        0;
+
+                    updatedRow.sgstAmount =
+                        0;
                 }
 
                 updatedRow =
@@ -2531,6 +2690,7 @@ const SalesOrder = () => {
 
                 return {
                     ...previous,
+
                     products:
                         updatedProducts,
                 };
@@ -2551,7 +2711,8 @@ const SalesOrder = () => {
                     availableQuantityRowIndex,
                     String(createdProductCode),
                     String(createdProductType),
-                    form.sOrderVoucherDate || todayYMD()
+                    form.sOrderVoucherDate ||
+                    todayYMD()
                 );
             }
 
@@ -2626,16 +2787,27 @@ const SalesOrder = () => {
     };
 
     const enableDuplicatePro = useMemo(() => {
-        const duplicateConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct;
-        return (duplicateConfig === true || duplicateConfig === "true");
+        const duplicateConfig =
+            configurations?.[0]?.systemConfiguration
+                ?.allowDuplicateProduct;
+
+        return (
+            duplicateConfig === true ||
+            duplicateConfig === "true"
+        );
     }, [configurations]);
 
-    const handleRowChange = (index: number, key: string, value: any) => {
+    const handleRowChange = (
+        index: number,
+        key: string,
+        value: any
+    ) => {
         if (!form?.sOrderCustomerCode) {
             return toast.error(
                 "Please select customer first"
             );
         }
+
         const duplicate = Boolean(
             form?.products?.some(
                 (
@@ -2669,46 +2841,120 @@ const SalesOrder = () => {
             )
         );
 
-        if (key === "productCode" && duplicate && !enableDuplicatePro) {
-            setErrors((previous: any) => ({
-                ...previous, products: "", [`row_${index}_${key}`]: "This product already added",
-                [`row_${index}_tax`]: "",
-            })
+        if (
+            key === "productCode" &&
+            duplicate &&
+            !enableDuplicatePro
+        ) {
+            setErrors(
+                (previous: any) => ({
+                    ...previous,
+
+                    products:
+                        "",
+
+                    [`row_${index}_${key}`]:
+                        "This product already added",
+
+                    [`row_${index}_tax`]:
+                        "",
+                })
             );
+
             return;
         }
 
         setForm((previous: any) => {
-            const updatedProducts = [...(previous.products || []),];
-            const currentRow = updatedProducts[index] || {};
-            const currentField = getBodyFieldByKey(key);
+            const updatedProducts = [
+                ...(previous.products || []),
+            ];
+
+            const currentRow =
+                updatedProducts[index] ||
+                {};
+
+            const currentField =
+                getBodyFieldByKey(key);
+
             let updatedRow = {
                 ...currentRow,
                 [key]: value,
             };
 
-            if (currentField?.mapFields) {
-                updatedRow = applyMappedFields(currentField, value, updatedRow);
+            if (
+                currentField?.mapFields
+            ) {
+                updatedRow =
+                    applyMappedFields(
+                        currentField,
+                        value,
+                        updatedRow
+                    );
             }
-            const selectedOption = getOptionByValue(currentField, value);
-            const raw = selectedOption?.raw || {};
 
-            if (raw?._id && !updatedRow.productId) {
-                updatedRow.productId = raw._id;
+            const selectedOption =
+                getOptionByValue(
+                    currentField,
+                    value
+                );
+
+            const raw =
+                selectedOption?.raw ||
+                {};
+
+            if (
+                raw?._id &&
+                !updatedRow.productId
+            ) {
+                updatedRow.productId =
+                    raw._id;
             }
 
-            if (key === "productCode" || key === "productName" || key === "productId") {
-                const getCustomer = filterAccount?.find((e: any) => e.accountCode == previous?.sOrderCustomerCode);
-                updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || ""; updatedRow.availableQuantity = null;
-                updatedRow.productDescription = raw?.productDescription || "";
-                const marginProduct = isTrueValue(raw?.dynamicFields?.marginProduct);
+            if (
+                key === "productCode" ||
+                key === "productName" ||
+                key === "productId"
+            ) {
+                const getCustomer =
+                    filterAccount?.find(
+                        (e: any) =>
+                            e.accountCode ==
+                            previous?.sOrderCustomerCode
+                    );
 
-                updatedRow.marginProduct = marginProduct;
+                updatedRow.productType =
+                    raw?.productType ||
+                    raw?.dynamicFields?.productType ||
+                    "";
+
+                updatedRow.availableQuantity =
+                    null;
+
+                updatedRow.productDescription =
+                    raw?.productDescription ||
+                    "";
+
+                const marginProduct =
+                    isTrueValue(
+                        raw?.dynamicFields
+                            ?.marginProduct
+                    );
+
+                updatedRow.marginProduct =
+                    marginProduct;
+
                 if (!marginProduct) {
-                    updatedRow.taxRate = "";
-                    updatedRow.nonTaxRate = "";
-                    updatedRow.taxGross = "";
-                    updatedRow.nonTaxGross = "";
+                    updatedRow.taxRate =
+                        "";
+
+                    updatedRow.nonTaxRate =
+                        "";
+
+                    updatedRow.taxGross =
+                        "";
+
+                    updatedRow.nonTaxGross =
+                        "";
                 }
 
                 const cgstValue =
@@ -2740,46 +2986,103 @@ const SalesOrder = () => {
                     raw?.tax?.igst ??
                     "";
 
-                if (company?.state?.isoCode == getCustomer?.state?.isoCode) {
-                    updatedRow.cgst = cgstValue;
-                    updatedRow.cgstPercentage = cgstValue;
-                    updatedRow.sgst = sgstValue;
-                    updatedRow.sgstPercentage = sgstValue;
-                    updatedRow.igst = "";
-                    updatedRow.igstPercentage = "";
-                    updatedRow.igstAmount = 0;
+                if (
+                    company?.state?.isoCode ==
+                    getCustomer?.state?.isoCode
+                ) {
+                    updatedRow.cgst =
+                        cgstValue;
+
+                    updatedRow.cgstPercentage =
+                        cgstValue;
+
+                    updatedRow.sgst =
+                        sgstValue;
+
+                    updatedRow.sgstPercentage =
+                        sgstValue;
+
+                    updatedRow.igst =
+                        "";
+
+                    updatedRow.igstPercentage =
+                        "";
+
+                    updatedRow.igstAmount =
+                        0;
                 } else {
-                    updatedRow.igst = igstValue;
-                    updatedRow.igstPercentage = igstValue;
-                    updatedRow.cgst = "";
-                    updatedRow.cgstPercentage = "";
-                    updatedRow.sgst = "";
-                    updatedRow.sgstPercentage = "";
-                    updatedRow.cgstAmount = 0;
-                    updatedRow.sgstAmount = 0;
+                    updatedRow.igst =
+                        igstValue;
+
+                    updatedRow.igstPercentage =
+                        igstValue;
+
+                    updatedRow.cgst =
+                        "";
+
+                    updatedRow.cgstPercentage =
+                        "";
+
+                    updatedRow.sgst =
+                        "";
+
+                    updatedRow.sgstPercentage =
+                        "";
+
+                    updatedRow.cgstAmount =
+                        0;
+
+                    updatedRow.sgstAmount =
+                        0;
                 }
             }
 
-            updatedRow = normalizeRowKeys(updatedRow);
+            updatedRow =
+                normalizeRowKeys(
+                    updatedRow
+                );
 
-            const lowerKey = String(key || "").toLowerCase();
-            const isCgst = lowerKey === "cgst" || lowerKey === "cgstpercentage";
-            const isSgst = lowerKey === "sgst" || lowerKey === "sgstpercentage";
-            const isIgst = lowerKey === "igst" || lowerKey === "igstpercentage";
+            const lowerKey =
+                String(key || "")
+                    .toLowerCase();
+
+            const isCgst =
+                lowerKey === "cgst" ||
+                lowerKey ===
+                "cgstpercentage";
+
+            const isSgst =
+                lowerKey === "sgst" ||
+                lowerKey ===
+                "sgstpercentage";
+
+            const isIgst =
+                lowerKey === "igst" ||
+                lowerKey ===
+                "igstpercentage";
 
             if (isCgst) {
-                updatedRow.cgst = value;
-                updatedRow.cgstPercentage = value;
+                updatedRow.cgst =
+                    value;
+
+                updatedRow.cgstPercentage =
+                    value;
             }
 
             if (isSgst) {
-                updatedRow.sgst = value;
-                updatedRow.sgstPercentage = value;
+                updatedRow.sgst =
+                    value;
+
+                updatedRow.sgstPercentage =
+                    value;
             }
 
             if (isIgst) {
-                updatedRow.igst = value;
-                updatedRow.igstPercentage = value;
+                updatedRow.igst =
+                    value;
+
+                updatedRow.igstPercentage =
+                    value;
             }
 
             if (
@@ -2789,63 +3092,148 @@ const SalesOrder = () => {
                 ) &&
                 num(value) > 0
             ) {
-                updatedRow.igst = "";
-                updatedRow.igstPercentage = "";
-                updatedRow.igstAmount = 0;
+                updatedRow.igst =
+                    "";
+
+                updatedRow.igstPercentage =
+                    "";
+
+                updatedRow.igstAmount =
+                    0;
             }
 
             if (
                 isIgst &&
                 num(value) > 0
             ) {
-                updatedRow.cgst = "";
-                updatedRow.cgstPercentage = "";
-                updatedRow.sgst = "";
-                updatedRow.sgstPercentage = "";
-                updatedRow.cgstAmount = 0;
-                updatedRow.sgstAmount = 0;
+                updatedRow.cgst =
+                    "";
+
+                updatedRow.cgstPercentage =
+                    "";
+
+                updatedRow.sgst =
+                    "";
+
+                updatedRow.sgstPercentage =
+                    "";
+
+                updatedRow.cgstAmount =
+                    0;
+
+                updatedRow.sgstAmount =
+                    0;
             }
 
             updatedRow =
-                calculateRow(updatedRow, key);
+                calculateRow(
+                    updatedRow,
+                    key
+                );
 
             updatedProducts[index] =
                 updatedRow;
 
             return {
                 ...previous,
+
                 products:
                     updatedProducts,
             };
         });
 
-        if (PRODUCT_FIELD_KEYS.has(key)) {
-            const currentField = getBodyFieldByKey(key);
-            const selectedOption = getOptionByValue(currentField, value);
-            const raw = selectedOption?.raw || {};
-            const productCode = raw?.productCode || selectedOption?.value || value || "";
-            const productType = raw?.productType || raw?.dynamicFields?.productType || "";
+        if (
+            PRODUCT_FIELD_KEYS.has(
+                key
+            )
+        ) {
+            const currentField =
+                getBodyFieldByKey(
+                    key
+                );
+
+            const selectedOption =
+                getOptionByValue(
+                    currentField,
+                    value
+                );
+
+            const raw =
+                selectedOption?.raw ||
+                {};
+
+            const productCode =
+                raw?.productCode ||
+                selectedOption?.value ||
+                value ||
+                "";
+
+            const productType =
+                raw?.productType ||
+                raw?.dynamicFields?.productType ||
+                "";
+
             if (productCode) {
-                void loadAvailableQuantity(index, String(productCode), String(productType), form.sOrderVoucherDate || todayYMD());
+                void loadAvailableQuantity(
+                    index,
+                    String(
+                        productCode
+                    ),
+                    String(
+                        productType
+                    ),
+                    form.sOrderVoucherDate ||
+                    todayYMD()
+                );
             }
         }
 
-        setErrors((previous: any) => ({
-            ...previous,
-            products: "",
-            [`row_${index}_${key}`]: "",
-            [`row_${index}_tax`]: "",
-        }));
+        setErrors(
+            (previous: any) => ({
+                ...previous,
+
+                products:
+                    "",
+
+                [`row_${index}_${key}`]:
+                    "",
+
+                [`row_${index}_tax`]:
+                    "",
+            })
+        );
     };
 
     const getFilledRows = () => {
-        return (form.products || []).filter((row: any) => {
-            const visibleFields = (templateFields?.body || []).filter((field: any) => isBodyFieldVisibleForRow(field, row));
+        return (
+            form.products ||
+            []
+        ).filter((row: any) => {
+            const visibleFields =
+                (
+                    templateFields?.body ||
+                    []
+                ).filter(
+                    (field: any) =>
+                        isBodyFieldVisibleForRow(
+                            field,
+                            row
+                        )
+                );
 
             return visibleFields.some(
                 (field: any) => {
-                    const value = row?.[field.key];
-                    return (value !== undefined && value !== null && value !== "");
+                    const value =
+                        row?.[
+                        field.key
+                        ];
+
+                    return (
+                        value !==
+                        undefined &&
+                        value !== null &&
+                        value !== ""
+                    );
                 }
             );
         });
@@ -2855,43 +3243,93 @@ const SalesOrder = () => {
         const validationErrors: any =
             {};
 
-        (templateFields?.header || []).forEach((field: any) => {
-            if (isTrueValue(field?.isHidden)) {
+        (
+            templateFields?.header ||
+            []
+        ).forEach((field: any) => {
+            if (
+                isTrueValue(
+                    field?.isHidden
+                )
+            ) {
                 return;
             }
 
-            if (!isTrueValue(field?.isRequired)) {
+            if (
+                !isTrueValue(
+                    field?.isRequired
+                )
+            ) {
                 return;
             }
 
-            const value = form?.[field.key];
-            if (value === undefined || value === null || value === "") {
-                validationErrors[field.key] = `${field.label || field.title || field.key} is required`;
+            const value =
+                form?.[
+                field.key
+                ];
+
+            if (
+                value === undefined ||
+                value === null ||
+                value === ""
+            ) {
+                validationErrors[
+                    field.key
+                ] =
+                    `${field.label ||
+                    field.title ||
+                    field.key
+                    } is required`;
             }
         });
 
-        const filledRows = getFilledRows();
+        const filledRows =
+            getFilledRows();
 
-        if (filledRows.length === 0) {
-            validationErrors.products = "Please add at least one product";
+        if (
+            filledRows.length ===
+            0
+        ) {
+            validationErrors.products =
+                "Please add at least one product";
         }
 
-        (form.products || []).forEach((row: any, index: number) => {
-                const visibleFields = (
-                    templateFields?.body ||
-                    []
-                ).filter((field: any) =>
-                    isBodyFieldVisibleForRow(
-                        field,
-                        row
-                    )
-                );
+        (
+            form.products ||
+            []
+        ).forEach(
+            (
+                row: any,
+                index: number
+            ) => {
+                const visibleFields =
+                    (
+                        templateFields?.body ||
+                        []
+                    ).filter(
+                        (field: any) =>
+                            isBodyFieldVisibleForRow(
+                                field,
+                                row
+                            )
+                    );
 
                 const hasAnyValue =
                     visibleFields.some(
                         (field: any) => {
-                            const value = row?.[field.key];
-                            return (value !== undefined && value !== null && value !== "");
+                            const value =
+                                row?.[
+                                field.key
+                                ];
+
+                            return (
+                                value !==
+                                undefined &&
+                                value !==
+                                null &&
+                                value !==
+                                ""
+                            );
                         }
                     );
 
@@ -2901,30 +3339,123 @@ const SalesOrder = () => {
 
                 visibleFields.forEach(
                     (field: any) => {
-                        if (!isTrueValue(field?.isRequired)) {
+                        if (
+                            !isTrueValue(
+                                field?.isRequired
+                            )
+                        ) {
                             return;
                         }
 
-                        const value = row?.[field.key];
-                        if (value === undefined || value === null || value === "") {
-                            validationErrors[`row_${index}_${field.key}`] = `${field.label || field.title || field.key} is required`;
+                        const value =
+                            row?.[
+                            field.key
+                            ];
+
+                        if (
+                            value ===
+                            undefined ||
+                            value ===
+                            null ||
+                            value ===
+                            ""
+                        ) {
+                            validationErrors[
+                                `row_${index}_${field.key}`
+                            ] =
+                                `${field.label ||
+                                field.title ||
+                                field.key
+                                } is required`;
                         }
                     }
                 );
 
-            const cgst = num(row.cgstPercentage || row.cgst);
-            const sgst = num(row.sgstPercentage || row.sgst);
-            const igst = num(row.igstPercentage || row.igst);
+                // PARTIAL SALES QUOTATION ALLOCATION
+                if (
+                    !editingRecord &&
+                    form?.sOrderQuotationVoucherNumber &&
+                    row?.quotationPendingQuantity !==
+                    null &&
+                    row?.quotationPendingQuantity !==
+                    undefined &&
+                    num(
+                        row?.quantity
+                    ) >
+                    num(
+                        row
+                            ?.quotationPendingQuantity
+                    )
+                ) {
+                    validationErrors[
+                        `row_${index}_quantity`
+                    ] =
+                        `Quantity cannot exceed pending Sales Quotation quantity ${num(
+                            row
+                                ?.quotationPendingQuantity
+                        )}`;
+                }
 
-            if (igst > 0 && (cgst > 0 || sgst > 0)) {
-                validationErrors[`row_${index}_tax`] = "You can enter either IGST or CGST/SGST";
-                validationErrors[`row_${index}_igstPercentage`] = "Only one tax type allowed";
-                validationErrors[`row_${index}_cgstPercentage`] = "Only one tax type allowed";
-                validationErrors[`row_${index}_sgstPercentage`] = "Only one tax type allowed";
-                validationErrors[`row_${index}_igst`] = "Only one tax type allowed";
-                validationErrors[`row_${index}_cgst`] = "Only one tax type allowed";
-                validationErrors[`row_${index}_sgst`] = "Only one tax type allowed";
-            }
+                const cgst =
+                    num(
+                        row.cgstPercentage ||
+                        row.cgst
+                    );
+
+                const sgst =
+                    num(
+                        row.sgstPercentage ||
+                        row.sgst
+                    );
+
+                const igst =
+                    num(
+                        row.igstPercentage ||
+                        row.igst
+                    );
+
+                if (
+                    igst > 0 &&
+                    (
+                        cgst > 0 ||
+                        sgst > 0
+                    )
+                ) {
+                    validationErrors[
+                        `row_${index}_tax`
+                    ] =
+                        "You can enter either IGST or CGST/SGST";
+
+                    validationErrors[
+                        `row_${index}_igstPercentage`
+                    ] =
+                        "Only one tax type allowed";
+
+                    validationErrors[
+                        `row_${index}_cgstPercentage`
+                    ] =
+                        "Only one tax type allowed";
+
+                    validationErrors[
+                        `row_${index}_sgstPercentage`
+                    ] =
+                        "Only one tax type allowed";
+
+                    validationErrors[
+                        `row_${index}_igst`
+                    ] =
+                        "Only one tax type allowed";
+
+                    validationErrors[
+                        `row_${index}_cgst`
+                    ] =
+                        "Only one tax type allowed";
+
+                    validationErrors[
+                        `row_${index}_sgst`
+                    ] =
+                        "Only one tax type allowed";
+                }
             }
         );
 
@@ -2998,21 +3529,302 @@ const SalesOrder = () => {
             );
         };
 
+    // PARTIAL SALES QUOTATION ALLOCATION
+    const getSalesQuotationByVoucherNumber =
+        async (
+            voucherNumber: string
+        ) => {
+            if (!voucherNumber) {
+                return null;
+            }
+
+            const response =
+                await professionalAxios.get(
+                    `/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesQuotation/getByVoucherNumber/${encodeURIComponent(
+                        voucherNumber
+                    )}`
+                );
+
+            return (
+                response?.data?.data ||
+                response?.data ||
+                null
+            );
+        };
+
+    // PARTIAL SALES QUOTATION ALLOCATION
+    const getQuotationSalesOrderSummary =
+        async (
+            quotation: any
+        ) => {
+            const quotationVoucherNumber =
+                String(
+                    quotation?.sQuoteVoucherNumber ||
+                    ""
+                ).trim();
+
+            const quotationBody =
+                Array.isArray(
+                    quotation?.sQuoteBody
+                )
+                    ? quotation.sQuoteBody
+                    : [];
+
+            const response =
+                await professionalAxios.get(
+                    "/eTaxSolnMongoApiBackend/users/bookez/salesFlow/salesOrder/getAll",
+                    {
+                        params: {
+                            offset:
+                                0,
+
+                            limit:
+                                100000,
+
+                            status:
+                                "",
+
+                            search:
+                                "",
+                        },
+                    }
+                );
+
+            const allSalesOrders =
+                getRecords(
+                    response?.data
+                );
+
+            const linkedSalesOrders =
+                (
+                    allSalesOrders ||
+                    []
+                ).filter(
+                    (order: any) =>
+                        String(
+                            order?.sOrderQuotationVoucherNumber ||
+                            ""
+                        ).trim() ===
+                        quotationVoucherNumber
+                );
+
+            const quotationQuantityMap =
+                new Map<
+                    string,
+                    number
+                >();
+
+            const orderedQuantityMap =
+                new Map<
+                    string,
+                    number
+                >();
+
+            quotationBody.forEach(
+                (item: any) => {
+                    const productCode =
+                        String(
+                            item?.productCode ||
+                            ""
+                        ).trim();
+
+                    if (
+                        !productCode
+                    ) {
+                        return;
+                    }
+
+                    quotationQuantityMap.set(
+                        productCode,
+                        num(
+                            quotationQuantityMap.get(
+                                productCode
+                            )
+                        ) +
+                        num(
+                            item?.quantity
+                        )
+                    );
+                }
+            );
+
+            linkedSalesOrders.forEach(
+                (order: any) => {
+                    (
+                        order?.sOrderBody ||
+                        []
+                    ).forEach(
+                        (item: any) => {
+                            const productCode =
+                                String(
+                                    item?.productCode ||
+                                    ""
+                                ).trim();
+
+                            if (
+                                !productCode
+                            ) {
+                                return;
+                            }
+
+                            orderedQuantityMap.set(
+                                productCode,
+                                num(
+                                    orderedQuantityMap.get(
+                                        productCode
+                                    )
+                                ) +
+                                num(
+                                    item?.quantity
+                                )
+                            );
+                        }
+                    );
+                }
+            );
+
+            const quotationProducts:
+                any[] =
+                [];
+
+            const orderProducts:
+                any[] =
+                [];
+
+            const pendingProducts:
+                any[] =
+                [];
+
+            let totalQuotedQty =
+                0;
+
+            let totalOrderedQty =
+                0;
+
+            let totalPendingQty =
+                0;
+
+            quotationQuantityMap.forEach(
+                (
+                    quotedQty,
+                    productCode
+                ) => {
+                    const orderedQty =
+                        num(
+                            orderedQuantityMap.get(
+                                productCode
+                            )
+                        );
+
+                    const pendingQty =
+                        Math.max(
+                            quotedQty -
+                            orderedQty,
+                            0
+                        );
+
+                    quotationProducts.push({
+                        productCode,
+                        quotedQty,
+                    });
+
+                    orderProducts.push({
+                        productCode,
+                        orderedQty,
+                    });
+
+                    pendingProducts.push({
+                        productCode,
+                        pendingQty,
+                    });
+
+                    totalQuotedQty +=
+                        quotedQty;
+
+                    totalOrderedQty +=
+                        orderedQty;
+
+                    totalPendingQty +=
+                        pendingQty;
+                }
+            );
+
+            return {
+                quotation: {
+                    sQuoteVoucherNumber:
+                        quotationVoucherNumber,
+
+                    totalQuotedQty,
+
+                    products:
+                        quotationProducts,
+                },
+
+                order: {
+                    totalOrderedQty,
+
+                    products:
+                        orderProducts,
+                },
+
+                pending: {
+                    totalPendingQty,
+
+                    products:
+                        pendingProducts,
+                },
+            };
+        };
+
+    // PARTIAL SALES QUOTATION ALLOCATION
     const syncQuotationStatusAfterSalesOrdr =
-        async (voucherNumber: string) => {
+        async (
+            voucherNumber: string
+        ) => {
             if (!voucherNumber) {
                 return "";
             }
 
             try {
+                const quotation =
+                    await getSalesQuotationByVoucherNumber(
+                        voucherNumber
+                    );
+
+                if (!quotation) {
+                    throw new Error(
+                        "Sales Quotation not found"
+                    );
+                }
+
+                const summary =
+                    await getQuotationSalesOrderSummary(
+                        quotation
+                    );
+
+                const totalPendingQty =
+                    num(
+                        summary
+                            ?.pending
+                            ?.totalPendingQty
+                    );
+
+                const isFullyConverted =
+                    totalPendingQty <=
+                    0;
+
                 await dispatch(
                     updateSalesQuotation({
                         payload: {
                             sQuoteDocStatus:
-                                "close",
+                                isFullyConverted
+                                    ? "close"
+                                    : "open",
 
                             sQuoteStatus:
-                                "close",
+                                isFullyConverted
+                                    ? "close"
+                                    : "won",
                         },
 
                         sQuoteVoucherNumber:
@@ -3021,8 +3833,21 @@ const SalesOrder = () => {
                 );
 
                 await fetchSalesQuotations();
-            } catch (error) {
+
+                return isFullyConverted
+                    ? "close"
+                    : "won";
+            } catch (error: any) {
+                console.log(
+                    "Failed to sync Sales Quotation status after Sales Order",
+                    error
+                );
+
                 toast.error(
+                    error?.response
+                        ?.data
+                        ?.message ||
+                    error?.message ||
                     "Sales Order saved but failed to update Sales Quotation status"
                 );
 
@@ -3439,6 +4264,16 @@ const SalesOrder = () => {
                     }) as any
                 ).unwrap();
 
+                if (
+                    form
+                        ?.sOrderQuotationVoucherNumber
+                ) {
+                    await syncQuotationStatusAfterSalesOrdr(
+                        form
+                            ?.sOrderQuotationVoucherNumber
+                    );
+                }
+
                 toast.success(
                     "Sales order updated successfully"
                 );
@@ -3453,7 +4288,7 @@ const SalesOrder = () => {
                     form
                         ?.sOrderQuotationVoucherNumber
                 ) {
-                    syncQuotationStatusAfterSalesOrdr(
+                    await syncQuotationStatusAfterSalesOrdr(
                         form
                             ?.sOrderQuotationVoucherNumber
                     );
@@ -3512,20 +4347,9 @@ const SalesOrder = () => {
                 if (
                     salesQuotationVoucherNumber
                 ) {
-                    await dispatch(
-                        updateSalesQuotation({
-                            sQuoteVoucherNumber:
-                                salesQuotationVoucherNumber,
-
-                            payload: {
-                                sQuoteDocStatus:
-                                    "open",
-
-                                sQuoteStatus:
-                                    "won",
-                            },
-                        }) as any
-                    ).unwrap();
+                    await syncQuotationStatusAfterSalesOrdr(
+                        salesQuotationVoucherNumber
+                    );
                 }
 
                 toast.success(
@@ -3550,170 +4374,575 @@ const SalesOrder = () => {
             }
         };
 
+    // PARTIAL SALES QUOTATION ALLOCATION
     const handlePurchaseOrderConfirm = async () => {
         if (!selectedPurchaseOrder) {
-            toast.error("Please select Sales Quotation");
+            toast.error(
+                "Please select Sales Quotation"
+            );
+
             return;
         }
 
-        const quotationBody = selectedPurchaseOrder?.sQuoteBody || [];
+        let quotationSummary:
+            any =
+            null;
 
-        const products = quotationBody.length > 0
-            ? quotationBody.map((item: any) => {
-                const productMaster = getProductMasterFromRow(item) || {};
-                const productType = String(
-                    item?.productType ||
-                    productMaster?.productType ||
-                    productMaster?.dynamicFields?.productType ||
-                    ""
-                ).trim().toLowerCase();
+        try {
+            quotationSummary =
+                await getQuotationSalesOrderSummary(
+                    selectedPurchaseOrder
+                );
+        } catch (error: any) {
+            console.log(
+                "Failed to load Sales Quotation pending quantity",
+                error
+            );
 
-                const row = normalizeRowKeys({
-                    ...(item?.dynamicBodyFields || {}),
-                    ...item,
-                    id: Date.now() + Math.random(),
-                    productCode: item?.productCode || "",
-                    productName: item?.productName || "",
-                    productId: item?.productId || "",
-                    productDescription: item?.productDescription || item?.description || "",
-                    description: item?.description || item?.productDescription || "",
-                    productHSNCode: item?.productHSNCode || "",
-                    remarks: item?.remarks || "",
-                    quantity: String(item?.quantity ?? ""),
-                    availableQuantity: null,
-                    productType,
-                    unit: item?.unit || item?.uom,
-                    uom: item?.uom || item?.unit,
-                    rate: String(item?.rate ?? ""),
-                    gross: item?.grossAmount || item?.gross || 0,
-                    grossAmount: item?.grossAmount || item?.gross || 0,
-                    discount: item?.discountPercentage || item?.discount || "",
-                    discountPercentage: item?.discountPercentage || item?.discount || "",
-                    discountAmount: item?.discountAmount ?? "",
-                    taxableAmount: item?.taxableAmount || 0,
-                    cgst: item?.cgstPercentage || item?.cgst || "",
-                    cgstPercentage: item?.cgstPercentage || item?.cgst || "",
-                    cgstAmount: item?.cgstAmount || 0,
-                    sgst: item?.sgstPercentage || item?.sgst || "",
-                    sgstPercentage: item?.sgstPercentage || item?.sgst || "",
-                    sgstAmount: item?.sgstAmount || 0,
-                    igst: item?.igstPercentage || item?.igst || "",
-                    igstPercentage: item?.igstPercentage || item?.igst || "",
-                    igstAmount: item?.igstAmount || 0,
-                    taxAmount: item?.taxAmount || 0,
-                    otherAmount: item?.otherAmount || 0,
-                    netAmount: item?.netAmount || item?.netTotal || 0,
-                    netTotal: item?.netTotal || item?.netAmount || 0,
-                    marginProduct: isTrueValue(item?.marginProduct),
-                    taxRate: item?.taxRate ?? item?.dynamicBodyFields?.taxRate ?? "",
-                    nonTaxRate: item?.nonTaxRate ?? item?.dynamicBodyFields?.nonTaxRate ?? "",
-                    taxGross: item?.taxGross ?? item?.dynamicBodyFields?.taxGross ?? "",
-                    nonTaxGross: item?.nonTaxGross ?? item?.dynamicBodyFields?.nonTaxGross ?? "",
-                });
+            toast.error(
+                error?.response
+                    ?.data
+                    ?.message ||
+                error?.message ||
+                "Failed to load Sales Quotation pending quantity"
+            );
 
-                return calculateRow(row);
-            })
-            : [{ ...emptyProductRow, id: Date.now() }];
+            return;
+        }
 
-        const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+        const pendingProducts =
+            Array.isArray(
+                quotationSummary
+                    ?.pending
+                    ?.products
+            )
+                ? quotationSummary
+                    .pending
+                    .products
+                : [];
 
-        const productsWithBalance = await Promise.all(products.map(async (item: any) => {
-            const productCode = String(item?.productCode || "").trim();
+        const pendingQtyByProduct =
+            new Map<
+                string,
+                number
+            >();
 
-            if (!productCode) return item;
+        pendingProducts.forEach(
+            (item: any) => {
+                const productCode =
+                    String(
+                        item?.productCode ||
+                        ""
+                    ).trim();
 
-            const productMaster = getProductMasterFromRow(item) || {};
+                if (
+                    !productCode
+                ) {
+                    return;
+                }
 
-            const productType = String(
-                item?.productType ||
-                productMaster?.productType ||
-                productMaster?.dynamicFields?.productType ||
-                ""
-            ).trim().toLowerCase();
-
-            if (
-                productType === "nonstocks" ||
-                (productType === "serviceproduct" && !enableServiceProductInventory)
-            ) {
-                return {
-                    ...item,
-                    productType,
-                    availableQuantity: null,
-                };
+                pendingQtyByProduct.set(
+                    productCode,
+                    num(
+                        item?.pendingQty
+                    )
+                );
             }
+        );
 
-            try {
-                const balance: any = await dispatch(
-                    getProductBalance({
-                        productCode,
-                        fromDate,
-                        toDate,
-                    }) as any
-                ).unwrap();
+        const quotationBody =
+            selectedPurchaseOrder
+                ?.sQuoteBody ||
+            [];
 
-                return {
-                    ...item,
-                    productType,
-                    availableQuantity:
-                        balance?.balanceQuantity !== undefined &&
-                            balance?.balanceQuantity !== null
-                            ? balance.balanceQuantity
-                            : null,
-                };
-            } catch (error) {
-                console.log(`Failed to fetch available quantity for ${productCode}`, error);
+        const products =
+            quotationBody.length >
+                0
+                ? quotationBody
+                    .map(
+                        (item: any) => {
+                            const productMaster =
+                                getProductMasterFromRow(
+                                    item
+                                ) || {};
 
-                return {
-                    ...item,
-                    productType,
-                    availableQuantity: null,
-                };
-            }
-        }));
+                            const productType =
+                                String(
+                                    item?.productType ||
+                                    productMaster?.productType ||
+                                    productMaster?.dynamicFields?.productType ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toLowerCase();
+
+                            const productCode =
+                                String(
+                                    item?.productCode ||
+                                    ""
+                                ).trim();
+
+                            const quotedQuantity =
+                                num(
+                                    item?.quantity
+                                );
+
+                            const currentPendingQuantity =
+                                pendingQtyByProduct.has(
+                                    productCode
+                                )
+                                    ? num(
+                                        pendingQtyByProduct.get(
+                                            productCode
+                                        )
+                                    )
+                                    : 0;
+
+                            const rowPendingQuantity =
+                                Math.min(
+                                    Math.max(
+                                        quotedQuantity,
+                                        0
+                                    ),
+                                    Math.max(
+                                        currentPendingQuantity,
+                                        0
+                                    )
+                                );
+
+                            if (
+                                productCode
+                            ) {
+                                pendingQtyByProduct.set(
+                                    productCode,
+                                    Math.max(
+                                        currentPendingQuantity -
+                                        rowPendingQuantity,
+                                        0
+                                    )
+                                );
+                            }
+
+                            const row =
+                                normalizeRowKeys({
+                                    ...(
+                                        item?.dynamicBodyFields ||
+                                        {}
+                                    ),
+
+                                    ...item,
+
+                                    id:
+                                        Date.now() +
+                                        Math.random(),
+
+                                    productCode:
+                                        item?.productCode ||
+                                        "",
+
+                                    productName:
+                                        item?.productName ||
+                                        "",
+
+                                    productId:
+                                        item?.productId ||
+                                        "",
+
+                                    productDescription:
+                                        item?.productDescription ||
+                                        item?.description ||
+                                        "",
+
+                                    description:
+                                        item?.description ||
+                                        item?.productDescription ||
+                                        "",
+
+                                    productHSNCode:
+                                        item?.productHSNCode ||
+                                        "",
+
+                                    remarks:
+                                        item?.remarks ||
+                                        "",
+
+                                    quantity:
+                                        String(
+                                            rowPendingQuantity
+                                        ),
+
+                                    quotationPendingQuantity:
+                                        rowPendingQuantity,
+
+                                    quotationQuotedQuantity:
+                                        quotedQuantity,
+
+                                    availableQuantity:
+                                        null,
+
+                                    productType,
+
+                                    unit:
+                                        item?.unit ||
+                                        item?.uom,
+
+                                    uom:
+                                        item?.uom ||
+                                        item?.unit,
+
+                                    rate:
+                                        String(
+                                            item?.rate ??
+                                            ""
+                                        ),
+
+                                    gross:
+                                        item?.grossAmount ||
+                                        item?.gross ||
+                                        0,
+
+                                    grossAmount:
+                                        item?.grossAmount ||
+                                        item?.gross ||
+                                        0,
+
+                                    discount:
+                                        item?.discountPercentage ||
+                                        item?.discount ||
+                                        "",
+
+                                    discountPercentage:
+                                        item?.discountPercentage ||
+                                        item?.discount ||
+                                        "",
+
+                                    discountAmount:
+                                        item?.discountAmount ??
+                                        "",
+
+                                    taxableAmount:
+                                        item?.taxableAmount ||
+                                        0,
+
+                                    cgst:
+                                        item?.cgstPercentage ||
+                                        item?.cgst ||
+                                        "",
+
+                                    cgstPercentage:
+                                        item?.cgstPercentage ||
+                                        item?.cgst ||
+                                        "",
+
+                                    cgstAmount:
+                                        item?.cgstAmount ||
+                                        0,
+
+                                    sgst:
+                                        item?.sgstPercentage ||
+                                        item?.sgst ||
+                                        "",
+
+                                    sgstPercentage:
+                                        item?.sgstPercentage ||
+                                        item?.sgst ||
+                                        "",
+
+                                    sgstAmount:
+                                        item?.sgstAmount ||
+                                        0,
+
+                                    igst:
+                                        item?.igstPercentage ||
+                                        item?.igst ||
+                                        "",
+
+                                    igstPercentage:
+                                        item?.igstPercentage ||
+                                        item?.igst ||
+                                        "",
+
+                                    igstAmount:
+                                        item?.igstAmount ||
+                                        0,
+
+                                    taxAmount:
+                                        item?.taxAmount ||
+                                        0,
+
+                                    otherAmount:
+                                        item?.otherAmount ||
+                                        0,
+
+                                    netAmount:
+                                        item?.netAmount ||
+                                        item?.netTotal ||
+                                        0,
+
+                                    netTotal:
+                                        item?.netTotal ||
+                                        item?.netAmount ||
+                                        0,
+
+                                    marginProduct:
+                                        isTrueValue(
+                                            item?.marginProduct
+                                        ),
+
+                                    taxRate:
+                                        item?.taxRate ??
+                                        item?.dynamicBodyFields?.taxRate ??
+                                        "",
+
+                                    nonTaxRate:
+                                        item?.nonTaxRate ??
+                                        item?.dynamicBodyFields?.nonTaxRate ??
+                                        "",
+
+                                    taxGross:
+                                        item?.taxGross ??
+                                        item?.dynamicBodyFields?.taxGross ??
+                                        "",
+
+                                    nonTaxGross:
+                                        item?.nonTaxGross ??
+                                        item?.dynamicBodyFields?.nonTaxGross ??
+                                        "",
+                                });
+
+                            return calculateRow(
+                                row
+                            );
+                        }
+                    )
+                    .filter(
+                        (item: any) =>
+                            !item?.productCode ||
+                            num(
+                                item
+                                    ?.quotationPendingQuantity
+                            ) > 0
+                    )
+                : [
+                    {
+                        ...emptyProductRow,
+
+                        id:
+                            Date.now(),
+                    },
+                ];
+
+        if (
+            quotationBody.length >
+            0 &&
+            products.length ===
+            0
+        ) {
+            await syncQuotationStatusAfterSalesOrdr(
+                selectedPurchaseOrder
+                    ?.sQuoteVoucherNumber
+            );
+
+            toast.info(
+                "This Sales Quotation is already fully converted to Sales Order"
+            );
+
+            setShowPurchaseOrderModal(
+                false
+            );
+
+            setSelectedPurchaseOrder(
+                null
+            );
+
+            return;
+        }
+
+        const {
+            fromDate,
+            toDate,
+        } =
+            getFinancialYearRange(
+                todayYMD()
+            );
+
+        const productsWithBalance =
+            await Promise.all(
+                products.map(
+                    async (
+                        item: any
+                    ) => {
+                        const productCode =
+                            String(
+                                item?.productCode ||
+                                ""
+                            ).trim();
+
+                        if (
+                            !productCode
+                        ) {
+                            return item;
+                        }
+
+                        const productMaster =
+                            getProductMasterFromRow(
+                                item
+                            ) || {};
+
+                        const productType =
+                            String(
+                                item?.productType ||
+                                productMaster?.productType ||
+                                productMaster?.dynamicFields?.productType ||
+                                ""
+                            )
+                                .trim()
+                                .toLowerCase();
+
+                        if (
+                            productType ===
+                            "nonstocks" ||
+                            (
+                                productType ===
+                                "serviceproduct" &&
+                                !enableServiceProductInventory
+                            )
+                        ) {
+                            return {
+                                ...item,
+
+                                productType,
+
+                                availableQuantity:
+                                    null,
+                            };
+                        }
+
+                        try {
+                            const balance: any =
+                                await dispatch(
+                                    getProductBalance({
+                                        productCode,
+
+                                        fromDate,
+
+                                        toDate,
+                                    }) as any
+                                ).unwrap();
+
+                            return {
+                                ...item,
+
+                                productType,
+
+                                availableQuantity:
+                                    balance?.balanceQuantity !==
+                                        undefined &&
+                                        balance?.balanceQuantity !==
+                                        null
+                                        ? balance
+                                            .balanceQuantity
+                                        : null,
+                            };
+                        } catch (
+                        error
+                        ) {
+                            console.log(
+                                `Failed to fetch available quantity for ${productCode}`,
+                                error
+                            );
+
+                            return {
+                                ...item,
+
+                                productType,
+
+                                availableQuantity:
+                                    null,
+                            };
+                        }
+                    }
+                )
+            );
 
         setForm({
             ...getDefaultForm(),
 
-            sOrderQuotationVoucherNumber: selectedPurchaseOrder?.sQuoteVoucherNumber,
+            sOrderQuotationVoucherNumber:
+                selectedPurchaseOrder
+                    ?.sQuoteVoucherNumber,
 
-            sOrderVoucherDate: selectedPurchaseOrder.sQuoteVoucherDate,
+            sOrderVoucherDate:
+                selectedPurchaseOrder
+                    .sQuoteVoucherDate,
 
-            sOrderCustomerCode: selectedPurchaseOrder.sQuoteCustomerCode,
+            sOrderCustomerCode:
+                selectedPurchaseOrder
+                    .sQuoteCustomerCode,
 
-            sOrderCustomerName: selectedPurchaseOrder.sQuoteCustomerName,
+            sOrderCustomerName:
+                selectedPurchaseOrder
+                    .sQuoteCustomerName,
 
-            sOrderSalesAccount: selectedPurchaseOrder.sQuoteSalesAccount || "SA021",
+            sOrderSalesAccount:
+                selectedPurchaseOrder
+                    .sQuoteSalesAccount ||
+                "SA021",
 
             sOrderStatus:
-                selectedPurchaseOrder.sQuoteStatus ||
-                selectedPurchaseOrder.sOrderDocStatus ||
+                selectedPurchaseOrder
+                    .sQuoteStatus ||
+                selectedPurchaseOrder
+                    .sOrderDocStatus ||
                 "open",
 
             sOrderDocStatus:
-                selectedPurchaseOrder.sQuoteDocStatus ||
-                selectedPurchaseOrder.sOrderStatus ||
+                selectedPurchaseOrder
+                    .sQuoteDocStatus ||
+                selectedPurchaseOrder
+                    .sOrderStatus ||
                 "open",
 
             sOrderRemark:
-                selectedPurchaseOrder.sQuoteRemark ||
-                selectedPurchaseOrder.sOrderRemarks ||
+                selectedPurchaseOrder
+                    .sQuoteRemark ||
+                selectedPurchaseOrder
+                    .sOrderRemarks ||
                 "",
 
             sOrderRemarks:
-                selectedPurchaseOrder.sQuoteRemarks ||
-                selectedPurchaseOrder.sOrderRemark ||
+                selectedPurchaseOrder
+                    .sQuoteRemarks ||
+                selectedPurchaseOrder
+                    .sOrderRemark ||
                 "",
 
-            isAutoPost: selectedPurchaseOrder.isAutoPost || false,
+            isAutoPost:
+                selectedPurchaseOrder
+                    .isAutoPost ||
+                false,
 
-            products: productsWithBalance,
+            products:
+                productsWithBalance,
         });
 
         setErrors({});
-        setEditingRecord(null);
-        setShowPurchaseOrderModal(false);
-        setSelectedPurchaseOrder(null);
-        setShowModal(true);
+
+        setEditingRecord(
+            null
+        );
+
+        setShowPurchaseOrderModal(
+            false
+        );
+
+        setSelectedPurchaseOrder(
+            null
+        );
+
+        setShowModal(
+            true
+        );
     };
 
     const handlePurchaseOrderSelect = (
@@ -3784,10 +5013,12 @@ const SalesOrder = () => {
 
                         return {
                             ...field,
+
                             value:
                                 money(
                                     rawValue
                                 ),
+
                             rawValue,
                         };
                     }
@@ -3813,8 +5044,20 @@ const SalesOrder = () => {
             }) as any
         );
 
-        if (!Object.keys(company ?? {})?.length) {
-            dispatch(getCompany({ withParent: true, limit: 100, }) as any
+        if (
+            !Object.keys(
+                company ??
+                {}
+            )?.length
+        ) {
+            dispatch(
+                getCompany({
+                    withParent:
+                        true,
+
+                    limit:
+                        100,
+                }) as any
             );
         }
     }, [dispatch]);
@@ -4476,7 +5719,8 @@ const SalesOrder = () => {
                             })
                         ),
 
-                    rowData: downlaodPDF?.record,
+                    rowData:
+                        downlaodPDF?.record,
 
                     report,
 
