@@ -2032,33 +2032,30 @@ const SalesInVoice = () => {
     const salesInvoiceInputData = useMemo(() => ({ ...templateFieldsWithCreateActions, header: (templateFieldsWithCreateActions?.header || []).filter((field: any) => !isPosPostingField(field)), footer: dynamicFooterArray }), [templateFieldsWithCreateActions, dynamicFooterArray]);
     const handlePurchaseOrderConfirm = async () => {
         if (!selectedPurchaseOrder) {
-            toast.error("Please select purchase order");
+            toast.error("Please select Sales Order");
             return;
         }
+
         const poBody = selectedPurchaseOrder?.sOrderBody || [];
-        const products = poBody?.length ? poBody?.map((item: any) => {
+
+        const products = poBody?.length ? poBody.map((item: any) => {
             const productMaster = getProductMasterFromRow(item) || {};
+
             const bodyCustomMasterValues = Object.fromEntries((templateFields?.body || [])
                 .filter((field: any) => isCustomMasterField(field))
                 .map((field: any) => {
                     const customMasterName = getCustomMasterName(field);
-                    const selectedMaster = item?.customMasters?.[customMasterName] ||
-                        item?.customMasters?.[field?.key] ||
-                        {};
-                    return [
-                        field.key,
-                        selectedMaster?.code || "",
-                    ];
+                    const selectedMaster = item?.customMasters?.[customMasterName] || item?.customMasters?.[field?.key] || {};
+                    return [field.key, selectedMaster?.code || ""];
                 }));
+
+            const productType = String(item?.productType || productMaster?.productType || productMaster?.dynamicFields?.productType || "").trim().toLowerCase();
+
             return calculateRow(normalizeRowKeys({
                 id: Date.now() + Math.random(),
                 ...bodyCustomMasterValues,
-                customMasters: item?.customMasters &&
-                    typeof item.customMasters === "object"
-                    ? { ...item.customMasters }
-                    : {},
+                customMasters: item?.customMasters && typeof item.customMasters === "object" ? { ...item.customMasters } : {},
                 _inventoryBalanceVoucherId: "",
-                // ✅ Store Sales Order voucher in each row
                 sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
                 productCode: item?.productCode || "",
                 productName: item?.productName || "",
@@ -2069,13 +2066,10 @@ const SalesInVoice = () => {
                 remarks: item?.remarks || "",
                 quantity: item?.quantity || "",
                 availableQuantity: null,
-                productType: item?.productType ||
-                    productMaster?.productType ||
-                    productMaster?.dynamicFields?.productType ||
-                    "",
+                productType,
                 unit: item?.unit,
                 uom: item?.uom,
-                unitName: item?.unitName || getUnitLabelFromSchema(item?.unitName),
+                unitName: item?.unitName || getUnitLabelFromSchema(item?.unit || item?.uom),
                 rate: item?.rate || "",
                 gross: item?.gross || item?.grossAmount || 0,
                 grossAmount: item?.grossAmount || item?.gross || 0,
@@ -2097,45 +2091,30 @@ const SalesInVoice = () => {
                 netAmount: item?.netAmount || item?.netTotal || 0,
                 netTotal: item?.netTotal || item?.netAmount || 0,
                 marginProduct: isTrueValue(item?.marginProduct),
-                taxRate: item?.taxRate ??
-                    item?.dynamicBodyFields?.taxRate ??
-                    "",
-                nonTaxRate: item?.nonTaxRate ??
-                    item?.dynamicBodyFields?.nonTaxRate ??
-                    "",
-                taxGross: item?.taxGross ??
-                    item?.dynamicBodyFields?.taxGross ??
-                    "",
-                nonTaxGross: item?.nonTaxGross ??
-                    item?.dynamicBodyFields?.nonTaxGross ??
-                    "",
+                taxRate: item?.taxRate ?? item?.dynamicBodyFields?.taxRate ?? "",
+                nonTaxRate: item?.nonTaxRate ?? item?.dynamicBodyFields?.nonTaxRate ?? "",
+                taxGross: item?.taxGross ?? item?.dynamicBodyFields?.taxGross ?? "",
+                nonTaxGross: item?.nonTaxGross ?? item?.dynamicBodyFields?.nonTaxGross ?? "",
             }));
-        })
-            : [
-                {
-                    ...emptyProductRow,
-                    id: Date.now(),
-                    sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
-                },
-            ];
+        }) : [{
+            ...emptyProductRow,
+            id: Date.now(),
+            sOrderNumber: selectedPurchaseOrder?.sOrderVoucherNumber || "",
+        }];
+
         const { fromDate, toDate } = getFinancialYearRange(todayYMD());
+
         const productsWithBalance = await Promise.all(products.map(async (item: any) => {
             const productCode = String(item?.productCode || "").trim();
             if (!productCode) return item;
+
             const productMaster = getProductMasterFromRow(item) || {};
-            const productType = String(item?.productType ||
-                productMaster?.productType ||
-                productMaster?.dynamicFields?.productType ||
-                "").trim().toLowerCase();
-            if (productType === "nonstocks" ||
-                (productType === "serviceproduct" &&
-                    !enableServiceProductInventory)) {
-                return {
-                    ...item,
-                    productType,
-                    availableQuantity: null,
-                };
+            const productType = String(item?.productType || productMaster?.productType || productMaster?.dynamicFields?.productType || "").trim().toLowerCase();
+
+            if (productType === "nonstocks" || (productType === "serviceproduct" && !enableServiceProductInventory)) {
+                return { ...item, productType, availableQuantity: null };
             }
+
             try {
                 const balance: any = await dispatch(getProductBalance({
                     productCode,
@@ -2143,24 +2122,18 @@ const SalesInVoice = () => {
                     toDate,
                     ...getInventoryBalanceFilters(item),
                 }) as any).unwrap();
+
                 return {
                     ...item,
                     productType,
-                    availableQuantity: balance?.balanceQuantity !== undefined &&
-                        balance?.balanceQuantity !== null
-                        ? balance.balanceQuantity
-                        : null,
+                    availableQuantity: balance?.balanceQuantity !== undefined && balance?.balanceQuantity !== null ? balance.balanceQuantity : null,
                 };
-            }
-            catch (error) {
+            } catch (error) {
                 console.log(`Failed to fetch available quantity for ${productCode}`, error);
-                return {
-                    ...item,
-                    productType,
-                    availableQuantity: null,
-                };
+                return { ...item, productType, availableQuantity: null };
             }
         }));
+
         setForm({
             ...getDefaultForm(),
             sInvVoucherNumber: "AUTO",
@@ -2172,17 +2145,16 @@ const SalesInVoice = () => {
             sInvDocStatus: selectedPurchaseOrder?.sOrderDocStatus || "open",
             sInvStatus: selectedPurchaseOrder?.sOrderStatus || "open",
             sInvRemark: selectedPurchaseOrder?.sOrderRemark || "",
-            sInvRemarks: selectedPurchaseOrder?.sOrderRemark || "",
+            sInvRemarks: selectedPurchaseOrder?.sOrderRemarks || selectedPurchaseOrder?.sOrderRemark || "",
             isAutoPost: selectedPurchaseOrder?.isAutoPost || false,
-            customMasters: selectedPurchaseOrder?.customMasters &&
-                typeof selectedPurchaseOrder.customMasters === "object"
-                ? { ...selectedPurchaseOrder.customMasters }
-                : {},
+            customMasters: selectedPurchaseOrder?.customMasters && typeof selectedPurchaseOrder.customMasters === "object" ? { ...selectedPurchaseOrder.customMasters } : {},
             products: productsWithBalance,
         });
+
         setErrors({});
         setEditingRecord(null);
         setShowPurchaseOrderModal(false);
+        setSelectedPurchaseOrder(null);
         setShowModal(true);
     };
     const handlePurchaseOrderSelect = (purchaseOrder: any) => {
