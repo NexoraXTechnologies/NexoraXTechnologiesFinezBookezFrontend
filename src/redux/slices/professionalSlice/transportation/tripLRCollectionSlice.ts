@@ -173,9 +173,9 @@ export const updateTripLRCollection = createAsyncThunk(
     "tripLRCollection/updateTripLRCollection",
     async ({ voucherNumber, payload }: { voucherNumber: string, payload: any }, { rejectWithValue }) => {
         try {
-            const response = await professionalAxios.put(`/eTaxSolnMongoApiBackend/users/bookEZ/tripLRCollection/update/${voucherNumber}`, {
+            const response = await professionalAxios.put(`/eTaxSolnMongoApiBackend/users/bookEZ/tripLRCollection/update/${voucherNumber}`,
                 payload
-            })
+            )
             return response?.data || null;
         } catch (error: any) {
             return rejectWithValue({

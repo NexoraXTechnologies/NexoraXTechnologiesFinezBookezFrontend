@@ -31,6 +31,7 @@ import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMast
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { createTransportRouteCalculate } from "../../../../redux/slices/professionalSlice/transportation/transportRoutes";
 import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
+import { getAllTransportIndent } from "../../../../redux/slices/professionalSlice/transportation/intendSlice";
 
 
 
@@ -123,6 +124,36 @@ const getOrderFromResponse = (response: any) => {
 		response ||
 		null
 	);
+};
+
+
+const formatProductTypeLabel = (value: any) => {
+	const text = String(value || "").trim();
+	if (!text) return "";
+
+	const normalizedText = text
+		.replace(/[_-]+/g, " ")
+		.replace(/([a-z])([A-Z])/g, "$1 $2")
+		.replace(/\s+/g, " ")
+		.trim();
+
+	const knownLabels: Record<string, string> = {
+		finishedgoods: "Finished Goods",
+		rawmaterial: "Raw Material",
+		semifinishedgoods: "Semi Finished Goods",
+		consumablegoods: "Consumable Goods",
+		tradinggoods: "Trading Goods",
+		service: "Service",
+	};
+
+	const normalizedKey = normalizedText.replace(/\s+/g, "").toLowerCase();
+
+	if (knownLabels[normalizedKey]) return knownLabels[normalizedKey];
+
+	return normalizedText
+		.split(" ")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+		.join(" ");
 };
 
 /* ===================================================
@@ -219,11 +250,12 @@ const CreateTransportOrder = ({
 	const { states = [] } = useSelector((state: any) => state.stateCity || {});
 	const { units = [] } = useSelector((state: any) => state.unitMaster);
 	const { products = [] } = useSelector((state: any) => state.productMaster);
-
+	const { transportIndents = [] } = useSelector((state: any) => state.transportIndent || {});
 	// fetch ALL shared reference data exactly once, here
 	useEffect(() => {
 		dispatch(getAllAccounts({ accountType: "customer" }));
 		dispatch(getAllTransportContract({ limit: 500, offset: 0, status: "active" }));
+		dispatch(getAllTransportIndent({ limit: 500, offset: 0, search: "" }));
 		// @ts-ignore
 		dispatch(getStates());
 		dispatch(getAllUnits({ limit: 200, offset: 0 }));
@@ -630,6 +662,137 @@ const CreateTransportOrder = ({
 		}));
 	};
 
+
+
+
+	const applyIndentToForm = (indentRaw: any) => {
+	if (!indentRaw) return;
+
+	const customerCode = indentRaw?.customer || "";
+	const pickup = indentRaw?.pickupDetails || {};
+	const delivery = indentRaw?.deliveryDetails || {};
+
+	const materialName = indentRaw?.material || "";
+
+	const selectedProduct = (products || []).find(
+		(item: any) =>
+			String(item?.productName || "").trim().toLowerCase() ===
+			String(materialName).trim().toLowerCase()
+	);
+
+	const rawProductType =
+		selectedProduct?.productType ||
+		selectedProduct?.productCategory ||
+		selectedProduct?.category ||
+		selectedProduct?.materialCategory ||
+		"";
+
+	const materialCategory = formatProductTypeLabel(rawProductType);
+
+	const indentWeightUnit = String(indentRaw?.weightUnit || "").trim();
+
+	const matchedUnit = (units || []).find((item: any) => {
+		const unitName = item?.unitName || item?.name || item?.unit || "";
+		const unitCode = item?.unitCode || item?.code || "";
+
+		return (
+			String(unitName).trim().toLowerCase() === indentWeightUnit.toLowerCase() ||
+			String(unitCode).trim().toLowerCase() === indentWeightUnit.toLowerCase()
+		);
+	});
+
+	const resolvedWeightUnit =
+		matchedUnit?.unitName ||
+		matchedUnit?.name ||
+		matchedUnit?.unit ||
+		matchedUnit?.unitCode ||
+		matchedUnit?.code ||
+		indentWeightUnit;
+
+	const account = (accounts || []).find(
+		(item: any) => String(item?.accountCode) === String(customerCode)
+	);
+
+	setForm((prev: any) => ({
+		...prev,
+
+		indentDetails: {
+			...prev.indentDetails,
+			indentNumber: indentRaw?.indentNumber || indentRaw?.voucherNumber || "",
+		},
+
+		customerDetails: {
+			...prev.customerDetails,
+			customerCode,
+			customerName: account?.accountName || "",
+			contactPerson: account?.accountName || "",
+			gstNumber: account?.gstNumber || account?.gst || account?.accountGSTNumber || "",
+			mobileNumber: account?.mobileNumber || account?.mobile || account?.accountMobile || account?.accountMobileNumber || "",
+			email: account?.email || account?.accountEmail || account?.accountEmailId || "",
+		},
+
+		loadDetails: {
+			...prev.loadDetails,
+			materialName,
+			materialCategory,
+			weight: indentRaw?.approximateWeight ?? "",
+			weightUnit: resolvedWeightUnit,
+		},
+
+		pickupDetails: {
+			...prev.pickupDetails,
+			pickupLocation: pickup?.pickupLocation || indentRaw?.pickupLocation || "",
+			pickupAddress: pickup?.pickupAddress || indentRaw?.pickupLocation || "",
+			pickupDateTime: pickup?.pickupDateTime
+				? formatDateTimeForInput(pickup.pickupDateTime)
+				: indentRaw?.reportingDateTime
+					? formatDateTimeForInput(indentRaw.reportingDateTime)
+					: "",
+			pickupContactName: pickup?.pickupContactName || "",
+			pickupContactNumber: pickup?.pickupContactNumber || "",
+			pickupState: pickup?.pickupState || null,
+			pickupStateCode: pickup?.pickupStateCode || "",
+			pickupStateName: pickup?.pickupStateName || "",
+			pickupCity: pickup?.pickupCity || null,
+			pickupCityName: pickup?.pickupCityName || "",
+			pickupPincode: pickup?.pickupPincode || "",
+			pickupLatitude: pickup?.pickupLatitude ?? "",
+			pickupLongitude: pickup?.pickupLongitude ?? "",
+			pickupPlaceId: pickup?.pickupPlaceId || "",
+		},
+
+		deliveryDetails: {
+			...prev.deliveryDetails,
+			deliveryLocation: delivery?.deliveryLocation || indentRaw?.deliveryLocation || "",
+			deliveryAddress: delivery?.deliveryAddress || indentRaw?.deliveryLocation || "",
+			expectedDeliveryDateTime: delivery?.expectedDeliveryDateTime
+				? formatDateTimeForInput(delivery.expectedDeliveryDateTime)
+				: "",
+			deliveryContactName: delivery?.deliveryContactName || "",
+			deliveryContactNumber: delivery?.deliveryContactNumber || "",
+			deliveryState: delivery?.deliveryState || null,
+			deliveryStateCode: delivery?.deliveryStateCode || "",
+			deliveryStateName: delivery?.deliveryStateName || "",
+			deliveryCity: delivery?.deliveryCity || null,
+			deliveryCityName: delivery?.deliveryCityName || "",
+			deliveryPincode: delivery?.deliveryPincode || "",
+			deliveryLatitude: delivery?.deliveryLatitude ?? "",
+			deliveryLongitude: delivery?.deliveryLongitude ?? "",
+			deliveryPlaceId: delivery?.deliveryPlaceId || "",
+		},
+
+		vehicleRequirement: {
+			...prev.vehicleRequirement,
+			vehicleType: indentRaw?.vehicleType || "",
+			numberOfVehicles: indentRaw?.numberOfVehicles ?? "",
+		},
+
+		freightDetails: {
+			...prev.freightDetails,
+			expectedFreight: indentRaw?.customerRate ?? "",
+		},
+	}));
+};
 
 
 	useEffect(() => {
@@ -1141,7 +1304,9 @@ const CreateTransportOrder = ({
 						isView={isView}
 						accounts={accounts}
 						transportContract={transportContract}
-						onContractSelect={applyContractToForm}   // <-- key wiring
+						transportIndent={transportIndents}
+						onContractSelect={applyContractToForm}
+						onIndentSelect={applyIndentToForm}
 					/>
 				);
 

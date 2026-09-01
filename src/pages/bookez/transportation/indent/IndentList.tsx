@@ -31,6 +31,8 @@ const IndentList = () => {
 
     const normalizeStatus = (value: any) => String(value || "draft").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const getIndentNumber = (row: any) => row?.indentNumber || row?.voucherNumber || "";
+    const getPickupLocation = (row: any) => row?.pickupDetails?.pickupLocation || row?.pickupLocation || "";
+    const getDeliveryLocation = (row: any) => row?.deliveryDetails?.deliveryLocation || row?.deliveryLocation || "";
 
     const isClosedIndent = (row: any) => {
         const status = normalizeStatus(row?.indentStatus || row?.status);
@@ -53,8 +55,8 @@ const IndentList = () => {
         return () => clearTimeout(timer);
     }, [dispatch, localOffset, localLimit, search]);
 
-    const openCount = useMemo(() => indents.filter((item: any) => !isClosedIndent(item)).length, [indents]);
-    const closedCount = useMemo(() => indents.filter((item: any) => isClosedIndent(item)).length, [indents]);
+    // const openCount = useMemo(() => indents.filter((item: any) => !isClosedIndent(item)).length, [indents]);
+    // const closedCount = useMemo(() => indents.filter((item: any) => isClosedIndent(item)).length, [indents]);
 
     const filteredIndents = useMemo(() => {
         const searchValue = String(search || "").trim().toLowerCase();
@@ -69,8 +71,8 @@ const IndentList = () => {
             return [
                 getIndentNumber(item),
                 item?.customer,
-                item?.pickupLocation,
-                item?.deliveryLocation,
+                getPickupLocation(item),
+                getDeliveryLocation(item),
                 item?.vehicleType,
                 item?.material,
                 item?.weightUnit,
@@ -173,7 +175,7 @@ const IndentList = () => {
         {
             key: "indentNumber",
             title: "Indent No",
-            render: (row: any) => <span >{getIndentNumber(row) || "-"}</span>
+            render: (row: any) => <span>{getIndentNumber(row) || "-"}</span>
         },
         {
             key: "indentDate",
@@ -190,13 +192,15 @@ const IndentList = () => {
             title: "Route",
             render: (row: any) => (
                 <div className="max-w-[240px]">
-                    <div className="truncate text-sm font-medium text-card-foreground" title={row?.pickupLocation || ""}>
-                        {row?.pickupLocation || "-"}
+                    <div className="truncate text-sm font-medium text-card-foreground" title={getPickupLocation(row)}>
+                        {getPickupLocation(row) || "-"}
                     </div>
 
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <span>→</span>
-                        <span className="truncate" title={row?.deliveryLocation || ""}>{row?.deliveryLocation || "-"}</span>
+                        <span className="truncate" title={getDeliveryLocation(row)}>
+                            {getDeliveryLocation(row) || "-"}
+                        </span>
                     </div>
                 </div>
             )

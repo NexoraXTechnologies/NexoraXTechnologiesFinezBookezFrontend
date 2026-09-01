@@ -72,6 +72,7 @@ const TO_BE_BILLED_PAYMENT_TYPE = "To Be Billed";
 const SECTION_KEYS = [
     "tripSetup",
     "ewayBill",
+    "touchUp",
     "tripSummary",
     "routePlanner",
     "vehicleStatus",
@@ -184,6 +185,19 @@ const normalizeTripDocKey = (value: any) =>
     String(value || "")
         .trim()
         .toLowerCase();
+
+const getLRTouchUpDocumentUrl = (touchUp: any) => {
+    const touchUpLr = touchUp?.touchUpLr;
+    return String(
+        typeof touchUpLr === "string"
+            ? touchUpLr
+            : touchUpLr?.fullUrl ||
+            touchUpLr?.fileUrl ||
+            touchUpLr?.url ||
+            touchUpLr?.relativePath ||
+            ""
+    ).trim();
+};
 
 const parseEwayJsonValue = (value: any) => {
     if (!value) return {};
@@ -1397,6 +1411,8 @@ const CreateEditTripExpence = () => {
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [vendorAccountOptions, setVendorAccountOptions] = useState<any[]>([]);
     const [expenseAccountOptions, setExpenseAccountOptions] = useState<any[]>([]);
+    // TOUCH UPS - DISPLAY ONLY
+    const [touchUps, setTouchUps] = useState<any[]>([]);
 
     const visibleCategories = useMemo(() => {
         if (!isChildUser) return CATEGORIES;
@@ -1872,6 +1888,8 @@ const CreateEditTripExpence = () => {
                     lr?.createdOn ||
                     "";
 
+                setTouchUps(Array.isArray(lr?.lrTouchUp) ? lr.lrTouchUp : []);
+
                 const ewayRecords =
                     extractEwayBillRecords(ewayRes);
 
@@ -1937,6 +1955,7 @@ const CreateEditTripExpence = () => {
                         "",
                 }));
             } catch (error) {
+                setTouchUps([]);
                 console.log(
                     "[TripExpense] LR/E-Way Bill lookup failed",
                     error
@@ -2712,54 +2731,6 @@ const CreateEditTripExpence = () => {
                                     />
                                 </Field>
 
-                                <Field label="LR Number">
-                                    <input
-                                        disabled={readOnly}
-                                        className={inputClass}
-                                        value={form.lrNumber || ""}
-                                        onChange={(e) => patchHeader({ lrNumber: e.target.value })}
-                                    />
-                                </Field>
-
-                                <Field label="E-Way Bill No">
-                                    <div className="relative">
-                                        <input
-                                            readOnly
-                                            className={`${inputClass} pr-12`}
-                                            value={form.ewayBillNo || ""}
-                                        />
-
-                                        <button
-                                            type="button"
-                                            onClick={handleViewEwayBill}
-                                            disabled={
-                                                ewayPdfLoading ||
-                                                !String(form.ewayBillNo || "").trim()
-                                            }
-                                            title="View E-Way Bill"
-                                            className="absolute right-1 top-1/2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {ewayPdfLoading ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Eye className="h-4 w-4" />
-                                            )}
-                                        </button>
-                                    </div>
-                                </Field>
-
-                                <Field label="LR Date">
-                                    <input
-                                        disabled={readOnly}
-                                        type="date"
-                                        className={inputClass}
-                                        value={toDateInputValue(form.lrDate)}
-                                        onChange={(e) => patchHeader({ lrDate: e.target.value })}
-                                    />
-                                </Field>
-
-
-
                                 <Field label="Vehicle No." mandatory>
                                     <input
                                         disabled={readOnly}
@@ -2850,7 +2821,100 @@ const CreateEditTripExpence = () => {
                         </div>
                     </SectionCard>
 
-                  
+                    <SectionCard
+                        index={2}
+                        title="LR & E-Way Bill"
+                        icon={<Paperclip size={18} />}
+                        expanded={expandedSections.ewayBill}
+                        onToggle={() => toggleSection("ewayBill")}
+                    >
+                        <div className="md:col-span-2 xl:col-span-3">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                <Field label="LR Number">
+                                    <input
+                                        disabled={readOnly}
+                                        className={inputClass}
+                                        value={form.lrNumber || ""}
+                                        onChange={(e) => patchHeader({ lrNumber: e.target.value })}
+                                    />
+                                </Field>
+
+                                <Field label="LR Date">
+                                    <input
+                                        disabled={readOnly}
+                                        type="date"
+                                        className={inputClass}
+                                        value={toDateInputValue(form.lrDate)}
+                                        onChange={(e) => patchHeader({ lrDate: e.target.value })}
+                                    />
+                                </Field>
+
+                                <Field label="E-Way Bill No">
+                                    <div className="relative">
+                                        <input readOnly className={`${inputClass} pr-12`} value={form.ewayBillNo || ""} />
+                                        <button
+                                            type="button"
+                                            onClick={handleViewEwayBill}
+                                            disabled={ewayPdfLoading || !String(form.ewayBillNo || "").trim()}
+                                            title="View E-Way Bill"
+                                            className="absolute right-1 top-1/2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {ewayPdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                </Field>
+                            </div>
+                        </div>
+                    </SectionCard>
+
+                    <SectionCard
+                        index={3}
+                        title="Touch Ups"
+                        subtitle={`${touchUps.length} ${touchUps.length === 1 ? "Touch Up" : "Touch Ups"}`}
+                        icon={<Route size={18} />}
+                        expanded={expandedSections.touchUp}
+                        onToggle={() => toggleSection("touchUp")}
+                    >
+                        <div className="md:col-span-2 xl:col-span-3">
+                            {touchUps.length ? (
+                                <div className="flex flex-col gap-3">
+                                    {touchUps.map((touchUp: any, index: number) => {
+                                        const documentUrl = getLRTouchUpDocumentUrl(touchUp);
+                                        return (
+                                            <div key={touchUp?.touchUpId || index} className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
+                                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">{index + 1}</span>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-bold text-card-foreground">{touchUp?.touchUpId || `Touch Up ${index + 1}`}</p>
+                                                        <p className="truncate text-xs text-muted-foreground">{touchUp?.pickupDetails?.name || "-"} → {touchUp?.deliveryDetails?.name || "-"} | {touchUp?.material || "-"}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (!documentUrl) {
+                                                            toast.warn("Touch Up LR document is not available");
+                                                            return;
+                                                        }
+                                                        window.open(documentUrl, "_blank", "noopener,noreferrer");
+                                                    }}
+                                                    disabled={!documentUrl}
+                                                    title="View Touch Up LR Document"
+                                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border bg-muted/20">
+                                    <p className="text-sm text-muted-foreground">No Touch Ups found in LR</p>
+                                </div>
+                            )}
+                        </div>
+                    </SectionCard>
 
                     <div
                         className={`grid grid-cols-1 gap-4 ${showVehicleStatusSection ? "xl:grid-cols-[0.75fr_1.25fr]" : ""
@@ -2859,7 +2923,7 @@ const CreateEditTripExpence = () => {
                         {showVehicleStatusSection && (
                             <div className="min-w-0">
                                 <SectionCard
-                                    index={2}
+                                    index={4}
                                     title="Vehicle Status"
                                     icon={<Truck size={18} />}
                                     expanded={expandedSections.vehicleStatus ?? true}
@@ -2901,7 +2965,7 @@ const CreateEditTripExpence = () => {
 
                         <div className="min-w-0">
                             <SectionCard
-                                index={showVehicleStatusSection ? 3 : 2}
+                                index={showVehicleStatusSection ? 5 : 4}
                                 title="Route Planner"
                                 icon={<Route size={18} />}
                                 expanded={expandedSections.routePlanner}
