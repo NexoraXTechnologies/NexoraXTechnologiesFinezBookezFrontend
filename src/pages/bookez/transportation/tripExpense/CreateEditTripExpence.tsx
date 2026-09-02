@@ -490,7 +490,7 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
     const vehicleSelection = allocation?.vehicleSelection || allocation?.vehicle || tripExpense?.vehicleSelection || tripExpense?.vehicle || {};
     const allocationOrder = allocation?.transportOrder || {};
     const ownership = normalizeOwnershipType(vehicleSelection?.ownershipType || allocation?.ownershipType || tripExpense?.ownershipType);
-   const freightAmount = Number(resolveFreightAmount({ lrEntry, allocation, tripExpense, transportOrder }) || 0);
+    const freightAmount = Number(resolveFreightAmount({ lrEntry, allocation, tripExpense, transportOrder }) || 0);
     const customerCode = String(allocationOrder?.customerCode || allocationOrder?.customerDetails?.customerCode || transportOrder?.customerCode || transportOrder?.customerDetails?.customerCode || transportOrder?.customer?.code || vehicleSelection?.customerCode || tripExpense?.customerCode || "").trim();
     const customerName = String(allocationOrder?.customerName || allocationOrder?.customerDetails?.customerName || transportOrder?.customerName || transportOrder?.customerDetails?.customerName || transportOrder?.customer?.name || vehicleSelection?.customerName || tripExpense?.customerName || "").trim();
     const vendorCode = String(vehicleSelection?.vendorCode || vehicleSelection?.vendor?.code || allocation?.vendorCode || allocation?.vendor?.code || tripExpense?.vendorCode || "").trim();
@@ -2974,7 +2974,7 @@ const CreateEditTripExpence = () => {
                         </div>
                     </div>
 
-                  
+
 
                     {visibleCategories.map((category: any, index: number) => {
                         const entries = form.expenses?.[category.key]?.entries || [];
@@ -3153,6 +3153,18 @@ const CreateEditTripExpence = () => {
                     </button>
                 )}
 
+
+                <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={loading || readOnly || statusUpdating}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                >
+                    {loading ? <Loader2 className="animate-spin" size={17} /> : <Save size={17} />}
+                    {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+                </button>
+
+
                 {showCompleteTripButton && (
                     <button
                         type="button"
@@ -3164,16 +3176,6 @@ const CreateEditTripExpence = () => {
                         Complete Trip
                     </button>
                 )}
-
-                <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={loading || readOnly || statusUpdating}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-                >
-                    {loading ? <Loader2 className="animate-spin" size={17} /> : <Save size={17} />}
-                    {loading ? "Saving..." : isEdit ? "Update" : "Save"}
-                </button>
             </footer>
 
 
