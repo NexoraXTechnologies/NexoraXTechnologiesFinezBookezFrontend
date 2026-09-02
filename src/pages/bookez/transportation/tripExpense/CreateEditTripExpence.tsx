@@ -1007,11 +1007,7 @@ const CategoryDetails = ({ category, form, setForm, readOnly, vendorAccountOptio
                             />
                         </Field>
                         <Field label={typeLabel}>
-                            {typeLabel === "Expense Type" ? (
-                                <SelectInput disabled={readOnly} value={entry[typeKey] || ""} options={getAccountOptions(expenseAccountOptions, entry[typeKey])} placeholder={`Select ${typeLabel}`} onChange={(value: string) => patchEntry(index, { [typeKey]: value })} />
-                            ) : (
-                                <input disabled={readOnly} className={inputClass} value={entry[typeKey] || ""} onChange={(e) => patchEntry(index, { [typeKey]: e.target.value })} />
-                            )}
+                            <SelectInput disabled={readOnly} value={entry[typeKey] || ""} options={getAccountOptions(expenseAccountOptions, entry[typeKey])} placeholder={`Select ${typeLabel}`} onChange={(value: string) => patchEntry(index, { [typeKey]: value })} />
                         </Field>
 
                         <Field label="Amount">
@@ -1573,7 +1569,7 @@ const CreateEditTripExpence = () => {
 
             setForm(hydrated);
         } catch (e: any) {
-            toast.error(e?.message || "Failed to load trip expense");
+            toast.error(e?.message || "Failed to load trip execution");
             navigate(-1);
         } finally {
             setLoading(false);
@@ -2125,10 +2121,10 @@ const CreateEditTripExpence = () => {
 
     const persistExpense = async (
         overrides: any = {},
-        successMessage = "Trip expense saved"
+        successMessage = "Trip execution saved"
     ) => {
         if (!isEdit || !voucherNumber) {
-            toast.error("Trip expense can only be updated from existing voucher");
+            toast.error("Trip execution can only be updated from existing voucher");
             return;
         }
 
@@ -2169,7 +2165,7 @@ const CreateEditTripExpence = () => {
             toast.success(successMessage);
             navigate(-1);
         } catch (e: any) {
-            toast.error(e?.message || "Trip expense save failed");
+            toast.error(e?.message || "Trip execution save failed");
         } finally {
             setLoading(false);
         }
@@ -2177,7 +2173,7 @@ const CreateEditTripExpence = () => {
 
     const handleAcceptTrip = () => {
         if (!isEdit || !voucherNumber) {
-            toast.error("Trip expense voucher number not found");
+            toast.error("Trip execution voucher number not found");
             return;
         }
 
@@ -2277,7 +2273,7 @@ const CreateEditTripExpence = () => {
         if (!validateForm()) return;
 
         if (!voucherNumber) {
-            toast.error("Trip expense voucher number not found");
+            toast.error("Trip execution voucher number not found");
             return;
         }
 
@@ -2424,7 +2420,7 @@ const CreateEditTripExpence = () => {
             {
                 enteredDate: form.enteredDate || new Date().toISOString(),
             },
-            isEdit ? "Trip expense updated" : "Trip expense saved"
+            isEdit ? "Trip execution updated" : "Trip execution saved"
         );
     };
 
@@ -2649,7 +2645,7 @@ const CreateEditTripExpence = () => {
                                 </div>
                                 <div>
                                     <h2 id="complete-trip-title" className="text-lg font-bold text-card-foreground">Complete Trip?</h2>
-                                    <p className="mt-1 text-sm text-muted-foreground">Are you sure you want to complete this trip?</p>
+                                    <p className="mt-1 text-sm text-muted-foreground">Are you sure you want to complete this trip? Vehicle will be set to Available and the driver will be notified.</p>
                                 </div>
                             </div>
                             <button type="button" onClick={() => setCompleteConfirmModalVisible(false)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Close confirmation modal">
@@ -3162,7 +3158,7 @@ const CreateEditTripExpence = () => {
                         type="button"
                         onClick={handleCompleteTrip}
                         disabled={loading || statusUpdating}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-primary bg-background px-5 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-success bg-background px-5 text-sm font-semibold text-success transition hover:bg-success/10 disabled:opacity-60"
                     >
                         <CheckCircle2 size={17} />
                         Complete Trip

@@ -1,5 +1,5 @@
 export const orderTypeOptions = [
-  {label: 'Market', value: 'market'},
+  {label: 'Direct Order', value: 'direct'},
   {label: 'Contract', value: 'contract'},
   {label: 'Indent', value: 'indent'},
 ];

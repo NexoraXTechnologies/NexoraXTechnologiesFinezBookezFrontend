@@ -1030,48 +1030,48 @@ const CreateTransportOrder = ({
 			return false;
 		}
 
-		if (
-			loadDetails?.quantity === "" ||
-			loadDetails?.quantity === null ||
-			loadDetails?.quantity === undefined ||
-			Number(
-				loadDetails?.quantity
-			) <= 0
-		) {
-			toast.warn(
-				"Please enter Quantity"
-			);
+		// if (
+		// 	loadDetails?.quantity === "" ||
+		// 	loadDetails?.quantity === null ||
+		// 	loadDetails?.quantity === undefined ||
+		// 	Number(
+		// 		loadDetails?.quantity
+		// 	) <= 0
+		// ) {
+		// 	toast.warn(
+		// 		"Please enter Quantity"
+		// 	);
 
-			return false;
-		}
+		// 	return false;
+		// }
 
-		if (
-			loadDetails?.weight === "" ||
-			loadDetails?.weight === null ||
-			loadDetails?.weight === undefined ||
-			Number(
-				loadDetails?.weight
-			) <= 0
-		) {
-			toast.warn(
-				"Please enter Weight"
-			);
+		// if (
+		// 	loadDetails?.weight === "" ||
+		// 	loadDetails?.weight === null ||
+		// 	loadDetails?.weight === undefined ||
+		// 	Number(
+		// 		loadDetails?.weight
+		// 	) <= 0
+		// ) {
+		// 	toast.warn(
+		// 		"Please enter Weight"
+		// 	);
 
-			return false;
-		}
+		// 	return false;
+		// }
 
-		if (
-			!String(
-				loadDetails?.weightUnit ||
-				""
-			).trim()
-		) {
-			toast.warn(
-				"Please select Weight Unit"
-			);
+		// if (
+		// 	!String(
+		// 		loadDetails?.weightUnit ||
+		// 		""
+		// 	).trim()
+		// ) {
+		// 	toast.warn(
+		// 		"Please select Weight Unit"
+		// 	);
 
-			return false;
-		}
+		// 	return false;
+		// }
 
 		/* ===================================================
 		   CONDITIONAL E-WAY BILL VALIDATION

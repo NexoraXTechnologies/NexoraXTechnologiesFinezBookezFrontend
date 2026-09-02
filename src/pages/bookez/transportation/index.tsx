@@ -52,9 +52,9 @@ const cards: any[] = [
     permissionKey: "touchUp",
   },
   {
-    title: "Trip Expense",
+    title: "Trip Execution",
     description: "Record fuel, toll, loading, unloading, and other trip-related expenses.",
-    path: "/bookEz/transportation/trip-expense",
+    path: "/bookEz/transportation/trip-execution",
     icon: <Fuel size={22} />,
     permissionKey: "tripExpense",
   },

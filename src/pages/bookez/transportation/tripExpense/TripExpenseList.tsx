@@ -364,7 +364,7 @@ const TripExpenseList = () => {
 
     const promptedAssignmentsRef = useRef(new Set<string>());
 
-    const pageTitle = location.state?.title || "Trip Expenses";
+    const pageTitle = location.state?.title || "Trip Executions";
 
 
     const professionalHeaders = useMemo(() => {
@@ -556,7 +556,7 @@ const TripExpenseList = () => {
                     limit,
                 });
 
-                toast.error(e?.message || "Failed to load trip expenses");
+                toast.error(e?.message || "Failed to load trip executions");
                 return [];
             } finally {
                 if (showLoader) setListingLoader(false);
@@ -629,7 +629,7 @@ const TripExpenseList = () => {
     const handleDownloadExcel = async () => {
         try {
             if (!filteredRows.length) {
-                toast.warn("No trip expenses available to export");
+                toast.warn("No trip executions available to export");
                 return;
             }
 
@@ -641,7 +641,7 @@ const TripExpenseList = () => {
                 );
 
             toast.success(
-                `Excel downloaded successfully with ${result.count} trip expense${result.count === 1 ? "" : "s"
+                `Excel downloaded successfully with ${result.count} trip execution${result.count === 1 ? "" : "s"
                 }.`
             );
         } catch (error: any) {
@@ -766,7 +766,7 @@ const TripExpenseList = () => {
                     .join(", ");
 
                 toast.success(
-                    `${updated} trip expense${updated === 1 ? "" : "s"
+                    `${updated} trip execution${updated === 1 ? "" : "s"
                     } updated successfully${details ? ` (${details})` : ""
                     }.`
                 );
@@ -776,13 +776,13 @@ const TripExpenseList = () => {
 
             if (skipped > 0 || failed > 0) {
                 toast.warn(
-                    `No trip expenses updated. ${skipped} skipped, ${failed} failed.`
+                    `No trip executions updated. ${skipped} skipped, ${failed} failed.`
                 );
 
                 return;
             }
 
-            toast.warn("No trip expenses were updated");
+            toast.warn("No trip executions were updated");
         } catch (error: any) {
             console.error(
                 "[TripExpenseExcel] Import error:",
@@ -827,7 +827,7 @@ const TripExpenseList = () => {
 
     const handleEdit = async (item: any) => {
         if (isTripClosedSafe(item)) {
-            toast.error("Completed trip expense cannot be edited");
+            toast.error("Completed trip execution cannot be edited");
             return;
         }
 
@@ -847,7 +847,7 @@ const TripExpenseList = () => {
             const voucherNumber = getTripExpenseVoucher(item);
 
             if (!voucherNumber) {
-                toast.warn("Trip expense voucher number not found");
+                toast.warn("Trip execution voucher number not found");
                 return;
             }
 
@@ -856,17 +856,17 @@ const TripExpenseList = () => {
                 getTripExpensesByVoucherNumber(voucherNumber)
             );
 
-            navigate(`/bookEz/transportation/trip-expense/edit/${voucherNumber}`, {
+            navigate(`/bookEz/transportation/trip-execution/edit/${voucherNumber}`, {
                 state: {
-                    title: "Edit Trip Expense",
-                    description: "Update trip expense details.",
+                    title: "Edit Trip Execution",
+                    description: "Update trip execution details.",
                     mode: "edit",
                     voucherNumber,
                     expenseData: res?.data || res,
                 },
             });
         } catch (e: any) {
-            toast.error(e?.message || "Failed to open trip expense");
+            toast.error(e?.message || "Failed to open trip execution");
         } finally {
             setListingLoader(false);
         }
@@ -879,7 +879,7 @@ const TripExpenseList = () => {
             setListingLoader(true);
 
             if (!voucher) {
-                toast.warn("Trip expense voucher number not found");
+                toast.warn("Trip execution voucher number not found");
                 return;
             }
 
@@ -918,10 +918,10 @@ const TripExpenseList = () => {
 
             toast.success("Trip accepted. You can now enter expenses.");
 
-            navigate(`/bookEz/transportation/trip-expense/edit/${voucher}`, {
+            navigate(`/bookEz/transportation/trip-execution/edit/${voucher}`, {
                 state: {
-                    title: "Edit Trip Expense",
-                    description: "Update trip expense details.",
+                    title: "Edit Trip Execution",
+                    description: "Update trip execution details.",
                     mode: "edit",
                     voucherNumber: voucher,
                     expenseData: payload,
@@ -955,14 +955,14 @@ const TripExpenseList = () => {
 
     const handleDeleteClick = (e: any, item: any) => {
         if (isTripClosedSafe(item)) {
-            toast.error("Completed trip expense cannot be deleted");
+            toast.error("Completed trip execution cannot be deleted");
             return;
         }
 
         const voucher = getTripExpenseVoucher(item);
 
         if (!voucher) {
-            toast.warn("Trip expense voucher number not found");
+            toast.warn("Trip execution voucher number not found");
             return;
         }
 
@@ -985,7 +985,7 @@ const TripExpenseList = () => {
     const handleDeleteConfirm = async () => {
         try {
             if (!confirmTooltip?.voucherNumber) {
-                toast.warn("Trip expense voucher number not found");
+                toast.warn("Trip execution voucher number not found");
                 return;
             }
 
@@ -996,7 +996,7 @@ const TripExpenseList = () => {
                 deleteTripExpenses(confirmTooltip.voucherNumber)
             );
 
-            toast.success("Trip expense deleted");
+            toast.success("Trip execution deleted");
 
             setConfirmTooltip({
                 show: false,
@@ -1283,7 +1283,7 @@ const TripExpenseList = () => {
                     columns={columns}
                     data={filteredRows}
                     loading={listingLoader}
-                    emptyMessage="No trip expenses found"
+                    emptyMessage="No trip executions found"
                     {...(activeStatus !== "close"
                         ? {
                             actions: (record: any) => {
@@ -1386,7 +1386,7 @@ const TripExpenseList = () => {
                 <ConfirmTooltip
                     x={confirmTooltip.x}
                     y={confirmTooltip.y}
-                    message={`Are you sure you want to delete ${confirmTooltip?.voucherNumber || "this trip expense"
+                    message={`Are you sure you want to delete ${confirmTooltip?.voucherNumber || "this trip execution"
                         }?`}
                     confirmText="Delete"
                     cancelText="Cancel"

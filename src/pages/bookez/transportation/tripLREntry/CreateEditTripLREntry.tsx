@@ -150,12 +150,12 @@ const normalizeVoucher = (value: any) =>
         .trim()
         .toLowerCase();
 
-const getUsedTransportOrderVoucher = (item: any) =>
-    item?.transportOrderNumber ||
-    item?.tripNumber ||
-    item?.transportOrder?.transportOrderNumber ||
-    item?.transportOrder?.tripNumber ||
-    "";
+// const getUsedTransportOrderVoucher = (item: any) =>
+//     item?.transportOrderNumber ||
+//     item?.tripNumber ||
+//     item?.transportOrder?.transportOrderNumber ||
+//     item?.transportOrder?.tripNumber ||
+//     "";
 
 const getApiList = (res: any) => {
     const data = res?.data || res || {};
@@ -219,7 +219,7 @@ const TouchUpImagePreview = ({ source, alt }: { source: string; alt: string }) =
         return (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
                 <Upload size={17} />
-                <span className="text-[10px] font-semibold">No Photo</span>
+                <span className="text-[10px] font-semibold">No Document</span>
             </div>
         );
     }
@@ -228,8 +228,8 @@ const TouchUpImagePreview = ({ source, alt }: { source: string; alt: string }) =
         <div className="absolute inset-0 z-10 overflow-hidden bg-background">
             <img src={source} alt={alt} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" onError={() => setImageFailed(true)} />
 
-            <button type="button" onClick={() => window.open(source, "_blank", "noopener,noreferrer")} className="absolute inset-0 h-full w-full cursor-zoom-in" title="View attached photo">
-                <span className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-[9px] font-bold text-white opacity-0 transition group-hover:opacity-100">View Photo</span>
+            <button type="button" onClick={() => window.open(source, "_blank", "noopener,noreferrer")} className="absolute inset-0 h-full w-full cursor-zoom-in" title="View attached document">
+                <span className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-[9px] font-bold text-white opacity-0 transition group-hover:opacity-100">View Document</span>
             </button>
         </div>
     );
@@ -805,62 +805,91 @@ const CreateEditTripLREntry = () => {
         }
     }, [dispatch]);
 
+    // const transportOrderOptions = useMemo(() => {
+    //     const usedOrderSet = new Set(
+    //         lrEntries
+    //             .map((item: any) => normalizeVoucher(getUsedTransportOrderVoucher(item)))
+    //             .filter(Boolean)
+    //     );
+
+    //     return transportOrders
+    //         .filter((order: any) => {
+    //             const voucher = normalizeVoucher(getTransportOrderVoucher(order));
+
+    //             if (!voucher) return false;
+
+    //             // In edit mode, keep current selected order visible if needed.
+    //             const currentVoucher = normalizeVoucher(
+    //                 form.transportOrderNumber || form.tripNumber
+    //             );
+
+    //             if (isEdit && voucher === currentVoucher) return true;
+
+    //             return !usedOrderSet.has(voucher);
+    //         })
+    //         .map((order: any) => {
+    //             const voucher = getTransportOrderVoucher(order);
+
+    //             const customer =
+    //                 order?.customerDetails?.customerName ||
+    //                 order?.customerName ||
+    //                 "-";
+
+    //             const source =
+    //                 order?.pickupDetails?.pickupCityName ||
+
+    //                 order?.pickupCityName ||
+    //                 "-";
+
+    //             const destination =
+    //                 order?.deliveryDetails?.deliveryCityName ||
+
+    //                 order?.deliveryCityName ||
+    //                 "-";
+
+    //             return {
+    //                 label: `${voucher} - ${customer} (${source} → ${destination})`,
+    //                 value: voucher,
+    //                 raw: order,
+    //             };
+    //         });
+    // }, [
+    //     transportOrders,
+    //     lrEntries,
+    //     isEdit,
+    //     form.transportOrderNumber,
+    //     form.tripNumber,
+    // ]);
+
+
     const transportOrderOptions = useMemo(() => {
-        const usedOrderSet = new Set(
-            lrEntries
-                .map((item: any) => normalizeVoucher(getUsedTransportOrderVoucher(item)))
-                .filter(Boolean)
-        );
+    return transportOrders
+        .filter((order: any) => Boolean(getTransportOrderVoucher(order)))
+        .map((order: any) => {
+            const voucher = getTransportOrderVoucher(order);
 
-        return transportOrders
-            .filter((order: any) => {
-                const voucher = normalizeVoucher(getTransportOrderVoucher(order));
+            const customer =
+                order?.customerDetails?.customerName ||
+                order?.customerName ||
+                "-";
 
-                if (!voucher) return false;
+            const source =
+                order?.pickupDetails?.pickupCityName ||
+                order?.pickupCityName ||
+                "-";
 
-                // In edit mode, keep current selected order visible if needed.
-                const currentVoucher = normalizeVoucher(
-                    form.transportOrderNumber || form.tripNumber
-                );
+            const destination =
+                order?.deliveryDetails?.deliveryCityName ||
+                order?.deliveryCityName ||
+                "-";
 
-                if (isEdit && voucher === currentVoucher) return true;
-
-                return !usedOrderSet.has(voucher);
-            })
-            .map((order: any) => {
-                const voucher = getTransportOrderVoucher(order);
-
-                const customer =
-                    order?.customerDetails?.customerName ||
-                    order?.customerName ||
-                    "-";
-
-                const source =
-                    order?.pickupDetails?.pickupCityName ||
-
-                    order?.pickupCityName ||
-                    "-";
-
-                const destination =
-                    order?.deliveryDetails?.deliveryCityName ||
-
-                    order?.deliveryCityName ||
-                    "-";
-
-                return {
-                    label: `${voucher} - ${customer} (${source} → ${destination})`,
-                    value: voucher,
-                    raw: order,
-                };
-            });
-    }, [
-        transportOrders,
-        lrEntries,
-        isEdit,
-        form.transportOrderNumber,
-        form.tripNumber,
-    ]);
-
+            return {
+                label: `${voucher} - ${customer} (${source} → ${destination})`,
+                value: voucher,
+                raw: order,
+            };
+        });
+}, [transportOrders]);
 
     const allTransportTouchUpOptions = useMemo(() => {
         const selectedOrder = normalizeVoucher(form.transportOrderNumber || form.tripNumber);
@@ -2211,7 +2240,7 @@ const CreateEditTripLREntry = () => {
 
                                                             <label className="inline-flex h-7 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary/5 px-2.5 text-[11px] font-bold text-primary transition hover:border-primary/40 hover:bg-primary/10">
                                                                 <Upload size={12} />
-                                                                {hasPhoto ? "Change" : "Upload / Camera"}
+                                                                {hasPhoto ? "Change" : "Upload"}
                                                                 <input
                                                                     type="file"
                                                                     accept="image/png,image/jpeg"

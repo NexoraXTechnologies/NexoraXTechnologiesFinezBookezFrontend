@@ -1,3 +1,5 @@
+
+
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ClipboardList, FileText, Flag, MapPin, Package, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,7 +11,7 @@ import { FormSectionCard } from "../../../../components/SectionCards";
 import GoogleAddressAutocompleteWeb from "../../../../components/common/GoogleAddressAutocompleteWeb";
 import { getCitiesByState, getStates } from "../../../../redux/slices/professionalSlice/stateCitySlice";
 import { getTransportOrders } from "../../../../redux/slices/professionalSlice/transportation/transportOrderSlice";
-import { createTransportTouchup, getAllTransportTouchup, updateTransportTouchup } from "../../../../redux/slices/professionalSlice/transportation/touchUpSlice";
+import { createTransportTouchup, updateTransportTouchup } from "../../../../redux/slices/professionalSlice/transportation/touchUpSlice";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 
@@ -109,9 +111,9 @@ const normalizeFormForEdit = (data: any = {}) => {
 const touchUpStatusOptions = [
     { label: "Select Status", value: "" },
     { label: "Pending", value: "pending" },
-
+   
     { label: "Completed", value: "completed" },
-
+   
 ];
 
 // LOCATION BLOCK
@@ -226,7 +228,7 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
             </div>
 
             <GoogleAddressAutocompleteWeb
-                label={`${label} Location`}
+                label={`${label} Location *`}
                 placeholder={`Search ${label.toLowerCase()} location`}
                 value={location?.location || ""}
                 country="in"
@@ -268,7 +270,7 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
                     })
                 )}
 
-
+               
             </div>
         </div>
     );
@@ -305,7 +307,7 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, un
     const materialFields = [
         { key: "material", label: "Material", type: "select", options: materialOptions, mandatory: true },
         { key: "unit", label: "Unit", type: "select", options: resolvedUnitOptions, mandatory: true },
-        { key: "quantity", label: "Quantity", type: "number", mandatory: true },
+        { key: "quantity", label: "Quantity", type: "number", mandatory: false },
         { key: "invoiceNumber", label: "Invoice Number", type: "text" }
     ];
 
@@ -438,7 +440,6 @@ const CreateEditTouchUP = () => {
 
     const { states = [] } = useSelector((state: any) => state.stateCity || {});
     const { transportOrders = [] } = useSelector((state: any) => state.transportOrder || {});
-    const { transportTouchups = [] } = useSelector((state: any) => state.transportTouchup || {});
     const { products = [] } = useSelector((state: any) => state.productMaster || {});
     const { units = [] } = useSelector((state: any) => state.unitMaster || {});
 
@@ -449,12 +450,13 @@ const CreateEditTouchUP = () => {
     const pageDescription = routeState?.description || (isEdit ? "Update touch up points for this transport order." : "Create pickup or delivery touch up against a transport trip order.");
 
     const productOptions = useMemo(() => [
-        { label: "Select Material", value: "" },
+        { label: "Select Material", value: "", unit: "" },
         ...(products || []).map((product: any) => {
             const productName = product?.productName || product?.name || "";
             const productCode = product?.productCode || product?.code || "";
+            const unit = product?.unit || product?.uom || product?.UOM || product?.productUOM || product?.productUnit || "";
             if (!productName && !productCode) return null;
-            return { label: productName || productCode, value: productName || productCode };
+            return { label: productName || productCode, value: productName || productCode, unit };
         }).filter(Boolean)
     ], [products]);
 
@@ -475,7 +477,6 @@ const CreateEditTouchUP = () => {
         dispatch(getAllProducts({ limit: 200, offset: 0 }));
         dispatch(getAllUnits({ limit: 200, offset: 0 }));
         dispatch(getTransportOrders({ limit: 200, offset: 0, status: "open" }));
-        dispatch(getAllTransportTouchup({ limit: 500, offset: 0, search: "" }));
     }, [dispatch]);
 
     // RESOLVE BACKEND STATE NAME TO STATE CODE FOR EDIT PREFILL
@@ -510,39 +511,25 @@ const CreateEditTouchUP = () => {
         });
     }, [isEdit, states]);
 
-    const usedTransportOrders = useMemo(() => new Set(
-        (transportTouchups || [])
-            .map((item: any) => item?.tripOrder)
-            .filter(Boolean)
-            .map((value: any) => String(value))
-    ), [transportTouchups]);
-
     const transportOrderOptions = useMemo(() => {
-        const currentEditOrder = isEdit ? String(form.tripOrder || "") : "";
-
         const options = (transportOrders || [])
             .map((order: any) => {
                 const value = order?.transportOrderNumber || order?.voucherNumber || "";
                 if (!value) return null;
 
-                const alreadyUsed = usedTransportOrders.has(String(value));
-                const isCurrentEditOrder = isEdit && String(value) === currentEditOrder;
-                const disabled = alreadyUsed && !isCurrentEditOrder;
-
                 return {
-                    label: `${value} - ${order?.customerDetails?.customerName || order?.customerName || "-"}${disabled ? " (Touch Up Created)" : ""}`,
-                    value,
-                    isDisabled: disabled
+                    label: `${value} - ${order?.customerDetails?.customerName || order?.customerName || "-"}`,
+                    value
                 };
             })
             .filter(Boolean) as any[];
 
         if (form.tripOrder && !options.some((item: any) => String(item?.value) === String(form.tripOrder))) {
-            options.unshift({ label: form.tripOrder, value: form.tripOrder, isDisabled: false });
+            options.unshift({ label: form.tripOrder, value: form.tripOrder });
         }
 
         return options;
-    }, [transportOrders, usedTransportOrders, form.tripOrder, isEdit]);
+    }, [transportOrders, form.tripOrder]);
 
     const selectedOrderOption = transportOrderOptions.find((item: any) => item?.value === form.tripOrder) || null;
 
@@ -551,7 +538,8 @@ const CreateEditTouchUP = () => {
     const updateTouchUpField = (index: number, key: string, value: any) => {
         setForm((prev: any) => {
             const touchUps = [...(prev.touchUps || [])];
-            touchUps[index] = { ...touchUps[index], [key]: value };
+            const selectedProduct = key === "material" ? productOptions.find((item: any) => String(item?.value || "") === String(value || "")) : null;
+            touchUps[index] = { ...touchUps[index], [key]: value, ...(key === "material" ? { unit: selectedProduct?.unit || "" } : {}) };
             return { ...prev, touchUps };
         });
     };
@@ -594,6 +582,22 @@ const CreateEditTouchUP = () => {
         if (!Array.isArray(form.touchUps) || !form.touchUps.length) {
             toast.warn("At least one Touch Up is required");
             return false;
+        }
+
+        for (let index = 0; index < form.touchUps.length; index++) {
+            const touchUp = form.touchUps[index];
+            if (!String(touchUp?.pickupLocation?.location || "").trim()) {
+                toast.warn(`Touch Up ${index + 1}: Pickup Location is required`);
+                return false;
+            }
+            if (!String(touchUp?.deliveryLocation?.location || "").trim()) {
+                toast.warn(`Touch Up ${index + 1}: Delivery Location is required`);
+                return false;
+            }
+            if (!String(touchUp?.material || "").trim()) {
+                toast.warn(`Touch Up ${index + 1}: Material is required`);
+                return false;
+            }
         }
 
         return true;
@@ -690,15 +694,6 @@ const CreateEditTouchUP = () => {
                                         isSearchable
                                         onChange={(option: any) => updateField("tripOrder", option?.value || "")}
                                         classNamePrefix="rs"
-                                        styles={{
-                                            option: (base: any, state: any) => ({
-                                                ...base,
-                                                color: state.isDisabled ? "#64748b" : base.color,
-                                                opacity: 1,
-                                                fontWeight: state.isDisabled ? 500 : base.fontWeight,
-                                                cursor: state.isDisabled ? "not-allowed" : "pointer"
-                                            })
-                                        }}
                                     />
                                 </div>
 
@@ -771,7 +766,3 @@ const CreateEditTouchUP = () => {
 };
 
 export default CreateEditTouchUP;
-
-
-
-

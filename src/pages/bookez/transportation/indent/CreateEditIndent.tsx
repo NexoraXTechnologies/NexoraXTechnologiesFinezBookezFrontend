@@ -102,15 +102,15 @@ const createInitialIndent = () => ({
     customer: "",
     pickupDetails: createEmptyPickupDetails(),
     deliveryDetails: createEmptyDeliveryDetails(),
-    reportingDateTime: "",
+    reportingDateTime: formatDateTimeForInput(new Date()),
     vehicleType: "",
-    numberOfVehicles: "",
+    numberOfVehicles: 1,
     material: "",
     approximateWeight: "",
     weightUnit: "",
     customerRate: "",
     remarks: "",
-    indentStatus: "draft"
+    indentStatus: "open"
 });
 
 const normalizeIndentForEdit = (data: any = {}) => ({
@@ -570,6 +570,13 @@ const CreateEditIndent = () => {
 
     const handleSelectChange = (key: string) => (e: any) => {
         const value = e?.target?.value ?? "";
+
+        if (key === "material") {
+            const selectedProduct = (products || []).find((item: any) => String(item?.productName || item?.name || item?.productCode || item?.code || "") === String(value));
+            const productUnit = selectedProduct?.unitName || selectedProduct?.unit || selectedProduct?.productUnit || selectedProduct?.unitCode || "";
+            setForm((prev: any) => ({ ...prev, material: value, weightUnit: productUnit }));
+            return;
+        }
 
         if (key !== "customer") {
             updateField(key, value);
