@@ -5655,30 +5655,30 @@ const SalesReturn = () => {
                         {...{
                             localLimit,
 
-                        selectCb:
-                            (
-                                e: any
-                            ) => {
-                                setLocalLimit(
-                                    Number(
-                                        e
-                                            .target
-                                            .value
-                                    )
-                                );
+                            selectCb:
+                                (
+                                    e: any
+                                ) => {
+                                    setLocalLimit(
+                                        Number(
+                                            e
+                                                .target
+                                                .value
+                                        )
+                                    );
 
-                                setLocalOffset(
-                                    0
-                                );
-                            },
+                                    setLocalOffset(
+                                        0
+                                    );
+                                },
 
-                        preDisabled:
-                            !pagination?.hasPrevPage,
+                            preDisabled:
+                                !pagination?.hasPrevPage,
 
-                        nextDisabled:
-                            !pagination?.hasNextPage,
+                            nextDisabled:
+                                !pagination?.hasNextPage,
 
-                        setLocalOffset,
+                            setLocalOffset,
 
                             pagination,
                         }}
@@ -5867,65 +5867,65 @@ const SalesReturn = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                            {salesInvoices.map(
-                                                (
-                                                    e: any,
-                                                    index: number
-                                                ) => {
-                                                    const poNumber =
-                                                        e?.sInvVoucherNumber ||
-                                                        "-";
+                                    {salesInvoices.map(
+                                        (
+                                            e: any,
+                                            index: number
+                                        ) => {
+                                            const poNumber =
+                                                e?.sInvVoucherNumber ||
+                                                "-";
 
-                                                    const isSelected =
-                                                        selectedPurchaseOrder?.sInvVoucherNumber ==
-                                                        e?.sInvVoucherNumber;
+                                            const isSelected =
+                                                selectedPurchaseOrder?.sInvVoucherNumber ==
+                                                e?.sInvVoucherNumber;
 
-                                                    return (
-                                                        <button
-                                                            key={
-                                                                poNumber ||
-                                                                index
-                                                            }
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handlePurchaseOrderSelect(
-                                                                    e
-                                                                )
-                                                            }
-                                                            className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
-                                                                ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                                                                : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-center justify-between gap-3">
-                                                                <div>
-                                                                    <p className="text-base font-bold text-card-foreground">
-                                                                        {e?.sInvVoucherNumber ||
-                                                                            "NA"}{" "}
-                                                                        -{" "}
-                                                                        {e?.sInvCustomerName ||
-                                                                            "NA"}
-                                                                    </p>
+                                            return (
+                                                <button
+                                                    key={
+                                                        poNumber ||
+                                                        index
+                                                    }
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handlePurchaseOrderSelect(
+                                                            e
+                                                        )
+                                                    }
+                                                    className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
+                                                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-base font-bold text-card-foreground">
+                                                                {e?.sInvVoucherNumber ||
+                                                                    "NA"}{" "}
+                                                                -{" "}
+                                                                {e?.sInvCustomerName ||
+                                                                    "NA"}
+                                                            </p>
 
-                                                                    <p className="mt-1 text-xs font-medium text-muted-foreground">
-                                                                        Items:{" "}
-                                                                        {e
-                                                                            ?.sInvBody
-                                                                            ?.length ||
-                                                                            0}
-                                                                    </p>
-                                                                </div>
+                                                            <p className="mt-1 text-xs font-medium text-muted-foreground">
+                                                                Items:{" "}
+                                                                {e
+                                                                    ?.sInvBody
+                                                                    ?.length ||
+                                                                    0}
+                                                            </p>
+                                                        </div>
 
-                                                                {isSelected && (
-                                                                    <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-                                                                        Selected
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                }
-                                            )}
+                                                        {isSelected && (
+                                                            <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                                                                Selected
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        }
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -5964,16 +5964,7 @@ const SalesReturn = () => {
             />
 
             {/* @ts-ignore  */}
-            <ListingModel
-                {...{
-                    show: downlaodPDF?.show,
-                    downlaodPDF,
-                    entryType: "sales-return",
-                    setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
-                    rowData: downlaodPDF?.record,
-                    report,
-                    title: "Download Sales Return PDF",
-                }}
+            <ListingModel {...{show: downlaodPDF?.show, downlaodPDF, entryType: "sales-return", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })), rowData: downlaodPDF?.record, report, title: "Download Sales Return PDF",}}
             />
         </div>
     );

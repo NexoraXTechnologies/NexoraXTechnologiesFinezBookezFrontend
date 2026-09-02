@@ -756,7 +756,7 @@ const CreateEditTripLREntry = () => {
     const [loading, setLoading] = useState(false);
     const [transportOrders, setTransportOrders] = useState<any[]>([]);
     const [transportTouchups, setTransportTouchups] = useState<any[]>([]);
-
+    // @ts-ignore
     const [lrEntries, setLrEntries] = useState<any[]>([]);
     const [allocationLoading, setAllocationLoading] = useState(false);
     const [driverPickError, setDriverPickError] = useState("");
@@ -863,33 +863,33 @@ const CreateEditTripLREntry = () => {
 
 
     const transportOrderOptions = useMemo(() => {
-    return transportOrders
-        .filter((order: any) => Boolean(getTransportOrderVoucher(order)))
-        .map((order: any) => {
-            const voucher = getTransportOrderVoucher(order);
+        return transportOrders
+            .filter((order: any) => Boolean(getTransportOrderVoucher(order)))
+            .map((order: any) => {
+                const voucher = getTransportOrderVoucher(order);
 
-            const customer =
-                order?.customerDetails?.customerName ||
-                order?.customerName ||
-                "-";
+                const customer =
+                    order?.customerDetails?.customerName ||
+                    order?.customerName ||
+                    "-";
 
-            const source =
-                order?.pickupDetails?.pickupCityName ||
-                order?.pickupCityName ||
-                "-";
+                const source =
+                    order?.pickupDetails?.pickupCityName ||
+                    order?.pickupCityName ||
+                    "-";
 
-            const destination =
-                order?.deliveryDetails?.deliveryCityName ||
-                order?.deliveryCityName ||
-                "-";
+                const destination =
+                    order?.deliveryDetails?.deliveryCityName ||
+                    order?.deliveryCityName ||
+                    "-";
 
-            return {
-                label: `${voucher} - ${customer} (${source} → ${destination})`,
-                value: voucher,
-                raw: order,
-            };
-        });
-}, [transportOrders]);
+                return {
+                    label: `${voucher} - ${customer} (${source} → ${destination})`,
+                    value: voucher,
+                    raw: order,
+                };
+            });
+    }, [transportOrders]);
 
     const allTransportTouchUpOptions = useMemo(() => {
         const selectedOrder = normalizeVoucher(form.transportOrderNumber || form.tripNumber);
