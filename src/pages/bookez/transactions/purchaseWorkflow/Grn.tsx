@@ -147,6 +147,11 @@ const emptyProductRow = {
     remarks: "",
 
     quantity: "",
+
+    // PARTIAL GRN
+    purchaseOrderPendingQuantity: null,
+    purchaseOrderOrderedQuantity: null,
+
     availableQuantity: null,
     productType: "",
     acceptedQuantity: "",
@@ -1814,6 +1819,197 @@ const Grn = () => {
         }
     };
 
+    // PARTIAL GRN
+    const getPurchaseOrderGrnSummary = async (purchaseOrder: any) => {
+        const pOrdVoucherNumber = String(
+            purchaseOrder?.pOrdVoucherNumber || ""
+        ).trim();
+
+        const poBody = Array.isArray(
+            purchaseOrder?.pOrdBody
+        )
+            ? purchaseOrder.pOrdBody
+            : [];
+
+        if (!pOrdVoucherNumber) {
+            return {
+                purchaseOrder: {
+                    totalOrderedQty: 0,
+                    products: [],
+                },
+
+                grn: {
+                    totalGrnQty: 0,
+                    products: [],
+                },
+
+                pending: {
+                    totalPendingQty: 0,
+                    products: [],
+                },
+            };
+        }
+
+        const response = await professionalAxios.get(
+            "/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/grn/getAll",
+            {
+                params: {
+                    offset: 0,
+                    limit: 100000,
+                    status: "",
+                    search: "",
+                },
+            }
+        );
+
+        const allGrns = getRecords(
+            response?.data
+        );
+
+        const linkedGrns = (allGrns || []).filter(
+            (grn: any) =>
+                String(
+                    grn?.pOrdVoucherNumber || ""
+                ).trim() === pOrdVoucherNumber
+        );
+
+        const orderedQtyMap =
+            new Map<string, number>();
+
+        const grnQtyMap =
+            new Map<string, number>();
+
+        poBody.forEach((item: any) => {
+            const productCode = String(
+                item?.productCode || ""
+            ).trim();
+
+            if (!productCode) return;
+
+            orderedQtyMap.set(
+                productCode,
+                num(
+                    orderedQtyMap.get(
+                        productCode
+                    )
+                ) +
+                num(
+                    item?.quantity
+                )
+            );
+        });
+
+        linkedGrns.forEach((grn: any) => {
+            (grn?.grnBody || []).forEach(
+                (item: any) => {
+                    const productCode = String(
+                        item?.productCode || ""
+                    ).trim();
+
+                    if (!productCode) return;
+
+                    const grnQuantity =
+                        item?.quantity !== undefined &&
+                            item?.quantity !== null &&
+                            item?.quantity !== ""
+                            ? num(
+                                item?.quantity
+                            )
+                            : num(
+                                item?.acceptedQuantity
+                            ) +
+                            num(
+                                item?.rejectedQuantity
+                            );
+
+                    grnQtyMap.set(
+                        productCode,
+                        num(
+                            grnQtyMap.get(
+                                productCode
+                            )
+                        ) +
+                        grnQuantity
+                    );
+                }
+            );
+        });
+
+        const purchaseOrderProducts: any[] = [];
+        const grnProducts: any[] = [];
+        const pendingProducts: any[] = [];
+
+        let totalOrderedQty = 0;
+        let totalGrnQty = 0;
+        let totalPendingQty = 0;
+
+        orderedQtyMap.forEach(
+            (
+                orderedQty,
+                productCode
+            ) => {
+                const grnQty =
+                    num(
+                        grnQtyMap.get(
+                            productCode
+                        )
+                    );
+
+                const pendingQty =
+                    Math.max(
+                        orderedQty -
+                        grnQty,
+                        0
+                    );
+
+                purchaseOrderProducts.push({
+                    productCode,
+                    orderedQty,
+                });
+
+                grnProducts.push({
+                    productCode,
+                    grnQty,
+                });
+
+                pendingProducts.push({
+                    productCode,
+                    pendingQty,
+                });
+
+                totalOrderedQty +=
+                    orderedQty;
+
+                totalGrnQty +=
+                    grnQty;
+
+                totalPendingQty +=
+                    pendingQty;
+            }
+        );
+
+        return {
+            purchaseOrder: {
+                pOrdVoucherNumber,
+                totalOrderedQty,
+                products:
+                    purchaseOrderProducts,
+            },
+
+            grn: {
+                totalGrnQty,
+                products:
+                    grnProducts,
+            },
+
+            pending: {
+                totalPendingQty,
+                products:
+                    pendingProducts,
+            },
+        };
+    };
+
     const syncPurchaseOrderStatusAfterGrn = async (pOrdVoucherNumber: string) => {
         if (!pOrdVoucherNumber) return "";
 
@@ -1925,6 +2121,19 @@ const Grn = () => {
 
             quantity: item?.quantity || "",
 
+            // PARTIAL GRN
+            purchaseOrderPendingQuantity:
+                item?.purchaseOrderPendingQuantity !== undefined &&
+                    item?.purchaseOrderPendingQuantity !== null
+                    ? item.purchaseOrderPendingQuantity
+                    : null,
+
+            purchaseOrderOrderedQuantity:
+                item?.purchaseOrderOrderedQuantity !== undefined &&
+                    item?.purchaseOrderOrderedQuantity !== null
+                    ? item.purchaseOrderOrderedQuantity
+                    : null,
+
             availableQuantity: null,
 
             productType:
@@ -2022,54 +2231,255 @@ const Grn = () => {
         setShowModal(true);
     };
 
-    const handlePurchaseOrderConfirm = () => {
+    // PARTIAL GRN
+    const handlePurchaseOrderConfirm = async () => {
         if (!selectedPurchaseOrder) {
             toast.error("Please select purchase order");
             return;
         }
 
-        const poBody = selectedPurchaseOrder?.pOrdBody || [];
+        try {
+            setPurchaseOrderModalLoading(true);
 
-        const products =
-            poBody.length > 0
-                ? poBody.map((item: any) =>
-                    buildGrnProductRow(
-                        item,
-                        selectedPurchaseOrder?.pOrdVendorCode || ""
-                    )
+            const summary =
+                await getPurchaseOrderGrnSummary(
+                    selectedPurchaseOrder
+                );
+
+            const pendingProducts =
+                Array.isArray(
+                    summary?.pending?.products
                 )
-                : [{ ...emptyProductRow, id: Date.now() }];
+                    ? summary.pending.products
+                    : [];
 
-        setForm({
-            ...getDefaultForm(),
+            const pendingQtyByProduct =
+                new Map<string, number>();
 
-            pOrdVoucherNumber: selectedPurchaseOrder?.pOrdVoucherNumber || "",
+            pendingProducts.forEach(
+                (item: any) => {
+                    const productCode =
+                        String(
+                            item?.productCode ||
+                            ""
+                        ).trim();
 
-            grnVendorCode: selectedPurchaseOrder?.pOrdVendorCode || "",
-            grnVendorName: selectedPurchaseOrder?.pOrdVendorName || "",
-
-            customMasters:
-                selectedPurchaseOrder?.customMasters &&
-                    typeof selectedPurchaseOrder.customMasters === "object"
-                    ? {
-                        ...selectedPurchaseOrder.customMasters,
+                    if (!productCode) {
+                        return;
                     }
-                    : {},
 
-            ...getCustomMasterFieldValues(
-                templateFields?.header || [],
-                selectedPurchaseOrder?.customMasters || {}
-            ),
+                    pendingQtyByProduct.set(
+                        productCode,
+                        num(
+                            item?.pendingQty
+                        )
+                    );
+                }
+            );
 
-            products,
-        });
+            const poBody =
+                selectedPurchaseOrder
+                    ?.pOrdBody ||
+                [];
 
-        setErrors({});
-        setEditingRecord(null);
-        setShowPurchaseOrderModal(false);
-        setPurchaseOrderLoaded(false);
-        setPurchaseOrderModalLoading(false);
-        setShowModal(true);
+            const products =
+                poBody.length > 0
+                    ? poBody
+                        .map(
+                            (item: any) => {
+                                const productCode =
+                                    String(
+                                        item?.productCode ||
+                                        ""
+                                    ).trim();
+
+                                const orderedQuantity =
+                                    num(
+                                        item?.quantity
+                                    );
+
+                                const currentPendingQuantity =
+                                    pendingQtyByProduct.has(
+                                        productCode
+                                    )
+                                        ? num(
+                                            pendingQtyByProduct.get(
+                                                productCode
+                                            )
+                                        )
+                                        : 0;
+
+                                const rowPendingQuantity =
+                                    Math.min(
+                                        Math.max(
+                                            orderedQuantity,
+                                            0
+                                        ),
+                                        Math.max(
+                                            currentPendingQuantity,
+                                            0
+                                        )
+                                    );
+
+                                if (
+                                    productCode
+                                ) {
+                                    pendingQtyByProduct.set(
+                                        productCode,
+                                        Math.max(
+                                            currentPendingQuantity -
+                                            rowPendingQuantity,
+                                            0
+                                        )
+                                    );
+                                }
+
+                                return buildGrnProductRow(
+                                    {
+                                        ...item,
+
+                                        quantity:
+                                            String(
+                                                rowPendingQuantity
+                                            ),
+
+                                        acceptedQuantity:
+                                            String(
+                                                rowPendingQuantity
+                                            ),
+
+                                        rejectedQuantity:
+                                            "0",
+
+                                        rejectedReason:
+                                            "",
+
+                                        purchaseOrderPendingQuantity:
+                                            rowPendingQuantity,
+
+                                        purchaseOrderOrderedQuantity:
+                                            orderedQuantity,
+                                    },
+
+                                    selectedPurchaseOrder
+                                        ?.pOrdVendorCode ||
+                                    ""
+                                );
+                            }
+                        )
+                        .filter(
+                            (item: any) =>
+                                !item?.productCode ||
+                                num(
+                                    item
+                                        ?.purchaseOrderPendingQuantity
+                                ) > 0
+                        )
+                    : [
+                        {
+                            ...emptyProductRow,
+                            id: Date.now(),
+                        },
+                    ];
+
+            if (
+                poBody.length > 0 &&
+                products.length === 0
+            ) {
+                await syncPurchaseOrderStatusAfterGrn(
+                    selectedPurchaseOrder
+                        ?.pOrdVoucherNumber
+                );
+
+                toast.info(
+                    "This Purchase Order is already fully received in GRN"
+                );
+
+                setShowPurchaseOrderModal(
+                    false
+                );
+
+                setSelectedPurchaseOrder(
+                    null
+                );
+
+                setPurchaseOrderLoaded(
+                    false
+                );
+
+                return;
+            }
+
+            setForm({
+                ...getDefaultForm(),
+
+                pOrdVoucherNumber:
+                    selectedPurchaseOrder
+                        ?.pOrdVoucherNumber ||
+                    "",
+
+                grnVendorCode:
+                    selectedPurchaseOrder
+                        ?.pOrdVendorCode ||
+                    "",
+
+                grnVendorName:
+                    selectedPurchaseOrder
+                        ?.pOrdVendorName ||
+                    "",
+
+                customMasters:
+                    selectedPurchaseOrder
+                        ?.customMasters &&
+                        typeof selectedPurchaseOrder.customMasters ===
+                        "object"
+                        ? {
+                            ...selectedPurchaseOrder.customMasters,
+                        }
+                        : {},
+
+                ...getCustomMasterFieldValues(
+                    templateFields?.header ||
+                    [],
+
+                    selectedPurchaseOrder
+                        ?.customMasters ||
+                    {}
+                ),
+
+                products,
+            });
+
+            setErrors({});
+            setEditingRecord(null);
+
+            setShowPurchaseOrderModal(
+                false
+            );
+
+            setPurchaseOrderLoaded(
+                false
+            );
+
+            setShowModal(
+                true
+            );
+        } catch (error: any) {
+            console.log(
+                "Failed to load pending Purchase Order GRN quantity",
+                error
+            );
+
+            toast.error(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to load pending Purchase Order quantity"
+            );
+        } finally {
+            setPurchaseOrderModalLoading(
+                false
+            );
+        }
     };
 
     const openEditModal = async (record: any) => {
@@ -2693,80 +3103,144 @@ const Grn = () => {
     //     return updatedRow;
     // };
 
-
+    // PARTIAL GRN
     const handleQuantityFields = (
         updatedRow: any,
         key: string,
         value: any,
         isPurchaseOrderGrn: boolean
     ) => {
-        const originalQuantity = num(updatedRow.quantity);
+        const purchaseOrderPendingQuantity =
+            isPurchaseOrderGrn &&
+                updatedRow?.purchaseOrderPendingQuantity !== undefined &&
+                updatedRow?.purchaseOrderPendingQuantity !== null
+                ? num(
+                    updatedRow
+                        ?.purchaseOrderPendingQuantity
+                )
+                : 0;
 
         if (key === "acceptedQuantity") {
-            let acceptedQuantity = num(value);
+            let acceptedQuantity =
+                num(value);
 
-            if (acceptedQuantity < 0) {
-                acceptedQuantity = 0;
-                toast.error("Accepted quantity cannot be negative");
+            let rejectedQuantity =
+                num(
+                    updatedRow
+                        ?.rejectedQuantity
+                );
+
+            if (
+                acceptedQuantity <
+                0
+            ) {
+                acceptedQuantity =
+                    0;
+
+                toast.error(
+                    "Accepted quantity cannot be negative"
+                );
             }
 
             if (
                 isPurchaseOrderGrn &&
-                originalQuantity > 0 &&
-                acceptedQuantity > originalQuantity
+                purchaseOrderPendingQuantity >
+                0 &&
+                acceptedQuantity +
+                rejectedQuantity >
+                purchaseOrderPendingQuantity
             ) {
-                acceptedQuantity = originalQuantity;
-                toast.error("Accepted quantity cannot be greater than quantity");
-            }
+                acceptedQuantity =
+                    Math.max(
+                        purchaseOrderPendingQuantity -
+                        rejectedQuantity,
+                        0
+                    );
 
-            updatedRow.acceptedQuantity = String(acceptedQuantity);
-
-            if (isPurchaseOrderGrn && originalQuantity > 0) {
-                updatedRow.rejectedQuantity = String(
-                    Math.max(originalQuantity - acceptedQuantity, 0)
-                );
-            } else {
-                updatedRow.quantity = String(
-                    acceptedQuantity + num(updatedRow.rejectedQuantity)
+                toast.error(
+                    `Accepted + Rejected quantity cannot exceed pending Purchase Order quantity ${purchaseOrderPendingQuantity}`
                 );
             }
 
-            if (num(updatedRow.rejectedQuantity) === 0) {
-                updatedRow.rejectedReason = "";
+            updatedRow.acceptedQuantity =
+                String(
+                    acceptedQuantity
+                );
+
+            updatedRow.quantity =
+                String(
+                    acceptedQuantity +
+                    rejectedQuantity
+                );
+
+            if (
+                rejectedQuantity ===
+                0
+            ) {
+                updatedRow.rejectedReason =
+                    "";
             }
         }
 
         if (key === "rejectedQuantity") {
-            let rejectedQuantity = num(value);
+            let rejectedQuantity =
+                num(value);
 
-            if (rejectedQuantity < 0) {
-                rejectedQuantity = 0;
-                toast.error("Rejected quantity cannot be negative");
+            const acceptedQuantity =
+                num(
+                    updatedRow
+                        ?.acceptedQuantity
+                );
+
+            if (
+                rejectedQuantity <
+                0
+            ) {
+                rejectedQuantity =
+                    0;
+
+                toast.error(
+                    "Rejected quantity cannot be negative"
+                );
             }
 
             if (
                 isPurchaseOrderGrn &&
-                originalQuantity > 0 &&
-                rejectedQuantity > originalQuantity
+                purchaseOrderPendingQuantity >
+                0 &&
+                acceptedQuantity +
+                rejectedQuantity >
+                purchaseOrderPendingQuantity
             ) {
-                rejectedQuantity = originalQuantity;
-                toast.error("Rejected quantity cannot be greater than quantity");
-            }
+                rejectedQuantity =
+                    Math.max(
+                        purchaseOrderPendingQuantity -
+                        acceptedQuantity,
+                        0
+                    );
 
-            updatedRow.rejectedQuantity = String(rejectedQuantity);
-
-            if (isPurchaseOrderGrn && originalQuantity > 0) {
-                updatedRow.acceptedQuantity = String(
-                    Math.max(originalQuantity - rejectedQuantity, 0)
-                );
-            } else {
-                updatedRow.quantity = String(
-                    num(updatedRow.acceptedQuantity) + rejectedQuantity
+                toast.error(
+                    `Accepted + Rejected quantity cannot exceed pending Purchase Order quantity ${purchaseOrderPendingQuantity}`
                 );
             }
 
-            if (rejectedQuantity === 0) {
-                updatedRow.rejectedReason = "";
+            updatedRow.rejectedQuantity =
+                String(
+                    rejectedQuantity
+                );
+
+            updatedRow.quantity =
+                String(
+                    acceptedQuantity +
+                    rejectedQuantity
+                );
+
+            if (
+                rejectedQuantity ===
+                0
+            ) {
+                updatedRow.rejectedReason =
+                    "";
             }
         }
 
@@ -2797,6 +3271,7 @@ const Grn = () => {
 
         return updatedRow;
     };
+
     const enableDuplicatePro = useMemo(() => {
         const locationConfig = configurations?.[0]?.systemConfiguration?.allowDuplicateProduct
         return locationConfig === true || locationConfig === "true";
@@ -2824,6 +3299,7 @@ const Grn = () => {
         }
 
         const duplicate = Boolean(form?.products?.filter((e: any) => e?.productCode == value)?.length);
+
         if (duplicate && !enableDuplicatePro) {
             setErrors((prev: any) => ({
                 ...prev,
@@ -2833,6 +3309,7 @@ const Grn = () => {
             }));
             return;
         }
+
         setForm((prev: any) => {
             const updatedProducts = [...(prev.products || [])];
 
@@ -2849,13 +3326,18 @@ const Grn = () => {
                 const apiKey = getInventoryBalanceApiKey(currentField);
                 const selectedOption = getOptionByValue(currentField, value);
                 const selectedCode = selectedOption?.value ?? selectedOption?.raw?.code ?? value ?? "";
+
                 const currentSelections =
                     updatedRow?._inventoryBalanceSelections &&
                         typeof updatedRow._inventoryBalanceSelections === "object"
                         ? { ...updatedRow._inventoryBalanceSelections }
                         : {};
 
-                if (selectedCode !== undefined && selectedCode !== null && String(selectedCode).trim() !== "") {
+                if (
+                    selectedCode !== undefined &&
+                    selectedCode !== null &&
+                    String(selectedCode).trim() !== ""
+                ) {
                     currentSelections[apiKey] = selectedCode;
                 } else {
                     delete currentSelections[apiKey];
@@ -2880,6 +3362,7 @@ const Grn = () => {
                     updatedRow
                 );
             }
+
             const selectedOption = getOptionByValue(currentField, value);
             const raw = selectedOption?.raw || {};
 
@@ -2903,6 +3386,7 @@ const Grn = () => {
                 updatedRow.productId = raw?._id || raw?.productId || updatedRow.productId || "";
                 updatedRow.productType = raw?.productType || raw?.dynamicFields?.productType || "";
                 updatedRow.availableQuantity = null;
+
                 updatedRow = applyGrnTaxRule(
                     updatedRow,
                     form?.grnVendorCode || "",
@@ -2914,7 +3398,11 @@ const Grn = () => {
             updatedRow = handleTaxFields(updatedRow, key, value);
             updatedRow = calculateRow(updatedRow);
             updatedProducts[index] = updatedRow;
-            return { ...prev, products: updatedProducts, };
+
+            return {
+                ...prev,
+                products: updatedProducts,
+            };
         });
 
         setErrors((prev: any) => ({
@@ -2931,11 +3419,16 @@ const Grn = () => {
             [`row_${index}_sgst`]: "",
         }));
     };
+
     const getFilledRows = () => {
-        const bodyKeys = (templateFields?.body || []).filter((field: any) => !field.isHidden).map((field: any) => field.key);
+        const bodyKeys = (templateFields?.body || [])
+            .filter((field: any) => !field.isHidden)
+            .map((field: any) => field.key);
+
         return (form.products || []).filter((row: any) => {
             return bodyKeys.some((key: string) => {
                 const value = row?.[key];
+
                 return value !== undefined && value !== null && value !== "";
             });
         });
@@ -2943,9 +3436,12 @@ const Grn = () => {
 
     const validateForm = () => {
         const err: any = {};
+
         (templateFields?.header || []).forEach((field: any) => {
             if (field.isHidden || !field.isRequired) return;
+
             const value = form?.[field.key];
+
             if (value === undefined || value === null || value === "") {
                 err[field.key] = `${field.label || field.key} is required`;
             }
@@ -2974,6 +3470,38 @@ const Grn = () => {
                         } is required`;
                 }
             });
+
+            // PARTIAL GRN
+            if (
+                !editingRecord &&
+                form?.pOrdVoucherNumber &&
+                row?.purchaseOrderPendingQuantity !== null &&
+                row?.purchaseOrderPendingQuantity !== undefined
+            ) {
+                const receivedQuantity =
+                    num(
+                        row?.acceptedQuantity
+                    ) +
+                    num(
+                        row?.rejectedQuantity
+                    );
+
+                if (
+                    receivedQuantity >
+                    num(
+                        row
+                            ?.purchaseOrderPendingQuantity
+                    )
+                ) {
+                    err[
+                        `row_${index}_acceptedQuantity`
+                    ] =
+                        `Accepted + Rejected quantity cannot exceed pending Purchase Order quantity ${num(
+                            row
+                                ?.purchaseOrderPendingQuantity
+                        )}`;
+                }
+            }
 
             const cgst = num(row.cgstPercentage || row.cgst);
             const sgst = num(row.sgstPercentage || row.sgst);
@@ -3601,6 +4129,7 @@ const Grn = () => {
             });
         }
     };
+
     const columns = [
         {
             key: "grnVoucherNumber",
@@ -3981,14 +4510,17 @@ const Grn = () => {
             toast.error("You can't edit closed GRN")
             return;
         }
+
         openEditModal(record);
     }
+
 
     const handleDeleteGRNClick = (e: any, record: any) => {
         if (isClosedGRN(record)) {
             toast.error("You can't delete closed GRN")
             return;
         }
+
         const rect =
             e.currentTarget.getBoundingClientRect();
 
@@ -4005,6 +4537,7 @@ const Grn = () => {
             pOrdVoucherNumber: record?.pOrdVoucherNumber || "",
         });
     }
+
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
@@ -4064,6 +4597,7 @@ const Grn = () => {
                         >
                             <Download size={16} />
                         </button>
+
                         <Permission module="bookez" permissionKey="grn" action="update">
                             <button
                                 id="grn-edit-button"
@@ -4301,8 +4835,6 @@ const Grn = () => {
                     confirmText: "Confirm",
                 }}
             />
-
-
 
             <Modal
                 show={showReturnConfirmModal}

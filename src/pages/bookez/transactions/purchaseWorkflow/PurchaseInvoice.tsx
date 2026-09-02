@@ -88,6 +88,8 @@ const emptyProductRow = {
     remarks: "",
 
     quantity: "",
+    grnPendingInvoiceQuantity: null,
+    maxQuantity: null,
     availableQuantity: null,
     productType: "",
 
@@ -1206,11 +1208,15 @@ const PurchaseInvoice = () => {
         const unitCode = item?.unit || item?.uom || "";
 
         const quantity =
-            item?.acceptedQuantity !== undefined &&
-                item?.acceptedQuantity !== null &&
-                item?.acceptedQuantity !== ""
-                ? item.acceptedQuantity
-                : item?.quantity || "";
+            item?.quantity !== undefined &&
+                item?.quantity !== null &&
+                item?.quantity !== ""
+                ? item.quantity
+                : item?.acceptedQuantity !== undefined &&
+                    item?.acceptedQuantity !== null &&
+                    item?.acceptedQuantity !== ""
+                    ? item.acceptedQuantity
+                    : "";
 
         const normalizedRow = normalizeRowKeys({
             id: item?.id || Date.now() + Math.random(),
@@ -1233,6 +1239,19 @@ const PurchaseInvoice = () => {
             remarks: item?.remarks || "",
 
             quantity,
+
+            grnPendingInvoiceQuantity:
+                item?.grnPendingInvoiceQuantity !== undefined &&
+                    item?.grnPendingInvoiceQuantity !== null
+                    ? item.grnPendingInvoiceQuantity
+                    : null,
+
+            maxQuantity:
+                item?.maxQuantity !== undefined &&
+                    item?.maxQuantity !== null &&
+                    item?.maxQuantity !== ""
+                    ? item.maxQuantity
+                    : null,
 
             availableQuantity: null,
 
@@ -1346,6 +1365,8 @@ const PurchaseInvoice = () => {
                         ...item,
                         quantity: String(pendingInvoiceQuantity),
                         acceptedQuantity: String(pendingInvoiceQuantity),
+                        grnPendingInvoiceQuantity: pendingInvoiceQuantity,
+                        maxQuantity: pendingInvoiceQuantity,
                     };
                 })
                 .filter(Boolean);
@@ -1388,17 +1409,64 @@ const PurchaseInvoice = () => {
         }
     };
 
-    const openEditModal = (record: any) => {
+    const openEditModal = async (record: any) => {
         const footer = record?.pInvFooter || {};
+
+        let pendingProducts: any[] = [];
+
+        if (record?.grnVoucherNumber) {
+            try {
+                const summaryRes = await professionalAxios.get(
+                    `/eTaxSolnMongoApiBackend/users/bookez/analysis/purchaseInvoice/byGrnVoucherNumber/${record.grnVoucherNumber}`
+                );
+
+                pendingProducts =
+                    summaryRes?.data?.data?.products ||
+                    summaryRes?.data?.products ||
+                    [];
+            } catch (error) {
+                console.log(
+                    "Failed to load pending GRN quantity while editing Purchase Invoice",
+                    error
+                );
+            }
+        }
+
+        const pendingProductMap = new Map(
+            (Array.isArray(pendingProducts) ? pendingProducts : []).map((item: any) => [
+                String(item?.productCode || ""),
+                item,
+            ])
+        );
 
         const products =
             record?.pInvBody?.length > 0
-                ? record.pInvBody.map((item: any) =>
-                    buildPurchaseInvoiceProductRow(
-                        item,
+                ? record.pInvBody.map((item: any) => {
+                    const pending = pendingProductMap.get(
+                        String(item?.productCode || "")
+                    );
+
+                    const currentQuantity = num(item?.quantity);
+
+                    const pendingInvoiceQuantity = num(
+                        pending?.pendingInvoiceQuantity ??
+                        pending?.balanceQuantity ??
+                        (num(pending?.acceptedQuantity) - num(pending?.invoicedQuantity))
+                    );
+
+                    return buildPurchaseInvoiceProductRow(
+                        {
+                            ...item,
+                            quantity: String(currentQuantity),
+                            grnPendingInvoiceQuantity: pendingInvoiceQuantity,
+                            maxQuantity:
+                                record?.grnVoucherNumber
+                                    ? String(currentQuantity + pendingInvoiceQuantity)
+                                    : null,
+                        },
                         record?.pInvVendorCode || ""
-                    )
-                )
+                    );
+                })
                 : [{ ...emptyProductRow, id: Date.now() }];
 
         setEditingRecord(true);
@@ -2031,6 +2099,24 @@ const PurchaseInvoice = () => {
             }
 
             updatedRow = normalizeRowKeys(updatedRow);
+
+            if (key === "quantity") {
+                const maxQuantity = num(updatedRow.maxQuantity);
+                const enteredQuantity = num(value);
+
+                if (
+                    updatedRow?.maxQuantity !== null &&
+                    updatedRow?.maxQuantity !== undefined &&
+                    maxQuantity >= 0 &&
+                    enteredQuantity > maxQuantity
+                ) {
+                    updatedRow.quantity = String(maxQuantity);
+                    toast.error(
+                        "Invoice quantity cannot be greater than pending GRN quantity"
+                    );
+                }
+            }
+
             updatedRow = handleTaxFields(updatedRow, key, value);
             updatedRow = calculateRow(updatedRow);
 
@@ -2122,6 +2208,16 @@ const PurchaseInvoice = () => {
                         } is required`;
                 }
             });
+
+            if (
+                form?.grnVoucherNumber &&
+                row?.maxQuantity !== null &&
+                row?.maxQuantity !== undefined &&
+                num(row?.quantity) > num(row?.maxQuantity)
+            ) {
+                err[`row_${index}_quantity`] =
+                    `Invoice quantity cannot exceed pending GRN quantity ${num(row?.maxQuantity)}`;
+            }
 
             const cgst = num(row.cgstPercentage || row.cgst);
             const sgst = num(row.sgstPercentage || row.sgst);
@@ -2218,7 +2314,7 @@ const PurchaseInvoice = () => {
 
                     productCode: item.productCode,
                     productName: item.productName,
-                    productId: item.productId,
+                    // productId: item.productId,
 
                     productDescription:
                         item.productDescription || item.description,
@@ -2859,7 +2955,7 @@ const PurchaseInvoice = () => {
                         },
                         bodyKey: "products",
                         handleChange: handleMainChange,
-                       
+
                         bodyCellExtraRenderer: (column: any, row: any) =>
                             renderPurchaseInvoiceCellExtra(
                                 column,
