@@ -3,7 +3,7 @@ import { CreatableSelectInput, SelectInput, TextInput } from "../inputs";
 
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 
-type ColumnType = "select" | "custommaster" | "text" | "number" | "date";
+type ColumnType = "select" | "custommaster" | "accountmaster" | "productmaster" | "unitmaster" | "employeemaster" | "text" | "number" | "date";
 
 export type EditableColumn = {
     key: string;
@@ -174,6 +174,21 @@ const EditableLineTable = ({
         );
     };
 
+    // STANDARD MASTER CHECK
+
+    const isStandardMasterColumn = (
+        column: EditableColumn
+    ) => {
+        const type = getColumnType(column);
+
+        return (
+            type === "accountmaster" ||
+            type === "productmaster" ||
+            type === "unitmaster" ||
+            type === "employeemaster"
+        );
+    };
+
     const isSelectColumn = (
         column: EditableColumn
     ) => {
@@ -182,7 +197,11 @@ const EditableLineTable = ({
 
         return (
             type === "select" ||
-            type === "custommaster"
+            type === "custommaster" ||
+            type === "accountmaster" ||
+            type === "productmaster" ||
+            type === "unitmaster" ||
+            type === "employeemaster"
         );
     };
 
@@ -232,6 +251,68 @@ const EditableLineTable = ({
             return "";
         }
 
+        // STANDARD MASTER VALUE
+
+        if (isStandardMasterColumn(column)) {
+            const directValue = row?.[column.key];
+
+            if (
+                directValue === undefined ||
+                directValue === null ||
+                directValue === ""
+            ) {
+                return "";
+            }
+
+            if (typeof directValue !== "object") {
+                return directValue;
+            }
+
+            const type = getColumnType(column);
+
+            if (type === "accountmaster") {
+                return (
+                    directValue?.accountCode ||
+                    directValue?.code ||
+                    directValue?.value ||
+                    ""
+                );
+            }
+
+            if (type === "productmaster") {
+                return (
+                    directValue?.productCode ||
+                    directValue?.code ||
+                    directValue?.value ||
+                    ""
+                );
+            }
+
+            if (type === "unitmaster") {
+                return (
+                    directValue?.unitCode ||
+                    directValue?.code ||
+                    directValue?.value ||
+                    ""
+                );
+            }
+
+            if (type === "employeemaster") {
+                return (
+                    directValue?.userMobileNumberHash ||
+                    directValue?.code ||
+                    directValue?.value ||
+                    ""
+                );
+            }
+
+            return (
+                directValue?.value ||
+                directValue?.code ||
+                ""
+            );
+        }
+
         return (
             row?.[
             column.key
@@ -240,45 +321,19 @@ const EditableLineTable = ({
         );
     };
 
-    const normalizeOptions = (
-        column: EditableColumn
-    ) => {
-        return (
-            column?.options ||
-            []
-        ).map(
-            (option: any) => {
-                if (
-                    typeof option ===
-                    "object"
-                ) {
+    const normalizeOptions = (column: EditableColumn) => {
+        return (column?.options || []).map((option: any) => {
+            if (typeof option === "object") {
                     return {
                         ...option,
-
-                        label:
-                            option?.label ||
-                            option?.name ||
-                            option?.value ||
-                            option?.code ||
-                            "",
-
-                        value:
-                            option?.value ||
-                            option?.code ||
-                            option?._id ||
-                            option?.name ||
-                            "",
+                        label: option?.label || option?.accountName || option?.productName || option?.unitName || option?.userFirstName || option?.name || option?.value || option?.code || "",
+                        value: option?.value || option?.accountCode || option?.productCode || option?.unitCode || option?.userMobileNumberHash || option?.code || option?._id || option?.name || "",
                     };
                 }
 
                 return {
-                    label:
-                        String(
-                            option
-                        ),
-
-                    value:
-                        option,
+                    label: String(option),
+                    value: option,
                 };
             }
         );
@@ -489,6 +544,9 @@ const EditableLineTable = ({
                                                                         "function" &&
                                                                         !isCustomMasterColumn(
                                                                             column
+                                                                                ) &&
+                                                                                !isStandardMasterColumn(
+                                                                                    column
                                                                         ) ? (
                                                                         <CreatableSelectInput
                                                                             label=""
@@ -567,6 +625,12 @@ const EditableLineTable = ({
                                                                             disabled={
                                                                                 disabledCell
                                                                             }
+                                                                                        largeData={
+                                                                                            isCustomMasterColumn(column) ||
+                                                                                                isStandardMasterColumn(column)
+                                                                                                ? true
+                                                                                                : column.largeData
+                                                                                        }
                                                                             onChange={(
                                                                                 event: any
                                                                             ) =>
@@ -662,8 +726,6 @@ const EditableLineTable = ({
                                                                         }
                                                                     />
                                                                 )}
-
-
 
                                                                 {renderCellExtra?.(
                                                                     column,

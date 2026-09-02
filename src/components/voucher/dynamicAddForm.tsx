@@ -12,6 +12,25 @@ import { loadFieldOptions } from "../../pages/bookez/transactions/purchaseWorkfl
 
 const getDynamicFieldType = (field: any) => String(field?.type || field?.dataSource?.type || "").trim().toLowerCase().replace(/\s/g, "");
 
+// STANDARD MASTER CHECK
+
+const STANDARD_MASTER_FIELD_TYPES = new Set([
+    "accountmaster",
+    "productmaster",
+    "unitmaster",
+    "employeemaster",
+    "customemployeemaster",
+    "teamemployeemaster",
+]);
+
+const EMPLOYEE_MASTER_FIELD_TYPES = new Set([
+    "employeemaster",
+    "customemployeemaster",
+    "teamemployeemaster",
+]);
+
+const isStandardMasterField = (field: any) => STANDARD_MASTER_FIELD_TYPES.has(getDynamicFieldType(field));
+
 // CUSTOM MASTER CHECK
 
 const isCustomMasterField = (field: any) => {
@@ -19,6 +38,10 @@ const isCustomMasterField = (field: any) => {
     const dataSourceType = String(field?.dataSource?.type || "").trim().toLowerCase().replace(/\s/g, "");
     return fieldType === "custommaster" || fieldType === "customemaster" || dataSourceType === "custommaster" || dataSourceType === "customemaster" || Boolean(field?.customMasterCode && field?.dataSource?.api);
 };
+
+// MASTER OPTION FIELD CHECK
+
+const isMasterOptionField = (field: any) => isCustomMasterField(field) || isStandardMasterField(field);
 
 // CUSTOM MASTER NAME
 
@@ -35,22 +58,65 @@ const prepareCustomMasterFieldForOptions = (field: any) => {
     return { ...field, api, labelField, valueField, queryParams: field?.queryParams || field?.dataSource?.queryParams || {} };
 };
 
-// LOAD CUSTOM MASTER OPTIONS FOR ONE SECTION
+// PREPARE STANDARD MASTER FIELD FOR loadFieldOptions
 
-const loadCustomMasterSectionOptions = async (fields: any[] = []) => {
+const prepareStandardMasterFieldForOptions = (field: any) => {
+    if (!isStandardMasterField(field)) return field;
+
+    const fieldType = getDynamicFieldType(field);
+    const api = field?.api || field?.dataSource?.api || "";
+
+    if (!api) return field;
+
+    let labelField = field?.labelField || field?.dataSource?.labelField || "";
+    let valueField = field?.valueField || field?.dataSource?.valueField || "";
+
+    if (fieldType === "productmaster") {
+        labelField = labelField || "productName";
+        valueField = valueField || "productCode";
+    }
+
+    if (fieldType === "unitmaster") {
+        labelField = labelField || "unitName";
+        valueField = valueField || "unitCode";
+    }
+
+    if (fieldType === "accountmaster") {
+        labelField = labelField || "accountName";
+        valueField = valueField || "accountCode";
+    }
+
+    if (EMPLOYEE_MASTER_FIELD_TYPES.has(fieldType)) {
+        labelField = labelField || "userFirstName";
+        valueField = valueField || "userMobileNumberHash";
+    }
+
+    return { ...field, api, labelField: labelField || "name", valueField: valueField || "code", queryParams: field?.queryParams || field?.dataSource?.queryParams || {} };
+};
+
+// LOAD MASTER OPTIONS FOR ONE SECTION
+
+const loadMasterSectionOptions = async (fields: any[] = []) => {
     const safeFields = Array.isArray(fields) ? fields : [];
-    const customMasterFields = safeFields.filter((field: any) => isCustomMasterField(field)).map((field: any) => prepareCustomMasterFieldForOptions(field));
-    if (customMasterFields.length === 0) return safeFields;
 
-    const loadedFields = await loadFieldOptions(customMasterFields);
+    const masterFields = safeFields
+        .filter((field: any) => isMasterOptionField(field))
+        .map((field: any) => isCustomMasterField(field) ? prepareCustomMasterFieldForOptions(field) : prepareStandardMasterFieldForOptions(field));
+
+    if (masterFields.length === 0) return safeFields;
+
+    const loadedFields = await loadFieldOptions(masterFields);
     const loadedFieldMap = new Map<string, any>();
 
     (Array.isArray(loadedFields) ? loadedFields : []).forEach((field: any) => loadedFieldMap.set(String(field?.key || ""), field));
 
     return safeFields.map((field: any) => {
-        if (!isCustomMasterField(field)) return field;
+        if (!isMasterOptionField(field)) return field;
+
         const loadedField = loadedFieldMap.get(String(field?.key || ""));
+
         if (!loadedField) return field;
+
         return { ...field, ...loadedField, dataSource: field?.dataSource };
     });
 };
@@ -85,6 +151,23 @@ const getCustomMasterOptions = (field: any) => {
     }).filter(Boolean);
 };
 
+// GET STANDARD MASTER OPTIONS
+
+const getStandardMasterOptions = (field: any) => {
+    const options = Array.isArray(field?.options) ? field.options : [];
+
+    return options.map((option: any) => {
+        if (typeof option !== "object") return { value: String(option), label: String(option) };
+
+        const value = option?.value ?? option?.code ?? option?.accountCode ?? option?.productCode ?? option?.unitCode ?? option?.userMobileNumberHash ?? option?._id ?? "";
+        const label = option?.label ?? option?.name ?? option?.accountName ?? option?.productName ?? option?.unitName ?? option?.userFirstName ?? value;
+
+        if (!String(value ?? "").trim()) return null;
+
+        return { ...option, value: String(value), label: String(label || value) };
+    }).filter(Boolean);
+};
+
 // GET CUSTOM MASTER SELECTED CODE
 
 const getCustomMasterSelectedCode = (form: any, field: any) => {
@@ -99,17 +182,47 @@ const getCustomMasterSelectedCode = (form: any, field: any) => {
     return "";
 };
 
+// GET STANDARD MASTER SELECTED VALUE
+
+const getStandardMasterSelectedValue = (form: any, field: any) => {
+    const fieldValue = form?.[field?.key];
+
+    if (fieldValue === undefined || fieldValue === null) return "";
+
+    if (typeof fieldValue !== "object") return String(fieldValue);
+
+    const fieldType = getDynamicFieldType(field);
+
+    if (fieldType === "accountmaster") return String(fieldValue?.accountCode || fieldValue?.code || fieldValue?.value || "");
+    if (fieldType === "productmaster") return String(fieldValue?.productCode || fieldValue?.code || fieldValue?.value || "");
+    if (fieldType === "unitmaster") return String(fieldValue?.unitCode || fieldValue?.code || fieldValue?.value || "");
+    if (EMPLOYEE_MASTER_FIELD_TYPES.has(fieldType)) return String(fieldValue?.userMobileNumberHash || fieldValue?.value || "");
+
+    return String(fieldValue?.value || fieldValue?.code || "");
+};
+
 // DYNAMIC ADD FORM
 
 const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleRefRow, handleDeleteRow, handleRowChange, inputData, bodyKey, addButtonText, handleChange, headerChildTitle, isAddButton = true, isRefrenceAction = false, RefrenceBtnText, bodyTitle, isView = false, contentLoading = false, contentSkeleton, isSummaryFooter, manualselected, enableLocation, isBodyColumnVisible, isBodyCellVisible, isBodyCellDisabled, bodyCellExtraRenderer, checkAccount, setCheckAccount, onAccountSaved, headerChildExtraRenderer, headerRightContent }: any) => {
     const [loadedInputData, setLoadedInputData] = useState<any>(inputData || {});
     const [customMasterOptionsLoading, setCustomMasterOptionsLoading] = useState(false);
 
-    // BUILD CUSTOM MASTER SIGNATURE
+    // BUILD MASTER SIGNATURE
 
-    const customMasterSignature = useMemo(() => {
+    const masterOptionsSignature = useMemo(() => {
         const allFields = [...(Array.isArray(inputData?.header) ? inputData.header : []), ...(Array.isArray(inputData?.headerChild) ? inputData.headerChild : []), ...(Array.isArray(inputData?.body) ? inputData.body : []), ...(Array.isArray(inputData?.footer) ? inputData.footer : [])];
-        return JSON.stringify(allFields.filter((field: any) => isCustomMasterField(field)).map((field: any) => ({ key: field?.key, type: field?.type, customMasterCode: field?.customMasterCode, customMasterName: field?.customMasterName, api: field?.api || field?.dataSource?.api, labelField: field?.labelField || field?.dataSource?.labelField, valueField: field?.valueField || field?.dataSource?.valueField, queryParams: field?.queryParams || field?.dataSource?.queryParams })));
+
+        return JSON.stringify(allFields.filter((field: any) => isMasterOptionField(field)).map((field: any) => ({
+            key: field?.key,
+            type: field?.type,
+            masterSource: field?.masterSource,
+            customMasterCode: field?.customMasterCode,
+            customMasterName: field?.customMasterName,
+            api: field?.api || field?.dataSource?.api,
+            labelField: field?.labelField || field?.dataSource?.labelField,
+            valueField: field?.valueField || field?.dataSource?.valueField,
+            queryParams: field?.queryParams || field?.dataSource?.queryParams,
+        })));
     }, [inputData]);
 
     // CALL COMMON loadFieldOptions
@@ -123,34 +236,34 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
 
         let isActive = true;
 
-        const loadCustomMasterOptions = async () => {
+        const loadMasterOptions = async () => {
             try {
                 setCustomMasterOptionsLoading(true);
 
                 const [updatedHeader, updatedHeaderChild, updatedBody, updatedFooter] = await Promise.all([
-                    loadCustomMasterSectionOptions(inputData?.header || []),
-                    loadCustomMasterSectionOptions(inputData?.headerChild || []),
-                    loadCustomMasterSectionOptions(inputData?.body || []),
-                    loadCustomMasterSectionOptions(inputData?.footer || []),
+                    loadMasterSectionOptions(inputData?.header || []),
+                    loadMasterSectionOptions(inputData?.headerChild || []),
+                    loadMasterSectionOptions(inputData?.body || []),
+                    loadMasterSectionOptions(inputData?.footer || []),
                 ]);
 
                 if (!isActive) return;
 
                 setLoadedInputData({ ...(inputData || {}), header: updatedHeader, headerChild: updatedHeaderChild, body: updatedBody, footer: updatedFooter });
             } catch (error) {
-                console.log("Failed to load DynamicAddForm Custom Master options", error);
+                console.log("Failed to load DynamicAddForm Master options", error);
                 if (isActive) setLoadedInputData(inputData || {});
             } finally {
                 if (isActive) setCustomMasterOptionsLoading(false);
             }
         };
 
-        loadCustomMasterOptions();
+        loadMasterOptions();
 
         return () => { isActive = false; };
-    }, [show, customMasterSignature]);
+    }, [show, masterOptionsSignature]);
 
-    // KEEP NON-CUSTOM DATA UPDATED
+    // KEEP NON-MASTER DATA UPDATED
 
     useEffect(() => {
         if (!show) return;
@@ -162,19 +275,19 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                 ...(inputData || {}),
                 header: (inputData?.header || []).map((field: any) => {
                     const loadedField = (previous?.header || []).find((item: any) => item?.key === field?.key);
-                    return isCustomMasterField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
+                    return isMasterOptionField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
                 }),
                 headerChild: (inputData?.headerChild || []).map((field: any) => {
                     const loadedField = (previous?.headerChild || []).find((item: any) => item?.key === field?.key);
-                    return isCustomMasterField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
+                    return isMasterOptionField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
                 }),
                 body: (inputData?.body || []).map((field: any) => {
                     const loadedField = (previous?.body || []).find((item: any) => item?.key === field?.key);
-                    return isCustomMasterField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
+                    return isMasterOptionField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
                 }),
                 footer: (inputData?.footer || []).map((field: any) => {
                     const loadedField = (previous?.footer || []).find((item: any) => item?.key === field?.key);
-                    return isCustomMasterField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
+                    return isMasterOptionField(field) && loadedField ? { ...field, options: loadedField?.options || [] } : field;
                 }),
             };
         });
@@ -234,6 +347,13 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
             const customMasterName = getCustomMasterName(field);
 
             return <SelectInput label={field?.label || customMasterName} value={selectedValue} mandatory={field?.isRequired || field?.required} placeholder={`Select ${field?.label || customMasterName}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleCustomMasterChange(field, event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label || customMasterName}...` : options.length > 0 ? `Select ${field?.label || customMasterName}` : `No ${field?.label || customMasterName} found` }, ...options]} />;
+        }
+
+        if (isStandardMasterField(field)) {
+            const options = getStandardMasterOptions(field);
+            const selectedValue = getStandardMasterSelectedValue(form, field);
+
+            return <SelectInput label={field?.label} value={selectedValue} mandatory={field?.isRequired || field?.required} placeholder={`Select ${field?.label}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleChange(field?.key, event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label}...` : options.length > 0 ? `Select ${field?.label}` : `No ${field?.label} found` }, ...options]} />;
         }
 
         if (fieldType === "select") {

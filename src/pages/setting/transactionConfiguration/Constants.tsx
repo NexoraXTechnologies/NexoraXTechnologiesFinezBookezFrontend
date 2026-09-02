@@ -96,14 +96,16 @@ export const TRANSACTIONS: TransactionItem[] = [
 ];
 
 export const FIELD_TYPE_OPTIONS = [
-    { value: "text", label: "Text" },
-    { value: "string", label: "String" },
+    { value: "string", label: "Text" },
     { value: "number", label: "Number" },
     { value: "date", label: "Date" },
     { value: "boolean", label: "Boolean" },
     { value: "select", label: "Select" },
     { value: "textarea", label: "Textarea" },
-    { value: "array", label: "Array" },
+    { value: "accountmaster", label: "Account Master" },
+    { value: "productmaster", label: "Product Master" },
+    { value: "unitmaster", label: "Unit Master" },
+    { value: "employeemaster", label: "Team / Employee Master" },
 ];
 
 export const SCHEMA_SECTIONS: { key: SchemaSection; label: string }[] = [
