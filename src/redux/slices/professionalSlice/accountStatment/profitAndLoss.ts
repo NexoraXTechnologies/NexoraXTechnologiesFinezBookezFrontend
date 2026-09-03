@@ -31,39 +31,10 @@ export const getProfitLossAnalysis = createAsyncThunk(
                 payload?.exportType ? { responseType: "blob" } : {}
             );
 
-            if (payload?.exportType) {
-                return {
-                    data: res.data,
-                    blob: res.data,
-                    exportType: payload.exportType
-                };
-            }
+            if (payload?.exportType) return { blob: res.data, exportType: payload.exportType };
 
-            if (!res.data?.success) {
-                return rejectWithValue({
-                    message: res.data?.message || "Failed to fetch Profit & Loss analysis"
-                });
-            }
-
-            return {
-                data: res.data?.data ?? null,
-                exportType: ""
-            };
+            return res.data ?? null;
         } catch (err: any) {
-            if (payload?.exportType && err?.response?.data instanceof Blob) {
-                try {
-                    const text = await err.response.data.text();
-                    const parsed = JSON.parse(text);
-                    return rejectWithValue({
-                        message: parsed?.message || "Failed to export Profit & Loss"
-                    });
-                } catch {
-                    return rejectWithValue({
-                        message: "Failed to export Profit & Loss"
-                    });
-                }
-            }
-
             return rejectWithValue({
                 message: err?.response?.data?.message || "Failed to fetch Profit & Loss analysis"
             });
@@ -78,10 +49,8 @@ const profitLossSlice = createSlice({
     initialState: {
         filterOptions: null,
         analysis: null,
-
         filterOptionsLoading: false,
         analysisLoading: false,
-
         filterOptionsError: null,
         analysisError: null
     },
@@ -129,7 +98,7 @@ const profitLossSlice = createSlice({
                 state.analysisLoading = false;
 
                 if (!action.payload?.exportType) {
-                    state.analysis = action.payload?.data ?? null;
+                    state.analysis = action.payload ?? null;
                 }
             })
             .addCase(getProfitLossAnalysis.rejected, (state: any, action: any) => {

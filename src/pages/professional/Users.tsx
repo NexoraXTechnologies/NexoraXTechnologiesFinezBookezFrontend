@@ -2415,6 +2415,7 @@ const Users = () => {
 
         limit:
           localLimit,
+        withParent: true,
       })
     );
   }, [
@@ -2701,19 +2702,9 @@ const Users = () => {
 
   const filteredUsers =
     useMemo(() => {
-      const search =
-        searchTerm
-          .trim()
-          .toLowerCase();
+      const search = searchTerm.trim().toLowerCase();
 
-      return (
-        Array.isArray(
-          users
-        )
-          ? users
-          : []
-      ).filter(
-        (user: any) => {
+      return (Array.isArray(users) ? users : []).filter((user: any) => {
           const name =
             [
               user
@@ -2754,7 +2745,7 @@ const Users = () => {
       users,
       searchTerm,
     ]);
-
+  console.log({ filteredUsers, users })
   /* ===================================================
      RESET FORM
   =================================================== */
@@ -2826,11 +2817,9 @@ const Users = () => {
     async () => {
       await dispatch(
         getProfessionalUsers({
-          page:
-            localPage,
-
-          limit:
-            localLimit,
+          page: localPage,
+          limit: localLimit,
+          withParent: true
         })
       );
 
@@ -3712,6 +3701,7 @@ const Users = () => {
             page: 1,
             limit:
               localLimit,
+            withParent: true
           })
         );
       } catch (
@@ -3753,6 +3743,7 @@ const Users = () => {
 
             limit:
               localLimit,
+            withParent: true
           })
         );
       } catch {

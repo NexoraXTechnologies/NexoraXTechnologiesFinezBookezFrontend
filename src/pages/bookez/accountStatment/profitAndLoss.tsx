@@ -1,190 +1,69 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { BarChart3, ChevronDown, LoaderCircle, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import DataTable from "../../../components/DataTable";
+import ReportFilterCard from "../reports/components/ReportFilterCard";
 import { clearProfitLossState, getProfitLossAnalysis, getProfitLossFilterOptions } from "../../../redux/slices/professionalSlice/accountStatment/profitAndLoss";
 import { getFirstDateOfCurrentMonth, todayYMD } from "../../../utils/helperFunctions";
-import ReportFilterCard from "../reports/components/ReportFilterCard";
 
 type ProfitLossProps = { show?: boolean; };
-type SelectOption = { label: string; value: string; };
-type CustomMasterModule = { moduleName: string; options: SelectOption[]; };
 
-const getDatePayload = (date: string, endOfDay = false) => {
+const formatAmount = (value: any) => Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const formatFromDate = (date: string) => {
     if (!date) return "";
-    const value = new Date(`${date}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`);
-    return value.toISOString();
+    return new Date(`${date}T00:00:00.000+05:30`).toISOString();
 };
 
-const getAmount = (row: any) => Number(
-    row?.amount ??
-    row?.balance ??
-    row?.netAmount ??
-    row?.closingBalance ??
-    row?.totalAmount ??
-    row?.value ??
-    0
-);
-
-const getAccountName = (row: any) => (
-    row?.accountName ||
-    row?.name ||
-    row?.ledgerName ||
-    row?.particular ||
-    row?.particulars ||
-    row?.account ||
-    "-"
-);
-
-const getArray = (value: any): any[] => {
-    if (Array.isArray(value)) return value;
-    if (Array.isArray(value?.details)) return value.details;
-    if (Array.isArray(value?.items)) return value.items;
-    if (Array.isArray(value?.records)) return value.records;
-    if (Array.isArray(value?.accounts)) return value.accounts;
-    if (Array.isArray(value?.data)) return value.data;
-    return [];
-};
-
-const getIncomeDetails = (data: any) => {
-    const values = [
-        data?.incomeDetails,
-        data?.incomes,
-        data?.income,
-        data?.incomeAccounts,
-        data?.details?.income,
-        data?.details?.incomes,
-        data?.profitLoss?.incomeDetails,
-        data?.profitLoss?.income,
-        data?.analysis?.incomeDetails,
-        data?.analysis?.income
-    ];
-
-    for (const value of values) {
-        const records = getArray(value);
-        if (records.length) return records;
-    }
-
-    return [];
-};
-
-const getExpenseDetails = (data: any) => {
-    const values = [
-        data?.expenseDetails,
-        data?.expenses,
-        data?.expense,
-        data?.expenseAccounts,
-        data?.details?.expense,
-        data?.details?.expenses,
-        data?.profitLoss?.expenseDetails,
-        data?.profitLoss?.expenses,
-        data?.analysis?.expenseDetails,
-        data?.analysis?.expenses
-    ];
-
-    for (const value of values) {
-        const records = getArray(value);
-        if (records.length) return records;
-    }
-
-    return [];
-};
-
-const getFilterModules = (data: any): CustomMasterModule[] => {
-    if (!data) return [];
-
-    const possibleRoots = [
-        data?.customMasterFilters,
-        data?.customMasters,
-        data?.filters,
-        data?.modules,
-        data?.filterOptions,
-        data
-    ];
-
-    let modules: any[] = [];
-
-    for (const root of possibleRoots) {
-        if (Array.isArray(root)) {
-            modules = root;
-            break;
-        }
-    }
-
-    return modules
-        .map((module: any) => {
-            const moduleName = String(
-                module?.moduleName ||
-                module?.name ||
-                module?.label ||
-                module?.customMasterName ||
-                ""
-            ).trim();
-
-            const records =
-                getArray(module?.options).length ? getArray(module?.options) :
-                    getArray(module?.items).length ? getArray(module?.items) :
-                        getArray(module?.records).length ? getArray(module?.records) :
-                            getArray(module?.values).length ? getArray(module?.values) :
-                                getArray(module?.data);
-
-            const seen = new Set<string>();
-
-            const options = records.reduce((list: SelectOption[], item: any) => {
-                const value = String(item?.code || item?.value || item?.moduleCode || item?._id || "").trim();
-                const label = String(item?.name || item?.label || item?.description || item?.code || item?.value || "").trim();
-
-                if (!value || seen.has(value)) return list;
-
-                seen.add(value);
-                list.push({ label: label || value, value });
-
-                return list;
-            }, []);
-
-            return { moduleName, options };
-        })
-        .filter((module: CustomMasterModule) => module.moduleName && module.options.length);
-};
-
-const amountColumn = {
-    key: "amount",
-    title: "Amount",
-    render: (row: any) => (
-        <span className="font-semibold text-card-foreground">
-            ₹{getAmount(row).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-    )
+const formatToDate = (date: string) => {
+    if (!date) return "";
+    return new Date(`${date}T23:59:59.999+05:30`).toISOString();
 };
 
 const incomeColumns = [
     {
-        key: "accountName",
+        key: "particular",
         title: "Particular",
-        render: (row: any) => <span className="font-medium text-card-foreground">{getAccountName(row)}</span>
+        render: (row: any) => <span className="text-sm font-medium text-card-foreground">{row?.particular || "-"}</span>
     },
-    amountColumn
+    {
+        key: "amount",
+        title: "Amount",
+        render: (row: any) => <span className="text-sm font-semibold text-success">₹{formatAmount(row?.amount)}</span>
+    }
 ];
 
 const expenseColumns = [
     {
-        key: "accountName",
+        key: "particular",
         title: "Particular",
-        render: (row: any) => <span className="font-medium text-card-foreground">{getAccountName(row)}</span>
+        render: (row: any) => <span className="text-sm font-medium text-card-foreground">{row?.particular || "-"}</span>
     },
-    amountColumn
+    {
+        key: "amount",
+        title: "Amount",
+        render: (row: any) => <span className="text-sm font-semibold text-danger">₹{formatAmount(row?.amount)}</span>
+    }
 ];
 
-const ProfitLoss = ({ show = true }: ProfitLossProps) => {
+const ProfitAndLoss = ({ show = true }: ProfitLossProps) => {
     const dispatch = useDispatch<any>();
 
+    const profitLossState = useSelector((state: any) =>
+        state?.profitLoss ||
+        state?.profitAndLoss ||
+        state?.accountStatement?.profitLoss ||
+        state?.accountStatment?.profitLoss ||
+        {}
+    );
+
     const {
-        filterOptions = [],
+        filterOptions = null,
         analysis = null,
         filterOptionsLoading = false,
         analysisLoading = false
-    } = useSelector((state: any) => state.profitLoss);
+    } = profitLossState;
 
     const [fromDate, setFromDate] = useState<string>(getFirstDateOfCurrentMonth());
     const [toDate, setToDate] = useState<string>(todayYMD());
@@ -193,64 +72,70 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
     const [pdfLoading, setPdfLoading] = useState(false);
     const [excelLoading, setExcelLoading] = useState(false);
 
-    const customMasterModules = useMemo(() => getFilterModules(filterOptions), [filterOptions]);
+    // FILTER OPTIONS
+    const customMasterModules = useMemo(() => {
+        let filters: any[] = [];
 
+        if (Array.isArray(filterOptions)) {
+            filters = filterOptions;
+        } else if (Array.isArray(filterOptions?.filters)) {
+            filters = filterOptions.filters;
+        } else if (Array.isArray(filterOptions?.data?.filters)) {
+            filters = filterOptions.data.filters;
+        } else if (Array.isArray(filterOptions?.data?.data?.filters)) {
+            filters = filterOptions.data.data.filters;
+        } else if (Array.isArray(filterOptions?.payload?.filters)) {
+            filters = filterOptions.payload.filters;
+        }
+
+        return filters
+            .map((filter: any) => ({
+                moduleCode: String(filter?.moduleCode || "").trim(),
+                moduleName: String(filter?.moduleName || "").trim(),
+                description: String(filter?.description || "").trim(),
+                totalEntries: Number(filter?.totalEntries || 0),
+                options: Array.isArray(filter?.entries)
+                    ? filter.entries
+                        .map((entry: any) => ({
+                            label: String(entry?.name || entry?.code || "").trim(),
+                            value: String(entry?.code || "").trim()
+                        }))
+                        .filter((entry: any) => entry.label && entry.value)
+                    : []
+            }))
+            .filter((filter: any) => filter.moduleName);
+    }, [filterOptions]);
+
+    // SELECTED CUSTOM MASTER FILTERS
     const customMasterFilters = useMemo(() => {
-        return Object.entries(customMasterValues)
-            .filter(([, code]) => Boolean(code))
-            .map(([moduleName, code]) => ({ moduleName, code }));
-    }, [customMasterValues]);
+        return customMasterModules
+            .map((module: any) => {
+                const code = String(customMasterValues[module.moduleName] || "").trim();
 
-    const incomeDetails = useMemo(() => getIncomeDetails(analysis), [analysis]);
-    const expenseDetails = useMemo(() => getExpenseDetails(analysis), [analysis]);
+                if (!code) return null;
 
-    const calculatedIncome = useMemo(() => {
-        return incomeDetails.reduce((total: number, row: any) => total + getAmount(row), 0);
-    }, [incomeDetails]);
+                return {
+                    moduleName: module.moduleName,
+                    code
+                };
+            })
+            .filter(Boolean);
+    }, [customMasterModules, customMasterValues]);
 
-    const calculatedExpense = useMemo(() => {
-        return expenseDetails.reduce((total: number, row: any) => total + getAmount(row), 0);
-    }, [expenseDetails]);
-
-    const totalIncome = Number(
-        analysis?.totalIncome ??
-        analysis?.incomeTotal ??
-        analysis?.summary?.totalIncome ??
-        analysis?.profitLoss?.totalIncome ??
-        analysis?.analysis?.totalIncome ??
-        calculatedIncome
-    );
-
-    const totalExpense = Number(
-        analysis?.totalExpense ??
-        analysis?.totalExpenses ??
-        analysis?.expenseTotal ??
-        analysis?.summary?.totalExpense ??
-        analysis?.summary?.totalExpenses ??
-        analysis?.profitLoss?.totalExpense ??
-        analysis?.analysis?.totalExpense ??
-        calculatedExpense
-    );
-
-    const netProfitLoss = Number(
-        analysis?.netProfit ??
-        analysis?.netProfitLoss ??
-        analysis?.profit ??
-        analysis?.summary?.netProfit ??
-        analysis?.summary?.netProfitLoss ??
-        analysis?.profitLoss?.netProfit ??
-        analysis?.analysis?.netProfit ??
-        (totalIncome - totalExpense)
-    );
-
-    const formatAmount = (value: any) => {
-        return Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
+    // ANALYSIS RESPONSE
+    const incomeRows = useMemo(() => Array.isArray(analysis?.data?.incomeRows) ? analysis.data.incomeRows : [], [analysis]);
+    const expenseRows = useMemo(() => Array.isArray(analysis?.data?.expenseRows) ? analysis.data.expenseRows : [], [analysis]);
+    const otherIncomeDetails = useMemo(() => Array.isArray(analysis?.data?.otherIncomeDetails) ? analysis.data.otherIncomeDetails : [], [analysis]);
+    const otherExpenseDetails = useMemo(() => Array.isArray(analysis?.data?.otherExpenseDetails) ? analysis.data.otherExpenseDetails : [], [analysis]);
+    const totalIncome = Number(analysis?.data?.totalIncome || 0);
+    const totalExpense = Number(analysis?.data?.totalExpense || 0);
+    const netProfit = Number(analysis?.data?.netProfit || 0);
+    const pageLoading = filterOptionsLoading || analysisLoading;
 
     const buildPayload = (exportType: "" | "pdf" | "excel" = "") => {
         const payload: any = {
-            fromDate: getDatePayload(fromDate),
-            toDate: getDatePayload(toDate, true)
+            fromDate: formatFromDate(fromDate),
+            toDate: formatToDate(toDate)
         };
 
         if (exportType) payload.exportType = exportType;
@@ -266,37 +151,50 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
         dispatch(clearProfitLossState());
     };
 
-    useEffect(() => {
-        if (!show) resetProfitLoss();
-    }, [show]);
-
+    // LOAD FILTER OPTIONS
     useEffect(() => {
         if (!fromDate || !toDate) return;
 
         dispatch(getProfitLossFilterOptions({
-            fromDate: getDatePayload(fromDate),
-            toDate: getDatePayload(toDate, true),
+            fromDate: formatFromDate(fromDate),
+            toDate: formatToDate(toDate),
             exportType: ""
-        }));
+        }) as any);
     }, [dispatch, fromDate, toDate]);
 
+    // LOAD ANALYSIS
     useEffect(() => {
         if (!fromDate || !toDate) return;
-        dispatch(getProfitLossAnalysis(buildPayload()));
+
+        const payload: any = {
+            fromDate: formatFromDate(fromDate),
+            toDate: formatToDate(toDate)
+        };
+
+        if (customMasterFilters.length) payload.customMasterFilters = customMasterFilters;
+
+        dispatch(getProfitLossAnalysis(payload) as any);
     }, [dispatch, fromDate, toDate, customMasterFilters]);
 
+    // REMOVE SELECTED VALUE IF MODULE IS REMOVED FROM API
     useEffect(() => {
+        if (!customMasterModules.length) return;
+
         setCustomMasterValues((previous) => {
-            const validModules = new Set(customMasterModules.map((module) => module.moduleName));
+            const validModuleNames = new Set(customMasterModules.map((module: any) => module.moduleName));
             const next: Record<string, string> = {};
 
             Object.entries(previous).forEach(([moduleName, code]) => {
-                if (validModules.has(moduleName)) next[moduleName] = code;
+                if (validModuleNames.has(moduleName)) next[moduleName] = code;
             });
 
             return next;
         });
     }, [customMasterModules]);
+
+    useEffect(() => {
+        if (!show) resetProfitLoss();
+    }, [show]);
 
     useEffect(() => () => {
         dispatch(clearProfitLossState());
@@ -322,10 +220,11 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
         try {
             setPdfLoading(true);
 
-            const res = await dispatch(getProfitLossAnalysis(buildPayload("pdf"))).unwrap();
-            const blob = res?.blob || res?.data;
+            const res = await dispatch(getProfitLossAnalysis(buildPayload("pdf")) as any).unwrap();
 
-            if (blob instanceof Blob) downloadBlobFile(blob, "profit-loss.pdf");
+            if (res?.blob instanceof Blob) {
+                downloadBlobFile(res.blob, "profit-loss.pdf");
+            }
         } catch (error) {
             console.log("Profit & Loss PDF download failed", error);
         } finally {
@@ -339,10 +238,11 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
         try {
             setExcelLoading(true);
 
-            const res = await dispatch(getProfitLossAnalysis(buildPayload("excel"))).unwrap();
-            const blob = res?.blob || res?.data;
+            const res = await dispatch(getProfitLossAnalysis(buildPayload("excel")) as any).unwrap();
 
-            if (blob instanceof Blob) downloadBlobFile(blob, "profit-loss.xlsx");
+            if (res?.blob instanceof Blob) {
+                downloadBlobFile(res.blob, "profit-loss.xlsx");
+            }
         } catch (error) {
             console.log("Profit & Loss Excel download failed", error);
         } finally {
@@ -350,6 +250,7 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
         }
     };
 
+    // FILTER FIELDS
     const filterFields: any[] = [
         {
             key: "fromDate",
@@ -367,37 +268,77 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
             onChange: (value: string) => setToDate(value),
             required: true
         },
-        ...customMasterModules.map((module) => ({
-            key: module.moduleName,
+
+        ...customMasterModules.map((module: any) => ({
+            key: `profitLoss_${module.moduleCode || module.moduleName}`,
             type: "select",
             label: module.moduleName,
-            placeholder: filterOptionsLoading ? `Loading ${module.moduleName}...` : `All ${module.moduleName}`,
+            placeholder: module.options.length ? `All ${module.moduleName}` : `No ${module.moduleName} available`,
             value: customMasterValues[module.moduleName] || "",
             options: module.options,
             disabled: filterOptionsLoading,
             required: false,
             onChange: (value: string) => {
-                setCustomMasterValues((previous) => ({ ...previous, [module.moduleName]: value }));
+                setCustomMasterValues((previous) => ({
+                    ...previous,
+                    [module.moduleName]: value
+                }));
             }
         }))
     ];
 
     return (
-        <div className="flex h-full w-full flex-col gap-4 bg-background p-4 text-foreground">
+        <div className="relative flex h-full w-full flex-col gap-3 bg-background p-3 text-foreground">
+            <AnimatePresence>
+                {pageLoading && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-50 flex items-center justify-center rounded-lg bg-background/50 backdrop-blur-[1px]"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.96 }}
+                            className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-4 py-2.5 shadow-lg"
+                        >
+                            <LoaderCircle size={19} className="animate-spin text-primary" />
+
+                            <div>
+                                <p className="text-xs font-semibold text-card-foreground">Loading Profit & Loss</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                    {filterOptionsLoading ? "Loading filter options..." : "Preparing report data..."}
+                                </p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className="w-full">
                 <button
                     type="button"
-                    onClick={() => setFiltersOpen((prev) => !prev)}
-                    className="mb-1 flex w-full cursor-pointer items-center justify-between rounded-md border border-border bg-card px-4 py-2.5 text-left transition-colors duration-200 hover:bg-muted/40"
+                    onClick={() => setFiltersOpen((previous) => !previous)}
+                    className="mb-1 flex w-full cursor-pointer items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-left shadow-sm transition-colors duration-200 hover:bg-muted/40"
                 >
-                    <span className="text-sm font-semibold text-card-foreground">Profit & Loss Filters</span>
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                            <BarChart3 size={15} />
+                        </div>
+
+                        <div>
+                            <p className="text-sm font-semibold leading-tight text-card-foreground">Profit & Loss Filters</p>
+                            <p className="text-[11px] leading-tight text-muted-foreground">Date range and master filters</p>
+                        </div>
+                    </div>
 
                     <motion.span
                         animate={{ rotate: filtersOpen ? 180 : 0 }}
                         transition={{ duration: 0.25, ease: "easeInOut" }}
-                        className="flex text-muted-foreground"
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
                     >
-                        <ChevronDown size={18} />
+                        <ChevronDown size={17} />
                     </motion.span>
                 </button>
 
@@ -405,13 +346,13 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
                     {filtersOpen && (
                         <motion.div
                             key="profit-loss-filters"
-                            initial={{ height: 0, opacity: 0, y: -6 }}
+                            initial={{ height: 0, opacity: 0, y: -5 }}
                             animate={{ height: "auto", opacity: 1, y: 0 }}
-                            exit={{ height: 0, opacity: 0, y: -6 }}
+                            exit={{ height: 0, opacity: 0, y: -5 }}
                             transition={{ height: { duration: 0.3, ease: "easeInOut" }, opacity: { duration: 0.2 }, y: { duration: 0.25, ease: "easeOut" } }}
                             className="overflow-hidden"
                         >
-                            <div className="w-full [&>*]:rounded-md [&>*]:!p-4 [&_h3]:!hidden [&_h2]:!hidden [&_p]:!text-sm [&_label]:!text-xs [&_input]:!h-10 [&_input]:!text-sm [&_select]:!h-10 [&_select]:!text-sm [&_.text-xl]:!text-lg [&_.text-lg]:!text-base">
+                            <div className="mt-1 w-full [&>*]:rounded-lg [&>*]:!border-border [&>*]:!p-3 [&>*]:shadow-sm [&_h3]:!hidden [&_h2]:!hidden [&_p]:!text-xs [&_label]:!text-xs [&_input]:!h-9 [&_input]:!text-sm [&_select]:!h-9 [&_select]:!text-sm">
                                 <ReportFilterCard
                                     title=""
                                     fields={filterFields}
@@ -430,41 +371,72 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
                 </AnimatePresence>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-2 rounded-md border border-border bg-card px-4 py-2.5 text-sm">
-                <div>
-                    <span className="font-medium text-muted-foreground">Total Income:</span>{" "}
-                    <span className="font-semibold text-success">₹{formatAmount(totalIncome)}</span>
+            {/* <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                <div className="rounded-lg border border-success/20 bg-card px-3 py-2.5 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Income</p>
+                            <p className="mt-0.5 truncate text-lg font-bold leading-tight text-success">₹{formatAmount(totalIncome)}</p>
+                        </div>
+
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                            <TrendingUp size={17} />
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <span className="font-medium text-muted-foreground">Total Expenses:</span>{" "}
-                    <span className="font-semibold text-danger">₹{formatAmount(totalExpense)}</span>
+                <div className="rounded-lg border border-danger/20 bg-card px-3 py-2.5 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Expenses</p>
+                            <p className="mt-0.5 truncate text-lg font-bold leading-tight text-danger">₹{formatAmount(totalExpense)}</p>
+                        </div>
+
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
+                            <TrendingDown size={17} />
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <span className="font-medium text-muted-foreground">
-                        {netProfitLoss >= 0 ? "Net Profit:" : "Net Loss:"}
-                    </span>{" "}
-                    <span className={`font-bold ${netProfitLoss >= 0 ? "text-success" : "text-danger"}`}>
-                        ₹{formatAmount(Math.abs(netProfitLoss))}
-                    </span>
+                <div className={`rounded-lg border bg-card px-3 py-2.5 shadow-sm ${netProfit >= 0 ? "border-success/20" : "border-danger/20"}`}>
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{netProfit >= 0 ? "Net Profit" : "Net Loss"}</p>
+                            <p className={`mt-0.5 truncate text-lg font-bold leading-tight ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
+                                ₹{formatAmount(Math.abs(netProfit))}
+                            </p>
+                        </div>
+
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${netProfit >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
+                            <WalletCards size={17} />
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </div> */}
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <div className="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card">
-                    <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-                        <span className="text-sm font-semibold text-card-foreground">Income</span>
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                    <div className="flex items-center justify-between border-b border-border bg-success/[0.03] px-3 py-2">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success">
+                                <TrendingUp size={15} />
+                            </div>
 
-                        <span className="text-sm font-bold text-success">
+                            <div>
+                                <p className="text-sm font-semibold leading-tight text-card-foreground">Income</p>
+                                <p className="text-[11px] leading-tight text-muted-foreground">{incomeRows.length} {incomeRows.length === 1 ? "entry" : "entries"}</p>
+                            </div>
+                        </div>
+
+                        <span className="rounded-md bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
                             ₹{formatAmount(totalIncome)}
                         </span>
                     </div>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
                         <DataTable
                             columns={incomeColumns}
-                            data={incomeDetails}
+                            data={incomeRows}
                             loading={analysisLoading}
                             emptyMessage="No income data found"
                             showFieldSelector={false}
@@ -472,19 +444,28 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
                     </div>
                 </div>
 
-                <div className="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card">
-                    <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-                        <span className="text-sm font-semibold text-card-foreground">Expenses</span>
+                <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                    <div className="flex items-center justify-between border-b border-border bg-danger/[0.03] px-3 py-2">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-danger/10 text-danger">
+                                <TrendingDown size={15} />
+                            </div>
 
-                        <span className="text-sm font-bold text-danger">
+                            <div>
+                                <p className="text-sm font-semibold leading-tight text-card-foreground">Expenses</p>
+                                <p className="text-[11px] leading-tight text-muted-foreground">{expenseRows.length} {expenseRows.length === 1 ? "entry" : "entries"}</p>
+                            </div>
+                        </div>
+
+                        <span className="rounded-md bg-danger/10 px-2.5 py-1 text-xs font-bold text-danger">
                             ₹{formatAmount(totalExpense)}
                         </span>
                     </div>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
                         <DataTable
                             columns={expenseColumns}
-                            data={expenseDetails}
+                            data={expenseRows}
                             loading={analysisLoading}
                             emptyMessage="No expense data found"
                             showFieldSelector={false}
@@ -493,17 +474,78 @@ const ProfitLoss = ({ show = true }: ProfitLossProps) => {
                 </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-md border border-border bg-card px-4 py-3">
-                <span className="text-sm font-semibold text-card-foreground">
-                    {netProfitLoss >= 0 ? "Net Profit" : "Net Loss"}
-                </span>
+            {/* {(otherIncomeDetails.length > 0 || otherExpenseDetails.length > 0) && (
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                    {otherIncomeDetails.length > 0 && (
+                        <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                                <div>
+                                    <p className="text-sm font-semibold leading-tight text-card-foreground">Other Income Details</p>
+                                    <p className="text-[11px] leading-tight text-muted-foreground">{otherIncomeDetails.length} {otherIncomeDetails.length === 1 ? "entry" : "entries"}</p>
+                                </div>
 
-                <span className={`text-base font-bold ${netProfitLoss >= 0 ? "text-success" : "text-danger"}`}>
-                    ₹{formatAmount(Math.abs(netProfitLoss))}
+                                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success">
+                                    <TrendingUp size={15} />
+                                </div>
+                            </div>
+
+                            <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
+                                <DataTable
+                                    columns={incomeColumns}
+                                    data={otherIncomeDetails}
+                                    loading={analysisLoading}
+                                    emptyMessage="No other income data found"
+                                    showFieldSelector={false}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {otherExpenseDetails.length > 0 && (
+                        <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                                <div>
+                                    <p className="text-sm font-semibold leading-tight text-card-foreground">Other Expense Details</p>
+                                    <p className="text-[11px] leading-tight text-muted-foreground">{otherExpenseDetails.length} {otherExpenseDetails.length === 1 ? "entry" : "entries"}</p>
+                                </div>
+
+                                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-danger/10 text-danger">
+                                    <TrendingDown size={15} />
+                                </div>
+                            </div>
+
+                            <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
+                                <DataTable
+                                    columns={expenseColumns}
+                                    data={otherExpenseDetails}
+                                    loading={analysisLoading}
+                                    emptyMessage="No other expense data found"
+                                    showFieldSelector={false}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )} */}
+
+            <div className={`flex items-center justify-between rounded-lg border bg-card px-3 py-2.5 shadow-sm ${netProfit >= 0 ? "border-success/20" : "border-danger/20"}`}>
+                <div className="flex items-center gap-2">
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${netProfit >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
+                        <WalletCards size={17} />
+                    </div>
+
+                    <div>
+                        <p className="text-sm font-semibold leading-tight text-card-foreground">{netProfit >= 0 ? "Net Profit" : "Net Loss"}</p>
+                        <p className="text-[11px] leading-tight text-muted-foreground">Income minus expenses</p>
+                    </div>
+                </div>
+
+                <span className={`text-lg font-bold ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
+                    ₹{formatAmount(Math.abs(netProfit))}
                 </span>
             </div>
         </div>
     );
 };
 
-export default ProfitLoss;
+export default ProfitAndLoss;
