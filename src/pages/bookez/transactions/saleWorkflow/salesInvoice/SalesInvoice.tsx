@@ -3217,7 +3217,7 @@ const SalesInVoice = () => {
                     })),
 
                 downlaodPDF,
-                externalBody: <><h1>Freight Invoice</h1></>,
+                // externalBody: <><h1>Freight Invoice</h1></>,
                 entryType: "sales-invoice",
                 rowData: downlaodPDF?.record,
                 report,
