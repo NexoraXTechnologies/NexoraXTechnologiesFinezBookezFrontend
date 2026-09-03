@@ -216,9 +216,9 @@ function App() {
           <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />} />
           <Route path="/bookEz/transportation/trip-allocation/edit/:voucherNumber" element={<CreateTripAllocation />} />
 
-          <Route path='/bookEz/transportation/trip-expense' element={<TripExpenseList />} />
-          <Route path='/bookEz/transportation/trip-expense/create' element={<CreateEditTripExpence />} />
-          <Route path='/bookEz/transportation/trip-expense/edit/:voucherNumber' element={<CreateEditTripExpence />} />
+          <Route path='/bookEz/transportation/trip-execution' element={<TripExpenseList />} />
+          <Route path='/bookEz/transportation/trip-execution/create' element={<CreateEditTripExpence />} />
+          <Route path='/bookEz/transportation/trip-execution/edit/:voucherNumber' element={<CreateEditTripExpence />} />
 
           <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
           <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
