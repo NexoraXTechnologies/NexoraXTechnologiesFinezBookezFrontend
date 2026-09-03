@@ -26,10 +26,12 @@ import { useDispatch, useSelector } from "react-redux";
 import {
     clearSystemConfigurationError,
     enableWhatsAppWithDefaultModulesLocal,
+    getFinanceCustomMasterOptions,
     getLatestSystemConfiguration,
     saveOrUpdateSystemConfiguration,
     setWhatsAppModuleEnabledLocal,
     updateFinanceConfigurationLocalField,
+    updateFinanceProfitLossCustomMastersLocal,
     updateInventoryConfigurationLocalField,
     updateSystemConfigurationNestedField,
     updateWhatsAppModuleLocalToggle,
@@ -323,6 +325,8 @@ const SystemConfiguration = () => {
         loading,
         saveLoading,
         whatsappVerifyLoading,
+        financeCustomMasterOptions,
+        financeCustomMasterLoading,
         error,
     } = useSelector((state: any) => state.systemConfiguration);
 
@@ -437,6 +441,14 @@ const SystemConfiguration = () => {
             getLatestSystemConfiguration()
         );
     }, [dispatch]);
+
+    useEffect(() => {
+        if (!financeConfig?.isActive) return;
+
+        dispatch(
+            getFinanceCustomMasterOptions()
+        );
+    }, [dispatch, financeConfig?.isActive]);
 
     useEffect(() => {
         if (!error) return;
@@ -1341,6 +1353,19 @@ const SystemConfiguration = () => {
     };
 
     const renderFinanceTab = () => {
+        const selectedProfitLossCustomMasters =
+            Array.isArray(
+                financeConfig
+                    ?.reportFilters
+                    ?.profitLoss
+                    ?.customMasters
+            )
+                ? financeConfig
+                    .reportFilters
+                    .profitLoss
+                    .customMasters
+                : [];
+
         return (
             <Panel
                 title="Finance Setup"
@@ -1368,6 +1393,58 @@ const SystemConfiguration = () => {
                         )
                     }
                 />
+
+                {financeConfig?.isActive ? (
+                    <div className="grid grid-cols-1 gap-3 border-b border-border px-5 py-4 last:border-b-0 lg:grid-cols-[1fr_360px] lg:items-center">
+                        <div>
+                            <h4 className="text-sm font-bold text-card-foreground">
+                                Profit & Loss Custom Masters
+                            </h4>
+
+                            <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+                                Select Custom Masters to use as filters in the Profit & Loss report.
+                            </p>
+                        </div>
+
+                        <SelectInput
+                            name="profitLossCustomMasters"
+                            value={
+                                selectedProfitLossCustomMasters
+                            }
+                            placeholder={
+                                financeCustomMasterLoading
+                                    ? "Loading Custom Masters..."
+                                    : "Select Custom Masters"
+                            }
+                            options={
+                                financeCustomMasterOptions ||
+                                []
+                            }
+                            isMulti
+                            largeData
+                            batchSize={
+                                100
+                            }
+                            disabled={
+                                financeCustomMasterLoading
+                            }
+                            onChange={(
+                                event: any
+                            ) => {
+                                dispatch(
+                                    updateFinanceProfitLossCustomMastersLocal(
+                                        Array.isArray(
+                                            event?.target
+                                                ?.value
+                                        )
+                                            ? event.target.value
+                                            : []
+                                    )
+                                );
+                            }}
+                        />
+                    </div>
+                ) : null}
             </Panel>
         );
     };
@@ -1968,8 +2045,8 @@ const SystemConfiguration = () => {
 
                         <div
                             className={`rounded-md border p-4 transition ${whereToAddConfirmed
-                                    ? "border-primary/40 bg-primary/5"
-                                    : "border-border bg-card"
+                                ? "border-primary/40 bg-primary/5"
+                                : "border-border bg-card"
                                 }`}
                         >
                             <Checkbox

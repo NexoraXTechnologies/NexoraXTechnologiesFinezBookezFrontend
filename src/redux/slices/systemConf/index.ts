@@ -164,6 +164,11 @@ export const getEmptySystemConfiguration = () => ({
 
     financeConfiguration: {
         isActive: false,
+        reportFilters: {
+            profitLoss: {
+                customMasters: [],
+            },
+        },
     },
 
     createdOn: "",
@@ -319,6 +324,13 @@ export const normalizeSystemConfiguration = (raw: any) => ({
 
     financeConfiguration: {
         isActive: toBool(raw?.financeConfiguration?.isActive),
+        reportFilters: {
+            profitLoss: {
+                customMasters: Array.isArray(raw?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
+                    ? raw.financeConfiguration.reportFilters.profitLoss.customMasters.map((item: any) => String(item || "").trim()).filter(Boolean)
+                    : [],
+            },
+        },
     },
 
     createdOn: raw?.createdOn || "",
@@ -452,6 +464,39 @@ const extractCustomMasterModules = (apiData: any) =>
         "modules",
         "masters",
     ]);
+
+export const getFinanceCustomMasterOptions = createAsyncThunk(
+    "systemConfiguration/getFinanceCustomMasterOptions",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.get(CUSTOM_MASTER_MODULES_API, {
+                params: { offset: 0, limit: 500, search: "", status: "active" },
+            });
+
+            if (res?.data?.success === false) {
+                return rejectWithValue({
+                    message: res?.data?.message || "Failed to load Custom Masters",
+                    status: res?.status,
+                });
+            }
+
+            const modules = extractCustomMasterModules(res?.data);
+
+            return modules
+                .map((item: any) => {
+                    const value = String(item?.moduleCode || item?.customMasterCode || "").trim();
+                    const label = String(item?.moduleName || item?.customMasterName || item?.name || value).trim();
+                    return { label, value, moduleCode: value, moduleName: label };
+                })
+                .filter((item: any) => item.value);
+        } catch (err: any) {
+            return rejectWithValue({
+                message: err?.response?.data?.message || err?.message || "Failed to load Custom Masters",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
 
 const getVehicleMasterCodeFromSyncResult = (syncResult: any) => {
     const candidates = [
@@ -1211,10 +1256,16 @@ const buildConfigurationPayload = (
         },
 
         financeConfiguration: {
-            isActive:
-                !!configuration
-                    ?.financeConfiguration
-                    ?.isActive,
+            isActive: !!configuration?.financeConfiguration?.isActive,
+            reportFilters: {
+                profitLoss: {
+                    customMasters: Array.isArray(configuration?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
+                        ? configuration.financeConfiguration.reportFilters.profitLoss.customMasters
+                            .map((item: any) => String(item?.value ?? item?.moduleCode ?? item?.customMasterCode ?? item ?? "").trim())
+                            .filter(Boolean)
+                        : [],
+                },
+            },
         },
 
         anyOtherField:
@@ -2617,6 +2668,10 @@ const systemConfigurationSlice =
             updateLoading: false,
             whatsappVerifyLoading: false,
 
+            financeCustomMasterOptions: [],
+            financeCustomMasterLoading: false,
+            financeCustomMasterError: null,
+
             whatsappVerified: false,
             whatsappMetaCredentials: null,
 
@@ -2672,6 +2727,12 @@ const systemConfigurationSlice =
 
                     state.whatsappVerifyLoading =
                         false;
+
+                    state.financeCustomMasterLoading =
+                        false;
+
+                    state.financeCustomMasterError =
+                        null;
 
                     state.posPostingLoading =
                         false;
@@ -2842,6 +2903,28 @@ const systemConfigurationSlice =
 
                         [key]:
                             value,
+                    };
+                },
+
+            updateFinanceProfitLossCustomMastersLocal:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const selected = Array.isArray(action.payload) ? action.payload : [];
+                    const customMasters = selected
+                        .map((item: any) => String(item?.value ?? item?.moduleCode ?? item?.customMasterCode ?? item ?? "").trim())
+                        .filter(Boolean);
+
+                    state.configuration.financeConfiguration = {
+                        ...state.configuration.financeConfiguration,
+                        reportFilters: {
+                            ...state.configuration.financeConfiguration?.reportFilters,
+                            profitLoss: {
+                                ...state.configuration.financeConfiguration?.reportFilters?.profitLoss,
+                                customMasters,
+                            },
+                        },
                     };
                 },
 
@@ -3398,6 +3481,30 @@ const systemConfigurationSlice =
 
                 builder
                     .addCase(
+                        getFinanceCustomMasterOptions.pending,
+                        (state) => {
+                            state.financeCustomMasterLoading = true;
+                            state.financeCustomMasterError = null;
+                        }
+                    )
+                    .addCase(
+                        getFinanceCustomMasterOptions.fulfilled,
+                        (state, action: any) => {
+                            state.financeCustomMasterLoading = false;
+                            state.financeCustomMasterOptions = action.payload || [];
+                        }
+                    )
+                    .addCase(
+                        getFinanceCustomMasterOptions.rejected,
+                        (state, action: any) => {
+                            state.financeCustomMasterLoading = false;
+                            state.financeCustomMasterOptions = [];
+                            state.financeCustomMasterError = action.payload?.message || "Failed to load Custom Masters";
+                        }
+                    );
+
+                builder
+                    .addCase(
                         getAllPosPostings.pending,
                         (
                             state
@@ -3608,6 +3715,7 @@ export const {
     updateSystemConfigurationLocalField,
     updateInventoryConfigurationLocalField,
     updateFinanceConfigurationLocalField,
+    updateFinanceProfitLossCustomMastersLocal,
     updateSystemConfigurationNestedField,
     updateWhatsAppModuleLocalToggle,
     setWhatsAppModuleEnabledLocal,

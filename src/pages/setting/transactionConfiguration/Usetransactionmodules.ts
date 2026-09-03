@@ -220,10 +220,7 @@ export function useTransactionModules() {
             closeConfirmTooltip();
 
             const remainingItems = transactionModules.length - 1;
-            const nextOffset =
-                remainingItems === 0 && localOffset > 0
-                    ? Math.max(0, localOffset - localLimit)
-                    : localOffset;
+            const nextOffset = remainingItems === 0 && localOffset > 0 ? Math.max(0, localOffset - localLimit) : localOffset;
 
             if (nextOffset !== localOffset) {
                 setLocalOffset(nextOffset);

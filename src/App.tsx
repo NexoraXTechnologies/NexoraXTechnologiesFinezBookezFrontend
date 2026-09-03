@@ -91,6 +91,7 @@ import TouchUPList from './pages/bookez/transportation/touchUP/TouchUPList';
 import CreateEditTouchUP from './pages/bookez/transportation/touchUP/CreateEditTouchUP';
 import IndentList from './pages/bookez/transportation/indent/IndentList';
 import CreateEditIndent from './pages/bookez/transportation/indent/CreateEditIndent';
+import AccountStatement from './pages/bookez/accountStatment';
 
 function App() {
   useAppearance();
@@ -177,6 +178,7 @@ function App() {
             element={<RegistersDashboard />}
           />
           <Route path="/bookEz/pos" element={<POS />} />
+          <Route path="/bookEz/accounts-statement" element={<AccountStatement />} />
 
           <Route
             path="/bookEz/pos/payment"
