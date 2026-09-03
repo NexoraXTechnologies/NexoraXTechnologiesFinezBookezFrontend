@@ -356,6 +356,86 @@ export const deleteSalesInvoice = createAsyncThunk<
   }
 );
 
+
+
+// download frieght invoice pdf
+
+// export const downloadFrieghtInvoicePdf = createAsyncThunk(
+//     "salesInvoice/downloadFrieghtInvoicePdf",
+//     async (
+//         {
+            
+//             voucherNumber,
+//             pdfData
+//         }: {
+           
+//             voucherNumber: string;
+//             pdfData: any;
+//         },
+//         { rejectWithValue }
+//     ) => {
+//         try {
+//             const response = await professionalAxios.post(
+//                 `/eTaxSolnMongoApiBackend/users/bookez/BookezReportPdf/download-pdf/TRANSPORTSALEINVOICE_VOUCHER/${voucherNumber}`,
+//                 {
+//                     pdfData
+//                 },
+//                 {
+//                     responseType: "blob"
+//                 }
+//             );
+
+//             const blob = new Blob([response.data], {
+//                 type: "application/pdf"
+//             });
+
+//             const pdfUrl = window.URL.createObjectURL(blob);
+//             const link = document.createElement("a");
+
+//             link.href = pdfUrl;
+//             link.download = `${voucherNumber}.pdf`;
+
+//             document.body.appendChild(link);
+//             link.click();
+//             document.body.removeChild(link);
+
+//             window.URL.revokeObjectURL(pdfUrl);
+
+//             return {
+//                 success: true,
+//                 voucherNumber
+//             };
+//         } catch (error: any) {
+//             let message = "Failed to download PDF";
+
+//             if (error?.response?.data instanceof Blob) {
+//                 try {
+//                     const errorText = await error.response.data.text();
+//                     const errorJson = JSON.parse(errorText);
+
+//                     message =
+//                         errorJson?.message ||
+//                         errorJson?.error ||
+//                         message;
+//                 } catch {
+//                     message = error?.message || message;
+//                 }
+//             } else {
+//                 message =
+//                     error?.response?.data?.message ||
+//                     error?.message ||
+//                     message;
+//             }
+
+//             return rejectWithValue({
+//                 message
+//             });
+//         }
+//     }
+// );
+
+
+
 /* ===================================================
    SALES INVOICE SLICE
 =================================================== */

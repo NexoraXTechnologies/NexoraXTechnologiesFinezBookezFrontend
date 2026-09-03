@@ -3286,19 +3286,9 @@ const systemConfigurationSlice =
                         }
                     )
 
-                    .addCase(
-                        saveSystemConfiguration.fulfilled,
-                        (
-                            state,
-                            action: any
-                        ) => {
-                            state.saveLoading =
-                                false;
-
-                            state.successMessage =
-                                action.payload
-                                    ?.message ||
-                                "Configuration saved successfully";
+                    .addCase(saveSystemConfiguration.fulfilled, (state, action: any) => {
+                        state.saveLoading = false;
+                        state.successMessage = action.payload?.message || "Configuration saved successfully";
                         }
                     )
 
@@ -3318,89 +3308,37 @@ const systemConfigurationSlice =
                     );
 
                 builder
-                    .addCase(
-                        updateSystemConfiguration.pending,
-                        (
-                            state
-                        ) => {
-                            state.updateLoading =
-                                true;
-
-                            state.error =
-                                null;
-
-                            state.successMessage =
-                                "";
+                    .addCase(updateSystemConfiguration.pending, (state) => {
+                        state.updateLoading = true;
+                        state.error = null;
+                        state.successMessage = "";
                         }
                     )
 
-                    .addCase(
-                        updateSystemConfiguration.fulfilled,
-                        (
-                            state,
-                            action: any
-                        ) => {
-                            state.updateLoading =
-                                false;
-
-                            state.successMessage =
-                                action.payload
-                                    ?.message ||
-                                "Configuration updated successfully";
+                    .addCase(updateSystemConfiguration.fulfilled, (state, action: any) => {
+                        state.updateLoading = false;
+                        state.successMessage = action.payload?.message || "Configuration updated successfully";
                         }
                     )
 
-                    .addCase(
-                        updateSystemConfiguration.rejected,
-                        (
-                            state,
-                            action: any
-                        ) => {
-                            state.updateLoading =
-                                false;
-
-                            state.error =
-                                action.payload
-                                    ?.message;
+                    .addCase(updateSystemConfiguration.rejected, (state, action: any) => {
+                        state.updateLoading = false;
+                        state.error = action.payload?.message;
                         }
                     );
 
                 builder
-                    .addCase(
-                        saveOrUpdateSystemConfiguration.pending,
-                        (
-                            state
-                        ) => {
-                            state.saveLoading =
-                                true;
-
-                            state.error =
-                                null;
-
-                            state.successMessage =
-                                "";
+                    .addCase(saveOrUpdateSystemConfiguration.pending, (state) => {
+                        state.saveLoading = true;
+                        state.error = null;
+                        state.successMessage = "";
                         }
                     )
 
-                    .addCase(
-                        saveOrUpdateSystemConfiguration.fulfilled,
-                        (
-                            state,
-                            action: any
-                        ) => {
-                            state.saveLoading =
-                                false;
-
-                            state.configuration =
-                                action.payload
-                                    ?.configuration ||
-                                state.configuration ||
-                                getEmptySystemConfiguration();
-
-                            state.successMessage =
-                                action.payload
-                                    ?.message ||
-                                "Configuration saved successfully";
+                    .addCase(saveOrUpdateSystemConfiguration.fulfilled, (state, action: any) => {
+                        state.saveLoading = false;
+                        state.configuration = action.payload?.configuration || state.configuration || getEmptySystemConfiguration();
+                        state.successMessage = action.payload?.message || "Configuration saved successfully";
                         }
                     )
 
