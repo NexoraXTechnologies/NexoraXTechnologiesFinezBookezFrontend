@@ -9,6 +9,7 @@ import {
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import { getAllSystemConfigurations } from "../../../redux/slices/systemConf";
 import ProfitAndLoss from "./profitAndLoss";
+import BalanceSheet from "./balanceSheet";
 // import BalanceSheet from "./balanceSheet";
 
 const AccountStatement = () => {
@@ -41,13 +42,13 @@ const AccountStatement = () => {
                 component: ProfitAndLoss,
                 permissionKey: "accountMaster",
             },
-            // {
-            //     title: "Balance Sheet",
-            //     description: "Manage customers, vendors, cash, bank and ledgers.",
-            //     icon: <Wallet size={22} />,
-            //     component: BalanceSheet,
-            //     permissionKey: "accountMaster",
-            // }
+            {
+                title: "Balance Sheet",
+                description: "Manage customers, vendors, cash, bank and ledgers.",
+                icon: <Wallet size={22} />,
+                component: BalanceSheet,
+                permissionKey: "accountMaster",
+            }
         ];
 
         return [...defaultCards];

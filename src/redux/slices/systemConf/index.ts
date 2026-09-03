@@ -326,7 +326,7 @@ export const normalizeSystemConfiguration = (raw: any) => ({
         isActive: toBool(raw?.financeConfiguration?.isActive),
         reportFilters: {
             profitLoss: {
-                customMasters: Array.isArray(raw?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
+                customMasters: toBool(raw?.financeConfiguration?.isActive) && Array.isArray(raw?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
                     ? raw.financeConfiguration.reportFilters.profitLoss.customMasters.map((item: any) => String(item || "").trim()).filter(Boolean)
                     : [],
             },
@@ -467,10 +467,10 @@ const extractCustomMasterModules = (apiData: any) =>
 
 export const getFinanceCustomMasterOptions = createAsyncThunk(
     "systemConfiguration/getFinanceCustomMasterOptions",
-    async (_, { rejectWithValue }) => {
+    async ({ isFilter = false }: { isFilter?: boolean }, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.get(CUSTOM_MASTER_MODULES_API, {
-                params: { offset: 0, limit: 500, search: "", status: "active" },
+                params: { offset: 0, limit: 500, search: "", status: "active", isFilter },
             });
 
             if (res?.data?.success === false) {
@@ -1259,7 +1259,7 @@ const buildConfigurationPayload = (
             isActive: !!configuration?.financeConfiguration?.isActive,
             reportFilters: {
                 profitLoss: {
-                    customMasters: Array.isArray(configuration?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
+                    customMasters: configuration?.financeConfiguration?.isActive && Array.isArray(configuration?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
                         ? configuration.financeConfiguration.reportFilters.profitLoss.customMasters
                             .map((item: any) => String(item?.value ?? item?.moduleCode ?? item?.customMasterCode ?? item ?? "").trim())
                             .filter(Boolean)
@@ -2904,6 +2904,16 @@ const systemConfigurationSlice =
                         [key]:
                             value,
                     };
+
+                    if (key === "isActive" && !toBool(value)) {
+                        state.configuration.financeConfiguration.reportFilters = {
+                            ...state.configuration.financeConfiguration?.reportFilters,
+                            profitLoss: {
+                                ...state.configuration.financeConfiguration?.reportFilters?.profitLoss,
+                                customMasters: [],
+                            },
+                        };
+                    }
                 },
 
             updateFinanceProfitLossCustomMastersLocal:
@@ -3286,9 +3296,19 @@ const systemConfigurationSlice =
                         }
                     )
 
-                    .addCase(saveSystemConfiguration.fulfilled, (state, action: any) => {
-                        state.saveLoading = false;
-                        state.successMessage = action.payload?.message || "Configuration saved successfully";
+                    .addCase(
+                        saveSystemConfiguration.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.saveLoading =
+                                false;
+
+                            state.successMessage =
+                                action.payload
+                                    ?.message ||
+                                "Configuration saved successfully";
                         }
                     )
 
@@ -3308,37 +3328,89 @@ const systemConfigurationSlice =
                     );
 
                 builder
-                    .addCase(updateSystemConfiguration.pending, (state) => {
-                        state.updateLoading = true;
-                        state.error = null;
-                        state.successMessage = "";
+                    .addCase(
+                        updateSystemConfiguration.pending,
+                        (
+                            state
+                        ) => {
+                            state.updateLoading =
+                                true;
+
+                            state.error =
+                                null;
+
+                            state.successMessage =
+                                "";
                         }
                     )
 
-                    .addCase(updateSystemConfiguration.fulfilled, (state, action: any) => {
-                        state.updateLoading = false;
-                        state.successMessage = action.payload?.message || "Configuration updated successfully";
+                    .addCase(
+                        updateSystemConfiguration.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.updateLoading =
+                                false;
+
+                            state.successMessage =
+                                action.payload
+                                    ?.message ||
+                                "Configuration updated successfully";
                         }
                     )
 
-                    .addCase(updateSystemConfiguration.rejected, (state, action: any) => {
-                        state.updateLoading = false;
-                        state.error = action.payload?.message;
+                    .addCase(
+                        updateSystemConfiguration.rejected,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.updateLoading =
+                                false;
+
+                            state.error =
+                                action.payload
+                                    ?.message;
                         }
                     );
 
                 builder
-                    .addCase(saveOrUpdateSystemConfiguration.pending, (state) => {
-                        state.saveLoading = true;
-                        state.error = null;
-                        state.successMessage = "";
+                    .addCase(
+                        saveOrUpdateSystemConfiguration.pending,
+                        (
+                            state
+                        ) => {
+                            state.saveLoading =
+                                true;
+
+                            state.error =
+                                null;
+
+                            state.successMessage =
+                                "";
                         }
                     )
 
-                    .addCase(saveOrUpdateSystemConfiguration.fulfilled, (state, action: any) => {
-                        state.saveLoading = false;
-                        state.configuration = action.payload?.configuration || state.configuration || getEmptySystemConfiguration();
-                        state.successMessage = action.payload?.message || "Configuration saved successfully";
+                    .addCase(
+                        saveOrUpdateSystemConfiguration.fulfilled,
+                        (
+                            state,
+                            action: any
+                        ) => {
+                            state.saveLoading =
+                                false;
+
+                            state.configuration =
+                                action.payload
+                                    ?.configuration ||
+                                state.configuration ||
+                                getEmptySystemConfiguration();
+
+                            state.successMessage =
+                                action.payload
+                                    ?.message ||
+                                "Configuration saved successfully";
                         }
                     )
 

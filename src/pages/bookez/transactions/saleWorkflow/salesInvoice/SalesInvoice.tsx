@@ -2838,6 +2838,9 @@ const SalesInVoice = () => {
         filterAccount.length,
     ]);
 
+
+    console.log("frieght invoice", downlaodPDF?.record)
+
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -3010,8 +3013,8 @@ const SalesInVoice = () => {
                                 <div className="flex items-center gap-2">
                                     <span
                                         className={`text-sm font-semibold transition-colors ${posPostingEnabled
-                                                ? "text-primary"
-                                                : "text-foreground"
+                                            ? "text-primary"
+                                            : "text-foreground"
                                             }`}
                                     >
                                         {posPostingField
@@ -3062,14 +3065,14 @@ const SalesInVoice = () => {
                                             }
                                         }}
                                         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${posPostingEnabled
-                                                ? "border-primary bg-primary shadow-md ring-2 ring-primary/30"
-                                                : "border-border bg-muted-foreground/30 shadow-inner"
+                                            ? "border-primary bg-primary shadow-md ring-2 ring-primary/30"
+                                            : "border-border bg-muted-foreground/30 shadow-inner"
                                             }`}
                                     >
                                         <span
                                             className={`h-4 w-4 rounded-full bg-white shadow-md transition-transform duration-200 ${posPostingEnabled
-                                                    ? "translate-x-6"
-                                                    : "translate-x-1"
+                                                ? "translate-x-6"
+                                                : "translate-x-1"
                                                 }`}
                                         />
                                     </button>
@@ -3162,8 +3165,8 @@ const SalesInVoice = () => {
                                                         )
                                                     }
                                                     className={`w-full rounded-xl border px-4 py-4 text-left transition ${isSelected
-                                                            ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                                                            : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
+                                                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/10"
                                                         }`}
                                                 >
                                                     <div className="flex items-center justify-between gap-3">
@@ -3214,6 +3217,7 @@ const SalesInVoice = () => {
                     })),
 
                 downlaodPDF,
+                externalBody: <><h1>Freight Invoice</h1></>,
                 entryType: "sales-invoice",
                 rowData: downlaodPDF?.record,
                 report,
