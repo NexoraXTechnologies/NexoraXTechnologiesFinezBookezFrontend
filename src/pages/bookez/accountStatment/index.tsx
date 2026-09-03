@@ -4,15 +4,12 @@ import { useDispatch, useSelector } from "react-redux";
 import {
     BrickWallShield,
     Wallet,
-    PackageSearch,
-    Ruler,
-    Boxes,
 } from "lucide-react";
-import { FaRegFilePowerpoint } from "react-icons/fa";
+// import { FaRegFilePowerpoint } from "react-icons/fa";
 import TransactionDashboard from "../../../components/mainPage/TransactionDashboard";
 import { getAllSystemConfigurations } from "../../../redux/slices/systemConf";
 import ProfitAndLoss from "./profitAndLoss";
-import BalanceSheet from "./balanceSheet";
+// import BalanceSheet from "./balanceSheet";
 
 const AccountStatement = () => {
     const dispatch = useDispatch();

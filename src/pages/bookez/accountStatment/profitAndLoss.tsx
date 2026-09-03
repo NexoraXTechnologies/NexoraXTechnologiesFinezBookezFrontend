@@ -125,8 +125,8 @@ const ProfitAndLoss = ({ show = true }: ProfitLossProps) => {
     // ANALYSIS RESPONSE
     const incomeRows = useMemo(() => Array.isArray(analysis?.data?.incomeRows) ? analysis.data.incomeRows : [], [analysis]);
     const expenseRows = useMemo(() => Array.isArray(analysis?.data?.expenseRows) ? analysis.data.expenseRows : [], [analysis]);
-    const otherIncomeDetails = useMemo(() => Array.isArray(analysis?.data?.otherIncomeDetails) ? analysis.data.otherIncomeDetails : [], [analysis]);
-    const otherExpenseDetails = useMemo(() => Array.isArray(analysis?.data?.otherExpenseDetails) ? analysis.data.otherExpenseDetails : [], [analysis]);
+    // const otherIncomeDetails = useMemo(() => Array.isArray(analysis?.data?.otherIncomeDetails) ? analysis.data.otherIncomeDetails : [], [analysis]);
+    // const otherExpenseDetails = useMemo(() => Array.isArray(analysis?.data?.otherExpenseDetails) ? analysis.data.otherExpenseDetails : [], [analysis]);
     const totalIncome = Number(analysis?.data?.totalIncome || 0);
     const totalExpense = Number(analysis?.data?.totalExpense || 0);
     const netProfit = Number(analysis?.data?.netProfit || 0);
