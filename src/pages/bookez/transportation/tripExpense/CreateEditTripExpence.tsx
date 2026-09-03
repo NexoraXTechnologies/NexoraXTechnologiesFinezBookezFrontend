@@ -186,19 +186,6 @@ const normalizeTripDocKey = (value: any) =>
         .trim()
         .toLowerCase();
 
-const getLRTouchUpDocumentUrl = (touchUp: any) => {
-    const touchUpLr = touchUp?.touchUpLr;
-    return String(
-        typeof touchUpLr === "string"
-            ? touchUpLr
-            : touchUpLr?.fullUrl ||
-            touchUpLr?.fileUrl ||
-            touchUpLr?.url ||
-            touchUpLr?.relativePath ||
-            ""
-    ).trim();
-};
-
 const parseEwayJsonValue = (value: any) => {
     if (!value) return {};
 
@@ -2827,12 +2814,30 @@ const CreateEditTripExpence = () => {
                         <div className="md:col-span-2 xl:col-span-3">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <Field label="LR Number">
-                                    <input
-                                        disabled={readOnly}
-                                        className={inputClass}
-                                        value={form.lrNumber || ""}
-                                        onChange={(e) => patchHeader({ lrNumber: e.target.value })}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            disabled={readOnly}
+                                            className={`${inputClass} pr-12`}
+                                            value={form.lrNumber || ""}
+                                            onChange={(e) => patchHeader({ lrNumber: e.target.value })}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const lrNumber = String(form.lrNumber || "").trim();
+                                                if (!lrNumber) {
+                                                    toast.warn("LR number is not available");
+                                                    return;
+                                                }
+                                                navigate(`/bookEz/transportation/trip-lr-entry/view/${lrNumber}`, { state: { mode: "view", voucherNumber: lrNumber, lrNumber } });
+                                            }}
+                                            disabled={!String(form.lrNumber || "").trim()}
+                                            title="View LR"
+                                            className="absolute right-1 top-1/2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <Eye className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </Field>
 
                                 <Field label="LR Date">
@@ -2875,27 +2880,27 @@ const CreateEditTripExpence = () => {
                             {touchUps.length ? (
                                 <div className="flex flex-col gap-3">
                                     {touchUps.map((touchUp: any, index: number) => {
-                                        const documentUrl = getLRTouchUpDocumentUrl(touchUp);
+                                        const transportTouchupNumber = String(touchUp?.transportTouchupNumber || touchUp?.touchUpNumber || touchUp?.voucherNumber || "").trim();
                                         return (
-                                            <div key={touchUp?.touchUpId || index} className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
+                                            <div key={`${transportTouchupNumber || "touchup"}-${touchUp?.touchUpId || index}`} className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
                                                 <div className="flex min-w-0 flex-1 items-center gap-2">
                                                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">{index + 1}</span>
                                                     <div className="min-w-0">
-                                                        <p className="truncate text-sm font-bold text-card-foreground">{touchUp?.touchUpId || `Touch Up ${index + 1}`}</p>
+                                                        <p className="truncate text-sm font-bold text-card-foreground">{transportTouchupNumber ? `${transportTouchupNumber} - ${touchUp?.touchUpId || `Touch Up ${index + 1}`}` : touchUp?.touchUpId || `Touch Up ${index + 1}`}</p>
                                                         <p className="truncate text-xs text-muted-foreground">{touchUp?.pickupDetails?.name || "-"} → {touchUp?.deliveryDetails?.name || "-"} | {touchUp?.material || "-"}</p>
                                                     </div>
                                                 </div>
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        if (!documentUrl) {
-                                                            toast.warn("Touch Up LR document is not available");
+                                                        if (!transportTouchupNumber) {
+                                                            toast.warn("Transport Touch Up number is not available");
                                                             return;
                                                         }
-                                                        window.open(documentUrl, "_blank", "noopener,noreferrer");
+                                                        navigate(`/bookEz/transportation/touch-up/view/${transportTouchupNumber}`, { state: { mode: "view", voucherNumber: transportTouchupNumber, transportTouchupNumber, touchUpId: touchUp?.touchUpId || "" } });
                                                     }}
-                                                    disabled={!documentUrl}
-                                                    title="View Touch Up LR Document"
+                                                    disabled={!transportTouchupNumber}
+                                                    title="View Touch Up"
                                                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <Eye size={16} />

@@ -211,6 +211,7 @@ function App() {
           <Route path='/bookEz/transportation/touch-up' element={<TouchUPList />} />
           <Route path='/bookEz/transportation/touch-up/create' element={<CreateEditTouchUP />} />
           <Route path='/bookEz/transportation/touch-up/edit/:voucherNumber' element={<CreateEditTouchUP />} />
+          <Route path='/bookEz/transportation/touch-up/view/:voucherNumber' element={<CreateEditTouchUP />} />
 
           <Route path='/bookEz/transportation/trip-allocation' element={<TripAllocationList />} />
           <Route path="/bookEz/transportation/trip-allocation/create" element={<CreateTripAllocation />} />
@@ -223,6 +224,7 @@ function App() {
           <Route path='/bookEz/transportation/trip-lr-entry' element={<TripLREntryList />} />
           <Route path='/bookEz/transportation/trip-lr-entry/create' element={<CreateEditTripLREntry />} />
           <Route path='/bookEz/transportation/trip-lr-entry/edit/:voucherNumber' element={<CreateEditTripLREntry />} />
+          <Route path='/bookEz/transportation/trip-lr-entry/view/:voucherNumber' element={<CreateEditTripLREntry />} />
 
 
           <Route path='/bookEz/transportation/e-way-bill' element={<EWayBillList />} />
