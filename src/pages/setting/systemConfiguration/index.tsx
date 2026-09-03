@@ -795,7 +795,7 @@ const SystemConfiguration = () => {
             if (result?.transportationTransactionFieldSync?.failed) {
                 toast.error(
                     result?.transportationTransactionFieldSync?.message ||
-                    "Configuration saved, but Receipt / Payment transportation fields synchronization failed."
+                   "Configuration saved, but transportation transaction fields synchronization failed."
                 );
             }
 

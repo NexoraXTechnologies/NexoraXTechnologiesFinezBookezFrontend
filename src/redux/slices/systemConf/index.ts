@@ -589,7 +589,7 @@ const buildTransportationAccountingFields = (vehicleMasterCode: string) => [
     {
         key: "driver",
         label: "Driver",
-        type: "string",
+        type: "employeemaster",
         isRequired: false,
         isSearchable: true,
         isFilterable: true,
@@ -617,7 +617,7 @@ const syncTransportationReceiptPaymentFields = async ({
     vehicleMasterSync?: any;
     dispatch: any;
 }) => {
-    const modules = ["receipt", "payment"] as const;
+    const modules = ["receipt", "payment", "salesInvoice", "purchaseInvoice"] as const;
     const results: any[] = [];
     const desiredHidden = !enabled;
     const vehicleMasterCode = enabled

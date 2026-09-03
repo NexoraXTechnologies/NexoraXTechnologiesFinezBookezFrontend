@@ -194,7 +194,7 @@ const WarningModel = ({ show, title = "No Data Found", message = "Please create 
     );
 };
 
-const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData, downlaodPDF, entryType = "sales-invoice", GstToggle = false }: any) => {
+const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData, downlaodPDF, entryType = "sales-invoice", GstToggle = false, externalBody }: any) => {
     const dispatch = useDispatch<any>();
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
     const [gstType, setGstType] = useState("");
@@ -346,6 +346,9 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                         )}
                     </div>
 
+
+
+                    {externalBody}
                     <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
                         <PrimaryButton callBackFn={handleConfirm} text="Confirm" loader={loader} />
                         <SecondaryButton disabled={loader} callBackFn={() => { setShow(); setGstType(""); setSelectedTemplate(null); }} text="Cancel" />
@@ -1109,7 +1112,7 @@ const AccountMasterModal = ({ show, setShow, editingAccount = null, onSaved, tit
             if (key === "state") {
                 nextForm.state =
                     typeof editingAccount.state === "object"
-                    ? editingAccount?.state?.isoCode || editingAccount?.state?.stateCode || editingAccount?.state?.code || ""
+                        ? editingAccount?.state?.isoCode || editingAccount?.state?.stateCode || editingAccount?.state?.code || ""
                         : editingAccount?.state || "";
 
                 return;
@@ -1118,7 +1121,7 @@ const AccountMasterModal = ({ show, setShow, editingAccount = null, onSaved, tit
             if (key === "city") {
                 existingCity =
                     typeof editingAccount.city === "object"
-                    ? getDisplayName(editingAccount?.city?.name || editingAccount?.city?.cityName)
+                        ? getDisplayName(editingAccount?.city?.name || editingAccount?.city?.cityName)
                         : editingAccount?.city || "";
 
                 nextForm.city = "";
@@ -2004,8 +2007,8 @@ const AccountMasterModal = ({ show, setShow, editingAccount = null, onSaved, tit
                         </div>
                     ) : (
                         schemaFields
-                                    .filter((field: any) => !isTrueAccountValue(field?.isHidden))
-                                    .map((field: any) => renderSchemaField(field))
+                            .filter((field: any) => !isTrueAccountValue(field?.isHidden))
+                            .map((field: any) => renderSchemaField(field))
                     )}
                 </>
             }
