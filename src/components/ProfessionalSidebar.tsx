@@ -237,9 +237,17 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 							path: "/bookEz/pos",
 							icon: <ShoppingCart size={20} />,
 							module: "bookez",
-							permissionKey: "allRegisters",
+							permissionKey: "Pass",
 							action: "view",
-						}] : [])
+						}] : []),
+						{
+							name: "Accounts Statement",
+							path: "/bookEz/accounts-statement",
+							icon: <ShoppingCart size={20} />,
+							module: "bookez",
+							permissionKey: "Pass",
+							action: "view",
+						}
 					],
 				},
 			]
