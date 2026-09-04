@@ -75,25 +75,25 @@ const emptyProductRow = { id: Date.now(), sOrderNumber: "", productCode: "", pro
 
 const getDefaultForm = () => ({ sInvVoucherNumber: "AUTO", sInvSalesOrderVoucherNumber: "", sInvVoucherDate: todayYMD(), sInvCustomerCode: "", sInvCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvDocStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, trip_order: "", lr_no: "", driver: "", vehicleCode: "", vehicleName: "", vehicleNumber: "", vehicle_master: null, customMasters: {}, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
 
-const getRecords = (res: any) => {
-    return Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.records)
-            ? res.records
-            : Array.isArray(res?.docs)
-                ? res.docs
-                : Array.isArray(res?.data?.items)
-                    ? res.data.items
-                    : Array.isArray(res?.data?.records)
-                        ? res.data.records
-                        : Array.isArray(res?.data?.docs)
-                            ? res.data.docs
-                            : Array.isArray(res?.data)
-                                ? res.data
-                                : Array.isArray(res)
-                                    ? res
-                                    : [];
-};
+// const getRecords = (res: any) => {
+//     return Array.isArray(res?.items)
+//         ? res.items
+//         : Array.isArray(res?.records)
+//             ? res.records
+//             : Array.isArray(res?.docs)
+//                 ? res.docs
+//                 : Array.isArray(res?.data?.items)
+//                     ? res.data.items
+//                     : Array.isArray(res?.data?.records)
+//                         ? res.data.records
+//                         : Array.isArray(res?.data?.docs)
+//                             ? res.data.docs
+//                             : Array.isArray(res?.data)
+//                                 ? res.data
+//                                 : Array.isArray(res)
+//                                     ? res
+//                                     : [];
+// };
 
 const CONDITIONAL_MARGIN_FIELD_KEYS = new Set(["taxRate", "nonTaxRate", "taxGross", "nonTaxGross"]);
 
