@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, ChevronDown, Landmark, LoaderCircle, Scale, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
+import { BarChart3, ChevronDown, LoaderCircle, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import DataTable from "../../../components/DataTable";
@@ -69,7 +69,7 @@ const BalanceSheet = () => {
   const assets = balanceSheetData?.assets || {};
   const liabilities = balanceSheetData?.liabilities || {};
 
-  const netProfit = Number(balanceSheetData?.netProfit || 0);
+  // const netProfit = Number(balanceSheetData?.netProfit || 0);
   const totalAssets = Number(assets?.totalAssets || 0);
   const totalLiabilities = Number(liabilities?.totalLiabilities || 0);
   const difference = totalAssets - totalLiabilities;
