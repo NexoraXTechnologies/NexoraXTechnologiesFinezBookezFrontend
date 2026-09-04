@@ -13,7 +13,7 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
-import { createSalesInvoice, deleteSalesInvoice, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { createSalesInvoice, deleteSalesInvoice, downloadFrieghtInvoicePdf, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import Modal, { ListingModel } from "../../../../../components/modal";
 import { getAllSalesOrder, updateSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
@@ -176,6 +176,68 @@ const renderSalesInvoiceCellExtra = (column: any, row: any, enableServiceProduct
     );
 };
 
+
+// FREIGHT PDF HELPERS
+
+const getPdfText = (value: any) => {
+    if (value === undefined || value === null) return "";
+    if (typeof value === "string" || typeof value === "number") return String(value);
+
+    if (typeof value === "object") {
+        return String(
+            value?.name ||
+            value?.label ||
+            value?.en ||
+            value?.stateName ||
+            value?.cityName ||
+            ""
+        );
+    }
+
+    return "";
+};
+
+const formatFreightPdfDate = (value: any) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+};
+
+const formatFreightPdfAmount = (value: any) => {
+    const amount = Number(String(value ?? 0).replace(/,/g, ""));
+    return Number.isFinite(amount) ? amount.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : "0";
+};
+
+const numberToIndianWords = (value: any) => {
+    const ones = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"];
+    const tens = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
+
+    const convert = (number: number): string => {
+        number = Math.floor(number);
+
+        if (number < 20) return ones[number];
+        if (number < 100) return `${tens[Math.floor(number / 10)]}${number % 10 ? ` ${ones[number % 10]}` : ""}`;
+        if (number < 1000) return `${ones[Math.floor(number / 100)]} HUNDRED${number % 100 ? ` ${convert(number % 100)}` : ""}`;
+        if (number < 100000) return `${convert(Math.floor(number / 1000))} THOUSAND${number % 1000 ? ` ${convert(number % 1000)}` : ""}`;
+        if (number < 10000000) return `${convert(Math.floor(number / 100000))} LAKH${number % 100000 ? ` ${convert(number % 100000)}` : ""}`;
+        return `${convert(Math.floor(number / 10000000))} CRORE${number % 10000000 ? ` ${convert(number % 10000000)}` : ""}`;
+    };
+
+    const amount = Number(String(value ?? 0).replace(/,/g, ""));
+    if (!Number.isFinite(amount)) return "";
+
+    const rupees = Math.floor(amount);
+    const paise = Math.round((amount - rupees) * 100);
+
+    return `${rupees ? convert(rupees) : "ZERO"} RUPEES${paise ? ` AND ${convert(paise)} PAISE` : ""} ONLY.`;
+};
+
+
+
+
 const SalesInVoice = () => {
     const dispatch = useDispatch<any>();
     const salesInvoiceState = useSelector((state: any) => state.salesInvoice);
@@ -214,6 +276,9 @@ const SalesInVoice = () => {
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
 
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const enableTransportationModule = useMemo(() => {
+        return isTrueValue(configurations?.[0]?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule);
+    }, [configurations]);
 
     const enableServiceProductInventory = useMemo(() => {
         const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
@@ -289,6 +354,235 @@ const SalesInVoice = () => {
 
     const { report } = useSelector((s: any) => s.reportMapping);
     const { company } = useSelector((state: any) => state.professionalCompanyMaster);
+
+
+
+    // BUILD FREIGHT INVOICE PDF DATA
+
+    const buildFreightInvoicePdfData = (record: any) => {
+        const customer = (accounts || []).find((account: any) => String(account?.accountCode || "") === String(record?.sInvCustomerCode || "")) || {};
+        const companyDynamic = company?.dynamicFields || {};
+        const customerDynamic = customer?.dynamicFields || {};
+        const recordDynamic = record?.dynamicFields || {};
+
+        const totalAmount = record?.sInvFooter?.totalNetAmount || record?.sInvFooter?.netAmount || record?.sInvFooter?.balanceAmount || 0;
+
+        return {
+            companyMaster: {
+                companyName: company?.companyName || company?.businessName || companyDynamic?.companyName || "",
+                companyAddress: getPdfText(company?.companyAddress || company?.address || company?.registeredAddress || companyDynamic?.companyAddress || companyDynamic?.address),
+                panNumber: company?.panNumber || company?.panNo || company?.companyPanNumber || companyDynamic?.panNumber || companyDynamic?.panNo || "",
+                gstin: company?.gstNumber || company?.gstin || company?.gstNumberHash || companyDynamic?.gstNumber || companyDynamic?.gstin || "",
+            },
+
+            accountDetails: {
+                accountName: customer?.accountName || record?.sInvCustomerName || "",
+                billingAddress: getPdfText(customer?.billingAddress || customer?.accountAddress || customer?.address || customerDynamic?.billingAddress || customerDynamic?.accountAddress),
+                gstin: customer?.gstNumber || customer?.gstin || customerDynamic?.gstNumber || customerDynamic?.gstin || "",
+            },
+
+            sacCode: "996601",
+
+            invoiceNo: record?.sInvVoucherNumber || "",
+            invoiceDate: formatFreightPdfDate(record?.sInvVoucherDate),
+
+            placeOfSupply: getPdfText(
+                customer?.state ||
+                customer?.stateName ||
+                customerDynamic?.state ||
+                record?.placeOfSupply ||
+                recordDynamic?.placeOfSupply
+            ),
+
+            items: (record?.sInvBody || []).map((item: any, index: number) => {
+                const dynamicBody = item?.dynamicBodyFields || {};
+                const vehicleMaster = item?.customMasters?.["Vehicle Master"] || record?.customMasters?.["Vehicle Master"] || {};
+                const vehicleTypeMaster = item?.customMasters?.["Vehicle Type Master"] || record?.customMasters?.["Vehicle Type Master"] || {};
+
+                return {
+                    slNo: String(index + 1),
+
+                    grNo:
+                        item?.grNo ||
+                        item?.lrNumber ||
+                        item?.lrVoucherNumber ||
+                        dynamicBody?.grNo ||
+                        dynamicBody?.lrNumber ||
+                        dynamicBody?.lrVoucherNumber ||
+                        record?.grNo ||
+                        record?.lrNumber ||
+                        record?.lrVoucherNumber ||
+                        recordDynamic?.grNo ||
+                        recordDynamic?.lrNumber ||
+                        recordDynamic?.lrVoucherNumber ||
+                        "",
+
+                    date: formatFreightPdfDate(
+                        item?.date ||
+                        item?.lrDate ||
+                        dynamicBody?.date ||
+                        dynamicBody?.lrDate ||
+                        record?.sInvVoucherDate
+                    ),
+
+                    vehNo:
+                        item?.vehNo ||
+                        item?.vehicleNo ||
+                        item?.vehicleNumber ||
+                        dynamicBody?.vehNo ||
+                        dynamicBody?.vehicleNo ||
+                        dynamicBody?.vehicleNumber ||
+                        vehicleMaster?.name ||
+                        vehicleMaster?.vehicle_number ||
+                        record?.vehNo ||
+                        record?.vehicleNo ||
+                        record?.vehicleNumber ||
+                        "",
+
+                    from:
+                        item?.from ||
+                        item?.fromLocation ||
+                        item?.source ||
+                        dynamicBody?.from ||
+                        dynamicBody?.fromLocation ||
+                        record?.from ||
+                        record?.fromLocation ||
+                        recordDynamic?.from ||
+                        recordDynamic?.fromLocation ||
+                        "",
+
+                    to:
+                        item?.to ||
+                        item?.toLocation ||
+                        item?.destination ||
+                        dynamicBody?.to ||
+                        dynamicBody?.toLocation ||
+                        record?.to ||
+                        record?.toLocation ||
+                        recordDynamic?.to ||
+                        recordDynamic?.toLocation ||
+                        "",
+
+                    invoiceNo:
+                        item?.invoiceNo ||
+                        dynamicBody?.invoiceNo ||
+                        record?.sInvVoucherNumber ||
+                        "",
+
+                    typeOfVehicle:
+                        item?.typeOfVehicle ||
+                        item?.vehicleType ||
+                        dynamicBody?.typeOfVehicle ||
+                        dynamicBody?.vehicleType ||
+                        vehicleTypeMaster?.name ||
+                        record?.typeOfVehicle ||
+                        record?.vehicleType ||
+                        "",
+
+                    freight: formatFreightPdfAmount(
+                        item?.freight ??
+                        item?.freightAmount ??
+                        dynamicBody?.freight ??
+                        dynamicBody?.freightAmount ??
+                        item?.taxableAmount ??
+                        item?.grossAmount ??
+                        item?.gross ??
+                        0
+                    ),
+
+                    extraPointCh: formatFreightPdfAmount(
+                        item?.extraPointCh ??
+                        item?.extraPointCharge ??
+                        dynamicBody?.extraPointCh ??
+                        dynamicBody?.extraPointCharge ??
+                        item?.otherAmount ??
+                        0
+                    ),
+
+                    totalAmount: formatFreightPdfAmount(
+                        item?.totalAmount ??
+                        dynamicBody?.totalAmount ??
+                        item?.netAmount ??
+                        item?.netTotal ??
+                        0
+                    ),
+                };
+            }),
+
+            rupeesInWords: numberToIndianWords(totalAmount),
+            totalAmount: formatFreightPdfAmount(totalAmount),
+
+            gstPaidBy:
+                record?.gstPaidBy ||
+                recordDynamic?.gstPaidBy ||
+                customer?.accountName ||
+                record?.sInvCustomerName ||
+                "",
+
+            reverseCharge:
+                record?.reverseCharge ||
+                record?.reverseChargeApplicable ||
+                recordDynamic?.reverseCharge ||
+                recordDynamic?.reverseChargeApplicable ||
+                "",
+
+            bankAcName:
+                company?.bankAcName ||
+                company?.bankAccountName ||
+                company?.accountHolderName ||
+                companyDynamic?.bankAcName ||
+                companyDynamic?.bankAccountName ||
+                company?.companyName ||
+                "",
+
+            bankAcNumber:
+                company?.bankAcNumber ||
+                company?.bankAccountNumber ||
+                company?.accountNumber ||
+                companyDynamic?.bankAcNumber ||
+                companyDynamic?.bankAccountNumber ||
+                companyDynamic?.accountNumber ||
+                "",
+
+            bankIfsc:
+                company?.bankIfsc ||
+                company?.bankIFSC ||
+                company?.ifscCode ||
+                company?.ifsc ||
+                companyDynamic?.bankIfsc ||
+                companyDynamic?.ifscCode ||
+                "",
+        };
+    };
+
+    const handleFreightInvoiceDownload = async () => {
+        try {
+            const record = downlaodPDF?.record;
+            const voucherNumber = record?.sInvVoucherNumber || downlaodPDF?.voucherNumber;
+
+            if (!voucherNumber) {
+                toast.error("Voucher number not found");
+                throw new Error("Voucher number not found");
+            }
+
+            if (!Object.keys(company || {}).length) {
+                toast.error("Company details not found");
+                throw new Error("Company details not found");
+            }
+
+            const pdfData = buildFreightInvoicePdfData(record);
+
+            await dispatch(
+                downloadFrieghtInvoicePdf({
+                    voucherNumber,
+                    pdfData,
+                })
+            ).unwrap();
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to download Freight Invoice PDF");
+            throw error;
+        }
+    };
 
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
@@ -3208,7 +3502,7 @@ const SalesInVoice = () => {
             />
 
             {/* @ts-ignore  */}
-            <ListingModel {...{
+            {/* <ListingModel {...{
                 show: downlaodPDF?.show,
 
                 setShow: () =>
@@ -3217,7 +3511,43 @@ const SalesInVoice = () => {
                     })),
 
                 downlaodPDF,
-                // externalBody: <><h1>Freight Invoice</h1></>,
+                externalBody: <><h1>Freight Invoice</h1></>,
+                entryType: "sales-invoice",
+                rowData: downlaodPDF?.record,
+                report,
+                title: "Download Sales Invoice PDF",
+                cancelText: "Cancel",
+                confirmText: "Confirm",
+            }} /> */}
+
+
+            <ListingModel {...{
+                show: downlaodPDF?.show,
+
+                setShow: () =>
+                    setDownlaodPDF((previous: any) => ({
+                        ...previous,
+                        show: !downlaodPDF?.show,
+                    })),
+
+                downlaodPDF,
+
+                externalBody: enableTransportationModule
+                    ? ({ selected, onSelect }: any) => (
+                        <button
+                            type="button"
+                            onClick={onSelect}
+                            className={`mx-6 mb-3 cursor-pointer rounded-lg px-4 py-3 text-left shadow-sm transition-all duration-200 ${selected
+                                ? "border-2 border-primary bg-primary/10 text-primary shadow-md"
+                                : "border border-border bg-card text-card-foreground hover:border-primary hover:bg-muted hover:shadow-md"
+                                }`}
+                        >
+                            Freight Invoice
+                        </button>
+                    )
+                    : null,
+                externalConfirm: handleFreightInvoiceDownload,
+
                 entryType: "sales-invoice",
                 rowData: downlaodPDF?.record,
                 report,

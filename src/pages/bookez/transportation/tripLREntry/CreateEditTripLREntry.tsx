@@ -3670,10 +3670,12 @@ const CreateEditTripLREntry = () => {
 
             if (!option) {
                 const touchUpId = String(item?.touchUpId || "").trim();
-                const candidates = allTransportTouchUpOptions.filter((entry: any) => {
+                const allCandidates = allTransportTouchUpOptions.filter((entry: any) => String(entry?.touchUpId || "") === touchUpId);
+                const availableCandidates = allCandidates.filter((entry: any) => {
                     const key = String(entry?.value || "");
-                    return String(entry?.touchUpId || "") === touchUpId && !reservedKeys.has(key) && !usedKeys.has(key);
+                    return !reservedKeys.has(key) && !usedKeys.has(key);
                 });
+                const candidates = availableCandidates.length ? availableCandidates : allCandidates;
 
                 if (candidates.length === 1) option = candidates[0];
                 else if (candidates.length > 1) {

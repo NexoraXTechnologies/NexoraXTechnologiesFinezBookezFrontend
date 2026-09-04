@@ -939,7 +939,7 @@ const Payment = () => {
                 }))
                 : [{ ...emptyPaymentRow, id: Date.now() }];
 
-        const vehicleMaster = record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || null;
+        const vehicleMaster = record?.customMasters?.["CSTM-000001"] || record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || ((record?.vehicleCode || record?.vehicleName) ? { code: record?.vehicleCode || "", name: record?.vehicleName || "" } : null);
         setEditingRecord(record);
         setErrors({});
 

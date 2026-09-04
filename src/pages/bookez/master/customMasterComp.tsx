@@ -1228,94 +1228,56 @@ const CustomMasterComp = ({
 		);
 	};
 
-	const resolveSubmitValue = (
-		field: any,
-		currentValue: any
-	) => {
-		if (
-			!hasDynamicSource(
-				field
-			)
-		) {
-			return currentValue;
+	const resolveSubmitValue = (field: any, currentValue: any) => {
+		if (!hasDynamicSource(field)) return currentValue;
+
+		const options = dynamicOptions[field.key] || [];
+		const fieldType = getFieldType(field);
+
+		if (isCustomMasterMultiSelectField(field)) {
+			const selectedValues = Array.isArray(currentValue) ? currentValue : [];
+
+			return selectedValues.map((item: any) => {
+				if (item && typeof item === "object") return item;
+
+				const match = options.find((option: any) => String(option.value) === String(item));
+
+				return match?.raw ?? item;
+			});
 		}
 
-		const options =
-			dynamicOptions[
-			field.key
-			] ||
-			[];
+		const match = currentValue && typeof currentValue === "object"
+			? null
+			: options.find((option: any) => String(option.value) === String(currentValue));
 
-		if (
-			isCustomMasterMultiSelectField(
-				field
-			)
-		) {
-			const selectedValues =
-				Array.isArray(
-					currentValue
-				)
-					? currentValue
-					: [];
+		const source = currentValue && typeof currentValue === "object" ? currentValue : match?.raw;
 
-			return selectedValues.map(
-				(
-					item: any
-				) => {
-					if (
-						item &&
-						typeof item ===
-						"object"
-					) {
-						return item;
-					}
+		if (fieldType === "statemaster") {
+			if (!source) return currentValue;
 
-					const match =
-						options.find(
-							(
-								option: any
-							) =>
-								String(
-									option.value
-								) ===
-								String(
-									item
-								)
-						);
+			const stateCode = source?.stateCode || source?.isoCode || source?.code || String(currentValue || "");
+			const stateName = typeof source?.name === "object" ? source?.name?.en : source?.name;
 
-					return (
-						match?.raw ??
-						item
-					);
-				}
-			);
+			return {
+				stateCode: String(stateCode || "").trim(),
+				name: String(stateName || match?.label || "").trim()
+			};
 		}
 
-		if (
-			currentValue &&
-			typeof currentValue ===
-			"object"
-		) {
-			return currentValue;
+		if (fieldType === "citymaster") {
+			if (!source) return currentValue;
+
+			const cityName = typeof source?.name === "object" ? source?.name?.en : source?.name;
+
+			return {
+				stateCode: String(source?.stateCode || form?.statemaster?.stateCode || form?.statemaster?.isoCode || form?.statemaster || "").trim(),
+				name: String(cityName || match?.label || currentValue || "").trim()
+			};
 		}
 
-		const match =
-			options.find(
-				(
-					option: any
-				) =>
-					String(
-						option.value
-					) ===
-					String(
-						currentValue
-					)
-			);
+		if (currentValue && typeof currentValue === "object") return currentValue;
 
-		return (
-			match?.raw ??
-			currentValue
-		);
+		return match?.raw ?? currentValue;
 	};
 
 	const openEditModal = async (
