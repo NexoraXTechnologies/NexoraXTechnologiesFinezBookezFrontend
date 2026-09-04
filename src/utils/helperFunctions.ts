@@ -82,30 +82,215 @@ const getRecords = (res: any) => {
     return Array.isArray(res?.items) ? res.items : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
 };
 
-const loadFieldOptions = async (fields: any[], param: Record<string, any> = {}) => {
-    const updatedFields = await Promise.all(
-        (fields || []).map(async (field) => {
-            if (!!field?.options?.length) {
-                const options = Array.isArray(field?.options) ? field?.options.map((item: any) => ({ label: item || "", value: item || "", raw: item })) : [];
-                return { ...field, options };
+const resolveDynamicSchemaApi = (api: string = "") => {
+    if (!api) return "";
+
+    try {
+        const professionalUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
+
+        return String(api).replace(/\{([^}]+)\}/g, (match, key) => {
+            const value = professionalUser?.[key] ?? localStorage.getItem(key);
+
+            if (value === undefined || value === null || value === "") {
+                console.log(`[resolveDynamicSchemaApi] Value not found for: ${key}`);
+                return match;
             }
-            if (!field?.api) return field;
+
+            return encodeURIComponent(String(value));
+        });
+    } catch (error) {
+        console.log("[resolveDynamicSchemaApi] Failed to resolve dynamic API", error);
+        return api;
+    }
+};
+
+export const loadFieldOptions = async (fields: any[], param: any = {}) => {
+    return Promise.all(
+        (fields || []).map(async (field: any) => {
+            const fieldType = String(field?.type || field?.dataSource?.type || "").trim().toLowerCase();
+            const isCustomMaster = fieldType === "custommaster";
+            const isEmployeeMaster = fieldType === "employeemaster";
+
+            // CUSTOM MASTER
+            if (isCustomMaster) {
+                const customMasterCode = field?.customMasterCode || field?.dataSource?.customMasterCode || "";
+
+                if (customMasterCode) {
+                    try {
+                        const response = await professionalAxios.get(
+                            "/eTaxSolnMongoApiBackend/users/customMaster/data/getAll",
+                            {
+                                params: {
+                                    moduleCode: customMasterCode,
+                                    status: "active",
+                                    offset: 0,
+                                    limit: 500,
+                                    ...(field?.queryParams || field?.dataSource?.queryParams || {}),
+                                    ...(param || {}),
+                                },
+                            }
+                        );
+
+                        const records = getRecords(response.data);
+
+                        const options = Array.isArray(records)
+                            ? records
+                                .map((item: any) => {
+                                    const value = item?.code ?? item?.masterCode ?? item?._id ?? "";
+                                    const label = item?.name ?? item?.masterName ?? item?.description ?? value;
+
+                                    return {
+                                        label: String(label || ""),
+                                        value: String(value || ""),
+                                        raw: item,
+                                    };
+                                })
+                                .filter((option: any) => option.value)
+                            : [];
+
+                        return { ...field, options };
+                    } catch (error) {
+                        console.log(`Failed to load Custom Master options for ${field?.key}`, error);
+                        return { ...field, options: field?.options || [] };
+                    }
+                }
+            }
+
+            // NORMAL API / DATASOURCE API
+            const rawApi =
+                field?.api ||
+                field?.dataSource?.api ||
+                (field?.customMasterCode
+                    ? `/users/customMaster/data/getAll?moduleCode=${field.customMasterCode}`
+                    : "");
+
+            if (!rawApi) return field;
+
+            const resolvedApi = resolveDynamicSchemaApi(rawApi);
+
+            // DON'T CALL API IF DYNAMIC VALUE NOT FOUND
+            if (/\{[^}]+\}/.test(resolvedApi)) {
+                console.log(`[loadFieldOptions] Unresolved API placeholder for ${field?.key}:`, resolvedApi);
+                return { ...field, options: field?.options || [] };
+            }
+
+            const apiUrl = String(resolvedApi).startsWith("/eTaxSolnMongoApiBackend")
+                ? String(resolvedApi)
+                : `/eTaxSolnMongoApiBackend${String(resolvedApi).startsWith("/") ? resolvedApi : `/${resolvedApi}`}`;
+
+            const labelField =
+                field?.labelField ||
+                field?.dataSource?.labelField ||
+                (fieldType === "productmaster"
+                    ? "productName"
+                    : isEmployeeMaster
+                        ? "userFirstName"
+                        : "name");
+
+            const valueField =
+                field?.valueField ||
+                field?.dataSource?.valueField ||
+                (fieldType === "productmaster"
+                    ? "productCode"
+                    : isEmployeeMaster
+                        ? "userMobileNumberHash"
+                        : "code");
+
             try {
-                const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend${field.api}`, { params: { ...(field.queryParams || {}), ...param, } });
-                const records = getRecords(res.data);
-                const options = Array.isArray(records) ? records.map((item: any) => ({ label: item?.[field.labelField] || "", value: item?.[field.valueField] || "", raw: item })) : [];
+                console.log("[loadFieldOptions] calling:", apiUrl);
+
+                const response = await professionalAxios.get(
+                    apiUrl,
+                    {
+                        params: {
+                            ...(field?.queryParams || field?.dataSource?.queryParams || {}),
+                            ...(param || {}),
+                        },
+                    }
+                );
+
+                // EMPLOYEE MASTER - /users RESPONSE
+                if (isEmployeeMaster) {
+                    const result = response?.data?.result || response?.data?.data?.result || [];
+
+                    const childUsers = Array.isArray(result)
+                        ? result.flatMap((item: any) => Array.isArray(item?.ChildUsers) ? item.ChildUsers : [])
+                        : [];
+
+                    if (childUsers.length > 0) {
+                        const options = childUsers
+                            .map((item: any) => {
+                                const value = item?.[valueField] ?? item?.userMobileNumberHash ?? item?._id ?? "";
+                                const fullName = [item?.userFirstName, item?.userMiddleName, item?.userLastName].filter(Boolean).join(" ");
+                                const label = fullName || item?.[labelField] || value;
+
+                                return {
+                                    label: String(label || ""),
+                                    value: String(value || ""),
+                                    raw: item,
+                                };
+                            })
+                            .filter((option: any) => option.value);
+
+                        console.log(`[loadFieldOptions] ${field?.key} options:`, options);
+
+                        return { ...field, options };
+                    }
+                }
+
+                // EXISTING NORMAL RESPONSE
+                const records = getRecords(response.data);
+
+                const options = Array.isArray(records)
+                    ? records
+                        .map((item: any) => {
+                            const value =
+                                item?.[valueField] ??
+                                item?.productCode ??
+                                item?.accountCode ??
+                                item?.masterCode ??
+                                item?.userMobileNumberHash ??
+                                item?.code ??
+                                item?._id ??
+                                "";
+
+                            const label =
+                                item?.[labelField] ??
+                                item?.productName ??
+                                item?.accountName ??
+                                item?.masterName ??
+                                item?.userFirstName ??
+                                item?.name ??
+                                item?.description ??
+                                value;
+
+                            return {
+                                label: String(label || ""),
+                                value: String(value || ""),
+                                raw: item,
+                            };
+                        })
+                        .filter((option: any) => option.value)
+                    : [];
+
+                console.log(`[loadFieldOptions] ${field?.key} options:`, options);
+
                 return { ...field, options };
             } catch (error) {
-                console.log(`Failed to load options for ${field.key}`, error);
-                return { ...field, options: [] };
+                console.log(`Failed to load options for ${field?.key}`, error);
+                return { ...field, options: field?.options || [] };
             }
         })
     );
-    return updatedFields;
 };
 
 export const loadAllTemplateOptions = async (templateData: any, param: any = {}) => {
-    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([loadFieldOptions(templateData?.header || [], param?.header), loadFieldOptions(templateData?.body || [], param?.body), loadFieldOptions(templateData?.footer || [], param?.footer)]);
+    const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([
+        loadFieldOptions(templateData?.header || [], param?.header),
+        loadFieldOptions(templateData?.body || [], param?.body),
+        loadFieldOptions(templateData?.footer || [], param?.footer),
+    ]);
+
     return { ...templateData, header: updatedHeader, body: updatedBody, footer: updatedFooter };
 };
 

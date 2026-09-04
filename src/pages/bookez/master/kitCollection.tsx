@@ -3,7 +3,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import professionalAxios from "../../../services/professionalAxios";
-import { formatDateForInput, formatDateForList, money, num, safePercent, todayYMD } from "../../../utils/helperFunctions";
+import { formatDateForInput, formatDateForList, loadFieldOptions, money, num, safePercent, todayYMD } from "../../../utils/helperFunctions";
 import { deleteKitCollection, getAllKitCollections, saveKitCollection, updateKitCollection } from "../../../redux/slices/professionalSlice/kitCollection";
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
 import Toggle from "../../../components/toggle";
@@ -170,99 +170,6 @@ const getRecords = (response: any) => {
     return [];
 };
 
-export const loadFieldOptions = async (fields: any[]) => {
-    return Promise.all(
-        (fields || []).map(async (field: any) => {
-            const fieldType = String(
-                field?.type ||
-                field?.dataSource?.type ||
-                ""
-            ).toLowerCase();
-
-            const api =
-                field?.api ||
-                field?.dataSource?.api ||
-                "";
-
-            if (!api) {
-                return field;
-            }
-
-            try {
-                const labelField =
-                    field?.labelField ||
-                    field?.dataSource?.labelField ||
-                    (fieldType === "productmaster"
-                        ? "productName"
-                        : "name");
-
-                const valueField =
-                    field?.valueField ||
-                    field?.dataSource?.valueField ||
-                    (fieldType === "productmaster"
-                        ? "productCode"
-                        : "code");
-
-                const apiUrl = String(api).startsWith(
-                    "/eTaxSolnMongoApiBackend"
-                )
-                    ? String(api)
-                    : `/eTaxSolnMongoApiBackend${String(api).startsWith("/")
-                        ? api
-                        : `/${api}`
-                    }`;
-
-                const response = await professionalAxios.get(
-                    apiUrl,
-                    {
-                        params:
-                            field?.queryParams ||
-                            field?.dataSource?.queryParams ||
-                            {},
-                    }
-                );
-
-                const options = getRecords(response.data)
-                    .map((item: any) => {
-                        const value =
-                            item?.[valueField] ??
-                            item?.productCode ??
-                            item?.code ??
-                            item?._id ??
-                            "";
-
-                        const label =
-                            item?.[labelField] ??
-                            item?.productName ??
-                            item?.name ??
-                            value;
-
-                        return {
-                            label: String(label || ""),
-                            value: String(value || ""),
-                            raw: item,
-                        };
-                    })
-                    .filter((option: any) => option.value);
-
-                return {
-                    ...field,
-                    options,
-                };
-            } catch (error) {
-                console.log(
-                    `Failed to load options for ${field?.key}`,
-                    error
-                );
-
-                return {
-                    ...field,
-                    options: field?.options || [],
-                };
-            }
-        })
-    );
-};
 
 const loadAllTemplateOptions = async (template: any) => {
     const [header, body, footer] = await Promise.all([
