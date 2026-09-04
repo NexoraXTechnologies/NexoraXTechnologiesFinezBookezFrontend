@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, ChevronDown, Landmark, LoaderCircle, Scale, TrendingDown, TrendingUp } from "lucide-react";
+import { BarChart3, ChevronDown, Landmark, LoaderCircle, Scale, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import DataTable from "../../../components/DataTable";
@@ -19,43 +19,29 @@ const formatToDate = (date: string) => {
   return new Date(`${date}T23:59:59.999+05:30`).toISOString();
 };
 
-const getRows = (...values: any[]) => {
-  for (const value of values) {
-    if (Array.isArray(value)) return value;
-    if (Array.isArray(value?.rows)) return value.rows;
-    if (Array.isArray(value?.details)) return value.details;
-    if (Array.isArray(value?.items)) return value.items;
-  }
-  return [];
-};
-
-const getParticular = (row: any) => row?.particular || row?.accountName || row?.name || row?.ledgerName || row?.groupName || "-";
-
-const getAmount = (row: any) => Number(row?.amount ?? row?.balance ?? row?.closingBalance ?? row?.total ?? row?.value ?? 0);
-
-const assetsColumns = [
+const assetColumns = [
   {
     key: "particular",
     title: "Particular",
-    render: (row: any) => <span className="text-sm font-medium text-card-foreground">{getParticular(row)}</span>
+    render: (row: any) => <span className="text-sm font-medium text-card-foreground">{row?.particular || "-"}</span>
   },
   {
     key: "amount",
     title: "Amount",
-    render: (row: any) => <span className="text-sm font-semibold text-success">₹{formatAmount(getAmount(row))}</span>
+    render: (row: any) => <span className="text-sm font-semibold text-success">₹{formatAmount(row?.amount)}</span>
   }
 ];
 
-const liabilitiesColumns = [
+const liabilityColumns = [
   {
     key: "particular",
     title: "Particular",
-    render: (row: any) => <span className="text-sm font-medium text-card-foreground">{getParticular(row)}</span>
+    render: (row: any) => <span className="text-sm font-medium text-card-foreground">{row?.particular || "-"}</span>
   },
   {
     key: "amount",
     title: "Amount",
-    render: (row: any) => <span className="text-sm font-semibold text-primary">₹{formatAmount(getAmount(row))}</span>
+    render: (row: any) => <span className="text-sm font-semibold text-primary">₹{formatAmount(row?.amount)}</span>
   }
 ];
 
@@ -78,41 +64,26 @@ const BalanceSheet = () => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
 
-  const balanceSheetData = useMemo(() => balanceSheet?.data || balanceSheet || {}, [balanceSheet]);
+  // BALANCE SHEET RESPONSE
+  const balanceSheetData = balanceSheet?.data || balanceSheet || {};
+  const assets = balanceSheetData?.assets || {};
+  const liabilities = balanceSheetData?.liabilities || {};
 
-  const assetRows = useMemo(() => getRows(
-    balanceSheetData?.assetRows,
-    balanceSheetData?.assets,
-    balanceSheetData?.assetsRows,
-    balanceSheetData?.assetDetails,
-    balanceSheetData?.currentAssets
-  ), [balanceSheetData]);
-
-  const liabilityRows = useMemo(() => getRows(
-    balanceSheetData?.liabilityRows,
-    balanceSheetData?.liabilities,
-    balanceSheetData?.liabilitiesRows,
-    balanceSheetData?.liabilityDetails,
-    balanceSheetData?.liabilitiesAndEquity
-  ), [balanceSheetData]);
-
-  const calculatedAssets = useMemo(() => assetRows.reduce((total: number, row: any) => total + getAmount(row), 0), [assetRows]);
-  const calculatedLiabilities = useMemo(() => liabilityRows.reduce((total: number, row: any) => total + getAmount(row), 0), [liabilityRows]);
-
-  const totalAssets = Number(
-    balanceSheetData?.totalAssets ??
-    balanceSheetData?.assetTotal ??
-    calculatedAssets
-  );
-
-  const totalLiabilities = Number(
-    balanceSheetData?.totalLiabilities ??
-    balanceSheetData?.totalLiabilitiesAndEquity ??
-    balanceSheetData?.liabilityTotal ??
-    calculatedLiabilities
-  );
-
+  const netProfit = Number(balanceSheetData?.netProfit || 0);
+  const totalAssets = Number(assets?.totalAssets || 0);
+  const totalLiabilities = Number(liabilities?.totalLiabilities || 0);
   const difference = totalAssets - totalLiabilities;
+
+  const assetRows = useMemo(() => [
+    { particular: "Cash & Bank", amount: Number(assets?.cashBank || 0) },
+    { particular: "Accounts Receivable", amount: Number(assets?.accountsReceivable || 0) },
+    { particular: "Capital Loss", amount: Number(assets?.capitalLoss || 0) }
+  ], [assets?.cashBank, assets?.accountsReceivable, assets?.capitalLoss]);
+
+  const liabilityRows = useMemo(() => [
+    { particular: "Accounts Payable", amount: Number(liabilities?.accountsPayable || 0) },
+    { particular: "Capital Profit", amount: Number(liabilities?.capitalProfit || 0) }
+  ], [liabilities?.accountsPayable, liabilities?.capitalProfit]);
 
   const buildPayload = (exportType: "" | "pdf" | "excel" = "") => {
     const payload: any = {
@@ -234,13 +205,14 @@ const BalanceSheet = () => {
         </AnimatePresence>
       </div>
 
-      {/* <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+      {/* <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
         <div className="rounded-lg border border-success/20 bg-card px-3 py-2.5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Assets</p>
               <p className="mt-0.5 truncate text-lg font-bold leading-tight text-success">₹{formatAmount(totalAssets)}</p>
             </div>
+
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
               <TrendingUp size={17} />
             </div>
@@ -253,8 +225,22 @@ const BalanceSheet = () => {
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Liabilities</p>
               <p className="mt-0.5 truncate text-lg font-bold leading-tight text-primary">₹{formatAmount(totalLiabilities)}</p>
             </div>
+
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Landmark size={17} />
+            </div>
+          </div>
+        </div>
+
+        <div className={`rounded-lg border bg-card px-3 py-2.5 shadow-sm ${netProfit >= 0 ? "border-success/20" : "border-danger/20"}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{netProfit >= 0 ? "Net Profit" : "Net Loss"}</p>
+              <p className={`mt-0.5 truncate text-lg font-bold leading-tight ${netProfit >= 0 ? "text-success" : "text-danger"}`}>₹{formatAmount(Math.abs(netProfit))}</p>
+            </div>
+
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${netProfit >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
+              <WalletCards size={17} />
             </div>
           </div>
         </div>
@@ -265,6 +251,7 @@ const BalanceSheet = () => {
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Difference</p>
               <p className={`mt-0.5 truncate text-lg font-bold leading-tight ${Math.abs(difference) < 0.01 ? "text-success" : "text-danger"}`}>₹{formatAmount(Math.abs(difference))}</p>
             </div>
+
             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${Math.abs(difference) < 0.01 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
               <Scale size={17} />
             </div>
@@ -279,9 +266,10 @@ const BalanceSheet = () => {
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success">
                 <TrendingUp size={15} />
               </div>
+
               <div>
                 <p className="text-sm font-semibold leading-tight text-card-foreground">Assets</p>
-                <p className="text-[11px] leading-tight text-muted-foreground">{assetRows.length} {assetRows.length === 1 ? "entry" : "entries"}</p>
+                <p className="text-[11px] leading-tight text-muted-foreground">{assetRows.length} entries</p>
               </div>
             </div>
 
@@ -289,7 +277,7 @@ const BalanceSheet = () => {
           </div>
 
           <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
-            <DataTable columns={assetsColumns} data={assetRows} loading={balanceSheetLoading} emptyMessage="No asset data found" showFieldSelector={false} />
+            <DataTable columns={assetColumns} data={assetRows} loading={balanceSheetLoading} emptyMessage="No asset data found" showFieldSelector={false} />
           </div>
         </div>
 
@@ -299,9 +287,10 @@ const BalanceSheet = () => {
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <TrendingDown size={15} />
               </div>
+
               <div>
-                <p className="text-sm font-semibold leading-tight text-card-foreground">Liabilities & Equity</p>
-                <p className="text-[11px] leading-tight text-muted-foreground">{liabilityRows.length} {liabilityRows.length === 1 ? "entry" : "entries"}</p>
+                <p className="text-sm font-semibold leading-tight text-card-foreground">Liabilities</p>
+                <p className="text-[11px] leading-tight text-muted-foreground">{liabilityRows.length} entries</p>
               </div>
             </div>
 
@@ -309,7 +298,7 @@ const BalanceSheet = () => {
           </div>
 
           <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
-            <DataTable columns={liabilitiesColumns} data={liabilityRows} loading={balanceSheetLoading} emptyMessage="No liability data found" showFieldSelector={false} />
+            <DataTable columns={liabilityColumns} data={liabilityRows} loading={balanceSheetLoading} emptyMessage="No liability data found" showFieldSelector={false} />
           </div>
         </div>
       </div>
@@ -321,10 +310,8 @@ const BalanceSheet = () => {
           </div>
 
           <div>
-            <p className="text-sm font-semibold leading-tight text-card-foreground">Balance Sheet</p>
-            <p className="text-[11px] leading-tight text-muted-foreground">
-              {Math.abs(difference) < 0.01 ? "Assets and liabilities are balanced" : "Difference between assets and liabilities"}
-            </p>
+            <p className="text-sm font-semibold leading-tight text-card-foreground">Balance Sheet Difference</p>
+            <p className="text-[11px] leading-tight text-muted-foreground">Total assets minus total liabilities</p>
           </div>
         </div>
 
