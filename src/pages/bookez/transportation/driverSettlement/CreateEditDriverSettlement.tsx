@@ -1971,6 +1971,21 @@ const CreateEditDriverSettlement = ({
                 selectedAllocation?.transportOrder?.transportOrderNumber ||
                 selectedTripId;
 
+            // TRANSPORT DETAILS FOR PAYMENT / RECEIPT
+            const selectedVehicleRaw = selectedAllocation?.vehicleSelection?.rawRecord || {};
+            const vehicleMasterModuleCode = cleanText(selectedVehicleRaw?.moduleCode) || "CSTM-000001";
+            const vehicleCode = cleanText(selectedAllocation?.vehicleSelection?.selectedVehicleId || selectedAllocation?.vehicleSelection?.voucherNumber || selectedVehicleRaw?.voucherNumber || tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleCode || driverVehicleMaster?.code);
+            const vehicleName = cleanText(selectedVehicleRaw?.name || driverVehicleMaster?.name);
+            const vehicleNumber = cleanText(selectedAllocation?.vehicleSelection?.vehicleNumber || selectedVehicleRaw?.vehicle_number || tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleNumber);
+            const tripDriverName = cleanText(selectedAllocation?.driverAllocation?.driverName || tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName);
+            const tripLrNo = tripDetails?.lrNo === "-" ? "" : cleanText(tripDetails?.lrNo || selectedLREntry?.lrNumber);
+            const transportCustomMasters = {
+                ...(selectedTransportOrder?.customMasters && typeof selectedTransportOrder.customMasters === "object" ? selectedTransportOrder.customMasters : {}),
+                ...(selectedTripExpense?.customMasters && typeof selectedTripExpense.customMasters === "object" ? selectedTripExpense.customMasters : {}),
+                ...(selectedLREntry?.customMasters && typeof selectedLREntry.customMasters === "object" ? selectedLREntry.customMasters : {}),
+                ...(vehicleMasterModuleCode && vehicleCode ? { [vehicleMasterModuleCode]: { code: vehicleCode, name: vehicleName } } : {}),
+            };
+
             const payload: any = {
                 transportOrderNumber,
 
@@ -2193,23 +2208,12 @@ const CreateEditDriverSettlement = ({
                         transportOrderNumber,
 
                         trip_order: transportOrderNumber,
-                        lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
-                        driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
-                        customMasters: {
-                            ...(selectedTransportOrder?.customMasters && typeof selectedTransportOrder.customMasters === "object"
-                                ? selectedTransportOrder.customMasters
-                                : {}),
-                            ...(selectedTripExpense?.customMasters && typeof selectedTripExpense.customMasters === "object"
-                                ? selectedTripExpense.customMasters
-                                : {}),
-                            ...(selectedLREntry?.customMasters && typeof selectedLREntry.customMasters === "object"
-                                ? selectedLREntry.customMasters
-                                : {}),
-                            "Vehicle Master": {
-                                code: driverVehicleMaster?.code || "",
-                                name: driverVehicleMaster?.name || "",
-                            },
-                        },
+                        lr_no: tripLrNo,
+                        driver: tripDriverName,
+                        vehicleCode,
+                        vehicleName,
+                        vehicleNumber,
+                        customMasters: transportCustomMasters,
 
                         transactionPurpose:
                             "TRIP_EXPENSE_PAYMENT",
@@ -2298,23 +2302,12 @@ const CreateEditDriverSettlement = ({
                         transportOrderNumber,
 
                         trip_order: transportOrderNumber,
-                        lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
-                        driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
-                        customMasters: {
-                            ...(selectedTransportOrder?.customMasters && typeof selectedTransportOrder.customMasters === "object"
-                                ? selectedTransportOrder.customMasters
-                                : {}),
-                            ...(selectedTripExpense?.customMasters && typeof selectedTripExpense.customMasters === "object"
-                                ? selectedTripExpense.customMasters
-                                : {}),
-                            ...(selectedLREntry?.customMasters && typeof selectedLREntry.customMasters === "object"
-                                ? selectedLREntry.customMasters
-                                : {}),
-                            "Vehicle Master": {
-                                code: driverVehicleMaster?.code || "",
-                                name: driverVehicleMaster?.name || "",
-                            },
-                        },
+                        lr_no: tripLrNo,
+                        driver: tripDriverName,
+                        vehicleCode,
+                        vehicleName,
+                        vehicleNumber,
+                        customMasters: transportCustomMasters,
                         transactionPurpose:
                             "FREIGHT_RECEIPT",
                     };

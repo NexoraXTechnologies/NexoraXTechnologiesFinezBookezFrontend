@@ -194,9 +194,10 @@ const WarningModel = ({ show, title = "No Data Found", message = "Please create 
     );
 };
 
-const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData, downlaodPDF, entryType = "sales-invoice", GstToggle = false, externalBody }: any) => {
+const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData, downlaodPDF, entryType = "sales-invoice", GstToggle = false, externalBody, externalConfirm }: any) => {
     const dispatch = useDispatch<any>();
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+    const [selectedExternal, setSelectedExternal] = useState(false);
     const [gstType, setGstType] = useState("");
     const { company } = useSelector((s: any) => s.professionalCompanyMaster);
     const [loader, setLoader] = useState(false);
@@ -231,6 +232,7 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
             setShow(false);
             setGstType("");
             setSelectedTemplate(null);
+            setSelectedExternal(false);
         } catch (error) {
             console.log("Local PDF print failed:", error);
         }
@@ -254,6 +256,8 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
 
             downloadBlobPdf({ blobData, fileName: `${rowData?.voucherNumber || "report"}.pdf` });
             setShow(false);
+            setSelectedTemplate(null);
+            setSelectedExternal(false);
         } catch (error) {
             toast.error("PDF download failed");
             console.error("PDF download failed:", error);
@@ -263,6 +267,25 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
     };
 
     const handleConfirm = async () => {
+        if (selectedExternal && typeof externalConfirm === "function") {
+            try {
+                setLoader(true);
+
+                await externalConfirm();
+
+                setShow(false);
+                setSelectedExternal(false);
+                setSelectedTemplate(null);
+                setGstType("");
+            } catch (error) {
+                console.error("External PDF download failed:", error);
+            } finally {
+                setLoader(false);
+            }
+
+            return;
+        }
+
         if (isReportDownload) {
             await handleServerPdfDownload();
             return;
@@ -274,6 +297,7 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
     useEffect(() => {
         if (!show) {
             autoPrintDoneRef.current = false;
+            setSelectedExternal(false);
             return;
         }
 
@@ -313,7 +337,16 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                             <h2 className="mb-0 text-xl font-semibold text-secondary-foreground">{title}</h2>
                         </div>
 
-                        <button type="button" onClick={() => { setShow(); setGstType(""); setSelectedTemplate(null); }} className="cursor-pointer rounded-full p-2 transition hover:bg-muted">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShow();
+                                setGstType("");
+                                setSelectedTemplate(null);
+                                setSelectedExternal(false);
+                            }}
+                            className="cursor-pointer rounded-full p-2 transition hover:bg-muted"
+                        >
                             <X size={18} className="text-muted-foreground" />
                         </button>
                     </div>
@@ -324,8 +357,11 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                                 {report?.map((e: any, index: number) => (
                                     <li
                                         key={e?.id || index}
-                                        onClick={() => setSelectedTemplate(e)}
-                                        className={`rounded-lg p-4 shadow-sm cursor-pointer transition-all duration-200 ${e?.id === selectedTemplate?.id ? "border-2 border-primary bg-primary/10 text-primary shadow-md" : "border border-border bg-card text-card-foreground hover:bg-muted hover:shadow-md"}`}
+                                        onClick={() => {
+                                            setSelectedTemplate(e);
+                                            setSelectedExternal(false);
+                                        }}
+                                        className={`rounded-lg p-4 shadow-sm cursor-pointer transition-all duration-200 ${e?.id === selectedTemplate?.id && !selectedExternal ? "border-2 border-primary bg-primary/10 text-primary shadow-md" : "border border-border bg-card text-card-foreground hover:bg-muted hover:shadow-md"}`}
                                     >
                                         {e?.templateName}
                                     </li>
@@ -336,8 +372,11 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                                 {["With GST", "Without GST"].map((option) => (
                                     <div
                                         key={option}
-                                        onClick={() => setGstType(option)}
-                                        className={`rounded-lg border px-4 py-2 cursor-pointer transition-all ${gstType === option ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-card-foreground hover:border-primary hover:bg-muted"}`}
+                                        onClick={() => {
+                                            setGstType(option);
+                                            setSelectedExternal(false);
+                                        }}
+                                        className={`rounded-lg border px-4 py-2 cursor-pointer transition-all ${gstType === option && !selectedExternal ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-card-foreground hover:border-primary hover:bg-muted"}`}
                                     >
                                         {option}
                                     </div>
@@ -346,12 +385,29 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                         )}
                     </div>
 
+                    {typeof externalBody === "function"
+                        ? externalBody({
+                            selected: selectedExternal,
+                            onSelect: () => {
+                                setSelectedExternal(true);
+                                setSelectedTemplate(null);
+                                setGstType("");
+                            },
+                        })
+                        : externalBody}
 
-
-                    {externalBody}
                     <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
                         <PrimaryButton callBackFn={handleConfirm} text="Confirm" loader={loader} />
-                        <SecondaryButton disabled={loader} callBackFn={() => { setShow(); setGstType(""); setSelectedTemplate(null); }} text="Cancel" />
+                        <SecondaryButton
+                            disabled={loader}
+                            callBackFn={() => {
+                                setShow();
+                                setGstType("");
+                                setSelectedTemplate(null);
+                                setSelectedExternal(false);
+                            }}
+                            text="Cancel"
+                        />
                     </div>
                 </motion.div>
             </motion.div>

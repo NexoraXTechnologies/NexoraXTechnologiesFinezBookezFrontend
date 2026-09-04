@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import professionalAxios from "../../../services/professionalAxios";
 import { formatDateForInput, formatDateForList, loadFieldOptions, money, num, safePercent, todayYMD } from "../../../utils/helperFunctions";
 import { deleteKitCollection, getAllKitCollections, saveKitCollection, updateKitCollection } from "../../../redux/slices/professionalSlice/kitCollection";
 import { getAllTransactionSchema } from "../../../redux/slices/professionalSlice/transactionSchema";
@@ -157,18 +156,18 @@ const roundNumber = (value: any) => {
         : 0;
 };
 
-const getRecords = (response: any) => {
-    if (Array.isArray(response?.items)) return response.items;
-    if (Array.isArray(response?.records)) return response.records;
-    if (Array.isArray(response?.docs)) return response.docs;
-    if (Array.isArray(response?.data?.items)) return response.data.items;
-    if (Array.isArray(response?.data?.records)) return response.data.records;
-    if (Array.isArray(response?.data?.docs)) return response.data.docs;
-    if (Array.isArray(response?.data)) return response.data;
-    if (Array.isArray(response)) return response;
+// const getRecords = (response: any) => {
+//     if (Array.isArray(response?.items)) return response.items;
+//     if (Array.isArray(response?.records)) return response.records;
+//     if (Array.isArray(response?.docs)) return response.docs;
+//     if (Array.isArray(response?.data?.items)) return response.data.items;
+//     if (Array.isArray(response?.data?.records)) return response.data.records;
+//     if (Array.isArray(response?.data?.docs)) return response.data.docs;
+//     if (Array.isArray(response?.data)) return response.data;
+//     if (Array.isArray(response)) return response;
 
-    return [];
-};
+//     return [];
+// };
 
 
 const loadAllTemplateOptions = async (template: any) => {

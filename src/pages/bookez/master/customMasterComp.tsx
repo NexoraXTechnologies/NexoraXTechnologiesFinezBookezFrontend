@@ -322,30 +322,95 @@ const CustomMasterComp = ({
 		}
 		return (value.code || value.value || "");
 	};
-	const resolveSubmitValue = (field: any, currentValue: any) => {
-		if (!hasDynamicSource(field)) {
+
+	const resolveSubmitValue = (
+		field: any,
+		currentValue: any
+	) => {
+		if (
+			!hasDynamicSource(
+				field
+			)
+		) {
 			return currentValue;
 		}
-		const options = dynamicOptions[field.key] || [];
-		if (isCustomMasterMultiSelectField(field)) {
-			const selectedValues = Array.isArray(currentValue) ? currentValue : [];
-			return selectedValues.map((item: any) => {
-				if (item && typeof item === "object") {
-					return item;
+
+		const options =
+			dynamicOptions[
+			field.key
+			] ||
+			[];
+
+		if (
+			isCustomMasterMultiSelectField(
+				field
+			)
+		) {
+			const selectedValues =
+				Array.isArray(
+					currentValue
+				)
+					? currentValue
+					: [];
+
+			return selectedValues.map(
+				(
+					item: any
+				) => {
+					if (
+						item &&
+						typeof item ===
+						"object"
+					) {
+						return item;
+					}
+
+					const match =
+						options.find(
+							(
+								option: any
+							) =>
+								String(
+									option.value
+								) ===
+								String(
+									item
+								)
+						);
+
+					return (
+						match?.raw ??
+						item
+					);
 				}
-				const match = options.find((option: any) => String(option.value) === String(item));
-				return (match?.raw ?? item);
-			}
 			);
 		}
-		if (currentValue && typeof currentValue === "object") {
+
+		if (
+			currentValue &&
+			typeof currentValue ===
+			"object"
+		) {
 			return currentValue;
 		}
-		const match = options.find((option: any) => String(option.value) === String(currentValue) || String(option.label) === String(currentValue) || String(
-			option.raw?.code ?? option.raw?.accountCode ?? ""
-		) === String(currentValue) || String(option.raw?.name ?? option.raw?.accountName ?? "") === String(currentValue)
+
+		const match =
+			options.find(
+				(
+					option: any
+				) =>
+					String(
+						option.value
+					) ===
+					String(
+						currentValue
+					)
+			);
+
+		return (
+			match?.raw ??
+			currentValue
 		);
-		return (match?.raw ?? currentValue);
 	};
 	const openEditModal = async (acc: any = null) => {
 		setShowModal(true);

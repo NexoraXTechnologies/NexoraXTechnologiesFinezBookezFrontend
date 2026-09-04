@@ -13,7 +13,7 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadFieldOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
-import { createSalesInvoice, deleteSalesInvoice, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { createSalesInvoice, deleteSalesInvoice, downloadFrieghtInvoicePdf, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import Modal, { ListingModel } from "../../../../../components/modal";
 import { getAllSalesOrder, updateSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
@@ -24,6 +24,7 @@ import ProductMasterModal from "../../../master/productMaster/ProductMasterFormM
 import { getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../../redux/slices/professionalSlice/productMasterSlice";
 import InputBorderLabel from "../../../../../components/common/InputBorderLabel";
 import { getCompany } from "../../../../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
+import { getTripLRCollectionByVoucherNumber } from "../../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
 
 const CUSTOMER_FIELD_KEYS = new Set(["sInvCustomerCode", "sInvCustomerName"]);
 const PRODUCT_FIELD_KEYS = new Set(["productCode", "productName", "productId", "product"]);
@@ -72,27 +73,27 @@ const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, c
 // PARTIAL SALES ORDER: salesOrderPendingQuantity and salesOrderOrderedQuantity added only for frontend tracking
 const emptyProductRow = { id: Date.now(), sOrderNumber: "", productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", salesOrderPendingQuantity: null, salesOrderOrderedQuantity: null, availableQuantity: null, productType: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: "", taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0, marginProduct: false, taxRate: "", nonTaxRate: "", taxGross: "", nonTaxGross: "", customMasters: {}, _inventoryBalanceVoucherId: "" };
 
-const getDefaultForm = () => ({ sInvVoucherNumber: "AUTO", sInvSalesOrderVoucherNumber: "", sInvVoucherDate: todayYMD(), sInvCustomerCode: "", sInvCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvDocStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, customMasters: {}, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
+const getDefaultForm = () => ({ sInvVoucherNumber: "AUTO", sInvSalesOrderVoucherNumber: "", sInvVoucherDate: todayYMD(), sInvCustomerCode: "", sInvCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvDocStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, trip_order: "", lr_no: "", driver: "", vehicleCode: "", vehicleName: "", vehicleNumber: "", vehicle_master: null, customMasters: {}, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
 
-const getRecords = (res: any) => {
-    return Array.isArray(res?.items)
-        ? res.items
-        : Array.isArray(res?.records)
-            ? res.records
-            : Array.isArray(res?.docs)
-                ? res.docs
-                : Array.isArray(res?.data?.items)
-                    ? res.data.items
-                    : Array.isArray(res?.data?.records)
-                        ? res.data.records
-                        : Array.isArray(res?.data?.docs)
-                            ? res.data.docs
-                            : Array.isArray(res?.data)
-                                ? res.data
-                                : Array.isArray(res)
-                                    ? res
-                                    : [];
-};
+// const getRecords = (res: any) => {
+//     return Array.isArray(res?.items)
+//         ? res.items
+//         : Array.isArray(res?.records)
+//             ? res.records
+//             : Array.isArray(res?.docs)
+//                 ? res.docs
+//                 : Array.isArray(res?.data?.items)
+//                     ? res.data.items
+//                     : Array.isArray(res?.data?.records)
+//                         ? res.data.records
+//                         : Array.isArray(res?.data?.docs)
+//                             ? res.data.docs
+//                             : Array.isArray(res?.data)
+//                                 ? res.data
+//                                 : Array.isArray(res)
+//                                     ? res
+//                                     : [];
+// };
 
 const CONDITIONAL_MARGIN_FIELD_KEYS = new Set(["taxRate", "nonTaxRate", "taxGross", "nonTaxGross"]);
 
@@ -150,6 +151,76 @@ const renderSalesInvoiceCellExtra = (column: any, row: any, enableServiceProduct
     );
 };
 
+
+// FREIGHT PDF HELPERS
+
+const getPdfText = (value: any) => {
+    if (value === undefined || value === null) return "";
+    if (typeof value === "string" || typeof value === "number") return String(value);
+
+    if (typeof value === "object") {
+        return String(
+            value?.name ||
+            value?.label ||
+            value?.en ||
+            value?.stateName ||
+            value?.cityName ||
+            ""
+        );
+    }
+
+    return "";
+};
+
+const formatFreightPdfDate = (value: any) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+};
+
+const formatFreightPdfAmount = (value: any) => {
+    const amount = Number(String(value ?? 0).replace(/,/g, ""));
+    return Number.isFinite(amount) ? amount.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : "0";
+};
+
+const getSingleLRRecord = (response: any) => {
+    const source = response?.data?.data ?? response?.data ?? response ?? {};
+    if (Array.isArray(source)) return source[0] || null;
+    if (Array.isArray(source?.records)) return source.records[0] || null;
+    if (Array.isArray(source?.tripLRCollection)) return source.tripLRCollection[0] || null;
+    return source?.record || source?.lrEntry || source?.tripLRCollection || source || null;
+};
+
+const numberToIndianWords = (value: any) => {
+    const ones = ["", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN", "SEVENTEEN", "EIGHTEEN", "NINETEEN"];
+    const tens = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
+
+    const convert = (number: number): string => {
+        number = Math.floor(number);
+
+        if (number < 20) return ones[number];
+        if (number < 100) return `${tens[Math.floor(number / 10)]}${number % 10 ? ` ${ones[number % 10]}` : ""}`;
+        if (number < 1000) return `${ones[Math.floor(number / 100)]} HUNDRED${number % 100 ? ` ${convert(number % 100)}` : ""}`;
+        if (number < 100000) return `${convert(Math.floor(number / 1000))} THOUSAND${number % 1000 ? ` ${convert(number % 1000)}` : ""}`;
+        if (number < 10000000) return `${convert(Math.floor(number / 100000))} LAKH${number % 100000 ? ` ${convert(number % 100000)}` : ""}`;
+        return `${convert(Math.floor(number / 10000000))} CRORE${number % 10000000 ? ` ${convert(number % 10000000)}` : ""}`;
+    };
+
+    const amount = Number(String(value ?? 0).replace(/,/g, ""));
+    if (!Number.isFinite(amount)) return "";
+
+    const rupees = Math.floor(amount);
+    const paise = Math.round((amount - rupees) * 100);
+
+    return `${rupees ? convert(rupees) : "ZERO"} RUPEES${paise ? ` AND ${convert(paise)} PAISE` : ""} ONLY.`;
+};
+
+
+
+
 const SalesInVoice = () => {
     const dispatch = useDispatch<any>();
     const salesInvoiceState = useSelector((state: any) => state.salesInvoice);
@@ -188,6 +259,9 @@ const SalesInVoice = () => {
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [] });
 
     const { configurations } = useSelector((state: any) => state.systemConfiguration);
+    const enableTransportationModule = useMemo(() => {
+        return isTrueValue(configurations?.[0]?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule);
+    }, [configurations]);
 
     const enableServiceProductInventory = useMemo(() => {
         const value = configurations?.[0]?.inventoryConfiguration?.enableServiceProductInventory;
@@ -263,6 +337,298 @@ const SalesInVoice = () => {
 
     const { report } = useSelector((s: any) => s.reportMapping);
     const { company } = useSelector((state: any) => state.professionalCompanyMaster);
+
+
+
+    // BUILD FREIGHT INVOICE PDF DATA
+
+    const upperFreightPdfText = (value: any) => getPdfText(value).trim().toUpperCase();
+
+    const buildFreightInvoicePdfData = (record: any, lrRecord: any = null) => {
+        const customer = (accounts || []).find((account: any) => String(account?.accountCode || "") === String(record?.sInvCustomerCode || "")) || {};
+        const companyDynamic = company?.dynamicFields || {};
+        const customerDynamic = customer?.dynamicFields || {};
+        const recordDynamic = record?.dynamicFields || {};
+        const lrVehicle = lrRecord?.vehicle || {};
+        const lrRoute = lrRecord?.route || {};
+        const lrConsignor = lrRecord?.consignor || {};
+        const lrConsignee = lrRecord?.consignee || {};
+        const lrFreight = lrRecord?.freight || {};
+        const lrLoading = lrRecord?.loading || {};
+        const lrVoucherNumber = lrRecord?.lrNumber || lrRecord?.voucherNumber || lrRecord?.lrVoucherNumber || record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "";
+        const totalAmount = lrFreight?.agreedFreight || 0;
+
+        return {
+            companyMaster: {
+                companyName: upperFreightPdfText(company?.companyName || company?.businessName || companyDynamic?.companyName || ""),
+                companyAddress: upperFreightPdfText(company?.companyAddress || company?.address || company?.registeredAddress || companyDynamic?.companyAddress || companyDynamic?.address),
+                panNumber: upperFreightPdfText(company?.panNumber || company?.panNo || company?.companyPanNumber || companyDynamic?.panNumber || companyDynamic?.panNo || ""),
+                gstin: upperFreightPdfText(company?.gstNumber || company?.gstin || company?.gstNumberHash || companyDynamic?.gstNumber || companyDynamic?.gstin || ""),
+            },
+
+            accountDetails: {
+                accountName: upperFreightPdfText(customer?.accountName || record?.sInvCustomerName || ""),
+                billingAddress: upperFreightPdfText(customer?.billingAddress || customer?.accountAddress || customer?.address || customerDynamic?.billingAddress || customerDynamic?.accountAddress),
+                gstin: upperFreightPdfText(customer?.gstNumber || customer?.gstin || customerDynamic?.gstNumber || customerDynamic?.gstin || ""),
+            },
+
+            sacCode: "996601",
+            invoiceNo: upperFreightPdfText(record?.sInvVoucherNumber || ""),
+            invoiceDate: formatFreightPdfDate(record?.sInvVoucherDate).toUpperCase(),
+
+            placeOfSupply: upperFreightPdfText(
+                lrRoute?.source ||
+                lrConsignor?.location?.city ||
+                lrConsignor?.name ||
+                lrLoading?.loadingPoint ||
+                record?.from ||
+                record?.fromLocation ||
+                recordDynamic?.from ||
+                recordDynamic?.fromLocation ||
+                ""
+            ),
+
+            items: (record?.sInvBody || []).map((item: any, index: number) => {
+                const dynamicBody = item?.dynamicBodyFields || {};
+                const vehicleMaster = item?.customMasters?.["CSTM-000001"] || item?.customMasters?.["Vehicle Master"] || record?.customMasters?.["CSTM-000001"] || record?.customMasters?.["Vehicle Master"] || {};
+                const vehicleTypeMaster = item?.customMasters?.["Vehicle Type Master"] || record?.customMasters?.["Vehicle Type Master"] || {};
+
+                return {
+                    slNo: String(index + 1),
+
+                    grNo: upperFreightPdfText(
+                        lrVoucherNumber ||
+                        item?.grNo ||
+                        item?.lrNumber ||
+                        item?.lrVoucherNumber ||
+                        dynamicBody?.grNo ||
+                        dynamicBody?.lrNumber ||
+                        dynamicBody?.lrVoucherNumber ||
+                        ""
+                    ),
+
+                    date: formatFreightPdfDate(
+                        lrRecord?.lrDate ||
+                        lrLoading?.loadingDateTime ||
+                        item?.date ||
+                        item?.lrDate ||
+                        dynamicBody?.date ||
+                        dynamicBody?.lrDate ||
+                        record?.sInvVoucherDate
+                    ).toUpperCase(),
+
+                    vehNo: upperFreightPdfText(
+                        lrVehicle?.vehicleNumber ||
+                        record?.vehicleNumber ||
+                        item?.vehNo ||
+                        item?.vehicleNo ||
+                        item?.vehicleNumber ||
+                        dynamicBody?.vehNo ||
+                        dynamicBody?.vehicleNo ||
+                        dynamicBody?.vehicleNumber ||
+                        vehicleMaster?.vehicle_number ||
+                        vehicleMaster?.name ||
+                        record?.vehNo ||
+                        record?.vehicleNo ||
+                        ""
+                    ),
+
+                    from: upperFreightPdfText(
+                        lrRoute?.source ||
+                        lrConsignor?.location?.city ||
+                        lrConsignor?.name ||
+                        lrLoading?.loadingPoint ||
+                        item?.from ||
+                        item?.fromLocation ||
+                        item?.source ||
+                        dynamicBody?.from ||
+                        dynamicBody?.fromLocation ||
+                        record?.from ||
+                        record?.fromLocation ||
+                        recordDynamic?.from ||
+                        recordDynamic?.fromLocation ||
+                        ""
+                    ),
+
+                    to: upperFreightPdfText(
+                        lrRoute?.destination ||
+                        lrConsignee?.location?.city ||
+                        lrConsignee?.name ||
+                        item?.to ||
+                        item?.toLocation ||
+                        item?.destination ||
+                        dynamicBody?.to ||
+                        dynamicBody?.toLocation ||
+                        record?.to ||
+                        record?.toLocation ||
+                        recordDynamic?.to ||
+                        recordDynamic?.toLocation ||
+                        ""
+                    ),
+
+                    invoiceNo: upperFreightPdfText(
+                        lrRecord?.invoiceNumber ||
+                        lrRecord?.cargo?.invoiceNumber ||
+                        item?.invoiceNo ||
+                        dynamicBody?.invoiceNo ||
+                        record?.sInvVoucherNumber ||
+                        ""
+                    ),
+
+                    typeOfVehicle: upperFreightPdfText(
+                        lrVehicle?.vehicleType ||
+                        item?.typeOfVehicle ||
+                        item?.vehicleType ||
+                        dynamicBody?.typeOfVehicle ||
+                        dynamicBody?.vehicleType ||
+                        vehicleTypeMaster?.name ||
+                        record?.typeOfVehicle ||
+                        record?.vehicleType ||
+                        ""
+                    ),
+
+                    freight: formatFreightPdfAmount(
+                        lrFreight?.agreedFreight ??
+                        item?.freight ??
+                        item?.freightAmount ??
+                        dynamicBody?.freight ??
+                        dynamicBody?.freightAmount ??
+                        item?.taxableAmount ??
+                        item?.grossAmount ??
+                        item?.gross ??
+                        0
+                    ),
+
+                    extraPointCh: formatFreightPdfAmount(
+                        lrFreight?.extraPointCh ??
+                        lrFreight?.extraPointCharge ??
+                        lrRecord?.extraPointCh ??
+                        lrRecord?.extraPointCharge ??
+                        item?.extraPointCh ??
+                        item?.extraPointCharge ??
+                        dynamicBody?.extraPointCh ??
+                        dynamicBody?.extraPointCharge ??
+                        item?.otherAmount ??
+                        0
+                    ),
+
+                    totalAmount: formatFreightPdfAmount(
+                        lrFreight?.agreedFreight ??
+                        item?.freight ??
+                        item?.freightAmount ??
+                        dynamicBody?.freight ??
+                        dynamicBody?.freightAmount ??
+                        item?.taxableAmount ??
+                        item?.grossAmount ??
+                        item?.gross ??
+                        0
+                    ),
+                    // totalAmount: formatFreightPdfAmount(
+                    //     lrFreight?.balancePayable ??
+                    //     lrRecord?.totalAmount ??
+                    //     item?.totalAmount ??
+                    //     dynamicBody?.totalAmount ??
+                    //     item?.netAmount ??
+                    //     item?.netTotal ??
+                    //     0
+                    // ),
+                };
+            }),
+
+            rupeesInWords: numberToIndianWords(totalAmount),
+            totalAmount: formatFreightPdfAmount(totalAmount),
+
+            gstPaidBy: upperFreightPdfText(
+                record?.gstPaidBy ||
+                recordDynamic?.gstPaidBy ||
+                customer?.accountName ||
+                record?.sInvCustomerName ||
+                ""
+            ),
+
+            reverseCharge: upperFreightPdfText(
+                record?.reverseCharge ||
+                record?.reverseChargeApplicable ||
+                recordDynamic?.reverseCharge ||
+                recordDynamic?.reverseChargeApplicable ||
+                ""
+            ),
+
+            bankAcName: upperFreightPdfText(
+                company?.bankName ||
+                company?.bankAccountName ||
+                company?.accountHolderName ||
+                companyDynamic?.bankAcName ||
+                companyDynamic?.bankAccountName ||
+                company?.companyName ||
+                ""
+            ),
+
+            bankAcNumber: upperFreightPdfText(
+                company?.bankAccountNumber ||
+                company?.bankAcNumber ||
+                company?.accountNumber ||
+                companyDynamic?.bankAcNumber ||
+                companyDynamic?.bankAccountNumber ||
+                companyDynamic?.accountNumber ||
+                ""
+            ),
+
+            bankIfsc: upperFreightPdfText(
+                company?.bankIfsc ||
+                company?.bankIFSC ||
+                company?.ifscCode ||
+                company?.ifsc ||
+                companyDynamic?.bankIfsc ||
+                companyDynamic?.ifscCode ||
+                ""
+            ),
+        };
+    };
+    const handleFreightInvoiceDownload = async () => {
+        try {
+            const record = downlaodPDF?.record;
+            const voucherNumber = record?.sInvVoucherNumber || downlaodPDF?.voucherNumber;
+            const lrVoucherNumber = String(record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "").trim();
+
+            if (!voucherNumber) {
+                toast.error("Voucher number not found");
+                throw new Error("Voucher number not found");
+            }
+
+            if (!Object.keys(company || {}).length) {
+                toast.error("Company details not found");
+                throw new Error("Company details not found");
+            }
+
+            let lrRecord: any = null;
+
+            if (lrVoucherNumber) {
+                try {
+                    const lrResponse = await dispatch(getTripLRCollectionByVoucherNumber(lrVoucherNumber) as any).unwrap();
+                    lrRecord = getSingleLRRecord(lrResponse);
+                    console.log("[FREIGHT INVOICE] LR VOUCHER:", lrVoucherNumber);
+                    console.log("[FREIGHT INVOICE] LR RECORD:", lrRecord);
+                } catch (lrError: any) {
+                    console.log("[FREIGHT INVOICE] LR fetch failed, using Sales Invoice fallback:", lrError);
+                }
+            }
+
+            const pdfData = buildFreightInvoicePdfData(record, lrRecord);
+
+            console.log("[FREIGHT INVOICE] PDF DATA:", pdfData);
+
+            await dispatch(
+                downloadFrieghtInvoicePdf({
+                    voucherNumber,
+                    pdfData,
+                })
+            ).unwrap();
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to download Freight Invoice PDF");
+            throw error;
+        }
+    };
 
     const getHeaderFieldByKey = (key: string) => templateFields?.header?.find((field: any) => field.key === key);
     const getBodyFieldByKey = (key: string) => templateFields?.body?.find((field: any) => field.key === key);
@@ -1039,6 +1405,53 @@ const SalesInVoice = () => {
         }
 
         const productsWithInventoryIds = attachInventoryBalanceVoucherIds(products, inventoryRecords);
+        const vehicleMaster = record?.customMasters?.["CSTM-000001"] || record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || ((record?.vehicleCode || record?.vehicleName) ? { code: record?.vehicleCode || "", name: record?.vehicleName || "" } : null);
+
+        const normalizeSelectText = (value: any) => String(value ?? "").trim().toLowerCase();
+        const headerFields = templateFields?.header || [];
+
+        const driverField = headerFields.find((field: any) => {
+            const key = normalizeSelectText(field?.key).replace(/[^a-z0-9]/g, "");
+            const label = normalizeSelectText(field?.label || field?.title).replace(/[^a-z0-9]/g, "");
+            return key === "driver" || key === "drivername" || label === "driver" || label === "drivername";
+        });
+
+        const driverOption = (driverField?.options || []).find((option: any) => {
+            const raw = option?.raw || {};
+            const values = [
+                option?.value,
+                option?.label,
+                raw?.driverName,
+                raw?.name,
+                raw?.userName,
+                [raw?.userFirstName, raw?.userMiddleName, raw?.userLastName].filter(Boolean).join(" "),
+            ].map(normalizeSelectText).filter(Boolean);
+            return values.includes(normalizeSelectText(record?.driver || record?.driverName));
+        });
+
+        const vehicleField = headerFields.find((field: any) => {
+            const key = normalizeSelectText(field?.key).replace(/[^a-z0-9]/g, "");
+            const label = normalizeSelectText(field?.label || field?.title || field?.customMasterName).replace(/[^a-z0-9]/g, "");
+            return String(field?.customMasterCode || "") === "CSTM-000001" || key === "vehiclemaster" || key === "vehicle_master" || label === "vehiclemaster";
+        });
+
+        const vehicleOption = (vehicleField?.options || []).find((option: any) => {
+            const raw = option?.raw || {};
+            const values = [
+                option?.value,
+                option?.label,
+                raw?.voucherNumber,
+                raw?.code,
+                raw?.name,
+                raw?.vehicleCode,
+                raw?.vehicleName,
+                raw?.vehicle_number,
+            ].map(normalizeSelectText).filter(Boolean);
+            return [record?.vehicleCode, record?.vehicleName, vehicleMaster?.code, vehicleMaster?.name].map(normalizeSelectText).filter(Boolean).some((value: string) => values.includes(value));
+        });
+
+        const driverSelectValue = driverOption?.value ?? record?.driver ?? record?.driverName ?? "";
+        const vehicleSelectValue = vehicleOption?.value ?? vehicleMaster?.code ?? record?.vehicleCode ?? "";
 
         setEditingRecord(true);
         setErrors({});
@@ -1055,7 +1468,18 @@ const SalesInVoice = () => {
             sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
             sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
             isAutoPost: record?.isAutoPost || false,
-            customMasters: record?.customMasters && typeof record.customMasters === "object" ? { ...record.customMasters } : {},
+            trip_order: record?.trip_order || record?.transportOrderNumber || "",
+            lr_no: record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "",
+            [driverField?.key || "driver"]: driverSelectValue,
+            driverName: record?.driver || record?.driverName || driverOption?.label || "",
+            vehicleCode: record?.vehicleCode || vehicleMaster?.code || "",
+            vehicleName: record?.vehicleName || vehicleMaster?.name || "",
+            vehicleNumber: record?.vehicleNumber || record?.vehicleNo || "",
+            [vehicleField?.key || "vehicle_master"]: vehicleSelectValue,
+            customMasters: {
+                ...(record?.customMasters && typeof record.customMasters === "object" ? record.customMasters : {}),
+                ...(vehicleMaster ? { "Vehicle Master": { code: vehicleMaster?.code || "", name: vehicleMaster?.name || "" } } : {}),
+            },
             products: productsWithInventoryIds,
             grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
             discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
@@ -1140,6 +1564,37 @@ const SalesInVoice = () => {
         setForm((prev: any) => {
             const currentField = getHeaderFieldByKey(key);
             let updated = { ...prev, [key]: value };
+
+            if (key === "customMasters") {
+                const selectedVehicle = value?.["CSTM-000001"] || value?.["Vehicle Master"] || value?.vehicle_master;
+                if (selectedVehicle) {
+                    updated.vehicleCode = selectedVehicle?.code || updated.vehicleCode || "";
+                    updated.vehicleName = selectedVehicle?.name || updated.vehicleName || "";
+                }
+            }
+
+            if (currentField) {
+                const normalizedKey = String(currentField?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+                const normalizedLabel = String(currentField?.label || currentField?.title || currentField?.customMasterName || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+                const selectedOption = (currentField?.options || []).find((option: any) => String(option?.value) === String(value));
+
+                if (normalizedKey === "driver" || normalizedKey === "drivername" || normalizedLabel === "driver" || normalizedLabel === "drivername") {
+                    const raw = selectedOption?.raw || {};
+                    updated.driverName = selectedOption?.label || raw?.driverName || raw?.name || [raw?.userFirstName, raw?.userMiddleName, raw?.userLastName].filter(Boolean).join(" ") || "";
+                }
+
+                if (String(currentField?.customMasterCode || "") === "CSTM-000001" || normalizedKey === "vehiclemaster" || normalizedLabel === "vehiclemaster") {
+                    const raw = selectedOption?.raw || {};
+                    const vehicleCode = String(selectedOption?.value || raw?.voucherNumber || raw?.code || value || "");
+                    const vehicleName = String(selectedOption?.label || raw?.name || "");
+                    updated.vehicleCode = vehicleCode;
+                    updated.vehicleName = vehicleName;
+                    updated.customMasters = {
+                        ...(updated.customMasters && typeof updated.customMasters === "object" ? updated.customMasters : {}),
+                        "CSTM-000001": { code: vehicleCode, name: vehicleName },
+                    };
+                }
+            }
 
             if (currentField?.mapFields) updated = applyMappedFields(currentField, value, updated);
 
@@ -1737,6 +2192,27 @@ const SalesInVoice = () => {
         const products = cleanRows();
         const footer = calculateFooter(products);
 
+        const selectedDriverField = (templateFields?.header || []).find((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const label = String(field?.label || field?.title || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            return key === "driver" || key === "drivername" || label === "driver" || label === "drivername";
+        });
+        const selectedDriverValue = form?.[selectedDriverField?.key || "driver"];
+        const selectedDriverOption = (selectedDriverField?.options || []).find((option: any) => String(option?.value) === String(selectedDriverValue));
+        const selectedDriverRaw = selectedDriverOption?.raw || {};
+        const selectedDriverName = String(selectedDriverOption?.label || selectedDriverRaw?.driverName || selectedDriverRaw?.name || [selectedDriverRaw?.userFirstName, selectedDriverRaw?.userMiddleName, selectedDriverRaw?.userLastName].filter(Boolean).join(" ") || form?.driverName || selectedDriverValue || "").trim();
+
+        const selectedVehicleMaster = form?.customMasters?.["CSTM-000001"] || form?.customMasters?.["Vehicle Master"] || form?.customMasters?.vehicle_master || null;
+        const selectedVehicleCode = selectedVehicleMaster && typeof selectedVehicleMaster === "object" ? selectedVehicleMaster?.code || form?.vehicleCode || "" : form?.vehicleCode || "";
+        const selectedVehicleName = selectedVehicleMaster && typeof selectedVehicleMaster === "object" ? selectedVehicleMaster?.name || form?.vehicleName || "" : form?.vehicleName || "";
+        const payloadCustomMasters = form?.customMasters && typeof form.customMasters === "object" ? { ...form.customMasters } : {};
+
+        if (selectedVehicleCode || selectedVehicleName) {
+            payloadCustomMasters["CSTM-000001"] = { code: selectedVehicleCode, name: selectedVehicleName };
+            delete payloadCustomMasters["Vehicle Master"];
+            delete payloadCustomMasters.vehicle_master;
+        }
+
         const payload: any = {
             sInvSalesOrderVoucherNumber: form?.sInvSalesOrderVoucherNumber || "",
             sInvCustomerCode: form.sInvCustomerCode,
@@ -1750,9 +2226,13 @@ const SalesInVoice = () => {
             // sInvDocStatus: form.sInvDocStatus || form.sInvStatus || "open",
             sOrderNumber: products?.[0]?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
 
-            customMasters: form?.customMasters && typeof form.customMasters === "object"
-                ? form.customMasters
-                : {},
+            ...(form?.trip_order ? { trip_order: form.trip_order } : {}),
+            ...(form?.lr_no ? { lr_no: form.lr_no } : {}),
+            ...(selectedDriverName ? { driver: selectedDriverName } : {}),
+            ...(selectedVehicleCode ? { vehicleCode: selectedVehicleCode } : {}),
+            ...(selectedVehicleName ? { vehicleName: selectedVehicleName } : {}),
+            ...(form?.vehicleNumber ? { vehicleNumber: form.vehicleNumber } : {}),
+            customMasters: payloadCustomMasters,
 
             sInvBody: products.map((item: any) => {
                 const marginProduct = isMarginProductRow(item);
@@ -3182,7 +3662,7 @@ const SalesInVoice = () => {
             />
 
             {/* @ts-ignore  */}
-            <ListingModel {...{
+            {/* <ListingModel {...{
                 show: downlaodPDF?.show,
 
                 setShow: () =>
@@ -3191,7 +3671,43 @@ const SalesInVoice = () => {
                     })),
 
                 downlaodPDF,
-                // externalBody: <><h1>Freight Invoice</h1></>,
+                externalBody: <><h1>Freight Invoice</h1></>,
+                entryType: "sales-invoice",
+                rowData: downlaodPDF?.record,
+                report,
+                title: "Download Sales Invoice PDF",
+                cancelText: "Cancel",
+                confirmText: "Confirm",
+            }} /> */}
+
+
+            <ListingModel {...{
+                show: downlaodPDF?.show,
+
+                setShow: () =>
+                    setDownlaodPDF((previous: any) => ({
+                        ...previous,
+                        show: !downlaodPDF?.show,
+                    })),
+
+                downlaodPDF,
+
+                externalBody: enableTransportationModule
+                    ? ({ selected, onSelect }: any) => (
+                        <button
+                            type="button"
+                            onClick={onSelect}
+                            className={`mx-6 mb-3 cursor-pointer rounded-lg px-4 py-3 text-left shadow-sm transition-all duration-200 ${selected
+                                ? "border-2 border-primary bg-primary/10 text-primary shadow-md"
+                                : "border border-border bg-card text-card-foreground hover:border-primary hover:bg-muted hover:shadow-md"
+                                }`}
+                        >
+                            Freight Invoice
+                        </button>
+                    )
+                    : null,
+                externalConfirm: handleFreightInvoiceDownload,
+
                 entryType: "sales-invoice",
                 rowData: downlaodPDF?.record,
                 report,

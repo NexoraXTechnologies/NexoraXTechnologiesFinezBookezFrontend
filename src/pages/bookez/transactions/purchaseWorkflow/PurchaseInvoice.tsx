@@ -1409,121 +1409,193 @@ const PurchaseInvoice = () => {
         }
     };
 
-    const openEditModal = async (record: any) => {
-        const footer = record?.pInvFooter || {};
 
-        let pendingProducts: any[] = [];
 
-        if (record?.grnVoucherNumber) {
-            try {
-                const summaryRes = await professionalAxios.get(
-                    `/eTaxSolnMongoApiBackend/users/bookez/analysis/purchaseInvoice/byGrnVoucherNumber/${record.grnVoucherNumber}`
-                );
+    const getSavedSelectOptionValue = (field: any, savedValue: any) => {
+        const saved = String(savedValue ?? "").trim();
+        if (!saved) return "";
 
-                pendingProducts =
-                    summaryRes?.data?.data?.products ||
-                    summaryRes?.data?.products ||
-                    [];
-            } catch (error) {
-                console.log(
-                    "Failed to load pending GRN quantity while editing Purchase Invoice",
-                    error
-                );
-            }
-        }
+        const selectedOption = (field?.options || []).find((option: any) => {
+            const raw = option?.raw || {};
+            const fullName = [raw?.userFirstName, raw?.userMiddleName, raw?.userLastName].filter(Boolean).join(" ").trim();
 
-        const pendingProductMap = new Map(
-            (Array.isArray(pendingProducts) ? pendingProducts : []).map((item: any) => [
-                String(item?.productCode || ""),
-                item,
-            ])
-        );
-
-        const products =
-            record?.pInvBody?.length > 0
-                ? record.pInvBody.map((item: any) => {
-                    const pending = pendingProductMap.get(
-                        String(item?.productCode || "")
-                    );
-
-                    const currentQuantity = num(item?.quantity);
-
-                    const pendingInvoiceQuantity = num(
-                        pending?.pendingInvoiceQuantity ??
-                        pending?.balanceQuantity ??
-                        (num(pending?.acceptedQuantity) - num(pending?.invoicedQuantity))
-                    );
-
-                    return buildPurchaseInvoiceProductRow(
-                        {
-                            ...item,
-                            quantity: String(currentQuantity),
-                            grnPendingInvoiceQuantity: pendingInvoiceQuantity,
-                            maxQuantity:
-                                record?.grnVoucherNumber
-                                    ? String(currentQuantity + pendingInvoiceQuantity)
-                                    : null,
-                        },
-                        record?.pInvVendorCode || ""
-                    );
-                })
-                : [{ ...emptyProductRow, id: Date.now() }];
-
-        setEditingRecord(true);
-        setErrors({});
-
-        setForm({
-            pInvVoucherNumber: record?.pInvVoucherNumber || "AUTO",
-
-            pInvVoucherDate: formatDateForInput(record?.pInvVoucherDate),
-
-            grnVoucherNumber: record?.grnVoucherNumber || "",
-
-            pInvVendorCode: record?.pInvVendorCode || "",
-            pInvVendorName: record?.pInvVendorName || "",
-
-            pInvPurAccount: record?.pInvPurAccount || "SA003",
-            pInvStatus: record?.pInvStatus || "open",
-
-            pInvRemark: record?.pInvRemark || "",
-            pInvStatusRemark: record?.pInvStatusRemark || "",
-            pInvStatusHistory: record?.pInvStatusHistory || [],
-
-            isAutoPost: record?.isAutoPost || false,
-
-            products,
-
-            grossAmount:
-                footer?.grossAmount || footer?.totalGrossAmount || "0.00",
-
-            discountAmount:
-                footer?.discountAmount ||
-                footer?.totalDiscountAmount ||
-                "0.00",
-
-            cgstAmount:
-                footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
-
-            sgstAmount:
-                footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
-
-            igstAmount:
-                footer?.igstAmount || footer?.totalIgstAmount || "0.00",
-
-            taxAmount:
-                footer?.taxAmount || footer?.totalTaxAmount || "0.00",
-
-            otherAmount:
-                footer?.otherAmount ||
-                footer?.totalOtherAmount ||
-                "0.00",
-
-            netAmount:
-                footer?.netAmount || footer?.totalNetAmount || "0.00",
+            return [option?.value, option?.label, option?.name, raw?.code, raw?.name, raw?.userMobileNumberHash, fullName]
+                .filter((value) => value !== undefined && value !== null && value !== "")
+                .some((value) => String(value).trim().toLowerCase() === saved.toLowerCase());
         });
 
-        setShowModal(true);
+        return selectedOption?.value ?? saved;
     };
+
+    const openEditModal = async (record: any) => {
+    const footer = record?.pInvFooter || {};
+
+    let pendingProducts: any[] = [];
+
+    if (record?.grnVoucherNumber) {
+        try {
+            const summaryRes = await professionalAxios.get(
+                `/eTaxSolnMongoApiBackend/users/bookez/analysis/purchaseInvoice/byGrnVoucherNumber/${record.grnVoucherNumber}`
+            );
+
+            pendingProducts = summaryRes?.data?.data?.products || summaryRes?.data?.products || [];
+        } catch (error) {
+            console.log("Failed to load pending GRN quantity while editing Purchase Invoice", error);
+        }
+    }
+
+    const pendingProductMap = new Map(
+        (Array.isArray(pendingProducts) ? pendingProducts : []).map((item: any) => [String(item?.productCode || ""), item])
+    );
+
+    const products =
+        record?.pInvBody?.length > 0
+            ? record.pInvBody.map((item: any) => {
+                const pending = pendingProductMap.get(String(item?.productCode || ""));
+                const currentQuantity = num(item?.quantity);
+                const pendingInvoiceQuantity = num(
+                    pending?.pendingInvoiceQuantity ??
+                    pending?.balanceQuantity ??
+                    (num(pending?.acceptedQuantity) - num(pending?.invoicedQuantity))
+                );
+
+                return buildPurchaseInvoiceProductRow(
+                    {
+                        ...item,
+                        quantity: String(currentQuantity),
+                        grnPendingInvoiceQuantity: pendingInvoiceQuantity,
+                        maxQuantity: record?.grnVoucherNumber ? String(currentQuantity + pendingInvoiceQuantity) : null,
+                    },
+                    record?.pInvVendorCode || ""
+                );
+            })
+            : [{ ...emptyProductRow, id: Date.now() }];
+
+    const headerFields = templateFields?.header || [];
+
+    const driverField = headerFields.find(
+        (field: any) => String(field?.key || "").trim().toLowerCase() === "driver"
+    );
+
+    const vehicleMasterField = headerFields.find((field: any) => {
+        const key = String(field?.key || "").trim().toLowerCase();
+        const label = String(field?.label || "").trim().toLowerCase();
+
+        return key === "vehicle_master" || label === "vehicle master";
+    });
+
+    const savedDriver = String(record?.driver || "").trim();
+
+    const savedVehicleMaster =
+        record?.customMasters?.["Vehicle Master"] ||
+        record?.customMasters?.vehicle_master ||
+        null;
+
+    const driverValue = getSavedSelectOptionValue(driverField, savedDriver);
+
+    const vehicleMasterValue = getSavedSelectOptionValue(
+        vehicleMasterField,
+        savedVehicleMaster?.code || savedVehicleMaster?.name || ""
+    );
+
+    // Keep saved Select values visible even when the latest option API does not return them.
+    setTemplateFields((prev: any) => ({
+        ...prev,
+        header: (prev?.header || []).map((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase();
+            const label = String(field?.label || "").trim().toLowerCase();
+
+            if (key === "driver" && savedDriver) {
+                const hasOption = (field?.options || []).some(
+                    (option: any) => String(option?.value || "") === String(driverValue)
+                );
+
+                if (!hasOption) {
+                    return {
+                        ...field,
+                        options: [
+                            ...(field?.options || []),
+                            { label: savedDriver, value: driverValue },
+                        ],
+                    };
+                }
+            }
+
+            if ((key === "vehicle_master" || label === "vehicle master") && savedVehicleMaster) {
+                const hasOption = (field?.options || []).some(
+                    (option: any) => String(option?.value || "") === String(vehicleMasterValue)
+                );
+
+                if (!hasOption) {
+                    return {
+                        ...field,
+                        options: [
+                            ...(field?.options || []),
+                            {
+                                label: savedVehicleMaster?.name || savedVehicleMaster?.code || "",
+                                value: vehicleMasterValue,
+                                raw: savedVehicleMaster,
+                            },
+                        ],
+                    };
+                }
+            }
+
+            return field;
+        }),
+    }));
+
+    const dynamicEditValues: any = {
+        trip_order: record?.trip_order || "",
+        lr_no: record?.lr_no || "",
+        driver: driverValue || savedDriver,
+    };
+
+    if (savedVehicleMaster) {
+        dynamicEditValues[String(vehicleMasterField?.key || "vehicle_master")] =
+            vehicleMasterValue || savedVehicleMaster?.code || "";
+    }
+
+    setEditingRecord(true);
+    setErrors({});
+
+    setForm({
+        ...record,
+        ...dynamicEditValues,
+
+        customMasters: record?.customMasters || {},
+
+        pInvVoucherNumber: record?.pInvVoucherNumber || "AUTO",
+        pInvVoucherDate: formatDateForInput(record?.pInvVoucherDate),
+
+        grnVoucherNumber: record?.grnVoucherNumber || "",
+
+        pInvVendorCode: record?.pInvVendorCode || "",
+        pInvVendorName: record?.pInvVendorName || "",
+
+        pInvPurAccount: record?.pInvPurAccount || "SA003",
+        pInvStatus: record?.pInvStatus || "open",
+
+        pInvRemark: record?.pInvRemark || "",
+        pInvStatusRemark: record?.pInvStatusRemark || "",
+        pInvStatusHistory: record?.pInvStatusHistory || [],
+
+        isAutoPost: record?.isAutoPost || false,
+
+        products,
+
+        grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
+        discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
+        cgstAmount: footer?.cgstAmount || footer?.totalCgstAmount || "0.00",
+        sgstAmount: footer?.sgstAmount || footer?.totalSgstAmount || "0.00",
+        igstAmount: footer?.igstAmount || footer?.totalIgstAmount || "0.00",
+        taxAmount: footer?.taxAmount || footer?.totalTaxAmount || "0.00",
+        otherAmount: footer?.otherAmount || footer?.totalOtherAmount || "0.00",
+        netAmount: footer?.netAmount || footer?.totalNetAmount || "0.00",
+    });
+
+    setShowModal(true);
+};
 
     /* ===================================================
        DYNAMIC HEADER CHANGE

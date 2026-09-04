@@ -382,7 +382,7 @@ const SalesReceipt = () => {
     const openEditModal = (record: any) => {
         const footer = record?.recFooter || {};
         const body = record?.recBody?.length > 0 ? record.recBody.map((row: any) => ({ id: row?._id || Date.now() + Math.random(), accountCode: row?.accountCode || "", accountName: row?.accountName || "", amount: row?.amount || row?.netAmount || "", netAmount: row?.netAmount || row?.amount || "", references: Array.isArray(row?.references) ? row.references : [], remarks: row?.remarks || "" })) : [{ ...emptyReceiptRow, id: Date.now() }];
-        const vehicleMaster = record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || null;
+        const vehicleMaster = record?.customMasters?.["CSTM-000001"] || record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || ((record?.vehicleCode || record?.vehicleName) ? { code: record?.vehicleCode || "", name: record?.vehicleName || "" } : null);
 
         setEditingRecord(record);
         setErrors({});
