@@ -10,7 +10,7 @@ import SearchInput from "../../../../../components/searchInput";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
-import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadFieldOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { createSalesInvoice, deleteSalesInvoice, downloadFrieghtInvoicePdf, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
@@ -123,32 +123,6 @@ const getCustomMasterSelection = (field: any, selectedValue: any) => {
     };
 };
 
-export const loadFieldOptions = async (fields: any[]) => {
-    const updatedFields = await Promise.all((fields || []).map(async (field) => {
-        const apiUrl = field?.api || field?.dataSource?.api || (field?.customMasterCode ? `/users/customMaster/data/getAll?moduleCode=${field.customMasterCode}` : "");
-        if (!apiUrl) return field;
-
-        try {
-            const res = await professionalAxios.get(`/eTaxSolnMongoApiBackend${apiUrl}`, { params: field?.queryParams || field?.dataSource?.queryParams || {} });
-            const records = getRecords(res.data);
-            const labelField = field?.labelField || field?.dataSource?.labelField || "name";
-            const valueField = field?.valueField || field?.dataSource?.valueField || "code";
-            const options = Array.isArray(records)
-                ? records.map((item: any) => ({
-                    label: item?.[labelField] ?? item?.name ?? item?.productName ?? item?.accountName ?? "",
-                    value: item?.[valueField] ?? item?.code ?? item?.productCode ?? item?.accountCode ?? item?._id ?? "",
-                    raw: item,
-                }))
-                : [];
-            return { ...field, options };
-        }
-        catch (error) {
-            console.log(`Failed to load options for ${field.key}`, error);
-            return { ...field, options: [] };
-        }
-    }));
-    return updatedFields;
-};
 
 const loadAllTemplateOptions = async (templateData: any) => {
     const [updatedHeader, updatedBody, updatedFooter] = await Promise.all([

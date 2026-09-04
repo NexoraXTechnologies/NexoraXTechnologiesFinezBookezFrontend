@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import DataTable from "../../../components/DataTable";
 import ReportFilterCard from "../reports/components/ReportFilterCard";
-import { clearProfitLossState, getProfitLossAnalysis, getProfitLossFilterOptions } from "../../../redux/slices/professionalSlice/accountStatment/profitAndLoss";
+import { clearProfitLossState, getProfitLossAnalysis, getProfitLossFilterOptions } from "../../../redux/slices/professionalSlice/accountStatment";
 import { getFirstDateOfCurrentMonth, todayYMD } from "../../../utils/helperFunctions";
 
 type ProfitLossProps = { show?: boolean; };

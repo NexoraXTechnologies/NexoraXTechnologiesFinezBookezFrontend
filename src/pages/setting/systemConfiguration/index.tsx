@@ -446,7 +446,7 @@ const SystemConfiguration = () => {
         if (!financeConfig?.isActive) return;
 
         dispatch(
-            getFinanceCustomMasterOptions()
+            getFinanceCustomMasterOptions({ isFilter: true }) as any
         );
     }, [dispatch, financeConfig?.isActive]);
 

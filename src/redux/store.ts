@@ -127,7 +127,7 @@ import teamEmployeeSchemaReducer from "./slices/systemConf/teamEmployeeSchemaSli
 import kitCollectionReducer from "./slices/professionalSlice/kitCollection";
 import barcodeQrReducer from "./slices/professionalSlice/BarCodeAndQRCode";
 import gstVerifyReducer from "./slices/professionalSlice/gstVerify";
-import profitAndLossReducer from "./slices/professionalSlice/accountStatment/profitAndLoss";
+import profitAndLossReducer from "./slices/professionalSlice/accountStatment";
 
 
 export const store = configureStore({

@@ -6,7 +6,8 @@ import VoucherFormModal from "./VoucherFormModal";
 import { DynamicFormContentSkeleton } from "../skeleton/SkeletonLoader";
 import LocationSection from "./LocationSection";
 import { AccountMasterModal } from "../modal";
-import { loadFieldOptions } from "../../pages/bookez/transactions/purchaseWorkflow/Grn";
+import { loadFieldOptions } from "../../utils/helperFunctions";
+
 
 // FIELD TYPE
 

@@ -326,7 +326,7 @@ export const normalizeSystemConfiguration = (raw: any) => ({
         isActive: toBool(raw?.financeConfiguration?.isActive),
         reportFilters: {
             profitLoss: {
-                customMasters: Array.isArray(raw?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
+                customMasters: toBool(raw?.financeConfiguration?.isActive) && Array.isArray(raw?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
                     ? raw.financeConfiguration.reportFilters.profitLoss.customMasters.map((item: any) => String(item || "").trim()).filter(Boolean)
                     : [],
             },
@@ -467,10 +467,10 @@ const extractCustomMasterModules = (apiData: any) =>
 
 export const getFinanceCustomMasterOptions = createAsyncThunk(
     "systemConfiguration/getFinanceCustomMasterOptions",
-    async (_, { rejectWithValue }) => {
+    async ({ isFilter = false }: { isFilter?: boolean }, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.get(CUSTOM_MASTER_MODULES_API, {
-                params: { offset: 0, limit: 500, search: "", status: "active" },
+                params: { offset: 0, limit: 500, search: "", status: "active", isFilter },
             });
 
             if (res?.data?.success === false) {
@@ -626,13 +626,55 @@ const syncTransportationReceiptPaymentFields = async ({
     const fields = buildTransportationAccountingFields(vehicleMasterCode);
 
     for (const module of modules) {
-        if (enabled) {
+        const schemaResponse = await professionalAxios.get(
+            TRANSACTION_SCHEMA_GET_ALL_API,
+            {
+                params: {
+                    module,
+                },
+            }
+        );
+
+        if (schemaResponse?.data?.success === false) {
+            throw new Error(
+                schemaResponse?.data?.message ||
+                `Failed to load ${module} transaction schema.`
+            );
+        }
+
+        const schemaData =
+            schemaResponse?.data?.data ||
+            schemaResponse?.data ||
+            {};
+
+        const headerFields =
+            Array.isArray(schemaData?.header)
+                ? schemaData.header
+                : Array.isArray(schemaData?.schema?.header)
+                    ? schemaData.schema.header
+                    : [];
+
+        const existingFieldsByKey = new Map(
+            headerFields.map((field: any) => [
+                String(field?.key || "").trim().toLowerCase(),
+                field,
+            ])
+        );
+
+        const missingFields = fields.filter(
+            (field) =>
+                !existingFieldsByKey.has(
+                    field.key.toLowerCase()
+                )
+        );
+
+        if (enabled && missingFields.length > 0) {
             const addResponse = await professionalAxios.post(
                 TRANSACTION_SCHEMA_ADD_FIELD_API,
                 {
                     module,
                     section: "header",
-                    fields: fields.map((field) => ({
+                    fields: missingFields.map((field) => ({
                         ...field,
                         isHidden: false,
                     })),
@@ -651,40 +693,43 @@ const syncTransportationReceiptPaymentFields = async ({
         const skippedFields: string[] = [];
 
         for (const fieldDefinition of fields) {
-            try {
-                await dispatch(
-                    updateTransactionSchema({
-                        module,
-                        section: "header",
-                        key: fieldDefinition.key,
-                        updates: {
-                            isHidden: desiredHidden,
-                        },
-                    }) as any
-                ).unwrap();
+            const existingField = existingFieldsByKey.get(
+                fieldDefinition.key.toLowerCase()
+            );
 
-                updatedFields.push(fieldDefinition.key);
-            } catch (updateError: any) {
-                const updateMessage = String(
-                    updateError?.message ||
-                    updateError?.payload?.message ||
-                    ""
-                ).toLowerCase();
-
-                if (!enabled && updateMessage.includes("field not found")) {
-                    skippedFields.push(fieldDefinition.key);
-                    continue;
-                }
-
-                throw updateError;
+            if (!existingField) {
+                skippedFields.push(fieldDefinition.key);
+                continue;
             }
+
+            const currentHidden = toBool(
+                (existingField as any)?.isHidden
+            );
+
+            if (currentHidden === desiredHidden) {
+                skippedFields.push(fieldDefinition.key);
+                continue;
+            }
+
+            await dispatch(
+                updateTransactionSchema({
+                    module,
+                    section: "header",
+                    key: fieldDefinition.key,
+                    updates: {
+                        isHidden: desiredHidden,
+                    },
+                }) as any
+            ).unwrap();
+
+            updatedFields.push(fieldDefinition.key);
         }
 
         results.push({
             module,
             addedFields:
                 enabled
-                    ? fields.map((field) => field.key)
+                    ? missingFields.map((field) => field.key)
                     : [],
             updatedFields,
             skippedFields,
@@ -1259,7 +1304,7 @@ const buildConfigurationPayload = (
             isActive: !!configuration?.financeConfiguration?.isActive,
             reportFilters: {
                 profitLoss: {
-                    customMasters: Array.isArray(configuration?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
+                    customMasters: configuration?.financeConfiguration?.isActive && Array.isArray(configuration?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
                         ? configuration.financeConfiguration.reportFilters.profitLoss.customMasters
                             .map((item: any) => String(item?.value ?? item?.moduleCode ?? item?.customMasterCode ?? item ?? "").trim())
                             .filter(Boolean)
@@ -2904,6 +2949,16 @@ const systemConfigurationSlice =
                         [key]:
                             value,
                     };
+
+                    if (key === "isActive" && !toBool(value)) {
+                        state.configuration.financeConfiguration.reportFilters = {
+                            ...state.configuration.financeConfiguration?.reportFilters,
+                            profitLoss: {
+                                ...state.configuration.financeConfiguration?.reportFilters?.profitLoss,
+                                customMasters: [],
+                            },
+                        };
+                    }
                 },
 
             updateFinanceProfitLossCustomMastersLocal:
@@ -3289,7 +3344,7 @@ const systemConfigurationSlice =
                     .addCase(saveSystemConfiguration.fulfilled, (state, action: any) => {
                         state.saveLoading = false;
                         state.successMessage = action.payload?.message || "Configuration saved successfully";
-                        }
+                    }
                     )
 
                     .addCase(
@@ -3312,19 +3367,19 @@ const systemConfigurationSlice =
                         state.updateLoading = true;
                         state.error = null;
                         state.successMessage = "";
-                        }
+                    }
                     )
 
                     .addCase(updateSystemConfiguration.fulfilled, (state, action: any) => {
                         state.updateLoading = false;
                         state.successMessage = action.payload?.message || "Configuration updated successfully";
-                        }
+                    }
                     )
 
                     .addCase(updateSystemConfiguration.rejected, (state, action: any) => {
                         state.updateLoading = false;
                         state.error = action.payload?.message;
-                        }
+                    }
                     );
 
                 builder
@@ -3332,14 +3387,14 @@ const systemConfigurationSlice =
                         state.saveLoading = true;
                         state.error = null;
                         state.successMessage = "";
-                        }
+                    }
                     )
 
                     .addCase(saveOrUpdateSystemConfiguration.fulfilled, (state, action: any) => {
                         state.saveLoading = false;
                         state.configuration = action.payload?.configuration || state.configuration || getEmptySystemConfiguration();
                         state.successMessage = action.payload?.message || "Configuration saved successfully";
-                        }
+                    }
                     )
 
                     .addCase(
