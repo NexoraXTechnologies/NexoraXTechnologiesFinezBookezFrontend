@@ -42,6 +42,28 @@ export const getProfitLossAnalysis = createAsyncThunk(
     }
 );
 
+// BALANCE SHEET ANALYSIS
+export const getBalanceSheetAnalysis = createAsyncThunk(
+    "profitLoss/getBalanceSheetAnalysis",
+    async (payload: any, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.post(
+                "/eTaxSolnMongoApiBackend/users/bookEZ/reports/balanceSheet/analysis",
+                payload,
+                payload?.exportType ? { responseType: "blob" } : {}
+            );
+
+            if (payload?.exportType) return { blob: res.data, exportType: payload.exportType };
+
+            return res.data ?? null;
+        } catch (err: any) {
+            return rejectWithValue({
+                message: err?.response?.data?.message || "Failed to fetch Balance Sheet analysis"
+            });
+        }
+    }
+);
+
 // SLICE
 const profitLossSlice = createSlice({
     name: "profitLoss",
@@ -49,25 +71,40 @@ const profitLossSlice = createSlice({
     initialState: {
         filterOptions: null,
         analysis: null,
+        balanceSheet: null,
+
         filterOptionsLoading: false,
         analysisLoading: false,
+        balanceSheetLoading: false,
+
         filterOptionsError: null,
-        analysisError: null
+        analysisError: null,
+        balanceSheetError: null
     },
 
     reducers: {
         clearProfitLossState: (state) => {
             state.filterOptions = null;
             state.analysis = null;
+            state.balanceSheet = null;
+
             state.filterOptionsLoading = false;
             state.analysisLoading = false;
+            state.balanceSheetLoading = false;
+
             state.filterOptionsError = null;
             state.analysisError = null;
+            state.balanceSheetError = null;
         },
 
         clearProfitLossAnalysis: (state) => {
             state.analysis = null;
             state.analysisError = null;
+        },
+
+        clearBalanceSheetAnalysis: (state) => {
+            state.balanceSheet = null;
+            state.balanceSheetError = null;
         }
     },
 
@@ -105,8 +142,31 @@ const profitLossSlice = createSlice({
                 state.analysisLoading = false;
                 state.analysisError = action.payload?.message;
             });
+
+        // BALANCE SHEET ANALYSIS
+        builder
+            .addCase(getBalanceSheetAnalysis.pending, (state: any) => {
+                state.balanceSheetLoading = true;
+                state.balanceSheetError = null;
+            })
+            .addCase(getBalanceSheetAnalysis.fulfilled, (state: any, action: any) => {
+                state.balanceSheetLoading = false;
+
+                if (!action.payload?.exportType) {
+                    state.balanceSheet = action.payload ?? null;
+                }
+            })
+            .addCase(getBalanceSheetAnalysis.rejected, (state: any, action: any) => {
+                state.balanceSheetLoading = false;
+                state.balanceSheetError = action.payload?.message;
+            });
     }
 });
 
-export const { clearProfitLossState, clearProfitLossAnalysis } = profitLossSlice.actions;
+export const {
+    clearProfitLossState,
+    clearProfitLossAnalysis,
+    clearBalanceSheetAnalysis
+} = profitLossSlice.actions;
+
 export default profitLossSlice.reducer;
