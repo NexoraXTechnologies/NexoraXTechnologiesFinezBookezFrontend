@@ -2469,7 +2469,7 @@ const CreateTripAllocation = ({
 
                                     <div>
                                         <label className="mb-1 block text-sm font-medium text-card-foreground">
-                                           Ownership Type
+                                            Ownership Type
                                         </label>
 
                                         <select
@@ -2492,25 +2492,80 @@ const CreateTripAllocation = ({
                                                 selectedVehicleDetails.ownershipType ||
                                                 selectedVehicleDetails.vehicleOwnership
                                             ) === "hired" && (
-                                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                                        <div className="min-w-0">
-                                                            <p className="text-xs font-medium text-muted-foreground">
-                                                                Vendor
-                                                            </p>
-                                                            <p className="mt-1 break-words text-sm font-semibold text-card-foreground">
-                                                                {selectedVehicleDetails.vendorName || "-"}
-                                                            </p>
-                                                        </div>
+                                                    <div className="rounded-md border border-border bg-muted/20 p-3">
 
-                                                        <div className="min-w-0 text-left sm:text-right">
-                                                            <p className="text-xs font-medium text-muted-foreground">
-                                                                Customer
-                                                            </p>
-                                                            <p className="mt-1 break-words text-sm font-semibold text-card-foreground">
-                                                                {selectedVehicleDetails.customerName ||
-                                                                    form.transportOrder?.customerName ||
-                                                                    "-"}
-                                                            </p>
+                                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                                            <div>
+                                                                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                                                                    Hired Charges
+                                                                </label>
+
+                                                                <input
+                                                                    type="number"
+                                                                    value={form.vehicleSelection?.hiredCharges ?? ""}
+                                                                    disabled={isView}
+                                                                    onChange={(e) =>
+                                                                        setForm((prev: any) => ({
+                                                                            ...prev,
+                                                                            vehicleSelection: {
+                                                                                ...prev.vehicleSelection,
+                                                                                hiredCharges: e.target.value,
+                                                                            },
+                                                                        }))
+                                                                    }
+                                                                    placeholder="Enter hired charges"
+                                                                    className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-card-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                                                                />
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                                                                    Vendor Bill
+                                                                </label>
+
+                                                                <input
+                                                                    type="number"
+                                                                    value={form.vehicleSelection?.vendorBill ?? ""}
+                                                                    disabled={isView}
+                                                                    onChange={(e) =>
+                                                                        setForm((prev: any) => ({
+                                                                            ...prev,
+                                                                            vehicleSelection: {
+                                                                                ...prev.vehicleSelection,
+                                                                                vendorBill: e.target.value,
+                                                                            },
+                                                                        }))
+                                                                    }
+                                                                    placeholder="Enter vendor bill"
+                                                                    className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-card-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                                                                />
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                                                                    Vendor
+                                                                </label>
+
+                                                                <div className="flex h-10 w-full items-center rounded-md border border-border bg-background px-3">
+                                                                    <span className="truncate text-sm  text-card-foreground">
+                                                                        {selectedVehicleDetails.vendorName || "-"}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                                                                    Customer
+                                                                </label>
+
+                                                                <div className="flex h-10 w-full items-center rounded-md border border-border bg-background px-3">
+                                                                    <span className="truncate text-sm  text-card-foreground">
+                                                                        {selectedVehicleDetails.customerName ||
+                                                                            form.transportOrder?.customerName ||
+                                                                            "-"}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )}
@@ -2530,7 +2585,7 @@ const CreateTripAllocation = ({
                                                         setVehicleSearch("");
                                                         setVehicleLocked(false);
                                                     }}
-                                                    className="inline-flex h-5 items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 text-xs font-bold text-primary transition hover:bg-primary/10"
+                                                    className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 text-xs font-bold text-primary transition hover:bg-primary/10"
                                                 >
                                                     <RefreshCcw size={12} />
                                                     {vehicleLocked && isEdit

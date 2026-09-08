@@ -4608,8 +4608,8 @@ const Grn = () => {
                     show={showModal}
                     setShow={setShowModal}
                     edit={Boolean(editingRecord)}
-                    title="GRN"
-                    subtitle="Fill in the GRN details below"
+                    title="GRN / SRN"
+                    subtitle="Fill in the Goods Receipt / Service Receipt Note details below"
                     loading={createLoading || updateLoading}
                     onClose={() => {
                         setShowModal(false);

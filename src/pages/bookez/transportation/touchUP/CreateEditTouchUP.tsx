@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ClipboardList, FileText, Flag, MapPin, Package, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Select from "react-select";
 import { renderField } from "../../../../components/inputs";
@@ -14,6 +14,7 @@ import { getTransportOrders } from "../../../../redux/slices/professionalSlice/t
 import { createTransportTouchup, updateTransportTouchup } from "../../../../redux/slices/professionalSlice/transportation/touchUpSlice";
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
+import professionalAxios from "../../../../services/professionalAxios";
 
 const getDisplayName = (name: any) => {
     if (!name) return "";
@@ -117,7 +118,7 @@ const touchUpStatusOptions = [
 ];
 
 // LOCATION BLOCK
-const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: any) => {
+const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange, isView }: any) => {
     const dispatch = useDispatch<any>();
     const [cities, setCities] = useState<any[]>([]);
     const [loadingCities, setLoadingCities] = useState(false);
@@ -179,6 +180,8 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
     ];
 
     const handleAddressSelect = (address: any) => {
+        if (isView) return;
+
         const matchedState = findStateByName(address?.stateName);
         const resolvedStateCode = matchedState?.isoCode || matchedState?.stateCode || matchedState?.code || "";
         const resolvedStateName = getDisplayName(matchedState?.name || matchedState?.stateName) || address?.stateName || "";
@@ -195,6 +198,8 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
     };
 
     const handleStateChange = (e: any) => {
+        if (isView) return;
+
         const value = e?.target?.value ?? "";
         const selected = stateOptions.find((item: any) => String(item.value) === String(value));
 
@@ -203,7 +208,10 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
         onFieldChange("cityName", "");
     };
 
-    const handleCityChange = (e: any) => onFieldChange("cityName", e?.target?.value ?? "");
+    const handleCityChange = (e: any) => {
+        if (isView) return;
+        onFieldChange("cityName", e?.target?.value ?? "");
+    };
 
     const locationExtraFields = [
         { key: "contactPerson", label: "Contact Person", type: "text" },
@@ -227,25 +235,29 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
                 </div>
             </div>
 
-            <GoogleAddressAutocompleteWeb
-                label={`${label} Location *`}
-                placeholder={`Search ${label.toLowerCase()} location`}
-                value={location?.location || ""}
-                country="in"
-                onInputChange={(value: string) => onFieldChange("location", value)}
-                onSelectAddress={handleAddressSelect}
-            />
+            <div className={isView ? "pointer-events-none" : ""}>
+                <GoogleAddressAutocompleteWeb
+                    label={`${label} Location *`}
+                    placeholder={`Search ${label.toLowerCase()} location`}
+                    value={location?.location || ""}
+                    country="in"
+                    onInputChange={(value: string) => {
+                        if (!isView) onFieldChange("location", value);
+                    }}
+                    onSelectAddress={handleAddressSelect}
+                />
+            </div>
 
             <div className="mt-3 grid w-full grid-cols-1 gap-4 md:grid-cols-2">
                 {renderField({
-                    field: { key: "stateCode", label: `${label} State`, type: "select", options: stateOptions },
+                    field: { key: "stateCode", label: `${label} State`, type: "select", options: stateOptions, disabled: isView },
                     form: location,
                     handleSelectChange: () => handleStateChange,
                     handleInputChange: () => handleStateChange
                 })}
 
                 {renderField({
-                    field: { key: "cityName", label: `${label} City`, type: "select", options: cityOptions, disabled: !stateCode || loadingCities },
+                    field: { key: "cityName", label: `${label} City`, type: "select", options: cityOptions, disabled: isView || !stateCode || loadingCities },
                     form: location,
                     handleSelectChange: () => handleCityChange,
                     handleInputChange: () => handleCityChange
@@ -253,7 +265,7 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
 
                 <div className="md:col-span-2">
                     {renderField({
-                        field: { key: "address", label: `${label} Address`, type: "textarea" },
+                        field: { key: "address", label: `${label} Address`, type: "textarea", disabled: isView },
                         form: location,
                         handleInputChange: () => (e: any) => onFieldChange("address", e?.target?.value ?? ""),
                         handleSelectChange: () => (e: any) => onFieldChange("address", e?.target?.value ?? "")
@@ -262,7 +274,7 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
 
                 {locationExtraFields.map((field: any) =>
                     renderField({
-                        field,
+                        field: { ...field, disabled: isView },
                         form: location,
                         handleInputChange,
                         handleSelectChange,
@@ -277,7 +289,7 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange }: 
 };
 
 // TOUCH UP CARD
-const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, unitMasterOptions, updateTouchUpField, updateTouchUpLocation, removeTouchUp, handlePODChange }: any) => {
+const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, unitMasterOptions, updateTouchUpField, updateTouchUpLocation, removeTouchUp, handlePODChange, isView }: any) => {
     const materialOptions = useMemo(() => {
         const options = [...(productOptions || [])];
 
@@ -305,16 +317,16 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, un
     }, [unitMasterOptions, touchUp?.unit]);
 
     const materialFields = [
-        { key: "material", label: "Material", type: "select", options: materialOptions, mandatory: true },
-        { key: "unit", label: "Unit", type: "select", options: resolvedUnitOptions, mandatory: true },
-        { key: "quantity", label: "Quantity", type: "number", mandatory: false },
-        { key: "invoiceNumber", label: "Invoice Number", type: "text" }
+        { key: "material", label: "Material", type: "select", options: materialOptions, mandatory: true, disabled: isView },
+        { key: "unit", label: "Unit", type: "select", options: resolvedUnitOptions, mandatory: true, disabled: isView },
+        { key: "quantity", label: "Quantity", type: "number", mandatory: false, disabled: isView },
+        { key: "invoiceNumber", label: "Invoice Number", type: "text", disabled: isView }
     ];
 
     const partyFields = [
-        { key: "consignor", label: "Consignor", type: "text" },
-        { key: "consignee", label: "Consignee", type: "text" },
-        { key: "touchUpStatus", label: "Touch Up Status", type: "select", options: touchUpStatusOptions, mandatory: true }
+        { key: "consignor", label: "Consignor", type: "text", disabled: isView },
+        { key: "consignee", label: "Consignee", type: "text", disabled: isView },
+        { key: "touchUpStatus", label: "Touch Up Status", type: "select", options: touchUpStatusOptions, mandatory: true, disabled: isView }
     ];
 
     const handleInputChange = (key: string) => (e: any) => updateTouchUpField(index, key, e?.target?.value ?? "");
@@ -345,7 +357,7 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, un
                     </div>
                 </div>
 
-                {totalTouchUps > 1 && (
+                {!isView && totalTouchUps > 1 && (
                     <button type="button" onClick={() => removeTouchUp(index)} className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-danger transition hover:bg-danger/10">
                         <Trash2 size={14} /> Remove
                     </button>
@@ -360,6 +372,7 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, un
                         location={touchUp.pickupLocation}
                         states={states}
                         onFieldChange={(key: string, value: any) => updateTouchUpLocation(index, "pickupLocation", key, value)}
+                        isView={isView}
                     />
 
                     <TouchUpLocationBlock
@@ -368,6 +381,7 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, un
                         location={touchUp.deliveryLocation}
                         states={states}
                         onFieldChange={(key: string, value: any) => updateTouchUpLocation(index, "deliveryLocation", key, value)}
+                        isView={isView}
                     />
                 </div>
 
@@ -401,12 +415,21 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, un
                         </div>
 
                         {!touchUp.touchUpPOD ? (
-                            <label className="flex min-h-[86px] w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-border bg-background px-4 py-3 text-center transition hover:border-primary/40 hover:bg-primary/5">
-                                <Upload size={20} className="text-primary" />
-                                <span className="text-xs font-semibold text-card-foreground">Upload POD</span>
-                                <span className="text-[11px] text-muted-foreground">PDF, PNG, JPG, JPEG</span>
-                                <input type="file" accept=".pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf" className="hidden" onChange={e => handlePODChange(index, e)} />
-                            </label>
+                            isView ? (
+                                <div className="flex min-h-[86px] w-full items-center justify-center rounded-md border border-dashed border-border bg-background px-4 py-3 text-center">
+                                    <div>
+                                        <FileText size={20} className="mx-auto text-muted-foreground" />
+                                        <span className="mt-1 block text-xs font-semibold text-muted-foreground">No POD Attached</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <label className="flex min-h-[86px] w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-border bg-background px-4 py-3 text-center transition hover:border-primary/40 hover:bg-primary/5">
+                                    <Upload size={20} className="text-primary" />
+                                    <span className="text-xs font-semibold text-card-foreground">Upload POD</span>
+                                    <span className="text-[11px] text-muted-foreground">PDF, PNG, JPG, JPEG</span>
+                                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf" className="hidden" onChange={e => handlePODChange(index, e)} />
+                                </label>
+                            )
                         ) : (
                             <div className="flex min-h-[86px] w-full items-center justify-between rounded-md border border-success/20 bg-success/5 px-3">
                                 <div className="flex min-w-0 items-center gap-2">
@@ -418,9 +441,11 @@ const TouchUpCard = ({ index, touchUp, totalTouchUps, states, productOptions, un
                                     </div>
                                 </div>
 
-                                <button type="button" onClick={() => updateTouchUpField(index, "touchUpPOD", "")} className="rounded-md p-2 text-danger transition hover:bg-danger/10">
-                                    <X size={15} />
-                                </button>
+                                {!isView && (
+                                    <button type="button" onClick={() => updateTouchUpField(index, "touchUpPOD", "")} className="rounded-md p-2 text-danger transition hover:bg-danger/10">
+                                        <X size={15} />
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -434,9 +459,21 @@ const CreateEditTouchUP = () => {
     const dispatch = useDispatch<any>();
     const navigate = useNavigate();
     const location = useLocation();
+    const params: any = useParams();
 
     const routeState: any = location.state || {};
-    const isEdit = routeState?.mode === "edit" || Boolean(routeState?.touchUpData);
+    const pathnameVoucherNumber = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop() || "");
+    const voucherNumber = String(
+        routeState?.voucherNumber ||
+        routeState?.transportTouchupNumber ||
+        params?.voucherNumber ||
+        params?.id ||
+        pathnameVoucherNumber ||
+        ""
+    ).trim();
+
+    const isView = routeState?.mode === "view" || location.pathname.includes("/touch-up/view/");
+    const isEdit = !isView && (routeState?.mode === "edit" || Boolean(routeState?.touchUpData) || location.pathname.includes("/touch-up/edit/"));
 
     const { states = [] } = useSelector((state: any) => state.stateCity || {});
     const { transportOrders = [] } = useSelector((state: any) => state.transportOrder || {});
@@ -446,8 +483,8 @@ const CreateEditTouchUP = () => {
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState<any>(routeState?.touchUpData ? normalizeFormForEdit(routeState.touchUpData) : createInitialForm());
 
-    const pageTitle = routeState?.title || (isEdit ? "Edit Touch Up" : "Create Touch Up");
-    const pageDescription = routeState?.description || (isEdit ? "Update touch up points for this transport order." : "Create pickup or delivery touch up against a transport trip order.");
+    const pageTitle = routeState?.title || (isView ? "View Touch Up" : isEdit ? "Edit Touch Up" : "Create Touch Up");
+    const pageDescription = routeState?.description || (isView ? `View transport touch up details${voucherNumber ? ` - ${voucherNumber}` : ""}.` : isEdit ? "Update touch up points for this transport order." : "Create pickup or delivery touch up against a transport trip order.");
 
     const productOptions = useMemo(() => [
         { label: "Select Material", value: "", unit: "" },
@@ -479,9 +516,52 @@ const CreateEditTouchUP = () => {
         dispatch(getTransportOrders({ limit: 200, offset: 0, status: "open" }));
     }, [dispatch]);
 
+    useEffect(() => {
+        if (!isView || !voucherNumber) return;
+
+        let active = true;
+
+        const loadTouchUpByVoucherNumber = async () => {
+            try {
+                setLoading(true);
+
+                const response = await professionalAxios.get(
+                    `/eTaxSolnMongoApiBackend/users/bookEZ/transportTouchup/getByVoucherNumber/${encodeURIComponent(voucherNumber)}`
+                );
+
+                const touchUpData = response?.data?.data || response?.data || null;
+
+                if (!active) return;
+
+                if (!touchUpData) {
+                    toast.warn("Touch Up details not found");
+                    return;
+                }
+
+                setForm(normalizeFormForEdit(touchUpData));
+            } catch (error: any) {
+                if (!active) return;
+
+                toast.error(
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "Failed to load Touch Up"
+                );
+            } finally {
+                if (active) setLoading(false);
+            }
+        };
+
+        loadTouchUpByVoucherNumber();
+
+        return () => {
+            active = false;
+        };
+    }, [isView, voucherNumber]);
+
     // RESOLVE BACKEND STATE NAME TO STATE CODE FOR EDIT PREFILL
     useEffect(() => {
-        if (!isEdit || !states?.length) return;
+        if ((!isEdit && !isView) || !states?.length) return;
 
         setForm((prev: any) => {
             let changed = false;
@@ -509,7 +589,7 @@ const CreateEditTouchUP = () => {
 
             return changed ? { ...prev, touchUps } : prev;
         });
-    }, [isEdit, states]);
+    }, [isEdit, isView, states]);
 
     const transportOrderOptions = useMemo(() => {
         const options = (transportOrders || [])
@@ -533,9 +613,14 @@ const CreateEditTouchUP = () => {
 
     const selectedOrderOption = transportOrderOptions.find((item: any) => item?.value === form.tripOrder) || null;
 
-    const updateField = (key: string, value: any) => setForm((prev: any) => ({ ...prev, [key]: value }));
+    const updateField = (key: string, value: any) => {
+        if (isView) return;
+        setForm((prev: any) => ({ ...prev, [key]: value }));
+    };
 
     const updateTouchUpField = (index: number, key: string, value: any) => {
+        if (isView) return;
+
         setForm((prev: any) => {
             const touchUps = [...(prev.touchUps || [])];
             const selectedProduct = key === "material" ? productOptions.find((item: any) => String(item?.value || "") === String(value || "")) : null;
@@ -545,6 +630,8 @@ const CreateEditTouchUP = () => {
     };
 
     const updateTouchUpLocation = (index: number, locationKey: "pickupLocation" | "deliveryLocation", key: string, value: any) => {
+        if (isView) return;
+
         setForm((prev: any) => {
             const touchUps = [...(prev.touchUps || [])];
             touchUps[index] = { ...touchUps[index], [locationKey]: { ...(touchUps[index]?.[locationKey] || {}), [key]: value } };
@@ -552,9 +639,14 @@ const CreateEditTouchUP = () => {
         });
     };
 
-    const addTouchUp = () => setForm((prev: any) => ({ ...prev, touchUps: [...(prev.touchUps || []), createEmptyTouchUp()] }));
+    const addTouchUp = () => {
+        if (isView) return;
+        setForm((prev: any) => ({ ...prev, touchUps: [...(prev.touchUps || []), createEmptyTouchUp()] }));
+    };
 
     const removeTouchUp = (index: number) => {
+        if (isView) return;
+
         if ((form.touchUps || []).length <= 1) {
             toast.warn("At least one Touch Up is required");
             return;
@@ -564,6 +656,8 @@ const CreateEditTouchUP = () => {
     };
 
     const handlePODChange = (index: number, e: any) => {
+        if (isView) return;
+
         const file = e?.target?.files?.[0];
         if (!file) return;
 
@@ -633,6 +727,7 @@ const CreateEditTouchUP = () => {
     });
 
     const persistTouchUp = async () => {
+        if (isView) return;
         if (!validateForm()) return;
 
         try {
@@ -640,7 +735,7 @@ const CreateEditTouchUP = () => {
             const payload = toPayload();
 
             if (isEdit) {
-                const transportTouchupNumber = routeState?.touchUpData?.transportTouchupNumber || routeState?.transportTouchupNumber;
+                const transportTouchupNumber = routeState?.touchUpData?.transportTouchupNumber || routeState?.transportTouchupNumber || voucherNumber;
 
                 if (!transportTouchupNumber) {
                     toast.warn("Transport Touch Up number not found");
@@ -691,7 +786,8 @@ const CreateEditTouchUP = () => {
                                         value={selectedOrderOption}
                                         options={transportOrderOptions}
                                         placeholder="Select Transport Order"
-                                        isSearchable
+                                        isSearchable={!isView}
+                                        isDisabled={isView}
                                         onChange={(option: any) => updateField("tripOrder", option?.value || "")}
                                         classNamePrefix="rs"
                                     />
@@ -717,12 +813,14 @@ const CreateEditTouchUP = () => {
                                         </span>
                                     </div>
 
-                                    <p className="mt-0.5 text-xs text-muted-foreground">Add multiple touch up points against the transport order.</p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">{isView ? "View touch up points against the transport order." : "Add multiple touch up points against the transport order."}</p>
                                 </div>
 
-                                <button type="button" onClick={addTouchUp} className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90">
-                                    <Plus size={15} /> Add Touch Up
-                                </button>
+                                {!isView && (
+                                    <button type="button" onClick={addTouchUp} className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90">
+                                        <Plus size={15} /> Add Touch Up
+                                    </button>
+                                )}
                             </div>
 
                             <div className="flex w-full flex-col gap-4">
@@ -739,13 +837,16 @@ const CreateEditTouchUP = () => {
                                         updateTouchUpLocation={updateTouchUpLocation}
                                         removeTouchUp={removeTouchUp}
                                         handlePODChange={handlePODChange}
+                                        isView={isView}
                                     />
                                 ))}
                             </div>
 
-                            <button type="button" onClick={addTouchUp} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 text-xs font-semibold text-primary transition hover:bg-primary/10">
-                                <Plus size={15} /> Add Another Touch Up
-                            </button>
+                            {!isView && (
+                                <button type="button" onClick={addTouchUp} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 text-xs font-semibold text-primary transition hover:bg-primary/10">
+                                    <Plus size={15} /> Add Another Touch Up
+                                </button>
+                            )}
                         </div>
                     </FormSectionCard>
                 </div>
@@ -753,13 +854,15 @@ const CreateEditTouchUP = () => {
 
             <footer className="sticky bottom-0 z-20 flex flex-col gap-3 border-t border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
                 <button type="button" onClick={() => navigate(-1)} disabled={loading} className="inline-flex h-10 items-center justify-center rounded-md border border-primary bg-background px-5 text-sm font-bold text-primary transition hover:bg-primary/10 disabled:opacity-60">
-                    Cancel
+                    {isView ? "Back" : "Cancel"}
                 </button>
 
-                <button type="button" onClick={persistTouchUp} disabled={loading} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60">
-                    <Save size={17} />
-                    {loading ? "Saving..." : isEdit ? "Update" : "Save"}
-                </button>
+                {!isView && (
+                    <button type="button" onClick={persistTouchUp} disabled={loading} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60">
+                        <Save size={17} />
+                        {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+                    </button>
+                )}
             </footer>
         </div>
     );

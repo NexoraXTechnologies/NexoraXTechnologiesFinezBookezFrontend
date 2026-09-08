@@ -617,15 +617,24 @@ const syncTransportationReceiptPaymentFields = async ({
     vehicleMasterSync?: any;
     dispatch: any;
 }) => {
-    const modules = ["receipt", "payment", "salesInvoice", "purchaseInvoice"] as const;
+    const modules = [
+        { module: "salesOrder", section: "header" },
+        { module: "purchaseOrder", section: "header" },
+        { module: "grn", section: "header" },
+        { module: "salesInvoice", section: "body" },
+        { module: "purchaseInvoice", section: "body" },
+    ] as const;
+
     const results: any[] = [];
     const desiredHidden = !enabled;
+
     const vehicleMasterCode = enabled
         ? await getVehicleMasterModuleCode(vehicleMasterSync)
         : "";
+
     const fields = buildTransportationAccountingFields(vehicleMasterCode);
 
-    for (const module of modules) {
+    for (const { module, section } of modules) {
         const schemaResponse = await professionalAxios.get(
             TRANSACTION_SCHEMA_GET_ALL_API,
             {
@@ -647,15 +656,15 @@ const syncTransportationReceiptPaymentFields = async ({
             schemaResponse?.data ||
             {};
 
-        const headerFields =
-            Array.isArray(schemaData?.header)
-                ? schemaData.header
-                : Array.isArray(schemaData?.schema?.header)
-                    ? schemaData.schema.header
+        const sectionFields =
+            Array.isArray(schemaData?.[section])
+                ? schemaData[section]
+                : Array.isArray(schemaData?.schema?.[section])
+                    ? schemaData.schema[section]
                     : [];
 
         const existingFieldsByKey = new Map(
-            headerFields.map((field: any) => [
+            sectionFields.map((field: any) => [
                 String(field?.key || "").trim().toLowerCase(),
                 field,
             ])
@@ -673,7 +682,7 @@ const syncTransportationReceiptPaymentFields = async ({
                 TRANSACTION_SCHEMA_ADD_FIELD_API,
                 {
                     module,
-                    section: "header",
+                    section,
                     fields: missingFields.map((field) => ({
                         ...field,
                         isHidden: false,
@@ -684,7 +693,7 @@ const syncTransportationReceiptPaymentFields = async ({
             if (addResponse?.data?.success === false) {
                 throw new Error(
                     addResponse?.data?.message ||
-                    `Failed to add transportation fields in ${module}.`
+                    `Failed to add transportation fields in ${module} ${section}.`
                 );
             }
         }
@@ -714,7 +723,7 @@ const syncTransportationReceiptPaymentFields = async ({
             await dispatch(
                 updateTransactionSchema({
                     module,
-                    section: "header",
+                    section,
                     key: fieldDefinition.key,
                     updates: {
                         isHidden: desiredHidden,
@@ -727,6 +736,7 @@ const syncTransportationReceiptPaymentFields = async ({
 
         results.push({
             module,
+            section,
             addedFields:
                 enabled
                     ? missingFields.map((field) => field.key)

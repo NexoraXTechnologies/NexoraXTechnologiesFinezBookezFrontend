@@ -326,20 +326,29 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
 
     // RENDER INPUT
 
+    const isTrueValue = (value: any) =>
+        value === true ||
+        value === 1 ||
+        value === "1" ||
+        String(value ?? "").trim().toLowerCase() === "true";
+
+    // RENDER INPUT
+
     const renderInput = (field: any) => {
         const fieldType = getDynamicFieldType(field);
+        const mandatory = isTrueValue(field?.isRequired ?? field?.required);
 
         if (fieldType === "date") {
-            return <TextInput label={field?.label} mandatory={field?.isRequired} disabled={field?.disabled == true || field?.disabled == "true" || field?.isReadonly == true || field?.isReadonly == "true"} read type={field.type} value={form?.[field?.key] ? String(form?.[field?.key]).split("T")[0] : ""} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} />;
+            return <TextInput label={field?.label} mandatory={mandatory} disabled={field?.disabled == true || field?.disabled == "true" || field?.isReadonly == true || field?.isReadonly == "true"} read type={field.type} value={form?.[field?.key] ? String(form?.[field?.key]).split("T")[0] : ""} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} />;
         }
 
         if (fieldType === "textarea") {
-            return <TextArea label={field?.label} mandatory={field?.isRequired} value={form?.[field?.key] || ""} placeholder={field?.placeholder} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} />;
+            return <TextArea label={field?.label} mandatory={mandatory} value={form?.[field?.key] || ""} placeholder={field?.placeholder} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} />;
         }
 
         if (fieldType === "toggle" || fieldType === "boolean") {
             const booleanValue = form?.[field.key] === true || form?.[field.key] === "true" || form?.[field.key] === 1 || form?.[field.key] === "1";
-            return <ToggleInput key={field.key} label={field.label} name={field.key} value={booleanValue} checked={booleanValue} mandatory={field.isRequired ?? field.required} disabled={field?.disabled == true || field?.disabled == "true" || field?.isReadonly == true || field?.isReadonly == "true"} error={errors?.[field.key]} onChange={(event: any) => handleChange(field.key, event.target.checked)} />;
+            return <ToggleInput key={field.key} label={field.label} name={field.key} value={booleanValue} checked={booleanValue} mandatory={mandatory} disabled={field?.disabled == true || field?.disabled == "true" || field?.isReadonly == true || field?.isReadonly == "true"} error={errors?.[field.key]} onChange={(event: any) => handleChange(field.key, event.target.checked)} />;
         }
 
         if (isCustomMasterField(field)) {
@@ -347,25 +356,25 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
             const selectedValue = getCustomMasterSelectedCode(form, field);
             const customMasterName = getCustomMasterName(field);
 
-            return <SelectInput label={field?.label || customMasterName} value={selectedValue} mandatory={field?.isRequired || field?.required} placeholder={`Select ${field?.label || customMasterName}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleCustomMasterChange(field, event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label || customMasterName}...` : options.length > 0 ? `Select ${field?.label || customMasterName}` : `No ${field?.label || customMasterName} found` }, ...options]} />;
+            return <SelectInput label={field?.label || customMasterName} value={selectedValue} mandatory={mandatory} placeholder={`Select ${field?.label || customMasterName}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleCustomMasterChange(field, event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label || customMasterName}...` : options.length > 0 ? `Select ${field?.label || customMasterName}` : `No ${field?.label || customMasterName} found` }, ...options]} />;
         }
 
         if (isStandardMasterField(field)) {
             const options = getStandardMasterOptions(field);
             const selectedValue = getStandardMasterSelectedValue(form, field);
 
-            return <SelectInput label={field?.label} value={selectedValue} mandatory={field?.isRequired || field?.required} placeholder={`Select ${field?.label}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleChange(field?.key, event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label}...` : options.length > 0 ? `Select ${field?.label}` : `No ${field?.label} found` }, ...options]} />;
+            return <SelectInput label={field?.label} value={selectedValue} mandatory={mandatory} placeholder={`Select ${field?.label}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleChange(field?.key, event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label}...` : options.length > 0 ? `Select ${field?.label}` : `No ${field?.label} found` }, ...options]} />;
         }
 
         if (fieldType === "select") {
             const options = (field?.options || []).map((option: any) => typeof option === "object" ? { label: option.label || option.name || option.value || "", value: option.value || option.code || option.name || "" } : { label: option, value: option });
 
-            if (typeof field?.onCreateOption === "function") return <CreatableSelectInput label={field?.label} value={form?.[field?.key] ?? ""} mandatory={field?.isRequired} placeholder={field?.placeholder || `Select ${field?.label}`} disabled={field?.disabled || field?.isReadonly} error={errors?.[field?.key]} largeData={field?.largeData ?? true} onCreateOption={field?.onCreateOption} createOptionLabel={field?.createOptionLabel} showCreateOnEmpty={field?.showCreateOnEmpty ?? true} onChange={(event: any) => handleChange(field?.key, event.target.value)} options={options} />;
+            if (typeof field?.onCreateOption === "function") return <CreatableSelectInput label={field?.label} value={form?.[field?.key] ?? ""} mandatory={mandatory} placeholder={field?.placeholder || `Select ${field?.label}`} disabled={field?.disabled || field?.isReadonly} error={errors?.[field?.key]} largeData={field?.largeData ?? true} onCreateOption={field?.onCreateOption} createOptionLabel={field?.createOptionLabel} showCreateOnEmpty={field?.showCreateOnEmpty ?? true} onChange={(event: any) => handleChange(field?.key, event.target.value)} options={options} />;
 
-            return <SelectInput label={field?.label} value={form?.[field?.key] || ""} mandatory={field?.isRequired} placeholder={field?.placeholder} disabled={field?.disabled || field?.isReadonly} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} options={[{ label: `Select ${field?.label}`, value: "" }, ...options]} />;
+            return <SelectInput label={field?.label} value={form?.[field?.key] || ""} mandatory={mandatory} placeholder={field?.placeholder} disabled={field?.disabled || field?.isReadonly} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} options={[{ label: `Select ${field?.label}`, value: "" }, ...options]} />;
         }
 
-        return <TextInput label={field?.label} mandatory={field?.isRequired} value={form?.[field?.key] || ""} type={field?.type || "text"} disabled={field?.disabled == true || field?.disabled == "true" || field?.isReadonly == true || field?.isReadonly == "true"} placeholder={field?.placeholder} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} />;
+        return <TextInput label={field?.label} mandatory={mandatory} value={form?.[field?.key] || ""} type={field?.type || "text"} disabled={field?.disabled == true || field?.disabled == "true" || field?.isReadonly == true || field?.isReadonly == "true"} placeholder={field?.placeholder} error={errors?.[field?.key]} onChange={(event: any) => handleChange(field?.key, event.target.value)} />;
     };
 
     // UI

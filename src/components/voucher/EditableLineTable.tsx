@@ -324,19 +324,18 @@ const EditableLineTable = ({
     const normalizeOptions = (column: EditableColumn) => {
         return (column?.options || []).map((option: any) => {
             if (typeof option === "object") {
-                    return {
-                        ...option,
-                        label: option?.label || option?.accountName || option?.productName || option?.unitName || option?.userFirstName || option?.name || option?.value || option?.code || "",
-                        value: option?.value || option?.accountCode || option?.productCode || option?.unitCode || option?.userMobileNumberHash || option?.code || option?._id || option?.name || "",
-                    };
-                }
-
                 return {
-                    label: String(option),
-                    value: option,
+                    ...option,
+                    label: option?.label || option?.accountName || option?.productName || option?.unitName || option?.userFirstName || option?.name || option?.value || option?.code || "",
+                    value: option?.value || option?.accountCode || option?.productCode || option?.unitCode || option?.userMobileNumberHash || option?.code || option?._id || option?.name || "",
                 };
             }
-        );
+
+            return {
+                label: String(option),
+                value: option,
+            };
+        });
     };
 
     const visibleColumns = columns.filter((column) => {
@@ -433,8 +432,10 @@ const EditableLineTable = ({
                                                     )}
                                                 </span>
 
-                                                {(column.isRequired ||
-                                                    column.required) && (
+                                                {isTrueValue(
+                                                    column?.isRequired ??
+                                                    column?.required
+                                                ) && (
                                                         <span className="text-danger">
                                                             *
                                                         </span>
@@ -544,9 +545,9 @@ const EditableLineTable = ({
                                                                         "function" &&
                                                                         !isCustomMasterColumn(
                                                                             column
-                                                                                ) &&
-                                                                                !isStandardMasterColumn(
-                                                                                    column
+                                                                        ) &&
+                                                                        !isStandardMasterColumn(
+                                                                            column
                                                                         ) ? (
                                                                         <CreatableSelectInput
                                                                             label=""
@@ -625,12 +626,12 @@ const EditableLineTable = ({
                                                                             disabled={
                                                                                 disabledCell
                                                                             }
-                                                                                        largeData={
-                                                                                            isCustomMasterColumn(column) ||
-                                                                                                isStandardMasterColumn(column)
-                                                                                                ? true
-                                                                                                : column.largeData
-                                                                                        }
+                                                                            largeData={
+                                                                                isCustomMasterColumn(column) ||
+                                                                                    isStandardMasterColumn(column)
+                                                                                    ? true
+                                                                                    : column.largeData
+                                                                            }
                                                                             onChange={(
                                                                                 event: any
                                                                             ) =>

@@ -211,6 +211,11 @@ const CAPACITY_OPTIONS = [
     "40 TON",
 ];
 
+const VEHICLE_COMPANY_OPTIONS = [
+    "Tata Motors", "Ashok Leyland", "Eicher", "BharatBenz", "Mahindra", "SML Isuzu", "Isuzu", "Volvo Trucks", "Scania", "MAN Trucks", "Force Motors"
+ 
+]
+
 const FUEL_TYPE_OPTIONS = [
     "Petrol",
     "Diesel",
@@ -278,12 +283,13 @@ export const VEHICLE_MASTER_SCHEMA_FIELDS = [
     =============================== */
 
     baseVehicleField({
-        key: "vehicle_number",
-        label: "Vehicle Number",
-        type: "string",
+        key: "vehicle_company",
+        label: "Vehicle Company",
+        type: "select",
         isRequired: true,
         isSearchable: false,
         isFilterable: false,
+        options: VEHICLE_COMPANY_OPTIONS,
     }),
 
     baseVehicleField({
@@ -306,6 +312,15 @@ export const VEHICLE_MASTER_SCHEMA_FIELDS = [
         options: CAPACITY_OPTIONS,
     }),
 
+    baseVehicleField({
+        key: "hightFt",
+        label: "Height (FT)",
+        type: "string",
+        isRequired: false,
+        isSearchable: false,
+        isFilterable: false,
+       
+    }),
     baseVehicleField({
         key: "chasis_number",
         label: "Chasis Number",
@@ -452,7 +467,7 @@ export const VEHICLE_MASTER_SCHEMA_FIELDS = [
         key: "vendor",
         label: "Vendor",
         type: "accountmaster",
-        isRequired: true,
+        isRequired: false,
         isSearchable: false,
         isFilterable: false,
         dataSource: ACCOUNT_MASTER_DATA_SOURCE,
@@ -462,7 +477,7 @@ export const VEHICLE_MASTER_SCHEMA_FIELDS = [
         key: "customemployeemaster",
         label: "Custom Employee Master",
         type: "employeemaster",
-        isRequired: true,
+        isRequired: false,
         isSearchable: false,
         isFilterable: true,
         dataSource: buildEmployeeMasterDataSource(),

@@ -135,59 +135,20 @@ const DriverSettlementList = () => {
 
     const dispatch = useDispatch<any>();
     const { driverSettlement, pagination, listingLoader, } = useSelector((state: any) => state.driverSettlement)
-    const [activeStatus, setActiveStatus] = useState<"open" | "close">("open");
 
-
-
-    // FIX: normalize from `status` (the real field on the record),
-    // not `contractStatus` / `docStatus`, and default to "unsettled".
     const normalizeStatus = (value: any) =>
-        String(value || "unsettled")
+        String(value || "")
             .trim()
             .toLowerCase()
             .replace(/[\s-]+/g, "_");
 
-    const getRowStatus = (row: any) => normalizeStatus(row?.status);
-
-    // FIX: match the actual status vocabulary used by driver settlements.
-    const isClosedContract = (row: any) => {
-        const status = getRowStatus(row);
-
-        return (
-            status === "settled" ||
-            status === "closed" ||
-            status === "complete" ||
-            status === "completed" ||
-            status === "paid"
-        );
-    };
-
-    const openCount = useMemo(
-        () =>
-            driverSettlement.filter(
-                (item: any) => !isClosedContract(item)
-            ).length,
-        [driverSettlement]
-    );
-
-    const closeCount = useMemo(
-        () =>
-            driverSettlement.filter(
-                (item: any) => isClosedContract(item)
-            ).length,
-        [driverSettlement]
-    );
-
-    // FIX: the table was always rendering the full unfiltered list.
-    // This actually applies the open/close tab to what gets displayed.
+    // ⭐ ADDED — Show only exact `settled` driver settlements.
     const filteredSettlements = useMemo(
         () =>
-            driverSettlement.filter((item: any) =>
-                activeStatus === "open"
-                    ? !isClosedContract(item)
-                    : isClosedContract(item)
+            (driverSettlement || []).filter(
+                (item: any) => normalizeStatus(item?.status) === "settled"
             ),
-        [driverSettlement, activeStatus]
+        [driverSettlement]
     );
 
     useEffect(() => {
@@ -480,7 +441,7 @@ const DriverSettlementList = () => {
                         }}
                     />
 
-                    <div className="flex rounded-md border border-border bg-background p-1">
+                    {/* <div className="flex rounded-md border border-border bg-background p-1">
                         <button
                             type="button"
                             onClick={() => setActiveStatus("open")}
@@ -502,7 +463,7 @@ const DriverSettlementList = () => {
                         >
                             Closed ({closeCount})
                         </button>
-                    </div>
+                    </div> */}
 
                     <DataREfreshButton
                         {...{

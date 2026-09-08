@@ -71,10 +71,10 @@ export const createInitialTripAllocation = () => ({
 	},
 
 	documentsAssigned: {
-		invoiceAttached: true,
-		ewayBillAttached: true,
-		deliveryChallanAttached: true,
-		insuranceCopyAttached: true,
+		invoiceAttached: false,
+		ewayBillAttached: false,
+		deliveryChallanAttached: false,
+		insuranceCopyAttached: false,
 	},
 
 	trackingConfig: {
