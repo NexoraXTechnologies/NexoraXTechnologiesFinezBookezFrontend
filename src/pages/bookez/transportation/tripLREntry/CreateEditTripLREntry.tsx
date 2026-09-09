@@ -1695,7 +1695,7 @@
 
 //             /* ===================================================
 //                EDIT LR
-    
+
 //                EXISTING WORKING EDIT FLOW — UNCHANGED
 //             =================================================== */
 
@@ -1816,7 +1816,7 @@
 
 //             /* ===================================================
 //                CREATE LR
-    
+
 //                Always executes.
 //             =================================================== */
 
@@ -3148,21 +3148,33 @@ const mapAllocationDriverToLR = (allocation: any = {}) => ({
         "",
 });
 
-const mapAllocationVehicleToLR = (allocation: any = {}) => ({
-    vehicleCode:
-        allocation?.vehicleSelection?.selectedVehicleId ||
-        allocation?.vehicleSelection?.vehicleCode ||
-        allocation?.vehicle?.vehicleCode ||
-        "",
-    vehicleNumber:
-        allocation?.vehicleSelection?.vehicleNumber ||
-        allocation?.vehicle?.vehicleNumber ||
-        "",
-    vehicleType:
-        allocation?.vehicleSelection?.vehicleType ||
-        allocation?.vehicle?.vehicleType ||
-        "",
-});
+const mapAllocationVehicleToLR = (allocation: any = {}) => {
+    const vehicleSelection = allocation?.vehicleSelection || {};
+    const vehicle = allocation?.vehicle || {};
+
+    const vehicleCode = String(
+        vehicleSelection?.vehicleNumber ||
+        vehicleSelection?.code ||
+        vehicleSelection?.vehicleCode ||
+        vehicle?.vehicleNumber ||
+        vehicle?.code ||
+        vehicle?.vehicleCode ||
+        ""
+    ).trim();
+
+    return {
+        vehicleCode,
+        vehicleNumber:
+            vehicleSelection?.vehicleNumber ||
+            vehicle?.vehicleNumber ||
+            vehicleCode ||
+            "",
+        vehicleType:
+            vehicleSelection?.vehicleType ||
+            vehicle?.vehicleType ||
+            "",
+    };
+};
 
 const findAllocationForOrder = (allocations: any[] = [], orderVoucher = "") => {
     const normalized = String(orderVoucher || "")
@@ -4225,23 +4237,23 @@ const CreateEditTripLREntry = () => {
             return false;
         }
 
-        if (form.cargo?.quantity === "" || form.cargo?.quantity === null) {
-            toast.warn("Quantity is required");
-            return false;
-        }
+        // if (form.cargo?.quantity === "" || form.cargo?.quantity === null) {
+        //     toast.warn("Quantity is required");
+        //     return false;
+        // }
 
-        if (form.cargo?.weight === "" || form.cargo?.weight === null) {
-            toast.warn("Weight is required");
-            return false;
-        }
+        // if (form.cargo?.weight === "" || form.cargo?.weight === null) {
+        //     toast.warn("Weight is required");
+        //     return false;
+        // }
 
-        if (
-            form.freight?.agreedFreight === "" ||
-            form.freight?.agreedFreight === null
-        ) {
-            toast.warn("Agreed freight is required");
-            return false;
-        }
+        // if (
+        //     form.freight?.agreedFreight === "" ||
+        //     form.freight?.agreedFreight === null
+        // ) {
+        //     toast.warn("Agreed freight is required");
+        //     return false;
+        // }
 
         if (!form.loading?.loadingPoint?.trim()) {
             toast.warn("Loading point is required");
@@ -4737,7 +4749,7 @@ const CreateEditTripLREntry = () => {
             key: "cargo.quantity",
             label: "Quantity",
             type: "number",
-            mandatory: true,
+            mandatory: false,
             placeholder: "Enter quantity",
         },
         {
@@ -4750,7 +4762,7 @@ const CreateEditTripLREntry = () => {
             key: "cargo.weight",
             label: "Weight",
             type: "number",
-            mandatory: true,
+            mandatory: false,
             placeholder: "Enter weight",
         },
         {
@@ -4766,7 +4778,7 @@ const CreateEditTripLREntry = () => {
             key: "freight.agreedFreight",
             label: "Agreed Freight (₹)",
             type: "number",
-            mandatory: true,
+            mandatory: false,
             placeholder: "Enter agreed freight",
         },
         {
@@ -5129,41 +5141,41 @@ const CreateEditTripLREntry = () => {
                             <div className="md:col-span-2 xl:col-span-3">
                                 <div className={isView ? "pointer-events-none opacity-70" : ""}>
                                     <DocumentUploadInput
-                                    label=""
-                                    value={(form.documents || []).map((doc: any) => ({
-                                        documentName: doc.documentName || doc.fileName || "",
-                                        documentUrl: doc.documentUrl || doc.fileUri || doc.fileUrl || "",
-                                        fileSizeKB: doc.fileSizeKB || 0,
-                                        mimeType: doc.mimeType || doc.fileType || "",
-                                        documentType: doc.documentType || "Other",
-                                    }))}
-                                    multiple={true}
-                                    placeholder="Upload LR Documents"
-                                    description="Attach invoice, e-way bill, challan, PDF, Word, Excel, or image files."
-                                    allowedText="Allowed: PDF, PNG, JPG, JPEG, XLS, XLSX, DOC, DOCX"
-                                    onChange={(docs: any[]) => {
-                                        if (isView) return;
+                                        label=""
+                                        value={(form.documents || []).map((doc: any) => ({
+                                            documentName: doc.documentName || doc.fileName || "",
+                                            documentUrl: doc.documentUrl || doc.fileUri || doc.fileUrl || "",
+                                            fileSizeKB: doc.fileSizeKB || 0,
+                                            mimeType: doc.mimeType || doc.fileType || "",
+                                            documentType: doc.documentType || "Other",
+                                        }))}
+                                        multiple={true}
+                                        placeholder="Upload LR Documents"
+                                        description="Attach invoice, e-way bill, challan, PDF, Word, Excel, or image files."
+                                        allowedText="Allowed: PDF, PNG, JPG, JPEG, XLS, XLSX, DOC, DOCX"
+                                        onChange={(docs: any[]) => {
+                                            if (isView) return;
 
-                                        setForm((prev: any) => ({
-                                            ...prev,
-                                            documents: docs.map((doc: any) => ({
-                                                documentType: doc.documentType || "Other",
+                                            setForm((prev: any) => ({
+                                                ...prev,
+                                                documents: docs.map((doc: any) => ({
+                                                    documentType: doc.documentType || "Other",
 
-                                                // For your new DocumentUploadInput
-                                                documentName: doc.documentName || "",
-                                                documentUrl: doc.documentUrl || "",
-                                                mimeType: doc.mimeType || "",
+                                                    // For your new DocumentUploadInput
+                                                    documentName: doc.documentName || "",
+                                                    documentUrl: doc.documentUrl || "",
+                                                    mimeType: doc.mimeType || "",
 
-                                                // For your existing LR payload compatibility
-                                                fileName: doc.documentName || doc.fileName || "",
-                                                fileUri: doc.documentUrl || doc.fileUri || "",
-                                                fileUrl: doc.documentUrl || doc.fileUrl || "",
-                                                fileType: doc.mimeType || doc.fileType || "",
+                                                    // For your existing LR payload compatibility
+                                                    fileName: doc.documentName || doc.fileName || "",
+                                                    fileUri: doc.documentUrl || doc.fileUri || "",
+                                                    fileUrl: doc.documentUrl || doc.fileUrl || "",
+                                                    fileType: doc.mimeType || doc.fileType || "",
 
-                                                fileSizeKB: Number(doc.fileSizeKB || 0),
-                                            })),
-                                        }));
-                                    }}
+                                                    fileSizeKB: Number(doc.fileSizeKB || 0),
+                                                })),
+                                            }));
+                                        }}
                                     />
                                 </div>
                             </div>

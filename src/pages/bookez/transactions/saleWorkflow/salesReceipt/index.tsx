@@ -159,8 +159,44 @@ const SalesReceipt = () => {
 
             header: (templateFields?.header || []).map(
                 (field: any) => {
+                    field = {
+                        ...field,
+                        disabled: false,
+                        isReadonly: false,
+                        isReadOnly: false,
+                    };
+
                     const fieldKey = String(field?.key || "");
                     const normalizedFieldKey = fieldKey.trim().toLowerCase();
+
+                    // ⭐ ADDED — SHOW SAVED DRIVER AS SELECTED IN EDIT MODE
+                    if (normalizedFieldKey === "driver" && editingRecord?.driver) {
+                        const savedDriver = String(editingRecord.driver || "").trim();
+                        const existingOptions = Array.isArray(field?.options)
+                            ? field.options
+                            : [];
+
+                        const hasSavedDriver = existingOptions.some(
+                            (option: any) =>
+                                String(option?.value ?? "").trim() === savedDriver ||
+                                String(option?.label ?? "")
+                                    .trim()
+                                    .toLowerCase() === savedDriver.toLowerCase()
+                        );
+
+                        field = {
+                            ...field,
+                            options: hasSavedDriver
+                                ? existingOptions
+                                : [
+                                    ...existingOptions,
+                                    {
+                                        value: savedDriver,
+                                        label: savedDriver,
+                                    },
+                                ],
+                        };
+                    }
 
                     if (isVehicleMasterField(field)) {
                         return {
@@ -170,8 +206,9 @@ const SalesReceipt = () => {
                             labelField: "name",
                             api: undefined,
                             options: [],
-                            disabled: editingRecord ? true : field?.disabled,
-                            isReadonly: editingRecord ? true : field?.isReadonly,
+                            disabled: false,
+                            isReadonly: false,
+                            isReadOnly: false,
                             dataSource: {
                                 ...(field?.dataSource || {}),
                                 customMasterName: "Vehicle Master",
@@ -184,8 +221,9 @@ const SalesReceipt = () => {
                     if (["trip_order", "lr_no", "driver"].includes(normalizedFieldKey)) {
                         return {
                             ...field,
-                            disabled: editingRecord ? true : field?.disabled,
-                            isReadonly: editingRecord ? true : field?.isReadonly,
+                            disabled: false,
+                            isReadonly: false,
+                            isReadOnly: false,
                         };
                     }
 
@@ -212,6 +250,13 @@ const SalesReceipt = () => {
 
             body: (templateFields?.body || []).map(
                 (field: any) => {
+                    field = {
+                        ...field,
+                        disabled: false,
+                        isReadonly: false,
+                        isReadOnly: false,
+                    };
+
                     const fieldKey = String(field?.key || "");
 
                     if (isVehicleMasterField(field)) {
@@ -222,8 +267,9 @@ const SalesReceipt = () => {
                             labelField: "name",
                             api: undefined,
                             options: [],
-                            disabled: editingRecord ? true : field?.disabled,
-                            isReadonly: editingRecord ? true : field?.isReadonly,
+                            disabled: false,
+                            isReadonly: false,
+                            isReadOnly: false,
                             dataSource: {
                                 ...(field?.dataSource || {}),
                                 customMasterName: "Vehicle Master",
@@ -379,6 +425,23 @@ const SalesReceipt = () => {
 
     const openEditModal = (record: any) => {
         const footer = record?.recFooter || {};
+
+        // ⭐ FIX — RESOLVE SAVED DRIVER NAME TO THE EXACT SELECT OPTION VALUE
+        const driverField = (templateFieldsWithCreateActions?.header || []).find(
+            (field: any) =>
+                String(field?.key || "").trim().toLowerCase() === "driver"
+        );
+
+        const savedDriver = String(record?.driver || "").trim();
+
+        const savedDriverOption = (driverField?.options || []).find(
+            (option: any) =>
+                String(option?.value ?? "").trim() === savedDriver ||
+                String(option?.label ?? "")
+                    .trim()
+                    .toLowerCase() === savedDriver.toLowerCase()
+        );
+
         const body = record?.recBody?.length > 0 ? record.recBody.map((row: any) => ({ id: row?._id || Date.now() + Math.random(), accountCode: row?.accountCode || "", accountName: row?.accountName || "", amount: row?.amount || row?.netAmount || "", netAmount: row?.netAmount || row?.amount || "", references: Array.isArray(row?.references) ? row.references : [], remarks: row?.remarks || "" })) : [{ ...emptyReceiptRow, id: Date.now() }];
         const vehicleMaster = record?.customMasters?.["CSTM-000001"] || record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || ((record?.vehicleCode || record?.vehicleName) ? { code: record?.vehicleCode || "", name: record?.vehicleName || "" } : null);
 
@@ -397,7 +460,7 @@ const SalesReceipt = () => {
 
             trip_order: record?.trip_order || "",
             lr_no: record?.lr_no || "",
-            driver: record?.driver || "",
+            driver: savedDriverOption?.value ?? record?.driver ?? "",
             vehicle_master: vehicleMaster
                 ? {
                     code: vehicleMaster?.code || "",

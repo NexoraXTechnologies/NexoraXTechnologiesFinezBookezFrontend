@@ -294,14 +294,32 @@ const CustomMasterComp = ({
 			}
 			).filter(Boolean);
 		}
-		if (value === undefined || value === null) {
+
+		if (value === undefined || value === null || value === "") {
 			return "";
 		}
+
 		if (typeof value !== "object") {
-			const primitiveValue = String(value);
-			const matchedOption = (dynamicOptions[field.key] || []).find((option: any) => String(option.value) === primitiveValue || String(option.label) === primitiveValue ||
-				String(option.raw?.code ?? option.raw?.accountCode ?? "") === primitiveValue || String(option.raw?.name ?? option.raw?.accountName ?? "") === primitiveValue
-			);
+			const primitiveValue = String(value).trim();
+
+			if (!primitiveValue) {
+				return "";
+			}
+
+			const matchedOption = (dynamicOptions[field.key] || []).find((option: any) => {
+				const optionValue = String(option?.value ?? "").trim();
+				const optionLabel = String(option?.label ?? "").trim();
+				const rawCode = String(option?.raw?.code ?? option?.raw?.accountCode ?? "").trim();
+				const rawName = String(option?.raw?.name ?? option?.raw?.accountName ?? "").trim();
+
+				return (
+					optionValue === primitiveValue ||
+					optionLabel === primitiveValue ||
+					(rawCode && rawCode === primitiveValue) ||
+					(rawName && rawName === primitiveValue)
+				);
+			});
+
 			return (matchedOption?.value ?? primitiveValue);
 		}
 		const fieldType = getFieldType(field);
@@ -322,7 +340,7 @@ const CustomMasterComp = ({
 		}
 		return (value.code || value.value || "");
 	};
-
+	
 	const resolveSubmitValue = (
 		field: any,
 		currentValue: any
@@ -414,7 +432,7 @@ const CustomMasterComp = ({
 	};
 	const openEditModal = async (acc: any = null) => {
 		setShowModal(true);
-		setForm({ ...acc, moduleCode });
+		setForm(acc ? { ...acc, moduleCode } : { moduleCode });
 		setDynamicOptions({});
 		setDynamicLoading({});
 		setDynamicErrors({});

@@ -960,7 +960,11 @@ const mapEditRecordToTripDetails = (record: any) => {
         tripStatus: formatTripStatusLabel(lr?.tripStatus),
         totalTripExpense: Number(lr?.totalTripExpense || 0),
         balanceAmount: Number(lr?.balance || 0),
-        expectedFreight: 0,
+        expectedFreight: Number(
+            lr?.expectedFreight ||
+            record?.expectedFreight ||
+            0
+        ),
     };
 };
 
@@ -1085,6 +1089,12 @@ const CreateEditDriverSettlement = ({
         name: "",
     });
 
+    // ⭐ ADDED — ACTUAL VEHICLE MASTER FROM SELECTED TRIP / ALLOCATION
+    const [tripVehicleMaster, setTripVehicleMaster] = useState<any>({
+        code: "",
+        name: "",
+    });
+
     const [salary, setSalary] = useState("");
     const [incentives, setIncentives] = useState("");
     const [paymentMode, setPaymentMode] = useState("");
@@ -1093,6 +1103,9 @@ const CreateEditDriverSettlement = ({
     const [remarks, setRemarks] = useState("");
     const [paymentAccountCode, setPaymentAccountCode] = useState("");
     const [paymentAccountName, setPaymentAccountName] = useState("");
+    const [vendorCode, setVendorCode] = useState("");
+    const [vendorName, setVendorName] = useState("");
+    const [vendorAmount, setVendorAmount] = useState("");
     const [expenseRowEdits, setExpenseRowEdits] = useState<Record<string, any>>({});
     const [advanceRowEdits, setAdvanceRowEdits] = useState<Record<string, any>>({});
 
@@ -1410,6 +1423,16 @@ const CreateEditDriverSettlement = ({
                     )
                 );
                 setSelectedTripId(cleanText(record?.transportOrderNumber));
+
+                // ⭐ ADDED — PREFILL SAVED MARKET VENDOR DETAILS
+                setVendorCode(cleanText(record?.vendorCode));
+                setVendorName(cleanText(record?.vendorName));
+                setVendorAmount(
+                    record?.vendorAmount !== undefined &&
+                    record?.vendorAmount !== null
+                        ? String(record.vendorAmount)
+                        : ""
+                );
             } catch (error: any) {
                 toast.error(error?.message || "Failed to load settlement details");
             } finally {
@@ -1532,6 +1555,34 @@ const CreateEditDriverSettlement = ({
         [selectedOrderOption, lrEntries, selectedTripId]
     );
 
+    // ⭐ ADDED — MARKET / HIRED VEHICLE PAYMENT
+    const ownershipType = cleanText(
+        editRecord?.ownershipType ||
+        selectedTransportOrder?.ownershipType ||
+        selectedTransportOrder?.vehicleSelection?.ownershipType ||
+        selectedTransportOrder?.vehicleSelection?.rawRecord?.ownershipType ||
+        selectedTransportOrder?.vehicle?.ownershipType ||
+        selectedAllocation?.transportOrder?.ownershipType ||
+        selectedAllocation?.ownershipType ||
+        selectedAllocation?.vehicleSelection?.ownershipType ||
+        selectedAllocation?.vehicleSelection?.rawRecord?.ownershipType ||
+        selectedTripExpense?.ownershipType ||
+        selectedLREntry?.ownershipType ||
+        selectedLREntry?.vehicle?.ownershipType ||
+        ""
+    );
+
+    const isMarketVehicle = normalizeText(ownershipType) === "hired";
+    const showMarketVendorPayment = isMarketVehicle;
+
+    useEffect(() => {
+        if (isMarketVehicle) return;
+
+        setVendorCode("");
+        setVendorName("");
+        setVendorAmount("");
+    }, [isMarketVehicle, selectedTripId]);
+
     const liveSettlementData = useMemo(
         () =>
             buildSettlementFromSelections({
@@ -1636,6 +1687,10 @@ const CreateEditDriverSettlement = ({
             code: "",
             name: "",
         });
+        setTripVehicleMaster({
+            code: "",
+            name: "",
+        });
 
         if (!selected) {
             setDriverDetail({
@@ -1728,7 +1783,46 @@ const CreateEditDriverSettlement = ({
     const handleOrderSelect = (orderNumber: string) => {
         if (isView) return;
 
+        const selectedOption = orderOptions.find((item: any) => item.value === orderNumber);
+        const allocation = selectedOption?.allocation || findAllocationForTrip(activeAllocations, orderNumber);
+        const transportOrder = selectedOption?.transportOrder || allocation?.transportOrder || findTransportOrderForTrip(transportOrders, orderNumber);
+        const vehicleSelection = allocation?.vehicleSelection || transportOrder?.vehicleSelection || {};
+        const vehicleRawRecord = vehicleSelection?.rawRecord || {};
+
+        const selectedVendorCode = cleanText(
+            vehicleSelection?.vendorCode ||
+            vehicleRawRecord?.vendorCode ||
+            vehicleRawRecord?.vendor?.code ||
+            ""
+        );
+
+        const selectedVendorName = cleanText(
+            vehicleSelection?.vendorName ||
+            vehicleRawRecord?.vendorName ||
+            vehicleRawRecord?.vendor?.name ||
+            ""
+        );
+
+        // ⭐ ADDED — USE ACTUAL VEHICLE MASTER CODE / NAME FROM ALLOCATION
+        // Example: { code: "MH31AB1234", name: "Tata Ace Gold" }
+        const selectedVehicleMaster = {
+            code: cleanText(
+                vehicleRawRecord?.code ||
+                vehicleSelection?.vehicleNumber ||
+                ""
+            ),
+            name: cleanText(
+                vehicleRawRecord?.name ||
+                vehicleSelection?.vehicleName ||
+                ""
+            ),
+        };
+
         setSelectedTripId(orderNumber || "");
+        setTripVehicleMaster(selectedVehicleMaster);
+        setVendorCode(selectedVendorCode);
+        setVendorName(selectedVendorName);
+        setVendorAmount("");
     };
 
     const fieldForm = {
@@ -1856,15 +1950,44 @@ const CreateEditDriverSettlement = ({
         response: any,
         fallback = ""
     ) => {
-        return (
+        const directValue = cleanText(
             response?.data?.settlement?.settlementNumber ||
             response?.data?.record?.settlementNumber ||
             response?.data?.settlementNumber ||
-            response?.data?.voucherNumber ||
             response?.settlementNumber ||
+            response?.data?.settlement?.voucherNumber ||
+            response?.data?.record?.voucherNumber ||
+            response?.data?.voucherNumber ||
             response?.voucherNumber ||
             fallback
         );
+
+        if (directValue) return directValue;
+
+        const visited = new Set<any>();
+
+        const findSettlementNumber = (value: any): string => {
+            if (!value || typeof value !== "object" || visited.has(value)) return "";
+
+            visited.add(value);
+
+            const settlementNumber = cleanText(
+                value?.settlementNumber ||
+                value?.driverSettlementNumber ||
+                ""
+            );
+
+            if (settlementNumber) return settlementNumber;
+
+            for (const child of Object.values(value)) {
+                const found = findSettlementNumber(child);
+                if (found) return found;
+            }
+
+            return "";
+        };
+
+        return findSettlementNumber(response);
     };
 
     const getPaymentVoucherNumber = (response: any) => {
@@ -1919,6 +2042,16 @@ const CreateEditDriverSettlement = ({
             return;
         }
 
+        if (showMarketVendorPayment && !cleanText(vendorCode)) {
+            toast.warn("Market vendor account is required");
+            return;
+        }
+
+        if (showMarketVendorPayment && Number(vendorAmount || 0) <= 0) {
+            toast.warn("Market vendor amount is required");
+            return;
+        }
+
         let settlementSaved = false;
 
         try {
@@ -1934,6 +2067,13 @@ const CreateEditDriverSettlement = ({
                 settlementData?.settlement?.allowedExpenses ??
                 0
             );
+
+            const marketVendorAmount = isMarketVehicle
+                ? Number(vendorAmount || 0)
+                : 0;
+
+            const paymentPostingAmount =
+                expenseAmount + marketVendorAmount;
 
             const freightAmount = Number(
                 tripDetails?.expectedFreight ||
@@ -1971,21 +2111,6 @@ const CreateEditDriverSettlement = ({
                 selectedAllocation?.transportOrder?.transportOrderNumber ||
                 selectedTripId;
 
-            // TRANSPORT DETAILS FOR PAYMENT / RECEIPT
-            const selectedVehicleRaw = selectedAllocation?.vehicleSelection?.rawRecord || {};
-            const vehicleMasterModuleCode = cleanText(selectedVehicleRaw?.moduleCode) || "CSTM-000001";
-            const vehicleCode = cleanText(selectedAllocation?.vehicleSelection?.selectedVehicleId || selectedAllocation?.vehicleSelection?.voucherNumber || selectedVehicleRaw?.voucherNumber || tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleCode || driverVehicleMaster?.code);
-            const vehicleName = cleanText(selectedVehicleRaw?.name || driverVehicleMaster?.name);
-            const vehicleNumber = cleanText(selectedAllocation?.vehicleSelection?.vehicleNumber || selectedVehicleRaw?.vehicle_number || tripDetails?.vehicleNo || selectedLREntry?.vehicle?.vehicleNumber);
-            const tripDriverName = cleanText(selectedAllocation?.driverAllocation?.driverName || tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName);
-            const tripLrNo = tripDetails?.lrNo === "-" ? "" : cleanText(tripDetails?.lrNo || selectedLREntry?.lrNumber);
-            const transportCustomMasters = {
-                ...(selectedTransportOrder?.customMasters && typeof selectedTransportOrder.customMasters === "object" ? selectedTransportOrder.customMasters : {}),
-                ...(selectedTripExpense?.customMasters && typeof selectedTripExpense.customMasters === "object" ? selectedTripExpense.customMasters : {}),
-                ...(selectedLREntry?.customMasters && typeof selectedLREntry.customMasters === "object" ? selectedLREntry.customMasters : {}),
-                ...(vehicleMasterModuleCode && vehicleCode ? { [vehicleMasterModuleCode]: { code: vehicleCode, name: vehicleName } } : {}),
-            };
-
             const payload: any = {
                 transportOrderNumber,
 
@@ -2010,9 +2135,14 @@ const CreateEditDriverSettlement = ({
                 netPayableToDriver: calculatedNetPayable,
 
                 paymentMode,
-                paymentReferenceNumber,
                 paymentDate,
                 remarks,
+
+                // ⭐ ADDED — SAVE MARKET VENDOR DETAILS IN DRIVER SETTLEMENT
+                ownershipType,
+                vendorCode: isMarketVehicle ? vendorCode : "",
+                vendorName: isMarketVehicle ? vendorName : "",
+                vendorAmount: isMarketVehicle ? marketVendorAmount : 0,
 
                 lrDetails: {
                     lrNumber: tripDetails?.lrNo || "",
@@ -2046,13 +2176,15 @@ const CreateEditDriverSettlement = ({
 
             /* =====================================================
                EDIT MODE
-               Prevent duplicate Payment and Receipt vouchers.
+               Update Driver Settlement only.
+               DO NOT create duplicate Payment / Receipt vouchers.
             ===================================================== */
 
             if (isEditMode) {
                 const settlementVoucherNumber = String(
                     editRecord?.settlementNumber ||
                     editRecord?.voucherNumber ||
+                    voucherNumber ||
                     ""
                 ).trim();
 
@@ -2065,20 +2197,25 @@ const CreateEditDriverSettlement = ({
 
                 await dispatch(
                     updateDriverSettlement({
-                        voucherNumber:
-                            settlementVoucherNumber,
+                        voucherNumber: settlementVoucherNumber,
                         payload,
                     }) as any
                 ).unwrap();
 
-                dispatch(sendWhatsAppMessage({ moduleType: "driverSettlement", voucherNumber: settlementVoucherNumber }) as any).unwrap().catch(() => { });
+                dispatch(
+                    sendWhatsAppMessage({
+                        moduleType: "driverSettlement",
+                        voucherNumber: settlementVoucherNumber,
+                    }) as any
+                )
+                    .unwrap()
+                    .catch(() => { });
 
                 toast.success(
                     "Driver Settlement Updated Successfully"
                 );
 
                 goToList();
-
                 return;
             }
 
@@ -2094,16 +2231,17 @@ const CreateEditDriverSettlement = ({
 
             const voucherNumberResult =
                 settlementResponse?.data?.settlementNumber ||
-                settlementResponse?.settlementNumber;
+                settlementResponse?.settlementNumber ||
+                "";
 
-            if (voucherNumberResult) {
-                dispatch(sendWhatsAppMessage({ moduleType: "driverSettlement", voucherNumber: voucherNumberResult }) as any).unwrap().catch(() => { });
+            const settlementNumber = getSettlementVoucherNumber(
+                settlementResponse,
+                voucherNumberResult
+            );
+
+            if (settlementNumber) {
+                dispatch(sendWhatsAppMessage({ moduleType: "driverSettlement", voucherNumber: settlementNumber }) as any).unwrap().catch(() => { });
             }
-
-            const settlementNumber =
-                getSettlementVoucherNumber(
-                    settlementResponse
-                );
 
             if (!settlementNumber) {
                 throw new Error(
@@ -2131,101 +2269,169 @@ const CreateEditDriverSettlement = ({
                 (row: any) => Number(row?.amount || 0) > 0
             );
 
-            if (expenseAmount > 0) {
+            if (paymentPostingAmount > 0) {
                 try {
-                    if (!expenseLineItems.length) throw new Error("No expense entries with an amount were found to create the expense payment");
-
                     const payBody = expenseLineItems.map(
-                        (row: any, index: number) => {
-                            const account = getExpenseAccount(
+                    (row: any, index: number) => {
+                        // ⭐ FIX — RESOLVE THE ACCOUNT ALREADY SELECTED ON THE EXPENSE ROW FIRST.
+                        // This prevents getExpenseAccount() from throwing before addPayment() is reached.
+                        const selectedExpenseAccountCode = cleanText(
+                            row?.expenseKey === "dieselCost" || row?.expenseKey === "petrolCost"
+                                ? row?.fuelStation
+                                : row?.expenseKey === "foodCost"
+                                    ? row?.mealType
+                                    : row?.expenseKey === "breakdownCost"
+                                        ? row?.issueType
+                                        : row?.expenseKey === "runningCost" || row?.expenseKey === "otherCost"
+                                            ? row?.expenseType
+                                            : ""
+                        );
+
+                        const selectedExpenseAccount = selectedExpenseAccountCode
+                            ? accountMasterByCode.get(selectedExpenseAccountCode.toLowerCase())
+                            : null;
+
+                        const account = selectedExpenseAccount?.code
+                            ? {
+                                code: selectedExpenseAccount.code,
+                                name: selectedExpenseAccount.name || selectedExpenseAccount.code,
+                            }
+                            : getExpenseAccount(
                                 row.expenseKey,
                                 row.type
                             );
-                            const amountStr = String(row.amount);
 
-                            return {
-                                id: Date.now() + index,
+                        const amountStr = String(row.amount);
 
-                                accountCode: account.code,
-                                accountName: account.name,
+                        return {
+                            id: Date.now() + index,
 
-                                amount: amountStr,
-                                netAmount: amountStr,
+                            accountCode: account.code,
+                            accountName: account.name,
 
-                                references: [
-                                    {
-                                        referenceType: "NEW",
-                                        newReference: "ADV",
-                                        billDueDate: paymentDate,
-                                        billAmount: amountStr,
-                                        adjustedAmount: amountStr,
-                                        purchaseInvoice: "",
-                                    },
-                                ],
+                            amount: amountStr,
+                            netAmount: amountStr,
 
-                                customMasters: row?.customMasters && typeof row.customMasters === "object"
-                                    ? { ...row.customMasters }
-                                    : {},
+                            references: [
+                                {
+                                    referenceType: "NEW",
+                                    newReference: "ADV",
+                                    billDueDate: paymentDate,
+                                    billAmount: amountStr,
+                                    adjustedAmount: amountStr,
+                                    purchaseInvoice: "",
+                                },
+                            ],
 
-                                remarks: `${row.type} - Trip ${transportOrderNumber}`,
-                            };
-                        }
-                    );
+                            customMasters: row?.customMasters && typeof row.customMasters === "object"
+                                ? { ...row.customMasters }
+                                : {},
 
-                    const payBodyTotal = expenseLineItems.reduce(
-                        (acc: number, row: any) => acc + Number(row.amount || 0),
-                        0
-                    );
+                            remarks: `${row.type} - Trip ${transportOrderNumber}`,
+                        };
+                    }
+                );
+
+                    if (isMarketVehicle && marketVendorAmount > 0) {
+                        payBody.push({
+                            id: Date.now() + expenseLineItems.length,
+                            accountCode: vendorCode,
+                            accountName: vendorName,
+                            amount: String(marketVendorAmount),
+                            netAmount: String(marketVendorAmount),
+                            references: [
+                                {
+                                    referenceType: "NEW",
+                                    newReference: "ADV",
+                                    billDueDate: paymentDate,
+                                    billAmount: String(marketVendorAmount),
+                                    adjustedAmount: String(marketVendorAmount),
+                                    purchaseInvoice: "",
+                                },
+                            ],
+                            customMasters: {},
+                            remarks: `Market Vendor Payment - Trip ${transportOrderNumber}`,
+                        });
+                    }
+
+                    if (!payBody.length) throw new Error("No expense entries with an amount were found to create the expense payment");
+
+                    const payBodyTotal = payBody.reduce(
+                    (acc: number, row: any) => acc + Number(row.amount || 0),
+                    0
+                );
 
                     const paymentPayload: any = {
-                        payVoucherNumber: "AUTO",
-                        payVoucherDate: paymentDate,
+                    payVoucherNumber: "AUTO",
+                    payVoucherDate: paymentDate,
 
-                        payAccountCode: CASH_IN_HAND_ACCOUNT_CODE,
-                        payAccountName: CASH_IN_HAND_ACCOUNT_NAME,
-                        payStatus: "open",
+                    payAccountCode: CASH_IN_HAND_ACCOUNT_CODE,
+                    payAccountName: CASH_IN_HAND_ACCOUNT_NAME,
+                    payStatus: "open",
 
-                        payRemark:
-                            remarks ||
-                            `Trip expense payment against Driver Settlement ${settlementNumber}`,
+                    payRemark:
+                        remarks ||
+                        `Trip expense payment against Driver Settlement ${settlementNumber}`,
 
-                        paymentMode,
-                        bankReferenceNumber: paymentReferenceNumber,
-                        paidBy: getFullName(loginUser) || "",
+                    paymentMode,
+                    bankReferenceNumber: paymentReferenceNumber,
+                    paidBy: getFullName(loginUser) || "",
 
-                        payBody,
+                    payBody,
 
-                        payFooter: {
-                            netAmount: String(payBodyTotal),
-                            adjustedAmount: String(payBodyTotal),
-                            balanceAmount: "0",
+                    payFooter: {
+                        netAmount: String(payBodyTotal),
+                        adjustedAmount: String(payBodyTotal),
+                        balanceAmount: "0",
+                    },
+
+                    sourceModule: "DRIVER_SETTLEMENT",
+                    sourceVoucherNumber:
+                        settlementNumber,
+
+                    transportOrderNumber,
+
+                    trip_order: transportOrderNumber,
+                    lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
+                    driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
+                    customMasters: {
+                        ...(selectedTransportOrder?.customMasters && typeof selectedTransportOrder.customMasters === "object"
+                            ? selectedTransportOrder.customMasters
+                            : {}),
+                        ...(selectedTripExpense?.customMasters && typeof selectedTripExpense.customMasters === "object"
+                            ? selectedTripExpense.customMasters
+                            : {}),
+                        ...(selectedLREntry?.customMasters && typeof selectedLREntry.customMasters === "object"
+                            ? selectedLREntry.customMasters
+                            : {}),
+                        "Vehicle Master": {
+                            code: tripVehicleMaster?.code || driverVehicleMaster?.code || "",
+                            name: tripVehicleMaster?.name || driverVehicleMaster?.name || "",
                         },
+                    },
 
-                        sourceModule: "DRIVER_SETTLEMENT",
-                        sourceVoucherNumber:
-                            settlementNumber,
+                    ownershipType,
+                    vendorCode: isMarketVehicle ? vendorCode : "",
+                    vendorName: isMarketVehicle ? vendorName : "",
+                    vendorAmount: isMarketVehicle ? marketVendorAmount : 0,
 
-                        transportOrderNumber,
-
-                        trip_order: transportOrderNumber,
-                        lr_no: tripLrNo,
-                        driver: tripDriverName,
-                        vehicleCode,
-                        vehicleName,
-                        vehicleNumber,
-                        customMasters: transportCustomMasters,
-
-                        transactionPurpose:
-                            "TRIP_EXPENSE_PAYMENT",
-                    };
+                    transactionPurpose:
+                        "TRIP_EXPENSE_PAYMENT",
+                };
 
                     const paymentResponse = await dispatch(addPayment({ payload: paymentPayload }) as any).unwrap();
 
                     paymentVoucherNumber = getPaymentVoucherNumber(paymentResponse);
 
                     if (!paymentVoucherNumber) console.warn("Expense payment created, but voucher number was not returned", paymentResponse);
-                } catch (paymentError) {
+                } catch (paymentError: any) {
                     console.error("Driver settlement payment creation failed:", paymentError);
+                    throw new Error(
+                        paymentError?.payload?.message ||
+                        paymentError?.response?.data?.message ||
+                        paymentError?.message ||
+                        "Driver Settlement created, but Payment creation failed"
+                    );
                 }
             }
 
@@ -2239,86 +2445,103 @@ const CreateEditDriverSettlement = ({
                     if (!customerAccountName) throw new Error("Customer account name is required to create freight receipt");
 
                     const receiptPayload: any = {
-                        recVoucherNumber: "AUTO",
-                        recVoucherDate: paymentDate,
+                    recVoucherNumber: "AUTO",
+                    recVoucherDate: paymentDate,
 
-                        recAccountCode: "Act-4",
-                        recAccountName: "Cash In Hand",
-                        recStatus: "open",
+                    recAccountCode: "Act-4",
+                    recAccountName: "Cash In Hand",
+                    recStatus: "open",
 
-                        recRemark:
-                            remarks ||
-                            `Freight receipt against Driver Settlement ${settlementNumber}`,
+                    recRemark:
+                        remarks ||
+                        `Freight receipt against Driver Settlement ${settlementNumber}`,
 
-                        paymentMode,
-                        receiptMode: paymentMode,
-                        bankReferenceNumber: paymentReferenceNumber,
-                        receivedBy: getFullName(loginUser) || "",
+                    paymentMode,
+                    receiptMode: paymentMode,
+                    bankReferenceNumber: paymentReferenceNumber,
+                    receivedBy: getFullName(loginUser) || "",
 
-                        recBody: [
-                            {
-                                id: Date.now(),
+                    recBody: [
+                        {
+                            id: Date.now(),
 
-                                accountCode:
-                                    customerAccountCode,
+                            accountCode:
+                                customerAccountCode,
 
-                                accountName:
-                                    customerAccountName,
+                            accountName:
+                                customerAccountName,
 
-                                amount: String(freightAmount),
-                                netAmount: String(freightAmount),
-
-                                references: [
-                                    {
-                                        referenceType: "NEW",
-                                        salesInvoice: "",
-                                        billDueDate: paymentDate,
-                                        billAmount: String(freightAmount),
-                                        adjustedAmount:
-                                            String(freightAmount),
-                                        returnAmount: "0",
-                                        newReference: "ADV",
-                                    },
-                                ],
-
-                                remarks:
-                                    `Freight receipt against settlement ${settlementNumber}`,
-                            },
-                        ],
-
-                        recFooter: {
+                            amount: String(freightAmount),
                             netAmount: String(freightAmount),
-                            adjustedAmount:
-                                String(freightAmount),
-                            balanceAmount: "0",
+
+                            references: [
+                                {
+                                    referenceType: "NEW",
+                                    salesInvoice: "",
+                                    billDueDate: paymentDate,
+                                    billAmount: String(freightAmount),
+                                    adjustedAmount:
+                                        String(freightAmount),
+                                    returnAmount: "0",
+                                    newReference: "ADV",
+                                },
+                            ],
+
+                            remarks:
+                                `Freight receipt against settlement ${settlementNumber}`,
                         },
+                    ],
 
-                        recSalesInvoiceRefs: [],
+                    recFooter: {
+                        netAmount: String(freightAmount),
+                        adjustedAmount:
+                            String(freightAmount),
+                        balanceAmount: "0",
+                    },
 
-                        sourceModule: "DRIVER_SETTLEMENT",
-                        sourceVoucherNumber:
-                            settlementNumber,
+                    recSalesInvoiceRefs: [],
 
-                        transportOrderNumber,
+                    sourceModule: "DRIVER_SETTLEMENT",
+                    sourceVoucherNumber:
+                        settlementNumber,
 
-                        trip_order: transportOrderNumber,
-                        lr_no: tripLrNo,
-                        driver: tripDriverName,
-                        vehicleCode,
-                        vehicleName,
-                        vehicleNumber,
-                        customMasters: transportCustomMasters,
-                        transactionPurpose:
-                            "FREIGHT_RECEIPT",
-                    };
+                    transportOrderNumber,
+
+                    trip_order: transportOrderNumber,
+                    lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
+                    driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
+                    customMasters: {
+                        ...(selectedTransportOrder?.customMasters && typeof selectedTransportOrder.customMasters === "object"
+                            ? selectedTransportOrder.customMasters
+                            : {}),
+                        ...(selectedTripExpense?.customMasters && typeof selectedTripExpense.customMasters === "object"
+                            ? selectedTripExpense.customMasters
+                            : {}),
+                        ...(selectedLREntry?.customMasters && typeof selectedLREntry.customMasters === "object"
+                            ? selectedLREntry.customMasters
+                            : {}),
+                        "Vehicle Master": {
+                            code: tripVehicleMaster?.code || driverVehicleMaster?.code || "",
+                            name: tripVehicleMaster?.name || driverVehicleMaster?.name || "",
+                        },
+                    },
+                    transactionPurpose:
+                        "FREIGHT_RECEIPT",
+                };
 
                     const receiptResponse = await dispatch(addSalesReceipt({ payload: receiptPayload }) as any).unwrap();
 
                     receiptVoucherNumber = getReceiptVoucherNumber(receiptResponse);
 
                     if (!receiptVoucherNumber) console.warn("Freight receipt created, but voucher number was not returned", receiptResponse);
-                } catch (receiptError) {
+                } catch (receiptError: any) {
                     console.error("Driver settlement receipt creation failed:", receiptError);
+                    throw new Error(
+                        receiptError?.payload?.message ||
+                        receiptError?.response?.data?.message ||
+                        receiptError?.message ||
+                        "Driver Settlement created, but Receipt creation failed"
+                    );
                 }
             }
 
@@ -2332,7 +2555,7 @@ const CreateEditDriverSettlement = ({
             ===================================================== */
 
             const expensePaymentStatus =
-                expenseAmount <= 0
+                paymentPostingAmount <= 0
                     ? "NOT_REQUIRED"
                     : paymentVoucherNumber
                         ? "CREATED"
@@ -2346,12 +2569,12 @@ const CreateEditDriverSettlement = ({
                         : "VOUCHER_NUMBER_PENDING";
 
             const accountingStatus =
-                expenseAmount <= 0 &&
+                paymentPostingAmount <= 0 &&
                     freightAmount <= 0
                     ? "NOT_REQUIRED"
                     : (
                         (
-                            expenseAmount <= 0 ||
+                            paymentPostingAmount <= 0 ||
                             Boolean(paymentVoucherNumber)
                         ) &&
                         (
@@ -2378,7 +2601,7 @@ const CreateEditDriverSettlement = ({
                                     paymentVoucherNumber,
 
                                 amount:
-                                    expenseAmount,
+                                    paymentPostingAmount,
 
                                 accountCode:
                                     CASH_IN_HAND_ACCOUNT_CODE,
@@ -2413,9 +2636,9 @@ const CreateEditDriverSettlement = ({
                 }) as any
             ).unwrap();
 
-            if (expenseAmount > 0 && freightAmount > 0) {
+            if (paymentPostingAmount > 0 && freightAmount > 0) {
                 toast.success(`Settlement created with Payment ${paymentVoucherNumber || ""} and Receipt ${receiptVoucherNumber || ""}`);
-            } else if (expenseAmount > 0) {
+            } else if (paymentPostingAmount > 0) {
                 toast.success(paymentVoucherNumber ? `Settlement and Expense Payment ${paymentVoucherNumber} created successfully` : "Settlement and Expense Payment created successfully");
             } else if (freightAmount > 0) {
                 toast.success(receiptVoucherNumber ? `Settlement and Freight Receipt ${receiptVoucherNumber} created successfully` : "Settlement and Freight Receipt created successfully");
@@ -2432,8 +2655,12 @@ const CreateEditDriverSettlement = ({
             );
 
             if (settlementSaved) {
-                toast.success("Driver Settlement Created Successfully");
-                goToList();
+                toast.error(
+                    error?.payload?.message ||
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "Driver Settlement created, but accounting voucher posting failed"
+                );
                 return;
             }
 
@@ -2758,8 +2985,10 @@ const CreateEditDriverSettlement = ({
                         </div>
                     </FormSectionCard>
 
+                 
+
                     <FormSectionCard
-                        index={4}
+                        index={showMarketVendorPayment ? 5 : 4}
                         title="Advances to Driver"
                         icon={<BadgeIndianRupee size={17} />}
                         expanded={true}
@@ -2799,8 +3028,64 @@ const CreateEditDriverSettlement = ({
                         </div>
                     </FormSectionCard>
 
+
+                       {showMarketVendorPayment && (
+                        <FormSectionCard
+                            index={4}
+                            title="Market Vendor Payment"
+                            icon={<BadgeIndianRupee size={17} />}
+                            expanded={true}
+                            onToggle={() => { }}
+                        >
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-card-foreground">
+                                    Vendor Account <span className="text-danger">*</span>
+                                </label>
+
+                                <Select
+                                    value={
+                                        vendorCode
+                                            ? {
+                                                value: vendorCode,
+                                                label: vendorName || vendorCode,
+                                            }
+                                            : null
+                                    }
+                                    options={vendorAccountOptions}
+                                    placeholder="Select Vendor Account"
+                                    isDisabled={isView}
+                                    isSearchable
+                                    onChange={(option: any) => {
+                                        setVendorCode(option?.value || "");
+                                        setVendorName(option?.label || "");
+                                    }}
+                                    classNamePrefix="rs"
+                                    classNames={selectClassNames}
+                                    styles={selectThemeStyles}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-card-foreground">
+                                    Amount <span className="text-danger">*</span>
+                                </label>
+
+                                <input
+                                    disabled={isView}
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={vendorAmount}
+                                    onChange={(e) => setVendorAmount(e.target.value)}
+                                    placeholder="Enter amount"
+                                    className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                                />
+                            </div>
+                        </FormSectionCard>
+                    )}
+
                     <FormSectionCard
-                        index={5}
+                        index={showMarketVendorPayment ? 6 : 5}
                         title="Settlement Summary"
                         icon={<PieChart size={17} />}
                         expanded={true}

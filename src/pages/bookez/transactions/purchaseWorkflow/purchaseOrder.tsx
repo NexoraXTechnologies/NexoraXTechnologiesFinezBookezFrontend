@@ -113,6 +113,17 @@ const getDefaultForm = () => ({
     pOrdStatusHistory: [],
     isAutoPost: false,
 
+    transportOrderNumber: "",
+    trip_order: "",
+    lr_no: "",
+    driver: "",
+    driverName: "",
+    vehicle_master: "",
+    vehicleCode: "",
+    vehicleName: "",
+    vehicleNumber: "",
+    customMasters: {},
+
     products: [{ ...emptyProductRow, id: Date.now() }],
 
     grossAmount: "0.00",
@@ -1066,6 +1077,44 @@ const PurchaseOrder = () => {
         setShowModal(true);
     };
 
+    const getSavedSelectOptionValue = (field: any, savedValue: any) => {
+        const saved = String(savedValue ?? "").trim();
+        if (!saved) return "";
+
+        const selectedOption = (field?.options || []).find((option: any) => {
+            const raw = option?.raw || {};
+            const fullName = [
+                raw?.userFirstName,
+                raw?.userMiddleName,
+                raw?.userLastName,
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
+
+            return [
+                option?.value,
+                option?.label,
+                option?.name,
+                raw?.voucherNumber,
+                raw?.code,
+                raw?.name,
+                raw?.vehicleCode,
+                raw?.vehicleName,
+                raw?.userMobileNumberHash,
+                fullName,
+            ]
+                .filter((value) => value !== undefined && value !== null && value !== "")
+                .some(
+                    (value) =>
+                        String(value).trim().toLowerCase() ===
+                        saved.toLowerCase()
+                );
+        });
+
+        return selectedOption?.value ?? saved;
+    };
+
     const openEditModal = (record: any) => {
         const footer = record?.pOrdFooter || {};
 
@@ -1186,10 +1235,168 @@ const PurchaseOrder = () => {
                 })
                 : [{ ...emptyProductRow, id: Date.now() }];
 
+        const headerFields = templateFields?.header || [];
+
+        const driverField = headerFields.find((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase();
+            const label = String(field?.label || field?.title || "").trim().toLowerCase();
+            const type = String(field?.type || field?.dataSource?.type || "").trim().toLowerCase();
+
+            return (
+                key === "driver" ||
+                label === "driver" ||
+                (type === "employeemaster" && label.includes("driver"))
+            );
+        });
+
+        const vehicleMasterField = headerFields.find((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase();
+            const label = String(
+                field?.label ||
+                field?.title ||
+                field?.customMasterName ||
+                field?.dataSource?.customMasterName ||
+                ""
+            )
+                .trim()
+                .toLowerCase();
+
+            return (
+                key === "vehicle_master" ||
+                key === "vehiclemaster" ||
+                label === "vehicle master" ||
+                String(field?.customMasterName || "").trim().toLowerCase() === "vehicle master" ||
+                String(field?.dataSource?.customMasterName || "").trim().toLowerCase() === "vehicle master"
+            );
+        });
+
+        const savedDriver = String(
+            record?.driver ||
+            record?.driverName ||
+            ""
+        ).trim();
+
+        const vehicleMasterCode = String(
+            vehicleMasterField?.customMasterCode ||
+            vehicleMasterField?.dataSource?.customMasterCode ||
+            ""
+        ).trim();
+
+        const savedVehicleMaster =
+            (vehicleMasterCode
+                ? record?.customMasters?.[vehicleMasterCode]
+                : null) ||
+            record?.customMasters?.["Vehicle Master"] ||
+            record?.customMasters?.["vehicle_master"] ||
+            record?.customMasters?.vehicle_master ||
+            ((record?.vehicleCode || record?.vehicleName)
+                ? {
+                    code: record?.vehicleCode || "",
+                    name: record?.vehicleName || "",
+                }
+                : null);
+
+        const driverValue = getSavedSelectOptionValue(
+            driverField,
+            savedDriver
+        );
+
+        const vehicleMasterValue = getSavedSelectOptionValue(
+            vehicleMasterField,
+            savedVehicleMaster?.code ||
+            savedVehicleMaster?.name ||
+            record?.vehicleCode ||
+            record?.vehicleName ||
+            ""
+        );
+
+        // Keep saved transportation values visible if the latest option API does not return them.
+        setTemplateFields((prev: any) => ({
+            ...prev,
+            header: (prev?.header || []).map((field: any) => {
+                const key = String(field?.key || "").trim().toLowerCase();
+                const label = String(field?.label || field?.title || "")
+                    .trim()
+                    .toLowerCase();
+
+                if ((key === "driver" || label === "driver") && savedDriver) {
+                    const hasOption = (field?.options || []).some(
+                        (option: any) =>
+                            String(option?.value || "") === String(driverValue)
+                    );
+
+                    if (!hasOption) {
+                        return {
+                            ...field,
+                            options: [
+                                ...(field?.options || []),
+                                { label: savedDriver, value: driverValue },
+                            ],
+                        };
+                    }
+                }
+
+                if (
+                    (key === "vehicle_master" ||
+                        key === "vehiclemaster" ||
+                        label === "vehicle master") &&
+                    savedVehicleMaster
+                ) {
+                    const hasOption = (field?.options || []).some(
+                        (option: any) =>
+                            String(option?.value || "") ===
+                            String(vehicleMasterValue)
+                    );
+
+                    if (!hasOption) {
+                        return {
+                            ...field,
+                            options: [
+                                ...(field?.options || []),
+                                {
+                                    label:
+                                        savedVehicleMaster?.name ||
+                                        savedVehicleMaster?.code ||
+                                        "",
+                                    value: vehicleMasterValue,
+                                    raw: savedVehicleMaster,
+                                },
+                            ],
+                        };
+                    }
+                }
+
+                return field;
+            }),
+        }));
+
+        const editCustomMasters =
+            record?.customMasters &&
+                typeof record.customMasters === "object"
+                ? { ...record.customMasters }
+                : {};
+
+        if (savedVehicleMaster) {
+            const vehiclePayload = {
+                code:
+                    savedVehicleMaster?.code ||
+                    record?.vehicleCode ||
+                    "",
+                name:
+                    savedVehicleMaster?.name ||
+                    record?.vehicleName ||
+                    "",
+            };
+
+            editCustomMasters["vehicle_master"] = vehiclePayload;
+            editCustomMasters["Vehicle Master"] = vehiclePayload;
+        }
+
         setEditingRecord(true);
         setErrors({});
 
         setForm({
+            ...record,
             pOrdVoucherNumber: record?.pOrdVoucherNumber || "AUTO",
 
             pOrdVoucherDate: formatDateForInput(
@@ -1208,6 +1415,54 @@ const PurchaseOrder = () => {
             pOrdStatusHistory: record?.pOrdStatusHistory || [],
 
             isAutoPost: record?.isAutoPost || false,
+
+            transportOrderNumber:
+                record?.transportOrderNumber ||
+                record?.trip_order ||
+                "",
+
+            trip_order:
+                record?.trip_order ||
+                record?.transportOrderNumber ||
+                "",
+
+            lr_no:
+                record?.lr_no ||
+                record?.lrNumber ||
+                record?.lrVoucherNumber ||
+                "",
+
+            [driverField?.key || "driver"]:
+                driverValue || savedDriver,
+
+            driverName:
+                record?.driverName ||
+                record?.driver ||
+                savedDriver ||
+                "",
+
+            [vehicleMasterField?.key || "vehicle_master"]:
+                vehicleMasterValue ||
+                savedVehicleMaster?.code ||
+                "",
+
+            vehicleCode:
+                record?.vehicleCode ||
+                savedVehicleMaster?.code ||
+                "",
+
+            vehicleName:
+                record?.vehicleName ||
+                savedVehicleMaster?.name ||
+                "",
+
+            vehicleNumber:
+                record?.vehicleNumber ||
+                record?.vehicleNo ||
+                "",
+
+            customMasters:
+                editCustomMasters,
 
             products,
 
@@ -1943,6 +2198,158 @@ const PurchaseOrder = () => {
         const products = cleanRows();
         const footer = calculateFooter(products);
 
+        const transportationHeaderFields = templateFields?.header || [];
+
+        const selectedDriverField = transportationHeaderFields.find((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase();
+            const label = String(field?.label || field?.title || "").trim().toLowerCase();
+            const type = String(field?.type || field?.dataSource?.type || "").trim().toLowerCase();
+
+            return (
+                key === "driver" ||
+                label === "driver" ||
+                (type === "employeemaster" && label.includes("driver"))
+            );
+        });
+
+        const selectedVehicleField = transportationHeaderFields.find((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase();
+            const label = String(
+                field?.label ||
+                field?.title ||
+                field?.customMasterName ||
+                field?.dataSource?.customMasterName ||
+                ""
+            )
+                .trim()
+                .toLowerCase();
+
+            return (
+                key === "vehicle_master" ||
+                key === "vehiclemaster" ||
+                label === "vehicle master" ||
+                String(field?.customMasterName || "").trim().toLowerCase() === "vehicle master" ||
+                String(field?.dataSource?.customMasterName || "").trim().toLowerCase() === "vehicle master"
+            );
+        });
+
+        const selectedDriverValue =
+            form?.[selectedDriverField?.key || "driver"] ??
+            form?.driver ??
+            "";
+
+        const selectedDriverOption = (selectedDriverField?.options || []).find(
+            (option: any) =>
+                String(option?.value) === String(selectedDriverValue)
+        );
+
+        const selectedDriverRaw = selectedDriverOption?.raw || {};
+
+        const selectedDriverName = String(
+            selectedDriverOption?.label ||
+            selectedDriverRaw?.driverName ||
+            selectedDriverRaw?.name ||
+            [
+                selectedDriverRaw?.userFirstName,
+                selectedDriverRaw?.userMiddleName,
+                selectedDriverRaw?.userLastName,
+            ]
+                .filter(Boolean)
+                .join(" ") ||
+            form?.driverName ||
+            selectedDriverValue ||
+            ""
+        ).trim();
+
+        const selectedVehicleMasterName =
+            String(
+                selectedVehicleField?.customMasterName ||
+                selectedVehicleField?.dataSource?.customMasterName ||
+                "Vehicle Master"
+            ).trim() || "Vehicle Master";
+
+        const selectedVehicleMasterCode = String(
+            selectedVehicleField?.customMasterCode ||
+            selectedVehicleField?.dataSource?.customMasterCode ||
+            ""
+        ).trim();
+
+        const selectedVehicleValue =
+            form?.[selectedVehicleField?.key || "vehicle_master"] ??
+            form?.vehicle_master ??
+            "";
+
+        const selectedVehicleOption = (selectedVehicleField?.options || []).find(
+            (option: any) =>
+                String(option?.value) === String(selectedVehicleValue)
+        );
+
+        const selectedVehicleRaw = selectedVehicleOption?.raw || {};
+
+        const selectedVehicleMaster =
+            form?.customMasters?.[selectedVehicleMasterName] ||
+            form?.customMasters?.[selectedVehicleField?.key || "vehicle_master"] ||
+            (selectedVehicleMasterCode
+                ? form?.customMasters?.[selectedVehicleMasterCode]
+                : null) ||
+            form?.customMasters?.["Vehicle Master"] ||
+            form?.customMasters?.["vehicle_master"] ||
+            form?.customMasters?.vehicle_master ||
+            null;
+
+        const selectedVehicleCode = String(
+            selectedVehicleMaster?.code ||
+            selectedVehicleOption?.value ||
+            selectedVehicleRaw?.voucherNumber ||
+            selectedVehicleRaw?.code ||
+            selectedVehicleRaw?.vehicleCode ||
+            form?.vehicleCode ||
+            selectedVehicleValue ||
+            ""
+        ).trim();
+
+        const selectedVehicleName = String(
+            selectedVehicleMaster?.name ||
+            selectedVehicleOption?.label ||
+            selectedVehicleRaw?.name ||
+            selectedVehicleRaw?.vehicleName ||
+            form?.vehicleName ||
+            ""
+        ).trim();
+
+        const selectedVehicleNumber = String(
+            form?.vehicleNumber ||
+            selectedVehicleRaw?.vehicleNumber ||
+            selectedVehicleRaw?.vehicleNo ||
+            selectedVehicleRaw?.vehicle_number ||
+            ""
+        ).trim();
+
+        const payloadCustomMasters =
+            form?.customMasters && typeof form.customMasters === "object"
+                ? { ...form.customMasters }
+                : {};
+
+        if (selectedVehicleCode || selectedVehicleName) {
+            const vehicleMasterPayload = {
+                code: selectedVehicleCode,
+                name: selectedVehicleName,
+            };
+
+            payloadCustomMasters["vehicle_master"] = vehicleMasterPayload;
+            payloadCustomMasters["Vehicle Master"] = vehicleMasterPayload;
+
+            if (selectedVehicleMasterName) {
+                payloadCustomMasters[selectedVehicleMasterName] =
+                    vehicleMasterPayload;
+            }
+
+            if (selectedVehicleMasterCode) {
+                payloadCustomMasters[selectedVehicleMasterCode] =
+                    vehicleMasterPayload;
+            }
+        }
+
         const payload: any = {
             pOrdVoucherDate: form.pOrdVoucherDate,
 
@@ -1954,6 +2361,36 @@ const PurchaseOrder = () => {
             pOrdStatus: form.pOrdStatus || "open",
 
             pOrdRemark: form.pOrdRemark,
+
+            transportOrderNumber:
+                form?.transportOrderNumber ||
+                form?.trip_order ||
+                "",
+
+            trip_order:
+                form?.trip_order ||
+                form?.transportOrderNumber ||
+                "",
+
+            lr_no:
+                form?.lr_no ||
+                "",
+
+            driver:
+                selectedDriverName,
+
+            vehicleCode:
+                selectedVehicleCode,
+
+            vehicleName:
+                selectedVehicleName,
+
+            ...(selectedVehicleNumber
+                ? { vehicleNumber: selectedVehicleNumber }
+                : {}),
+
+            customMasters:
+                payloadCustomMasters,
 
             pOrdBody: products.map((item: any) => ({
                 productCode: item.productCode,

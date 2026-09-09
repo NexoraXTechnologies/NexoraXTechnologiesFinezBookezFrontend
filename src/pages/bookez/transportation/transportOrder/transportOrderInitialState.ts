@@ -18,7 +18,7 @@ export const todayDateTime = () => {
 
 export const createInitialTransportOrder = () => ({
     orderDate:todayYMD(),
-    orderType: "direct",
+    orderType: "oneTimeOrder",
 
     contractDetails: {
         contractNumber: "",

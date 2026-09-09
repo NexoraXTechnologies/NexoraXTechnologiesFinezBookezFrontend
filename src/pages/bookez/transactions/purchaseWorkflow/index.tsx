@@ -37,8 +37,8 @@ const PurchaseWorkflowDashboard = () => {
       permissionKey: "purchaseOrder"
     },
     {
-      title: "GRN",
-      description: "Manage goods receipt notes.",
+      title: "GRN / SRN",
+      description: "Manage goods receipt and service receipt notes.",
       component: Grn,
       icon: <Truck size={22} />,
       permissionKey: "grn"

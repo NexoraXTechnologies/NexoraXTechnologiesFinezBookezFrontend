@@ -355,7 +355,8 @@ const SalesInVoice = () => {
         const lrConsignee = lrRecord?.consignee || {};
         const lrFreight = lrRecord?.freight || {};
         const lrLoading = lrRecord?.loading || {};
-        const lrVoucherNumber = lrRecord?.lrNumber || lrRecord?.voucherNumber || lrRecord?.lrVoucherNumber || record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "";
+        const firstInvoiceBody = record?.sInvBody?.[0] || {};
+        const lrVoucherNumber = lrRecord?.lrNumber || lrRecord?.voucherNumber || lrRecord?.lrVoucherNumber || record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || firstInvoiceBody?.lr_no || firstInvoiceBody?.lrNumber || firstInvoiceBody?.lrVoucherNumber || "";
         const totalAmount = lrFreight?.agreedFreight || 0;
 
         return {
@@ -589,7 +590,8 @@ const SalesInVoice = () => {
         try {
             const record = downlaodPDF?.record;
             const voucherNumber = record?.sInvVoucherNumber || downlaodPDF?.voucherNumber;
-            const lrVoucherNumber = String(record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "").trim();
+            const firstInvoiceBody = record?.sInvBody?.[0] || {};
+            const lrVoucherNumber = String(record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || firstInvoiceBody?.lr_no || firstInvoiceBody?.lrNumber || firstInvoiceBody?.lrVoucherNumber || "").trim();
 
             if (!voucherNumber) {
                 toast.error("Voucher number not found");
@@ -1327,18 +1329,64 @@ const SalesInVoice = () => {
             ? record.sInvBody.map((item: any) => {
                 const unitCode = item?.unit || item?.uom || "";
                 const productMaster = getProductMasterFromRow(item) || {};
+                const normalizeBodySelectText = (value: any) => String(value ?? "").trim().toLowerCase();
+
+                const bodyDriverField = (templateFields?.body || []).find((field: any) => {
+                    const key = normalizeBodySelectText(field?.key).replace(/[^a-z0-9]/g, "");
+                    const label = normalizeBodySelectText(field?.label || field?.title).replace(/[^a-z0-9]/g, "");
+                    return key === "driver" || key === "drivername" || label === "driver" || label === "drivername";
+                });
+                const bodyDriverSource = item?.[bodyDriverField?.key || "driver"] ?? item?.driver ?? item?.driverName ?? "";
+                const bodyDriverPrimitive = bodyDriverSource && typeof bodyDriverSource === "object"
+                    ? bodyDriverSource?.userMobileNumberHash || bodyDriverSource?.code || bodyDriverSource?.value || bodyDriverSource?.name || ""
+                    : bodyDriverSource;
+                const bodyDriverOption = (bodyDriverField?.options || []).find((option: any) => {
+                    const raw = option?.raw || {};
+                    const values = [
+                        option?.value,
+                        option?.label,
+                        raw?.driverName,
+                        raw?.name,
+                        raw?.userName,
+                        raw?.userMobileNumberHash,
+                        [raw?.userFirstName, raw?.userMiddleName, raw?.userLastName].filter(Boolean).join(" "),
+                    ].map(normalizeBodySelectText).filter(Boolean);
+
+                    return values.includes(normalizeBodySelectText(bodyDriverPrimitive));
+                });
+                const bodyDriverSelectValue = bodyDriverOption?.value ?? bodyDriverPrimitive ?? "";
+                const bodyDriverName = String(
+                    item?.driverName ||
+                    bodyDriverOption?.label ||
+                    (typeof bodyDriverPrimitive === "string" ? bodyDriverPrimitive : "") ||
+                    ""
+                ).trim();
 
                 const bodyCustomMasterValues = Object.fromEntries((templateFields?.body || [])
                     .filter((field: any) => isCustomMasterField(field))
                     .map((field: any) => {
                         const customMasterName = getCustomMasterName(field);
-                        const selectedMaster = item?.customMasters?.[customMasterName] || item?.customMasters?.[field?.key] || {};
+                        const normalizedKey = normalizeBodySelectText(field?.key).replace(/[^a-z0-9]/g, "");
+                        const normalizedLabel = normalizeBodySelectText(field?.label || field?.title || field?.customMasterName).replace(/[^a-z0-9]/g, "");
+                        const isVehicleMasterField = String(field?.customMasterCode || "") === "CSTM-000001" || normalizedKey === "vehiclemaster" || normalizedLabel === "vehiclemaster";
+                        const selectedMaster =
+                            item?.customMasters?.[customMasterName] ||
+                            item?.customMasters?.[field?.key] ||
+                            item?.customMasters?.["CSTM-000001"] ||
+                            (isVehicleMasterField ? item?.customMasters?.["Vehicle Master"] || item?.customMasters?.vehicle_master : null) ||
+                            (isVehicleMasterField && (item?.vehicleCode || item?.vehicleName)
+                                ? { code: item?.vehicleCode || "", name: item?.vehicleName || "" }
+                                : {});
+
                         return [field.key, selectedMaster?.code || ""];
                     }));
 
                 return normalizeRowKeys({
+                    ...item,
                     id: item?.id || Date.now() + Math.random(),
                     ...bodyCustomMasterValues,
+                    [bodyDriverField?.key || "driver"]: bodyDriverSelectValue,
+                    driverName: bodyDriverName,
                     customMasters: item?.customMasters && typeof item.customMasters === "object" ? { ...item.customMasters } : {},
                     _inventoryBalanceVoucherId: item?._inventoryBalanceVoucherId || item?.inventoryBalanceVoucherId || item?.inventoryBalanceId || "",
 
@@ -1378,6 +1426,14 @@ const SalesInVoice = () => {
                     otherAmount: item?.otherAmount || 0,
                     netAmount: item?.netAmount || item?.netTotal || 0,
                     netTotal: item?.netTotal || item?.netAmount || 0,
+
+                    // ⭐ TRANSPORTATION DATA — BODY
+                    trip_order: item?.trip_order || record?.trip_order || record?.transportOrderNumber || "",
+                    lr_no: item?.lr_no || record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "",
+                    vehicleCode: item?.vehicleCode || record?.vehicleCode || "",
+                    vehicleName: item?.vehicleName || record?.vehicleName || "",
+                    vehicleNumber: item?.vehicleNumber || item?.vehicleNo || record?.vehicleNumber || record?.vehicleNo || "",
+
                     marginProduct: isTrueValue(item?.marginProduct ?? item?.dynamicBodyFields?.marginProduct ?? productMaster?.dynamicFields?.marginProduct ?? productMaster?.marginProduct),
                     taxRate: item?.taxRate ?? item?.dynamicBodyFields?.taxRate ?? "",
                     nonTaxRate: item?.nonTaxRate ?? item?.dynamicBodyFields?.nonTaxRate ?? "",
@@ -1405,7 +1461,20 @@ const SalesInVoice = () => {
         }
 
         const productsWithInventoryIds = attachInventoryBalanceVoucherIds(products, inventoryRecords);
-        const vehicleMaster = record?.customMasters?.["CSTM-000001"] || record?.customMasters?.["Vehicle Master"] || record?.customMasters?.vehicle_master || ((record?.vehicleCode || record?.vehicleName) ? { code: record?.vehicleCode || "", name: record?.vehicleName || "" } : null);
+        const firstInvoiceBody = record?.sInvBody?.[0] || {};
+        const vehicleMaster =
+            record?.customMasters?.["CSTM-000001"] ||
+            record?.customMasters?.["Vehicle Master"] ||
+            record?.customMasters?.vehicle_master ||
+            firstInvoiceBody?.customMasters?.["CSTM-000001"] ||
+            firstInvoiceBody?.customMasters?.["Vehicle Master"] ||
+            firstInvoiceBody?.customMasters?.vehicle_master ||
+            ((record?.vehicleCode || record?.vehicleName || firstInvoiceBody?.vehicleCode || firstInvoiceBody?.vehicleName)
+                ? {
+                    code: record?.vehicleCode || firstInvoiceBody?.vehicleCode || "",
+                    name: record?.vehicleName || firstInvoiceBody?.vehicleName || "",
+                }
+                : null);
 
         const normalizeSelectText = (value: any) => String(value ?? "").trim().toLowerCase();
         const headerFields = templateFields?.header || [];
@@ -1426,7 +1495,7 @@ const SalesInVoice = () => {
                 raw?.userName,
                 [raw?.userFirstName, raw?.userMiddleName, raw?.userLastName].filter(Boolean).join(" "),
             ].map(normalizeSelectText).filter(Boolean);
-            return values.includes(normalizeSelectText(record?.driver || record?.driverName));
+            return values.includes(normalizeSelectText(record?.driver || record?.driverName || firstInvoiceBody?.driver || firstInvoiceBody?.driverName));
         });
 
         const vehicleField = headerFields.find((field: any) => {
@@ -1447,11 +1516,11 @@ const SalesInVoice = () => {
                 raw?.vehicleName,
                 raw?.vehicle_number,
             ].map(normalizeSelectText).filter(Boolean);
-            return [record?.vehicleCode, record?.vehicleName, vehicleMaster?.code, vehicleMaster?.name].map(normalizeSelectText).filter(Boolean).some((value: string) => values.includes(value));
+            return [record?.vehicleCode, record?.vehicleName, firstInvoiceBody?.vehicleCode, firstInvoiceBody?.vehicleName, vehicleMaster?.code, vehicleMaster?.name].map(normalizeSelectText).filter(Boolean).some((value: string) => values.includes(value));
         });
 
-        const driverSelectValue = driverOption?.value ?? record?.driver ?? record?.driverName ?? "";
-        const vehicleSelectValue = vehicleOption?.value ?? vehicleMaster?.code ?? record?.vehicleCode ?? "";
+        const driverSelectValue = driverOption?.value ?? record?.driver ?? record?.driverName ?? firstInvoiceBody?.driver ?? firstInvoiceBody?.driverName ?? "";
+        const vehicleSelectValue = vehicleOption?.value ?? vehicleMaster?.code ?? record?.vehicleCode ?? firstInvoiceBody?.vehicleCode ?? "";
 
         setEditingRecord(true);
         setErrors({});
@@ -1468,13 +1537,13 @@ const SalesInVoice = () => {
             sInvRemark: record?.sInvRemark || record?.sInvRemarks || "",
             sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
             isAutoPost: record?.isAutoPost || false,
-            trip_order: record?.trip_order || record?.transportOrderNumber || "",
-            lr_no: record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "",
+            trip_order: record?.trip_order || record?.transportOrderNumber || firstInvoiceBody?.trip_order || "",
+            lr_no: record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || firstInvoiceBody?.lr_no || "",
             [driverField?.key || "driver"]: driverSelectValue,
-            driverName: record?.driver || record?.driverName || driverOption?.label || "",
-            vehicleCode: record?.vehicleCode || vehicleMaster?.code || "",
-            vehicleName: record?.vehicleName || vehicleMaster?.name || "",
-            vehicleNumber: record?.vehicleNumber || record?.vehicleNo || "",
+            driverName: record?.driver || record?.driverName || firstInvoiceBody?.driverName || firstInvoiceBody?.driver || driverOption?.label || "",
+            vehicleCode: record?.vehicleCode || firstInvoiceBody?.vehicleCode || vehicleMaster?.code || "",
+            vehicleName: record?.vehicleName || firstInvoiceBody?.vehicleName || vehicleMaster?.name || "",
+            vehicleNumber: record?.vehicleNumber || record?.vehicleNo || firstInvoiceBody?.vehicleNumber || firstInvoiceBody?.vehicleNo || "",
             [vehicleField?.key || "vehicle_master"]: vehicleSelectValue,
             customMasters: {
                 ...(record?.customMasters && typeof record.customMasters === "object" ? record.customMasters : {}),
@@ -2213,6 +2282,18 @@ const SalesInVoice = () => {
             delete payloadCustomMasters.vehicle_master;
         }
 
+        const normalizeTransportFieldText = (value: any) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        const bodyDriverField = (templateFields?.body || []).find((field: any) => {
+            const key = normalizeTransportFieldText(field?.key);
+            const label = normalizeTransportFieldText(field?.label || field?.title);
+            return key === "driver" || key === "drivername" || label === "driver" || label === "drivername";
+        });
+        const bodyVehicleField = (templateFields?.body || []).find((field: any) => {
+            const key = normalizeTransportFieldText(field?.key);
+            const label = normalizeTransportFieldText(field?.label || field?.title || field?.customMasterName);
+            return String(field?.customMasterCode || "") === "CSTM-000001" || key === "vehiclemaster" || label === "vehiclemaster";
+        });
+
         const payload: any = {
             sInvSalesOrderVoucherNumber: form?.sInvSalesOrderVoucherNumber || "",
             sInvCustomerCode: form.sInvCustomerCode,
@@ -2226,16 +2307,102 @@ const SalesInVoice = () => {
             // sInvDocStatus: form.sInvDocStatus || form.sInvStatus || "open",
             sOrderNumber: products?.[0]?.sOrderNumber || form?.sInvSalesOrderVoucherNumber || "",
 
-            ...(form?.trip_order ? { trip_order: form.trip_order } : {}),
-            ...(form?.lr_no ? { lr_no: form.lr_no } : {}),
-            ...(selectedDriverName ? { driver: selectedDriverName } : {}),
-            ...(selectedVehicleCode ? { vehicleCode: selectedVehicleCode } : {}),
-            ...(selectedVehicleName ? { vehicleName: selectedVehicleName } : {}),
-            ...(form?.vehicleNumber ? { vehicleNumber: form.vehicleNumber } : {}),
+            // Keep non-transport header custom masters unchanged.
             customMasters: payloadCustomMasters,
 
+            // ⭐ TRANSPORTATION FIELDS ARE SAVED IN SALES INVOICE BODY
             sInvBody: products.map((item: any) => {
                 const marginProduct = isMarginProductRow(item);
+
+                const bodyDriverValue = item?.[bodyDriverField?.key || "driver"] ?? item?.driver ?? "";
+                const bodyDriverPrimitive = bodyDriverValue && typeof bodyDriverValue === "object"
+                    ? bodyDriverValue?.userMobileNumberHash || bodyDriverValue?.code || bodyDriverValue?.value || bodyDriverValue?.name || ""
+                    : bodyDriverValue;
+                const bodyDriverOption = (bodyDriverField?.options || []).find((option: any) => {
+                    const raw = option?.raw || {};
+                    const values = [
+                        option?.value,
+                        option?.label,
+                        raw?.driverName,
+                        raw?.name,
+                        raw?.userName,
+                        raw?.userMobileNumberHash,
+                        [raw?.userFirstName, raw?.userMiddleName, raw?.userLastName].filter(Boolean).join(" "),
+                    ].map((value: any) => String(value ?? "").trim().toLowerCase()).filter(Boolean);
+
+                    return values.includes(String(bodyDriverPrimitive ?? "").trim().toLowerCase());
+                });
+                const bodyDriverRaw = bodyDriverOption?.raw || {};
+                const bodyDriverName = String(
+                    bodyDriverOption?.label ||
+                    bodyDriverRaw?.driverName ||
+                    bodyDriverRaw?.name ||
+                    [bodyDriverRaw?.userFirstName, bodyDriverRaw?.userMiddleName, bodyDriverRaw?.userLastName].filter(Boolean).join(" ") ||
+                    item?.driverName ||
+                    (typeof bodyDriverPrimitive === "string" ? bodyDriverPrimitive : "") ||
+                    selectedDriverName ||
+                    ""
+                ).trim();
+
+                const bodyVehicleMasterName = getCustomMasterName(bodyVehicleField) || "Vehicle Master";
+                const bodyVehicleMaster =
+                    item?.customMasters?.[bodyVehicleMasterName] ||
+                    item?.customMasters?.[bodyVehicleField?.key] ||
+                    item?.customMasters?.["CSTM-000001"] ||
+                    item?.customMasters?.["Vehicle Master"] ||
+                    item?.customMasters?.vehicle_master ||
+                    null;
+                const bodyVehicleSelectedValue = item?.[bodyVehicleField?.key || "vehicle_master"] || bodyVehicleMaster?.code || item?.vehicleCode || "";
+                const bodyVehicleOption = (bodyVehicleField?.options || []).find((option: any) => {
+                    const raw = option?.raw || {};
+                    const values = [
+                        option?.value,
+                        option?.label,
+                        raw?.voucherNumber,
+                        raw?.code,
+                        raw?.name,
+                        raw?.vehicleCode,
+                        raw?.vehicleName,
+                        raw?.vehicle_number,
+                    ].map((value: any) => String(value ?? "").trim().toLowerCase()).filter(Boolean);
+
+                    return [
+                        bodyVehicleSelectedValue,
+                        bodyVehicleMaster?.code,
+                        bodyVehicleMaster?.name,
+                        item?.vehicleCode,
+                        item?.vehicleName,
+                    ].map((value: any) => String(value ?? "").trim().toLowerCase()).filter(Boolean).some((value: string) => values.includes(value));
+                });
+                const bodyVehicleRaw = bodyVehicleOption?.raw || {};
+                const bodyVehicleCode = String(
+                    bodyVehicleMaster?.code ||
+                    bodyVehicleOption?.value ||
+                    bodyVehicleRaw?.voucherNumber ||
+                    bodyVehicleRaw?.code ||
+                    item?.vehicleCode ||
+                    selectedVehicleCode ||
+                    ""
+                ).trim();
+                const bodyVehicleName = String(
+                    bodyVehicleMaster?.name ||
+                    bodyVehicleOption?.label ||
+                    bodyVehicleRaw?.name ||
+                    bodyVehicleRaw?.vehicleName ||
+                    item?.vehicleName ||
+                    selectedVehicleName ||
+                    ""
+                ).trim();
+                const bodyCustomMasters = item?.customMasters && typeof item.customMasters === "object"
+                    ? { ...item.customMasters }
+                    : {};
+
+                if (bodyVehicleCode || bodyVehicleName) {
+                    bodyCustomMasters[bodyVehicleMasterName] = {
+                        code: bodyVehicleCode,
+                        name: bodyVehicleName,
+                    };
+                }
 
                 return {
                     // ✅ Store Sales Order voucher in invoice body also
@@ -2275,6 +2442,14 @@ const SalesInVoice = () => {
                     netAmount: fmtMoney(item.netAmount || item.netTotal),
                     netTotal: fmtMoney(item.netTotal || item.netAmount),
 
+                    // ⭐ TRANSPORTATION DATA — BODY
+                    trip_order: item?.trip_order || form?.trip_order || "",
+                    lr_no: item?.lr_no || form?.lr_no || "",
+                    driver: bodyDriverName,
+                    vehicleCode: bodyVehicleCode,
+                    vehicleName: bodyVehicleName,
+                    vehicleNumber: item?.vehicleNumber || item?.vehicleNo || form?.vehicleNumber || "",
+
                     marginProduct,
 
                     taxRate: marginProduct ? String(item.taxRate ?? "") : "",
@@ -2282,9 +2457,7 @@ const SalesInVoice = () => {
                     taxGross: marginProduct ? fmtMoney(item.taxGross) : "",
                     nonTaxGross: marginProduct ? fmtMoney(item.nonTaxGross) : "",
 
-                    customMasters: item?.customMasters && typeof item.customMasters === "object"
-                        ? item.customMasters
-                        : {},
+                    customMasters: bodyCustomMasters,
 
                     dynamicBodyFields: {
                         ...Object.fromEntries(
