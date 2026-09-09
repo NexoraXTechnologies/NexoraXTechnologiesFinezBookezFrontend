@@ -93,6 +93,17 @@ const emptyProductRow = {
     availableQuantity: null,
     productType: "",
 
+    // ⭐ TRANSPORTATION FIELDS — PURCHASE INVOICE BODY
+    trip_order: "",
+    lr_no: "",
+    driver: "",
+    driverName: "",
+    vehicleCode: "",
+    vehicleName: "",
+    vehicleNumber: "",
+    vehicle_master: "",
+    customMasters: {},
+
     uom: "",
     unit: "",
     unitName: "",
@@ -1219,6 +1230,9 @@ const PurchaseInvoice = () => {
                     : "";
 
         const normalizedRow = normalizeRowKeys({
+            // ⭐ KEEP EXISTING / DYNAMIC BODY DATA
+            ...item,
+
             id: item?.id || Date.now() + Math.random(),
 
             productCode: item?.productCode || "",
@@ -1296,6 +1310,47 @@ const PurchaseInvoice = () => {
 
             netAmount: item?.netAmount || item?.netTotal || 0,
             netTotal: item?.netTotal || item?.netAmount || 0,
+
+            // ⭐ TRANSPORTATION DATA — BODY
+            trip_order:
+                item?.trip_order ||
+                item?.transportOrderNumber ||
+                "",
+
+            lr_no:
+                item?.lr_no ||
+                item?.lrNumber ||
+                item?.lrVoucherNumber ||
+                "",
+
+            driver:
+                item?.driver ||
+                item?.driverName ||
+                "",
+
+            driverName:
+                item?.driverName ||
+                item?.driver ||
+                "",
+
+            vehicleCode:
+                item?.vehicleCode ||
+                "",
+
+            vehicleName:
+                item?.vehicleName ||
+                "",
+
+            vehicleNumber:
+                item?.vehicleNumber ||
+                item?.vehicleNo ||
+                "",
+
+            customMasters:
+                item?.customMasters &&
+                    typeof item.customMasters === "object"
+                    ? { ...item.customMasters }
+                    : {},
         });
 
         return calculateRow(
@@ -1378,9 +1433,141 @@ const PurchaseInvoice = () => {
                 return;
             }
 
+            const bodyFields = templateFields?.body || [];
+
+            const driverField = bodyFields.find((field: any) => {
+                const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+                const label = String(field?.label || field?.title || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+                const type = String(field?.type || field?.dataSource?.type || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+                return (
+                    key === "driver" ||
+                    key === "drivername" ||
+                    label === "driver" ||
+                    label === "drivername" ||
+                    (type === "employeemaster" && label.includes("driver"))
+                );
+            });
+
+            const vehicleMasterField = bodyFields.find((field: any) => {
+                const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+                const label = String(
+                    field?.label ||
+                    field?.title ||
+                    field?.customMasterName ||
+                    field?.dataSource?.customMasterName ||
+                    ""
+                ).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+                return (
+                    key === "vehiclemaster" ||
+                    key === "vehicle_master" ||
+                    label === "vehiclemaster" ||
+                    String(field?.customMasterName || "").trim().toLowerCase() === "vehicle master" ||
+                    String(field?.dataSource?.customMasterName || "").trim().toLowerCase() === "vehicle master"
+                );
+            });
+
+            const grnDriver =
+                selectedGrn?.driver ||
+                selectedGrn?.driverName ||
+                "";
+
+            const grnDriverValue =
+                getSavedSelectOptionValue(
+                    driverField,
+                    grnDriver
+                ) ||
+                grnDriver;
+
+            const grnVehicleMaster =
+                selectedGrn?.customMasters?.["Vehicle Master"] ||
+                selectedGrn?.customMasters?.["vehicle_master"] ||
+                selectedGrn?.customMasters?.vehicle_master ||
+                ((selectedGrn?.vehicleCode || selectedGrn?.vehicleName)
+                    ? {
+                        code: selectedGrn?.vehicleCode || "",
+                        name: selectedGrn?.vehicleName || "",
+                    }
+                    : null);
+
+            const grnVehicleMasterValue =
+                getSavedSelectOptionValue(
+                    vehicleMasterField,
+                    grnVehicleMaster?.code ||
+                    grnVehicleMaster?.name ||
+                    selectedGrn?.vehicleCode ||
+                    ""
+                );
+
             const products = pendingRows.map((item: any) =>
                 buildPurchaseInvoiceProductRow(
-                    item,
+                    {
+                        ...item,
+
+                        trip_order:
+                            item?.trip_order ||
+                            selectedGrn?.trip_order ||
+                            selectedGrn?.transportOrderNumber ||
+                            "",
+
+                        lr_no:
+                            item?.lr_no ||
+                            selectedGrn?.lr_no ||
+                            selectedGrn?.lrNumber ||
+                            selectedGrn?.lrVoucherNumber ||
+                            "",
+
+                        [driverField?.key || "driver"]:
+                            item?.[driverField?.key || "driver"] ||
+                            grnDriverValue ||
+                            "",
+
+                        driver:
+                            item?.driver ||
+                            grnDriverValue ||
+                            grnDriver ||
+                            "",
+
+                        driverName:
+                            item?.driverName ||
+                            grnDriver ||
+                            "",
+
+                        [vehicleMasterField?.key || "vehicle_master"]:
+                            item?.[vehicleMasterField?.key || "vehicle_master"] ||
+                            grnVehicleMasterValue ||
+                            grnVehicleMaster?.code ||
+                            "",
+
+                        vehicleCode:
+                            item?.vehicleCode ||
+                            grnVehicleMaster?.code ||
+                            selectedGrn?.vehicleCode ||
+                            "",
+
+                        vehicleName:
+                            item?.vehicleName ||
+                            grnVehicleMaster?.name ||
+                            selectedGrn?.vehicleName ||
+                            "",
+
+                        vehicleNumber:
+                            item?.vehicleNumber ||
+                            item?.vehicleNo ||
+                            selectedGrn?.vehicleNumber ||
+                            selectedGrn?.vehicleNo ||
+                            "",
+
+                        customMasters:
+                            item?.customMasters &&
+                                typeof item.customMasters === "object"
+                                ? { ...item.customMasters }
+                                : selectedGrn?.customMasters &&
+                                    typeof selectedGrn.customMasters === "object"
+                                    ? { ...selectedGrn.customMasters }
+                                    : {},
+                    },
                     selectedGrn?.grnVendorCode || ""
                 )
             );
@@ -1471,70 +1658,298 @@ const PurchaseInvoice = () => {
             })
             : [{ ...emptyProductRow, id: Date.now() }];
 
-    const headerFields = templateFields?.header || [];
+    const bodyFields = templateFields?.body || [];
 
-    const driverField = headerFields.find(
-        (field: any) => String(field?.key || "").trim().toLowerCase() === "driver"
-    );
+    const driverField = bodyFields.find((field: any) => {
+        const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        const label = String(field?.label || field?.title || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        const type = String(field?.type || field?.dataSource?.type || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
-    const vehicleMasterField = headerFields.find((field: any) => {
-        const key = String(field?.key || "").trim().toLowerCase();
-        const label = String(field?.label || "").trim().toLowerCase();
-
-        return key === "vehicle_master" || label === "vehicle master";
+        return (
+            key === "driver" ||
+            key === "drivername" ||
+            label === "driver" ||
+            label === "drivername" ||
+            (type === "employeemaster" && label.includes("driver"))
+        );
     });
 
-    const savedDriver = String(record?.driver || "").trim();
+    const vehicleMasterField = bodyFields.find((field: any) => {
+        const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+        const label = String(
+            field?.label ||
+            field?.title ||
+            field?.customMasterName ||
+            field?.dataSource?.customMasterName ||
+            ""
+        ).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
-    const savedVehicleMaster =
+        return (
+            key === "vehiclemaster" ||
+            key === "vehicle_master" ||
+            label === "vehiclemaster" ||
+            String(field?.customMasterName || "").trim().toLowerCase() === "vehicle master" ||
+            String(field?.dataSource?.customMasterName || "").trim().toLowerCase() === "vehicle master"
+        );
+    });
+
+    const sourceBodyRows =
+        Array.isArray(record?.pInvBody)
+            ? record.pInvBody
+            : [];
+
+    const hydratedProducts = products.map((row: any, index: number) => {
+        const sourceItem = sourceBodyRows[index] || row || {};
+
+        const savedDriver =
+            sourceItem?.driver ||
+            sourceItem?.driverName ||
+            record?.driver ||
+            record?.driverName ||
+            "";
+
+        const driverValue =
+            getSavedSelectOptionValue(
+                driverField,
+                savedDriver
+            ) ||
+            savedDriver;
+
+        const savedVehicleMaster =
+            sourceItem?.customMasters?.["Vehicle Master"] ||
+            sourceItem?.customMasters?.["vehicle_master"] ||
+            sourceItem?.customMasters?.vehicle_master ||
+            record?.customMasters?.["Vehicle Master"] ||
+            record?.customMasters?.["vehicle_master"] ||
+            record?.customMasters?.vehicle_master ||
+            ((sourceItem?.vehicleCode ||
+                sourceItem?.vehicleName ||
+                record?.vehicleCode ||
+                record?.vehicleName)
+                ? {
+                    code:
+                        sourceItem?.vehicleCode ||
+                        record?.vehicleCode ||
+                        "",
+                    name:
+                        sourceItem?.vehicleName ||
+                        record?.vehicleName ||
+                        "",
+                }
+                : null);
+
+        const vehicleMasterValue =
+            getSavedSelectOptionValue(
+                vehicleMasterField,
+                savedVehicleMaster?.code ||
+                savedVehicleMaster?.name ||
+                sourceItem?.vehicleCode ||
+                record?.vehicleCode ||
+                ""
+            );
+
+        const rowCustomMasters =
+            sourceItem?.customMasters &&
+                typeof sourceItem.customMasters === "object"
+                ? { ...sourceItem.customMasters }
+                : record?.customMasters &&
+                    typeof record.customMasters === "object"
+                    ? { ...record.customMasters }
+                    : {};
+
+        if (savedVehicleMaster?.code || savedVehicleMaster?.name) {
+            const vehicleMasterPayload = {
+                code:
+                    savedVehicleMaster?.code ||
+                    sourceItem?.vehicleCode ||
+                    record?.vehicleCode ||
+                    "",
+                name:
+                    savedVehicleMaster?.name ||
+                    sourceItem?.vehicleName ||
+                    record?.vehicleName ||
+                    "",
+            };
+
+            rowCustomMasters["Vehicle Master"] =
+                vehicleMasterPayload;
+
+            rowCustomMasters["vehicle_master"] =
+                vehicleMasterPayload;
+        }
+
+        return {
+            ...row,
+
+            trip_order:
+                sourceItem?.trip_order ||
+                record?.trip_order ||
+                record?.transportOrderNumber ||
+                "",
+
+            lr_no:
+                sourceItem?.lr_no ||
+                record?.lr_no ||
+                record?.lrNumber ||
+                record?.lrVoucherNumber ||
+                "",
+
+            [driverField?.key || "driver"]:
+                driverValue,
+
+            driver:
+                driverValue,
+
+            driverName:
+                sourceItem?.driverName ||
+                sourceItem?.driver ||
+                record?.driverName ||
+                record?.driver ||
+                "",
+
+            [vehicleMasterField?.key || "vehicle_master"]:
+                vehicleMasterValue ||
+                savedVehicleMaster?.code ||
+                "",
+
+            vehicleCode:
+                sourceItem?.vehicleCode ||
+                savedVehicleMaster?.code ||
+                record?.vehicleCode ||
+                "",
+
+            vehicleName:
+                sourceItem?.vehicleName ||
+                savedVehicleMaster?.name ||
+                record?.vehicleName ||
+                "",
+
+            vehicleNumber:
+                sourceItem?.vehicleNumber ||
+                sourceItem?.vehicleNo ||
+                record?.vehicleNumber ||
+                record?.vehicleNo ||
+                "",
+
+            customMasters:
+                rowCustomMasters,
+        };
+    });
+
+    const firstSourceItem =
+        sourceBodyRows?.[0] ||
+        {};
+
+    const firstSavedDriver =
+        firstSourceItem?.driver ||
+        firstSourceItem?.driverName ||
+        record?.driver ||
+        record?.driverName ||
+        "";
+
+    const firstDriverValue =
+        getSavedSelectOptionValue(
+            driverField,
+            firstSavedDriver
+        ) ||
+        firstSavedDriver;
+
+    const firstSavedVehicleMaster =
+        firstSourceItem?.customMasters?.["Vehicle Master"] ||
+        firstSourceItem?.customMasters?.["vehicle_master"] ||
+        firstSourceItem?.customMasters?.vehicle_master ||
         record?.customMasters?.["Vehicle Master"] ||
+        record?.customMasters?.["vehicle_master"] ||
         record?.customMasters?.vehicle_master ||
         null;
 
-    const driverValue = getSavedSelectOptionValue(driverField, savedDriver);
+    const firstVehicleMasterValue =
+        getSavedSelectOptionValue(
+            vehicleMasterField,
+            firstSavedVehicleMaster?.code ||
+            firstSavedVehicleMaster?.name ||
+            firstSourceItem?.vehicleCode ||
+            record?.vehicleCode ||
+            ""
+        );
 
-    const vehicleMasterValue = getSavedSelectOptionValue(
-        vehicleMasterField,
-        savedVehicleMaster?.code || savedVehicleMaster?.name || ""
-    );
-
-    // Keep saved Select values visible even when the latest option API does not return them.
+    // Keep saved BODY select values visible even when latest option API does not return them.
     setTemplateFields((prev: any) => ({
         ...prev,
-        header: (prev?.header || []).map((field: any) => {
-            const key = String(field?.key || "").trim().toLowerCase();
-            const label = String(field?.label || "").trim().toLowerCase();
 
-            if (key === "driver" && savedDriver) {
+        body: (prev?.body || []).map((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const label = String(
+                field?.label ||
+                field?.title ||
+                field?.customMasterName ||
+                field?.dataSource?.customMasterName ||
+                ""
+            ).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+            if (
+                (key === "driver" ||
+                    key === "drivername" ||
+                    label === "driver" ||
+                    label === "drivername") &&
+                firstSavedDriver
+            ) {
                 const hasOption = (field?.options || []).some(
-                    (option: any) => String(option?.value || "") === String(driverValue)
+                    (option: any) =>
+                        String(option?.value || "") ===
+                        String(firstDriverValue)
                 );
 
                 if (!hasOption) {
                     return {
                         ...field,
+
                         options: [
                             ...(field?.options || []),
-                            { label: savedDriver, value: driverValue },
+
+                            {
+                                label:
+                                    firstSavedDriver,
+                                value:
+                                    firstDriverValue,
+                            },
                         ],
                     };
                 }
             }
 
-            if ((key === "vehicle_master" || label === "vehicle master") && savedVehicleMaster) {
+            if (
+                (key === "vehiclemaster" ||
+                    key === "vehicle_master" ||
+                    label === "vehiclemaster") &&
+                firstSavedVehicleMaster
+            ) {
                 const hasOption = (field?.options || []).some(
-                    (option: any) => String(option?.value || "") === String(vehicleMasterValue)
+                    (option: any) =>
+                        String(option?.value || "") ===
+                        String(firstVehicleMasterValue)
                 );
 
                 if (!hasOption) {
                     return {
                         ...field,
+
                         options: [
                             ...(field?.options || []),
+
                             {
-                                label: savedVehicleMaster?.name || savedVehicleMaster?.code || "",
-                                value: vehicleMasterValue,
-                                raw: savedVehicleMaster,
+                                label:
+                                    firstSavedVehicleMaster?.name ||
+                                    firstSavedVehicleMaster?.code ||
+                                    firstSourceItem?.vehicleName ||
+                                    "",
+                                value:
+                                    firstVehicleMasterValue ||
+                                    firstSavedVehicleMaster?.code ||
+                                    firstSourceItem?.vehicleCode ||
+                                    "",
+                                raw:
+                                    firstSavedVehicleMaster,
                             },
                         ],
                     };
@@ -1545,23 +1960,11 @@ const PurchaseInvoice = () => {
         }),
     }));
 
-    const dynamicEditValues: any = {
-        trip_order: record?.trip_order || "",
-        lr_no: record?.lr_no || "",
-        driver: driverValue || savedDriver,
-    };
-
-    if (savedVehicleMaster) {
-        dynamicEditValues[String(vehicleMasterField?.key || "vehicle_master")] =
-            vehicleMasterValue || savedVehicleMaster?.code || "";
-    }
-
     setEditingRecord(true);
     setErrors({});
 
     setForm({
         ...record,
-        ...dynamicEditValues,
 
         customMasters: record?.customMasters || {},
 
@@ -1582,7 +1985,8 @@ const PurchaseInvoice = () => {
 
         isAutoPost: record?.isAutoPost || false,
 
-        products,
+        products:
+            hydratedProducts,
 
         grossAmount: footer?.grossAmount || footer?.totalGrossAmount || "0.00",
         discountAmount: footer?.discountAmount || footer?.totalDiscountAmount || "0.00",
@@ -2367,6 +2771,41 @@ const PurchaseInvoice = () => {
         const products = cleanRows();
         const footer = calculateFooter(products);
 
+        const bodyFields = templateFields?.body || [];
+
+        const bodyDriverField = bodyFields.find((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const label = String(field?.label || field?.title || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const type = String(field?.type || field?.dataSource?.type || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+            return (
+                key === "driver" ||
+                key === "drivername" ||
+                label === "driver" ||
+                label === "drivername" ||
+                (type === "employeemaster" && label.includes("driver"))
+            );
+        });
+
+        const bodyVehicleField = bodyFields.find((field: any) => {
+            const key = String(field?.key || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const label = String(
+                field?.label ||
+                field?.title ||
+                field?.customMasterName ||
+                field?.dataSource?.customMasterName ||
+                ""
+            ).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+            return (
+                key === "vehiclemaster" ||
+                key === "vehicle_master" ||
+                label === "vehiclemaster" ||
+                String(field?.customMasterName || "").trim().toLowerCase() === "vehicle master" ||
+                String(field?.dataSource?.customMasterName || "").trim().toLowerCase() === "vehicle master"
+            );
+        });
+
         const payload: any = {
             pInvVoucherDate: form.pInvVoucherDate,
 
@@ -2380,71 +2819,405 @@ const PurchaseInvoice = () => {
 
             pInvRemark: form.pInvRemark,
 
-            pInvBody: products.map((item: any) =>
-                removeEmptyValues({
-                    grnVoucherNumber: form?.grnVoucherNumber || "",
+            // ⭐ TRANSPORTATION FIELDS ARE SAVED IN PURCHASE INVOICE BODY
+            pInvBody: products.map((item: any) => {
+                const driverSelectedValue =
+                    item?.[bodyDriverField?.key || "driver"] ??
+                    item?.driver ??
+                    "";
 
-                    productCode: item.productCode,
-                    productName: item.productName,
+                const driverSelectedOption =
+                    (bodyDriverField?.options || []).find((option: any) => {
+                        const raw = option?.raw || {};
+
+                        const values = [
+                            option?.value,
+                            option?.label,
+                            raw?.driverName,
+                            raw?.name,
+                            raw?.userName,
+                            raw?.userMobileNumberHash,
+                            [
+                                raw?.userFirstName,
+                                raw?.userMiddleName,
+                                raw?.userLastName,
+                            ]
+                                .filter(Boolean)
+                                .join(" "),
+                        ]
+                            .map((value: any) =>
+                                String(value ?? "")
+                                    .trim()
+                                    .toLowerCase()
+                            )
+                            .filter(Boolean);
+
+                        return values.includes(
+                            String(
+                                driverSelectedValue ??
+                                ""
+                            )
+                                .trim()
+                                .toLowerCase()
+                        );
+                    });
+
+                const driverRaw =
+                    driverSelectedOption?.raw ||
+                    {};
+
+                const driverName =
+                    String(
+                        driverSelectedOption?.label ||
+                        driverRaw?.driverName ||
+                        driverRaw?.name ||
+                        [
+                            driverRaw?.userFirstName,
+                            driverRaw?.userMiddleName,
+                            driverRaw?.userLastName,
+                        ]
+                            .filter(Boolean)
+                            .join(" ") ||
+                        item?.driverName ||
+                        item?.driver ||
+                        ""
+                    ).trim();
+
+                const vehicleMasterName =
+                    String(
+                        bodyVehicleField?.customMasterName ||
+                        bodyVehicleField?.dataSource?.customMasterName ||
+                        "Vehicle Master"
+                    ).trim() ||
+                    "Vehicle Master";
+
+                const existingVehicleMaster =
+                    item?.customMasters?.[
+                        vehicleMasterName
+                    ] ||
+                    item?.customMasters?.[
+                        bodyVehicleField?.key
+                    ] ||
+                    item?.customMasters?.[
+                        "Vehicle Master"
+                    ] ||
+                    item?.customMasters?.[
+                        "vehicle_master"
+                    ] ||
+                    item?.customMasters
+                        ?.vehicle_master ||
+                    null;
+
+                const vehicleSelectedValue =
+                    item?.[
+                        bodyVehicleField?.key ||
+                        "vehicle_master"
+                    ] ||
+                    existingVehicleMaster?.code ||
+                    item?.vehicleCode ||
+                    "";
+
+                const vehicleSelectedOption =
+                    (bodyVehicleField?.options || []).find((option: any) => {
+                        const raw =
+                            option?.raw ||
+                            {};
+
+                        const values = [
+                            option?.value,
+                            option?.label,
+                            raw?.voucherNumber,
+                            raw?.code,
+                            raw?.name,
+                            raw?.vehicleCode,
+                            raw?.vehicleName,
+                            raw?.vehicle_number,
+                        ]
+                            .map((value: any) =>
+                                String(value ?? "")
+                                    .trim()
+                                    .toLowerCase()
+                            )
+                            .filter(Boolean);
+
+                        return [
+                            vehicleSelectedValue,
+                            existingVehicleMaster?.code,
+                            existingVehicleMaster?.name,
+                            item?.vehicleCode,
+                            item?.vehicleName,
+                        ]
+                            .map((value: any) =>
+                                String(value ?? "")
+                                    .trim()
+                                    .toLowerCase()
+                            )
+                            .filter(Boolean)
+                            .some(
+                                (value: string) =>
+                                    values.includes(
+                                        value
+                                    )
+                            );
+                    });
+
+                const vehicleRaw =
+                    vehicleSelectedOption?.raw ||
+                    {};
+
+                const vehicleCode =
+                    String(
+                        existingVehicleMaster?.code ||
+                        vehicleSelectedOption?.value ||
+                        vehicleRaw?.voucherNumber ||
+                        vehicleRaw?.code ||
+                        vehicleRaw?.vehicleCode ||
+                        item?.vehicleCode ||
+                        vehicleSelectedValue ||
+                        ""
+                    ).trim();
+
+                const vehicleName =
+                    String(
+                        existingVehicleMaster?.name ||
+                        vehicleSelectedOption?.label ||
+                        vehicleRaw?.name ||
+                        vehicleRaw?.vehicleName ||
+                        item?.vehicleName ||
+                        ""
+                    ).trim();
+
+                const bodyCustomMasters =
+                    item?.customMasters &&
+                        typeof item.customMasters === "object"
+                        ? { ...item.customMasters }
+                        : {};
+
+                if (
+                    vehicleCode ||
+                    vehicleName
+                ) {
+                    const vehicleMasterPayload = {
+                        code:
+                            vehicleCode,
+                        name:
+                            vehicleName,
+                    };
+
+                    bodyCustomMasters[
+                        "vehicle_master"
+                    ] =
+                        vehicleMasterPayload;
+
+                    bodyCustomMasters[
+                        "Vehicle Master"
+                    ] =
+                        vehicleMasterPayload;
+
+                    if (
+                        vehicleMasterName
+                    ) {
+                        bodyCustomMasters[
+                            vehicleMasterName
+                        ] =
+                            vehicleMasterPayload;
+                    }
+                }
+
+                return removeEmptyValues({
+                    grnVoucherNumber:
+                        form?.grnVoucherNumber ||
+                        "",
+
+                    productCode:
+                        item.productCode,
+
+                    productName:
+                        item.productName,
+
                     // productId: item.productId,
 
                     productDescription:
-                        item.productDescription || item.description,
+                        item.productDescription ||
+                        item.description,
 
                     description:
-                        item.description || item.productDescription,
+                        item.description ||
+                        item.productDescription,
 
-                    productHSNCode: item.productHSNCode,
+                    productHSNCode:
+                        item.productHSNCode,
 
-                    remarks: item.remarks,
+                    remarks:
+                        item.remarks,
 
-                    quantity: String(item.quantity || 0),
+                    quantity:
+                        String(
+                            item.quantity ||
+                            0
+                        ),
 
-                    unit: item.unit || item.uom,
-                    uom: item.uom || item.unit,
+                    unit:
+                        item.unit ||
+                        item.uom,
 
-                    rate: String(item.rate),
+                    uom:
+                        item.uom ||
+                        item.unit,
 
-                    gross: fmtMoney(item.grossAmount),
-                    grossAmount: fmtMoney(item.grossAmount),
+                    rate:
+                        String(
+                            item.rate
+                        ),
 
-                    discount: String(
-                        getTaxValue(item.discount, item.discountPercentage)
-                    ),
-                    discountPercentage: String(
-                        getTaxValue(item.discountPercentage, item.discount)
-                    ),
+                    gross:
+                        fmtMoney(
+                            item.grossAmount
+                        ),
 
-                    discountAmount: fmtMoney(item.discountAmount),
+                    grossAmount:
+                        fmtMoney(
+                            item.grossAmount
+                        ),
 
-                    taxableAmount: fmtMoney(item.taxableAmount),
+                    discount:
+                        String(
+                            getTaxValue(
+                                item.discount,
+                                item.discountPercentage
+                            )
+                        ),
 
-                    cgst: String(getTaxValue(item.cgst, item.cgstPercentage)),
-                    cgstPercentage: String(
-                        getTaxValue(item.cgstPercentage, item.cgst)
-                    ),
-                    cgstAmount: fmtMoney(item.cgstAmount),
+                    discountPercentage:
+                        String(
+                            getTaxValue(
+                                item.discountPercentage,
+                                item.discount
+                            )
+                        ),
 
-                    sgst: String(getTaxValue(item.sgst, item.sgstPercentage)),
-                    sgstPercentage: String(
-                        getTaxValue(item.sgstPercentage, item.sgst)
-                    ),
-                    sgstAmount: fmtMoney(item.sgstAmount),
+                    discountAmount:
+                        fmtMoney(
+                            item.discountAmount
+                        ),
 
-                    igst: String(getTaxValue(item.igst, item.igstPercentage)),
-                    igstPercentage: String(
-                        getTaxValue(item.igstPercentage, item.igst)
-                    ),
-                    igstAmount: fmtMoney(item.igstAmount),
+                    taxableAmount:
+                        fmtMoney(
+                            item.taxableAmount
+                        ),
 
-                    taxAmount: fmtMoney(item.taxAmount),
+                    cgst:
+                        String(
+                            getTaxValue(
+                                item.cgst,
+                                item.cgstPercentage
+                            )
+                        ),
 
-                    otherAmount: fmtMoney(item.otherAmount),
+                    cgstPercentage:
+                        String(
+                            getTaxValue(
+                                item.cgstPercentage,
+                                item.cgst
+                            )
+                        ),
 
-                    netAmount: fmtMoney(item.netAmount || item.netTotal),
-                    netTotal: fmtMoney(item.netTotal || item.netAmount),
-                })
-            ),
+                    cgstAmount:
+                        fmtMoney(
+                            item.cgstAmount
+                        ),
+
+                    sgst:
+                        String(
+                            getTaxValue(
+                                item.sgst,
+                                item.sgstPercentage
+                            )
+                        ),
+
+                    sgstPercentage:
+                        String(
+                            getTaxValue(
+                                item.sgstPercentage,
+                                item.sgst
+                            )
+                        ),
+
+                    sgstAmount:
+                        fmtMoney(
+                            item.sgstAmount
+                        ),
+
+                    igst:
+                        String(
+                            getTaxValue(
+                                item.igst,
+                                item.igstPercentage
+                            )
+                        ),
+
+                    igstPercentage:
+                        String(
+                            getTaxValue(
+                                item.igstPercentage,
+                                item.igst
+                            )
+                        ),
+
+                    igstAmount:
+                        fmtMoney(
+                            item.igstAmount
+                        ),
+
+                    taxAmount:
+                        fmtMoney(
+                            item.taxAmount
+                        ),
+
+                    otherAmount:
+                        fmtMoney(
+                            item.otherAmount
+                        ),
+
+                    netAmount:
+                        fmtMoney(
+                            item.netAmount ||
+                            item.netTotal
+                        ),
+
+                    netTotal:
+                        fmtMoney(
+                            item.netTotal ||
+                            item.netAmount
+                        ),
+
+                    // ⭐ TRANSPORTATION DATA — BODY
+                    trip_order:
+                        item?.trip_order ||
+                        "",
+
+                    lr_no:
+                        item?.lr_no ||
+                        "",
+
+                    driver:
+                        driverName,
+
+                    vehicleCode:
+                        vehicleCode,
+
+                    vehicleName:
+                        vehicleName,
+
+                    vehicleNumber:
+                        item?.vehicleNumber ||
+                        item?.vehicleNo ||
+                        "",
+
+                    customMasters:
+                        bodyCustomMasters,
+                });
+            }),
 
             pInvFooter: {
                 grossAmount: fmtMoney(footer.totalGrossAmount),

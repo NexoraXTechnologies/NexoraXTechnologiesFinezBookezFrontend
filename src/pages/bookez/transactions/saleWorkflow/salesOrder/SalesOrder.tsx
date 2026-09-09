@@ -106,6 +106,15 @@ const getDefaultForm = () => ({
     sOrderRemark: "",
     sOrderRemarks: "",
     isAutoPost: false,
+    trip_order: "",
+    lr_no: "",
+    driver: "",
+    driverName: "",
+    vehicleCode: "",
+    vehicleName: "",
+    vehicleNumber: "",
+    vehicle_master: "",
+    customMasters: {},
     products: [
         {
             ...emptyProductRow,
@@ -1668,6 +1677,118 @@ const SalesOrder = () => {
                     },
                 ];
 
+        const normalizeTransportationText = (value: any) =>
+            String(value ?? "").trim().toLowerCase();
+
+        const headerFields = templateFields?.header || [];
+
+        const driverField = headerFields.find((field: any) => {
+            const key = normalizeTransportationText(field?.key).replace(/[^a-z0-9]/g, "");
+            const label = normalizeTransportationText(field?.label || field?.title).replace(/[^a-z0-9]/g, "");
+            const type = normalizeTransportationText(field?.type || field?.dataSource?.type).replace(/[^a-z0-9]/g, "");
+
+            return (
+                key === "driver" ||
+                key === "drivername" ||
+                label === "driver" ||
+                label === "drivername" ||
+                (type === "employeemaster" && label.includes("driver"))
+            );
+        });
+
+        const vehicleField = headerFields.find((field: any) => {
+            const key = normalizeTransportationText(field?.key).replace(/[^a-z0-9]/g, "");
+            const label = normalizeTransportationText(field?.label || field?.title || field?.customMasterName || field?.dataSource?.customMasterName).replace(/[^a-z0-9]/g, "");
+
+            return (
+                key === "vehiclemaster" ||
+                key === "vehicle_master" ||
+                label === "vehiclemaster" ||
+                normalizeTransportationText(field?.customMasterName) === "vehicle master" ||
+                normalizeTransportationText(field?.dataSource?.customMasterName) === "vehicle master"
+            );
+        });
+
+        const vehicleMasterCode = String(vehicleField?.customMasterCode || vehicleField?.dataSource?.customMasterCode || "").trim();
+        const vehicleMaster =
+            (vehicleMasterCode ? record?.customMasters?.[vehicleMasterCode] : null) ||
+            record?.customMasters?.["vehicle_master"] ||
+            record?.customMasters?.["Vehicle Master"] ||
+            record?.customMasters?.vehicle_master ||
+            ((record?.vehicleCode || record?.vehicleName)
+                ? { code: record?.vehicleCode || "", name: record?.vehicleName || "" }
+                : null);
+
+        const driverOption = (driverField?.options || []).find((option: any) => {
+            const raw = option?.raw || {};
+            const values = [
+                option?.value,
+                option?.label,
+                raw?.driverName,
+                raw?.name,
+                raw?.userName,
+                raw?.userMobileNumberHash,
+                [raw?.userFirstName, raw?.userMiddleName, raw?.userLastName].filter(Boolean).join(" "),
+            ].map(normalizeTransportationText).filter(Boolean);
+
+            return [record?.driver, record?.driverName]
+                .map(normalizeTransportationText)
+                .filter(Boolean)
+                .some((value: string) => values.includes(value));
+        });
+
+        const vehicleOption = (vehicleField?.options || []).find((option: any) => {
+            const raw = option?.raw || {};
+            const values = [
+                option?.value,
+                option?.label,
+                raw?.voucherNumber,
+                raw?.code,
+                raw?.name,
+                raw?.vehicleCode,
+                raw?.vehicleName,
+                raw?.vehicle_number,
+            ].map(normalizeTransportationText).filter(Boolean);
+
+            return [
+                record?.vehicleCode,
+                record?.vehicleName,
+                vehicleMaster?.code,
+                vehicleMaster?.name,
+            ].map(normalizeTransportationText)
+                .filter(Boolean)
+                .some((value: string) => values.includes(value));
+        });
+
+        const driverSelectValue =
+            driverOption?.value ??
+            record?.[driverField?.key || "driver"] ??
+            record?.driver ??
+            record?.driverName ??
+            "";
+
+        const vehicleSelectValue =
+            vehicleOption?.value ??
+            vehicleMaster?.code ??
+            record?.vehicleCode ??
+            "";
+
+        const editCustomMasters =
+            record?.customMasters && typeof record.customMasters === "object"
+                ? { ...record.customMasters }
+                : {};
+
+        if (vehicleMaster?.code || vehicleMaster?.name) {
+            editCustomMasters["Vehicle Master"] = {
+                code: vehicleMaster?.code || record?.vehicleCode || "",
+                name: vehicleMaster?.name || record?.vehicleName || "",
+            };
+            editCustomMasters["vehicle_master"] = {
+                code: vehicleMaster?.code || record?.vehicleCode || "",
+                name: vehicleMaster?.name || record?.vehicleName || "",
+            };
+        }
+
         setEditingRecord(true);
         setErrors({});
 
@@ -1718,6 +1839,47 @@ const SalesOrder = () => {
             isAutoPost:
                 record?.isAutoPost ||
                 false,
+
+            trip_order:
+                record?.trip_order ||
+                record?.transportOrderNumber ||
+                "",
+
+            lr_no:
+                record?.lr_no ||
+                record?.lrNumber ||
+                record?.lrVoucherNumber ||
+                "",
+
+            [driverField?.key || "driver"]:
+                driverSelectValue,
+
+            driverName:
+                record?.driverName ||
+                record?.driver ||
+                driverOption?.label ||
+                "",
+
+            vehicleCode:
+                record?.vehicleCode ||
+                vehicleMaster?.code ||
+                "",
+
+            vehicleName:
+                record?.vehicleName ||
+                vehicleMaster?.name ||
+                "",
+
+            vehicleNumber:
+                record?.vehicleNumber ||
+                record?.vehicleNo ||
+                "",
+
+            [vehicleField?.key || "vehicle_master"]:
+                vehicleSelectValue,
+
+            customMasters:
+                editCustomMasters,
 
             products,
 
@@ -3681,6 +3843,124 @@ const SalesOrder = () => {
         const footer =
             calculateFooter(products);
 
+        const normalizeTransportationText = (value: any) =>
+            String(value ?? "").trim().toLowerCase();
+
+        const transportationHeaderFields = templateFields?.header || [];
+
+        const selectedDriverField = transportationHeaderFields.find((field: any) => {
+            const key = normalizeTransportationText(field?.key).replace(/[^a-z0-9]/g, "");
+            const label = normalizeTransportationText(field?.label || field?.title).replace(/[^a-z0-9]/g, "");
+            const type = normalizeTransportationText(field?.type || field?.dataSource?.type).replace(/[^a-z0-9]/g, "");
+
+            return (
+                key === "driver" ||
+                key === "drivername" ||
+                label === "driver" ||
+                label === "drivername" ||
+                (type === "employeemaster" && label.includes("driver"))
+            );
+        });
+
+        const selectedVehicleField = transportationHeaderFields.find((field: any) => {
+            const key = normalizeTransportationText(field?.key).replace(/[^a-z0-9]/g, "");
+            const label = normalizeTransportationText(field?.label || field?.title || field?.customMasterName || field?.dataSource?.customMasterName).replace(/[^a-z0-9]/g, "");
+
+            return (
+                key === "vehiclemaster" ||
+                key === "vehicle_master" ||
+                label === "vehiclemaster" ||
+                normalizeTransportationText(field?.customMasterName) === "vehicle master" ||
+                normalizeTransportationText(field?.dataSource?.customMasterName) === "vehicle master"
+            );
+        });
+
+        const selectedDriverValue = form?.[selectedDriverField?.key || "driver"];
+        const selectedDriverOption = (selectedDriverField?.options || []).find(
+            (option: any) => String(option?.value) === String(selectedDriverValue)
+        );
+        const selectedDriverRaw = selectedDriverOption?.raw || {};
+        const selectedDriverName = String(
+            selectedDriverOption?.label ||
+            selectedDriverRaw?.driverName ||
+            selectedDriverRaw?.name ||
+            [
+                selectedDriverRaw?.userFirstName,
+                selectedDriverRaw?.userMiddleName,
+                selectedDriverRaw?.userLastName,
+            ].filter(Boolean).join(" ") ||
+            form?.driverName ||
+            selectedDriverValue ||
+            ""
+        ).trim();
+
+        const selectedVehicleMasterName =
+            String(
+                selectedVehicleField?.customMasterName ||
+                selectedVehicleField?.dataSource?.customMasterName ||
+                "Vehicle Master"
+            ).trim() || "Vehicle Master";
+
+        const selectedVehicleMasterCode = String(
+            selectedVehicleField?.customMasterCode ||
+            selectedVehicleField?.dataSource?.customMasterCode ||
+            ""
+        ).trim();
+
+        const selectedVehicleMaster =
+            form?.customMasters?.[selectedVehicleMasterName] ||
+            form?.customMasters?.[selectedVehicleField?.key || "vehicle_master"] ||
+            (selectedVehicleMasterCode ? form?.customMasters?.[selectedVehicleMasterCode] : null) ||
+            form?.customMasters?.["Vehicle Master"] ||
+            form?.customMasters?.["vehicle_master"] ||
+            form?.customMasters?.vehicle_master ||
+            null;
+
+        const selectedVehicleValue = form?.[selectedVehicleField?.key || "vehicle_master"];
+        const selectedVehicleOption = (selectedVehicleField?.options || []).find(
+            (option: any) => String(option?.value) === String(selectedVehicleValue)
+        );
+        const selectedVehicleRaw = selectedVehicleOption?.raw || {};
+
+        const selectedVehicleCode = String(
+            selectedVehicleMaster?.code ||
+            selectedVehicleOption?.value ||
+            selectedVehicleRaw?.voucherNumber ||
+            selectedVehicleRaw?.code ||
+            selectedVehicleRaw?.vehicleCode ||
+            form?.vehicleCode ||
+            selectedVehicleValue ||
+            ""
+        ).trim();
+
+        const selectedVehicleName = String(
+            selectedVehicleMaster?.name ||
+            selectedVehicleOption?.label ||
+            selectedVehicleRaw?.name ||
+            selectedVehicleRaw?.vehicleName ||
+            form?.vehicleName ||
+            ""
+        ).trim();
+
+        const payloadCustomMasters =
+            form?.customMasters && typeof form.customMasters === "object"
+                ? { ...form.customMasters }
+                : {};
+
+        if (selectedVehicleCode || selectedVehicleName) {
+            const vehicleMasterPayload = {
+                code: selectedVehicleCode,
+                name: selectedVehicleName,
+            };
+
+            payloadCustomMasters["vehicle_master"] = vehicleMasterPayload;
+            payloadCustomMasters["Vehicle Master"] = vehicleMasterPayload;
+
+            if (selectedVehicleMasterName) {
+                payloadCustomMasters[selectedVehicleMasterName] = vehicleMasterPayload;
+            }
+        }
+
         const payload: any = {
             sOrderVoucherDate:
                 form.sOrderVoucherDate,
@@ -3715,6 +3995,34 @@ const SalesOrder = () => {
             isAutoPost:
                 form.isAutoPost ||
                 false,
+
+            transportOrderNumber:
+                form?.trip_order ||
+                "",
+
+            trip_order:
+                form?.trip_order ||
+                "",
+
+            lr_no:
+                form?.lr_no ||
+                "",
+
+            driver:
+                selectedDriverName,
+
+            vehicleCode:
+                selectedVehicleCode,
+
+            vehicleName:
+                selectedVehicleName,
+
+            ...(form?.vehicleNumber
+                ? { vehicleNumber: form.vehicleNumber }
+                : {}),
+
+            customMasters:
+                payloadCustomMasters,
 
             sOrderBody: products.map(
                 (item: any) => {

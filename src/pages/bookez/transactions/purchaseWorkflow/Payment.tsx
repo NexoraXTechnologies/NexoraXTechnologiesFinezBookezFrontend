@@ -313,8 +313,38 @@ const Payment = () => {
             ...templateFields,
 
             header: (templateFields?.header || []).map((field: any) => {
+                field = {
+                    ...field,
+                    disabled: false,
+                    isReadonly: false,
+                    isReadOnly: false,
+                };
+
                 const fieldKey = String(field?.key || "");
                 const normalizedFieldKey = fieldKey.trim().toLowerCase();
+
+                // ⭐ ADDED — SHOW SAVED DRIVER AS SELECTED IN EDIT MODE
+                if (normalizedFieldKey === "driver" && editingRecord?.driver) {
+                    const savedDriver = String(editingRecord.driver || "").trim();
+                    const existingOptions = Array.isArray(field?.options) ? field.options : [];
+                    const hasSavedDriver = existingOptions.some((option: any) =>
+                        String(option?.value ?? option?.label ?? "").trim() === savedDriver ||
+                        String(option?.label ?? "").trim() === savedDriver
+                    );
+
+                    field = {
+                        ...field,
+                        options: hasSavedDriver
+                            ? existingOptions
+                            : [
+                                ...existingOptions,
+                                {
+                                    value: savedDriver,
+                                    label: savedDriver,
+                                },
+                            ],
+                    };
+                }
 
                 if (isVehicleMasterField(field)) {
                     return {
@@ -324,8 +354,9 @@ const Payment = () => {
                         labelField: "name",
                         api: undefined,
                         options: [],
-                        disabled: editingRecord ? true : field?.disabled,
-                        isReadonly: editingRecord ? true : field?.isReadonly,
+                        disabled: false,
+                        isReadonly: false,
+                        isReadOnly: false,
                         dataSource: {
                             ...(field?.dataSource || {}),
                             customMasterName: "Vehicle Master",
@@ -338,8 +369,9 @@ const Payment = () => {
                 if (["trip_order", "lr_no", "driver"].includes(normalizedFieldKey)) {
                     return {
                         ...field,
-                        disabled: editingRecord ? true : field?.disabled,
-                        isReadonly: editingRecord ? true : field?.isReadonly,
+                        disabled: false,
+                        isReadonly: false,
+                        isReadOnly: false,
                     };
                 }
 
@@ -364,6 +396,13 @@ const Payment = () => {
             }),
 
             body: (templateFields?.body || []).map((field: any) => {
+                field = {
+                    ...field,
+                    disabled: false,
+                    isReadonly: false,
+                    isReadOnly: false,
+                };
+
                 const fieldKey = String(field?.key || "");
 
                 if (isVehicleMasterField(field)) {
@@ -374,8 +413,9 @@ const Payment = () => {
                         labelField: "name",
                         api: undefined,
                         options: [],
-                        disabled: editingRecord ? true : field?.disabled,
-                        isReadonly: editingRecord ? true : field?.isReadonly,
+                        disabled: false,
+                        isReadonly: false,
+                        isReadOnly: false,
                         dataSource: {
                             ...(field?.dataSource || {}),
                             customMasterName: "Vehicle Master",
@@ -926,6 +966,27 @@ const Payment = () => {
     const openEditModal = (record: any) => {
         const footer = record?.payFooter || {};
 
+        // ⭐ FIX — DRIVER API SAVES THE DRIVER NAME, WHILE THE SELECT
+        // CAN USE A DIFFERENT OPTION VALUE (FOR EXAMPLE MOBILE / HASH).
+        // Resolve the saved name against the already loaded Driver options
+        // so the Select receives the exact option value and shows it selected.
+        const driverField = (templateFieldsWithCreateActions?.header || []).find(
+            (field: any) => String(field?.key || "").trim().toLowerCase() === "driver"
+        );
+
+        const savedDriver = String(record?.driver || "").trim();
+
+        const savedDriverOption = (driverField?.options || []).find(
+            (option: any) =>
+                String(option?.value ?? "").trim() === savedDriver ||
+                String(option?.label ?? "").trim().toLowerCase() ===
+                    savedDriver.toLowerCase() ||
+                String(option?.raw?.driverName ?? "").trim().toLowerCase() ===
+                    savedDriver.toLowerCase() ||
+                String(option?.raw?.userFirstName ?? "").trim().toLowerCase() ===
+                    savedDriver.toLowerCase()
+        );
+
         const body =
             record?.payBody?.length > 0
                 ? record.payBody.map((row: any) => ({
@@ -960,7 +1021,7 @@ const Payment = () => {
 
             trip_order: record?.trip_order || "",
             lr_no: record?.lr_no || "",
-            driver: record?.driver || "",
+            driver: savedDriverOption?.value ?? record?.driver ?? "",
 
             vehicle_master: vehicleMaster
                 ? {

@@ -2520,23 +2520,23 @@ const CreateTripAllocation = ({
 
                                                             <div>
                                                                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                                                                    Vendor Bill
+                                                                 Advance to Vendor
                                                                 </label>
 
                                                                 <input
                                                                     type="number"
-                                                                    value={form.vehicleSelection?.vendorBill ?? ""}
+                                                                    value={form.vehicleSelection?.AdvanceToVendor ?? ""}
                                                                     disabled={isView}
                                                                     onChange={(e) =>
                                                                         setForm((prev: any) => ({
                                                                             ...prev,
                                                                             vehicleSelection: {
                                                                                 ...prev.vehicleSelection,
-                                                                                vendorBill: e.target.value,
+                                                                                AdvanceToVendor: e.target.value,
                                                                             },
                                                                         }))
                                                                     }
-                                                                    placeholder="Enter vendor bill"
+                                                                    placeholder="Enter Advance to Vendor"
                                                                     className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-card-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                                                                 />
                                                             </div>

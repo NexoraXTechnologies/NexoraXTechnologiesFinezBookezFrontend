@@ -55,7 +55,10 @@ import {
     getEWayBillPdfByNumber,
 } from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
 import { createSalesInvoice } from "../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
+import { createSalesOrder } from "../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 import { addPurchaseInvoice } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+import { addPurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
+import { addGrn } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
 
 
 
@@ -422,7 +425,26 @@ const normalizeBillingValue = (value: any) => String(value || "").trim().toLower
 const normalizeOwnershipType = (value: any) => {
     const normalized = String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
     if (["owned", "own", "companyowned", "selfowned"].includes(normalized)) return "owned";
-    if (["market", "hired", "hire", "marketvehicle", "hiredvehicle", "attached", "vendor", "thirdparty", "outsourced"].includes(normalized)) return "market";
+    if (["hired", "hire", "marketvehicle", "hiredvehicle", "attached", "vendor", "thirdparty", "outsourced"].includes(normalized)) return "hired";
+    return "";
+};
+
+// ⭐ YELLOW STAR: ADDED — COMPLETE TRIP VOUCHER FLOW ORDER TYPE
+const normalizeTransportOrderType = (value: any) => {
+    const normalized = String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+
+    if (["normal", "onetimeorder", "onetime", "oneoff", "adhoc", "spot"].includes(normalized)) {
+        return "oneTimeOrder";
+    }
+
+    if (["contract", "contractorder"].includes(normalized)) {
+        return "contract";
+    }
+
+    if (["indent", "transportindent"].includes(normalized)) {
+        return "indent";
+    }
+
     return "";
 };
 
@@ -458,9 +480,19 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
     const transportOrder = extractTransportOrderRecord(orderResponse);
     if (!transportOrder || !Object.keys(transportOrder).length) throw new Error(`Transport Order ${tripId} was not found`);
 
+    const rawOrderType =
+        transportOrder?.orderType ||
+        transportOrder?.transportOrderType ||
+        transportOrder?.orderCategory ||
+        transportOrder?.type ||
+        (transportOrder?.indentNumber || transportOrder?.transportIndentNumber ? "indent" : "") ||
+        (transportOrder?.contractDetails?.contractNumber ? "contract" : "normal");
+
+    const orderType = normalizeTransportOrderType(rawOrderType) || "oneTimeOrder";
+
     const paymentType = String(transportOrder?.freightDetails?.paymentType || "").trim();
     if (normalizeBillingValue(paymentType) !== normalizeBillingValue(TO_BE_BILLED_PAYMENT_TYPE)) {
-        return { shouldBill: false, ownership: "", freightAmount: 0, customerCode: "", customerName: "", vendorCode: "", vendorName: "", tripId };
+        return { shouldBill: false, orderType, ownership: "", freightAmount: 0, customerCode: "", customerName: "", vendorCode: "", vendorName: "", tripId };
     }
 
     // To Be Billed: allocation + LR are required to resolve ownership and freight source.
@@ -478,6 +510,15 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
     const allocationOrder = allocation?.transportOrder || {};
     const ownership = normalizeOwnershipType(vehicleSelection?.ownershipType || allocation?.ownershipType || tripExpense?.ownershipType);
     const freightAmount = Number(resolveFreightAmount({ lrEntry, allocation, tripExpense, transportOrder }) || 0);
+
+    // ⭐ YELLOW STAR: ADDED — HIRED VEHICLE CHARGES FOR PURCHASE INVOICE RATE
+    const hiredCharges = Number(
+        vehicleSelection?.hiredCharges ||
+        tripExpense?.vehicle?.hiredCharges ||
+        tripExpense?.vehicleSelection?.hiredCharges ||
+        0
+    );
+
     const customerCode = String(allocationOrder?.customerCode || allocationOrder?.customerDetails?.customerCode || transportOrder?.customerCode || transportOrder?.customerDetails?.customerCode || transportOrder?.customer?.code || vehicleSelection?.customerCode || tripExpense?.customerCode || "").trim();
     const customerName = String(allocationOrder?.customerName || allocationOrder?.customerDetails?.customerName || transportOrder?.customerName || transportOrder?.customerDetails?.customerName || transportOrder?.customer?.name || vehicleSelection?.customerName || tripExpense?.customerName || "").trim();
     const vendorCode = String(vehicleSelection?.vendorCode || vehicleSelection?.vendor?.code || allocation?.vendorCode || allocation?.vendor?.code || tripExpense?.vendorCode || "").trim();
@@ -515,7 +556,24 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
 
     // VEHICLE MASTER FROM SELECTED TRIP ALLOCATION
     const vehicleRawRecord = vehicleSelection?.rawRecord || {};
+
+    // ⭐ YELLOW STAR: UPDATED — MODULE CODE IDENTIFIES THE MASTER ONLY.
+    // Vehicle transaction value must use Vehicle Master record `code`.
+    const vehicleMasterModuleCode = String(
+        vehicleRawRecord?.moduleCode ||
+        vehicleSelection?.moduleCode ||
+        ""
+    ).trim();
+
     const existingVehicleMaster =
+        (vehicleMasterModuleCode
+            ? transportOrder?.customMasters?.[vehicleMasterModuleCode] ||
+            allocationOrder?.customMasters?.[vehicleMasterModuleCode] ||
+            allocation?.customMasters?.[vehicleMasterModuleCode] ||
+            tripExpense?.customMasters?.[vehicleMasterModuleCode] ||
+            lrEntry?.customMasters?.[vehicleMasterModuleCode]
+            : null) ||
+        // Backward compatibility for already-saved older data
         transportOrder?.customMasters?.["CSTM-000001"] ||
         allocationOrder?.customMasters?.["CSTM-000001"] ||
         allocation?.customMasters?.["CSTM-000001"] ||
@@ -526,21 +584,34 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         allocation?.customMasters?.["Vehicle Master"] ||
         tripExpense?.customMasters?.["Vehicle Master"] ||
         lrEntry?.customMasters?.["Vehicle Master"] ||
+        transportOrder?.customMasters?.vehicle_master ||
+        allocationOrder?.customMasters?.vehicle_master ||
+        allocation?.customMasters?.vehicle_master ||
+        tripExpense?.customMasters?.vehicle_master ||
+        lrEntry?.customMasters?.vehicle_master ||
         {};
 
-    const vehicleMasterModuleCode = String(vehicleRawRecord?.moduleCode || "CSTM-000001").trim();
+    // ⭐ YELLOW STAR: UPDATED — ALWAYS PREFER VEHICLE MASTER `code`
+    // Example: MH49AS9806. Do not use moduleCode (CSTM-000003) as vehicleCode.
     const vehicleCode = String(
+        vehicleRawRecord?.code ||
+        vehicleSelection?.code ||
+        existingVehicleMaster?.code ||
+        lrEntry?.vehicle?.vehicleCode ||
+        vehicleSelection?.vehicleCode ||
+        vehicleSelection?.vehicleNumber ||
+        tripExpense?.vehicle?.vehicleCode ||
+        tripExpense?.vehicle?.vehicleNumber ||
         vehicleSelection?.selectedVehicleId ||
         vehicleSelection?.vehicleVoucherNumber ||
         vehicleSelection?.vehicleVoucher ||
         vehicleSelection?.voucherNumber ||
         vehicleRawRecord?.voucherNumber ||
-        lrEntry?.vehicle?.vehicleCode ||
-        existingVehicleMaster?.code ||
         tripExpense?.vehicle?.vehicleId ||
         getVehicleVoucherFromTripExpense(tripExpense) ||
         ""
     ).trim();
+
     const vehicleName = String(
         vehicleRawRecord?.name ||
         vehicleSelection?.vehicleName ||
@@ -548,11 +619,16 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         tripExpense?.vehicle?.vehicleName ||
         ""
     ).trim();
+
+    // Vehicle Master `code` is the vehicle registration/code in this master.
     const vehicleNumber = String(
+        vehicleRawRecord?.code ||
         vehicleSelection?.vehicleNumber ||
         vehicleRawRecord?.vehicle_number ||
+        existingVehicleMaster?.code ||
         lrEntry?.vehicle?.vehicleNumber ||
         tripExpense?.vehicle?.vehicleNumber ||
+        vehicleCode ||
         ""
     ).trim();
 
@@ -564,12 +640,18 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         ...(tripExpense?.customMasters && typeof tripExpense.customMasters === "object" ? tripExpense.customMasters : {}),
         ...(lrEntry?.customMasters && typeof lrEntry.customMasters === "object" ? lrEntry.customMasters : {}),
         ...(vehicleMasterModuleCode && vehicleCode ? { [vehicleMasterModuleCode]: { code: vehicleCode, name: vehicleName } } : {}),
+        ...(vehicleCode ? {
+            vehicle_master: { code: vehicleCode, name: vehicleName },
+            "Vehicle Master": { code: vehicleCode, name: vehicleName },
+        } : {}),
     };
 
     return {
         shouldBill: true,
+        orderType,
         ownership,
         freightAmount,
+        hiredCharges,
         customerCode,
         customerName,
         vendorCode,
@@ -644,6 +726,29 @@ const buildInvoiceLine = ({ product, freightAmount }: any) => ({
 
 const buildInvoiceFooter = (freightAmount: number) => ({ grossAmount: formatInvoiceAmount(freightAmount), discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: formatInvoiceAmount(freightAmount), adjustedAmount: "0", balanceAmount: formatInvoiceAmount(freightAmount), totalQuantity: 1, totalGrossAmount: formatInvoiceAmount(freightAmount), totalDiscountAmount: "0.00", totalCgstAmount: "0.00", totalSgstAmount: "0.00", totalIgstAmount: "0.00", totalTaxAmount: "0.00", totalOtherAmount: "0.00", totalNetAmount: formatInvoiceAmount(freightAmount) });
 
+const buildTransportInvoiceLine = ({ product, freightAmount, context }: any) => ({
+    ...buildInvoiceLine({ product, freightAmount }),
+
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTATION FIELDS MUST BE IN INVOICE BODY
+    trip_order: context.transportOrderNumber || "",
+    lr_no: context.lrNo || "",
+    driver: context.driver || "",
+    vehicleCode: context.vehicleCode || "",
+    vehicleName: context.vehicleName || "",
+    vehicleNumber: context.vehicleNumber || "",
+    customMasters: context.customMasters || {},
+});
+
+const buildTransportationHeaderFields = (context: any) => ({
+    transportOrderNumber: context.transportOrderNumber || "",
+    trip_order: context.transportOrderNumber || "",
+    lr_no: context.lrNo || "",
+    driver: context.driver || "",
+    vehicleCode: context.vehicleCode || "",
+    vehicleName: context.vehicleName || "",
+    customMasters: context.customMasters || {},
+});
+
 const createTripSalesInvoice = async ({ dispatch, context, product }: any) => {
     const remark = `Auto from trip ${context.tripId}`;
 
@@ -658,17 +763,14 @@ const createTripSalesInvoice = async ({ dispatch, context, product }: any) => {
         sInvRemarks: remark,
         isAutoPost: false,
 
-        // TRANSPORTATION FIELDS
-        trip_order: context.transportOrderNumber || "",
-        lr_no: context.lrNo || "",
-        driver: context.driver || "",
-        vehicleCode: context.vehicleCode || "",
-        vehicleName: context.vehicleName || "",
-        vehicleNumber: context.vehicleNumber || "",
-
-        customMasters: context.customMasters || {},
-
-        sInvBody: [buildInvoiceLine({ product, freightAmount: context.freightAmount })],
+        // ⭐ YELLOW STAR: UPDATED — TRANSPORTATION FIELDS ARE IN BODY
+        sInvBody: [
+            buildTransportInvoiceLine({
+                product,
+                freightAmount: context.freightAmount,
+                context,
+            }),
+        ],
         sInvFooter: buildInvoiceFooter(context.freightAmount),
     };
 
@@ -683,6 +785,9 @@ const createTripSalesInvoice = async ({ dispatch, context, product }: any) => {
 const createTripPurchaseInvoice = async ({ dispatch, context, product }: any) => {
     const remark = `Auto from trip ${context.tripId}`;
 
+    // ⭐ YELLOW STAR: ADDED — PURCHASE INVOICE PRODUCT RATE MUST USE HIRED CHARGES
+    const purchaseInvoiceAmount = Number(context?.hiredCharges || context?.freightAmount || 0);
+
     const payload = {
         pInvVoucherNumber: "AUTO",
         pInvVoucherDate: todayYMD(),
@@ -693,18 +798,15 @@ const createTripPurchaseInvoice = async ({ dispatch, context, product }: any) =>
         pInvRemark: remark,
         isAutoPost: false,
 
-        // TRANSPORTATION FIELDS
-        trip_order: context.transportOrderNumber || "",
-        lr_no: context.lrNo || "",
-        driver: context.driver || "",
-        vehicleCode: context.vehicleCode || "",
-        vehicleName: context.vehicleName || "",
-        vehicleNumber: context.vehicleNumber || "",
-
-        customMasters: context.customMasters || {},
-
-        pInvBody: [buildInvoiceLine({ product, freightAmount: context.freightAmount })],
-        pInvFooter: buildInvoiceFooter(context.freightAmount),
+        // ⭐ YELLOW STAR: UPDATED — TRANSPORTATION FIELDS ARE IN BODY
+        pInvBody: [
+            buildTransportInvoiceLine({
+                product,
+                freightAmount: purchaseInvoiceAmount,
+                context,
+            }),
+        ],
+        pInvFooter: buildInvoiceFooter(purchaseInvoiceAmount),
     };
 
     const response = await unwrapThunk(dispatch, addPurchaseInvoice({ payload }));
@@ -715,32 +817,318 @@ const createTripPurchaseInvoice = async ({ dispatch, context, product }: any) =>
     return voucherNumber;
 };
 
+// ⭐ YELLOW STAR: ADDED — CONTRACT / INDENT + OWNED => SALES ORDER
+const createTripSalesOrder = async ({ dispatch, context, product }: any) => {
+    const remark = `Auto from trip ${context.tripId}`;
+
+    const payload = {
+        sOrderVoucherNumber: "AUTO",
+        sOrderVoucherDate: new Date().toISOString(),
+
+        ...buildTransportationHeaderFields(context),
+
+        sOrderCustomerCode: context.customerCode,
+        sOrderCustomerName: context.customerName,
+        sOrderSalesAccount: "SA003",
+        sOrderStatus: "open",
+        sOrderRemark: remark,
+
+        sOrderBody: [
+            buildInvoiceLine({
+                product,
+                freightAmount: context.freightAmount,
+            }),
+        ],
+        sOrderFooter: buildInvoiceFooter(context.freightAmount),
+    };
+
+    const response = await unwrapThunk(dispatch, createSalesOrder(payload));
+    const voucherNumber = extractCreatedVoucherNumber(response, "sOrderVoucherNumber");
+
+    if (!voucherNumber) {
+        throw new Error("Sales Order was created but voucher number was not returned");
+    }
+
+    return voucherNumber;
+};
+
+// ⭐ YELLOW STAR: ADDED — CONTRACT / INDENT + HIRED => PURCHASE ORDER
+const createTripPurchaseOrder = async ({ dispatch, context, product }: any) => {
+    const remark = `Auto from trip ${context.tripId}`;
+
+    const payload = {
+        pOrdVoucherNumber: "AUTO",
+        pOrdVoucherDate: new Date().toISOString(),
+
+        ...buildTransportationHeaderFields(context),
+
+        pOrdVendorCode: context.vendorCode,
+        pOrdVendorName: context.vendorName,
+        pOrdPurAccount: "SA003",
+        pOrdStatus: "open",
+        pOrdRemark: remark,
+
+        pOrdBody: [
+            buildInvoiceLine({
+                product,
+                freightAmount: context.freightAmount,
+            }),
+        ],
+        pOrdFooter: buildInvoiceFooter(context.freightAmount),
+    };
+
+    const response = await unwrapThunk(dispatch, addPurchaseOrder({ payload }));
+    const voucherNumber = extractCreatedVoucherNumber(response, "pOrdVoucherNumber");
+
+    if (!voucherNumber) {
+        throw new Error("Purchase Order was created but voucher number was not returned");
+    }
+
+    return voucherNumber;
+};
+
+// ⭐ YELLOW STAR: ADDED — GRN AFTER AUTO PURCHASE ORDER
+const createTripGrn = async ({
+    dispatch,
+    context,
+    product,
+    purchaseOrderVoucherNumber,
+}: any) => {
+    const remark = `Auto from trip ${context.tripId}`;
+
+    const payload = {
+        grnVoucherNumber: "AUTO",
+        pOrdVoucherNumber: purchaseOrderVoucherNumber,
+        grnVoucherDate: new Date().toISOString(),
+
+        ...buildTransportationHeaderFields(context),
+
+        grnVendorCode: context.vendorCode,
+        grnVendorName: context.vendorName,
+        grnPurAccount: "SA003",
+        grnStatus: "open",
+        grnRemark: remark,
+
+        grnBody: [
+            {
+                ...buildInvoiceLine({
+                    product,
+                    freightAmount: context.freightAmount,
+                }),
+                pOrdVoucherNumber: purchaseOrderVoucherNumber,
+                acceptedQuantity: 1,
+                rejectedQuantity: 0,
+                rejectedReason: "",
+            },
+        ],
+        grnFooter: buildInvoiceFooter(context.freightAmount),
+    };
+
+    const response = await unwrapThunk(dispatch, addGrn({ payload }));
+    const voucherNumber = extractCreatedVoucherNumber(response, "grnVoucherNumber");
+
+    if (!voucherNumber) {
+        throw new Error("GRN was created but voucher number was not returned");
+    }
+
+    return voucherNumber;
+};
+
+// ⭐ YELLOW STAR: UPDATED — COMPLETE TRIP VOUCHER FLOW
 const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => {
-    const existingSalesVoucher = String(tripExpense?.salesInvoiceVoucher || "").trim();
-    const existingPurchaseVoucher = String(tripExpense?.purchaseInvoiceVoucher || "").trim();
-    if (existingSalesVoucher) return { invoiceType: "sales", voucherNumber: existingSalesVoucher, alreadyCreated: true };
-    if (existingPurchaseVoucher) return { invoiceType: "purchase", voucherNumber: existingPurchaseVoucher, alreadyCreated: true };
-
     const context = await resolveTripBillingContext({ dispatch, tripExpense });
-    if (!context.shouldBill) return null;
 
-    if (context.ownership === "owned") {
-        if (!context.customerCode || !context.customerName) throw new Error(`Customer is required to create the Sales Invoice for trip ${context.tripId}`);
-        const product = await ensureServiceProduct({ productName: TRIP_SALES_PRODUCT_NAME });
-        const invoiceContext = { ...context, freightAmount: context.freightAmount > 0 ? context.freightAmount : product.sellingPrice || 0 };
-        const voucherNumber = await createTripSalesInvoice({ dispatch, context: invoiceContext, product });
-        return { invoiceType: "sales", voucherNumber, alreadyCreated: false };
+    // NOT TO BE BILLED => COMPLETE TRIP WITHOUT ANY ACCOUNTING VOUCHER
+    if (!context.shouldBill) {
+        return null;
     }
 
-    if (context.ownership === "market") {
-        if (!context.vendorCode || !context.vendorName) throw new Error(`Vendor is required to create the Purchase Invoice for trip ${context.tripId}`);
-        const product = await ensureServiceProduct({ productName: TRIP_PURCHASE_PRODUCT_NAME });
-        const invoiceContext = { ...context, freightAmount: context.freightAmount > 0 ? context.freightAmount : product.sellingPrice || 0 };
-        const voucherNumber = await createTripPurchaseInvoice({ dispatch, context: invoiceContext, product });
-        return { invoiceType: "purchase", voucherNumber, alreadyCreated: false };
+    const isOneTimeOrder = context.orderType === "oneTimeOrder";
+    const isContractOrIndent =
+        context.orderType === "contract" ||
+        context.orderType === "indent";
+
+    if (isOneTimeOrder) {
+        const existingSalesVoucher = String(
+            tripExpense?.salesInvoiceVoucher || ""
+        ).trim();
+
+        const existingPurchaseVoucher = String(
+            tripExpense?.purchaseInvoiceVoucher || ""
+        ).trim();
+
+        if (existingSalesVoucher) {
+            return {
+                invoiceType: "sales",
+                voucherType: "salesInvoice",
+                voucherNumber: existingSalesVoucher,
+                alreadyCreated: true,
+            };
+        }
+
+        if (existingPurchaseVoucher) {
+            return {
+                invoiceType: "purchase",
+                voucherType: "purchaseInvoice",
+                voucherNumber: existingPurchaseVoucher,
+                alreadyCreated: true,
+            };
+        }
+
+        if (context.ownership === "owned") {
+            if (!context.customerCode || !context.customerName) {
+                throw new Error(
+                    `Customer is required to create the Sales Invoice for trip ${context.tripId}`
+                );
+            }
+
+            const product = await ensureServiceProduct({
+                productName: TRIP_SALES_PRODUCT_NAME,
+            });
+
+            const invoiceContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
+
+            const voucherNumber = await createTripSalesInvoice({
+                dispatch,
+                context: invoiceContext,
+                product,
+            });
+
+            return {
+                invoiceType: "sales",
+                voucherType: "salesInvoice",
+                voucherNumber,
+                alreadyCreated: false,
+            };
+        }
+
+        if (context.ownership === "hired") {
+            if (!context.vendorCode || !context.vendorName) {
+                throw new Error(
+                    `Vendor is required to create the Purchase Invoice for trip ${context.tripId}`
+                );
+            }
+
+            const product = await ensureServiceProduct({
+                productName: TRIP_PURCHASE_PRODUCT_NAME,
+            });
+
+            const invoiceContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
+
+            const voucherNumber = await createTripPurchaseInvoice({
+                dispatch,
+                context: invoiceContext,
+                product,
+            });
+
+            return {
+                invoiceType: "purchase",
+                voucherType: "purchaseInvoice",
+                voucherNumber,
+                alreadyCreated: false,
+            };
+        }
     }
 
-    throw new Error(`Vehicle ownership type must be Owned or Hired/Market for trip ${context.tripId}`);
+    if (isContractOrIndent) {
+        if (context.ownership === "owned") {
+            if (!context.customerCode || !context.customerName) {
+                throw new Error(
+                    `Customer is required to create the Sales Order for trip ${context.tripId}`
+                );
+            }
+
+            const product = await ensureServiceProduct({
+                productName: TRIP_SALES_PRODUCT_NAME,
+            });
+
+            const orderContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
+
+            const voucherNumber = await createTripSalesOrder({
+                dispatch,
+                context: orderContext,
+                product,
+            });
+
+            return {
+                invoiceType: "",
+                voucherType: "salesOrder",
+                voucherNumber,
+                alreadyCreated: false,
+            };
+        }
+
+        if (context.ownership === "hired") {
+            if (!context.vendorCode || !context.vendorName) {
+                throw new Error(
+                    `Vendor is required to create the Purchase Order for trip ${context.tripId}`
+                );
+            }
+
+            const product = await ensureServiceProduct({
+                productName: TRIP_PURCHASE_PRODUCT_NAME,
+            });
+
+            const orderContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
+
+            const purchaseOrderVoucherNumber =
+                await createTripPurchaseOrder({
+                    dispatch,
+                    context: orderContext,
+                    product,
+                });
+
+            const grnVoucherNumber = await createTripGrn({
+                dispatch,
+                context: orderContext,
+                product,
+                purchaseOrderVoucherNumber,
+            });
+
+            return {
+                invoiceType: "",
+                voucherType: "purchaseOrderGrn",
+                voucherNumber: grnVoucherNumber,
+                purchaseOrderVoucherNumber,
+                grnVoucherNumber,
+                alreadyCreated: false,
+            };
+        }
+    }
+
+    if (!context.orderType) {
+        throw new Error(
+            `Order type is required for trip ${context.tripId}`
+        );
+    }
+
+    throw new Error(
+        `Vehicle ownership type must be Owned or Hired/Market for trip ${context.tripId}`
+    );
 };
 
 const formatIndianNumber = (value: any) =>
@@ -2398,7 +2786,7 @@ const CreateEditTripExpence = () => {
                 const completeSaveForm = buildChildSaveForm(form);
                 const completeSaveFormWithPod = { ...completeSaveForm, pod: buildPodForSave(completeSaveForm) };
 
-                // INVOICE MUST SUCCEED BEFORE ANY TRIP-COMPLETION SIDE EFFECT
+                // ⭐ YELLOW STAR: UPDATED — REQUIRED ACCOUNTING VOUCHER MUST SUCCEED BEFORE TRIP-COMPLETION SIDE EFFECT
                 const invoice = await createInvoiceForCompletedTrip({ dispatch, tripExpense: completeSaveFormWithPod });
 
                 const payload = toTripExpensePayload(completeSaveFormWithPod, {
@@ -2416,13 +2804,13 @@ const CreateEditTripExpence = () => {
                     enteredDate: form.enteredDate || new Date().toISOString(),
                     ...(invoice?.invoiceType === "sales" ? { salesInvoiceVoucher: invoice.voucherNumber } : {}),
                     ...(invoice?.invoiceType === "purchase" ? { purchaseInvoiceVoucher: invoice.voucherNumber } : {}),
-                    ...(invoice ? { invoiceRemark: `Auto ${invoice.invoiceType} invoice ${invoice.voucherNumber} from trip ${form.tripId || ""}` } : {}),
+                    ...(invoice?.invoiceType ? { invoiceRemark: `Auto ${invoice.invoiceType} invoice ${invoice.voucherNumber} from trip ${form.tripId || ""}` } : {}),
                 });
 
                 payload.pod = buildPodForSave(completeSaveFormWithPod);
                 if (invoice?.invoiceType === "sales") (payload as Record<string, any>).salesInvoiceVoucher = invoice.voucherNumber;
                 if (invoice?.invoiceType === "purchase") (payload as Record<string, any>).purchaseInvoiceVoucher = invoice.voucherNumber;
-                if (invoice) (payload as Record<string, any>).invoiceRemark = `Auto ${invoice.invoiceType} invoice ${invoice.voucherNumber} from trip ${form.tripId || ""}`;
+                if (invoice?.invoiceType) (payload as Record<string, any>).invoiceRemark = `Auto ${invoice.invoiceType} invoice ${invoice.voucherNumber} from trip ${form.tripId || ""}`;
 
                 await unwrapThunk(
                     dispatch,
@@ -2513,8 +2901,22 @@ const CreateEditTripExpence = () => {
                     }
                 }
 
-                const invoiceLabel = invoice?.invoiceType === "sales" ? "Sales Invoice" : invoice?.invoiceType === "purchase" ? "Purchase Invoice" : "";
-                toast.success(invoice ? `Trip completed successfully. ${invoiceLabel}: ${invoice.voucherNumber}` : "Trip completed successfully");
+                const voucherLabel =
+                    invoice?.voucherType === "salesInvoice"
+                        ? "Sales Invoice"
+                        : invoice?.voucherType === "purchaseInvoice"
+                            ? "Purchase Invoice"
+                            : invoice?.voucherType === "salesOrder"
+                                ? "Sales Order"
+                                : invoice?.voucherType === "purchaseOrderGrn"
+                                    ? "Purchase Order / GRN"
+                                    : "";
+
+                toast.success(
+                    invoice && voucherLabel
+                        ? `Trip completed successfully. ${voucherLabel}: ${invoice.voucherNumber}`
+                        : "Trip completed successfully"
+                );
                 navigate(-1);
             } catch (e: any) {
                 toast.error(e?.message || "Failed to complete trip");

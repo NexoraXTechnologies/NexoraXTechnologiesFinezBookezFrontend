@@ -623,6 +623,8 @@ const syncTransportationReceiptPaymentFields = async ({
         { module: "grn", section: "header" },
         { module: "salesInvoice", section: "body" },
         { module: "purchaseInvoice", section: "body" },
+        { module: "payment", section: "header" },
+        { module: "receipt", section: "header" },
     ] as const;
 
     const results: any[] = [];
