@@ -48,6 +48,7 @@ export const normalizeDoc = (payload: any) => {
             "pRetBody",
             "pInvBody",
             "sQuoteBody",
+            "recBody"
         ]) || [];
 
     const footer =

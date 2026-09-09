@@ -1,6 +1,8 @@
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { CreatableSelectInput, SelectInput, TextInput } from "../inputs";
-
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useMemo, useState } from "react";
+import { formatDateForList, money } from "../../utils/helperFunctions";
 import { capitalizeFirstLttr } from "../../utils/templateKeyLabel";
 
 type ColumnType = "select" | "custommaster" | "accountmaster" | "productmaster" | "unitmaster" | "employeemaster" | "text" | "number" | "date";
@@ -810,5 +812,262 @@ const EditableLineTable = ({
         </div>
     );
 };
+interface MultiInvoiceEditableTableProps {
+    invoices?: any[];
+    schema?: any[];
+    errors?: any;
+    onDeleteInvoice?: (index: number) => void;
+    onInvoiceChange?: (index: number, key: string, value: any) => void;
+    readonly?: boolean;
+    showDelete?: boolean;
+    title?: string;
+}
 
+const isTrueValue = (value: any) => value === true || String(value ?? "").trim().toLowerCase() === "true";
+
+const getDisplayValue = (value: any, field?: any) => {
+    if (value === undefined || value === null || value === "") return "-";
+
+    if (field?.type === "date") {
+        try {
+            return formatDateForList(value);
+        }
+        catch {
+            return String(value);
+        }
+    }
+
+    if (field?.type === "boolean") return isTrueValue(value) ? "Yes" : "No";
+
+    if (typeof value === "object") return value?.name || value?.label || value?.code || value?.value || "-";
+
+    return String(value);
+};
+
+const getInvoiceHeaderSchema = (schema: any[]) => {
+    return (schema || []).filter((field: any) => field?.key && field?.key !== "sInvBody" && field?.key !== "sInvFooter" && !isTrueValue(field?.isHidden));
+};
+
+const getProductSchema = (schema: any[]) => {
+    const bodyField = (schema || []).find((field: any) => field?.key === "sInvBody");
+    return Array.isArray(bodyField?.fields) ? bodyField.fields : [];
+};
+
+const normalizeEditableColumnType = (type: any) => {
+    const normalizedType = String(type || "").trim().toLowerCase();
+
+    if (normalizedType === "select") return "select";
+    if (normalizedType === "number") return "number";
+    if (normalizedType === "date") return "date";
+
+    return "text";
+};
+
+const normalizeProductColumns = (fields: any[]) => {
+    return (fields || []).map((field: any) => ({
+        ...field,
+        type: normalizeEditableColumnType(field?.type),
+        disabled: true,
+        isReadonly: true,
+    }));
+};
+
+const MultiInvoiceEditableTable = ({
+    invoices = [],
+    schema = [],
+    errors = {},
+    onDeleteInvoice,
+    onInvoiceChange,
+    readonly = true,
+    showDelete = true,
+    title = "Sales Invoices",
+}: MultiInvoiceEditableTableProps) => {
+    const [expandedInvoices, setExpandedInvoices] = useState<Record<number, boolean>>({});
+
+    const invoiceFields = useMemo(() => getInvoiceHeaderSchema(schema), [schema]);
+
+    const productColumns = useMemo(() => {
+        const productFields = getProductSchema(schema);
+        return normalizeProductColumns(productFields);
+    }, [schema]);
+
+    const toggleInvoice = (index: number) => {
+        setExpandedInvoices((previous) => ({
+            ...previous,
+            [index]: previous[index] === false ? true : false,
+        }));
+    };
+
+    const isExpanded = (index: number) => expandedInvoices[index] !== false;
+
+    if (!invoices.length) {
+        return (
+            <div className="rounded-md border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                No Sales Invoice selected
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <h3 className="text-sm font-semibold text-card-foreground">{title}</h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                        {invoices.length} Sales Invoice{invoices.length === 1 ? "" : "s"} selected
+                    </p>
+                </div>
+            </div>
+
+            {invoices.map((invoice: any, invoiceIndex: number) => {
+                const expanded = isExpanded(invoiceIndex);
+                const invoiceNumber = invoice?.sInvNo || invoice?.sInvVoucherNumber || `Invoice ${invoiceIndex + 1}`;
+
+                return (
+                    <div key={`${invoiceNumber}-${invoiceIndex}`} className="overflow-hidden rounded-md border border-border bg-card">
+                        <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/30 px-4 py-3">
+                            <button
+                                type="button"
+                                onClick={() => toggleInvoice(invoiceIndex)}
+                                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+                            >
+                                <span className="text-primary">
+                                    {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                </span>
+
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-card-foreground">
+                                        {invoiceNumber}
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {(invoice?.sInvBody || []).length} Product{(invoice?.sInvBody || []).length === 1 ? "" : "s"}
+                                    </p>
+                                </div>
+                            </button>
+
+                            {showDelete && onDeleteInvoice && (
+                                <button
+                                    type="button"
+                                    onClick={() => onDeleteInvoice(invoiceIndex)}
+                                    className="cursor-pointer rounded-md p-2 text-danger transition hover:bg-danger/10"
+                                    title="Remove Invoice"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        {expanded && (
+                            <div className="space-y-4 p-4">
+                                {invoiceFields.length > 0 && (
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                        {invoiceFields.map((field: any) => {
+                                            const error = errors?.[`row_${invoiceIndex}_${field.key}`];
+                                            const value = invoice?.[field.key];
+                                            const disabled = readonly || isTrueValue(field?.isReadonly) || isTrueValue(field?.disabled);
+
+                                            return (
+                                                <div key={field.key} className="min-w-0">
+                                                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                                                        {field?.label || field?.title || field?.key}
+                                                        {isTrueValue(field?.isRequired) && <span className="ml-0.5 text-danger">*</span>}
+                                                    </label>
+
+                                                    {field?.type === "date" ? (
+                                                        <input
+                                                            type="date"
+                                                            value={value ? String(value).split("T")[0] : ""}
+                                                            disabled={disabled}
+                                                            onChange={(event) => onInvoiceChange?.(invoiceIndex, field.key, event.target.value)}
+                                                            className={`w-full rounded-md border bg-input px-3 py-2 text-sm text-foreground outline-none ${error ? "border-danger" : "border-border"} disabled:cursor-not-allowed disabled:opacity-70`}
+                                                        />
+                                                    ) : field?.type === "boolean" ? (
+                                                        <div className="flex min-h-[38px] items-center rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-card-foreground">
+                                                            {isTrueValue(value) ? "Yes" : "No"}
+                                                        </div>
+                                                    ) : disabled ? (
+                                                        <div className={`min-h-[38px] rounded-md border bg-muted/20 px-3 py-2 text-sm text-card-foreground ${error ? "border-danger" : "border-border"}`}>
+                                                            {getDisplayValue(value, field)}
+                                                        </div>
+                                                    ) : (
+                                                        <input
+                                                            type={field?.type === "number" ? "number" : "text"}
+                                                            value={value ?? ""}
+                                                            onChange={(event) => onInvoiceChange?.(invoiceIndex, field.key, event.target.value)}
+                                                            className={`w-full rounded-md border bg-input px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 ${error ? "border-danger" : "border-border"}`}
+                                                        />
+                                                    )}
+
+                                                    {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                <EditableLineTable
+                                    isView={true}
+                                    bodyTitle="Invoice Products"
+                                    addButtonText="Add Product"
+                                    rows={invoice?.sInvBody || []}
+                                    columns={productColumns}
+                                    errors={{}}
+                                    onAddRow={() => { }}
+                                    onDeleteRow={() => { }}
+                                    onRefrenceRow={() => { }}
+                                    onChange={() => { }}
+                                    emptyText="No products found"
+                                    isAddButton={false}
+                                    isRefrenceAction={false}
+                                />
+
+                                {invoice?.sInvFooter && (
+                                    <div className="grid grid-cols-2 gap-2 border-t border-border pt-3 sm:grid-cols-3 lg:grid-cols-5">
+                                        <div className="rounded-md bg-muted/30 p-2">
+                                            <p className="text-xs text-muted-foreground">Gross</p>
+                                            <p className="mt-0.5 text-sm font-semibold">
+                                                {money(invoice?.sInvFooter?.grossAmount || 0)}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-md bg-muted/30 p-2">
+                                            <p className="text-xs text-muted-foreground">Discount</p>
+                                            <p className="mt-0.5 text-sm font-semibold">
+                                                {money(invoice?.sInvFooter?.discountAmount || 0)}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-md bg-muted/30 p-2">
+                                            <p className="text-xs text-muted-foreground">Tax</p>
+                                            <p className="mt-0.5 text-sm font-semibold">
+                                                {money(invoice?.sInvFooter?.taxAmount || 0)}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-md bg-muted/30 p-2">
+                                            <p className="text-xs text-muted-foreground">Net Amount</p>
+                                            <p className="mt-0.5 text-sm font-semibold text-primary">
+                                                {money(invoice?.sInvFooter?.netAmount || 0)}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-md bg-muted/30 p-2">
+                                            <p className="text-xs text-muted-foreground">Balance</p>
+                                            <p className="mt-0.5 text-sm font-semibold">
+                                                {money(invoice?.sInvFooter?.balanceAmount || invoice?.sInvFooter?.netAmount || 0)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+export { MultiInvoiceEditableTable }
 export default EditableLineTable;

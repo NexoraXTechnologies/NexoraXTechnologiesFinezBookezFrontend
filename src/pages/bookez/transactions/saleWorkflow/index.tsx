@@ -14,6 +14,7 @@ import SalesReceipt from "./salesReceipt";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useMemo } from "react";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
+import MultiSalesInvoice from "./multiInvoice";
 
 const SaleWorkflowDashboard = () => {
   const dispatch = useDispatch();
@@ -63,6 +64,13 @@ const SaleWorkflowDashboard = () => {
       icon: <RotateCcw size={22} />,
       permissionKey: "salesReturn"
     },
+    // {
+    //   title: "Multiple Invoices",
+    //   description: "Manage multiple sales invoices.",
+    //   component: MultiSalesInvoice,
+    //   icon: <RotateCcw size={22} />,
+    //   permissionKey: "salesInvoice"
+    // },
     ...(enableReceipt ? [{
       title: "Receipt",
       description: "Manage customer receipts and incoming payment transactions.",

@@ -1,5 +1,3 @@
-
-
 import { useEffect, useMemo, useState } from "react";
 import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -624,7 +622,7 @@ const SalesReceipt = () => {
             }
         } catch (error: any) {
             console.log(
-                "Failed to refresh Sales Receipt account options:",
+                "Failed to refresh Receipt account options:",
                 error
             );
 
@@ -849,20 +847,25 @@ const SalesReceipt = () => {
             const value = isVehicleMasterField(field) ? (form?.customMasters?.["Vehicle Master"] || form?.customMasters?.vehicle_master) : form?.[field.key];
             if (value === undefined || value === null || value === "") err[field.key] = `${field.label || field.key} is required`;
         });
+
         const filledRows = getFilledRows();
         if (filledRows.length === 0) err.recBody = "Please add at least one receipt row";
+
         (form.recBody || []).forEach((row: any, index: number) => {
             const hasAnyValue = (bodyFieldsWithoutReference || []).some((field: any) => {
                 const value = row?.[field.key];
                 return value !== undefined && value !== null && value !== "";
             });
+
             if (!hasAnyValue) return;
+
             (bodyFieldsWithoutReference || []).forEach((field: any) => {
                 if (field.isHidden) return;
                 if (!field.isRequired) return;
                 const value = row?.[field.key];
                 if (value === undefined || value === null || value === "") err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
             });
+ 
             const rowAmount = num(row?.netAmount || row?.amount || 0);
             const hasReferences = Array.isArray(row?.references) && row.references.length > 0;
             const referenceAdjusted = hasReferences ? row.references.reduce((sum: number, ref: any) => sum + num(ref?.adjustedAmount), 0) : 0;
@@ -892,9 +895,31 @@ const SalesReceipt = () => {
             netAmount: String(row?.netAmount || row?.amount || 0),
             references: Array.isArray(row?.references) ? row.references.map((ref: any) => {
                 const referenceType = String(ref?.referenceType || "SINV").toUpperCase();
-                if (referenceType === "NEW") return { referenceType: "NEW", newReference: ref?.newReference || "ADV", billDueDate: ref?.billDueDate || todayYMD(), billAmount: String(ref?.billAmount || ref?.adjustedAmount || 0), adjustedAmount: String(ref?.adjustedAmount || ref?.billAmount || 0) };
+
+                if (referenceType === "NEW") return {
+                    referenceType: "NEW",
+                    newReference: ref?.newReference || "ADV",
+                    billDueDate: ref?.billDueDate || todayYMD(),
+                    billAmount: String(ref?.billAmount || ref?.adjustedAmount || 0),
+                    adjustedAmount: String(ref?.adjustedAmount || ref?.billAmount || 0)
+                };
+
                 const saleInvoice = ref?.saleInvoice || ref?.salesInvoice || "";
-                return { referenceType: "SINV", saleInvoice, salesInvoice: saleInvoice, docDate: ref?.docDate || ref?.billDueDate || "", billDueDate: ref?.billDueDate || ref?.docDate || "", billAmount: String(ref?.billAmount || ref?.netAmount || 0), netAmount: String(ref?.netAmount || ref?.billAmount || 0), netBillAmount: String(ref?.netBillAmount || ref?.netAmount || 0), netReturnAmount: String(ref?.netReturnAmount || 0), remainingBillAmount: String(ref?.remainingBillAmount || 0), returnAmount: Number(ref?.returnAmount || ref?.netReturnAmount || 0), adjustedAmount: String(ref?.adjustedAmount || 0) };
+
+                return {
+                    referenceType: "SINV",
+                    saleInvoice,
+                    salesInvoice: saleInvoice,
+                    docDate: ref?.docDate || ref?.billDueDate || "",
+                    billDueDate: ref?.billDueDate || ref?.docDate || "",
+                    billAmount: String(ref?.billAmount || ref?.netAmount || 0),
+                    netAmount: String(ref?.netAmount || ref?.billAmount || 0),
+                    netBillAmount: String(ref?.netBillAmount || ref?.netAmount || 0),
+                    netReturnAmount: String(ref?.netReturnAmount || 0),
+                    remainingBillAmount: String(ref?.remainingBillAmount || 0),
+                    returnAmount: Number(ref?.returnAmount || ref?.netReturnAmount || 0),
+                    adjustedAmount: String(ref?.adjustedAmount || 0)
+                };
             }) : [],
             remarks: row?.remarks || null,
         }));
@@ -973,8 +998,10 @@ const SalesReceipt = () => {
         const updateLinkedSalesReturn = async ({ ref, oldAdj = 0, newAdj = 0, receiptVoucherNumber, }: any) => {
             const salesReturnVoucherNumber = getSalesReturnVoucherNumber(ref);
             if (!salesReturnVoucherNumber) return;
-            const getSalesReturn = await dispatch(getByVoucherNumberSalesInvoiceReturn({ voucherNumber: salesReturnVoucherNumber, }) as any);
+
+            const getSalesReturn = await dispatch(getByVoucherNumberSalesInvoiceReturn({ voucherNumber: salesReturnVoucherNumber }) as any);
             const salesReturn = getSalesReturn?.payload;
+
             if (!salesReturn) {
                 console.warn("Sales return not found:", salesReturnVoucherNumber);
                 return;
@@ -985,13 +1012,19 @@ const SalesReceipt = () => {
             const previousAdjusted = toNumber(returnFooter.adjustedAmount);
             const recalculatedAdjusted = previousAdjusted - toNumber(oldAdj) + toNumber(newAdj);
             const newBalanceAmount = returnNetAmount - recalculatedAdjusted;
-            if (newBalanceAmount < 0) { throw new Error(`Adjusted amount exceeds sales return balance for ${salesReturnVoucherNumber}`) }
+
+            if (newBalanceAmount < 0) {
+                throw new Error(`Adjusted amount exceeds sales return balance for ${salesReturnVoucherNumber}`);
+            }
+
             let returnReferenceCodes = Array.isArray(salesReturn.sInvReturnReferenceCodes) ? [...salesReturn.sInvReturnReferenceCodes] : [];
+
             if (toNumber(newAdj) === 0) {
                 returnReferenceCodes = returnReferenceCodes.filter((code: string) => code !== receiptVoucherNumber);
             } else if (toNumber(oldAdj) === 0 && receiptVoucherNumber) {
                 returnReferenceCodes = Array.from(new Set([...returnReferenceCodes, receiptVoucherNumber]));
             }
+
             const updateSalesReturnPayload: any = {
                 sInvReturnFooter: {
                     ...returnFooter,
@@ -1002,7 +1035,7 @@ const SalesReceipt = () => {
                 sInvReturnReferenceCodes: returnReferenceCodes,
             };
 
-            await dispatch(updateSalesInvoiceReturn({ sInvReturnVoucherNumber: salesReturnVoucherNumber, payload: updateSalesReturnPayload, }) as any);
+            await dispatch(updateSalesInvoiceReturn({ sInvReturnVoucherNumber: salesReturnVoucherNumber, payload: updateSalesReturnPayload }) as any);
         };
 
         try {
@@ -1044,7 +1077,6 @@ const SalesReceipt = () => {
                 for (const ref of diffs) {
                     // @ts-ignore
                     const invoiceNo = ref.saleInvoice || ref.salesInvoice;
-
                     if (!invoiceNo) continue;
 
                     const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: invoiceNo }) as any);
@@ -1087,12 +1119,12 @@ const SalesReceipt = () => {
                         sInvReferenceCodes: referenceCodes,
                     };
 
-                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: invoiceNo, payload: updateInvoicePayload, }) as any);
-                    await updateLinkedSalesReturn({ ref: { ...ref.originalRef, salesInvoiceReturn: ref.returnVoucherNumber, }, oldAdj, newAdj, receiptVoucherNumber: form.recVoucherNumber });
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: invoiceNo, payload: updateInvoicePayload }) as any);
+                    await updateLinkedSalesReturn({ ref: { ...ref.originalRef, salesInvoiceReturn: ref.returnVoucherNumber }, oldAdj, newAdj, receiptVoucherNumber: form.recVoucherNumber });
                 }
 
-                await dispatch(updateSalesReceipt({ receiptVoucherNumber: form.recVoucherNumber, payload, }) as any).unwrap();
-                toast.success("Sales receipt updated successfully");
+                await dispatch(updateSalesReceipt({ receiptVoucherNumber: form.recVoucherNumber, payload }) as any).unwrap();
+                toast.success("Receipt updated successfully");
             } else {
                 const invoiceAdjustments: any[] = [];
 
@@ -1131,7 +1163,7 @@ const SalesReceipt = () => {
 
                 for (const item of invoiceAdjustments) {
                     const oldReferenceCodes = Array.isArray(item.salesInv.sInvReferenceCodes) ? item.salesInv.sInvReferenceCodes : [];
-                    const newReferenceCodes = savedReceiptVoucherNumber ? Array.from(new Set([...oldReferenceCodes, savedReceiptVoucherNumber,])) : oldReferenceCodes;
+                    const newReferenceCodes = savedReceiptVoucherNumber ? Array.from(new Set([...oldReferenceCodes, savedReceiptVoucherNumber])) : oldReferenceCodes;
 
                     const updateInvoicePayload: any = {
                         sInvFooter: {
@@ -1143,19 +1175,19 @@ const SalesReceipt = () => {
                         sInvReferenceCodes: newReferenceCodes,
                     };
 
-                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: item.saleInvoice || item.salesInvoice, payload: updateInvoicePayload, }) as any);
+                    await dispatch(updateSalesInvoice({ sInvVoucherNumber: item.saleInvoice || item.salesInvoice, payload: updateInvoicePayload }) as any);
                     await updateLinkedSalesReturn({ ref: item.originalRef, oldAdj: 0, newAdj: item.receiptAdjusted, receiptVoucherNumber: savedReceiptVoucherNumber });
                 }
 
-                toast.success("Sales receipt created successfully");
+                toast.success("Receipt created successfully");
             }
 
             setShowModal(false);
             resetMainForm();
             await fetchSalesReceipts();
         } catch (error: any) {
-            console.error("Sales receipt save error:", error);
-            toast.error(error?.response?.data?.message || error?.message || "Failed to save sales receipt");
+            console.error("Receipt save error:", error);
+            toast.error(error?.response?.data?.message || error?.message || "Failed to save receipt");
         }
     };
 
@@ -1163,17 +1195,20 @@ const SalesReceipt = () => {
         try {
             const receiptVoucherNumber = confirmTooltip.voucherNumber;
             if (!receiptVoucherNumber) return;
+
             const receiptData = await dispatch(getByVoucherNumberSalesReceiptList({ voucherNumber: receiptVoucherNumber }) as any).unwrap();
             const recBody = Array.isArray(receiptData?.recBody) ? receiptData.recBody : [];
 
             for (const bodyItem of recBody) {
                 const references = Array.isArray(bodyItem?.references) ? bodyItem.references : [];
+
                 for (const ref of references) {
                     const salesInvoiceNumber = ref?.saleInvoice || ref?.salesInvoice;
                     if (!salesInvoiceNumber) continue;
 
                     const getSalesInv = await dispatch(getByVoucherNumberSalesInvoice({ voucherNumber: salesInvoiceNumber }) as any);
                     const salesInvoiceData = getSalesInv?.payload;
+
                     if (!salesInvoiceData) {
                         console.warn("Sales invoice not found:", salesInvoiceNumber);
                         continue;
@@ -1187,17 +1222,27 @@ const SalesReceipt = () => {
                     const newBalanceAmount = oldBalanceAmount + receiptAdjustedAmount;
                     const oldReferenceCodes = Array.isArray(salesInvoiceData?.sInvReferenceCodes) ? salesInvoiceData.sInvReferenceCodes : [];
                     const newReferenceCodes = oldReferenceCodes.filter((id: string) => id !== receiptVoucherNumber);
-                    const updateInvoicePayload = { sInvFooter: { ...oldFooter, adjustedAmount: String(newAdjustedAmount < 0 ? 0 : newAdjustedAmount), balanceAmount: String(newBalanceAmount) }, sInvStatus: "open", sInvReferenceCodes: newReferenceCodes };
+
+                    const updateInvoicePayload = {
+                        sInvFooter: {
+                            ...oldFooter,
+                            adjustedAmount: String(newAdjustedAmount < 0 ? 0 : newAdjustedAmount),
+                            balanceAmount: String(newBalanceAmount)
+                        },
+                        sInvStatus: "open",
+                        sInvReferenceCodes: newReferenceCodes
+                    };
+
                     await dispatch(updateSalesInvoice({ sInvVoucherNumber: salesInvoiceNumber, payload: updateInvoicePayload }) as any);
                 }
             }
 
             await dispatch(deleteSalesReceipt({ receiptVoucherNumber }) as any).unwrap();
-            toast.success("Sales receipt deleted successfully");
+            toast.success("Receipt deleted successfully");
             await fetchSalesReceipts();
         } catch (error: any) {
-            console.error("Sales receipt delete error:", error);
-            toast.error(error?.response?.data?.message || error?.message || "Failed to delete sales receipt");
+            console.error("receipt delete error:", error);
+            toast.error(error?.response?.data?.message || error?.message || "Failed to delete receipt");
         } finally {
             setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null });
         }
@@ -1205,9 +1250,10 @@ const SalesReceipt = () => {
 
     const handleRefresh = async () => {
         setRefreshing(true);
+
         try {
             await fetchSalesReceipts();
-            toast.success("Sales receipt list refreshed");
+            toast.success("Receipt list refreshed");
         } finally {
             setRefreshing(false);
         }
@@ -1216,34 +1262,75 @@ const SalesReceipt = () => {
     const columns = [
         { key: "recVoucherNumber", title: "Voucher", render: (row: any) => row?.recVoucherNumber || row?.voucherNumber || "-" },
         { key: "recVoucherDate", title: "Date", render: (row: any) => row?.recVoucherDate ? formatDateForList(row.recVoucherDate) : "-" },
-        { key: "recAccountName", title: "Cash/Bank Account", render: (row: any) => (<div><div className="font-medium text-card-foreground">{row?.recAccountName || "-"}</div><div className="text-xs text-muted-foreground">{row?.recAccountCode || "-"}</div></div>) },
+        {
+            key: "recAccountName",
+            title: "Cash/Bank Account",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-card-foreground">{row?.recAccountName || "-"}</div>
+                    <div className="text-xs text-muted-foreground">{row?.recAccountCode || "-"}</div>
+                </div>
+            )
+        },
         { key: "recBody", title: "Accounts", render: (row: any) => row?.recBody?.length || 0 },
         { key: "receiptAmount", title: "Receipt Amount", render: (row: any) => (<span className="font-semibold text-primary">{money(row?.recFooter?.netAmount || 0)}</span>), type: "amount" },
-        { key: "recStatus", title: "Status", render: (row: any) => (<span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.recStatus === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>{row?.recStatus || "-"}</span>) },
+        {
+            key: "recStatus",
+            title: "Status",
+            render: (row: any) => (
+                <span className={`rounded-md border px-2 py-1 text-xs font-medium capitalize ${row?.recStatus === "open" ? "border-success/20 bg-success/10 text-success" : "border-danger/20 bg-danger/10 text-danger"}`}>
+                    {row?.recStatus || "-"}
+                </span>
+            )
+        },
     ];
 
-    useEffect(() => { dispatch(getAllTransactionSchema("receipt") as any); }, [dispatch]);
-    useEffect(() => { fetchSalesReceipts(); }, [localOffset, localLimit, debouncedSearch, status]);
+    useEffect(() => {
+        dispatch(getAllTransactionSchema("receipt") as any);
+    }, [dispatch]);
 
     useEffect(() => {
-        const timer = setTimeout(() => { setDebouncedSearch(search.trim()); setLocalOffset(0); }, 400);
+        fetchSalesReceipts();
+    }, [localOffset, localLimit, debouncedSearch, status]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setLocalOffset(0);
+        }, 400);
+
         return () => clearTimeout(timer);
     }, [search]);
 
     useEffect(() => {
         const prepareFields = async () => {
             if (!transactionsSchema) return;
-            const hasSchema = Array.isArray(transactionsSchema?.header) || Array.isArray(transactionsSchema?.body) || Array.isArray(transactionsSchema?.footer);
+
+            const hasSchema =
+                Array.isArray(transactionsSchema?.header) ||
+                Array.isArray(transactionsSchema?.body) ||
+                Array.isArray(transactionsSchema?.footer);
+
             if (!hasSchema) return;
 
             try {
                 setFieldsLoading(true);
+
                 const receiptSchema = prepareReceiptSchema(transactionsSchema);
-                const updatedData = await loadAllTemplateOptions(receiptSchema, { header: { accountType: "bank,cash" }, body: { accountType: "customer" } });
+
+                const updatedData = await loadAllTemplateOptions(receiptSchema, {
+                    header: { accountType: "bank,cash" },
+                    body: { accountType: "customer" }
+                });
+
                 const header = updatedData?.header?.filter((e: any) => e?.key !== "isPosPosting");
-                setTemplateFields({ ...updatedData, header });
+
+                setTemplateFields({
+                    ...updatedData,
+                    header
+                });
             } catch (error) {
-                console.log("Failed to prepare sales receipt fields", error);
+                console.log("Failed to prepare receipt fields", error);
             } finally {
                 setFieldsLoading(false);
             }
@@ -1260,7 +1347,6 @@ const SalesReceipt = () => {
         );
     }, [dispatch]);
 
-    // ★ ADDED: Load Account Master records for modal availability check
     useEffect(() => {
         const loadAccounts = async () => {
             try {
@@ -1284,17 +1370,13 @@ const SalesReceipt = () => {
         loadAccounts();
     }, [dispatch]);
 
-    // ★ ADDED: Open Account Master when a required receipt account is missing
     useEffect(() => {
         if (!showModal) return;
         if (editingRecord) return;
         if (!accountListLoaded) return;
 
-        const customerMissing =
-            customerAccounts.length === 0;
-
-        const cashBankMissing =
-            cashBankAccounts.length === 0;
+        const customerMissing = customerAccounts.length === 0;
+        const cashBankMissing = cashBankAccounts.length === 0;
 
         if (cashBankMissing) {
             setAccountCreateTarget("header");
@@ -1317,19 +1399,23 @@ const SalesReceipt = () => {
     ]);
 
     const showInitialSkeleton = !refreshing && salesReceipt.length === 0 && (listingLoader || fieldsLoading);
-    if (showInitialSkeleton) return <ModulePageSkeleton rows={8} columns={5} />;
+
+    if (showInitialSkeleton) {
+        return <ModulePageSkeleton rows={8} columns={5} />;
+    }
 
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <Badge count={pagination?.totalDocs ?? salesReceipt?.length ?? 0} text="Total Sales Receipts:" varient="primary" />
+                <Badge count={pagination?.totalDocs ?? salesReceipt?.length ?? 0} text="Total Receipts:" varient="primary" />
 
                 <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     <Toggle arr={["open", "close"]} state={status} setState={(nextStatus: "open" | "close") => { setStatus(nextStatus); setLocalOffset(0); }} />
                     <SearchInput search={search} setSearch={setSearch} />
                     <DataREfreshButton callBackFn={handleRefresh} loading={refreshing} />
+
                     <Permission module="bookez" permissionKey="receipt" action="create">
-                        <DataCreateButton callBackFn={openAddModal} text="Add Sales Receipt" />
+                        <DataCreateButton callBackFn={openAddModal} text="Add Receipt" />
                     </Permission>
                 </div>
             </div>
@@ -1338,7 +1424,7 @@ const SalesReceipt = () => {
                 columns={columns}
                 data={salesReceipt}
                 loading={listingLoader}
-                emptyMessage={`No ${status} sales receipt found`}
+                emptyMessage={`No ${status} receipt found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
                         <button
@@ -1363,7 +1449,13 @@ const SalesReceipt = () => {
                                     let x = rect.left - 150;
                                     if (x < 10) x = 10;
                                     const y = rect.top + window.scrollY - 5;
-                                    setConfirmTooltip({ show: true, x, y, voucherNumber: record?.recVoucherNumber || record?.receiptVoucherNumber || record?.voucherNumber });
+
+                                    setConfirmTooltip({
+                                        show: true,
+                                        x,
+                                        y,
+                                        voucherNumber: record?.recVoucherNumber || record?.receiptVoucherNumber || record?.voucherNumber
+                                    });
                                 }}
                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                             >
@@ -1374,9 +1466,31 @@ const SalesReceipt = () => {
                 )}
             />
 
-            {pagination?.totalDocs > 0 && <Pagination localLimit={localLimit} selectCb={(e: any) => { setLocalLimit(Number(e.target.value)); setLocalOffset(0); }} preDisabled={!pagination?.hasPrevPage} nextDisabled={!pagination?.hasNextPage} setLocalOffset={setLocalOffset} pagination={pagination} />}
+            {pagination?.totalDocs > 0 && (
+                <Pagination
+                    localLimit={localLimit}
+                    selectCb={(e: any) => {
+                        setLocalLimit(Number(e.target.value));
+                        setLocalOffset(0);
+                    }}
+                    preDisabled={!pagination?.hasPrevPage}
+                    nextDisabled={!pagination?.hasNextPage}
+                    setLocalOffset={setLocalOffset}
+                    pagination={pagination}
+                />
+            )}
 
-            {confirmTooltip.show && <ConfirmTooltip x={confirmTooltip.x} y={confirmTooltip.y} message="Are you sure you want to delete this sales receipt?" confirmText="Delete" cancelText="Cancel" onConfirm={handleDeleteConfirm} onCancel={() => setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null })} />}
+            {confirmTooltip.show && (
+                <ConfirmTooltip
+                    x={confirmTooltip.x}
+                    y={confirmTooltip.y}
+                    message="Are you sure you want to delete this receipt?"
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setConfirmTooltip({ show: false, x: null, y: null, voucherNumber: null })}
+                />
+            )}
 
             {!fieldsLoading && (
                 <DynamicAddForm
@@ -1414,8 +1528,6 @@ const SalesReceipt = () => {
                         },
                         bodyKey: "recBody",
                         handleChange: handleMainChange,
-
-                        // ★ ADDED: Common Account Master modal props
                         checkAccount,
                         setCheckAccount,
                         onAccountSaved: handleAccountSaved,
@@ -1438,20 +1550,56 @@ const SalesReceipt = () => {
                         addButtonText: "Add Reference",
                         isAddButton: false,
                         Addbutton: false,
-                        form: { newReference: newReferenceAmount, referenceBody: referenceRows },
-                        errors: { referenceBody: referenceError },
+
+                        form: {
+                            newReference: newReferenceAmount,
+                            referenceBody: referenceRows
+                        },
+
+                        errors: {
+                            referenceBody: referenceError
+                        },
+
                         handleAddRow: handleAddReferenceRow,
                         handleDeleteRow: handleDeleteReferenceRow,
                         handleRowChange: handleReferenceRowChange,
                         footerTotals: {},
-                        inputData: { header: [], body: referenceTableFields, footer: [] },
+
+                        // ⭐ ADDED: NEW REFERENCE INPUT
+                        inputData: {
+                            header: [
+                                {
+                                    key: "newReference",
+                                    label: "New Reference",
+                                    type: "number",
+                                    isRequired: false,
+                                },
+                            ],
+                            body: referenceTableFields,
+                            footer: [],
+                        },
+
                         bodyKey: "referenceBody",
-                        handleChange: (key: string, value: any) => { if (key === "newReference") handleNewReferenceChange(value); },
+
+                        handleChange: (key: string, value: any) => {
+                            if (key === "newReference") handleNewReferenceChange(value);
+                        },
                     }}
                 />
             )}
 
-            <ListingModel {...{ show: downlaodPDF?.show, GstToggle: true, downlaodPDF, entryType: "receipt", setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })), rowData: downlaodPDF?.record, report, title: "Download Sales Receipt PDF" }} />
+            <ListingModel
+                {...{
+                    show: downlaodPDF?.show,
+                    GstToggle: true,
+                    downlaodPDF,
+                    entryType: "receipt",
+                    setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show })),
+                    rowData: downlaodPDF?.record,
+                    report,
+                    title: "Download Receipt PDF"
+                }}
+            />
         </div>
     );
 };

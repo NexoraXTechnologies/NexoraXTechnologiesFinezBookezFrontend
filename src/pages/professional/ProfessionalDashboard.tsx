@@ -1482,7 +1482,7 @@ const TransportAnalyticsView = ({
 					</div>
 				</CompactWidgetCard>
 
-				<CompactWidgetCard title="Maintenance Summary" accent="purchase">
+				{/* <CompactWidgetCard title="Maintenance Summary" accent="purchase">
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
 						<div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
 							<p className="text-2xl font-black text-foreground">
@@ -1505,7 +1505,7 @@ const TransportAnalyticsView = ({
 							<p className="mt-1 text-xs font-bold text-muted-foreground">Fitness</p>
 						</div>
 					</div>
-				</CompactWidgetCard>
+				</CompactWidgetCard> */}
 			</div>
 		</motion.div>
 	);

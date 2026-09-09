@@ -205,59 +205,7 @@ const BalanceSheet = () => {
         </AnimatePresence>
       </div>
 
-      {/* <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-        <div className="rounded-lg border border-success/20 bg-card px-3 py-2.5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Assets</p>
-              <p className="mt-0.5 truncate text-lg font-bold leading-tight text-success">₹{formatAmount(totalAssets)}</p>
-            </div>
-
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
-              <TrendingUp size={17} />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-primary/20 bg-card px-3 py-2.5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Liabilities</p>
-              <p className="mt-0.5 truncate text-lg font-bold leading-tight text-primary">₹{formatAmount(totalLiabilities)}</p>
-            </div>
-
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Landmark size={17} />
-            </div>
-          </div>
-        </div>
-
-        <div className={`rounded-lg border bg-card px-3 py-2.5 shadow-sm ${netProfit >= 0 ? "border-success/20" : "border-danger/20"}`}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{netProfit >= 0 ? "Net Profit" : "Net Loss"}</p>
-              <p className={`mt-0.5 truncate text-lg font-bold leading-tight ${netProfit >= 0 ? "text-success" : "text-danger"}`}>₹{formatAmount(Math.abs(netProfit))}</p>
-            </div>
-
-            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${netProfit >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
-              <WalletCards size={17} />
-            </div>
-          </div>
-        </div>
-
-        <div className={`rounded-lg border bg-card px-3 py-2.5 shadow-sm ${Math.abs(difference) < 0.01 ? "border-success/20" : "border-danger/20"}`}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Difference</p>
-              <p className={`mt-0.5 truncate text-lg font-bold leading-tight ${Math.abs(difference) < 0.01 ? "text-success" : "text-danger"}`}>₹{formatAmount(Math.abs(difference))}</p>
-            </div>
-
-            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${Math.abs(difference) < 0.01 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
-              <Scale size={17} />
-            </div>
-          </div>
-        </div>
-      </div> */}
+      
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">

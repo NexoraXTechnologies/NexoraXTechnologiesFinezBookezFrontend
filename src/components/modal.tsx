@@ -210,6 +210,7 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
 
         if (!finalGstType) return toast.warn("Select With GST Or Without GST");
         if (!Object.keys(company || {})?.length) return toast.error("Add Company Details");
+        console.log({ rowData })
 
         try {
             const includeGst = finalGstType === "With GST";
@@ -225,7 +226,6 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                 upiUrl = buildUpiLink({ upiId: companyUpiId, amount, invoiceNo, name: company?.companyName || company?.businessName || "" });
                 upiQrUri = await generateQrDataUrl(upiUrl);
             }
-
             const htmlContent = buildPdfHtml({ ...company, selectedAccount, rowData, includeGst, primaryColor: "#1E88E5", entryType, gstType: finalGstType, upiId: companyUpiId, upiUrl, upiQrUri });
 
             printHtmlUsingIframe(htmlContent);

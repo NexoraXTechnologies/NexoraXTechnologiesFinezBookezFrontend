@@ -1,35 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-	LogOut,
-	IdCard,
-	Users,
-	Settings,
-	ChevronDown,
-	ChevronRight,
-	Building2,
-	Sliders,
-	CloudCog,
-	BookText,
-	LayoutDashboard,
-	X,
-	// CreditCard,
-	BrickWallShield,
-	WalletCards,
-	BadgeIndianRupee,
-	ShoppingCart,
-	BarChart3,
-	BookOpenCheck,
-	LockKeyhole,
-	Palette,
-	Wrench,
-	Truck,
-	MonitorCog,
-	Settings2,
-	Workflow,
-	Factory,
-
-} from "lucide-react";
+import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, BrickWallShield, WalletCards, BadgeIndianRupee, ShoppingCart, BarChart3, BookOpenCheck, LockKeyhole, Palette, Wrench, Truck, MonitorCog, Settings2, Workflow, Factory, ReceiptText, ScanLine } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 // import { useDispatch } from "react-redux";
 import EZLogo from "../assets/Logo.EZ.png";
@@ -37,7 +8,6 @@ import FinEzLogo from "../assets/FinEZ.png";
 import { isModuleEnabled } from "./PermissionGuard";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllSystemConfigurations } from "../redux/slices/systemConf";
-
 
 const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -147,7 +117,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 						...(enableQrBarcode ? [{
 							name: "Code Generate and assign",
 							path: "/bookEz/qr-and-barcode-generator",
-							icon: <BrickWallShield size={20} />,
+							icon: <ScanLine size={20} />,
 							module: "bookez",
 							permissionKey: "Pass",
 							action: "view",
@@ -243,7 +213,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 						{
 							name: "Accounts Statement",
 							path: "/bookEz/accounts-statement",
-							icon: <ShoppingCart size={20} />,
+							icon: <ReceiptText size={20} />,
 							module: "bookez",
 							permissionKey: "Pass",
 							action: "view",

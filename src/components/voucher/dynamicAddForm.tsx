@@ -204,7 +204,7 @@ const getStandardMasterSelectedValue = (form: any, field: any) => {
 
 // DYNAMIC ADD FORM
 
-const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleRefRow, handleDeleteRow, handleRowChange, inputData, bodyKey, addButtonText, handleChange, headerChildTitle, isAddButton = true, isRefrenceAction = false, RefrenceBtnText, bodyTitle, isView = false, contentLoading = false, contentSkeleton, isSummaryFooter, manualselected, enableLocation, isBodyColumnVisible, isBodyCellVisible, isBodyCellDisabled, bodyCellExtraRenderer, checkAccount, setCheckAccount, onAccountSaved, headerChildExtraRenderer, headerRightContent }: any) => {
+const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleRefRow, handleDeleteRow, handleRowChange, inputData, bodyKey, addButtonText, handleChange, headerChildTitle, isAddButton = true, isRefrenceAction = false, RefrenceBtnText, bodyTitle, isView = false, contentLoading = false, contentSkeleton, isSummaryFooter, manualselected, enableLocation, isBodyColumnVisible, isBodyCellVisible, isBodyCellDisabled, bodyCellExtraRenderer, checkAccount, setCheckAccount, onAccountSaved, headerChildExtraRenderer, headerRightContent, customBody }: any) => {
     const [loadedInputData, setLoadedInputData] = useState<any>(inputData || {});
     const [customMasterOptionsLoading, setCustomMasterOptionsLoading] = useState(false);
 
@@ -406,10 +406,36 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                         {/* BODY ERROR */}
                         {errors?.[bodyKey] && <p className="mt-4 text-sm text-danger">{errors?.[bodyKey]}</p>}
 
-                        {/* LINE TABLE */}
-                        {!manualselected && (
+                        {/* CUSTOM BODY */}
+                        {!manualselected && customBody && (
                             <div className="mt-3 w-full max-w-full">
-                                <EditableLineTable isView={isView} bodyTitle={bodyTitle || "Products"} addButtonText={addButtonText || "Add Product"} rows={form?.[bodyKey] || []} columns={loadedInputData?.body || []} errors={errors} onAddRow={handleAddRow} onRefrenceRow={handleRefRow} onDeleteRow={handleDeleteRow} onChange={handleRowChange} emptyText="No products added" isAddButton={isAddButton} RefrenceBtnText={RefrenceBtnText} isRefrenceAction={isRefrenceAction} isColumnVisible={isBodyColumnVisible} isCellVisible={isBodyCellVisible} isCellDisabled={isBodyCellDisabled} renderCellExtra={bodyCellExtraRenderer} />
+                                {customBody}
+                            </div>
+                        )}
+
+                        {/* LINE TABLE */}
+                        {!manualselected && !customBody && (
+                            <div className="mt-3 w-full max-w-full">
+                                <EditableLineTable
+                                    isView={isView}
+                                    bodyTitle={bodyTitle || "Products"}
+                                    addButtonText={addButtonText || "Add Product"}
+                                    rows={form?.[bodyKey] || []}
+                                    columns={loadedInputData?.body || []}
+                                    errors={errors}
+                                    onAddRow={handleAddRow}
+                                    onRefrenceRow={handleRefRow}
+                                    onDeleteRow={handleDeleteRow}
+                                    onChange={handleRowChange}
+                                    emptyText="No products added"
+                                    isAddButton={isAddButton}
+                                    RefrenceBtnText={RefrenceBtnText}
+                                    isRefrenceAction={isRefrenceAction}
+                                    isColumnVisible={isBodyColumnVisible}
+                                    isCellVisible={isBodyCellVisible}
+                                    isCellDisabled={isBodyCellDisabled}
+                                    renderCellExtra={bodyCellExtraRenderer}
+                                />
                             </div>
                         )}
 

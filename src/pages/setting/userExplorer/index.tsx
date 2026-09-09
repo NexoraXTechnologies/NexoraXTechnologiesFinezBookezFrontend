@@ -12,6 +12,7 @@ import {
     IndianRupee,
     Layers,
     ListChecks,
+    MapPinned,
     Loader2,
     MessageSquareText,
     PackageCheck,
@@ -26,6 +27,9 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
+import L from "leaflet";
+import { GeoJSON, MapContainer, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import {
     requestDbAccess,
     getDbAccessRequests,
@@ -63,6 +67,35 @@ import {
     YAxis,
 } from "recharts";
 
+
+const STATE_GEOJSON_BASE_URL = "https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@2884453/geojson/states";
+
+const normalizeGeoName = (value: any) => String(value || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ").trim();
+
+const getStateGeoJsonSlug = (stateName: any) => {
+    const normalized = normalizeGeoName(stateName);
+    if (normalized === "dadra and nagar haveli and daman and diu") return "dnh-and-dd";
+    return normalized.replace(/\s+/g, "-");
+};
+
+const FitGeoJsonBounds = ({ data }: any) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!data?.features?.length) return;
+        const layer = L.geoJSON(data as any);
+        const bounds = layer.getBounds();
+        if (!bounds.isValid()) return;
+
+        requestAnimationFrame(() => {
+            map.invalidateSize();
+            map.fitBounds(bounds, { padding: [8, 8], animate: false });
+        });
+    }, [data, map]);
+
+    return null;
+};
+
 const UserExplorer = ({ onAccessSuccess }: any) => {
     const dispatch = useDispatch<any>();
 
@@ -93,6 +126,12 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     const [showDashboardFilter, setShowDashboardFilter] = useState(false);
 
     const [selectedStateCities, setSelectedStateCities] = useState<any[]>([]);
+    const [selectedMapState, setSelectedMapState] = useState<any>(null);
+    const [mapCityData, setMapCityData] = useState<any[]>([]);
+    const [mapLoading, setMapLoading] = useState(false);
+    const [mapGeoJson, setMapGeoJson] = useState<any>(null);
+    const [mapGeoJsonLoading, setMapGeoJsonLoading] = useState(false);
+    const [mapGeoJsonError, setMapGeoJsonError] = useState("");
 
     const [dashboardFilters, setDashboardFilters] = useState<any>({
         dbNumbers: [],
@@ -456,6 +495,135 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         }
     };
 
+    const normalizeLocationText = (value: any) => {
+        if (!value) return "";
+        if (typeof value === "string") return value.trim().toLowerCase();
+        return String(value?.name?.en || value?.name || value?.label || value?.cityName || value?.stateName || value?.city || value?.state || "").trim().toLowerCase();
+    };
+
+    const getCityName = (value: any) => {
+        if (!value) return "";
+        if (typeof value === "string") return value.trim();
+        return String(value?.name?.en || value?.cityName || value?.name || value?.label || value?.city || "").trim();
+    };
+
+    const getCityCoordinates = (city: any) => {
+        const latitude = Number(city?.latitude ?? city?.lat);
+        const longitude = Number(city?.longitude ?? city?.lng ?? city?.long);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return { latitude: null, longitude: null };
+        return { latitude, longitude };
+    };
+
+    const normalizeAreaDashboardResponse = (response: any) => response?.data?.data || response?.data || response || {};
+
+    const getCityWiseDashboardData = (response: any) => {
+        const data = normalizeAreaDashboardResponse(response);
+        const candidates = [data?.cityWise, data?.citySummary, data?.cityBreakdown, data?.cities, data?.areaWise, data?.locationWise];
+
+        for (const candidate of candidates) {
+            if (Array.isArray(candidate)) return candidate;
+
+            if (candidate && typeof candidate === "object") {
+                return Object.entries(candidate).map(([city, value]: any) => {
+                    if (value && typeof value === "object") return { city, ...value };
+                    return { city, totalAmount: value };
+                });
+            }
+        }
+
+        return [];
+    };
+
+    const getDashboardTotals = (response: any) => {
+        const data = normalizeAreaDashboardResponse(response);
+        const moduleKeys = ["salesQuotation", "salesOrder", "salesInvoice", "salesInvoiceReturn", "receipt", "purchaseOrder", "grn", "purchaseInvoice", "purchaseReturn", "payment"];
+        const totalAmount = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalAmount || 0), 0);
+        const totalTransactions = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalCount || 0), 0);
+
+        return { totalAmount, totalTransactions, totalBusinesses: Number(data?.totalBusinesses || 0) };
+    };
+
+    const handleMapStateChange = async (option: any) => {
+        setSelectedMapState(option || null);
+        setMapCityData([]);
+
+        if (!option?.value || !option?.stateCode) return;
+
+        try {
+            setMapLoading(true);
+
+            const cityResponse = await dispatch(getCitiesByState({ stateCode: option.stateCode }) as any).unwrap();
+            const stateCities = cityResponse?.cities || cityResponse?.data?.cities || cityResponse?.data || cityResponse?.records || cityResponse || [];
+            const cityList = Array.isArray(stateCities) ? stateCities : [];
+            const cityLookup = new Map(cityList.map((city: any) => [normalizeLocationText(getCityName(city)), city]));
+
+            const stateDashboardResponse = await dispatch(getAreaDashboard({ dbNumbers: [], cities: [], states: [option.value], period: "", modules: [] }) as any).unwrap();
+            const cityWise = getCityWiseDashboardData(stateDashboardResponse);
+
+            if (cityWise.length) {
+                const normalized = cityWise
+                    .map((item: any) => {
+                        const cityName = getCityName(item?.city || item?.cityName || item?.name || item?.label);
+                        const cityMeta = cityLookup.get(normalizeLocationText(cityName));
+                        const { latitude, longitude } = getCityCoordinates(cityMeta);
+                        const amount = Number(item?.totalAmount ?? item?.amount ?? item?.transactionAmount ?? item?.netAmount ?? item?.value ?? 0);
+                        const transactions = Number(item?.totalTransactions ?? item?.transactionCount ?? item?.totalCount ?? item?.count ?? 0);
+                        const businesses = Number(item?.totalBusinesses ?? item?.businessCount ?? item?.businesses ?? 0);
+
+                        return { city: cityName, amount, transactions, businesses, latitude, longitude };
+                    })
+                    .filter((item: any) => item.city)
+                    .sort((a: any, b: any) => b.amount - a.amount);
+
+                setMapCityData(normalized);
+                return;
+            }
+
+            const allAccessResponse = await dispatch(getDbAccessRequests({ offset: 0, limit: 1000, status: "ACCEPTED", search: "" }) as any).unwrap();
+            const allAccessRows = allAccessResponse?.records || allAccessResponse?.requests || allAccessResponse?.accessRequests || allAccessResponse?.data?.records || allAccessResponse?.data?.requests || [];
+            const acceptedRows = Array.isArray(allAccessRows) ? allAccessRows : requestTableData;
+
+            const cityNamesInState = Array.from(
+                new Set(
+                    acceptedRows
+                        .filter((row: any) => {
+                            const rowCity = getCityName(row?.city);
+                            if (!rowCity || !cityLookup.has(normalizeLocationText(rowCity))) return false;
+                            const rowState = normalizeLocationText(row?.state);
+                            return !rowState || rowState === normalizeLocationText(option.value);
+                        })
+                        .map((row: any) => getCityName(row?.city))
+                        .filter(Boolean)
+                )
+            );
+
+            await fetchDbAccessRequestsWithParams({ offset: localOffset, limit: localLimit, searchValue: debouncedSearch });
+
+            const cityResults = await Promise.all(
+                cityNamesInState.map(async (city: any) => {
+                    try {
+                        const response = await dispatch(getAreaDashboard({ dbNumbers: [], cities: [city], states: [option.value], period: "", modules: [] }) as any).unwrap();
+                        const totals = getDashboardTotals(response);
+                        const cityMeta = cityLookup.get(normalizeLocationText(city));
+                        const { latitude, longitude } = getCityCoordinates(cityMeta);
+
+                        return { city, amount: totals.totalAmount, transactions: totals.totalTransactions, businesses: totals.totalBusinesses, latitude, longitude };
+                    } catch {
+                        const cityMeta = cityLookup.get(normalizeLocationText(city));
+                        const { latitude, longitude } = getCityCoordinates(cityMeta);
+                        return { city, amount: 0, transactions: 0, businesses: 0, latitude, longitude };
+                    }
+                })
+            );
+
+            setMapCityData(cityResults.sort((a: any, b: any) => b.amount - a.amount));
+        } catch (err: any) {
+            toast.error(err?.message || err?.data?.message || "Failed to load state map data");
+        } finally {
+            setMapLoading(false);
+        }
+    };
+
     const pageTabs = [
         {
             key: "listing",
@@ -466,6 +634,11 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             key: "dashboard",
             label: "Dashboard",
             icon: <BarChart3 size={16} />,
+        },
+        {
+            key: "stateMap",
+            label: "State Map",
+            icon: <MapPinned size={16} />,
         },
     ];
 
@@ -607,6 +780,47 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         fetchAreaDashboard();
     }, [activePageTab]);
 
+    useEffect(() => {
+        if (activePageTab !== "stateMap") return;
+
+        // @ts-ignore
+        dispatch(getStates() as any);
+    }, [activePageTab]);
+
+    useEffect(() => {
+        if (activePageTab !== "stateMap" || !selectedMapState?.value) {
+            setMapGeoJson(null);
+            setMapGeoJsonError("");
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadStateGeoJson = async () => {
+            try {
+                setMapGeoJsonLoading(true);
+                setMapGeoJsonError("");
+                const slug = getStateGeoJsonSlug(selectedMapState.value);
+                const response = await fetch(`${STATE_GEOJSON_BASE_URL}/${slug}.geojson`);
+                if (!response.ok) throw new Error(`Failed to load ${selectedMapState.label || selectedMapState.value} map`);
+                const geoJson = await response.json();
+                const features = Array.isArray(geoJson?.features) ? geoJson.features : [];
+                if (!features.length) throw new Error(`No district boundary found for ${selectedMapState.label || selectedMapState.value}`);
+                if (!cancelled) setMapGeoJson({ ...geoJson, type: "FeatureCollection", features });
+            } catch (err: any) {
+                if (!cancelled) {
+                    setMapGeoJson(null);
+                    setMapGeoJsonError(err?.message || "Failed to load district boundary map");
+                }
+            } finally {
+                if (!cancelled) setMapGeoJsonLoading(false);
+            }
+        };
+
+        loadStateGeoJson();
+        return () => { cancelled = true; };
+    }, [activePageTab, selectedMapState?.value]);
+
     const dbNumberOptions = requestTableData
         ?.map((item: any) => ({
             label: `${item?.parentMobileNumber || "-"} ${getFullName(item) !== "-" ? `- ${getFullName(item)}` : ""
@@ -644,6 +858,57 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         { label: "This Year", value: "this_year" },
         { label: "Last Year", value: "last_year" },
     ];
+
+    const mapMaxAmount = Math.max(0, ...mapCityData.map((item: any) => Number(item?.amount || 0)));
+    const mapColorScale = ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02", "#b10026"];
+
+    const normalizeDistrictKey = (value: any) => normalizeGeoName(value).replace(/\b(district|city district|urban|rural)\b/g, "").replace(/\s+/g, " ").trim();
+
+    const findMapCityData = (districtName: any) => {
+        const districtKey = normalizeDistrictKey(districtName);
+        if (!districtKey) return null;
+
+        const exact = mapCityData.find((item: any) => normalizeDistrictKey(item?.city) === districtKey);
+        if (exact) return exact;
+
+        return mapCityData.find((item: any) => {
+            const cityKey = normalizeDistrictKey(item?.city);
+            if (!cityKey) return false;
+            if (districtKey === "mumbai suburban" && cityKey === "mumbai") return true;
+            if (districtKey === "mumbai" && cityKey === "mumbai") return true;
+            return districtKey.includes(cityKey) || cityKey.includes(districtKey);
+        }) || null;
+    };
+
+    const getMapFillColor = (amount: any) => {
+        const value = Number(amount || 0);
+        if (value <= 0 || mapMaxAmount <= 0) return "#dbe4ee";
+        const ratio = value / mapMaxAmount;
+        const index = Math.min(mapColorScale.length - 1, Math.max(0, Math.ceil(ratio * mapColorScale.length) - 1));
+        return mapColorScale[index];
+    };
+
+    const getDistrictNameFromFeature = (feature: any) => feature?.properties?.district || feature?.properties?.DISTRICT || feature?.properties?.district_name || feature?.properties?.DISTRICT_NAME || feature?.properties?.dtname || feature?.properties?.DT_NAME || feature?.properties?.NAME_2 || feature?.properties?.name || feature?.properties?.NAME || "-";
+
+    const getDistrictStyle = (feature: any) => {
+        const cityData = findMapCityData(getDistrictNameFromFeature(feature));
+        return { color: cityData ? "#64748b" : "#94a3b8", weight: cityData ? 1.5 : 1.15, fillColor: getMapFillColor(cityData?.amount), fillOpacity: cityData ? 0.98 : 0.88 };
+    };
+
+    const onEachDistrictFeature = (feature: any, layer: any) => {
+        const districtName = getDistrictNameFromFeature(feature);
+        const cityData = findMapCityData(districtName);
+        const amount = Number(cityData?.amount || 0);
+        const label = `<div style="text-align:center;line-height:1.15;white-space:nowrap"><div style="font-size:${cityData ? "13px" : "11px"};font-weight:800;color:#0f172a;text-shadow:0 1px 2px rgba(255,255,255,.98)">${districtName}</div>${cityData ? `<div style="font-size:12px;font-weight:900;color:#334155;text-shadow:0 1px 2px rgba(255,255,255,.98)">${formatAmount(amount)}</div>` : ""}</div>`;
+
+        layer.bindTooltip(label, { permanent: true, direction: "center", className: "state-map-label", opacity: 1 });
+
+        layer.bindPopup(`<div style="min-width:170px"><div style="font-weight:800;margin-bottom:6px">${districtName}</div><div>Amount: <b>${formatFullAmount(amount)}</b></div><div>Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div>Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div></div>`);
+        layer.on({
+            mouseover: (event: any) => event.target.setStyle({ weight: 2.2, color: "#334155", fillOpacity: 1 }),
+            mouseout: (event: any) => event.target.setStyle(getDistrictStyle(feature)),
+        });
+    };
 
     const disabled = false;
 
@@ -2315,6 +2580,100 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                 </div>
             )}
 
+            {/* ================= STATE MAP TAB ================= */}
+            {activePageTab === "stateMap" && (
+                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+                    <style>{`
+                        .user-explorer-state-map .leaflet-container { background: transparent !important; font-family: inherit; }
+                        .user-explorer-state-map .leaflet-pane.leaflet-map-pane { cursor: default; }
+                        .user-explorer-state-map .leaflet-tooltip.state-map-label { background: transparent; border: 0; box-shadow: none; padding: 0; }
+                        .user-explorer-state-map .leaflet-tooltip.state-map-label:before { display: none; }
+                        .user-explorer-state-map .leaflet-popup-content-wrapper { border-radius: 8px; }
+                    `}</style>
+
+                    <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <h2 className="text-sm font-black text-card-foreground">State Map</h2>
+                            <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p>
+                        </div>
+
+                        <div className="w-full md:w-[320px]">
+                            <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
+                            <Select
+                                classNamePrefix="dashboard-select"
+                                isDisabled={mapLoading}
+                                value={selectedMapState}
+                                onChange={handleMapStateChange}
+                                options={stateOptions}
+                                placeholder="Select State"
+                                styles={reactSelectStyles}
+                                isClearable
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                            />
+                        </div>
+                    </div>
+
+                    {/* {!selectedMapState ? (
+                        <div className="flex min-h-[520px] flex-1 items-center justify-center border border-dashed border-border bg-background/30 text-center">
+                            <div>
+                                <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
+                                <p className="text-sm font-black text-card-foreground">Select a state to show its map</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="user-explorer-state-map relative min-h-[700px] flex-1 overflow-hidden bg-background/30">
+                            {(mapLoading || mapGeoJsonLoading) && (
+                                <div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
+                                    <Loader2 size={18} className="animate-spin" />
+                                    Loading {selectedMapState?.label} map...
+                                </div>
+                            )}
+
+                            {!mapGeoJsonLoading && mapGeoJson ? (
+                                <>
+                                    <MapContainer
+                                        key={selectedMapState?.value}
+                                        center={[20.5937, 78.9629]}
+                                        zoom={5}
+                                        zoomSnap={0.1}
+                                        zoomDelta={0.1}
+                                        zoomControl={false}
+                                        attributionControl={false}
+                                        dragging={false}
+                                        scrollWheelZoom={false}
+                                        doubleClickZoom={false}
+                                        boxZoom={false}
+                                        keyboard={false}
+                                        touchZoom={false}
+                                        style={{ height: "100%", width: "100%", background: "transparent" }}
+                                    >
+                                        <GeoJSON key={`${selectedMapState?.value}-${mapCityData.length}-${mapMaxAmount}`} data={mapGeoJson as any} style={getDistrictStyle as any} onEachFeature={onEachDistrictFeature as any} />
+                                        <FitGeoJsonBounds data={mapGeoJson} />
+                                    </MapContainer>
+
+                                    <div className="pointer-events-none absolute bottom-4 right-4 z-[900] flex items-center gap-2 rounded bg-background/90 px-3 py-2 shadow-md backdrop-blur-sm">
+                                        <span className="text-[10px] font-bold text-muted-foreground">₹0</span>
+                                        <div className="flex overflow-hidden rounded-sm border border-border">
+                                            {mapColorScale.map((color) => <span key={color} className="h-3 w-7" style={{ backgroundColor: color }} />)}
+                                        </div>
+                                        <span className="text-[10px] font-black text-card-foreground">{formatAmount(mapMaxAmount)}</span>
+                                    </div>
+                                </>
+                            ) : !mapGeoJsonLoading && !mapLoading ? (
+                                <div className="flex h-full min-h-[700px] items-center justify-center p-6 text-center">
+                                    <div>
+                                        <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
+                                        <p className="text-sm font-black text-card-foreground">Map could not be loaded</p>
+                                        <p className="mt-1 text-xs font-medium text-muted-foreground">{mapGeoJsonError || `No map data found for ${selectedMapState?.label}`}</p>
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
+                    )} */}
+                </div>
+            )}
+
             {/* ================= REQUEST ACCESS MODAL ================= */}
             {showRequestModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
@@ -2355,8 +2714,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
                                 <div
                                     className={`flex items-center gap-3 rounded-lg border bg-input px-3 py-2.5 transition ${errors.parentMobileNumber
-                                            ? "border-danger"
-                                            : "border-border focus-within:border-primary"
+                                        ? "border-danger"
+                                        : "border-border focus-within:border-primary"
                                         }`}
                                 >
                                     <Phone
@@ -2393,8 +2752,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
                                 <div
                                     className={`flex gap-3 rounded-lg border bg-input px-3 py-2.5 transition ${errors.requestMessage
-                                            ? "border-danger"
-                                            : "border-border focus-within:border-primary"
+                                        ? "border-danger"
+                                        : "border-border focus-within:border-primary"
                                         }`}
                                 >
                                     <MessageSquareText

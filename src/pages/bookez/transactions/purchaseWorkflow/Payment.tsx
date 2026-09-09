@@ -204,21 +204,7 @@ const Payment = () => {
     const getRecords = (res: any) => {
         return Array.isArray(res?.items)
             ? res.items
-            : Array.isArray(res?.records)
-                ? res.records
-                : Array.isArray(res?.docs)
-                    ? res.docs
-                    : Array.isArray(res?.data?.items)
-                        ? res.data.items
-                        : Array.isArray(res?.data?.records)
-                            ? res.data.records
-                            : Array.isArray(res?.data?.docs)
-                                ? res.data.docs
-                                : Array.isArray(res?.data)
-                                    ? res.data
-                                    : Array.isArray(res)
-                                        ? res
-                                        : [];
+            : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
     };
 
     const cashBankAccounts = useMemo(() => {
@@ -2400,7 +2386,7 @@ const Payment = () => {
                     show: downlaodPDF?.show,
                     downlaodPDF,
                     GstToggle: true,
-                    entryType: "purchasePayment",
+                    entryType: "payment",
                     setShow: () => setDownlaodPDF(() => ({ show: !downlaodPDF?.show, })),
                     rowData: downlaodPDF?.record,
                     report,

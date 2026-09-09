@@ -371,79 +371,7 @@ const ProfitAndLoss = ({ show = true }: ProfitLossProps) => {
                 </AnimatePresence>
             </div>
 
-            {/* <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <div className="rounded-lg border border-success/20 bg-card px-3 py-2.5 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Income</p>
-                            <p className="mt-0.5 truncate text-lg font-bold leading-tight text-success">₹{formatAmount(totalIncome)}</p>
-                        </div>
-
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
-                            <TrendingUp size={17} />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="rounded-lg border border-danger/20 bg-card px-3 py-2.5 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Total Expenses</p>
-                            <p className="mt-0.5 truncate text-lg font-bold leading-tight text-danger">₹{formatAmount(totalExpense)}</p>
-                        </div>
-
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
-                            <TrendingDown size={17} />
-                        </div>
-                    </div>
-                </div>
-
-                <div className={`rounded-lg border bg-card px-3 py-2.5 shadow-sm ${netProfit >= 0 ? "border-success/20" : "border-danger/20"}`}>
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{netProfit >= 0 ? "Net Profit" : "Net Loss"}</p>
-                            <p className={`mt-0.5 truncate text-lg font-bold leading-tight ${netProfit >= 0 ? "text-success" : "text-danger"}`}>
-                                ₹{formatAmount(Math.abs(netProfit))}
-                            </p>
-                        </div>
-
-                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${netProfit >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
-                            <WalletCards size={17} />
-                        </div>
-                    </div>
-                </div>
-            </div> */}
-
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-                    <div className="flex items-center justify-between border-b border-border bg-success/[0.03] px-3 py-2">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success">
-                                <TrendingUp size={15} />
-                            </div>
-
-                            <div>
-                                <p className="text-sm font-semibold leading-tight text-card-foreground">Income</p>
-                                <p className="text-[11px] leading-tight text-muted-foreground">{incomeRows.length} {incomeRows.length === 1 ? "entry" : "entries"}</p>
-                            </div>
-                        </div>
-
-                        <span className="rounded-md bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
-                            ₹{formatAmount(totalIncome)}
-                        </span>
-                    </div>
-
-                    <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
-                        <DataTable
-                            columns={incomeColumns}
-                            data={incomeRows}
-                            loading={analysisLoading}
-                            emptyMessage="No income data found"
-                            showFieldSelector={false}
-                        />
-                    </div>
-                </div>
-
                 <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                     <div className="flex items-center justify-between border-b border-border bg-danger/[0.03] px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -472,61 +400,35 @@ const ProfitAndLoss = ({ show = true }: ProfitLossProps) => {
                         />
                     </div>
                 </div>
+                <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                    <div className="flex items-center justify-between border-b border-border bg-success/[0.03] px-3 py-2">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success">
+                                <TrendingUp size={15} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold leading-tight text-card-foreground">Income</p>
+                                <p className="text-[11px] leading-tight text-muted-foreground">{incomeRows.length} {incomeRows.length === 1 ? "entry" : "entries"}</p>
+                            </div>
+                        </div>
+
+                        <span className="rounded-md bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
+                            ₹{formatAmount(totalIncome)}
+                        </span>
+                    </div>
+
+                    <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
+                        <DataTable
+                            columns={incomeColumns}
+                            data={incomeRows}
+                            loading={analysisLoading}
+                            emptyMessage="No income data found"
+                            showFieldSelector={false}
+                        />
+                    </div>
+                </div>
             </div>
 
-            {/* {(otherIncomeDetails.length > 0 || otherExpenseDetails.length > 0) && (
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                    {otherIncomeDetails.length > 0 && (
-                        <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-                            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                                <div>
-                                    <p className="text-sm font-semibold leading-tight text-card-foreground">Other Income Details</p>
-                                    <p className="text-[11px] leading-tight text-muted-foreground">{otherIncomeDetails.length} {otherIncomeDetails.length === 1 ? "entry" : "entries"}</p>
-                                </div>
-
-                                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success">
-                                    <TrendingUp size={15} />
-                                </div>
-                            </div>
-
-                            <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
-                                <DataTable
-                                    columns={incomeColumns}
-                                    data={otherIncomeDetails}
-                                    loading={analysisLoading}
-                                    emptyMessage="No other income data found"
-                                    showFieldSelector={false}
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    {otherExpenseDetails.length > 0 && (
-                        <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-                            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                                <div>
-                                    <p className="text-sm font-semibold leading-tight text-card-foreground">Other Expense Details</p>
-                                    <p className="text-[11px] leading-tight text-muted-foreground">{otherExpenseDetails.length} {otherExpenseDetails.length === 1 ? "entry" : "entries"}</p>
-                                </div>
-
-                                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-danger/10 text-danger">
-                                    <TrendingDown size={15} />
-                                </div>
-                            </div>
-
-                            <div className="min-w-0 overflow-hidden [&_table]:!w-full [&_table]:!min-w-full [&_.overflow-x-auto]:!overflow-x-hidden [&_th]:!py-2 [&_th]:!text-xs [&_td]:!py-2 [&_td]:!text-sm">
-                                <DataTable
-                                    columns={expenseColumns}
-                                    data={otherExpenseDetails}
-                                    loading={analysisLoading}
-                                    emptyMessage="No other expense data found"
-                                    showFieldSelector={false}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )} */}
 
             <div className={`flex items-center justify-between rounded-lg border bg-card px-3 py-2.5 shadow-sm ${netProfit >= 0 ? "border-success/20" : "border-danger/20"}`}>
                 <div className="flex items-center gap-2">
