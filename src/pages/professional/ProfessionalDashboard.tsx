@@ -850,8 +850,16 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 													x2="1"
 													y2="1"
 												>
-													<stop offset="0%" stopColor={item.color} stopOpacity={0.95} />
-													<stop offset="100%" stopColor={item.color} stopOpacity={0.65} />
+													<stop
+														offset="0%"
+														stopColor={item.color}
+														stopOpacity={0.95}
+													/>
+													<stop
+														offset="100%"
+														stopColor={item.color}
+														stopOpacity={0.65}
+													/>
 												</linearGradient>
 											))}
 										</defs>
@@ -862,7 +870,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											nameKey="name"
 											cx="50%"
 											cy="50%"
-											innerRadius={68}
+												innerRadius={78}
 											outerRadius={100}
 											paddingAngle={6}
 											stroke="var(--card)"
@@ -881,16 +889,16 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								</ResponsiveContainer>
 
 								{/* Center Text */}
-								<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-									<p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+									<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+										<p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
 										Total
 									</p>
 
-									<p className="mt-1 text-xl font-black text-foreground">
+										<p className="mt-1 max-w-[145px] whitespace-nowrap text-[15px] font-black leading-tight text-foreground">
 										{formatMoney(revenueTotal)}
 									</p>
 
-									<p className="mt-1 text-[11px] font-bold text-muted-foreground">
+										<p className="mt-1 text-[10px] font-bold text-muted-foreground">
 										Revenue mix
 									</p>
 								</div>
@@ -905,9 +913,7 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 									>
 										<div className="flex items-center justify-between gap-3">
 											<div className="flex min-w-0 items-center gap-2">
-												<span
-													className="h-3 w-3 shrink-0 rounded-full shadow-sm"
-													style={{ backgroundColor: item.color }}
+												<span className="h-3 w-3 shrink-0 rounded-full shadow-sm" style={{ backgroundColor: item.color, }}
 												/>
 
 												<div className="min-w-0">

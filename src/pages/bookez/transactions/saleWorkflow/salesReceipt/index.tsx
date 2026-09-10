@@ -137,8 +137,7 @@ const SalesReceipt = () => {
     const customerAccounts = useMemo(() => {
         return (accounts || []).filter(
             (account: any) =>
-                String(account?.accountType || "").toLowerCase() ===
-                "customer"
+                String(account?.accountType || "").toLowerCase() === "customer"
         );
     }, [accounts]);
 
@@ -534,15 +533,7 @@ const SalesReceipt = () => {
                 const receiptSchema = prepareReceiptSchema(transactionsSchema);
 
                 const updatedData = await loadAllTemplateOptions(
-                    receiptSchema,
-                    {
-                        header: {
-                            accountType: "bank,cash",
-                        },
-                        body: {
-                            accountType: "customer",
-                        },
-                    }
+                    receiptSchema
                 );
 
                 const header = (updatedData?.header || []).filter(
@@ -1381,10 +1372,7 @@ const SalesReceipt = () => {
 
                 const receiptSchema = prepareReceiptSchema(transactionsSchema);
 
-                const updatedData = await loadAllTemplateOptions(receiptSchema, {
-                    header: { accountType: "bank,cash" },
-                    body: { accountType: "customer" }
-                });
+                const updatedData = await loadAllTemplateOptions(receiptSchema);
 
                 const header = updatedData?.header?.filter((e: any) => e?.key !== "isPosPosting");
 

@@ -3,7 +3,7 @@ import { CheckSquare, Square, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DataTable from "../../../../../components/DataTable";
-import { DataCreateButton, DataREfreshButton } from "../../../../../components/buttons";
+import { DataREfreshButton } from "../../../../../components/buttons";
 import Toggle from "../../../../../components/toggle";
 import Badge from "../../../../../components/badge";
 import SearchInput from "../../../../../components/searchInput";
@@ -534,6 +534,7 @@ const MultiSalesInvoice = () => {
 
     const handleSelectAllInvoices = () => {
         const visibleVoucherNumbers = filteredCustomerInvoices.map(getInvoiceVoucherNumber).filter(Boolean);
+        // @ts-ignore
         const allVisibleSelected = visibleVoucherNumbers.length > 0 && visibleVoucherNumbers.every((voucherNumber) => selectedInvoiceSet.has(voucherNumber));
 
         setSelectedInvoiceNumbers((previous) => {
@@ -897,6 +898,7 @@ const MultiSalesInvoice = () => {
                 headerClassName="bg-card"
                 footerClassName="bg-card"
                 bodyClassName="!block !p-0 bg-card text-card-foreground"
+                // @ts-ignore
                 cancelText="Cancel"
                 confirmText={`Continue${selectedInvoiceNumbers.length ? ` (${selectedInvoiceNumbers.length})` : ""}`}
                 body={

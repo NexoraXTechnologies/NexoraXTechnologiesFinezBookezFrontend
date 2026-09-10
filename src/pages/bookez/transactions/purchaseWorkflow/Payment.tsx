@@ -793,10 +793,12 @@ const Payment = () => {
 
                 const paymentSchema = preparePaymentSchema(transactionsSchema);
 
-                const updatedData = await loadAllTemplateOptions(paymentSchema, {
-                    header: { accountType: "bank , cash" },
-                    body: { accountType: "vendor , expense", limit: 1000 },
-                });
+                const updatedData = await loadAllTemplateOptions(paymentSchema,
+                //     {
+                //     header: { accountType: "bank , cash" },
+                //     body: { accountType: "vendor , expense", limit: 1000 },
+                // }
+                );
 
                 setTemplateFields(updatedData);
             } catch (error) {
@@ -1075,7 +1077,6 @@ const Payment = () => {
         }));
     };
 
-
     const handleAccountSaved = async (savedResponse: any) => {
         try {
             const accountResponse: any = await dispatch(
@@ -1099,15 +1100,15 @@ const Payment = () => {
 
                 const updatedData = await loadAllTemplateOptions(
                     paymentSchema,
-                    {
-                        header: {
-                            accountType: "bank , cash",
-                        },
-                        body: {
-                            accountType: "vendor , expense",
-                            limit: 1000,
-                        },
-                    }
+                    // {
+                    //     header: {
+                    //         accountType: "bank , cash",
+                    //     },
+                    //     body: {
+                    //         accountType: "vendor , expense",
+                    //         limit: 1000,
+                    //     },
+                    // }
                 );
 
                 setTemplateFields(updatedData);

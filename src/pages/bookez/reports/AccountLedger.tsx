@@ -931,7 +931,6 @@ const AccountLedger = () => {
 
     const selectedAccountName =
         accountOptions.find((item: any) => item.value === account)?.label || "-";
-
     // const remainingBalanceType: "Dr" | "Cr" = totals?.remainingBalanceType
     //     ? normalizeType(totals?.remainingBalanceType, "Dr")
     //     : Number(totals?.remainingBalance || 0) >= 0
@@ -1009,6 +1008,7 @@ const totalTypeMap: Record<string, "Dr" | "Cr"> = {
     receiptNetTotal: "Cr",
 
     purchaseInvoiceNetTotal: "Cr",
+    creditNoteNetTotal: "Cr",
     purchaseReturnNetTotal: "Dr",
     paymentNetTotal: "Dr",
 };
@@ -1037,13 +1037,9 @@ const hiddenTotalKeys = [
     "remainingBalanceType",
 ];
 
-const apiTotalKeys = Object.keys(totals || {}).filter(
-    (key) => !hiddenTotalKeys.includes(key)
-);
+    const apiTotalKeys = Object.keys(totals || {}).filter((key) => !hiddenTotalKeys.includes(key));
 
-const summaryItems =
-    apiTotalKeys.length === 0
-        ? defaultSummaryItems.map((item) => ({
+    const summaryItems = apiTotalKeys.length === 0 ? defaultSummaryItems.map((item) => ({
             label: item.label,
             value: formatAmount(0, item.type),
         }))

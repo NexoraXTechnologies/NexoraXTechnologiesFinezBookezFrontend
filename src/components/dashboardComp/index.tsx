@@ -224,7 +224,7 @@ const CompactTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
 
     return (
-        <div className="rounded-md border border-border bg-card px-4 py-3 text-card-foreground shadow-xl">
+        <div className="rounded-md border border-border bg-card px-4 py-3 text-card-foreground shadow-xl z-">
             {label && (
                 <p className="mb-1 text-xs font-semibold text-muted-foreground">
                     {label}

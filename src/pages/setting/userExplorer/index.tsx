@@ -1,154 +1,81 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
-import {
-    Activity,
-    ArrowDownRight,
-    ArrowUpRight,
-    BarChart3,
-    Database,
-    Eye,
-    Filter,
-    IndianRupee,
-    Layers,
-    ListChecks,
-    MapPinned,
-    Loader2,
-    MessageSquareText,
-    PackageCheck,
-    Phone,
-    ReceiptText,
-    RotateCcw,
-    ShieldCheck,
-    ShoppingCart,
-    Users,
-    WalletCards,
-    X,
-} from "lucide-react";
+import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, Database, Eye, Filter, IndianRupee, Layers, ListChecks, MapPinned, Loader2, MessageSquareText, PackageCheck, Phone, ReceiptText, RotateCcw, ShieldCheck, ShoppingCart, Users, WalletCards, X } from "lucide-react";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import L from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import {
-    requestDbAccess,
-    getDbAccessRequests,
-    getDbAccessRequestById,
-} from "../../../redux/slices/userExplorer";
-
+import { requestDbAccess, getDbAccessRequests, getDbAccessRequestById, getStateCityDashboard } from "../../../redux/slices/userExplorer";
 import Badge from "../../../components/badge";
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
 import { DataREfreshButton } from "../../../components/buttons";
-
 import { getProfessionalUser } from "../../../redux/slices/professionalSlice/professionalUserSlice";
-
 import Tabs from "./tabs";
 import { getAreaDashboard } from "../../../redux/slices/professionalSlice/dashboard/registerDashboard";
 import { SelectInput } from "../../../components/inputs";
-import {
-    getCitiesByState,
-    getStates,
-} from "../../../redux/slices/professionalSlice/stateCitySlice";
-
-import {
-    Area,
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    ComposedChart,
-    Legend,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from "recharts";
-
-
+import { getCitiesByState, getStates } from "../../../redux/slices/professionalSlice/stateCitySlice";
+import { Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 const STATE_GEOJSON_BASE_URL = "https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@2884453/geojson/states";
-
+const DEFAULT_MAP_STATE = { label: "Maharashtra", value: "Maharashtra", stateCode: "MH" };
 const normalizeGeoName = (value: any) => String(value || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ").trim();
-
 const getStateGeoJsonSlug = (stateName: any) => {
     const normalized = normalizeGeoName(stateName);
-    if (normalized === "dadra and nagar haveli and daman and diu") return "dnh-and-dd";
+    if (normalized === "dadra and nagar haveli and daman and diu")
+        return "dnh-and-dd";
     return normalized.replace(/\s+/g, "-");
 };
-
 const FitGeoJsonBounds = ({ data }: any) => {
     const map = useMap();
-
     useEffect(() => {
-        if (!data?.features?.length) return;
+        if (!data?.features?.length)
+            return;
         const layer = L.geoJSON(data as any);
         const bounds = layer.getBounds();
-        if (!bounds.isValid()) return;
-
+        if (!bounds.isValid())
+            return;
         requestAnimationFrame(() => {
             map.invalidateSize();
             map.fitBounds(bounds, { padding: [8, 8], animate: false });
         });
     }, [data, map]);
-
     return null;
 };
-
 const UserExplorer = ({ onAccessSuccess }: any) => {
     const dispatch = useDispatch<any>();
-
-    const {
-        requestLoading,
-        accessRequestsLoading,
-        accessRequests,
-        accessRequestsPagination,
-    } = useSelector((state: any) => state.dbAccess);
-
-    const { registerDashboardData, registerDashboardLoading } = useSelector(
-        (state: any) => state.registerDashboard
-    );
-
+    const { requestLoading, accessRequestsLoading, accessRequests, accessRequestsPagination } = useSelector((state: any) => state.dbAccess);
+    const { registerDashboardData, registerDashboardLoading } = useSelector((state: any) => state.registerDashboard);
     const { states = [] } = useSelector((state: any) => state.stateCity || {});
-
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [activePageTab, setActivePageTab] = useState("listing");
-
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
-
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
-
     const [refreshing, setRefreshing] = useState(false);
     const [showDashboardFilter, setShowDashboardFilter] = useState(false);
-
     const [selectedStateCities, setSelectedStateCities] = useState<any[]>([]);
-    const [selectedMapState, setSelectedMapState] = useState<any>(null);
+    const [selectedMapState, setSelectedMapState] = useState<any>(DEFAULT_MAP_STATE);
     const [mapCityData, setMapCityData] = useState<any[]>([]);
     const [mapLoading, setMapLoading] = useState(false);
     const [mapGeoJson, setMapGeoJson] = useState<any>(null);
     const [mapGeoJsonLoading, setMapGeoJsonLoading] = useState(false);
     const [mapGeoJsonError, setMapGeoJsonError] = useState("");
-
     const [dashboardFilters, setDashboardFilters] = useState<any>({
         dbNumbers: [],
         cities: [],
         states: [],
-        period: "",
+        period: ""
     });
-
     const [form, setForm] = useState({
         parentMobileNumber: "",
-        requestMessage: "Need DB access for support and troubleshooting.",
+        requestMessage: "Need DB access for support and troubleshooting."
     });
-
     const [errors, setErrors] = useState<any>({});
-
     const dashboardFilterRef = useRef<HTMLDivElement | null>(null);
-
     const requestTableData = Array.isArray(accessRequests)
         ? accessRequests
         : accessRequests?.records && Array.isArray(accessRequests.records)
@@ -156,698 +83,515 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             : accessRequests?.requests && Array.isArray(accessRequests.requests)
                 ? accessRequests.requests
                 : [];
-
-    const totalRequests =
-        accessRequestsPagination?.totalDocs ?? requestTableData.length ?? 0;
-
+    const totalRequests = accessRequestsPagination?.totalDocs ?? requestTableData.length ?? 0;
     const getFullName = (row: any) => {
-        return (
-            [row?.firstName, row?.middleName, row?.lastName]
-                .filter(Boolean)
-                .join(" ") || "-"
-        );
+        return ([row?.firstName, row?.middleName, row?.lastName]
+            .filter(Boolean)
+            .join(" ") || "-");
     };
-
     const resetForm = () => {
         setForm({
             parentMobileNumber: "",
-            requestMessage: "Need DB access for support and troubleshooting.",
+            requestMessage: "Need DB access for support and troubleshooting."
         });
         setErrors({});
     };
-
     const openRequestModal = () => {
         resetForm();
         setShowRequestModal(true);
     };
-
     const closeRequestModal = () => {
         setShowRequestModal(false);
         resetForm();
     };
-
     const handleChange = (key: string, value: string) => {
         if (key === "parentMobileNumber") {
             value = value.replace(/\D/g, "").slice(0, 10);
         }
-
         setForm((prev) => ({
             ...prev,
-            [key]: value,
+            [key]: value
         }));
-
         setErrors((prev: any) => ({
             ...prev,
-            [key]: "",
+            [key]: ""
         }));
     };
-
     const validateForm = () => {
         const newErrors: any = {};
-
         if (!form.parentMobileNumber) {
             newErrors.parentMobileNumber = "Mobile number is required";
-        } else if (form.parentMobileNumber.length !== 10) {
+        }
+        else if (form.parentMobileNumber.length !== 10) {
             newErrors.parentMobileNumber = "Enter valid 10 digit mobile number";
         }
-
         if (!form.requestMessage.trim()) {
             newErrors.requestMessage = "Request message is required";
         }
-
         setErrors(newErrors);
-
         return Object.keys(newErrors).length === 0;
     };
-
     const fetchDbAccessRequests = async () => {
-        await dispatch(
-            getDbAccessRequests({
-                offset: localOffset,
-                limit: localLimit,
-                status: "ACCEPTED",
-                search: debouncedSearch,
-            }) as any
-        );
+        await dispatch(getDbAccessRequests({
+            offset: localOffset,
+            limit: localLimit,
+            status: "ACCEPTED",
+            search: debouncedSearch
+        }) as any);
     };
-
-    const fetchDbAccessRequestsWithParams = async ({
-        offset = localOffset,
-        limit = localLimit,
-        searchValue = debouncedSearch,
-    }: any = {}) => {
-        await dispatch(
-            getDbAccessRequests({
-                offset,
-                limit,
-                status: "ACCEPTED",
-                search: searchValue,
-            }) as any
-        );
+    const fetchDbAccessRequestsWithParams = async ({ offset = localOffset, limit = localLimit, searchValue = debouncedSearch }: any = {}) => {
+        await dispatch(getDbAccessRequests({
+            offset,
+            limit,
+            status: "ACCEPTED",
+            search: searchValue
+        }) as any);
     };
-
     const handleSubmit = async () => {
-        if (!validateForm()) return;
-
+        if (!validateForm())
+            return;
         try {
-            const userRes = await dispatch(
-                getProfessionalUser({
-                    number: form.parentMobileNumber,
-                }) as any
-            ).unwrap();
-
+            const userRes = await dispatch(getProfessionalUser({
+                number: form.parentMobileNumber
+            }) as any).unwrap();
             const users = userRes?.users || userRes?.user || userRes || {};
-
-            const listRes = await dispatch(
-                getDbAccessRequests({
-                    offset: 0,
-                    limit: 100,
-                    status: "ACCEPTED",
-                    search: "",
-                }) as any
-            ).unwrap();
-
-            const requestList =
-                listRes?.records ||
+            const listRes = await dispatch(getDbAccessRequests({
+                offset: 0,
+                limit: 100,
+                status: "ACCEPTED",
+                search: ""
+            }) as any).unwrap();
+            const requestList = listRes?.records ||
                 listRes?.requests ||
                 listRes?.accessRequests ||
                 [];
-
             const alreadyExists = requestList?.some((item: any) => {
-                return (
-                    String(item?.parentMobileNumber) ===
-                    String(form.parentMobileNumber)
-                );
+                return (String(item?.parentMobileNumber) ===
+                    String(form.parentMobileNumber));
             });
-
             if (alreadyExists) {
-                toast.warning(
-                    "Access request already exists for this mobile number"
-                );
-
+                toast.warning("Access request already exists for this mobile number");
                 setSearch(form.parentMobileNumber);
                 setDebouncedSearch(form.parentMobileNumber);
                 setLocalOffset(0);
                 setActivePageTab("listing");
-
                 await fetchDbAccessRequestsWithParams({
                     offset: 0,
                     limit: localLimit,
-                    searchValue: form.parentMobileNumber,
+                    searchValue: form.parentMobileNumber
                 });
-
                 closeRequestModal();
                 return;
             }
-
-            const res = await dispatch(
-                requestDbAccess({
-                    parentMobileNumber: form.parentMobileNumber,
-                    requestMessage: form.requestMessage,
-                    firstName: users?.userFirstName || users?.firstName || "",
-                    middleName:
-                        users?.userMiddleName || users?.middleName || "",
-                    lastName: users?.userLastName || users?.lastName || "",
-                    userEmail: users?.userEmail || users?.email || "",
-                    userAddress: users?.userAddress || users?.address || "",
-                    authTokenDigest: users?.authTokenDigest || "",
-                    state: userRes?.users?.state,
-                    city: userRes?.users?.city,
-                } as any)
-            ).unwrap();
-
-            toast.success(
-                res?.message || "Database access request sent successfully"
-            );
-
+            const res = await dispatch(requestDbAccess({
+                parentMobileNumber: form.parentMobileNumber,
+                requestMessage: form.requestMessage,
+                firstName: users?.userFirstName || users?.firstName || "",
+                middleName: users?.userMiddleName || users?.middleName || "",
+                lastName: users?.userLastName || users?.lastName || "",
+                userEmail: users?.userEmail || users?.email || "",
+                userAddress: users?.userAddress || users?.address || "",
+                authTokenDigest: users?.authTokenDigest || "",
+                state: userRes?.users?.state,
+                city: userRes?.users?.city
+            } as any)).unwrap();
+            toast.success(res?.message || "Database access request sent successfully");
             setSearch(form.parentMobileNumber);
             setDebouncedSearch(form.parentMobileNumber);
             setLocalOffset(0);
             setActivePageTab("listing");
-
             await fetchDbAccessRequestsWithParams({
                 offset: 0,
                 limit: localLimit,
-                searchValue: form.parentMobileNumber,
+                searchValue: form.parentMobileNumber
             });
-
             closeRequestModal();
-
             if (onAccessSuccess) {
                 onAccessSuccess(form.parentMobileNumber);
             }
-        } catch (err: any) {
+        }
+        catch (err: any) {
             if (err?.status === 409) {
                 toast.warning(err?.message || "Access request already exists");
-
                 setSearch(form.parentMobileNumber);
                 setDebouncedSearch(form.parentMobileNumber);
                 setLocalOffset(0);
                 setActivePageTab("listing");
-
                 await fetchDbAccessRequestsWithParams({
                     offset: 0,
                     limit: localLimit,
-                    searchValue: form.parentMobileNumber,
+                    searchValue: form.parentMobileNumber
                 });
-
                 closeRequestModal();
                 return;
             }
-
-            toast.error(
-                err?.message ||
+            toast.error(err?.message ||
                 err?.data?.message ||
-                "Failed to request database access"
-            );
+                "Failed to request database access");
         }
     };
-
     const handleRefresh = async () => {
         try {
             setRefreshing(true);
-
             await fetchDbAccessRequestsWithParams({
                 offset: 0,
                 limit: localLimit,
-                searchValue: debouncedSearch,
+                searchValue: debouncedSearch
             });
-
             setLocalOffset(0);
             toast.success("DB access request list refreshed");
-        } catch (err: any) {
+        }
+        catch (err: any) {
             toast.error(err?.message || "Refresh failed");
-        } finally {
+        }
+        finally {
             setRefreshing(false);
         }
     };
-
     const handleViewRequest = (row: any) => {
         if (row?.status !== "ACCEPTED") {
             return toast.warn("Request not approved yet. Cannot view details.");
         }
-
         setSelectedRequest(row);
     };
-
     const multiValueToArray = (value: any) => {
-        if (!Array.isArray(value)) return [];
+        if (!Array.isArray(value))
+            return [];
         return value.map((item: any) => item.value).filter(Boolean);
     };
-
     const handleDashboardFilterChange = (key: string, value: any) => {
         setDashboardFilters((prev: any) => ({
             ...prev,
-            [key]: value,
+            [key]: value
         }));
     };
-
     const fetchAreaDashboard = async () => {
         try {
-            await dispatch(
-                getAreaDashboard({
-                    dbNumbers: multiValueToArray(dashboardFilters.dbNumbers),
-                    cities: multiValueToArray(dashboardFilters.cities),
-                    states: multiValueToArray(dashboardFilters.states),
-                    period: dashboardFilters.period,
-                    modules: [],
-                }) as any
-            ).unwrap();
-        } catch (err: any) {
-            toast.error(
-                err?.message ||
+            await dispatch(getAreaDashboard({
+                dbNumbers: multiValueToArray(dashboardFilters.dbNumbers),
+                cities: multiValueToArray(dashboardFilters.cities),
+                states: multiValueToArray(dashboardFilters.states),
+                period: dashboardFilters.period,
+                modules: []
+            }) as any).unwrap();
+        }
+        catch (err: any) {
+            toast.error(err?.message ||
                 err?.data?.message ||
-                "Failed to fetch area dashboard"
-            );
+                "Failed to fetch area dashboard");
         }
     };
-
     const clearDashboardFilters = () => {
         setDashboardFilters({
             dbNumbers: [],
             cities: [],
             states: [],
-            period: "",
+            period: ""
         });
-
         setSelectedStateCities([]);
     };
-
     const handleStateChange = async (value: any) => {
         const selectedStates = value || [];
-
         handleDashboardFilterChange("states", selectedStates);
         handleDashboardFilterChange("cities", []);
         setSelectedStateCities([]);
-
         const stateCodes = selectedStates
             .map((item: any) => item?.stateCode)
             .filter(Boolean);
-
-        if (!stateCodes.length) return;
-
+        if (!stateCodes.length)
+            return;
         try {
             let allCities: any[] = [];
-
             for (const stateCode of stateCodes) {
                 const res = await dispatch(
                     //@ts-ignore
-                    getCitiesByState({ stateCode }) as any
-                ).unwrap();
-
-                const cityList =
-                    res?.cities || res?.data || res?.records || res || [];
-
+                    getCitiesByState({ stateCode }) as any).unwrap();
+                const cityList = res?.cities || res?.data || res?.records || res || [];
                 if (Array.isArray(cityList)) {
                     allCities = [...allCities, ...cityList];
                 }
             }
-
-            const uniqueCities = Array.from(
-                new Map(
-                    allCities.map((city: any) => {
-                        const cityName =
-                            city?.name?.en ||
-                            city?.cityName ||
-                            city?.name ||
-                            city?.label ||
-                            city?.city ||
-                            "";
-
-                        return [cityName, city];
-                    })
-                ).values()
-            ).filter((city: any) => {
-                return (
-                    city?.name?.en ||
+            const uniqueCities = Array.from(new Map(allCities.map((city: any) => {
+                const cityName = city?.name?.en ||
                     city?.cityName ||
                     city?.name ||
                     city?.label ||
-                    city?.city
-                );
+                    city?.city ||
+                    "";
+                return [cityName, city];
+            })).values()).filter((city: any) => {
+                return (city?.name?.en ||
+                    city?.cityName ||
+                    city?.name ||
+                    city?.label ||
+                    city?.city);
             });
-
             setSelectedStateCities(uniqueCities);
-        } catch (err: any) {
-            toast.error(
-                err?.message || err?.data?.message || "Failed to fetch cities"
-            );
+        }
+        catch (err: any) {
+            toast.error(err?.message || err?.data?.message || "Failed to fetch cities");
         }
     };
-
     const normalizeLocationText = (value: any) => {
-        if (!value) return "";
-        if (typeof value === "string") return value.trim().toLowerCase();
+        if (!value)
+            return "";
+        if (typeof value === "string")
+            return value.trim().toLowerCase();
         return String(value?.name?.en || value?.name || value?.label || value?.cityName || value?.stateName || value?.city || value?.state || "").trim().toLowerCase();
     };
-
     const getCityName = (value: any) => {
-        if (!value) return "";
-        if (typeof value === "string") return value.trim();
+        if (!value)
+            return "";
+        if (typeof value === "string")
+            return value.trim();
         return String(value?.name?.en || value?.cityName || value?.name || value?.label || value?.city || "").trim();
     };
-
     const getCityCoordinates = (city: any) => {
         const latitude = Number(city?.latitude ?? city?.lat);
         const longitude = Number(city?.longitude ?? city?.lng ?? city?.long);
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return { latitude: null, longitude: null };
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude))
+            return { latitude: null, longitude: null };
         return { latitude, longitude };
     };
-
     const normalizeAreaDashboardResponse = (response: any) => response?.data?.data || response?.data || response || {};
-
     const getCityWiseDashboardData = (response: any) => {
         const data = normalizeAreaDashboardResponse(response);
         const candidates = [data?.cityWise, data?.citySummary, data?.cityBreakdown, data?.cities, data?.areaWise, data?.locationWise];
-
         for (const candidate of candidates) {
-            if (Array.isArray(candidate)) return candidate;
-
+            if (Array.isArray(candidate))
+                return candidate;
             if (candidate && typeof candidate === "object") {
                 return Object.entries(candidate).map(([city, value]: any) => {
-                    if (value && typeof value === "object") return { city, ...value };
+                    if (value && typeof value === "object")
+                        return { city, ...value };
                     return { city, totalAmount: value };
                 });
             }
         }
-
         return [];
     };
-
     const getDashboardTotals = (response: any) => {
         const data = normalizeAreaDashboardResponse(response);
         const moduleKeys = ["salesQuotation", "salesOrder", "salesInvoice", "salesInvoiceReturn", "receipt", "purchaseOrder", "grn", "purchaseInvoice", "purchaseReturn", "payment"];
         const totalAmount = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalAmount || 0), 0);
         const totalTransactions = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalCount || 0), 0);
-
         return { totalAmount, totalTransactions, totalBusinesses: Number(data?.totalBusinesses || 0) };
     };
-
     const handleMapStateChange = async (option: any) => {
         setSelectedMapState(option || null);
         setMapCityData([]);
-
-        if (!option?.value || !option?.stateCode) return;
-
+        if (!option?.value)
+            return;
         try {
             setMapLoading(true);
-
-            const cityResponse = await dispatch(getCitiesByState({ stateCode: option.stateCode }) as any).unwrap();
-            const stateCities = cityResponse?.cities || cityResponse?.data?.cities || cityResponse?.data || cityResponse?.records || cityResponse || [];
-            const cityList = Array.isArray(stateCities) ? stateCities : [];
-            const cityLookup = new Map(cityList.map((city: any) => [normalizeLocationText(getCityName(city)), city]));
-
-            const stateDashboardResponse = await dispatch(getAreaDashboard({ dbNumbers: [], cities: [], states: [option.value], period: "", modules: [] }) as any).unwrap();
-            const cityWise = getCityWiseDashboardData(stateDashboardResponse);
-
-            if (cityWise.length) {
-                const normalized = cityWise
-                    .map((item: any) => {
-                        const cityName = getCityName(item?.city || item?.cityName || item?.name || item?.label);
-                        const cityMeta = cityLookup.get(normalizeLocationText(cityName));
-                        const { latitude, longitude } = getCityCoordinates(cityMeta);
-                        const amount = Number(item?.totalAmount ?? item?.amount ?? item?.transactionAmount ?? item?.netAmount ?? item?.value ?? 0);
-                        const transactions = Number(item?.totalTransactions ?? item?.transactionCount ?? item?.totalCount ?? item?.count ?? 0);
-                        const businesses = Number(item?.totalBusinesses ?? item?.businessCount ?? item?.businesses ?? 0);
-
-                        return { city: cityName, amount, transactions, businesses, latitude, longitude };
-                    })
-                    .filter((item: any) => item.city)
-                    .sort((a: any, b: any) => b.amount - a.amount);
-
-                setMapCityData(normalized);
-                return;
-            }
-
-            const allAccessResponse = await dispatch(getDbAccessRequests({ offset: 0, limit: 1000, status: "ACCEPTED", search: "" }) as any).unwrap();
-            const allAccessRows = allAccessResponse?.records || allAccessResponse?.requests || allAccessResponse?.accessRequests || allAccessResponse?.data?.records || allAccessResponse?.data?.requests || [];
-            const acceptedRows = Array.isArray(allAccessRows) ? allAccessRows : requestTableData;
-
-            const cityNamesInState = Array.from(
-                new Set(
-                    acceptedRows
-                        .filter((row: any) => {
-                            const rowCity = getCityName(row?.city);
-                            if (!rowCity || !cityLookup.has(normalizeLocationText(rowCity))) return false;
-                            const rowState = normalizeLocationText(row?.state);
-                            return !rowState || rowState === normalizeLocationText(option.value);
-                        })
-                        .map((row: any) => getCityName(row?.city))
-                        .filter(Boolean)
-                )
-            );
-
-            await fetchDbAccessRequestsWithParams({ offset: localOffset, limit: localLimit, searchValue: debouncedSearch });
-
-            const cityResults = await Promise.all(
-                cityNamesInState.map(async (city: any) => {
-                    try {
-                        const response = await dispatch(getAreaDashboard({ dbNumbers: [], cities: [city], states: [option.value], period: "", modules: [] }) as any).unwrap();
-                        const totals = getDashboardTotals(response);
-                        const cityMeta = cityLookup.get(normalizeLocationText(city));
-                        const { latitude, longitude } = getCityCoordinates(cityMeta);
-
-                        return { city, amount: totals.totalAmount, transactions: totals.totalTransactions, businesses: totals.totalBusinesses, latitude, longitude };
-                    } catch {
-                        const cityMeta = cityLookup.get(normalizeLocationText(city));
-                        const { latitude, longitude } = getCityCoordinates(cityMeta);
-                        return { city, amount: 0, transactions: 0, businesses: 0, latitude, longitude };
-                    }
-                })
-            );
-
-            setMapCityData(cityResults.sort((a: any, b: any) => b.amount - a.amount));
-        } catch (err: any) {
+            const response = await dispatch(getStateCityDashboard({ state: option.value }) as any).unwrap();
+            const cities = Array.isArray(response?.cities) ? response.cities : [];
+            const normalized = cities
+                .map((item: any) => ({
+                    city: getCityName(item?.city),
+                    amount: Number(item?.totalAmount || 0),
+                    transactions: Number(item?.totalCount || 0),
+                    businesses: Number(item?.totalBusinesses || 0)
+                }))
+                .filter((item: any) => item.city)
+                .sort((a: any, b: any) => b.amount - a.amount);
+            setMapCityData(normalized);
+        }
+        catch (err: any) {
             toast.error(err?.message || err?.data?.message || "Failed to load state map data");
-        } finally {
+        }
+        finally {
             setMapLoading(false);
         }
     };
-
     const pageTabs = [
         {
             key: "listing",
             label: "Listing",
-            icon: <ListChecks size={16} />,
+            icon: <ListChecks size={16} />
         },
         {
             key: "dashboard",
             label: "Dashboard",
-            icon: <BarChart3 size={16} />,
+            icon: <BarChart3 size={16} />
         },
-        {
-            key: "stateMap",
-            label: "State Map",
-            icon: <MapPinned size={16} />,
-        },
+        // {
+        //     key: "stateMap",
+        //     label: "State Map",
+        //     icon: <MapPinned size={16} />
+        // },
     ];
-
     const requestColumns = [
         {
             key: "requestId",
             title: "Request ID",
-            render: (row: any) => (
-                <span className="font-semibold text-card-foreground">
-                    {row?.requestId || "-"}
-                </span>
-            ),
+            render: (row: any) => (<span className="font-semibold text-card-foreground">
+                {row?.requestId || "-"}
+            </span>)
         },
         {
             key: "parentMobileNumber",
-            title: "Mobile",
+            title: "Mobile"
         },
         {
             key: "name",
             title: "Name",
-            render: (row: any) => (
-                <span className="font-semibold text-card-foreground">
-                    {getFullName(row)}
-                </span>
-            ),
+            render: (row: any) => (<span className="font-semibold text-card-foreground">
+                {getFullName(row)}
+            </span>)
         },
         {
             key: "requestMessage",
             title: "Request Message",
             type: "readMoreText",
-            render: (row: any) => (
-                <span className="text-muted-foreground">
-                    {row?.requestMessage || "-"}
-                </span>
-            ),
+            render: (row: any) => (<span className="text-muted-foreground">
+                {row?.requestMessage || "-"}
+            </span>)
         },
         {
             key: "userEmail",
             title: "Email",
-            render: (row: any) => row?.userEmail || "-",
+            render: (row: any) => row?.userEmail || "-"
         },
         {
             key: "status",
             title: "Status",
             render: (row: any) => {
                 const status = row?.status || "PENDING";
-
-                return (
-                    <span
-                        className={`
+                return (<span className={`
                             rounded px-3 py-1 text-xs font-bold uppercase
                             ${status === "ACCEPTED"
-                                ? "bg-success/10 text-success"
-                                : status === "REJECTED"
-                                    ? "bg-danger/10 text-danger"
-                                    : "bg-muted text-muted-foreground"
-                            }
-                        `}
-                    >
-                        {status}
-                    </span>
-                );
-            },
+                        ? "bg-success/10 text-success"
+                        : status === "REJECTED"
+                            ? "bg-danger/10 text-danger"
+                            : "bg-muted text-muted-foreground"}
+                        `}>
+                    {status}
+                </span>);
+            }
         },
         {
             key: "createdOn",
             title: "Requested At",
-            type: "date",
+            type: "date"
         },
     ];
-
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (!showDashboardFilter) return;
-
+            if (!showDashboardFilter)
+                return;
             const target = event.target as HTMLElement;
-
-            if (
-                target.closest(".dashboard-select__menu") ||
+            if (target.closest(".dashboard-select__menu") ||
                 target.closest(".dashboard-select__option") ||
-                target.closest(".dashboard-select__control")
-            ) {
+                target.closest(".dashboard-select__control")) {
                 return;
             }
-
-            if (
-                dashboardFilterRef.current &&
-                !dashboardFilterRef.current.contains(target)
-            ) {
+            if (dashboardFilterRef.current &&
+                !dashboardFilterRef.current.contains(target)) {
                 setShowDashboardFilter(false);
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
-
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [showDashboardFilter]);
-
     useEffect(() => {
-        if (selectedRequest) return;
-
+        if (selectedRequest)
+            return;
         fetchDbAccessRequests();
     }, [localOffset, localLimit, debouncedSearch, selectedRequest]);
-
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search.trim());
             setLocalOffset(0);
         }, 400);
-
         return () => clearTimeout(timer);
     }, [search]);
-
     useEffect(() => {
-        if (!selectedRequest?.requestId) return;
-
-        dispatch(
-            getDbAccessRequestById({
-                requestId: selectedRequest.requestId,
-            }) as any
-        )
+        if (!selectedRequest?.requestId)
+            return;
+        dispatch(getDbAccessRequestById({
+            requestId: selectedRequest.requestId
+        }) as any)
             .unwrap()
             .catch((err: any) => {
-                toast.error(
-                    err?.message ||
+                toast.error(err?.message ||
                     err?.data?.message ||
-                    "Failed to fetch request details"
-                );
+                    "Failed to fetch request details");
             });
     }, [selectedRequest?.requestId, dispatch]);
-
     useEffect(() => {
-        if (activePageTab !== "dashboard") return;
-
+        if (activePageTab !== "dashboard")
+            return;
         // @ts-ignore
         dispatch(getStates() as any);
         fetchAreaDashboard();
     }, [activePageTab]);
-
     useEffect(() => {
-        if (activePageTab !== "stateMap") return;
-
+        if (activePageTab !== "stateMap")
+            return;
         // @ts-ignore
         dispatch(getStates() as any);
+        if (!mapCityData.length && selectedMapState?.value)
+            handleMapStateChange(selectedMapState);
     }, [activePageTab]);
-
     useEffect(() => {
         if (activePageTab !== "stateMap" || !selectedMapState?.value) {
             setMapGeoJson(null);
             setMapGeoJsonError("");
             return;
         }
-
         let cancelled = false;
-
         const loadStateGeoJson = async () => {
             try {
                 setMapGeoJsonLoading(true);
                 setMapGeoJsonError("");
                 const slug = getStateGeoJsonSlug(selectedMapState.value);
                 const response = await fetch(`${STATE_GEOJSON_BASE_URL}/${slug}.geojson`);
-                if (!response.ok) throw new Error(`Failed to load ${selectedMapState.label || selectedMapState.value} map`);
+                if (!response.ok)
+                    throw new Error(`Failed to load ${selectedMapState.label || selectedMapState.value} map`);
                 const geoJson = await response.json();
                 const features = Array.isArray(geoJson?.features) ? geoJson.features : [];
-                if (!features.length) throw new Error(`No district boundary found for ${selectedMapState.label || selectedMapState.value}`);
-                if (!cancelled) setMapGeoJson({ ...geoJson, type: "FeatureCollection", features });
-            } catch (err: any) {
+                if (!features.length)
+                    throw new Error(`No district boundary found for ${selectedMapState.label || selectedMapState.value}`);
+                if (!cancelled)
+                    setMapGeoJson({ ...geoJson, type: "FeatureCollection", features });
+            }
+            catch (err: any) {
                 if (!cancelled) {
                     setMapGeoJson(null);
                     setMapGeoJsonError(err?.message || "Failed to load district boundary map");
                 }
-            } finally {
-                if (!cancelled) setMapGeoJsonLoading(false);
+            }
+            finally {
+                if (!cancelled)
+                    setMapGeoJsonLoading(false);
             }
         };
-
         loadStateGeoJson();
         return () => { cancelled = true; };
     }, [activePageTab, selectedMapState?.value]);
-
     const dbNumberOptions = requestTableData
         ?.map((item: any) => ({
-            label: `${item?.parentMobileNumber || "-"} ${getFullName(item) !== "-" ? `- ${getFullName(item)}` : ""
-                }`,
-            value: item?.parentMobileNumber,
+            label: `${item?.parentMobileNumber || "-"} ${getFullName(item) !== "-" ? `- ${getFullName(item)}` : ""}`,
+            value: item?.parentMobileNumber
         }))
         ?.filter((item: any) => item?.value);
-
-    const uniqueDbNumberOptions: any = Array.from(
-        new Map(dbNumberOptions.map((item: any) => [item.value, item])).values()
-    );
-
+    const uniqueDbNumberOptions: any = Array.from(new Map(dbNumberOptions.map((item: any) => [item.value, item])).values());
     const stateOptions = Array.isArray(states)
         ? states.map((item: any) => ({
             label: item?.name?.en || "-",
             value: item?.name?.en || "",
-            stateCode: item?.isoCode || "",
+            stateCode: item?.isoCode || ""
         }))
         : [];
-
     const cityOptions = Array.isArray(selectedStateCities)
         ? selectedStateCities.map((item: any) => ({
             label: item?.name?.en || item?.label || item?.city || "-",
-            value: item?.name?.en || item?.value || item?.city || "",
+            value: item?.name?.en || item?.value || item?.city || ""
         }))
         : [];
-
     const periodOptions = [
         { label: "Today", value: "today" },
         { label: "Yesterday", value: "yesterday" },
@@ -858,285 +602,244 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         { label: "This Year", value: "this_year" },
         { label: "Last Year", value: "last_year" },
     ];
-
     const mapMaxAmount = Math.max(0, ...mapCityData.map((item: any) => Number(item?.amount || 0)));
     const mapColorScale = ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02", "#b10026"];
-
     const normalizeDistrictKey = (value: any) => normalizeGeoName(value).replace(/\b(district|city district|urban|rural)\b/g, "").replace(/\s+/g, " ").trim();
-
     const findMapCityData = (districtName: any) => {
         const districtKey = normalizeDistrictKey(districtName);
-        if (!districtKey) return null;
-
+        if (!districtKey)
+            return null;
         const exact = mapCityData.find((item: any) => normalizeDistrictKey(item?.city) === districtKey);
-        if (exact) return exact;
-
+        if (exact)
+            return exact;
         return mapCityData.find((item: any) => {
             const cityKey = normalizeDistrictKey(item?.city);
-            if (!cityKey) return false;
-            if (districtKey === "mumbai suburban" && cityKey === "mumbai") return true;
-            if (districtKey === "mumbai" && cityKey === "mumbai") return true;
+            if (!cityKey)
+                return false;
+            if (districtKey === "mumbai suburban" && cityKey === "mumbai")
+                return true;
+            if (districtKey === "mumbai" && cityKey === "mumbai")
+                return true;
             return districtKey.includes(cityKey) || cityKey.includes(districtKey);
         }) || null;
     };
-
     const getMapFillColor = (amount: any) => {
         const value = Number(amount || 0);
-        if (value <= 0 || mapMaxAmount <= 0) return "#dbe4ee";
+        if (value <= 0 || mapMaxAmount <= 0)
+            return "#dbe4ee";
         const ratio = value / mapMaxAmount;
         const index = Math.min(mapColorScale.length - 1, Math.max(0, Math.ceil(ratio * mapColorScale.length) - 1));
         return mapColorScale[index];
     };
-
     const getDistrictNameFromFeature = (feature: any) => feature?.properties?.district || feature?.properties?.DISTRICT || feature?.properties?.district_name || feature?.properties?.DISTRICT_NAME || feature?.properties?.dtname || feature?.properties?.DT_NAME || feature?.properties?.NAME_2 || feature?.properties?.name || feature?.properties?.NAME || "-";
-
     const getDistrictStyle = (feature: any) => {
         const cityData = findMapCityData(getDistrictNameFromFeature(feature));
         return { color: cityData ? "#64748b" : "#94a3b8", weight: cityData ? 1.5 : 1.15, fillColor: getMapFillColor(cityData?.amount), fillOpacity: cityData ? 0.98 : 0.88 };
     };
-
     const onEachDistrictFeature = (feature: any, layer: any) => {
         const districtName = getDistrictNameFromFeature(feature);
         const cityData = findMapCityData(districtName);
         const amount = Number(cityData?.amount || 0);
         const label = `<div style="text-align:center;line-height:1.15;white-space:nowrap"><div style="font-size:${cityData ? "13px" : "11px"};font-weight:800;color:#0f172a;text-shadow:0 1px 2px rgba(255,255,255,.98)">${districtName}</div>${cityData ? `<div style="font-size:12px;font-weight:900;color:#334155;text-shadow:0 1px 2px rgba(255,255,255,.98)">${formatAmount(amount)}</div>` : ""}</div>`;
-
         layer.bindTooltip(label, { permanent: true, direction: "center", className: "state-map-label", opacity: 1 });
-
         layer.bindPopup(`<div style="min-width:170px"><div style="font-weight:800;margin-bottom:6px">${districtName}</div><div>Amount: <b>${formatFullAmount(amount)}</b></div><div>Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div>Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div></div>`);
         layer.on({
             mouseover: (event: any) => event.target.setStyle({ weight: 2.2, color: "#334155", fillOpacity: 1 }),
-            mouseout: (event: any) => event.target.setStyle(getDistrictStyle(feature)),
+            mouseout: (event: any) => event.target.setStyle(getDistrictStyle(feature))
         });
     };
-
     const disabled = false;
-
-    const reactSelectStyles: any = useMemo(
-        () => ({
-            control: (base: any, state: any) => ({
-                ...base,
-                minHeight: "32px",
-                height: "32px",
-                borderRadius: "0.2rem",
-                borderColor: state.isFocused
-                    ? "var(--primary)"
-                    : "var(--border)",
-                boxShadow: state.isFocused
-                    ? "0 0 0 1px var(--primary)"
-                    : "none",
-                backgroundColor: disabled ? "var(--muted)" : "var(--input)",
-                cursor: disabled ? "not-allowed" : "pointer",
-                transition: "all 200ms",
-                opacity: disabled ? 0.7 : 1,
-                "&:hover": {
-                    borderColor: "var(--primary)",
-                },
-            }),
-
-            valueContainer: (base: any) => ({
-                ...base,
-                minHeight: "30px",
-                height: "30px",
-                padding: "0 8px",
-                flexWrap: "nowrap",
-                overflowX: "auto",
-                overflowY: "hidden",
-            }),
-
-            input: (base: any) => ({
-                ...base,
-                margin: 0,
-                padding: 0,
-                color: "var(--foreground)",
-                fontSize: "14px",
-            }),
-
-            singleValue: (base: any) => ({
-                ...base,
-                color: "var(--foreground)",
-                fontSize: "14px",
-            }),
-
-            placeholder: (base: any) => ({
-                ...base,
-                color: "var(--muted-foreground)",
-                fontSize: "14px",
-            }),
-
-            indicatorsContainer: (base: any) => ({
-                ...base,
-                height: "30px",
-            }),
-
-            dropdownIndicator: (base: any) => ({
-                ...base,
-                padding: "4px",
-                color: "var(--muted-foreground)",
-                "&:hover": {
-                    color: "var(--primary)",
-                },
-            }),
-
-            clearIndicator: (base: any) => ({
-                ...base,
-                padding: "4px",
-                color: "var(--muted-foreground)",
-                "&:hover": {
-                    color: "var(--danger)",
-                },
-            }),
-
-            indicatorSeparator: () => ({
-                display: "none",
-            }),
-
-            menu: (base: any) => ({
-                ...base,
-                zIndex: 9999,
-                fontSize: "14px",
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
-                overflow: "hidden",
-            }),
-
-            menuList: (base: any) => ({
-                ...base,
-                backgroundColor: "var(--card)",
-                padding: "4px",
-                maxHeight: "280px",
-                overflowY: "auto",
-            }),
-
-            menuPortal: (base: any) => ({
-                ...base,
-                zIndex: 9999,
-            }),
-
-            option: (base: any, state: any) => ({
-                ...base,
-                minHeight: "32px",
-                display: "flex",
-                alignItems: "center",
-                fontSize: "14px",
-                cursor: "pointer",
-                borderRadius: "0.25rem",
-                backgroundColor: state.isSelected
-                    ? "var(--primary)"
-                    : state.isFocused
-                        ? "var(--muted)"
-                        : "var(--card)",
-                color: state.isSelected
-                    ? "var(--primary-foreground)"
-                    : "var(--card-foreground)",
-                "&:active": {
-                    backgroundColor: "var(--primary)",
-                    color: "var(--primary-foreground)",
-                },
-            }),
-
-            noOptionsMessage: (base: any) => ({
-                ...base,
-                color: "var(--muted-foreground)",
-                fontSize: "14px",
-            }),
-
-            multiValue: (base: any) => ({
-                ...base,
-                height: "22px",
-                minHeight: "22px",
-                borderRadius: "0.2rem",
-                backgroundColor: "var(--primary)",
-                margin: "2px",
-            }),
-
-            multiValueLabel: (base: any) => ({
-                ...base,
-                padding: "2px 6px",
-                color: "var(--primary-foreground)",
-                fontSize: "12px",
-                fontWeight: 700,
-            }),
-
-            multiValueRemove: (base: any) => ({
-                ...base,
-                color: "var(--primary-foreground)",
-                cursor: "pointer",
-                borderRadius: "0 0.2rem 0.2rem 0",
-                "&:hover": {
-                    backgroundColor: "var(--danger)",
-                    color: "var(--danger-foreground)",
-                },
-            }),
+    const reactSelectStyles: any = useMemo(() => ({
+        control: (base: any, state: any) => ({
+            ...base,
+            minHeight: "32px",
+            height: "32px",
+            borderRadius: "0.2rem",
+            borderColor: state.isFocused
+                ? "var(--primary)"
+                : "var(--border)",
+            boxShadow: state.isFocused
+                ? "0 0 0 1px var(--primary)"
+                : "none",
+            backgroundColor: disabled ? "var(--muted)" : "var(--input)",
+            cursor: disabled ? "not-allowed" : "pointer",
+            transition: "all 200ms",
+            opacity: disabled ? 0.7 : 1,
+            "&:hover": {
+                borderColor: "var(--primary)"
+            }
         }),
-        [disabled]
-    );
-
+        valueContainer: (base: any) => ({
+            ...base,
+            minHeight: "30px",
+            height: "30px",
+            padding: "0 8px",
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            overflowY: "hidden"
+        }),
+        input: (base: any) => ({
+            ...base,
+            margin: 0,
+            padding: 0,
+            color: "var(--foreground)",
+            fontSize: "14px"
+        }),
+        singleValue: (base: any) => ({
+            ...base,
+            color: "var(--foreground)",
+            fontSize: "14px"
+        }),
+        placeholder: (base: any) => ({
+            ...base,
+            color: "var(--muted-foreground)",
+            fontSize: "14px"
+        }),
+        indicatorsContainer: (base: any) => ({
+            ...base,
+            height: "30px"
+        }),
+        dropdownIndicator: (base: any) => ({
+            ...base,
+            padding: "4px",
+            color: "var(--muted-foreground)",
+            "&:hover": {
+                color: "var(--primary)"
+            }
+        }),
+        clearIndicator: (base: any) => ({
+            ...base,
+            padding: "4px",
+            color: "var(--muted-foreground)",
+            "&:hover": {
+                color: "var(--danger)"
+            }
+        }),
+        indicatorSeparator: () => ({
+            display: "none"
+        }),
+        menu: (base: any) => ({
+            ...base,
+            zIndex: 9999,
+            fontSize: "14px",
+            backgroundColor: "var(--card)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+            overflow: "hidden"
+        }),
+        menuList: (base: any) => ({
+            ...base,
+            backgroundColor: "var(--card)",
+            padding: "4px",
+            maxHeight: "280px",
+            overflowY: "auto"
+        }),
+        menuPortal: (base: any) => ({
+            ...base,
+            zIndex: 9999
+        }),
+        option: (base: any, state: any) => ({
+            ...base,
+            minHeight: "32px",
+            display: "flex",
+            alignItems: "center",
+            fontSize: "14px",
+            cursor: "pointer",
+            borderRadius: "0.25rem",
+            backgroundColor: state.isSelected
+                ? "var(--primary)"
+                : state.isFocused
+                    ? "var(--muted)"
+                    : "var(--card)",
+            color: state.isSelected
+                ? "var(--primary-foreground)"
+                : "var(--card-foreground)",
+            "&:active": {
+                backgroundColor: "var(--primary)",
+                color: "var(--primary-foreground)"
+            }
+        }),
+        noOptionsMessage: (base: any) => ({
+            ...base,
+            color: "var(--muted-foreground)",
+            fontSize: "14px"
+        }),
+        multiValue: (base: any) => ({
+            ...base,
+            height: "22px",
+            minHeight: "22px",
+            borderRadius: "0.2rem",
+            backgroundColor: "var(--primary)",
+            margin: "2px"
+        }),
+        multiValueLabel: (base: any) => ({
+            ...base,
+            padding: "2px 6px",
+            color: "var(--primary-foreground)",
+            fontSize: "12px",
+            fontWeight: 700
+        }),
+        multiValueRemove: (base: any) => ({
+            ...base,
+            color: "var(--primary-foreground)",
+            cursor: "pointer",
+            borderRadius: "0 0.2rem 0.2rem 0",
+            "&:hover": {
+                backgroundColor: "var(--danger)",
+                color: "var(--danger-foreground)"
+            }
+        })
+    }), [disabled]);
     const dashboardData = registerDashboardData || {};
-
     const toNumber = (value: any) => {
         const num = Number(value);
         return Number.isFinite(num) ? num : 0;
     };
-
     const formatCount = (value: any) => {
         return toNumber(value).toLocaleString("en-IN");
     };
-
     const formatAmount = (value: any) => {
         const amount = toNumber(value);
-
         if (amount >= 10000000) {
             return `₹${(amount / 10000000).toFixed(2)}Cr`;
         }
-
         if (amount >= 100000) {
             return `₹${(amount / 100000).toFixed(2)}L`;
         }
-
         if (amount >= 1000) {
             return `₹${(amount / 1000).toFixed(1)}K`;
         }
-
         return `₹${amount.toFixed(0)}`;
     };
-
     const formatFullAmount = (value: any) => {
         return `₹${toNumber(value).toLocaleString("en-IN", {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
+            maximumFractionDigits: 2
         })}`;
     };
-
     const formatDate = (value: any) => {
-        if (!value) return "-";
-
+        if (!value)
+            return "-";
         const date = new Date(value);
-
-        if (Number.isNaN(date.getTime())) return String(value);
-
+        if (Number.isNaN(date.getTime()))
+            return String(value);
         return date.toLocaleDateString("en-IN", {
             day: "2-digit",
             month: "short",
-            year: "numeric",
+            year: "numeric"
         });
     };
-
     const getModuleAmount = (key: string) => {
         return toNumber(dashboardData?.[key]?.totalAmount);
     };
-
     const getModuleCount = (key: string) => {
         return toNumber(dashboardData?.[key]?.totalCount);
     };
-
     const getModuleDetails = (key: string) => {
         return Array.isArray(dashboardData?.[key]?.details)
             ? dashboardData[key].details
             : [];
     };
-
     const dashboardModuleConfig = [
         {
             key: "salesQuotation",
@@ -1148,7 +851,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "sQuoteVoucherNumber",
             partyKey: "sQuoteCustomerName",
             dateKey: "sQuoteVoucherDate",
-            footerKey: "sQuoteFooter",
+            footerKey: "sQuoteFooter"
         },
         {
             key: "salesOrder",
@@ -1160,7 +863,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "sOrderVoucherNumber",
             partyKey: "sOrderCustomerName",
             dateKey: "sOrderVoucherDate",
-            footerKey: "sOrderFooter",
+            footerKey: "sOrderFooter"
         },
         {
             key: "salesInvoice",
@@ -1172,7 +875,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "sInvVoucherNumber",
             partyKey: "sInvCustomerName",
             dateKey: "sInvVoucherDate",
-            footerKey: "sInvFooter",
+            footerKey: "sInvFooter"
         },
         {
             key: "salesInvoiceReturn",
@@ -1184,7 +887,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "sInvReturnVoucherNumber",
             partyKey: "sInvReturnCustomerName",
             dateKey: "sInvReturnVoucherDate",
-            footerKey: "sInvReturnFooter",
+            footerKey: "sInvReturnFooter"
         },
         {
             key: "receipt",
@@ -1196,7 +899,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "recVoucherNumber",
             partyKey: "recAccountName",
             dateKey: "recVoucherDate",
-            footerKey: "recFooter",
+            footerKey: "recFooter"
         },
         {
             key: "purchaseOrder",
@@ -1208,7 +911,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "pOrdVoucherNumber",
             partyKey: "pOrdVendorName",
             dateKey: "pOrdVoucherDate",
-            footerKey: "pOrdFooter",
+            footerKey: "pOrdFooter"
         },
         {
             key: "grn",
@@ -1220,7 +923,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "grnVoucherNumber",
             partyKey: "grnVendorName",
             dateKey: "grnVoucherDate",
-            footerKey: "grnFooter",
+            footerKey: "grnFooter"
         },
         {
             key: "purchaseInvoice",
@@ -1232,7 +935,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "pInvVoucherNumber",
             partyKey: "pInvVendorName",
             dateKey: "pInvVoucherDate",
-            footerKey: "pInvFooter",
+            footerKey: "pInvFooter"
         },
         {
             key: "purchaseReturn",
@@ -1244,7 +947,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "pRetVoucherNumber",
             partyKey: "pRetVendorName",
             dateKey: "pRetVoucherDate",
-            footerKey: "pRetFooter",
+            footerKey: "pRetFooter"
         },
         {
             key: "payment",
@@ -1256,10 +959,9 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             voucherKey: "payVoucherNumber",
             partyKey: "payAccountName",
             dateKey: "payVoucherDate",
-            footerKey: "payFooter",
+            footerKey: "payFooter"
         },
     ];
-
     const moduleSummaryData = dashboardModuleConfig
         .map((item: any) => ({
             ...item,
@@ -1267,22 +969,12 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             amount: getModuleAmount(item.key),
             count: getModuleCount(item.key),
             records: getModuleDetails(item.key).length,
-            details: getModuleDetails(item.key),
+            details: getModuleDetails(item.key)
         }))
         .filter((item: any) => item.count > 0 || item.amount > 0);
-
     const totalBusinesses = toNumber(dashboardData?.totalBusinesses);
-
-    const totalTransactions = moduleSummaryData.reduce(
-        (sum: number, item: any) => sum + toNumber(item.count),
-        0
-    );
-
-    const totalAmount = moduleSummaryData.reduce(
-        (sum: number, item: any) => sum + toNumber(item.amount),
-        0
-    );
-
+    const totalTransactions = moduleSummaryData.reduce((sum: number, item: any) => sum + toNumber(item.count), 0);
+    const totalAmount = moduleSummaryData.reduce((sum: number, item: any) => sum + toNumber(item.amount), 0);
     const salesFlowData = [
         "salesQuotation",
         "salesOrder",
@@ -1291,15 +983,13 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         "receipt",
     ].map((key) => {
         const module = dashboardModuleConfig.find((item) => item.key === key);
-
         return {
             key,
             module: module?.shortLabel || key,
             amount: getModuleAmount(key),
-            count: getModuleCount(key),
+            count: getModuleCount(key)
         };
     });
-
     const purchaseFlowData = [
         "purchaseOrder",
         "grn",
@@ -1308,93 +998,65 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         "payment",
     ].map((key) => {
         const module = dashboardModuleConfig.find((item) => item.key === key);
-
         return {
             key,
             module: module?.shortLabel || key,
             amount: getModuleAmount(key),
-            count: getModuleCount(key),
+            count: getModuleCount(key)
         };
     });
-
-    const totalSalesAmount =
-        getModuleAmount("salesInvoice") -
+    const totalSalesAmount = getModuleAmount("salesInvoice") -
         getModuleAmount("salesInvoiceReturn");
-
-    const totalPurchaseAmount =
-        getModuleAmount("purchaseInvoice") -
+    const totalPurchaseAmount = getModuleAmount("purchaseInvoice") -
         getModuleAmount("purchaseReturn");
-
+    const profitAmount = totalSalesAmount - totalPurchaseAmount;
     const cashInAmount = getModuleAmount("receipt");
     const cashOutAmount = getModuleAmount("payment");
-
     // const outstandingReceivable =
     //     getModuleAmount("salesInvoice") -
     //     getModuleAmount("salesInvoiceReturn") -
     //     cashInAmount;
-
     // const outstandingPayable =
     //     getModuleAmount("purchaseInvoice") -
     //     getModuleAmount("purchaseReturn") -
     //     cashOutAmount;
-
-    const topAmountModule = [...moduleSummaryData].sort(
-        (a: any, b: any) => toNumber(b.amount) - toNumber(a.amount)
-    )?.[0];
-
+    const topAmountModule = [...moduleSummaryData].sort((a: any, b: any) => toNumber(b.amount) - toNumber(a.amount))?.[0];
     const topModulesByAmount = [...moduleSummaryData]
         .filter((item: any) => item.amount > 0)
         .sort((a: any, b: any) => toNumber(b.amount) - toNumber(a.amount))
         .slice(0, 7);
-
     const statusMap = moduleSummaryData.reduce((acc: any, module: any) => {
         const details = getModuleDetails(module.key);
-
         details.forEach((row: any) => {
-            const status = String(
-                row?.[module?.statusKey || ""] || "unknown"
-            ).toLowerCase();
-
+            const status = String(row?.[module?.statusKey || ""] || "unknown").toLowerCase();
             acc[status] = (acc[status] || 0) + 1;
         });
-
         return acc;
     }, {});
-
-    const statusChartData = Object.entries(statusMap).map(
-        ([name, value]: any) => ({
-            name: name.charAt(0).toUpperCase() + name.slice(1),
-            value,
-        })
-    );
-
+    const statusChartData = Object.entries(statusMap).map(([name, value]: any) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        value
+    }));
     const recentTransactions = dashboardModuleConfig
-        .flatMap((config: any) =>
-            getModuleDetails(config.key).map((row: any) => {
-                const footer = row?.[config.footerKey] || {};
-
-                return {
-                    module: config.label,
-                    voucher: row?.[config.voucherKey] || "-",
-                    party: row?.[config.partyKey] || "-",
-                    date: row?.[config.dateKey],
-                    status: row?.[config.statusKey] || "-",
-                    amount: toNumber(
-                        footer?.netAmount || footer?.totalNetAmount || 0
-                    ),
-                    icon: config.icon,
-                    group: config.group,
-                };
-            })
-        )
+        .flatMap((config: any) => getModuleDetails(config.key).map((row: any) => {
+            const footer = row?.[config.footerKey] || {};
+            return {
+                module: config.label,
+                voucher: row?.[config.voucherKey] || "-",
+                party: row?.[config.partyKey] || "-",
+                date: row?.[config.dateKey],
+                status: row?.[config.statusKey] || "-",
+                amount: toNumber(footer?.netAmount || footer?.totalNetAmount || 0),
+                icon: config.icon,
+                group: config.group
+            };
+        }))
         .sort((a: any, b: any) => {
             const aTime = new Date(a.date || 0).getTime();
             const bTime = new Date(b.date || 0).getTime();
-
             return bTime - aTime;
         })
         .slice(0, 8);
-
     const pieColors = [
         "var(--primary, #4f46e5)",
         "var(--success, #16a34a)",
@@ -1407,7 +1069,6 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         "#f97316",
         "#22c55e",
     ];
-
     const cardVariants: any = {
         hidden: { opacity: 0, y: 12, scale: 0.98 },
         visible: (index: number) => ({
@@ -1417,11 +1078,10 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             transition: {
                 delay: index * 0.06,
                 duration: 0.35,
-                ease: "easeOut",
-            },
-        }),
+                ease: "easeOut"
+            }
+        })
     };
-
     const chartVariants: any = {
         hidden: { opacity: 0, y: 14 },
         visible: (index: number) => ({
@@ -1430,11 +1090,10 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             transition: {
                 delay: index * 0.08,
                 duration: 0.4,
-                ease: "easeOut",
-            },
-        }),
+                ease: "easeOut"
+            }
+        })
     };
-
     const summaryCards = [
         {
             title: "Businesses",
@@ -1442,7 +1101,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             helper: "Total businesses found",
             badge: "Count",
             icon: <Users size={17} />,
-            accent: "primary",
+            accent: "primary"
         },
         {
             title: "Transactions",
@@ -1450,7 +1109,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             helper: "Entries across all modules",
             badge: "Count",
             icon: <Activity size={17} />,
-            accent: "success",
+            accent: "success"
         },
         {
             title: "Total Value",
@@ -1458,25 +1117,25 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             helper: formatFullAmount(totalAmount),
             badge: "Amount",
             icon: <IndianRupee size={17} />,
-            accent: "primary",
+            accent: "primary"
         },
-        {
-            title: "Highest Module",
-            value: topAmountModule?.module || "-",
-            helper: topAmountModule?.amount
-                ? formatFullAmount(topAmountModule?.amount)
-                : "No module data found",
-            badge: "Top",
-            icon: <ShieldCheck size={17} />,
-            accent: "primary",
-        },
+        // {
+        //     title: "Highest Module",
+        //     value: topAmountModule?.module || "-",
+        //     helper: topAmountModule?.amount
+        //         ? formatFullAmount(topAmountModule?.amount)
+        //         : "No module data found",
+        //     badge: "Top",
+        //     icon: <ShieldCheck size={17} />,
+        //     accent: "primary"
+        // },
         {
             title: "Net Sales",
             value: formatAmount(totalSalesAmount),
             helper: "Sales Invoice - Sales Return",
             badge: "Sales",
             icon: <ArrowUpRight size={17} />,
-            accent: "success",
+            accent: "success"
         },
         {
             title: "Net Purchase",
@@ -1484,7 +1143,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             helper: "Purchase Invoice - Return",
             badge: "Purchase",
             icon: <ArrowDownRight size={17} />,
-            accent: "danger",
+            accent: "danger"
         },
         {
             title: "Cash In",
@@ -1492,7 +1151,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             helper: "Receipt amount",
             badge: "Receipt",
             icon: <WalletCards size={17} />,
-            accent: "success",
+            accent: "success"
         },
         {
             title: "Cash Out",
@@ -1500,1090 +1159,620 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             helper: "Payment amount",
             badge: "Payment",
             icon: <WalletCards size={17} />,
-            accent: "danger",
+            accent: "danger"
         },
+        {
+            title: "Profit",
+            value: formatAmount(profitAmount),
+            helper: "Net Sales - Net Purchase",
+            badge: "Profit",
+            icon: <IndianRupee size={17} />,
+            accent: profitAmount >= 0 ? "success" : "danger"
+        }
     ];
-
     const CustomTooltip = ({ active, payload, label }: any) => {
-        if (!active || !payload?.length) return null;
+        if (!active || !payload?.length)
+            return null;
+        return (<div className="rounded-lg border border-border bg-card px-3 py-2 shadow-xl">
+            <p className="mb-1 text-xs font-black text-card-foreground">
+                {label}
+            </p>
 
-        return (
-            <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-xl">
-                <p className="mb-1 text-xs font-black text-card-foreground">
-                    {label}
-                </p>
+            {payload.map((entry: any) => (<div key={`${entry.name}-${entry.value}`} className="flex items-center justify-between gap-4 text-xs">
+                <span className="font-bold text-muted-foreground">
+                    {entry.name}
+                </span>
 
-                {payload.map((entry: any) => (
-                    <div
-                        key={`${entry.name}-${entry.value}`}
-                        className="flex items-center justify-between gap-4 text-xs"
-                    >
-                        <span className="font-bold text-muted-foreground">
-                            {entry.name}
-                        </span>
-
-                        <span className="font-black text-card-foreground">
-                            {entry.name?.toLowerCase()?.includes("amount")
-                                ? formatFullAmount(entry.value)
-                                : formatCount(entry.value)}
-                        </span>
-                    </div>
-                ))}
-            </div>
-        );
+                <span className="font-black text-card-foreground">
+                    {entry.name?.toLowerCase()?.includes("amount")
+                        ? formatFullAmount(entry.value)
+                        : formatCount(entry.value)}
+                </span>
+            </div>))}
+        </div>);
     };
-
     if (selectedRequest) {
         return <Tabs {...{ selectedRequest, setSelectedRequest }} />;
     }
-
-    return (
-        <div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
-            {/* ================= PAGE TABS ================= */}
-            <div className="mb-4 flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
-                {pageTabs.map((tab: any) => {
-                    const isActive = activePageTab === tab.key;
-
-                    return (
-                        <button
-                            key={tab.key}
-                            type="button"
-                            onClick={() => setActivePageTab(tab.key)}
-                            className={`
+    return (<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
+        {/* ================= PAGE TABS ================= */}
+        <div className="mb-4 flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
+            {pageTabs.map((tab: any) => {
+                const isActive = activePageTab === tab.key;
+                return (<button key={tab.key} type="button" onClick={() => setActivePageTab(tab.key)} className={`
                                 flex cursor-pointer items-center gap-2 rounded px-4 py-2 text-sm font-bold transition
                                 ${isActive
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-muted-foreground hover:bg-muted hover:text-card-foreground"
-                                }
-                            `}
-                        >
-                            {tab.icon}
-                            {tab.label}
-                        </button>
-                    );
-                })}
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-card-foreground"}
+                            `}>
+                    {tab.icon}
+                    {tab.label}
+                </button>);
+            })}
+        </div>
+
+        {/* ================= LISTING TAB ================= */}
+        {activePageTab === "listing" && (<>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+                <div className="flex items-start gap-3">
+                    <Badge {...{
+                        count: totalRequests,
+                        text: "Total Requests:"
+                    }} />
+                </div>
+
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                    <DataREfreshButton {...{
+                        callBackFn: handleRefresh,
+                        loading: refreshing
+                    }} />
+
+                    <button type="button" onClick={openRequestModal} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90">
+                        <ShieldCheck size={16} />
+                        Request Access
+                    </button>
+                </div>
             </div>
 
-            {/* ================= LISTING TAB ================= */}
-            {activePageTab === "listing" && (
-                <>
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <div className="flex items-start gap-3">
-                            <Badge
-                                {...{
-                                    count: totalRequests,
-                                    text: "Total Requests:",
-                                }}
-                            />
-                        </div>
+            <DataTable columns={requestColumns} data={requestTableData} loading={accessRequestsLoading} emptyMessage="No DB access request found" actions={(row: any) => (<div className="flex items-center gap-2">
+                <button id="user-explorer-view-button" onClick={() => handleViewRequest(row)} className="cursor-pointer rounded-lg p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary">
+                    <Eye size={16} />
+                </button>
+            </div>)} />
 
-                        <div className="ml-auto flex flex-wrap items-center gap-2">
-                            <DataREfreshButton
-                                {...{
-                                    callBackFn: handleRefresh,
-                                    loading: refreshing,
-                                }}
-                            />
+            {accessRequestsPagination?.totalDocs > 0 && (<Pagination {...{
+                localLimit,
+                selectCb: (e: any) => {
+                    setLocalLimit(Number(e.target.value));
+                    setLocalOffset(0);
+                },
+                preDisabled: !accessRequestsPagination?.hasPrevPage,
+                nextDisabled: !accessRequestsPagination?.hasNextPage,
+                setLocalOffset,
+                pagination: accessRequestsPagination
+            }} />)}
+        </>)}
 
-                            <button
-                                type="button"
-                                onClick={openRequestModal}
-                                className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-bold text-primary-foreground transition hover:bg-primary/90"
-                            >
-                                <ShieldCheck size={16} />
-                                Request Access
-                            </button>
-                        </div>
+        {/* ================= DASHBOARD TAB ================= */}
+        {activePageTab === "dashboard" && (<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+            <div ref={dashboardFilterRef} className="relative rounded border border-border bg-background/70 p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-sm font-black text-card-foreground">
+                            Dashboard
+                        </h2>
+
+                        <p className="text-xs font-medium text-muted-foreground">
+                            View analytics by DB number, city, state and
+                            period.
+                        </p>
                     </div>
 
-                    <DataTable
-                        columns={requestColumns}
-                        data={requestTableData}
-                        loading={accessRequestsLoading}
-                        emptyMessage="No DB access request found"
-                        actions={(row: any) => (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    id="user-explorer-view-button"
-                                    onClick={() => handleViewRequest(row)}
-                                    className="cursor-pointer rounded-lg p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                                >
-                                    <Eye size={16} />
-                                </button>
-                            </div>
-                        )}
-                    />
+                    <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setShowDashboardFilter((prev) => !prev)} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted">
+                            <Filter size={14} />
+                            Filter
+                        </button>
 
-                    {accessRequestsPagination?.totalDocs > 0 && (
-                        <Pagination
-                            {...{
-                                localLimit,
-                                selectCb: (e: any) => {
-                                    setLocalLimit(Number(e.target.value));
-                                    setLocalOffset(0);
-                                },
-                                preDisabled:
-                                    !accessRequestsPagination?.hasPrevPage,
-                                nextDisabled:
-                                    !accessRequestsPagination?.hasNextPage,
-                                setLocalOffset,
-                                pagination: accessRequestsPagination,
-                            }}
-                        />
-                    )}
-                </>
-            )}
+                        <button type="button" onClick={fetchAreaDashboard} disabled={registerDashboardLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                            {registerDashboardLoading ? (<>
+                                <Loader2 size={15} className="animate-spin" />
+                                Loading...
+                            </>) : (<>
+                                <BarChart3 size={15} />
+                                Refresh
+                            </>)}
+                        </button>
+                    </div>
+                </div>
 
-            {/* ================= DASHBOARD TAB ================= */}
-            {activePageTab === "dashboard" && (
-                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
-                    <div
-                        ref={dashboardFilterRef}
-                        className="relative rounded border border-border bg-background/70 p-4 shadow-sm"
-                    >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <h2 className="text-sm font-black text-card-foreground">
-                                    Dashboard
+                {showDashboardFilter && (<div className="absolute right-4 top-[72px] z-50 w-[min(720px,calc(100vw-2rem))] rounded border border-border bg-card p-4 shadow-2xl">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-black text-card-foreground">
+                                Dashboard Filters
+                            </h3>
+
+                            <p className="text-xs font-medium text-muted-foreground">
+                                Select filters and apply.
+                            </p>
+                        </div>
+
+                        <button type="button" onClick={() => setShowDashboardFilter(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded hover:bg-muted">
+                            <X size={15} />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">
+                                States
+                            </label>
+
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.states} onChange={handleStateChange} options={stateOptions} placeholder="Select States" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">
+                                Cities
+                            </label>
+
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.cities} onChange={(value: any) => handleDashboardFilterChange("cities", value || [])} options={cityOptions} placeholder="Select Cities" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">
+                                DB Numbers
+                            </label>
+
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.dbNumbers} onChange={(value: any) => handleDashboardFilterChange("dbNumbers", value || [])} options={uniqueDbNumberOptions} placeholder="Select DB Numbers" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <SelectInput label="Period" value={dashboardFilters.period} placeholder="Select Period" onChange={(e: any) => handleDashboardFilterChange("period", e?.target?.value)} options={periodOptions} />
+                    </div>
+
+                    <div className="mt-4 flex justify-end gap-2">
+                        <button type="button" onClick={clearDashboardFilters} disabled={registerDashboardLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
+                            <X size={14} />
+                            Clear
+                        </button>
+
+                        <button type="button" onClick={async () => {
+                            await fetchAreaDashboard();
+                            setShowDashboardFilter(false);
+                        }} disabled={registerDashboardLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                            {registerDashboardLoading ? (<>
+                                <Loader2 size={15} className="animate-spin" />
+                                Loading...
+                            </>) : (<>
+                                <BarChart3 size={15} />
+                                Apply
+                            </>)}
+                        </button>
+                    </div>
+                </div>)}
+            </div>
+
+            {registerDashboardLoading ? (<div className="flex h-40 items-center justify-center gap-2 rounded border border-border bg-background text-sm font-bold text-muted-foreground">
+                <Loader2 size={18} className="animate-spin" />
+                Loading dashboard...
+            </div>) : (<div className="flex flex-col gap-4">
+                {/* ================= KPI CARDS ================= */}
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {summaryCards.map((card: any, index: number) => (<motion.div key={card.title} custom={index} variants={cardVariants} initial="hidden" animate="visible" whileHover={{
+                        y: -3,
+                        scale: 1.015,
+                        transition: { duration: 0.2 }
+                    }} className="group relative overflow-hidden rounded-md border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md">
+                        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-125 group-hover:bg-primary/10" />
+                        <div className="relative flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                                <div className="mb-1 flex items-center gap-2">
+                                    <p className="truncate text-[11px] font-black uppercase tracking-wide text-muted-foreground">
+                                        {card.title}
+                                    </p>
+
+                                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
+                                        {card.badge}
+                                    </span>
+                                </div>
+
+                                <h2 className="truncate text-2xl font-black tracking-tight text-card-foreground">
+                                    {card.value}
                                 </h2>
 
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    View analytics by DB number, city, state and
-                                    period.
+                                <p className="mt-1 truncate text-[11px] font-bold text-muted-foreground">
+                                    {card.helper}
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setShowDashboardFilter((prev) => !prev)
-                                    }
-                                    className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted"
-                                >
-                                    <Filter size={14} />
-                                    Filter
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={fetchAreaDashboard}
-                                    disabled={registerDashboardLoading}
-                                    className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {registerDashboardLoading ? (
-                                        <>
-                                            <Loader2
-                                                size={15}
-                                                className="animate-spin"
-                                            />
-                                            Loading...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <BarChart3 size={15} />
-                                            Refresh
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        {showDashboardFilter && (
-                            <div className="absolute right-4 top-[72px] z-50 w-[min(720px,calc(100vw-2rem))] rounded border border-border bg-card p-4 shadow-2xl">
-                                <div className="mb-3 flex items-center justify-between gap-3">
-                                    <div>
-                                        <h3 className="text-sm font-black text-card-foreground">
-                                            Dashboard Filters
-                                        </h3>
-
-                                        <p className="text-xs font-medium text-muted-foreground">
-                                            Select filters and apply.
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowDashboardFilter(false)
-                                        }
-                                        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded hover:bg-muted"
-                                    >
-                                        <X size={15} />
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-sm font-medium text-card-foreground">
-                                            States
-                                        </label>
-
-                                        <Select
-                                            isMulti
-                                            classNamePrefix="dashboard-select"
-                                            isDisabled={disabled}
-                                            value={dashboardFilters.states}
-                                            onChange={handleStateChange}
-                                            options={stateOptions}
-                                            placeholder="Select States"
-                                            styles={reactSelectStyles}
-                                            closeMenuOnSelect={false}
-                                            menuPortalTarget={document.body}
-                                            menuPosition="fixed"
-                                        />
-                                    </div>
-
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-sm font-medium text-card-foreground">
-                                            Cities
-                                        </label>
-
-                                        <Select
-                                            isMulti
-                                            classNamePrefix="dashboard-select"
-                                            isDisabled={disabled}
-                                            value={dashboardFilters.cities}
-                                            onChange={(value: any) =>
-                                                handleDashboardFilterChange(
-                                                    "cities",
-                                                    value || []
-                                                )
-                                            }
-                                            options={cityOptions}
-                                            placeholder="Select Cities"
-                                            styles={reactSelectStyles}
-                                            closeMenuOnSelect={false}
-                                            menuPortalTarget={document.body}
-                                            menuPosition="fixed"
-                                        />
-                                    </div>
-
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-sm font-medium text-card-foreground">
-                                            DB Numbers
-                                        </label>
-
-                                        <Select
-                                            isMulti
-                                            classNamePrefix="dashboard-select"
-                                            isDisabled={disabled}
-                                            value={dashboardFilters.dbNumbers}
-                                            onChange={(value: any) =>
-                                                handleDashboardFilterChange(
-                                                    "dbNumbers",
-                                                    value || []
-                                                )
-                                            }
-                                            options={uniqueDbNumberOptions}
-                                            placeholder="Select DB Numbers"
-                                            styles={reactSelectStyles}
-                                            closeMenuOnSelect={false}
-                                            menuPortalTarget={document.body}
-                                            menuPosition="fixed"
-                                        />
-                                    </div>
-
-                                    <SelectInput
-                                        label="Period"
-                                        value={dashboardFilters.period}
-                                        placeholder="Select Period"
-                                        onChange={(e: any) =>
-                                            handleDashboardFilterChange(
-                                                "period",
-                                                e?.target?.value
-                                            )
-                                        }
-                                        options={periodOptions}
-                                    />
-                                </div>
-
-                                <div className="mt-4 flex justify-end gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={clearDashboardFilters}
-                                        disabled={registerDashboardLoading}
-                                        className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        <X size={14} />
-                                        Clear
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            await fetchAreaDashboard();
-                                            setShowDashboardFilter(false);
-                                        }}
-                                        disabled={registerDashboardLoading}
-                                        className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        {registerDashboardLoading ? (
-                                            <>
-                                                <Loader2
-                                                    size={15}
-                                                    className="animate-spin"
-                                                />
-                                                Loading...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <BarChart3 size={15} />
-                                                Apply
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {registerDashboardLoading ? (
-                        <div className="flex h-40 items-center justify-center gap-2 rounded border border-border bg-background text-sm font-bold text-muted-foreground">
-                            <Loader2 size={18} className="animate-spin" />
-                            Loading dashboard...
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-4">
-                            {/* ================= KPI CARDS ================= */}
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                {summaryCards.map(
-                                    (card: any, index: number) => (
-                                        <motion.div
-                                            key={card.title}
-                                            custom={index}
-                                            variants={cardVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                            whileHover={{
-                                                y: -3,
-                                                scale: 1.015,
-                                                transition: { duration: 0.2 },
-                                            }}
-                                            className="group relative overflow-hidden rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
-                                        >
-                                            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-125 group-hover:bg-primary/10" />
-
-                                            <div className="relative flex items-start justify-between gap-3">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="mb-1 flex items-center gap-2">
-                                                        <p className="truncate text-[11px] font-black uppercase tracking-wide text-muted-foreground">
-                                                            {card.title}
-                                                        </p>
-
-                                                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
-                                                            {card.badge}
-                                                        </span>
-                                                    </div>
-
-                                                    <h2 className="truncate text-2xl font-black tracking-tight text-card-foreground">
-                                                        {card.value}
-                                                    </h2>
-
-                                                    <p className="mt-1 truncate text-[11px] font-bold text-muted-foreground">
-                                                        {card.helper}
-                                                    </p>
-                                                </div>
-
-                                                <div
-                                                    className={`
+                            <div className={`
                                                         flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110
                                                         ${card.accent ===
-                                                            "success"
-                                                            ? "bg-success/10 text-success group-hover:bg-success group-hover:text-white"
-                                                            : card.accent ===
-                                                                "danger"
-                                                                ? "bg-danger/10 text-danger group-hover:bg-danger group-hover:text-white"
-                                                                : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                                                        }
-                                                    `}
-                                                >
-                                                    {card.icon}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )
-                                )}
-                            </div>
-
-                            {/* ================= SALES + PURCHASE FLOW ================= */}
-                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                                <motion.div
-                                    custom={0}
-                                    variants={chartVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    whileHover={{ y: -2 }}
-                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
-                                >
-                                    <div className="mb-4 flex items-start justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-sm font-black text-card-foreground">
-                                                Sales Flow
-                                            </h2>
-
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Quotation to receipt conversion
-                                                overview.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
-                                            <ArrowUpRight size={17} />
-                                        </div>
-                                    </div>
-
-                                    <div className="h-[310px] w-full">
-                                        <ResponsiveContainer
-                                            width="100%"
-                                            height="100%"
-                                        >
-                                            <ComposedChart data={salesFlowData}>
-                                                <defs>
-                                                    <linearGradient
-                                                        id="salesAmountGradient"
-                                                        x1="0"
-                                                        y1="0"
-                                                        x2="0"
-                                                        y2="1"
-                                                    >
-                                                        <stop
-                                                            offset="5%"
-                                                            stopColor="var(--primary)"
-                                                            stopOpacity={0.28}
-                                                        />
-                                                        <stop
-                                                            offset="95%"
-                                                            stopColor="var(--primary)"
-                                                            stopOpacity={0.02}
-                                                        />
-                                                    </linearGradient>
-                                                </defs>
-
-                                                <CartesianGrid
-                                                    strokeDasharray="3 3"
-                                                    vertical={false}
-                                                />
-
-                                                <XAxis
-                                                    dataKey="module"
-                                                    tick={{ fontSize: 11 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                />
-
-                                                <YAxis
-                                                    yAxisId="left"
-                                                    tick={{ fontSize: 10 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tickFormatter={(
-                                                        value: any
-                                                    ) => formatAmount(value)}
-                                                />
-
-                                                <YAxis
-                                                    yAxisId="right"
-                                                    orientation="right"
-                                                    tick={{ fontSize: 10 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    allowDecimals={false}
-                                                />
-
-                                                <Tooltip
-                                                    content={<CustomTooltip />}
-                                                />
-
-                                                <Legend
-                                                    wrapperStyle={{
-                                                        fontSize: 11,
-                                                    }}
-                                                />
-
-                                                <Area
-                                                    yAxisId="left"
-                                                    type="monotone"
-                                                    dataKey="amount"
-                                                    name="Amount"
-                                                    stroke="var(--primary)"
-                                                    fill="url(#salesAmountGradient)"
-                                                    strokeWidth={3}
-                                                />
-
-                                                <Bar
-                                                    yAxisId="right"
-                                                    dataKey="count"
-                                                    name="Count"
-                                                    radius={[8, 8, 0, 0]}
-                                                    fill="var(--success)"
-                                                    barSize={28}
-                                                />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </motion.div>
-
-                                <motion.div
-                                    custom={1}
-                                    variants={chartVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    whileHover={{ y: -2 }}
-                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
-                                >
-                                    <div className="mb-4 flex items-start justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-sm font-black text-card-foreground">
-                                                Purchase Flow
-                                            </h2>
-
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Purchase order to payment
-                                                overview.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-danger/10 text-danger">
-                                            <ArrowDownRight size={17} />
-                                        </div>
-                                    </div>
-
-                                    <div className="h-[310px] w-full">
-                                        <ResponsiveContainer
-                                            width="100%"
-                                            height="100%"
-                                        >
-                                            <ComposedChart
-                                                data={purchaseFlowData}
-                                            >
-                                                <defs>
-                                                    <linearGradient
-                                                        id="purchaseAmountGradient"
-                                                        x1="0"
-                                                        y1="0"
-                                                        x2="0"
-                                                        y2="1"
-                                                    >
-                                                        <stop
-                                                            offset="5%"
-                                                            stopColor="var(--danger)"
-                                                            stopOpacity={0.25}
-                                                        />
-                                                        <stop
-                                                            offset="95%"
-                                                            stopColor="var(--danger)"
-                                                            stopOpacity={0.02}
-                                                        />
-                                                    </linearGradient>
-                                                </defs>
-
-                                                <CartesianGrid
-                                                    strokeDasharray="3 3"
-                                                    vertical={false}
-                                                />
-
-                                                <XAxis
-                                                    dataKey="module"
-                                                    tick={{ fontSize: 11 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                />
-
-                                                <YAxis
-                                                    yAxisId="left"
-                                                    tick={{ fontSize: 10 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tickFormatter={(
-                                                        value: any
-                                                    ) => formatAmount(value)}
-                                                />
-
-                                                <YAxis
-                                                    yAxisId="right"
-                                                    orientation="right"
-                                                    tick={{ fontSize: 10 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    allowDecimals={false}
-                                                />
-
-                                                <Tooltip
-                                                    content={<CustomTooltip />}
-                                                />
-
-                                                <Legend
-                                                    wrapperStyle={{
-                                                        fontSize: 11,
-                                                    }}
-                                                />
-
-                                                <Area
-                                                    yAxisId="left"
-                                                    type="monotone"
-                                                    dataKey="amount"
-                                                    name="Amount"
-                                                    stroke="var(--danger)"
-                                                    fill="url(#purchaseAmountGradient)"
-                                                    strokeWidth={3}
-                                                />
-
-                                                <Bar
-                                                    yAxisId="right"
-                                                    dataKey="count"
-                                                    name="Count"
-                                                    radius={[8, 8, 0, 0]}
-                                                    fill="var(--primary)"
-                                                    barSize={28}
-                                                />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </motion.div>
-                            </div>
-
-                            {/* ================= MODULE PERFORMANCE + STATUS ================= */}
-                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                                <motion.div
-                                    custom={2}
-                                    variants={chartVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    whileHover={{ y: -2 }}
-                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md xl:col-span-2"
-                                >
-                                    <div className="mb-4 flex items-start justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-sm font-black text-card-foreground">
-                                                Top Modules by Amount
-                                            </h2>
-
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Highest value modules in
-                                                selected period.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                            <BarChart3 size={17} />
-                                        </div>
-                                    </div>
-
-                                    <div className="h-[340px] w-full">
-                                        <ResponsiveContainer
-                                            width="100%"
-                                            height="100%"
-                                        >
-                                            <BarChart
-                                                data={topModulesByAmount}
-                                                layout="vertical"
-                                                margin={{
-                                                    left: 18,
-                                                    right: 24,
-                                                    top: 10,
-                                                    bottom: 10,
-                                                }}
-                                            >
-                                                <CartesianGrid
-                                                    strokeDasharray="3 3"
-                                                    horizontal={false}
-                                                />
-
-                                                <XAxis
-                                                    type="number"
-                                                    tick={{ fontSize: 10 }}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tickFormatter={(
-                                                        value: any
-                                                    ) => formatAmount(value)}
-                                                />
-
-                                                <YAxis
-                                                    type="category"
-                                                    dataKey="shortLabel"
-                                                    tick={{ fontSize: 11 }}
-                                                    width={95}
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                />
-
-                                                <Tooltip
-                                                    formatter={(
-                                                        value: any
-                                                    ) => [
-                                                            formatFullAmount(value),
-                                                            "Amount",
-                                                        ]}
-                                                />
-
-                                                <Bar
-                                                    dataKey="amount"
-                                                    name="Amount"
-                                                    radius={[0, 8, 8, 0]}
-                                                    fill="var(--primary)"
-                                                    barSize={24}
-                                                />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </motion.div>
-
-                                <motion.div
-                                    custom={3}
-                                    variants={chartVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    whileHover={{ y: -2 }}
-                                    className="rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
-                                >
-                                    <div className="mb-4 flex items-start justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-sm font-black text-card-foreground">
-                                                Status Split
-                                            </h2>
-
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Open, close, draft and other
-                                                records.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                            <Layers size={17} />
-                                        </div>
-                                    </div>
-
-                                    <div className="h-[230px] w-full">
-                                        <ResponsiveContainer
-                                            width="100%"
-                                            height="100%"
-                                        >
-                                            <PieChart>
-                                                <Pie
-                                                    data={statusChartData}
-                                                    dataKey="value"
-                                                    nameKey="name"
-                                                    innerRadius={58}
-                                                    outerRadius={88}
-                                                    paddingAngle={4}
-                                                >
-                                                    {statusChartData.map(
-                                                        (
-                                                            entry: any,
-                                                            index: number
-                                                        ) => (
-                                                            <Cell
-                                                                key={entry.name}
-                                                                fill={
-                                                                    pieColors[
-                                                                    index %
-                                                                    pieColors.length
-                                                                    ]
-                                                                }
-                                                            />
-                                                        )
-                                                    )}
-                                                </Pie>
-
-                                                <Tooltip
-                                                    formatter={(
-                                                        value: any
-                                                    ) => [
-                                                            formatCount(value),
-                                                            "Records",
-                                                        ]}
-                                                />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-
-                                    <div className="mt-3 flex flex-col gap-2">
-                                        {statusChartData.length ? (
-                                            statusChartData.map(
-                                                (
-                                                    item: any,
-                                                    index: number
-                                                ) => (
-                                                    <div
-                                                        key={item.name}
-                                                        className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2"
-                                                    >
-                                                        <div className="flex min-w-0 items-center gap-2">
-                                                            <span
-                                                                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                                                style={{
-                                                                    backgroundColor:
-                                                                        pieColors[
-                                                                        index %
-                                                                        pieColors.length
-                                                                        ],
-                                                                }}
-                                                            />
-
-                                                            <span className="truncate text-xs font-black text-card-foreground">
-                                                                {item.name}
-                                                            </span>
-                                                        </div>
-
-                                                        <span className="text-xs font-black text-muted-foreground">
-                                                            {formatCount(
-                                                                item.value
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                )
-                                            )
-                                        ) : (
-                                            <div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border text-xs font-bold text-muted-foreground">
-                                                No status data found
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            </div>
-
-                            {/* ================= MODULE TABLE + RECENT ACTIVITY ================= */}
-                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                                <motion.div
-                                    custom={4}
-                                    variants={chartVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    className="rounded-xl border border-border bg-background p-4 shadow-sm"
-                                >
-                                    <div className="mb-4 flex items-start justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-sm font-black text-card-foreground">
-                                                Module Summary
-                                            </h2>
-
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Count and amount by module.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                            <Database size={17} />
-                                        </div>
-                                    </div>
-
-                                    <div className="max-h-[390px] overflow-auto rounded-lg border border-border">
-                                        <table className="w-full text-left text-xs">
-                                            <thead className="sticky top-0 bg-card">
-                                                <tr className="border-b border-border">
-                                                    <th className="px-3 py-2 font-black text-muted-foreground">
-                                                        Module
-                                                    </th>
-                                                    <th className="px-3 py-2 text-right font-black text-muted-foreground">
-                                                        Count
-                                                    </th>
-                                                    <th className="px-3 py-2 text-right font-black text-muted-foreground">
-                                                        Amount
-                                                    </th>
-                                                </tr>
-                                            </thead>
-
-                                            <tbody>
-                                                {moduleSummaryData.length ? (
-                                                    moduleSummaryData.map(
-                                                        (item: any) => (
-                                                            <tr
-                                                                key={item.key}
-                                                                className="border-b border-border last:border-b-0 hover:bg-muted/40"
-                                                            >
-                                                                <td className="px-3 py-2">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                                                            {
-                                                                                item.icon
-                                                                            }
-                                                                        </div>
-
-                                                                        <div className="min-w-0">
-                                                                            <p className="truncate font-black text-card-foreground">
-                                                                                {
-                                                                                    item.label
-                                                                                }
-                                                                            </p>
-
-                                                                            <p className="text-[10px] font-bold text-muted-foreground">
-                                                                                {
-                                                                                    item.records
-                                                                                }{" "}
-                                                                                records
-                                                                                loaded
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-
-                                                                <td className="px-3 py-2 text-right font-black text-card-foreground">
-                                                                    {formatCount(
-                                                                        item.count
-                                                                    )}
-                                                                </td>
-
-                                                                <td className="px-3 py-2 text-right font-black text-card-foreground">
-                                                                    {formatAmount(
-                                                                        item.amount
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    )
-                                                ) : (
-                                                    <tr>
-                                                        <td
-                                                            colSpan={3}
-                                                            className="px-3 py-8 text-center text-xs font-bold text-muted-foreground"
-                                                        >
-                                                            No module data found
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </motion.div>
-
-                                <motion.div
-                                    custom={5}
-                                    variants={chartVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    className="rounded-xl border border-border bg-background p-4 shadow-sm"
-                                >
-                                    <div className="mb-4 flex items-start justify-between gap-3">
-                                        <div>
-                                            <h2 className="text-sm font-black text-card-foreground">
-                                                Recent Transactions
-                                            </h2>
-
-                                            <p className="text-xs font-medium text-muted-foreground">
-                                                Latest records across all
-                                                modules.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
-                                            <Activity size={17} />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex max-h-[390px] flex-col gap-2 overflow-auto">
-                                        {recentTransactions.length ? (
-                                            recentTransactions.map(
-                                                (item: any, index: number) => (
-                                                    <motion.div
-                                                        key={`${item.module}-${item.voucher}-${index}`}
-                                                        initial={{
-                                                            opacity: 0,
-                                                            x: 10,
-                                                        }}
-                                                        animate={{
-                                                            opacity: 1,
-                                                            x: 0,
-                                                        }}
-                                                        transition={{
-                                                            delay:
-                                                                index * 0.04,
-                                                        }}
-                                                        className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 transition hover:border-primary/30 hover:bg-muted/30"
-                                                    >
-                                                        <div className="flex min-w-0 items-center gap-3">
-                                                            <div
-                                                                className={`
-                                                                    flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
-                                                                    ${item.group ===
-                                                                        "purchase" ||
-                                                                        item.group ===
-                                                                        "cash-out" ||
-                                                                        item.group ===
-                                                                        "purchase-return"
-                                                                        ? "bg-danger/10 text-danger"
-                                                                        : item.group ===
-                                                                            "cash-in"
-                                                                            ? "bg-success/10 text-success"
-                                                                            : "bg-primary/10 text-primary"
-                                                                    }
-                                                                `}
-                                                            >
-                                                                {item.icon}
-                                                            </div>
-
-                                                            <div className="min-w-0">
-                                                                <div className="flex items-center gap-2">
-                                                                    <p className="truncate text-xs font-black text-card-foreground">
-                                                                        {
-                                                                            item.voucher
-                                                                        }
-                                                                    </p>
-
-                                                                    <span
-                                                                        className={`
-                                                                            rounded-full px-2 py-0.5 text-[10px] font-black capitalize
-                                                                            ${String(
-                                                                            item.status
-                                                                        ).toLowerCase() ===
-                                                                                "close"
-                                                                                ? "bg-success/10 text-success"
-                                                                                : "bg-primary/10 text-primary"
-                                                                            }
-                                                                        `}
-                                                                    >
-                                                                        {
-                                                                            item.status
-                                                                        }
-                                                                    </span>
-                                                                </div>
-
-                                                                <p className="truncate text-[11px] font-bold text-muted-foreground">
-                                                                    {
-                                                                        item.module
-                                                                    }{" "}
-                                                                    •{" "}
-                                                                    {
-                                                                        item.party
-                                                                    }
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="shrink-0 text-right">
-                                                            <p className="text-xs font-black text-card-foreground">
-                                                                {formatAmount(
-                                                                    item.amount
-                                                                )}
-                                                            </p>
-
-                                                            <p className="text-[10px] font-bold text-muted-foreground">
-                                                                {formatDate(
-                                                                    item.date
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                    </motion.div>
-                                                )
-                                            )
-                                        ) : (
-                                            <div className="flex h-36 items-center justify-center rounded-lg border border-dashed border-border text-xs font-bold text-muted-foreground">
-                                                No recent transactions found
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
+                                    "success"
+                                    ? "bg-success/10 text-success group-hover:bg-success group-hover:text-white"
+                                    : card.accent ===
+                                        "danger"
+                                        ? "bg-danger/10 text-danger group-hover:bg-danger group-hover:text-white"
+                                        : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"}
+                                                    `}>
+                                {card.icon}
                             </div>
                         </div>
-                    )}
+                    </motion.div>))}
                 </div>
-            )}
 
-            {/* ================= STATE MAP TAB ================= */}
-            {activePageTab === "stateMap" && (
-                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-                    <style>{`
+                {/* ================= SALES + PURCHASE FLOW ================= */}
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <motion.div custom={0} variants={chartVariants} initial="hidden" animate="visible" whileHover={{ y: -2 }} className="rounded-md border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-black text-card-foreground">
+                                    Sales Flow
+                                </h2>
+
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Quotation to receipt conversion
+                                    overview.
+                                </p>
+                            </div>
+
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
+                                <ArrowUpRight size={17} />
+                            </div>
+                        </div>
+
+                        <div className="h-[310px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={salesFlowData}>
+                                    <defs>
+                                        <linearGradient id="salesAmountGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.28} />
+                                            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.02} />
+                                        </linearGradient>
+                                    </defs>
+
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+                                    <XAxis dataKey="module" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+
+                                    <YAxis yAxisId="left" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(value: any) => formatAmount(value)} />
+
+                                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+
+                                    <Tooltip content={<CustomTooltip />} />
+
+                                    <Legend wrapperStyle={{
+                                        fontSize: 11
+                                    }} />
+
+                                    <Area yAxisId="left" type="monotone" dataKey="amount" name="Amount" stroke="var(--primary)" fill="url(#salesAmountGradient)" strokeWidth={3} />
+
+                                    <Bar yAxisId="right" dataKey="count" name="Count" radius={[8, 8, 0, 0]} fill="var(--success)" barSize={28} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+
+                    <motion.div custom={1} variants={chartVariants} initial="hidden" animate="visible" whileHover={{ y: -2 }} className="rounded-md border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-black text-card-foreground">
+                                    Purchase Flow
+                                </h2>
+
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Purchase order to payment
+                                    overview.
+                                </p>
+                            </div>
+
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-danger/10 text-danger">
+                                <ArrowDownRight size={17} />
+                            </div>
+                        </div>
+
+                        <div className="h-[310px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={purchaseFlowData}>
+                                    <defs>
+                                        <linearGradient id="purchaseAmountGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="var(--danger)" stopOpacity={0.25} />
+                                            <stop offset="95%" stopColor="var(--danger)" stopOpacity={0.02} />
+                                        </linearGradient>
+                                    </defs>
+
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+                                    <XAxis dataKey="module" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+
+                                    <YAxis yAxisId="left" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(value: any) => formatAmount(value)} />
+
+                                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+
+                                    <Tooltip content={<CustomTooltip />} />
+
+                                    <Legend wrapperStyle={{
+                                        fontSize: 11
+                                    }} />
+
+                                    <Area yAxisId="left" type="monotone" dataKey="amount" name="Amount" stroke="var(--danger)" fill="url(#purchaseAmountGradient)" strokeWidth={3} />
+
+                                    <Bar yAxisId="right" dataKey="count" name="Count" radius={[8, 8, 0, 0]} fill="var(--primary)" barSize={28} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* ================= MODULE PERFORMANCE + STATUS ================= */}
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                    <motion.div custom={2} variants={chartVariants} initial="hidden" animate="visible" whileHover={{ y: -2 }} className="rounded-md border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md xl:col-span-2">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-black text-card-foreground">
+                                    Top Modules by Amount
+                                </h2>
+
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Highest value modules in
+                                    selected period.
+                                </p>
+                            </div>
+
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <BarChart3 size={17} />
+                            </div>
+                        </div>
+
+                        <div className="h-[340px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={topModulesByAmount} layout="vertical" margin={{
+                                    left: 18,
+                                    right: 24,
+                                    top: 10,
+                                    bottom: 10
+                                }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+
+                                    <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(value: any) => formatAmount(value)} />
+
+                                    <YAxis type="category" dataKey="shortLabel" tick={{ fontSize: 11 }} width={95} axisLine={false} tickLine={false} />
+
+                                    <Tooltip formatter={(value: any) => [
+                                        formatFullAmount(value),
+                                        "Amount",
+                                    ]} />
+
+                                    <Bar dataKey="amount" name="Amount" radius={[0, 8, 8, 0]} fill="var(--primary)" barSize={24} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+
+                    <motion.div custom={3} variants={chartVariants} initial="hidden" animate="visible" whileHover={{ y: -2 }} className="rounded-md border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-black text-card-foreground">
+                                    Status Split
+                                </h2>
+
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Open, close, draft and other
+                                    records.
+                                </p>
+                            </div>
+
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <Layers size={17} />
+                            </div>
+                        </div>
+
+                        <div className="h-[230px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={statusChartData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={4}>
+                                        {statusChartData.map((entry: any, index: number) => (<Cell key={entry.name} fill={pieColors[index %
+                                            pieColors.length]} />))}
+                                    </Pie>
+
+                                    <Tooltip formatter={(value: any) => [
+                                        formatCount(value),
+                                        "Records",
+                                    ]} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        <div className="mt-3 flex flex-col gap-2">
+                            {statusChartData.length ? (statusChartData.map((item: any, index: number) => (<div key={item.name} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2">
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{
+                                        backgroundColor: pieColors[index %
+                                            pieColors.length]
+                                    }} />
+
+                                    <span className="truncate text-xs font-black text-card-foreground">
+                                        {item.name}
+                                    </span>
+                                </div>
+
+                                <span className="text-xs font-black text-muted-foreground">
+                                    {formatCount(item.value)}
+                                </span>
+                            </div>))) : (<div className="flex h-20 items-center justify-center rounded-lg border border-dashed border-border text-xs font-bold text-muted-foreground">
+                                No status data found
+                            </div>)}
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* ================= MODULE TABLE + RECENT ACTIVITY ================= */}
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <motion.div custom={4} variants={chartVariants} initial="hidden" animate="visible" className="rounded-xl border border-border bg-background p-4 shadow-sm">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-black text-card-foreground">
+                                    Module Summary
+                                </h2>
+
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Count and amount by module.
+                                </p>
+                            </div>
+
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <Database size={17} />
+                            </div>
+                        </div>
+
+                        <div className="max-h-[390px] overflow-auto rounded-lg border border-border">
+                            <table className="w-full text-left text-xs">
+                                <thead className="sticky top-0 bg-card">
+                                    <tr className="border-b border-border">
+                                        <th className="px-3 py-2 font-black text-muted-foreground">
+                                            Module
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-black text-muted-foreground">
+                                            Count
+                                        </th>
+                                        <th className="px-3 py-2 text-right font-black text-muted-foreground">
+                                            Amount
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {moduleSummaryData.length ? (moduleSummaryData.map((item: any) => (<tr key={item.key} className="border-b border-border last:border-b-0 hover:bg-muted/40">
+                                        <td className="px-3 py-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                    {item.icon}
+                                                </div>
+
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-black text-card-foreground">
+                                                        {item.label}
+                                                    </p>
+
+                                                    <p className="text-[10px] font-bold text-muted-foreground">
+                                                        {item.records}{" "}
+                                                        records
+                                                        loaded
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-3 py-2 text-right font-black text-card-foreground">
+                                            {formatCount(item.count)}
+                                        </td>
+
+                                        <td className="px-3 py-2 text-right font-black text-card-foreground">
+                                            {formatAmount(item.amount)}
+                                        </td>
+                                    </tr>))) : (<tr>
+                                        <td colSpan={3} className="px-3 py-8 text-center text-xs font-bold text-muted-foreground">
+                                            No module data found
+                                        </td>
+                                    </tr>)}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+
+                    <motion.div custom={5} variants={chartVariants} initial="hidden" animate="visible" className="rounded-xl border border-border bg-background p-4 shadow-sm">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-black text-card-foreground">
+                                    Recent Transactions
+                                </h2>
+
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Latest records across all
+                                    modules.
+                                </p>
+                            </div>
+
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-success/10 text-success">
+                                <Activity size={17} />
+                            </div>
+                        </div>
+
+                        <div className="flex max-h-[390px] flex-col gap-2 overflow-auto">
+                            {recentTransactions.length ? (recentTransactions.map((item: any, index: number) => (<motion.div key={`${item.module}-${item.voucher}-${index}`} initial={{
+                                opacity: 0,
+                                x: 10
+                            }} animate={{
+                                opacity: 1,
+                                x: 0
+                            }} transition={{
+                                delay: index * 0.04
+                            }} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 transition hover:border-primary/30 hover:bg-muted/30">
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <div className={`
+                                                                    flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
+                                                                    ${item.group ===
+                                            "purchase" ||
+                                            item.group ===
+                                            "cash-out" ||
+                                            item.group ===
+                                            "purchase-return"
+                                            ? "bg-danger/10 text-danger"
+                                            : item.group ===
+                                                "cash-in"
+                                                ? "bg-success/10 text-success"
+                                                : "bg-primary/10 text-primary"}
+                                                                `}>
+                                        {item.icon}
+                                    </div>
+
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className="truncate text-xs font-black text-card-foreground">
+                                                {item.voucher}
+                                            </p>
+
+                                            <span className={`
+                                                                            rounded-full px-2 py-0.5 text-[10px] font-black capitalize
+                                                                            ${String(item.status).toLowerCase() ===
+                                                    "close"
+                                                    ? "bg-success/10 text-success"
+                                                    : "bg-primary/10 text-primary"}
+                                                                        `}>
+                                                {item.status}
+                                            </span>
+                                        </div>
+
+                                        <p className="truncate text-[11px] font-bold text-muted-foreground">
+                                            {item.module}{" "}
+                                            •{" "}
+                                            {item.party}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="shrink-0 text-right">
+                                    <p className="text-xs font-black text-card-foreground">
+                                        {formatAmount(item.amount)}
+                                    </p>
+
+                                    <p className="text-[10px] font-bold text-muted-foreground">
+                                        {formatDate(item.date)}
+                                    </p>
+                                </div>
+                            </motion.div>))) : (<div className="flex h-36 items-center justify-center rounded-lg border border-dashed border-border text-xs font-bold text-muted-foreground">
+                                No recent transactions found
+                            </div>)}
+                        </div>
+                    </motion.div>
+                </div>
+            </div>)}
+        </div>)}
+
+        {/* ================= STATE MAP TAB ================= */}
+        {activePageTab === "stateMap" && (<div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+            <style>{`
                         .user-explorer-state-map .leaflet-container { background: transparent !important; font-family: inherit; }
                         .user-explorer-state-map .leaflet-pane.leaflet-map-pane { cursor: default; }
                         .user-explorer-state-map .leaflet-tooltip.state-map-label { background: transparent; border: 0; box-shadow: none; padding: 0; }
@@ -2591,235 +1780,135 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                         .user-explorer-state-map .leaflet-popup-content-wrapper { border-radius: 8px; }
                     `}</style>
 
-                    <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
+            <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 className="text-sm font-black text-card-foreground">State Map</h2>
+                    <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p>
+                </div>
+
+                <div className="w-full md:w-[320px]">
+                    <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
+                    <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                </div>
+            </div>
+
+            {!selectedMapState ? (<div className="flex min-h-[520px] flex-1 items-center justify-center border border-dashed border-border bg-background/30 text-center">
+                <div>
+                    <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm font-black text-card-foreground">Select a state to show its map</p>
+                </div>
+            </div>) : (<div className="user-explorer-state-map relative min-h-[700px] flex-1 overflow-hidden bg-background/30">
+                {(mapLoading || mapGeoJsonLoading) && (<div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
+                    <Loader2 size={18} className="animate-spin" />
+                    Loading {selectedMapState?.label} map...
+                </div>)}
+
+                {!mapGeoJsonLoading && mapGeoJson ? (<>
+                    <MapContainer key={selectedMapState?.value} center={[20.5937, 78.9629]} zoom={5} zoomSnap={0.1} zoomDelta={0.1} zoomControl={false} attributionControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} boxZoom={false} keyboard={false} touchZoom={false} style={{ height: "100%", width: "100%", background: "transparent" }}>
+                        <GeoJSON key={`${selectedMapState?.value}-${mapCityData.length}-${mapMaxAmount}`} data={mapGeoJson as any} style={getDistrictStyle as any} onEachFeature={onEachDistrictFeature as any} />
+                        <FitGeoJsonBounds data={mapGeoJson} />
+                    </MapContainer>
+
+                    <div className="pointer-events-none absolute bottom-4 right-4 z-[900] flex items-center gap-2 rounded bg-background/90 px-3 py-2 shadow-md backdrop-blur-sm">
+                        <span className="text-[10px] font-bold text-muted-foreground">₹0</span>
+                        <div className="flex overflow-hidden rounded-sm border border-border">
+                            {mapColorScale.map((color) => <span key={color} className="h-3 w-7" style={{ backgroundColor: color }} />)}
+                        </div>
+                        <span className="text-[10px] font-black text-card-foreground">{formatAmount(mapMaxAmount)}</span>
+                    </div>
+                </>) : !mapGeoJsonLoading && !mapLoading ? (<div className="flex h-full min-h-[700px] items-center justify-center p-6 text-center">
+                    <div>
+                        <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm font-black text-card-foreground">Map could not be loaded</p>
+                        <p className="mt-1 text-xs font-medium text-muted-foreground">{mapGeoJsonError || `No map data found for ${selectedMapState?.label}`}</p>
+                    </div>
+                </div>) : null}
+            </div>)}
+        </div>)}
+
+        {/* ================= REQUEST ACCESS MODAL ================= */}
+        {showRequestModal && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <Database size={22} />
+                        </div>
+
                         <div>
-                            <h2 className="text-sm font-black text-card-foreground">State Map</h2>
-                            <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p>
-                        </div>
+                            <h2 className="text-lg font-bold">
+                                Request DB Access
+                            </h2>
 
-                        <div className="w-full md:w-[320px]">
-                            <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
-                            <Select
-                                classNamePrefix="dashboard-select"
-                                isDisabled={mapLoading}
-                                value={selectedMapState}
-                                onChange={handleMapStateChange}
-                                options={stateOptions}
-                                placeholder="Select State"
-                                styles={reactSelectStyles}
-                                isClearable
-                                menuPortalTarget={document.body}
-                                menuPosition="fixed"
-                            />
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Enter user mobile number and request
+                                message.
+                            </p>
                         </div>
                     </div>
 
-                    {/* {!selectedMapState ? (
-                        <div className="flex min-h-[520px] flex-1 items-center justify-center border border-dashed border-border bg-background/30 text-center">
-                            <div>
-                                <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
-                                <p className="text-sm font-black text-card-foreground">Select a state to show its map</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="user-explorer-state-map relative min-h-[700px] flex-1 overflow-hidden bg-background/30">
-                            {(mapLoading || mapGeoJsonLoading) && (
-                                <div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
-                                    <Loader2 size={18} className="animate-spin" />
-                                    Loading {selectedMapState?.label} map...
-                                </div>
-                            )}
-
-                            {!mapGeoJsonLoading && mapGeoJson ? (
-                                <>
-                                    <MapContainer
-                                        key={selectedMapState?.value}
-                                        center={[20.5937, 78.9629]}
-                                        zoom={5}
-                                        zoomSnap={0.1}
-                                        zoomDelta={0.1}
-                                        zoomControl={false}
-                                        attributionControl={false}
-                                        dragging={false}
-                                        scrollWheelZoom={false}
-                                        doubleClickZoom={false}
-                                        boxZoom={false}
-                                        keyboard={false}
-                                        touchZoom={false}
-                                        style={{ height: "100%", width: "100%", background: "transparent" }}
-                                    >
-                                        <GeoJSON key={`${selectedMapState?.value}-${mapCityData.length}-${mapMaxAmount}`} data={mapGeoJson as any} style={getDistrictStyle as any} onEachFeature={onEachDistrictFeature as any} />
-                                        <FitGeoJsonBounds data={mapGeoJson} />
-                                    </MapContainer>
-
-                                    <div className="pointer-events-none absolute bottom-4 right-4 z-[900] flex items-center gap-2 rounded bg-background/90 px-3 py-2 shadow-md backdrop-blur-sm">
-                                        <span className="text-[10px] font-bold text-muted-foreground">₹0</span>
-                                        <div className="flex overflow-hidden rounded-sm border border-border">
-                                            {mapColorScale.map((color) => <span key={color} className="h-3 w-7" style={{ backgroundColor: color }} />)}
-                                        </div>
-                                        <span className="text-[10px] font-black text-card-foreground">{formatAmount(mapMaxAmount)}</span>
-                                    </div>
-                                </>
-                            ) : !mapGeoJsonLoading && !mapLoading ? (
-                                <div className="flex h-full min-h-[700px] items-center justify-center p-6 text-center">
-                                    <div>
-                                        <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
-                                        <p className="text-sm font-black text-card-foreground">Map could not be loaded</p>
-                                        <p className="mt-1 text-xs font-medium text-muted-foreground">{mapGeoJsonError || `No map data found for ${selectedMapState?.label}`}</p>
-                                    </div>
-                                </div>
-                            ) : null}
-                        </div>
-                    )} */}
+                    <button type="button" onClick={closeRequestModal} className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-card-foreground">
+                        <X size={18} />
+                    </button>
                 </div>
-            )}
 
-            {/* ================= REQUEST ACCESS MODAL ================= */}
-            {showRequestModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
-                        <div className="mb-5 flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                    <Database size={22} />
-                                </div>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm font-medium text-card-foreground">
+                            Parent Mobile Number{" "}
+                            <span className="text-danger">*</span>
+                        </label>
 
-                                <div>
-                                    <h2 className="text-lg font-bold">
-                                        Request DB Access
-                                    </h2>
+                        <div className={`flex items-center gap-3 rounded-lg border bg-input px-3 py-2.5 transition ${errors.parentMobileNumber
+                            ? "border-danger"
+                            : "border-border focus-within:border-primary"}`}>
+                            <Phone size={18} className="text-muted-foreground" />
 
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Enter user mobile number and request
-                                        message.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={closeRequestModal}
-                                className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-card-foreground"
-                            >
-                                <X size={18} />
-                            </button>
+                            <input type="text" value={form.parentMobileNumber} onChange={(e) => handleChange("parentMobileNumber", e.target.value)} placeholder="Enter 10 digit mobile number" className="w-full bg-transparent text-sm font-medium text-card-foreground outline-none placeholder:text-muted-foreground" />
                         </div>
 
-                        <div className="flex flex-col gap-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-sm font-medium text-card-foreground">
-                                    Parent Mobile Number{" "}
-                                    <span className="text-danger">*</span>
-                                </label>
+                        {errors.parentMobileNumber && (<p className="text-xs font-medium text-danger">
+                            {errors.parentMobileNumber}
+                        </p>)}
+                    </div>
 
-                                <div
-                                    className={`flex items-center gap-3 rounded-lg border bg-input px-3 py-2.5 transition ${errors.parentMobileNumber
-                                        ? "border-danger"
-                                        : "border-border focus-within:border-primary"
-                                        }`}
-                                >
-                                    <Phone
-                                        size={18}
-                                        className="text-muted-foreground"
-                                    />
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm font-medium text-card-foreground">
+                            Request Message{" "}
+                            <span className="text-danger">*</span>
+                        </label>
 
-                                    <input
-                                        type="text"
-                                        value={form.parentMobileNumber}
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "parentMobileNumber",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter 10 digit mobile number"
-                                        className="w-full bg-transparent text-sm font-medium text-card-foreground outline-none placeholder:text-muted-foreground"
-                                    />
-                                </div>
+                        <div className={`flex gap-3 rounded-lg border bg-input px-3 py-2.5 transition ${errors.requestMessage
+                            ? "border-danger"
+                            : "border-border focus-within:border-primary"}`}>
+                            <MessageSquareText size={18} className="mt-0.5 text-muted-foreground" />
 
-                                {errors.parentMobileNumber && (
-                                    <p className="text-xs font-medium text-danger">
-                                        {errors.parentMobileNumber}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <label className="text-sm font-medium text-card-foreground">
-                                    Request Message{" "}
-                                    <span className="text-danger">*</span>
-                                </label>
-
-                                <div
-                                    className={`flex gap-3 rounded-lg border bg-input px-3 py-2.5 transition ${errors.requestMessage
-                                        ? "border-danger"
-                                        : "border-border focus-within:border-primary"
-                                        }`}
-                                >
-                                    <MessageSquareText
-                                        size={18}
-                                        className="mt-0.5 text-muted-foreground"
-                                    />
-
-                                    <textarea
-                                        value={form.requestMessage}
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "requestMessage",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter request message"
-                                        rows={4}
-                                        className="w-full resize-none bg-transparent text-sm font-medium text-card-foreground outline-none placeholder:text-muted-foreground"
-                                    />
-                                </div>
-
-                                {errors.requestMessage && (
-                                    <p className="text-xs font-medium text-danger">
-                                        {errors.requestMessage}
-                                    </p>
-                                )}
-                            </div>
+                            <textarea value={form.requestMessage} onChange={(e) => handleChange("requestMessage", e.target.value)} placeholder="Enter request message" rows={4} className="w-full resize-none bg-transparent text-sm font-medium text-card-foreground outline-none placeholder:text-muted-foreground" />
                         </div>
 
-                        <div className="mt-6 flex justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={closeRequestModal}
-                                disabled={requestLoading}
-                                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="button"
-                                disabled={requestLoading}
-                                onClick={handleSubmit}
-                                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {requestLoading ? (
-                                    <>
-                                        <Loader2
-                                            size={18}
-                                            className="animate-spin"
-                                        />
-                                        Requesting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <ShieldCheck size={18} />
-                                        Request Access
-                                    </>
-                                )}
-                            </button>
-                        </div>
+                        {errors.requestMessage && (<p className="text-xs font-medium text-danger">
+                            {errors.requestMessage}
+                        </p>)}
                     </div>
                 </div>
-            )}
-        </div>
-    );
+
+                <div className="mt-6 flex justify-end gap-2">
+                    <button type="button" onClick={closeRequestModal} disabled={requestLoading} className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
+                        Cancel
+                    </button>
+
+                    <button type="button" disabled={requestLoading} onClick={handleSubmit} className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                        {requestLoading ? (<>
+                            <Loader2 size={18} className="animate-spin" />
+                            Requesting...
+                        </>) : (<>
+                            <ShieldCheck size={18} />
+                            Request Access
+                        </>)}
+                    </button>
+                </div>
+            </div>
+        </div>)}
+    </div>);
 };
-
 export default UserExplorer;

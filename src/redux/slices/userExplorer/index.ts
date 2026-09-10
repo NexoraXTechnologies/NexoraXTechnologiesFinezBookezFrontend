@@ -30,10 +30,10 @@ export const requestDbAccess = createAsyncThunk(
             middleName: string;
             lastName: string;
             userEmail: string;
-                userAddress: string;
-                authTokenDigest: string;
-                state: any;
-                city: any;
+            userAddress: string;
+            authTokenDigest: string;
+            state: any;
+            city: any;
         },
         { rejectWithValue }
     ) => {
@@ -74,6 +74,31 @@ export const requestDbAccess = createAsyncThunk(
                 message:
                     err?.response?.data?.message ||
                     "Failed to request database access",
+                status: err?.response?.status,
+            });
+        }
+    }
+);
+
+
+/* ===================================================
+   GET STATE CITY DASHBOARD
+=================================================== */
+
+export const getStateCityDashboard = createAsyncThunk(
+    "dbAccess/getStateCityDashboard",
+    async ({ state }: { state: string }, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.post(
+                `eTaxSolnMongoApiBackend/users/admin/analytics/stateCityDashboard`,
+                { state },
+                { headers: DB_ACCESS_HEADERS }
+            );
+
+            return res.data?.data || res.data;
+        } catch (err: any) {
+            return rejectWithValue({
+                message: err?.response?.data?.message || "Failed to fetch state city dashboard",
                 status: err?.response?.status,
             });
         }
@@ -274,7 +299,7 @@ export const getDbAccessRequestsUser = createAsyncThunk(
 
 export const acceptRequestsUser = createAsyncThunk(
     "dbAccess/acceptRequestsUser",
-    async ({ requestId, action=""}: any, { rejectWithValue }) => {
+    async ({ requestId, action = "" }: any, { rejectWithValue }) => {
         try {
             const res = await professionalAxios.patch(
                 `eTaxSolnMongoApiBackend/users/parent/dbAccess/request/action/${requestId}`,
@@ -359,6 +384,7 @@ const dbAccessSlice = createSlice({
         accessRequestData: null,
         accessRequests: [],
         selectedAccessRequest: null,
+        stateCityDashboardData: null,
 
         pagination: {
             offset: 0,
@@ -384,6 +410,7 @@ const dbAccessSlice = createSlice({
         loading: false,
         accessRequestsLoading: false,
         detailLoading: false,
+        stateCityDashboardLoading: false,
         error: null,
     },
 
@@ -396,6 +423,7 @@ const dbAccessSlice = createSlice({
             state.loading = false;
             state.accessRequestsLoading = false;
             state.detailLoading = false;
+            state.stateCityDashboardLoading = false;
         },
 
         clearDbAccessList: (state) => {
@@ -444,6 +472,22 @@ const dbAccessSlice = createSlice({
                 state.requestLoading = false;
                 state.error = action.payload?.message;
                 state.accessRequestData = null;
+            });
+
+
+        builder
+            .addCase(getStateCityDashboard.pending, (state) => {
+                state.stateCityDashboardLoading = true;
+                state.error = null;
+            })
+            .addCase(getStateCityDashboard.fulfilled, (state, action: any) => {
+                state.stateCityDashboardLoading = false;
+                state.stateCityDashboardData = action.payload || null;
+            })
+            .addCase(getStateCityDashboard.rejected, (state, action: any) => {
+                state.stateCityDashboardLoading = false;
+                state.error = action.payload?.message;
+                state.stateCityDashboardData = null;
             });
 
         builder

@@ -20,7 +20,6 @@ const AccountSummaryCard = ({
     finalLabel = "Remaining Balance",
     finalValue = 0,
 }: AccountSummaryCardProps) => {
-    // console.log(summaryItems)
 
     return (
         <div className="w-full rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
