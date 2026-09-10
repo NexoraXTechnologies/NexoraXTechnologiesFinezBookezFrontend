@@ -144,7 +144,7 @@ const LogoutModal = ({ show, setShow, loading, handleSubmit }: any) => {
                                 </div>
                             </div>
 
-                            <button type="button" onClick={() => setShow(false)} className="rounded-full p-2 transition hover:bg-muted">
+                            <button type="button" onClick={() => setShow(false)} className="rounded-full p-2 transition hover:bg-muted cursor-pointer ">
                                 <X size={18} className="text-muted-foreground" />
                             </button>
                         </div>
@@ -154,8 +154,8 @@ const LogoutModal = ({ show, setShow, loading, handleSubmit }: any) => {
                         </div>
 
                         <div className="flex justify-end gap-3 border-t border-border bg-secondary px-6 py-4">
-                            <button onClick={() => setShow(false)} className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition hover:bg-muted">Cancel</button>
-                            <button disabled={loading} onClick={handleSubmit} className="rounded-md bg-danger px-4 py-2 text-sm font-medium text-danger-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                            <button onClick={() => setShow(false)} className="cursor-pointer rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition hover:bg-muted">Cancel</button>
+                            <button disabled={loading} onClick={handleSubmit} className="cursor-pointer rounded-md bg-danger px-4 py-2 text-sm font-medium text-danger-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                                 {loading ? "Logging out..." : "Logout"}
                             </button>
                         </div>

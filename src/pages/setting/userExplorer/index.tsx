@@ -1801,7 +1801,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                     <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm font-black text-card-foreground">Select a state to show its map</p>
                 </div>
-            </div>) : (<div className="user-explorer-state-map relative min-h-[700px] flex-1 overflow-hidden bg-background/30">
+            </div>) : (<div className="user-explorer-state-map relative z-0 isolate min-h-[700px] flex-1 overflow-hidden bg-background/30">
                 {(mapLoading || mapGeoJsonLoading) && (<div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
                     <Loader2 size={18} className="animate-spin" />
                     Loading {selectedMapState?.label} map...
