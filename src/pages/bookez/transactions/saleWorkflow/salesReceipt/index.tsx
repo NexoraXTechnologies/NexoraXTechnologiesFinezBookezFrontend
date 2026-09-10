@@ -766,7 +766,10 @@ const SalesReceipt = () => {
 
         const existingReferences = Array.isArray(selectedRow?.references) ? selectedRow.references : [];
         const existingNewReference = existingReferences.find((ref: any) => String(ref?.referenceType || "").toUpperCase() === "NEW");
-        setNewReferenceAmount(existingNewReference ? String(existingNewReference?.adjustedAmount || "") : "");
+
+        // ⭐ YELLOW STAR: UPDATED — SHOW RECEIPT AMOUNT IN NEW REFERENCE
+        const receiptAmount = num(selectedRow?.netAmount || selectedRow?.amount || 0);
+        setNewReferenceAmount(existingNewReference ? String(existingNewReference?.adjustedAmount || "") : String(receiptAmount));
 
         const existingReferenceMap = new Map<string, any>(existingReferences.filter((ref: any) => String(ref?.referenceType || "SINV").toUpperCase() === "SINV" && (ref?.saleInvoice || ref?.salesInvoice)).map((ref: any) => [String(ref.saleInvoice || ref.salesInvoice), ref]));
         const refs = await fetchReceiptReferences(selectedRow);
@@ -919,7 +922,7 @@ const SalesReceipt = () => {
                 const value = row?.[field.key];
                 if (value === undefined || value === null || value === "") err[`row_${index}_${field.key}`] = `${field.label || field.key} is required`;
             });
- 
+
             const rowAmount = num(row?.netAmount || row?.amount || 0);
             const hasReferences = Array.isArray(row?.references) && row.references.length > 0;
             const referenceAdjusted = hasReferences ? row.references.reduce((sum: number, ref: any) => sum + num(ref?.adjustedAmount), 0) : 0;
@@ -1603,7 +1606,7 @@ const SalesReceipt = () => {
                         Addbutton: false,
 
                         form: {
-                            newReference: newReferenceAmount,
+                            newReference: money(newReferenceAmount),
                             referenceBody: referenceRows
                         },
 
@@ -1622,8 +1625,8 @@ const SalesReceipt = () => {
                                 {
                                     key: "newReference",
                                     label: "New Reference",
-                                    type: "number",
-                                    isRequired: false,
+                                    type: "text",
+                                    isReadOnly: true,
                                 },
                             ],
                             body: referenceTableFields,
