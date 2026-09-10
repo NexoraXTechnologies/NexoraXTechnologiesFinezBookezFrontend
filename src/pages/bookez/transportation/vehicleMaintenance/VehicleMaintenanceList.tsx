@@ -80,7 +80,7 @@ const formatStatus = (value: any) =>
         .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
 const getVehicleNumber = (item: any) =>
-    item?.vehicleNumber || item?.vehicle?.vehicleNumber || "-";
+    item?.vehicleNumber || item?.vehicle?.vehicleNumber || item?.vehicle?.vehicleCode || item?.vehicle?.code || "-";
 
 const getVehicleType = (item: any) =>
     item?.vehicleType || item?.vehicle?.vehicleType || "-";

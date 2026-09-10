@@ -171,7 +171,7 @@ const getCustomerCode = (row: any) =>
 const getVehicleNumber = (row: any) =>
     row?.vehicle?.vehicleNumber ||
     row?.vehicleDetails?.vehicleNumber ||
-    row?.vehicleNumber ||
+    row?.vehicleNumber || row?.vehicle?.vehicleCode || row?.vehicle?.code ||
     "-";
 
 const getVehicleType = (row: any) =>

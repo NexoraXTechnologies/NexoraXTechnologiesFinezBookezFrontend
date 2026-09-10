@@ -87,8 +87,11 @@ const getTripId = (row: any): string => {
 const getVehicleNumber = (row: any): string => {
     return (
         row?.vehicle?.vehicleNumber ||
+        row?.vehicle?.vehicleCode || 
         row?.vehicleSelection?.vehicleNumber ||
+        row?.vehicleSelection?.vehicleCode ||
         row?.tripAllocation?.vehicleSelection?.vehicleNumber ||
+        row?.tripAllocation?.vehicleSelection?.vehicleCode ||
         "-"
     );
 };

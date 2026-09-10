@@ -370,6 +370,39 @@ const unwrapThunk = async (
 
 const firstObject = (...values: any[]) => values.find((value) => value && typeof value === "object" && !Array.isArray(value)) || {};
 
+// ⭐ YELLOW STAR: ADDED — KEEP EXISTING TRIP DATA AND FILL ONLY MISSING VALUES FROM ALLOCATION
+const mergeMissingTripValues = (current: any, fallback: any): any => {
+    if (current === undefined || current === null || current === "") {
+        return fallback;
+    }
+
+    if (Array.isArray(current)) {
+        return current.length ? current : Array.isArray(fallback) ? fallback : current;
+    }
+
+    if (
+        current &&
+        typeof current === "object" &&
+        !Array.isArray(current) &&
+        fallback &&
+        typeof fallback === "object" &&
+        !Array.isArray(fallback)
+    ) {
+        const merged = { ...current };
+
+        Object.keys(fallback).forEach((key) => {
+            merged[key] = mergeMissingTripValues(
+                current?.[key],
+                fallback?.[key]
+            );
+        });
+
+        return merged;
+    }
+
+    return current;
+};
+
 const extractTransportOrderRecord = (response: any) => firstObject(
     response?.data?.transportOrder,
     response?.data?.record,
@@ -2323,7 +2356,8 @@ const CreateEditTripExpence = () => {
             try {
                 setEwayBillLoading(true);
 
-                const [lrRes, ewayRes] = await Promise.all([
+                // ⭐ YELLOW STAR: UPDATED — CALL LR + TRIP ALLOCATION + E-WAY BILL
+                const [lrRes, allocationRes, ewayRes] = await Promise.all([
                     unwrapThunk(
                         dispatch,
                         getAllLRCollection({
@@ -2331,6 +2365,21 @@ const CreateEditTripExpence = () => {
                             limit: 200,
                         })
                     ),
+
+                    unwrapThunk(
+                        dispatch,
+                        getActiveTripAllocations({
+                            offset: 0,
+                            limit: 200,
+                        })
+                    ).catch((error) => {
+                        console.log(
+                            "[TripExpense] Trip allocation fallback lookup failed",
+                            error
+                        );
+
+                        return null;
+                    }),
 
                     unwrapThunk(
                         dispatch,
@@ -2374,6 +2423,45 @@ const CreateEditTripExpence = () => {
                         );
                 });
 
+                // ⭐ YELLOW STAR: ADDED — FIND MATCHING TRIP ALLOCATION FOR LR FALLBACK
+                const allocationList =
+                    allocationRes?.data?.records ||
+                    allocationRes?.data?.items ||
+                    allocationRes?.data?.data ||
+                    allocationRes?.records ||
+                    allocationRes?.items ||
+                    allocationRes?.data ||
+                    [];
+
+                const allocation =
+                    findTripRelatedRecord(
+                        Array.isArray(allocationList)
+                            ? allocationList
+                            : [],
+                        [
+                            tripKey,
+                            allocationKey,
+                        ]
+                    );
+
+                const mappedAllocation =
+                    !lr && allocation
+                        ? mapTripAllocationToExpenseForm(
+                            allocation
+                        )
+                        : null;
+
+                const allocationFallbackForm =
+                    mappedAllocation
+                        ? {
+                            ...mappedAllocation,
+                            routesData:
+                                mappedAllocation?.routesData ||
+                                allocation?.routesData ||
+                                {},
+                        }
+                        : null;
+
                 const lrNumber =
                     lr?.lrNumber ||
                     lr?.lrVoucherNumber ||
@@ -2400,6 +2488,11 @@ const CreateEditTripExpence = () => {
                     lr?.lrNumber,
                     lr?.lrVoucherNumber,
                     lr?.voucherNumber,
+                    allocation?.tripNumber,
+                    allocation?.transportOrderNumber,
+                    allocation?.transportOrder?.transportOrderNumber,
+                    allocation?.allocationVoucherNumber,
+                    getAllocationVoucher(allocation),
                 ]
                     .map((value) =>
                         String(value || "").trim()
@@ -2417,41 +2510,53 @@ const CreateEditTripExpence = () => {
                         ewayRecord
                     );
 
-                setForm((prev: any) => ({
-                    ...prev,
-
-                    lrNumber:
-                        lrNumber ||
-                        prev.lrNumber ||
-                        "",
-
-                    lrDate:
-                        lrDate ||
-                        prev.lrDate ||
-                        "",
-
-                    ewayBillNo:
-                        ewayDetails.ewayBillNo
-                            ? String(
-                                ewayDetails.ewayBillNo
+                setForm((prev: any) => {
+                    // ⭐ YELLOW STAR: ADDED — ONLY WHEN LR RECORD IS MISSING,
+                    // FILL EMPTY TRIP VALUES FROM THE MATCHING ALLOCATION.
+                    const baseForm =
+                        allocationFallbackForm
+                            ? mergeMissingTripValues(
+                                prev,
+                                allocationFallbackForm
                             )
-                            : prev.ewayBillNo || "",
+                            : prev;
 
-                    ewayBillDate:
-                        ewayDetails.ewayBillDate ||
-                        prev.ewayBillDate ||
-                        "",
+                    return {
+                        ...baseForm,
 
-                    ewayBillValidUpto:
-                        ewayDetails.validUpto ||
-                        prev.ewayBillValidUpto ||
-                        "",
+                        lrNumber:
+                            lrNumber ||
+                            baseForm.lrNumber ||
+                            "",
 
-                    ewayBillStatus:
-                        ewayDetails.status ||
-                        prev.ewayBillStatus ||
-                        "",
-                }));
+                        lrDate:
+                            lrDate ||
+                            baseForm.lrDate ||
+                            "",
+
+                        ewayBillNo:
+                            ewayDetails.ewayBillNo
+                                ? String(
+                                    ewayDetails.ewayBillNo
+                                )
+                                : baseForm.ewayBillNo || "",
+
+                        ewayBillDate:
+                            ewayDetails.ewayBillDate ||
+                            baseForm.ewayBillDate ||
+                            "",
+
+                        ewayBillValidUpto:
+                            ewayDetails.validUpto ||
+                            baseForm.ewayBillValidUpto ||
+                            "",
+
+                        ewayBillStatus:
+                            ewayDetails.status ||
+                            baseForm.ewayBillStatus ||
+                            "",
+                    };
+                });
             } catch (error) {
                 setTouchUps([]);
                 console.log(

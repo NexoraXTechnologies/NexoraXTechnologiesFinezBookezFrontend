@@ -130,7 +130,7 @@ export const mapTripExpenseToExcelRow = (item: any): ExcelRow => {
   return {
     "Voucher Number": getTripExpenseVoucher(item),
     "Trip ID": item?.tripId || "",
-    Vehicle: item?.vehicle?.vehicleNumber || "",
+    Vehicle: item?.vehicle?.vehicleNumber || item?.vehicle?.vehicleCode || "",
     Driver: item?.driver?.driverName || "",
     "Trip Status": item?.tripStatus || "",
 

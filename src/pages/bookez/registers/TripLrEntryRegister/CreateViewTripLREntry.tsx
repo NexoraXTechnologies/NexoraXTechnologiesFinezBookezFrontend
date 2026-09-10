@@ -504,6 +504,7 @@ const mapAllocationVehicleToLR = (allocation: any = {}) => ({
     vehicleNumber:
         allocation?.vehicleSelection?.vehicleNumber ||
         allocation?.vehicle?.vehicleNumber ||
+        allocation?.vehicleSelection?.vehicleCode ||
         "",
     vehicleType:
         allocation?.vehicleSelection?.vehicleType ||
@@ -1863,7 +1864,7 @@ const CreateViewTripLREntry = ({
                                 <p className="mt-1 truncate text-sm font-bold text-card-foreground">
                                     {allocationLoading
                                         ? "Loading vehicle..."
-                                        : form.vehicle?.vehicleNumber ||
+                                        : form.vehicle?.vehicleNumber || form.vehicle?.vehicleCode || "-" ||
                                         vehiclePickError ||
                                         "Select transport order first"}
                                 </p>

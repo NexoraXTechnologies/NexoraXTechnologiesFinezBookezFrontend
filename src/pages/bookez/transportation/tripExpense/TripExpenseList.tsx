@@ -615,7 +615,7 @@ const TripExpenseList = () => {
                 String(item?.driver?.driverName || "").toLowerCase().includes(q) ||
                 String(item?.driver?.driverMobile || "").toLowerCase().includes(q) ||
                 String(item?.driver?.mobileNumber || "").toLowerCase().includes(q) ||
-                String(item?.vehicle?.vehicleNumber || "").toLowerCase().includes(q) ||
+                String(item?.vehicle?.vehicleNumber || item?.vehicle?.vehicleCode ||  "").toLowerCase().includes(q) ||
                 String(item?.vehicle?.vehicleType || "").toLowerCase().includes(q)
             );
         });
@@ -1132,7 +1132,7 @@ const TripExpenseList = () => {
             render: (row: any) => (
                 <div>
                     <div className="font-medium text-card-foreground">
-                        {row?.vehicle?.vehicleNumber || "-"}
+                        {row?.vehicle?.vehicleNumber || row?.vehicle?.vehicleCode || "-"}
                     </div>
 
                     <div className="text-xs text-muted-foreground">

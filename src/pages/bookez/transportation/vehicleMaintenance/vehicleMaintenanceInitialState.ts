@@ -153,7 +153,7 @@ export const mergeVehicleMaintenanceForm = (data: any = {}) => {
         ...base,
 
         vehicleCode: data.vehicleCode || vehicle.vehicleCode || "",
-        vehicleNumber: data.vehicleNumber || vehicle.vehicleNumber || "",
+        vehicleNumber: data.vehicleNumber || vehicle.vehicleNumber ||data.vehicle?.vehicleCode || vehicle.vehicleCode || "",
         vehicleType: data.vehicleType || vehicle.vehicleType || "",
         driverCode: data.driverCode || vehicle.driverCode || "",
         driverName: data.driverName || vehicle.driverName || "",

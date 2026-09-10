@@ -249,7 +249,7 @@ const getDriverMobile = (item: any) => {
 };
 
 const getVehicleNumber = (item: any) => {
-    return item?.vehicle?.vehicleNumber || item?.vehicleNumber || "-";
+    return item?.vehicle?.vehicleNumber || item?.vehicleNumber || item?.vehicle?.vehicleCode || item?.vehicle?.code || "-";
 };
 
 const getTripLabel = (item: any) => {

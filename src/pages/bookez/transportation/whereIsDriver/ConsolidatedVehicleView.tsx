@@ -102,7 +102,7 @@ const VehicleMapMarker = ({
 
                     <img
                         src={TruckImg}
-                        alt={item?.vehicle?.vehicleNumber || "Vehicle"}
+                        alt={item?.vehicle?.vehicleNumber || item?.vehicle?.vehicleCode || item?.vehicle?.code || "Vehicle"}
                         draggable={false}
                         className="relative z-10 h-[68px] w-[46px] object-contain drop-shadow-lg"
                         style={{
@@ -122,7 +122,7 @@ const VehicleMapMarker = ({
                         }`}
                 >
                     <span className="max-w-[105px] truncate text-xs font-extrabold text-primary">
-                        {item?.vehicle?.vehicleNumber || "-"}
+                        {item?.vehicle?.vehicleNumber || item?.vehicle?.vehicleCode || item?.vehicle?.code || "-"}
                     </span>
 
                     <span
@@ -422,7 +422,7 @@ const ConsolidatedVehicleView = () => {
 
                             <p className="mt-1 truncate text-sm text-muted-foreground">
                                 {selectedVehicle
-                                    ? `${selectedVehicle?.vehicle?.vehicleNumber || "-"} • ${selectedVehicle?.trackingId || "-"}`
+                                    ? `${selectedVehicle?.vehicle?.vehicleNumber || selectedVehicle?.vehicle?.vehicleCode || selectedVehicle?.vehicle?.code || "-"} • ${selectedVehicle?.trackingId || "-"}`
                                     : "Track all vehicles from one map"}
                             </p>
                         </div>
@@ -475,7 +475,7 @@ const ConsolidatedVehicleView = () => {
                                 <Truck size={18} />
 
                                 {selectedVehicle
-                                    ? `${selectedVehicle?.vehicle?.vehicleNumber || "-"} • ${selectedVehicle?.trackingId || "-"}`
+                                    ? `${selectedVehicle?.vehicle?.vehicleNumber || selectedVehicle?.vehicle?.vehicleCode || selectedVehicle?.vehicle?.code || "-"} • ${selectedVehicle?.trackingId || "-"}`
                                     : `${validVehicles.length} ${validVehicles.length === 1 ? "vehicle" : "vehicles"} on map`}
                             </motion.button>
                         </div>
@@ -569,7 +569,7 @@ className="absolute bottom-[58px] left-0 w-[310px] overflow-hidden rounded-xl bo
                                                         <div className="min-w-0 flex-1">
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <p className="truncate text-sm font-bold text-card-foreground">
-                                                                    {item?.vehicle?.vehicleNumber || "-"}
+                                                                    {item?.vehicle?.vehicleNumber || item?.vehicle?.vehicleCode || item?.vehicle?.code || "-"}
                                                                 </p>
 
                                                                 {selected && (

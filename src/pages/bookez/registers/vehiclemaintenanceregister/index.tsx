@@ -65,7 +65,7 @@ const getMaintenanceType = (row: any): string => {
 };
 
 const getVehicleNumber = (row: any): string => {
-    return row?.vehicleNumber || row?.vehicle?.vehicleNumber || "-";
+    return row?.vehicleNumber || row?.vehicle?.vehicleNumber || row?.vehicle?.vehicleCode || "-";
 };
 
 const getDriverName = (row: any): string => {
