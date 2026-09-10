@@ -10,6 +10,7 @@ import { Edit, Trash2 } from "lucide-react";
 import Pagination from "../../../../components/pagination";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
+import { toISODate } from "../../../../utils/helperFunctions";
 
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import {
@@ -924,7 +925,8 @@ const CreditNote = () => {
                 ? form?.voucherNumber || form?.voucherno
                 : "AUTO",
 
-            voucherDate: form.voucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND CREDIT NOTE DATE IN ISO FORMAT
+            voucherDate: toISODate(form.voucherDate),
             voucherType: "salesCreditNote",
 
             sourceType: form.sourceType || "manual",

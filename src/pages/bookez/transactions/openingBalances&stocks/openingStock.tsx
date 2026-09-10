@@ -10,7 +10,7 @@ import Pagination from "../../../../components/pagination";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
 import { getAllProducts, getProductBalance, saveInventoryBalance, updateInventoryBalance } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
-import { loadAllTemplateOptions, money, num, safePercent, todayYMD, } from "../../../../utils/helperFunctions";
+import { loadAllTemplateOptions, money, num, safePercent, todayYMD, toISODate } from "../../../../utils/helperFunctions";
 import { addOpeningStock, deleteOpeningStock, getOpeningStockList, updateOpeningStock, } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/openingStockSlice";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import Permission from "../../../../components/PermissionGuard";
@@ -72,18 +72,6 @@ const getInventoryTransactionApiKey = (field: any) => {
     return "";
 };
 
-const toInventoryIsoDate = (value: any) => {
-    if (!value) return "";
-
-    const stringValue = String(value).trim();
-    if (!stringValue) return "";
-
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(stringValue)
-        ? new Date(`${stringValue}T00:00:00.000Z`)
-        : new Date(stringValue);
-
-    return Number.isNaN(date.getTime()) ? stringValue : date.toISOString();
-};
 const BODY_STANDARD_FIELD_KEYS = new Set([
     "productCode",
     "productName",
@@ -701,7 +689,7 @@ const OpeningStock = () => {
             voucherType: "openingStock",
             sourceModule: "openingStock",
             voucherStatus: inventoryStatus,
-            voucherDate: toInventoryIsoDate(
+            voucherDate: toISODate(
                 form?.openingStockDate || todayYMD()
             ),
             party: "openingStock",
@@ -732,10 +720,10 @@ const OpeningStock = () => {
             binCode: String(
                 getInventoryTransactionValue(row, "binCode") || ""
             ),
-            mfgOn: toInventoryIsoDate(
+            mfgOn: toISODate(
                 getInventoryTransactionValue(row, "mfgOn")
             ),
-            expOn: toInventoryIsoDate(
+            expOn: toISODate(
                 getInventoryTransactionValue(row, "expOn")
             ),
             remarks:
@@ -897,8 +885,24 @@ const OpeningStock = () => {
             if (value !== undefined &&
                 value !== null &&
                 value !== "") {
+                // ⭐ YELLOW STAR: UPDATED — SEND DYNAMIC DATE FIELDS IN ISO FORMAT
+                const fieldType = String(
+                    field?.type ||
+                    field?.dataSource?.type ||
+                    ""
+                ).trim().toLowerCase();
+
+                const inventoryDateKey = getInventoryTransactionApiKey(field);
+
+                const isDateField =
+                    ["date", "datetime", "datetime-local"].includes(fieldType) ||
+                    inventoryDateKey === "mfgOn" ||
+                    inventoryDateKey === "expOn";
+
                 dynamicValues[key] =
-                    value;
+                    isDateField
+                        ? toISODate(value)
+                        : value;
             }
         });
         return dynamicValues;
@@ -2102,7 +2106,8 @@ const OpeningStock = () => {
             [], form, HEADER_STANDARD_FIELD_KEYS);
         const payload: any = {
             ...dynamicHeaderFields,
-            openingStockDate: form.openingStockDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND OPENING STOCK DATE IN ISO FORMAT
+            openingStockDate: toISODate(form.openingStockDate),
             remark: form.remark ||
                 "",
             openingStockStatus: form.openingStockStatus ||

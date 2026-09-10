@@ -13,6 +13,7 @@ import {
     num,
     safePercent,
     todayYMD,
+    toISODate,
 } from "../../../../utils/helperFunctions";
 
 import professionalAxios from "../../../../services/professionalAxios";
@@ -109,19 +110,6 @@ const getInventoryTransactionApiKey = (field: any) => {
     if (fieldNames.some((name) => name.includes("expirydate") || name.includes("expirationdate") || name === "expon" || name.includes("expdate"))) return "expOn";
 
     return "";
-};
-
-const toInventoryIsoDate = (value: any) => {
-    if (!value) return "";
-
-    const stringValue = String(value).trim();
-    if (!stringValue) return "";
-
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(stringValue)
-        ? new Date(`${stringValue}T00:00:00.000Z`)
-        : new Date(stringValue);
-
-    return Number.isNaN(date.getTime()) ? stringValue : date.toISOString();
 };
 
 const defaultPagination = {
@@ -936,7 +924,7 @@ const Grn = () => {
             voucherType: "grn",
             sourceModule: "grn",
             voucherStatus: inventoryStatus,
-            voucherDate: toInventoryIsoDate(
+            voucherDate: toISODate(
                 form?.grnVoucherDate || todayYMD()
             ),
             party:
@@ -961,8 +949,8 @@ const Grn = () => {
             batchNumber: String(getInventoryTransactionValue(row, "batchNumber") || ""),
             rackCode: String(getInventoryTransactionValue(row, "rackCode") || ""),
             binCode: String(getInventoryTransactionValue(row, "binCode") || ""),
-            mfgOn: toInventoryIsoDate(getInventoryTransactionValue(row, "mfgOn")),
-            expOn: toInventoryIsoDate(getInventoryTransactionValue(row, "expOn")),
+            mfgOn: toISODate(getInventoryTransactionValue(row, "mfgOn")),
+            expOn: toISODate(getInventoryTransactionValue(row, "expOn")),
             remarks:
                 row?.remarks ||
                 form?.grnRemark ||
@@ -4085,7 +4073,8 @@ const Grn = () => {
 
         const purchaseReturnPayload = {
             grnVoucherNumber,
-            pRetVoucherDate: todayYMD(),
+            // ⭐ YELLOW STAR: UPDATED — SEND PURCHASE RETURN DATE IN ISO FORMAT
+            pRetVoucherDate: toISODate(todayYMD()),
 
             pRetVendorCode: payload?.grnVendorCode || "",
             pRetVendorName: payload?.grnVendorName || "",
@@ -4351,7 +4340,8 @@ const Grn = () => {
         }
 
         const payload: any = {
-            grnVoucherDate: form.grnVoucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND GRN DATE IN ISO FORMAT
+            grnVoucherDate: toISODate(form.grnVoucherDate),
 
             grnVendorCode: form.grnVendorCode,
             grnVendorName: form.grnVendorName,

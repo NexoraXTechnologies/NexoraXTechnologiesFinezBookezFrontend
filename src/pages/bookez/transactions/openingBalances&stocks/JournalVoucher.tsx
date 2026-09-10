@@ -17,6 +17,7 @@ import {
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
+import { toISODate } from "../../../../utils/helperFunctions";
 
 const emptyEntryRow = {
     id: Date.now(),
@@ -386,7 +387,8 @@ const JournalVoucher = () => {
         }
 
         const payload = {
-            voucherDate: form.voucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND JOURNAL VOUCHER DATE IN ISO FORMAT
+            voucherDate: toISODate(form.voucherDate),
             voucherType: form.voucherType || "journal",
             referenceNumber: form.referenceNumber,
             remarks: form.remark || form.remarks || "",

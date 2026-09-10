@@ -12,6 +12,7 @@ import {
     num,
     safePercent,
     todayYMD,
+    toISODate,
 } from "../../../../utils/helperFunctions";
 
 import professionalAxios from "../../../../services/professionalAxios";
@@ -2807,7 +2808,8 @@ const PurchaseInvoice = () => {
         });
 
         const payload: any = {
-            pInvVoucherDate: form.pInvVoucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND PURCHASE INVOICE DATE IN ISO FORMAT
+            pInvVoucherDate: toISODate(form.pInvVoucherDate),
 
             grnVoucherNumber: form?.grnVoucherNumber || "",
 

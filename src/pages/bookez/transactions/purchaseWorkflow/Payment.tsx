@@ -10,6 +10,7 @@ import {
     money,
     num,
     todayYMD,
+    toISODate,
 } from "../../../../utils/helperFunctions";
 
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
@@ -1764,8 +1765,9 @@ const Payment = () => {
                         return {
                             referenceType: "PINV",
                             purchaseInvoice: ref?.purchaseInvoice || "",
-                            docDate: ref?.docDate || ref?.billDueDate || "",
-                            billDueDate: ref?.billDueDate || ref?.docDate || "",
+                            // ⭐ YELLOW STAR: UPDATED — SEND REFERENCE DATES IN ISO FORMAT
+                            docDate: toISODate(ref?.docDate || ref?.billDueDate || ""),
+                            billDueDate: toISODate(ref?.billDueDate || ref?.docDate || ""),
                             billAmount: String(
                                 ref?.billAmount || ref?.netAmount || 0
                             ),
@@ -1990,7 +1992,8 @@ const Payment = () => {
         const balanceAmount = netAmount - adjustedAmount;
 
         const payload: any = {
-            payVoucherDate: form.payVoucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND PAYMENT DATE IN ISO FORMAT
+            payVoucherDate: toISODate(form.payVoucherDate),
 
             payAccountCode: form.payAccountCode,
             payAccountName: form.payAccountName,

@@ -13,6 +13,7 @@ import {
     num,
     safePercent,
     todayYMD,
+    toISODate,
 } from "../../../../utils/helperFunctions";
 
 import professionalAxios from "../../../../services/professionalAxios";
@@ -100,19 +101,6 @@ const getInventoryTransactionApiKey = (field: any) => {
     if (fieldNames.some((name) => name.includes("expirydate") || name.includes("expirationdate") || name === "expon" || name.includes("expdate"))) return "expOn";
 
     return "";
-};
-
-const toInventoryIsoDate = (value: any) => {
-    if (!value) return "";
-
-    const stringValue = String(value).trim();
-    if (!stringValue) return "";
-
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(stringValue)
-        ? new Date(`${stringValue}T00:00:00.000Z`)
-        : new Date(stringValue);
-
-    return Number.isNaN(date.getTime()) ? stringValue : date.toISOString();
 };
 
 const defaultPagination = {
@@ -729,7 +717,7 @@ const PurchaseReturn = () => {
             voucherType: "purchaseReturn",
             sourceModule: "purchaseReturn",
             voucherStatus: inventoryStatus,
-            voucherDate: toInventoryIsoDate(
+            voucherDate: toISODate(
                 form?.pRetVoucherDate || todayYMD()
             ),
             party:
@@ -763,10 +751,10 @@ const PurchaseReturn = () => {
             binCode: String(
                 getInventoryTransactionValue(row, "binCode") || ""
             ),
-            mfgOn: toInventoryIsoDate(
+            mfgOn: toISODate(
                 getInventoryTransactionValue(row, "mfgOn")
             ),
-            expOn: toInventoryIsoDate(
+            expOn: toISODate(
                 getInventoryTransactionValue(row, "expOn")
             ),
             remarks:
@@ -2350,7 +2338,8 @@ const PurchaseReturn = () => {
             );
 
         const payload: any = {
-            pRetVoucherDate: form.pRetVoucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND PURCHASE RETURN DATE IN ISO FORMAT
+            pRetVoucherDate: toISODate(form.pRetVoucherDate),
 
             grnVoucherNumber: form?.grnVoucherNumber || "",
             pOrdVoucherNumber: form?.pOrdVoucherNumber || "",

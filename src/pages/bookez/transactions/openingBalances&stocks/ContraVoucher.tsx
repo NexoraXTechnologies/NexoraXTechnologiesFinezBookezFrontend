@@ -12,6 +12,7 @@ import Pagination from "../../../../components/pagination";
 import DynamicAddForm from "../../../../components/voucher/dynamicAddForm";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
 import ConfirmTooltip from "../../../../components/common/ConfirmTooltip";
+import { toISODate } from "../../../../utils/helperFunctions";
 import { addContraVoucher, deleteContraVoucher, getContraVoucherList, updateContraVoucher } from "../../../../redux/slices/professionalSlice/openingBalancesStocks/contraVoucherSlice";
 
 const emptyEntryRow = {
@@ -388,7 +389,8 @@ const ContraVoucher = () => {
         }
 
         const payload = {
-            voucherDate: form.voucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND CONTRA VOUCHER DATE IN ISO FORMAT
+            voucherDate: toISODate(form.voucherDate),
             voucherType: form.voucherType || "contra",
             referenceNumber: form.referenceNumber,
             remarks: form.remark || form.remarks || "",

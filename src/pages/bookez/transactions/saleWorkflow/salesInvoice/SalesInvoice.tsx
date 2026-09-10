@@ -10,7 +10,7 @@ import SearchInput from "../../../../../components/searchInput";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
-import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadFieldOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadFieldOptions, money, num, safePercent, todayYMD, toISODate } from "../../../../../utils/helperFunctions";
 import professionalAxios from "../../../../../services/professionalAxios";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { createSalesInvoice, deleteSalesInvoice, downloadFrieghtInvoicePdf, getAllSalesInvoice, updateSalesInvoice } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
@@ -58,14 +58,6 @@ const getInventoryTransactionApiKey = (field: any) => {
     if (fieldNames.some((name) => name.includes("manufacturingdate") || name === "mfgon" || name.includes("mfgdate"))) return "mfgOn";
     if (fieldNames.some((name) => name.includes("expirydate") || name.includes("expirationdate") || name === "expon" || name.includes("expdate"))) return "expOn";
     return "";
-};
-
-const toInventoryIsoDate = (value: any) => {
-    if (!value) return "";
-    const stringValue = String(value).trim();
-    if (!stringValue) return "";
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(stringValue) ? new Date(`${stringValue}T00:00:00.000Z`) : new Date(stringValue);
-    return Number.isNaN(date.getTime()) ? stringValue : date.toISOString();
 };
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
@@ -815,7 +807,7 @@ const SalesInVoice = () => {
             voucherType: "salesInvoice",
             sourceModule: "salesInvoice",
             voucherStatus: inventoryStatus,
-            voucherDate: toInventoryIsoDate(form?.sInvVoucherDate || todayYMD()),
+            voucherDate: toISODate(form?.sInvVoucherDate || todayYMD()),
             party: form?.sInvCustomerCode || form?.sInvCustomerName || "customer",
             productCode: String(row?.productCode || ""),
             productName: String(row?.productName || ""),
@@ -829,8 +821,8 @@ const SalesInVoice = () => {
             batchNumber: String(getInventoryTransactionValue(row, "batchNumber") || ""),
             rackCode: String(getInventoryTransactionValue(row, "rackCode") || ""),
             binCode: String(getInventoryTransactionValue(row, "binCode") || ""),
-            mfgOn: toInventoryIsoDate(getInventoryTransactionValue(row, "mfgOn")),
-            expOn: toInventoryIsoDate(getInventoryTransactionValue(row, "expOn")),
+            mfgOn: toISODate(getInventoryTransactionValue(row, "mfgOn")),
+            expOn: toISODate(getInventoryTransactionValue(row, "expOn")),
             remarks: row?.remarks || form?.sInvRemarks || form?.sInvRemark || "Sales Invoice",
             status: inventoryStatus,
         };
@@ -2298,7 +2290,8 @@ const SalesInVoice = () => {
             sInvSalesOrderVoucherNumber: form?.sInvSalesOrderVoucherNumber || "",
             sInvCustomerCode: form.sInvCustomerCode,
             sInvCustomerName: form.sInvCustomerName,
-            sInvVoucherDate: form.sInvVoucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND SALES INVOICE DATE IN ISO FORMAT
+            sInvVoucherDate: toISODate(form.sInvVoucherDate),
             sInvStatus: form.sInvStatus || form.sInvDocStatus || "open",
             sInvRemarks: form.sInvRemarks || form.sInvRemark || "",
             sInvSalesAccount: form.sInvSalesAccount || "SA021",
