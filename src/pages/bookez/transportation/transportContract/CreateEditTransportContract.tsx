@@ -471,9 +471,9 @@ const RouteLocationBlock = ({
 		onFieldChange(`${side}CityName`, value);
 	};
 
-	const handleAddressTextChange = (e: any) => {
-		onFieldChange(`${side}Address`, e?.target?.value ?? "");
-	};
+	// const handleAddressTextChange = (e: any) => {
+	// 	onFieldChange(`${side}Address`, e?.target?.value ?? "");
+	// };
 
 	return (
 		<div className="mb-2 rounded-lg border border-border bg-background p-2">

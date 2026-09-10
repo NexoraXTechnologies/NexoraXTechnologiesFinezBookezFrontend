@@ -144,13 +144,13 @@ const getTrackingTime = (item: any) => new Date(
     0
 ).getTime();
 
-const hasCurrentLatLng = (item: any) => {
-    const lat = item?.currentLocation?.lat;
-    const lng = item?.currentLocation?.lng;
-    if (lat === undefined || lat === null || lat === "") return false;
-    if (lng === undefined || lng === null || lng === "") return false;
-    return !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
-};
+// const hasCurrentLatLng = (item: any) => {
+//     const lat = item?.currentLocation?.lat;
+//     const lng = item?.currentLocation?.lng;
+//     if (lat === undefined || lat === null || lat === "") return false;
+//     if (lng === undefined || lng === null || lng === "") return false;
+//     return !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
+// };
 
 /* ⭐ YELLOW STAR: UPDATED — STATUS HELPERS BASED ON API tripStatus */
 const isInTransitTrip = (item: any) => {
