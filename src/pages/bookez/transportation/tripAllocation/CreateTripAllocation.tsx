@@ -346,6 +346,7 @@ const normalizeDriverUsers = (users: any[] = []) => {
             const customFields = user?.childUserCustomFields || {};
             const mobileNumber = String(user?.userMobileNumberHash || "");
             const status = String(customFields?.status || user?.status || "");
+            const employeeCategory = String(customFields?.employeeCategory || "").trim();
 
             return {
                 raw: user,
@@ -369,19 +370,16 @@ const normalizeDriverUsers = (users: any[] = []) => {
                 userType: user?.userType || "",
                 status,
                 hasParent: Boolean(user?.parentUserMobileNumber),
-
-                isDriverType:
-                    String(customFields?.employeeCategory || "")
-                        .trim()
-                        .toLowerCase() === "driver",
+                employeeCategory,
+                isDriverType: employeeCategory.toLowerCase() === "driver",
+                isHelperType: employeeCategory.toLowerCase() === "helper",
             };
         })
-        .filter((driver: any) => {
+        .filter((user: any) => {
             return (
-                driver.driverId &&
-                driver.hasParent &&
-                driver.isDriverType &&
-                String(driver.status || "")
+                user.driverId &&
+                user.hasParent &&
+                String(user.status || "")
                     .trim()
                     .toLowerCase() === "available"
             );
@@ -1031,22 +1029,24 @@ const CreateTripAllocation = ({
 
 
     const driverOptions = useMemo(() => {
-        const options = (driverUsers || []).map((driver: any) => {
-            const assignment = driverAssignmentMap[driver.driverId];
+        const options = (driverUsers || [])
+            .filter((driver: any) => driver.isDriverType)
+            .map((driver: any) => {
+                const assignment = driverAssignmentMap[driver.driverId];
 
-            const isAssignedElsewhere =
-                assignment &&
-                (!isEdit || assignment.allocationVoucher !== voucherNumber);
+                const isAssignedElsewhere =
+                    assignment &&
+                    (!isEdit || assignment.allocationVoucher !== voucherNumber);
 
-            return {
-                label: isAssignedElsewhere
-                    ? `${driver.driverName} - Assigned (${assignment.allocationVoucher})`
-                    : driver.driverName || driver.driverId,
-                value: driver.driverId,
-                isDisabled: Boolean(isAssignedElsewhere),
-                driver,
-            };
-        });
+                return {
+                    label: isAssignedElsewhere
+                        ? `${driver.driverName} - Assigned (${assignment.allocationVoucher})`
+                        : driver.driverName || driver.driverId,
+                    value: driver.driverId,
+                    isDisabled: Boolean(isAssignedElsewhere),
+                    driver,
+                };
+            });
 
         const assignedDriverId = String(
             form.driverAllocation?.driverId || ""
@@ -1093,14 +1093,15 @@ const CreateTripAllocation = ({
         () =>
             (driverUsers || [])
                 .filter(
-                    (driver: any) =>
-                        driver.driverName &&
-                        driver.driverId !== form.driverAllocation?.driverId
+                    (user: any) =>
+                        user.isHelperType &&
+                        user.driverName &&
+                        user.driverId !== form.driverAllocation?.driverId
                 )
-                .map((driver: any) => ({
-                    label: `${driver.driverName}`,
-                    value: driver.driverId,
-                    driver,
+                .map((user: any) => ({
+                    label: user.driverName,
+                    value: user.driverId,
+                    driver: user,
                 })),
         [driverUsers, form.driverAllocation?.driverId]
     );
@@ -1195,10 +1196,35 @@ const CreateTripAllocation = ({
             (item: any) => item.value === form.driverAllocation?.driverId
         ) || null;
 
+    // ⭐ YELLOW STAR: UPDATED — PREFILL SAVED HELPER IN EDIT/VIEW MODE
+    // Existing API may return helperName + helperMobile without helperId.
     const selectedHelperOption =
         helperOptions.find(
-            (item: any) => item.value === form.driverAllocation?.helperId
-        ) || null;
+            (item: any) =>
+                item.value === form.driverAllocation?.helperId ||
+                item.value === form.driverAllocation?.helperMobile ||
+                item.driver?.mobileNumber === form.driverAllocation?.helperMobile ||
+                (
+                    form.driverAllocation?.helperName &&
+                    String(item.label || "").trim().toLowerCase() ===
+                    String(form.driverAllocation.helperName).trim().toLowerCase()
+                )
+        ) ||
+        (
+            form.driverAllocation?.helperAssigned &&
+            (form.driverAllocation?.helperMobile || form.driverAllocation?.helperName)
+                ? {
+                    label:
+                        form.driverAllocation?.helperName ||
+                        form.driverAllocation?.helperMobile,
+                    value:
+                        form.driverAllocation?.helperMobile ||
+                        form.driverAllocation?.helperId ||
+                        "",
+                    isDisabled: false,
+                }
+                : null
+        );
 
     const transportOrderSelected = Boolean(
         form.transportOrder?.transportOrderNumber
@@ -1401,7 +1427,6 @@ const CreateTripAllocation = ({
                 page: 1,
                 limit: 500,
                 withParent: true,
-                type: "driver",
                 inputFields: [
                     "ParentUser",
                     "ChildUsers",
@@ -2868,7 +2893,7 @@ const CreateTripAllocation = ({
 
                                 <input
                                     disabled
-                                    value={form.driverAllocation?.helperMobile || ""}
+                                    value={form.driverAllocation?.helperMobile || form.driverAllocation?.helperName || ""}
                                     className="h-10 w-full rounded-md border border-border bg-muted px-3 text-sm text-muted-foreground"
                                 />
                             </div>
@@ -2889,7 +2914,7 @@ const CreateTripAllocation = ({
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex w-full flex-col gap-1">
                                         <label className="text-sm font-medium text-card-foreground">
-                                            Helper / Cleaner
+                                            Helper
                                         </label>
 
                                         <Select
@@ -2898,7 +2923,7 @@ const CreateTripAllocation = ({
                                             placeholder={
                                                 driversLoader
                                                     ? "Loading team members..."
-                                                    : "Helper / Cleaner"
+                                                    : "Helper"
                                             }
                                             isDisabled={driversLoader || isView}
                                             isSearchable

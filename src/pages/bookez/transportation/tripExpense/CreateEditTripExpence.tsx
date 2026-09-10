@@ -59,6 +59,7 @@ import { createSalesOrder } from "../../../../redux/slices/professionalSlice/sal
 import { addPurchaseInvoice } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import { addPurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 import { addGrn } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
+import { getWhereIsMyDriverList } from "../../../../redux/slices/professionalSlice/transportation/whereIsMyDriverSlice";
 
 
 
@@ -1412,13 +1413,18 @@ const CategoryDetails = ({ category, form, setForm, readOnly, vendorAccountOptio
                                 }
                             />
                         </Field>
+                        {/* ⭐ YELLOW STAR: UPDATED — SOURCE AS SELECT */}
                         <Field label="Source">
-                            <input
+                            <SelectInput
                                 disabled={readOnly}
-                                className={inputClass}
                                 value={entry.sourceName || ""}
-                                onChange={(e) =>
-                                    patchEntry(index, { sourceName: e.target.value })
+                                options={[
+                                    { label: "Cash", value: "Cash" },
+                                    { label: "Bank", value: "Bank" },
+                                ]}
+                                placeholder="Select Source"
+                                onChange={(value: string) =>
+                                    patchEntry(index, { sourceName: value })
                                 }
                             />
                         </Field>
@@ -3006,6 +3012,60 @@ const CreateEditTripExpence = () => {
                     }
                 }
 
+                // ⭐ YELLOW STAR: ADDED — MARK MATCHING TRIP TRACKING AS DELIVERED
+                try {
+                    const trackingListResponse = await unwrapThunk(
+                        dispatch,
+                        getWhereIsMyDriverList({
+                            limit: 100,
+                            offset: 0,
+                        })
+                    );
+
+                    const trackingRecords =
+                        trackingListResponse?.drivers ||
+                        trackingListResponse?.data?.drivers ||
+                        trackingListResponse?.data?.records ||
+                        trackingListResponse?.records ||
+                        [];
+
+                    const tripOrderNumber = normalizeTripDocKey(form.tripId);
+
+                    const trackingRecord = (
+                        Array.isArray(trackingRecords)
+                            ? trackingRecords
+                            : []
+                    ).find(
+                        (item: any) =>
+                            normalizeTripDocKey(item?.transportOrderNumber) ===
+                            tripOrderNumber
+                    );
+
+                    const trackingVoucherNumber = String(
+                        trackingRecord?.trackingId ||
+                        trackingRecord?.trackingVoucherNumber ||
+                        trackingRecord?.voucherNumber ||
+                        ""
+                    ).trim();
+
+                    if (trackingVoucherNumber) {
+                        await professionalAxios.put(
+                            `/eTaxSolnMongoApiBackend/users/bookEZ/tripTracking/update/${encodeURIComponent(
+                                trackingVoucherNumber
+                            )}`,
+                            {
+                                tripStatus: "Delivered",
+                                lastUpdatedAt: new Date().toISOString(),
+                            }
+                        );
+                    }
+                } catch (trackingError) {
+                    console.log(
+                        "[TripExpense] trip tracking delivered sync failed",
+                        trackingError
+                    );
+                }
+
                 const voucherLabel =
                     invoice?.voucherType === "salesInvoice"
                         ? "Sales Invoice"
@@ -3361,18 +3421,7 @@ const CreateEditTripExpence = () => {
                                     />
                                 </Field>
 
-                                <Field label="Vehicle ID">
-                                    <input
-                                        disabled={readOnly}
-                                        className={inputClass}
-                                        value={form.vehicle?.vehicleId || ""}
-                                        onChange={(e) =>
-                                            patchNested("vehicle", {
-                                                vehicleId: e.target.value,
-                                            })
-                                        }
-                                    />
-                                </Field>
+
 
                                 <Field label="Driver Name" mandatory>
                                     <input

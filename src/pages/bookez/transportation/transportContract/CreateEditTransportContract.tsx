@@ -525,17 +525,21 @@ const RouteLocationBlock = ({
 					handleInputChange: () => handleCityChange,
 				})}
 
-				{renderField({
-					field: {
-						key: `${side}Address`,
-						label: `${label} Address`,
-						type: "textarea",
-						// className: "md:col-span-2",
-					},
-					form: row,
-					handleInputChange: () => handleAddressTextChange,
-					handleSelectChange: () => handleAddressTextChange,
-				})}
+				{/* ⭐ YELLOW STAR: UPDATED — ADDRESS EDITABLE + FULL WIDTH */}
+				<div className="flex min-w-0 flex-col gap-1 md:col-span-2">
+					<label className="text-sm font-medium text-card-foreground">
+						{label} Address
+					</label>
+
+					<textarea
+						value={row?.[`${side}Address`] || ""}
+						onChange={(e) =>
+							onFieldChange(`${side}Address`, e.target.value)
+						}
+						placeholder={`Enter ${label.toLowerCase()} address`}
+						className="min-h-[105px] w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary"
+					/>
+				</div>
 			</div>
 		</div>
 	);

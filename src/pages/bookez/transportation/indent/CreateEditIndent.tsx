@@ -439,13 +439,21 @@ const IndentLocationBlock = ({ type, details, states, onFieldChange, onFieldsCha
                     handleSelectChange: () => (e: any) => onFieldChange(dateTimeKey, e?.target?.value ?? "")
                 })}
 
-                <div className="md:col-span-2">
-                    {renderField({
-                        field: { key: addressKey, label: `${title} Address`, type: "textarea", mandatory: true },
-                        form: details,
-                        handleInputChange: () => (e: any) => onFieldChange(addressKey, e?.target?.value ?? ""),
-                        handleSelectChange: () => (e: any) => onFieldChange(addressKey, e?.target?.value ?? "")
-                    })}
+                {/* ⭐ YELLOW STAR: UPDATED — ADDRESS EDITABLE + FULL WIDTH */}
+                <div className="flex min-w-0 flex-col gap-1 md:col-span-2">
+                    <label className="text-sm font-medium text-card-foreground">
+                        {title} Address
+                        <span className="text-danger">*</span>
+                    </label>
+
+                    <textarea
+                        value={details?.[addressKey] || ""}
+                        onChange={(e) =>
+                            onFieldChange(addressKey, e.target.value)
+                        }
+                        placeholder={`Enter ${title.toLowerCase()} address`}
+                        className="min-h-[105px] w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary"
+                    />
                 </div>
 
                 {renderField({
