@@ -347,14 +347,14 @@ export const buildTripExpenseFromAllocation = (allocation: AnyObj = {}, parentUs
   const tripId = allocation?.tripNumber || allocation?.transportOrder?.transportOrderNumber || allocation?.voucherNumber || "";
   const driverMobile = allocation?.driverAllocation?.driverId || "";
   const driverName = allocation?.driverAllocation?.driverName || "";
-  const vehicleNumber = allocation?.vehicleSelection?.vehicleNumber || "-";
+  const vehicleNumber = allocation?.vehicleSelection?.vehicleNumber || allocation?.vehicleSelection?.vehicleCode || "-";
 
   const form = mergeTripExpenseForm({
     tripId,
     tripDate: allocation?.allocationDate || new Date().toISOString(),
     vehicle: {
       vehicleId: allocation?.vehicleSelection?.selectedVehicleId || "",
-      vehicleNumber: allocation?.vehicleSelection?.vehicleNumber || "",
+      vehicleNumber: allocation?.vehicleSelection?.vehicleNumber || allocation?.vehicleSelection?.vehicleCode || "",
     },
     driver: { driverId: driverMobile, driverName },
     assignedDriverMobile: driverMobile,

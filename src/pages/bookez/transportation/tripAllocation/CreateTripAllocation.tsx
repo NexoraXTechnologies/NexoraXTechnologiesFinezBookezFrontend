@@ -432,6 +432,7 @@ const normalizeVehicle = (vehicle: any = {}) => {
         vehicle?.vehicle_number ||
         vehicle?.registrationNumber ||
         vehicle?.code ||
+        vehicle?.vehicleCode ||
         "";
 
     const vehicleType =
@@ -695,7 +696,7 @@ const filterVehicles = ({
                 return false;
             }
 
-            return Boolean(vehicle?.vehicleNumber || vehicle?.selectedVehicleId);
+            return Boolean(vehicle?.vehicleNumber || vehicle?.selectedVehicleId || vehicle?.vehicleCode);
         });
 };
 
@@ -859,11 +860,11 @@ const CreateTripAllocation = ({
     const selectedVehicleDetails = useMemo(() => {
         const savedVehicle = normalizeVehicle(form.vehicleSelection || {});
         const savedId = String(savedVehicle.selectedVehicleId || "").trim();
-        const savedNumber = String(savedVehicle.vehicleNumber || "").trim();
+        const savedNumber = String(savedVehicle.vehicleNumber || savedVehicle.vehicleCode || "").trim();
 
         const masterVehicle = normalizedVehicles.find((vehicle: any) => {
             const vehicleId = String(vehicle?.selectedVehicleId || "").trim();
-            const vehicleNumber = String(vehicle?.vehicleNumber || "").trim();
+            const vehicleNumber = String(vehicle?.vehicleNumber || vehicle?.vehicleCode || "").trim();
 
             return (savedId && vehicleId === savedId) ||
                 (savedNumber && vehicleNumber === savedNumber);
@@ -2520,7 +2521,7 @@ const CreateTripAllocation = ({
 
                                                             <div>
                                                                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                                                                 Advance to Vendor
+                                                                    Advance to Vendor
                                                                 </label>
 
                                                                 <input
@@ -2687,7 +2688,7 @@ const CreateTripAllocation = ({
 
                                                     return (
                                                         <button
-                                                            key={vehicle.selectedVehicleId || vehicle.vehicleNumber}
+                                                            key={vehicle.selectedVehicleId || vehicle.vehicleNumber || vehicle.vehicleCode || vehicle.code}
                                                             type="button"
                                                             onClick={async () => {
                                                                 await applyVehicle(vehicle);
@@ -2718,10 +2719,8 @@ const CreateTripAllocation = ({
                                                                     <div className="min-w-0">
                                                                         <div className="flex min-w-0 items-center gap-2">
                                                                             <span className="truncate text-xs font-bold text-card-foreground">
-                                                                                {vehicle.vehicleNumber || "-"}
+                                                                               {vehicle.name || vehicle.rawRecord?.name || "-"} - {vehicle.vehicleNumber || vehicle.rawRecord?.code || "-"}
                                                                             </span>
-
-
                                                                         </div>
 
                                                                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -3132,7 +3131,7 @@ const VehicleSummary = ({ form, showMarketNames = true }: any) => {
 
                     <div className="min-w-0">
                         <h3 className="truncate text-xs font-bold text-card-foreground">
-                            {vehicle.vehicleNumber || "-"}
+                            {vehicle.name || vehicle.rawRecord?.name || "-"} - {vehicle.vehicleNumber || vehicle.rawRecord?.code || "-"}
                         </h3>
 
                         <p className="truncate text-[11px] text-muted-foreground">

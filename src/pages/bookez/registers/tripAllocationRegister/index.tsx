@@ -246,7 +246,7 @@ const mainColumns = [
         render: (row: any) => (
             <div>
                 <div className="font-medium text-card-foreground">
-                    {row?.vehicleSelection?.vehicleNumber || "-"}
+                    {row?.vehicleSelection?.vehicleNumber || row?.vehicleSelection?.vehicleCode || "-"}
                 </div>
 
                 <div className="text-xs text-muted-foreground">

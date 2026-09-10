@@ -1098,7 +1098,7 @@ const TransportAnalyticsView = ({
 		};
 
 		const groupedVehicles = Object.values([...(vehicleMaintenance?.list || [])].reduce((acc: any, vehicle: any) => {
-			const key = String(vehicle?.vehicleNumber || vehicle?.vehicleCode || vehicle?._id || "").trim();
+			const key = String(vehicle?.vehicleNumber || vehicle?.vehicleCode || vehicle?._id || vehicle?.code || "").trim();
 			if (!key) return acc;
 			if (!acc[key]) acc[key] = [];
 			acc[key].push(vehicle);

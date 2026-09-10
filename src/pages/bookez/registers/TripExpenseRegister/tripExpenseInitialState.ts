@@ -364,7 +364,7 @@ export const mapTripAllocationToExpenseForm = (allocation: any = {}) => {
                 allocation?.vehicleSelection?.selectedVehicleId ||
                 "",
             vehicleNumber:
-                allocation?.vehicleSelection?.vehicleNumber ||
+                allocation?.vehicleSelection?.vehicleNumber || allocation?.vehicleSelection?.vehicleCode ||
                 "",
         },
 

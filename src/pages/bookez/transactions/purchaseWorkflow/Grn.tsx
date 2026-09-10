@@ -2527,9 +2527,11 @@ const Grn = () => {
 
                 vehicleNumber:
                     selectedPurchaseOrder
-                        ?.vehicleNumber ||
+                        ?.vehicleNumber || 
                     selectedPurchaseOrder
-                        ?.vehicleNo ||
+                        ?.vehicleNo || 
+                    selectedPurchaseOrder
+                        ?.vehicleCode || 
                     "",
 
                 customMasters:
@@ -2814,7 +2816,7 @@ const Grn = () => {
 
             vehicleNumber:
                 record?.vehicleNumber ||
-                record?.vehicleNo ||
+                record?.vehicleNo || record?.vehicleCode ||
                 "",
 
             customMasters:
@@ -4314,7 +4316,9 @@ const Grn = () => {
 
         const selectedVehicleNumber = String(
             form?.vehicleNumber ||
+            form?.vehicleCode ||
             selectedVehicleRaw?.vehicleNumber ||
+            selectedVehicleRaw?.vehicleCode ||
             selectedVehicleRaw?.vehicleNo ||
             selectedVehicleRaw?.vehicle_number ||
             ""

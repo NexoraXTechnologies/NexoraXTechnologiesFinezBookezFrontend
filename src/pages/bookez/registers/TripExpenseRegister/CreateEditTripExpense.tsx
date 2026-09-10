@@ -1022,7 +1022,7 @@ const CreateEditTripExpense = ({
             return false;
         }
 
-        if (!String(form.vehicle?.vehicleNumber || "").trim()) {
+        if (!String(form.vehicle?.vehicleNumber || form.vehicle?.vehicleCode || "").trim()) {
             toast.error("Vehicle number is required");
             return false;
         }
@@ -1371,7 +1371,7 @@ const CreateEditTripExpense = ({
                                                 return (
                                                     <option key={voucher} value={voucher}>
                                                         {voucher} -{" "}
-                                                        {allocation?.vehicleSelection?.vehicleNumber || ""}
+                                                        {allocation?.vehicleSelection?.vehicleNumber ||allocation?.vehicleSelection?.vehicleCode || "-"}
                                                     </option>
                                                 );
                                             })}
@@ -1427,10 +1427,11 @@ const CreateEditTripExpense = ({
                                     <input
                                         disabled={readOnly}
                                         className={inputClass}
-                                        value={form.vehicle?.vehicleNumber || ""}
+                                        value={form.vehicle?.vehicleNumber ||form.vehicle?.vehicleCode || ""}
                                         onChange={(e) =>
                                             patchNested("vehicle", {
                                                 vehicleNumber: e.target.value,
+                                                vehicleCode: e.target.value,
                                             })
                                         }
                                     />
@@ -1653,7 +1654,7 @@ const CreateEditTripExpense = ({
                                         </p> */}
 
                                         <p className="mt-1 text-sm font-medium text-muted-foreground">
-                                            Vehicle: {form.vehicle?.vehicleNumber || "-"} • Driver:{" "}
+                                            Vehicle: {form.vehicle?.vehicleNumber || form.vehicle?.vehicleCode || "-"} • Driver:{" "}
                                             {form.driver?.driverName || "-"} • Date:{" "}
                                             {formatTripDate(form.tripDate)} • Status:{" "}
                                             <span className="font-bold text-primary">
