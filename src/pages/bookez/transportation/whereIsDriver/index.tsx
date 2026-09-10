@@ -152,22 +152,21 @@ const hasCurrentLatLng = (item: any) => {
     return !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
 };
 
-/* ⭐ ADDED — LIVE / CLOSED STATUS HELPERS */
-const isClosedTrip = (item: any) => {
+/* ⭐ YELLOW STAR: UPDATED — STATUS HELPERS BASED ON API tripStatus */
+const isInTransitTrip = (item: any) => {
     const status = String(item?.tripStatus || item?.status || "").toLowerCase().trim();
+    return status === "in_transit";
+};
 
-    return (
-        status === "delivered" ||
-        status === "completed" ||
-        status === "closed" ||
-        status === "close"
-    );
+const isDeliveredTrip = (item: any) => {
+    const status = String(item?.tripStatus || item?.status || "").toLowerCase().trim();
+    return status === "delivered";
 };
 
 const getTripStatusLabel = (item: any) => {
     const status = String(item?.tripStatus || item?.status || "");
 
-    if (!status) return "Live";
+    if (!status) return "-";
 
     return status
         .replaceAll("_", " ")
@@ -225,7 +224,7 @@ const DriverCard = ({
     const lastUpdated = getLastUpdated(item);
 
     /* ⭐ ADDED — STATUS FOR CARD */
-    const closed = isClosedTrip(item);
+    const delivered = isDeliveredTrip(item);
     const statusLabel = getTripStatusLabel(item);
 
     return (
@@ -269,12 +268,12 @@ const DriverCard = ({
 
                             {/* ⭐ CHANGED — STATUS IS NOW DYNAMIC */}
                             <span
-                                className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${closed
+                                className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${delivered
                                     ? "border-slate-200 bg-slate-100 text-slate-700"
                                     : "border-emerald-200 bg-emerald-50 text-emerald-700"
                                     }`}
                             >
-                                {!closed && (
+                                {!delivered && (
                                     <motion.span
                                         animate={{ scale: [1, 1.3, 1] }}
                                         transition={{
@@ -411,33 +410,30 @@ const WhereIsMyDriver = () => {
 
     const [selectedDriver, setSelectedDriver] = useState("all");
 
-    /* ⭐ ADDED — DEFAULT TAB IS LIVE */
-    const [activeTab, setActiveTab] = useState<"live" | "closed">("live");
+    /* ⭐ YELLOW STAR: UPDATED — DEFAULT TAB MATCHES API STATUS */
+    const [activeTab, setActiveTab] = useState<"in_transit" | "delivered">("in_transit");
 
     const [search, setSearch] = useState("");
 
-    /* ⭐ CHANGED — LATEST VALID GPS RECORD PER DRIVER */
+    /* ⭐ YELLOW STAR: UPDATED — SHOW COMPLETE TRIP LIST; STATUS FILTER CONTINUES BELOW */
     const latestDriverRecords = useMemo(() => {
-        const latestMap = new Map<string, any>();
-
-        (drivers || [])
-            .filter((item: any) => hasCurrentLatLng(item))
-            .forEach((item: any, index: number) => {
-                const driverKey = getDriverIdentity(item);
-                const key = driverKey || `unknown-${getTripTrackingVoucher(item) || index}`;
-                const existing = latestMap.get(key);
-
-                if (!existing || getTrackingTime(item) >= getTrackingTime(existing)) latestMap.set(key, item);
-            });
-
-        return Array.from(latestMap.values()).sort((a: any, b: any) => getTrackingTime(b) - getTrackingTime(a));
+        return [...(drivers || [])].sort(
+            (a: any, b: any) => getTrackingTime(b) - getTrackingTime(a)
+        );
     }, [drivers]);
 
-    const liveDrivers = useMemo(() => latestDriverRecords.filter((item: any) => !isClosedTrip(item)), [latestDriverRecords]);
-    const closedDrivers = useMemo(() => latestDriverRecords.filter((item: any) => isClosedTrip(item)), [latestDriverRecords]);
+    const inTransitDrivers = useMemo(
+        () => latestDriverRecords.filter((item: any) => isInTransitTrip(item)),
+        [latestDriverRecords]
+    );
 
-    const liveCount = liveDrivers.length;
-    const closedCount = closedDrivers.length;
+    const deliveredDrivers = useMemo(
+        () => latestDriverRecords.filter((item: any) => isDeliveredTrip(item)),
+        [latestDriverRecords]
+    );
+
+    const inTransitCount = inTransitDrivers.length;
+    const deliveredCount = deliveredDrivers.length;
 
     const fetchDrivers = () => {
         dispatch(
@@ -489,7 +485,7 @@ const WhereIsMyDriver = () => {
 
     /* ⭐ CHANGED — FILTER BY ACTIVE TAB FIRST */
     const filteredDrivers = useMemo(() => {
-        const tabRecords = activeTab === "live" ? liveDrivers : closedDrivers;
+        const tabRecords = activeTab === "in_transit" ? inTransitDrivers : deliveredDrivers;
 
         return tabRecords.filter((item: any) => {
             if (selectedDriver !== "all") {
@@ -513,7 +509,7 @@ const WhereIsMyDriver = () => {
 
             return true;
         });
-    }, [liveDrivers, closedDrivers, activeTab, selectedDriver, search]);
+    }, [inTransitDrivers, deliveredDrivers, activeTab, selectedDriver, search]);
 
     console.log({ drivers });
 
@@ -564,7 +560,7 @@ const WhereIsMyDriver = () => {
     const hasFilter = selectedDriver !== "all" || Boolean(search);
 
     /* ⭐ CHANGED — COUNT BASED ON SELECTED TAB */
-    const totalDrivers = activeTab === "live" ? liveCount : closedCount;
+    const totalDrivers = activeTab === "in_transit" ? inTransitCount : deliveredCount;
     const showingDrivers = filteredDrivers.length;
 
     return (
@@ -600,7 +596,7 @@ const WhereIsMyDriver = () => {
                             <p className="mt-1 text-sm text-muted-foreground">
                                 {listingLoader
                                     ? "Finding active drivers..."
-                                    : `${activeTab === "live" ? "Live" : "Closed"} trips: ${totalDrivers} • Showing: ${showingDrivers}`}
+                                    : `${activeTab === "in_transit" ? "In Transit" : "Delivered"} trips: ${totalDrivers} • Showing: ${showingDrivers}`}
                             </p>
                         </div>
                     </div>
@@ -629,7 +625,7 @@ const WhereIsMyDriver = () => {
                             )}
                         </AnimatePresence>
 
-                        {/* ⭐ ADDED — LIVE / CLOSED TABS */}
+                        {/* ⭐ YELLOW STAR: UPDATED — IN TRANSIT / DELIVERED TABS */}
                         <motion.div
                             variants={sectionVariants}
                             className="rounded-md border border-border bg-card p-1 shadow-sm"
@@ -638,17 +634,17 @@ const WhereIsMyDriver = () => {
                                 <motion.button
                                     type="button"
                                     onClick={() => {
-                                        setActiveTab("live");
+                                        setActiveTab("in_transit");
                                         setSelectedDriver("all");
                                         setSearch("");
                                     }}
                                     whileTap={{ scale: 0.98 }}
-                                    className={`relative flex h-9 min-w-[90px] items-center justify-center gap-1.5 rounded-md px-3 text-sm font-bold transition ${activeTab === "live"
+                                    className={`relative flex h-9 min-w-[90px] items-center justify-center gap-1.5 rounded-md px-3 text-sm font-bold transition ${activeTab === "in_transit"
                                         ? "bg-primary text-primary-foreground shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
-                                    {activeTab === "live" && (
+                                    {activeTab === "in_transit" && (
                                         <motion.span
                                             layoutId="vehicle-status-tab"
                                             className="absolute inset-0 rounded-md bg-primary"
@@ -662,29 +658,29 @@ const WhereIsMyDriver = () => {
 
                                     <span className="relative z-10 flex items-center gap-1.5">
                                         <span
-                                            className={`h-1.5 w-1.5 rounded-full ${activeTab === "live"
+                                            className={`h-1.5 w-1.5 rounded-full ${activeTab === "in_transit"
                                                 ? "bg-primary-foreground"
                                                 : "bg-emerald-500"
                                                 }`}
                                         />
-                                        Live ({liveCount})
+                                        In Transit ({inTransitCount})
                                     </span>
                                 </motion.button>
 
                                 <motion.button
                                     type="button"
                                     onClick={() => {
-                                        setActiveTab("closed");
+                                        setActiveTab("delivered");
                                         setSelectedDriver("all");
                                         setSearch("");
                                     }}
                                     whileTap={{ scale: 0.98 }}
-                                    className={`relative flex h-9 min-w-[95px] items-center justify-center gap-1.5 rounded-md px-3 text-sm font-bold transition ${activeTab === "closed"
+                                    className={`relative flex h-9 min-w-[95px] items-center justify-center gap-1.5 rounded-md px-3 text-sm font-bold transition ${activeTab === "delivered"
                                         ? "bg-primary text-primary-foreground shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
-                                    {activeTab === "closed" && (
+                                    {activeTab === "delivered" && (
                                         <motion.span
                                             layoutId="vehicle-status-tab"
                                             className="absolute inset-0 rounded-md bg-primary"
@@ -697,7 +693,7 @@ const WhereIsMyDriver = () => {
                                     )}
 
                                     <span className="relative z-10">
-                                        Closed ({closedCount})
+                                        Delivered ({deliveredCount})
                                     </span>
                                 </motion.button>
                             </div>
@@ -758,13 +754,13 @@ const WhereIsMyDriver = () => {
 
                                 <div>
                                     <h2 className="text-sm font-bold text-card-foreground">
-                                        {activeTab === "live"
-                                            ? "Live Vehicle Locations"
-                                            : "Closed Vehicle Trips"}
+                                        {activeTab === "in_transit"
+                                            ? "In Transit Vehicle Locations"
+                                            : "Delivered Vehicle Trips"}
                                     </h2>
 
                                     <div className="mt-1 flex items-center gap-2">
-                                        {activeTab === "live" && (
+                                        {activeTab === "in_transit" && (
                                             <motion.span
                                                 animate={{ scale: [1, 1.35, 1] }}
                                                 transition={{
@@ -853,15 +849,15 @@ const WhereIsMyDriver = () => {
                             </motion.div>
 
                             <h3 className="mt-4 text-lg font-bold text-foreground">
-                                {activeTab === "live"
-                                    ? "No live vehicle location"
-                                    : "No closed vehicle trip"}
+                                {activeTab === "in_transit"
+                                    ? "No in-transit vehicle"
+                                    : "No delivered vehicle trip"}
                             </h3>
 
                             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                                {activeTab === "live"
-                                    ? "Vehicle location will appear here after a driver accepts and starts live tracking."
-                                    : "Closed vehicle trips will appear here after the trip is delivered, completed or closed."}
+                                {activeTab === "in_transit"
+                                    ? "In-transit vehicle trips will appear here based on trip status."
+                                    : "Delivered vehicle trips will appear here based on trip status."}
                             </p>
 
                             {hasFilter && (

@@ -122,7 +122,7 @@ const getOrderFromResponse = (response: any) => {
 		response?.record ||
 		response?.transportOrder ||
 		response ||
-		null
+		""
 	);
 };
 
@@ -320,7 +320,7 @@ const CreateTransportOrder = ({
 
 		const routeRate =
 			selectedRoute?.rate !== undefined &&
-				selectedRoute?.rate !== null
+				selectedRoute?.rate !== ""
 				? selectedRoute.rate
 				: "";
 
@@ -461,7 +461,7 @@ const CreateTransportOrder = ({
 				pickupState:
 					selectedRoute?.fromState ||
 					prev.pickupDetails?.pickupState ||
-					null,
+					"",
 
 				pickupStateCode:
 					selectedRoute?.fromStateCode ||
@@ -474,7 +474,7 @@ const CreateTransportOrder = ({
 				pickupCity:
 					selectedRoute?.fromCity ||
 					prev.pickupDetails?.pickupCity ||
-					null,
+					"",
 
 				pickupCityName:
 					selectedRoute?.fromCityName ||
@@ -513,7 +513,7 @@ const CreateTransportOrder = ({
 				deliveryState:
 					selectedRoute?.toState ||
 					prev.deliveryDetails?.deliveryState ||
-					null,
+					"",
 
 				deliveryStateCode:
 					selectedRoute?.toStateCode ||
@@ -526,7 +526,7 @@ const CreateTransportOrder = ({
 				deliveryCity:
 					selectedRoute?.toCity ||
 					prev.deliveryDetails?.deliveryCity ||
-					null,
+					"",
 
 				deliveryCityName:
 					selectedRoute?.toCityName ||
@@ -666,133 +666,133 @@ const CreateTransportOrder = ({
 
 
 	const applyIndentToForm = (indentRaw: any) => {
-	if (!indentRaw) return;
+		if (!indentRaw) return;
 
-	const customerCode = indentRaw?.customer || "";
-	const pickup = indentRaw?.pickupDetails || {};
-	const delivery = indentRaw?.deliveryDetails || {};
+		const customerCode = indentRaw?.customer || "";
+		const pickup = indentRaw?.pickupDetails || {};
+		const delivery = indentRaw?.deliveryDetails || {};
 
-	const materialName = indentRaw?.material || "";
+		const materialName = indentRaw?.material || "";
 
-	const selectedProduct = (products || []).find(
-		(item: any) =>
-			String(item?.productName || "").trim().toLowerCase() ===
-			String(materialName).trim().toLowerCase()
-	);
-
-	const rawProductType =
-		selectedProduct?.productType ||
-		selectedProduct?.productCategory ||
-		selectedProduct?.category ||
-		selectedProduct?.materialCategory ||
-		"";
-
-	const materialCategory = formatProductTypeLabel(rawProductType);
-
-	const indentWeightUnit = String(indentRaw?.weightUnit || "").trim();
-
-	const matchedUnit = (units || []).find((item: any) => {
-		const unitName = item?.unitName || item?.name || item?.unit || "";
-		const unitCode = item?.unitCode || item?.code || "";
-
-		return (
-			String(unitName).trim().toLowerCase() === indentWeightUnit.toLowerCase() ||
-			String(unitCode).trim().toLowerCase() === indentWeightUnit.toLowerCase()
+		const selectedProduct = (products || []).find(
+			(item: any) =>
+				String(item?.productName || "").trim().toLowerCase() ===
+				String(materialName).trim().toLowerCase()
 		);
-	});
 
-	const resolvedWeightUnit =
-		matchedUnit?.unitName ||
-		matchedUnit?.name ||
-		matchedUnit?.unit ||
-		matchedUnit?.unitCode ||
-		matchedUnit?.code ||
-		indentWeightUnit;
+		const rawProductType =
+			selectedProduct?.productType ||
+			selectedProduct?.productCategory ||
+			selectedProduct?.category ||
+			selectedProduct?.materialCategory ||
+			"";
 
-	const account = (accounts || []).find(
-		(item: any) => String(item?.accountCode) === String(customerCode)
-	);
+		const materialCategory = formatProductTypeLabel(rawProductType);
 
-	setForm((prev: any) => ({
-		...prev,
+		const indentWeightUnit = String(indentRaw?.weightUnit || "").trim();
 
-		indentDetails: {
-			...prev.indentDetails,
-			indentNumber: indentRaw?.indentNumber || indentRaw?.voucherNumber || "",
-		},
+		const matchedUnit = (units || []).find((item: any) => {
+			const unitName = item?.unitName || item?.name || item?.unit || "";
+			const unitCode = item?.unitCode || item?.code || "";
 
-		customerDetails: {
-			...prev.customerDetails,
-			customerCode,
-			customerName: account?.accountName || "",
-			contactPerson: account?.accountName || "",
-			gstNumber: account?.gstNumber || account?.gst || account?.accountGSTNumber || "",
-			mobileNumber: account?.mobileNumber || account?.mobile || account?.accountMobile || account?.accountMobileNumber || "",
-			email: account?.email || account?.accountEmail || account?.accountEmailId || "",
-		},
+			return (
+				String(unitName).trim().toLowerCase() === indentWeightUnit.toLowerCase() ||
+				String(unitCode).trim().toLowerCase() === indentWeightUnit.toLowerCase()
+			);
+		});
 
-		loadDetails: {
-			...prev.loadDetails,
-			materialName,
-			materialCategory,
-			weight: indentRaw?.approximateWeight ?? "",
-			weightUnit: resolvedWeightUnit,
-		},
+		const resolvedWeightUnit =
+			matchedUnit?.unitName ||
+			matchedUnit?.name ||
+			matchedUnit?.unit ||
+			matchedUnit?.unitCode ||
+			matchedUnit?.code ||
+			indentWeightUnit;
 
-		pickupDetails: {
-			...prev.pickupDetails,
-			pickupLocation: pickup?.pickupLocation || indentRaw?.pickupLocation || "",
-			pickupAddress: pickup?.pickupAddress || indentRaw?.pickupLocation || "",
-			pickupDateTime: pickup?.pickupDateTime
-				? formatDateTimeForInput(pickup.pickupDateTime)
-				: indentRaw?.reportingDateTime
-					? formatDateTimeForInput(indentRaw.reportingDateTime)
+		const account = (accounts || []).find(
+			(item: any) => String(item?.accountCode) === String(customerCode)
+		);
+
+		setForm((prev: any) => ({
+			...prev,
+
+			indentDetails: {
+				...prev.indentDetails,
+				indentNumber: indentRaw?.indentNumber || indentRaw?.voucherNumber || "",
+			},
+
+			customerDetails: {
+				...prev.customerDetails,
+				customerCode,
+				customerName: account?.accountName || "",
+				contactPerson: account?.accountName || "",
+				gstNumber: account?.gstNumber || account?.gst || account?.accountGSTNumber || "",
+				mobileNumber: account?.mobileNumber || account?.mobile || account?.accountMobile || account?.accountMobileNumber || "",
+				email: account?.email || account?.accountEmail || account?.accountEmailId || "",
+			},
+
+			loadDetails: {
+				...prev.loadDetails,
+				materialName,
+				materialCategory,
+				weight: indentRaw?.approximateWeight ?? "",
+				weightUnit: resolvedWeightUnit,
+			},
+
+			pickupDetails: {
+				...prev.pickupDetails,
+				pickupLocation: pickup?.pickupLocation || indentRaw?.pickupLocation || "",
+				pickupAddress: pickup?.pickupAddress || indentRaw?.pickupLocation || "",
+				pickupDateTime: pickup?.pickupDateTime
+					? formatDateTimeForInput(pickup.pickupDateTime)
+					: indentRaw?.reportingDateTime
+						? formatDateTimeForInput(indentRaw.reportingDateTime)
+						: "",
+				pickupContactName: pickup?.pickupContactName || "",
+				pickupContactNumber: pickup?.pickupContactNumber || "",
+				pickupState: pickup?.pickupState || "",
+				pickupStateCode: pickup?.pickupStateCode || "",
+				pickupStateName: pickup?.pickupStateName || "",
+				pickupCity: pickup?.pickupCity || "",
+				pickupCityName: pickup?.pickupCityName || "",
+				pickupPincode: pickup?.pickupPincode || "",
+				pickupLatitude: pickup?.pickupLatitude ?? "",
+				pickupLongitude: pickup?.pickupLongitude ?? "",
+				pickupPlaceId: pickup?.pickupPlaceId || "",
+			},
+
+			deliveryDetails: {
+				...prev.deliveryDetails,
+				deliveryLocation: delivery?.deliveryLocation || indentRaw?.deliveryLocation || "",
+				deliveryAddress: delivery?.deliveryAddress || indentRaw?.deliveryLocation || "",
+				expectedDeliveryDateTime: delivery?.expectedDeliveryDateTime
+					? formatDateTimeForInput(delivery.expectedDeliveryDateTime)
 					: "",
-			pickupContactName: pickup?.pickupContactName || "",
-			pickupContactNumber: pickup?.pickupContactNumber || "",
-			pickupState: pickup?.pickupState || null,
-			pickupStateCode: pickup?.pickupStateCode || "",
-			pickupStateName: pickup?.pickupStateName || "",
-			pickupCity: pickup?.pickupCity || null,
-			pickupCityName: pickup?.pickupCityName || "",
-			pickupPincode: pickup?.pickupPincode || "",
-			pickupLatitude: pickup?.pickupLatitude ?? "",
-			pickupLongitude: pickup?.pickupLongitude ?? "",
-			pickupPlaceId: pickup?.pickupPlaceId || "",
-		},
+				deliveryContactName: delivery?.deliveryContactName || "",
+				deliveryContactNumber: delivery?.deliveryContactNumber || "",
+				deliveryState: delivery?.deliveryState || "",
+				deliveryStateCode: delivery?.deliveryStateCode || "",
+				deliveryStateName: delivery?.deliveryStateName || "",
+				deliveryCity: delivery?.deliveryCity || "",
+				deliveryCityName: delivery?.deliveryCityName || "",
+				deliveryPincode: delivery?.deliveryPincode || "",
+				deliveryLatitude: delivery?.deliveryLatitude ?? "",
+				deliveryLongitude: delivery?.deliveryLongitude ?? "",
+				deliveryPlaceId: delivery?.deliveryPlaceId || "",
+			},
 
-		deliveryDetails: {
-			...prev.deliveryDetails,
-			deliveryLocation: delivery?.deliveryLocation || indentRaw?.deliveryLocation || "",
-			deliveryAddress: delivery?.deliveryAddress || indentRaw?.deliveryLocation || "",
-			expectedDeliveryDateTime: delivery?.expectedDeliveryDateTime
-				? formatDateTimeForInput(delivery.expectedDeliveryDateTime)
-				: "",
-			deliveryContactName: delivery?.deliveryContactName || "",
-			deliveryContactNumber: delivery?.deliveryContactNumber || "",
-			deliveryState: delivery?.deliveryState || null,
-			deliveryStateCode: delivery?.deliveryStateCode || "",
-			deliveryStateName: delivery?.deliveryStateName || "",
-			deliveryCity: delivery?.deliveryCity || null,
-			deliveryCityName: delivery?.deliveryCityName || "",
-			deliveryPincode: delivery?.deliveryPincode || "",
-			deliveryLatitude: delivery?.deliveryLatitude ?? "",
-			deliveryLongitude: delivery?.deliveryLongitude ?? "",
-			deliveryPlaceId: delivery?.deliveryPlaceId || "",
-		},
+			vehicleRequirement: {
+				...prev.vehicleRequirement,
+				vehicleType: indentRaw?.vehicleType || "",
+				numberOfVehicles: indentRaw?.numberOfVehicles ?? "",
+			},
 
-		vehicleRequirement: {
-			...prev.vehicleRequirement,
-			vehicleType: indentRaw?.vehicleType || "",
-			numberOfVehicles: indentRaw?.numberOfVehicles ?? "",
-		},
-
-		freightDetails: {
-			...prev.freightDetails,
-			expectedFreight: indentRaw?.customerRate ?? "",
-		},
-	}));
-};
+			freightDetails: {
+				...prev.freightDetails,
+				expectedFreight: indentRaw?.customerRate ?? "",
+			},
+		}));
+	};
 
 
 	useEffect(() => {
@@ -1032,7 +1032,7 @@ const CreateTransportOrder = ({
 
 		// if (
 		// 	loadDetails?.quantity === "" ||
-		// 	loadDetails?.quantity === null ||
+		// 	loadDetails?.quantity === "" ||
 		// 	loadDetails?.quantity === undefined ||
 		// 	Number(
 		// 		loadDetails?.quantity
@@ -1047,7 +1047,7 @@ const CreateTransportOrder = ({
 
 		// if (
 		// 	loadDetails?.weight === "" ||
-		// 	loadDetails?.weight === null ||
+		// 	loadDetails?.weight === "" ||
 		// 	loadDetails?.weight === undefined ||
 		// 	Number(
 		// 		loadDetails?.weight
@@ -1215,6 +1215,24 @@ const CreateTransportOrder = ({
 
 			const payload = {
 				...form,
+
+				loadDetails: {
+					...form.loadDetails,
+					quantity:
+						form.loadDetails?.quantity === "" ||
+							form.loadDetails?.quantity === null ||
+							form.loadDetails?.quantity === undefined
+							? 0
+							: form.loadDetails.quantity,
+
+					weight:
+						form.loadDetails?.weight === "" ||
+							form.loadDetails?.weight === null ||
+							form.loadDetails?.weight === undefined
+							? 0
+							: form.loadDetails.weight,
+				},
+
 				freightDetails: {
 					...form.freightDetails,
 					balanceAmount,
@@ -1371,7 +1389,7 @@ const CreateTransportOrder = ({
 				);
 
 			default:
-				return null;
+				return "";
 		}
 	};
 
