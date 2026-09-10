@@ -332,13 +332,13 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             toast.error(err?.message || err?.data?.message || "Failed to fetch cities");
         }
     };
-    const normalizeLocationText = (value: any) => {
-        if (!value)
-            return "";
-        if (typeof value === "string")
-            return value.trim().toLowerCase();
-        return String(value?.name?.en || value?.name || value?.label || value?.cityName || value?.stateName || value?.city || value?.state || "").trim().toLowerCase();
-    };
+    // const normalizeLocationText = (value: any) => {
+    //     if (!value)
+    //         return "";
+    //     if (typeof value === "string")
+    //         return value.trim().toLowerCase();
+    //     return String(value?.name?.en || value?.name || value?.label || value?.cityName || value?.stateName || value?.city || value?.state || "").trim().toLowerCase();
+    // };
     const getCityName = (value: any) => {
         if (!value)
             return "";
@@ -346,37 +346,37 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             return value.trim();
         return String(value?.name?.en || value?.cityName || value?.name || value?.label || value?.city || "").trim();
     };
-    const getCityCoordinates = (city: any) => {
-        const latitude = Number(city?.latitude ?? city?.lat);
-        const longitude = Number(city?.longitude ?? city?.lng ?? city?.long);
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude))
-            return { latitude: null, longitude: null };
-        return { latitude, longitude };
-    };
-    const normalizeAreaDashboardResponse = (response: any) => response?.data?.data || response?.data || response || {};
-    const getCityWiseDashboardData = (response: any) => {
-        const data = normalizeAreaDashboardResponse(response);
-        const candidates = [data?.cityWise, data?.citySummary, data?.cityBreakdown, data?.cities, data?.areaWise, data?.locationWise];
-        for (const candidate of candidates) {
-            if (Array.isArray(candidate))
-                return candidate;
-            if (candidate && typeof candidate === "object") {
-                return Object.entries(candidate).map(([city, value]: any) => {
-                    if (value && typeof value === "object")
-                        return { city, ...value };
-                    return { city, totalAmount: value };
-                });
-            }
-        }
-        return [];
-    };
-    const getDashboardTotals = (response: any) => {
-        const data = normalizeAreaDashboardResponse(response);
-        const moduleKeys = ["salesQuotation", "salesOrder", "salesInvoice", "salesInvoiceReturn", "receipt", "purchaseOrder", "grn", "purchaseInvoice", "purchaseReturn", "payment"];
-        const totalAmount = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalAmount || 0), 0);
-        const totalTransactions = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalCount || 0), 0);
-        return { totalAmount, totalTransactions, totalBusinesses: Number(data?.totalBusinesses || 0) };
-    };
+    // const getCityCoordinates = (city: any) => {
+    //     const latitude = Number(city?.latitude ?? city?.lat);
+    //     const longitude = Number(city?.longitude ?? city?.lng ?? city?.long);
+    //     if (!Number.isFinite(latitude) || !Number.isFinite(longitude))
+    //         return { latitude: null, longitude: null };
+    //     return { latitude, longitude };
+    // };
+    // const normalizeAreaDashboardResponse = (response: any) => response?.data?.data || response?.data || response || {};
+    // const getCityWiseDashboardData = (response: any) => {
+    //     const data = normalizeAreaDashboardResponse(response);
+    //     const candidates = [data?.cityWise, data?.citySummary, data?.cityBreakdown, data?.cities, data?.areaWise, data?.locationWise];
+    //     for (const candidate of candidates) {
+    //         if (Array.isArray(candidate))
+    //             return candidate;
+    //         if (candidate && typeof candidate === "object") {
+    //             return Object.entries(candidate).map(([city, value]: any) => {
+    //                 if (value && typeof value === "object")
+    //                     return { city, ...value };
+    //                 return { city, totalAmount: value };
+    //             });
+    //         }
+    //     }
+    //     return [];
+    // };
+    // const getDashboardTotals = (response: any) => {
+    //     const data = normalizeAreaDashboardResponse(response);
+    //     const moduleKeys = ["salesQuotation", "salesOrder", "salesInvoice", "salesInvoiceReturn", "receipt", "purchaseOrder", "grn", "purchaseInvoice", "purchaseReturn", "payment"];
+    //     const totalAmount = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalAmount || 0), 0);
+    //     const totalTransactions = moduleKeys.reduce((sum: number, key: string) => sum + Number(data?.[key]?.totalCount || 0), 0);
+    //     return { totalAmount, totalTransactions, totalBusinesses: Number(data?.totalBusinesses || 0) };
+    // };
     const handleMapStateChange = async (option: any) => {
         setSelectedMapState(option || null);
         setMapCityData([]);
@@ -415,11 +415,11 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             label: "Dashboard",
             icon: <BarChart3 size={16} />
         },
-        // {
-        //     key: "stateMap",
-        //     label: "State Map",
-        //     icon: <MapPinned size={16} />
-        // },
+        {
+            key: "stateMap",
+            label: "State Map",
+            icon: <MapPinned size={16} />
+        },
     ];
     const requestColumns = [
         {
@@ -496,6 +496,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [showDashboardFilter]);
+
     useEffect(() => {
         if (selectedRequest)
             return;
@@ -508,6 +509,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         }, 400);
         return () => clearTimeout(timer);
     }, [search]);
+
     useEffect(() => {
         if (!selectedRequest?.requestId)
             return;
@@ -521,6 +523,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                     "Failed to fetch request details");
             });
     }, [selectedRequest?.requestId, dispatch]);
+
     useEffect(() => {
         if (activePageTab !== "dashboard")
             return;
@@ -528,6 +531,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         dispatch(getStates() as any);
         fetchAreaDashboard();
     }, [activePageTab]);
+
     useEffect(() => {
         if (activePageTab !== "stateMap")
             return;
@@ -1020,7 +1024,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     //     getModuleAmount("purchaseInvoice") -
     //     getModuleAmount("purchaseReturn") -
     //     cashOutAmount;
-    const topAmountModule = [...moduleSummaryData].sort((a: any, b: any) => toNumber(b.amount) - toNumber(a.amount))?.[0];
+    // const topAmountModule = [...moduleSummaryData].sort((a: any, b: any) => toNumber(b.amount) - toNumber(a.amount))?.[0];
     const topModulesByAmount = [...moduleSummaryData]
         .filter((item: any) => item.amount > 0)
         .sort((a: any, b: any) => toNumber(b.amount) - toNumber(a.amount))

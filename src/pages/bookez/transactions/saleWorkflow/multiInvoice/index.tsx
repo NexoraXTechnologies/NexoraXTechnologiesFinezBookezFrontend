@@ -15,7 +15,7 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { SelectInput } from "../../../../../components/inputs";
 import { formatDateForInput, formatDateForList, isTrueValue, loadFieldOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
-import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
+// import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 import {
     clearCustomerSalesInvoices,
     createMultiSalesInvoice,
@@ -492,19 +492,19 @@ const MultiSalesInvoice = () => {
         setErrors({});
     };
 
-    const openAddModal = async () => {
-        resetSelectionModal();
-        resetForm();
+    // const openAddModal = async () => {
+    //     resetSelectionModal();
+    //     resetForm();
 
-        try {
-            await dispatch(getAllAccounts({ offset: 0, limit: 1000, search: "", accountType: "customer" }) as any).unwrap();
-        }
-        catch (error: any) {
-            toast.error(error?.message || "Failed to load customers");
-        }
+    //     try {
+    //         await dispatch(getAllAccounts({ offset: 0, limit: 1000, search: "", accountType: "customer" }) as any).unwrap();
+    //     }
+    //     catch (error: any) {
+    //         toast.error(error?.message || "Failed to load customers");
+    //     }
 
-        setShowSelectionModal(true);
-    };
+    //     setShowSelectionModal(true);
+    // };
 
     const handleCustomerSelect = async (customerCode: string) => {
         setSelectedCustomerCode(customerCode);

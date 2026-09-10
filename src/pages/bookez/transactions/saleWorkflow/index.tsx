@@ -14,7 +14,7 @@ import SalesReceipt from "./salesReceipt";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useMemo } from "react";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
-import MultiSalesInvoice from "./multiInvoice";
+// import MultiSalesInvoice from "./multiInvoice";
 
 const SaleWorkflowDashboard = () => {
   const dispatch = useDispatch();
