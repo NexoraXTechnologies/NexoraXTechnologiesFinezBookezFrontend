@@ -19,6 +19,7 @@ import { DataCreateButton } from "../../../../components/buttons";
 import DataTable from "../../../../components/DataTable";
 import Permission from "../../../../components/PermissionGuard";
 import Badge from "../../../../components/badge";
+import { toISODate } from "../../../../utils/helperFunctions";
 
 const emptyEntryRow = {
     id: Date.now(),
@@ -324,6 +325,10 @@ const OpeningBalance = () => {
 
         const payload = {
             ...form,
+
+            // ⭐ YELLOW STAR: UPDATED — SEND OPENING BALANCE DATE IN ISO FORMAT
+            openingBalDate: toISODate(form.openingBalDate),
+
             openingBalBody,
             openingBalFooter: {
                 totalDebit,

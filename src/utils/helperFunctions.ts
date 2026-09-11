@@ -8,6 +8,18 @@ export const todayYMD = () => {
     return now.toISOString().slice(0, 10);
 };
 
+export const toISODate = (date: string | number | Date) => {
+    if (!date) return '';
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return '';
+    }
+
+    return parsedDate.toISOString();
+};
+
 export const isTrueValue = (value: any) =>
     value === true ||
     String(value ?? "").trim().toLowerCase() === "true";

@@ -10,7 +10,7 @@ import SearchInput from "../../../../../components/searchInput";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
-import { fmtMoney, formatDateForList, getFinancialYearRange, isTrueValue, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForList, getFinancialYearRange, isTrueValue, loadAllTemplateOptions, money, num, safePercent, todayYMD, toISODate } from "../../../../../utils/helperFunctions";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { deleteSalesInvoiceReturn, getAllSalesInvoiceReturn, updateSalesInvoiceReturn, createSalesInvoiceReturn } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceReturn";
@@ -83,19 +83,6 @@ const getInventoryTransactionApiKey = (field: any) => {
     if (fieldNames.some((name) => name.includes("expirydate") || name.includes("expirationdate") || name === "expon" || name.includes("expdate"))) return "expOn";
 
     return "";
-};
-
-const toInventoryIsoDate = (value: any) => {
-    if (!value) return "";
-
-    const stringValue = String(value).trim();
-    if (!stringValue) return "";
-
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(stringValue)
-        ? new Date(`${stringValue}T00:00:00.000Z`)
-        : new Date(stringValue);
-
-    return Number.isNaN(date.getTime()) ? stringValue : date.toISOString();
 };
 
 // PARTIAL SALES RETURN
@@ -864,7 +851,7 @@ const SalesReturn = () => {
                 inventoryStatus,
 
             voucherDate:
-                toInventoryIsoDate(
+                toISODate(
                     form
                         ?.sInvReturnVoucherDate ||
                     todayYMD()
@@ -957,7 +944,7 @@ const SalesReturn = () => {
                 ),
 
             mfgOn:
-                toInventoryIsoDate(
+                toISODate(
                     getInventoryTransactionValue(
                         row,
                         "mfgOn"
@@ -965,7 +952,7 @@ const SalesReturn = () => {
                 ),
 
             expOn:
-                toInventoryIsoDate(
+                toISODate(
                     getInventoryTransactionValue(
                         row,
                         "expOn"
@@ -3838,8 +3825,9 @@ const SalesReturn = () => {
                 );
 
             const payload: any = {
+                // ⭐ YELLOW STAR: UPDATED — SEND SALES RETURN DATE IN ISO FORMAT
                 sInvReturnVoucherDate:
-                    form.sInvReturnVoucherDate,
+                    toISODate(form.sInvReturnVoucherDate),
 
                 sInvReturnCustomerCode:
                     form?.sInvReturnCustomerCode,

@@ -42,7 +42,7 @@ import {
 } from "../../../../redux/slices/professionalSlice/transportation/tripAllocationSlice";
 import TripRoutePlannerCard from "./TripRoutePlannerCard";
 import { getAllLRCollection } from "../../../../redux/slices/professionalSlice/transportation/tripLRCollectionSlice";
-import { formatStatusLabel, todayYMD } from "../../../../utils/helperFunctions";
+import { formatStatusLabel, todayYMD, toISODate } from "../../../../utils/helperFunctions";
 import professionalAxios from "../../../../services/professionalAxios";
 import { sendWhatsAppMessage } from "../../../../redux/slices/professionalSlice/transportation/whatsappSlice";
 import { getAllAccounts } from "../../../../redux/slices/professionalSlice/accountMasterSlice";
@@ -189,6 +189,46 @@ const normalizeTripDocKey = (value: any) =>
     String(value || "")
         .trim()
         .toLowerCase();
+
+// ⭐ YELLOW STAR: ADDED — ALL OUTGOING API PAYLOAD DATES USE EXISTING toISODate
+const isApiPayloadDateKey = (key: string) =>
+    key === "date" ||
+    key === "validityFrom" ||
+    key === "validityTo" ||
+    key === "periodStart" ||
+    key === "periodEnd" ||
+    key === "available_from" ||
+    /(Date|DateTime|At|On|Upto|UpTo)$/.test(key) ||
+    /(_date|_datetime|_at|_on|_upto|_up_to|_expiry)$/i.test(key);
+
+const normalizeApiPayloadDates = (value: any, key = ""): any => {
+    if (value === null || value === undefined || value === "") {
+        return value;
+    }
+
+    if (key && isApiPayloadDateKey(key)) {
+        return toISODate(value);
+    }
+
+    if (value instanceof Date) {
+        return toISODate(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => normalizeApiPayloadDates(item));
+    }
+
+    if (Object.prototype.toString.call(value) === "[object Object]") {
+        return Object.fromEntries(
+            Object.entries(value).map(([childKey, childValue]) => [
+                childKey,
+                normalizeApiPayloadDates(childValue, childKey),
+            ])
+        );
+    }
+
+    return value;
+};
 
 const parseEwayJsonValue = (value: any) => {
     if (!value) return {};
@@ -808,7 +848,7 @@ const createTripSalesInvoice = async ({ dispatch, context, product }: any) => {
         sInvFooter: buildInvoiceFooter(context.freightAmount),
     };
 
-    const response = await unwrapThunk(dispatch, createSalesInvoice({ payload }));
+    const response = await unwrapThunk(dispatch, createSalesInvoice({ payload: normalizeApiPayloadDates(payload) }));
     const voucherNumber = extractCreatedVoucherNumber(response, "sInvVoucherNumber");
 
     if (!voucherNumber) throw new Error("Sales invoice was created but voucher number was not returned");
@@ -843,7 +883,7 @@ const createTripPurchaseInvoice = async ({ dispatch, context, product }: any) =>
         pInvFooter: buildInvoiceFooter(purchaseInvoiceAmount),
     };
 
-    const response = await unwrapThunk(dispatch, addPurchaseInvoice({ payload }));
+    const response = await unwrapThunk(dispatch, addPurchaseInvoice({ payload: normalizeApiPayloadDates(payload) }));
     const voucherNumber = extractCreatedVoucherNumber(response, "pInvVoucherNumber");
 
     if (!voucherNumber) throw new Error("Purchase invoice was created but voucher number was not returned");
@@ -876,7 +916,7 @@ const createTripSalesOrder = async ({ dispatch, context, product }: any) => {
         sOrderFooter: buildInvoiceFooter(context.freightAmount),
     };
 
-    const response = await unwrapThunk(dispatch, createSalesOrder(payload));
+    const response = await unwrapThunk(dispatch, createSalesOrder(normalizeApiPayloadDates(payload)));
     const voucherNumber = extractCreatedVoucherNumber(response, "sOrderVoucherNumber");
 
     if (!voucherNumber) {
@@ -911,7 +951,7 @@ const createTripPurchaseOrder = async ({ dispatch, context, product }: any) => {
         pOrdFooter: buildInvoiceFooter(context.freightAmount),
     };
 
-    const response = await unwrapThunk(dispatch, addPurchaseOrder({ payload }));
+    const response = await unwrapThunk(dispatch, addPurchaseOrder({ payload: normalizeApiPayloadDates(payload) }));
     const voucherNumber = extractCreatedVoucherNumber(response, "pOrdVoucherNumber");
 
     if (!voucherNumber) {
@@ -958,7 +998,7 @@ const createTripGrn = async ({
         grnFooter: buildInvoiceFooter(context.freightAmount),
     };
 
-    const response = await unwrapThunk(dispatch, addGrn({ payload }));
+    const response = await unwrapThunk(dispatch, addGrn({ payload: normalizeApiPayloadDates(payload) }));
     const voucherNumber = extractCreatedVoucherNumber(response, "grnVoucherNumber");
 
     if (!voucherNumber) {
@@ -2213,7 +2253,7 @@ const CreateEditTripExpence = () => {
                         dispatch,
                         updateTripExpenses({
                             voucherNumber,
-                            payload,
+                            payload: normalizeApiPayloadDates(payload),
                         })
                     );
 
@@ -2769,7 +2809,7 @@ const CreateEditTripExpence = () => {
                 dispatch,
                 updateTripExpenses({
                     voucherNumber,
-                    payload,
+                    payload: normalizeApiPayloadDates(payload),
                 })
             );
 
@@ -2825,7 +2865,7 @@ const CreateEditTripExpence = () => {
                     dispatch,
                     updateTripExpenses({
                         voucherNumber,
-                        payload,
+                        payload: normalizeApiPayloadDates(payload),
                     })
                 );
 
@@ -2927,7 +2967,7 @@ const CreateEditTripExpence = () => {
                     dispatch,
                     updateTripExpenses({
                         voucherNumber,
-                        payload,
+                        payload: normalizeApiPayloadDates(payload),
                     })
                 );
 
@@ -2994,14 +3034,14 @@ const CreateEditTripExpence = () => {
                             dispatch,
                             updateTransportOrderByVoucherNumber({
                                 voucherNumber: transportOrderNumber,
-                                payload: {
+                                payload: normalizeApiPayloadDates({
                                     ...existingOrder,
                                     tripStatus: "completed",
                                     orderStatus: "completed",
                                     status: "close",
                                     completedAt,
                                     statusHistory,
-                                },
+                                }),
                             })
                         );
                     } catch (transportOrderError) {
@@ -3053,10 +3093,10 @@ const CreateEditTripExpence = () => {
                             `/eTaxSolnMongoApiBackend/users/bookEZ/tripTracking/update/${encodeURIComponent(
                                 trackingVoucherNumber
                             )}`,
-                            {
+                            normalizeApiPayloadDates({
                                 tripStatus: "Delivered",
                                 lastUpdatedAt: new Date().toISOString(),
-                            }
+                            })
                         );
                     }
                 } catch (trackingError) {

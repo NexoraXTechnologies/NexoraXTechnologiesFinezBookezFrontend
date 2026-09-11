@@ -13,7 +13,7 @@ import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { createSalesOrder, deleteSalesOrder, getAllSalesOrder, updateSalesOrder } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import professionalAxios from "../../../../../services/professionalAxios";
-import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, loadFieldOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, loadFieldOptions, money, num, safePercent, todayYMD, toISODate } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import Modal, { ListingModel } from "../../../../../components/modal";
 import { clearSelectedSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
@@ -3962,8 +3962,9 @@ const SalesOrder = () => {
         }
 
         const payload: any = {
+            // ⭐ YELLOW STAR: UPDATED — SEND SALES ORDER DATE IN ISO FORMAT
             sOrderVoucherDate:
-                form.sOrderVoucherDate,
+                toISODate(form.sOrderVoucherDate),
 
             sOrderQuotationVoucherNumber:
                 form

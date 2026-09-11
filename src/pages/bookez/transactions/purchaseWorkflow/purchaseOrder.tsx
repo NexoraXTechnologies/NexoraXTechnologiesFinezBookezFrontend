@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, Edit, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, safePercent, todayYMD, toISODate } from "../../../../utils/helperFunctions";
 import { addPurchaseOrder, deletePurchaseOrder, getPurchaseOrderList, updatePurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 import { getAllTransactionSchema } from "../../../../redux/slices/professionalSlice/transactionSchema";
 import Badge from "../../../../components/badge";
@@ -2351,7 +2351,8 @@ const PurchaseOrder = () => {
         }
 
         const payload: any = {
-            pOrdVoucherDate: form.pOrdVoucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND PURCHASE ORDER DATE IN ISO FORMAT
+            pOrdVoucherDate: toISODate(form.pOrdVoucherDate),
 
             pOrdVendorCode: form.pOrdVendorCode,
             pOrdVendorName: form.pOrdVendorName,

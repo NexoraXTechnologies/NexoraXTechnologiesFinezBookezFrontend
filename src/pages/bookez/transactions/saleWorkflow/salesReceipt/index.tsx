@@ -11,7 +11,7 @@ import { DataCreateButton, DataREfreshButton } from "../../../../../components/b
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import ModulePageSkeleton from "../../../../../components/skeleton/SkeletonLoader";
-import { formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
+import { formatDateForInput, formatDateForList, loadAllTemplateOptions, money, num, todayYMD, toISODate } from "../../../../../utils/helperFunctions";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { addSalesReceipt, updateSalesReceipt, deleteSalesReceipt, getSalesReceiptList, clearSalesReceiptReferences, getByVoucherNumberSalesReceiptList } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesReceipt";
@@ -956,7 +956,8 @@ const SalesReceipt = () => {
                 if (referenceType === "NEW") return {
                     referenceType: "NEW",
                     newReference: ref?.newReference || "ADV",
-                    billDueDate: ref?.billDueDate || todayYMD(),
+                    // ⭐ YELLOW STAR: UPDATED — SEND NEW REFERENCE DATE IN ISO FORMAT
+                    billDueDate: toISODate(ref?.billDueDate || todayYMD()),
                     billAmount: String(ref?.billAmount || ref?.adjustedAmount || 0),
                     adjustedAmount: String(ref?.adjustedAmount || ref?.billAmount || 0)
                 };
@@ -967,8 +968,9 @@ const SalesReceipt = () => {
                     referenceType: "SINV",
                     saleInvoice,
                     salesInvoice: saleInvoice,
-                    docDate: ref?.docDate || ref?.billDueDate || "",
-                    billDueDate: ref?.billDueDate || ref?.docDate || "",
+                    // ⭐ YELLOW STAR: UPDATED — SEND REFERENCE DATES IN ISO FORMAT
+                    docDate: toISODate(ref?.docDate || ref?.billDueDate || ""),
+                    billDueDate: toISODate(ref?.billDueDate || ref?.docDate || ""),
                     billAmount: String(ref?.billAmount || ref?.netAmount || 0),
                     netAmount: String(ref?.netAmount || ref?.billAmount || 0),
                     netBillAmount: String(ref?.netBillAmount || ref?.netAmount || 0),
@@ -993,7 +995,8 @@ const SalesReceipt = () => {
 
         const payload: any = {
             recVoucherNumber: editingRecord ? form.recVoucherNumber : "AUTO",
-            recVoucherDate: form.recVoucherDate,
+            // ⭐ YELLOW STAR: UPDATED — SEND RECEIPT DATE IN ISO FORMAT
+            recVoucherDate: toISODate(form.recVoucherDate),
             recAccountCode: form.recAccountCode,
             recAccountName: form.recAccountName,
             recStatus: form.recStatus || "open",

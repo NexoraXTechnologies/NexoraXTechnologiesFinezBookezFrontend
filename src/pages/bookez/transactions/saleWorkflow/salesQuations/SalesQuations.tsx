@@ -11,7 +11,7 @@ import ConfirmTooltip, { ListTooltip } from "../../../../../components/common/Co
 import Toggle from "../../../../../components/toggle";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { addSalesQuotation, deleteSalesQuotation, getSalesQuotationList, updateSalesQuotation } from "../../../../../redux/slices/professionalSlice/salesWorkflow/salesQuationsSlice";
-import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadAllTemplateOptions, money, num, safePercent, todayYMD } from "../../../../../utils/helperFunctions";
+import { fmtMoney, formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadAllTemplateOptions, money, num, safePercent, todayYMD, toISODate } from "../../../../../utils/helperFunctions";
 import type { ConfirmTooltipState } from "../salesWorkflowTypes";
 import { getAllTransactionSchema } from "../../../../../redux/slices/professionalSlice/transactionSchema";
 import { getAllReportMapping } from "../../../../../redux/slices/professionalSlice/reportMappingSlice";
@@ -2760,9 +2760,12 @@ const SalesQuotations = () => {
                 );
 
             const payload: any = {
+                // ⭐ YELLOW STAR: UPDATED — SEND SALES QUOTATION DATE IN ISO FORMAT
                 sQuoteVoucherDate:
-                    form
-                        .sQuoteVoucherDate,
+                    toISODate(
+                        form
+                            .sQuoteVoucherDate
+                    ),
 
                 sQuoteCustomerCode:
                     form
