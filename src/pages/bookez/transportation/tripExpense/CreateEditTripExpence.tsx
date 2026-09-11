@@ -1166,24 +1166,41 @@ const createTripGrn = async ({
     return voucherNumber;
 };
 
-// ⭐ YELLOW STAR: UPDATED — SIMPLE COMPLETE TRIP BILLING FLOW
-// PAYMENT TYPE = TO BE BILLED:
-//   OWNED => SALES ORDER -> SALES INVOICE
-//   HIRED => PURCHASE ORDER -> GRN -> PURCHASE INVOICE -> PAYMENT
+// ⭐ YELLOW STAR: UPDATED — COMPLETE TRIP VOUCHER FLOW
 // PAYMENT TYPE != TO BE BILLED:
 //   SKIP BILLING
+//
+// PAYMENT TYPE = TO BE BILLED:
+//
+// ONE TIME ORDER:
+//   OWNED => SALES INVOICE
+//   HIRED => PURCHASE INVOICE -> PAYMENT (ADVANCE TO VENDOR)
+//
+// CONTRACT / INDENT:
+//   OWNED => SALES ORDER
+//   HIRED => PURCHASE ORDER -> GRN -> PAYMENT (ADVANCE TO VENDOR)
+//   NOTE: PURCHASE INVOICE IS NOT CREATED FOR CONTRACT / INDENT + HIRED
 const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => {
     const context = await resolveTripBillingContext({ dispatch, tripExpense });
 
-    // NOT TO BE BILLED => COMPLETE TRIP WITHOUT ANY ACCOUNTING VOUCHER
     if (!context.shouldBill) {
         return null;
     }
 
-    // ⭐ YELLOW STAR: UPDATED — NO ONE-TIME / CONTRACT / INDENT CONDITION
-    if (context.ownership === "owned") {
+    const isOneTimeOrder =
+        context.orderType === "oneTimeOrder";
+
+    const isContractOrIndent =
+        context.orderType === "contract" ||
+        context.orderType === "indent";
+
+    if (isOneTimeOrder) {
         const existingSalesVoucher = String(
             tripExpense?.salesInvoiceVoucher || ""
+        ).trim();
+
+        const existingPurchaseVoucher = String(
+            tripExpense?.purchaseInvoiceVoucher || ""
         ).trim();
 
         if (existingSalesVoucher) {
@@ -1195,56 +1212,6 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
             };
         }
 
-        if (!context.customerCode || !context.customerName) {
-            throw new Error(
-                `Customer is required to create the Sales Order / Sales Invoice for trip ${context.tripId}`
-            );
-        }
-
-        const product = await ensureServiceProduct({
-            productName: TRIP_SALES_PRODUCT_NAME,
-        });
-
-        const salesContext = {
-            ...context,
-            freightAmount:
-                context.freightAmount > 0
-                    ? context.freightAmount
-                    : product.sellingPrice || 0,
-        };
-
-        // ⭐ YELLOW STAR: UPDATED — OWNED ALWAYS CREATES SALES ORDER FIRST
-        const salesOrderVoucherNumber =
-            await createTripSalesOrder({
-                dispatch,
-                context: salesContext,
-                product,
-            });
-
-        // ⭐ YELLOW STAR: UPDATED — SALES INVOICE AFTER SALES ORDER
-        const salesInvoiceVoucherNumber =
-            await createTripSalesInvoice({
-                dispatch,
-                context: salesContext,
-                product,
-            });
-
-        return {
-            invoiceType: "sales",
-            voucherType: "salesOrderSalesInvoice",
-            voucherNumber: salesInvoiceVoucherNumber,
-            salesOrderVoucherNumber,
-            salesInvoiceVoucherNumber,
-            alreadyCreated: false,
-        };
-    }
-
-    // ⭐ YELLOW STAR: UPDATED — HIRED ALWAYS USES PURCHASE FLOW
-    if (context.ownership === "hired") {
-        const existingPurchaseVoucher = String(
-            tripExpense?.purchaseInvoiceVoucher || ""
-        ).trim();
-
         if (existingPurchaseVoucher) {
             return {
                 invoiceType: "purchase",
@@ -1254,67 +1221,178 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
             };
         }
 
-        if (!context.vendorCode || !context.vendorName) {
-            throw new Error(
-                `Vendor is required to create the Purchase Order / GRN / Purchase Invoice for trip ${context.tripId}`
-            );
+        if (context.ownership === "owned") {
+            if (!context.customerCode || !context.customerName) {
+                throw new Error(
+                    `Customer is required to create the Sales Invoice for trip ${context.tripId}`
+                );
+            }
+
+            const product = await ensureServiceProduct({
+                productName: TRIP_SALES_PRODUCT_NAME,
+            });
+
+            const invoiceContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
+
+            const voucherNumber =
+                await createTripSalesInvoice({
+                    dispatch,
+                    context: invoiceContext,
+                    product,
+                });
+
+            return {
+                invoiceType: "sales",
+                voucherType: "salesInvoice",
+                voucherNumber,
+                alreadyCreated: false,
+            };
         }
 
-        const product = await ensureServiceProduct({
-            productName: TRIP_PURCHASE_PRODUCT_NAME,
-        });
+        if (context.ownership === "hired") {
+            if (!context.vendorCode || !context.vendorName) {
+                throw new Error(
+                    `Vendor is required to create the Purchase Invoice for trip ${context.tripId}`
+                );
+            }
 
-        const purchaseContext = {
-            ...context,
-            freightAmount:
-                context.freightAmount > 0
-                    ? context.freightAmount
-                    : product.sellingPrice || 0,
-        };
-
-        // ⭐ YELLOW STAR: UPDATED — HIRED ALWAYS CREATES PURCHASE ORDER
-        const purchaseOrderVoucherNumber =
-            await createTripPurchaseOrder({
-                dispatch,
-                context: purchaseContext,
-                product,
+            const product = await ensureServiceProduct({
+                productName: TRIP_PURCHASE_PRODUCT_NAME,
             });
 
-        // ⭐ YELLOW STAR: UPDATED — GRN AFTER PURCHASE ORDER
-        const grnVoucherNumber =
-            await createTripGrn({
-                dispatch,
-                context: purchaseContext,
-                product,
-                purchaseOrderVoucherNumber,
-            });
+            const invoiceContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
 
-        // ⭐ YELLOW STAR: UPDATED — PURCHASE INVOICE AFTER GRN
-        const purchaseInvoiceVoucherNumber =
-            await createTripPurchaseInvoice({
-                dispatch,
-                context: purchaseContext,
-                product,
-            });
+            const purchaseInvoiceVoucherNumber =
+                await createTripPurchaseInvoice({
+                    dispatch,
+                    context: invoiceContext,
+                    product,
+                });
 
-        // ⭐ YELLOW STAR: UPDATED — PAYMENT FOR ADVANCE TO VENDOR
-        const paymentVoucherNumber =
-            await createTripVendorAdvancePayment({
-                dispatch,
-                context: purchaseContext,
+            const paymentVoucherNumber =
+                await createTripVendorAdvancePayment({
+                    dispatch,
+                    context: invoiceContext,
+                    purchaseInvoiceVoucherNumber,
+                });
+
+            return {
+                invoiceType: "purchase",
+                voucherType: "purchaseInvoice",
+                voucherNumber: purchaseInvoiceVoucherNumber,
                 purchaseInvoiceVoucherNumber,
+                paymentVoucherNumber,
+                alreadyCreated: false,
+            };
+        }
+    }
+
+    if (isContractOrIndent) {
+        if (context.ownership === "owned") {
+            if (!context.customerCode || !context.customerName) {
+                throw new Error(
+                    `Customer is required to create the Sales Order for trip ${context.tripId}`
+                );
+            }
+
+            const product = await ensureServiceProduct({
+                productName: TRIP_SALES_PRODUCT_NAME,
             });
 
-        return {
-            invoiceType: "purchase",
-            voucherType: "purchaseOrderGrnPurchaseInvoicePayment",
-            voucherNumber: purchaseInvoiceVoucherNumber,
-            purchaseOrderVoucherNumber,
-            grnVoucherNumber,
-            purchaseInvoiceVoucherNumber,
-            paymentVoucherNumber,
-            alreadyCreated: false,
-        };
+            const orderContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
+
+            const voucherNumber =
+                await createTripSalesOrder({
+                    dispatch,
+                    context: orderContext,
+                    product,
+                });
+
+            return {
+                invoiceType: "",
+                voucherType: "salesOrder",
+                voucherNumber,
+                alreadyCreated: false,
+            };
+        }
+
+        if (context.ownership === "hired") {
+            if (!context.vendorCode || !context.vendorName) {
+                throw new Error(
+                    `Vendor is required to create the Purchase Order for trip ${context.tripId}`
+                );
+            }
+
+            const product = await ensureServiceProduct({
+                productName: TRIP_PURCHASE_PRODUCT_NAME,
+            });
+
+            const orderContext = {
+                ...context,
+                freightAmount:
+                    context.freightAmount > 0
+                        ? context.freightAmount
+                        : product.sellingPrice || 0,
+            };
+
+            const purchaseOrderVoucherNumber =
+                await createTripPurchaseOrder({
+                    dispatch,
+                    context: orderContext,
+                    product,
+                });
+
+            const grnVoucherNumber =
+                await createTripGrn({
+                    dispatch,
+                    context: orderContext,
+                    product,
+                    purchaseOrderVoucherNumber,
+                });
+
+            // ⭐ YELLOW STAR: UPDATED — PAYMENT DIRECTLY AFTER GRN
+            // PURCHASE INVOICE IS NOT CREATED FOR CONTRACT / INDENT + HIRED
+            const paymentVoucherNumber =
+                await createTripVendorAdvancePayment({
+                    dispatch,
+                    context: orderContext,
+                    purchaseInvoiceVoucherNumber: "",
+                });
+
+            return {
+                invoiceType: "",
+                voucherType: "purchaseOrderGrn",
+                voucherNumber: grnVoucherNumber,
+                purchaseOrderVoucherNumber,
+                grnVoucherNumber,
+                paymentVoucherNumber,
+                alreadyCreated: false,
+            };
+        }
+    }
+
+    if (!context.orderType) {
+        throw new Error(
+            `Order type is required for trip ${context.tripId}`
+        );
     }
 
     throw new Error(

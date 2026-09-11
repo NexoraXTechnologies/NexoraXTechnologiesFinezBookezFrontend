@@ -6,7 +6,7 @@ import {
 	paymentTypeOptions,
 } from "../transportOrderOptions";
 
-const FreightStep = ({ form, update, balanceAmount,isView }: any) => {
+const FreightStep = ({ form, update, balanceAmount, isView }: any) => {
 	const updateFreightField = (key: string, value: any) => {
 		update("freightDetails", key, value);
 	};
@@ -43,58 +43,60 @@ const FreightStep = ({ form, update, balanceAmount,isView }: any) => {
 
 		"freightDetails.balanceAmount":
 			form.freightDetails?.expectedFreight === "" &&
-			form.freightDetails?.advanceAmount === ""
+				form.freightDetails?.advanceAmount === ""
 				? ""
 				: balanceAmount,
 
 		"freightDetails.paymentType":
-			form.freightDetails?.paymentType || "To Pay",
+			form.freightDetails?.paymentType || "",
 
 		"freightDetails.paymentMode":
-			form.freightDetails?.paymentMode || "Cash",
+			form.freightDetails?.paymentMode || "Bank Transfer",
 	};
 
 	const freightFields = [
-	{
-		key: "freightDetails.freightPerTon",
-		label: "Freight Per Ton",
-		type: "number",
-		placeholder: "Enter freight per ton",
-		
-	},
-	{
-		key: "freightDetails.expectedFreight",
-		label: "Expected Freight",
-		type: "number",
-		placeholder: "Enter expected freight",
-		
-	},
-	{
-		key: "freightDetails.advanceAmount",
-		label: "Advance Amount",
-		type: "number",
-		placeholder: "Enter advance amount",
-	},
-	{
-		key: "freightDetails.balanceAmount",
-		label: "Balance Amount",
-		type: "number",
-		placeholder: "Auto calculated balance amount",
-		disabled: true,
-	},
-	{
-		key: "freightDetails.paymentType",
-		label: "Payment Type",
-		type: "select",
-		options: paymentTypeOptions,
-	},
-	{
-		key: "freightDetails.paymentMode",
-		label: "Payment Mode",
-		type: "select",
-		options: paymentModeOptions,
-	},
-];
+		{
+			key: "freightDetails.freightPerTon",
+			label: "Freight Per Ton",
+			type: "number",
+			placeholder: "Enter freight per ton",
+
+		},
+		{
+			key: "freightDetails.expectedFreight",
+			label: "Expected Freight",
+			type: "number",
+			placeholder: "Enter expected freight",
+
+		},
+		{
+			key: "freightDetails.advanceAmount",
+			label: "Advance Amount",
+			type: "number",
+			placeholder: "Enter advance amount",
+		},
+		{
+			key: "freightDetails.balanceAmount",
+			label: "Balance Amount",
+			type: "number",
+			placeholder: "Auto calculated balance amount",
+			disabled: true,
+		},
+		{
+			key: "freightDetails.paymentType",
+			label: "Payment Type",
+			type: "select",
+			options: paymentTypeOptions,
+			mandatory: true
+
+		},
+		{
+			key: "freightDetails.paymentMode",
+			label: "Payment Mode",
+			type: "select",
+			options: paymentModeOptions,
+		},
+	];
 
 	const renderFields = (fields: any[]) =>
 		fields.map((field: any) =>

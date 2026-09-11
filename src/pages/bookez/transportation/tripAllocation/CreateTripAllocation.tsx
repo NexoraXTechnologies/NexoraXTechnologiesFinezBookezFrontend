@@ -1212,7 +1212,7 @@ const CreateTripAllocation = ({
         ) ||
         (
             form.driverAllocation?.helperAssigned &&
-            (form.driverAllocation?.helperMobile || form.driverAllocation?.helperName)
+                (form.driverAllocation?.helperMobile || form.driverAllocation?.helperName)
                 ? {
                     label:
                         form.driverAllocation?.helperName ||
@@ -2110,6 +2110,34 @@ const CreateTripAllocation = ({
             return false;
         }
 
+        // ⭐ YELLOW STAR: ADDED — HIRED CHARGES REQUIRED FOR HIRED VEHICLE
+        if (
+            ownershipType === "hired" &&
+            (
+                form.vehicleSelection?.hiredCharges === "" ||
+                form.vehicleSelection?.hiredCharges === null ||
+                form.vehicleSelection?.hiredCharges === undefined ||
+                Number(form.vehicleSelection?.hiredCharges) <= 0
+            )
+        ) {
+            toast.warn("Please enter Hired Charges");
+            return false;
+        }
+
+        // ⭐ YELLOW STAR: ADDED — ADVANCE TO VENDOR REQUIRED FOR HIRED VEHICLE
+        if (
+            ownershipType === "hired" &&
+            (
+                form.vehicleSelection?.AdvanceToVendor === "" ||
+                form.vehicleSelection?.AdvanceToVendor === null ||
+                form.vehicleSelection?.AdvanceToVendor === undefined ||
+                Number(form.vehicleSelection?.AdvanceToVendor) <= 0
+            )
+        ) {
+            toast.warn("Please enter Advance to Vendor");
+            return false;
+        }
+
         const chosenDriverAssignment =
             driverAssignmentMap[form.driverAllocation.driverId];
 
@@ -2523,7 +2551,7 @@ const CreateTripAllocation = ({
                                                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                                                             <div>
                                                                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                                                                    Hired Charges
+                                                                    Hired Charges<span className="text-danger">*</span>
                                                                 </label>
 
                                                                 <input
@@ -2546,7 +2574,7 @@ const CreateTripAllocation = ({
 
                                                             <div>
                                                                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                                                                    Advance to Vendor
+                                                                    Advance to Vendor<span className="text-danger">*</span>
                                                                 </label>
 
                                                                 <input
@@ -2744,7 +2772,7 @@ const CreateTripAllocation = ({
                                                                     <div className="min-w-0">
                                                                         <div className="flex min-w-0 items-center gap-2">
                                                                             <span className="truncate text-xs font-bold text-card-foreground">
-                                                                               {vehicle.name || vehicle.rawRecord?.name || "-"} - {vehicle.vehicleNumber || vehicle.rawRecord?.code || "-"}
+                                                                                {vehicle.name || vehicle.rawRecord?.name || "-"} - {vehicle.vehicleNumber || vehicle.rawRecord?.code || "-"}
                                                                             </span>
                                                                         </div>
 

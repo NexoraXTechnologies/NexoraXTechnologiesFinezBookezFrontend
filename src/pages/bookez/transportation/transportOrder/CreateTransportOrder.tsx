@@ -1115,6 +1115,22 @@ const CreateTransportOrder = ({
 		return true;
 	};
 
+	/* ===================================================
+   FREIGHT STEP MANDATORY FIELD VALIDATION
+=================================================== */
+
+	const validateFreightStep = () => {
+		const paymentType = String(
+			form?.freightDetails?.paymentType || ""
+		).trim();
+
+		if (!paymentType) {
+			toast.warn("Please select Payment Type");
+			return false;
+		}
+
+		return true;
+	};
 
 	const next = () => {
 		/* ===================================================
@@ -1162,6 +1178,17 @@ const CreateTransportOrder = ({
 
 				return;
 			}
+		}
+
+		/* ===================================================
+   FREIGHT STEP
+=================================================== */
+
+		if (
+			step === 5 &&
+			!validateFreightStep()
+		) {
+			return;
 		}
 
 
