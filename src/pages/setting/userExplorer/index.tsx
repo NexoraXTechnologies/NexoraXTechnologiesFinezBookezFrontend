@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import L from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { requestDbAccess, getDbAccessRequests, getDbAccessRequestById, getStateCityDashboard } from "../../../redux/slices/userExplorer";
+import { requestDbAccess, getDbAccessRequests, getDbAccessRequestById, getStateCityDashboard, getBusinessOperationsDashboard } from "../../../redux/slices/userExplorer";
 import Badge from "../../../components/badge";
 import DataTable from "../../../components/DataTable";
 import Pagination from "../../../components/pagination";
@@ -45,7 +45,7 @@ const FitGeoJsonBounds = ({ data }: any) => {
 };
 const UserExplorer = ({ onAccessSuccess }: any) => {
     const dispatch = useDispatch<any>();
-    const { requestLoading, accessRequestsLoading, accessRequests, accessRequestsPagination } = useSelector((state: any) => state.dbAccess);
+    const { requestLoading, accessRequestsLoading, accessRequests, accessRequestsPagination, businessOperationsData, businessOperationsLoading } = useSelector((state: any) => state.dbAccess);
     const { registerDashboardData, registerDashboardLoading } = useSelector((state: any) => state.registerDashboard);
     const { states = [] } = useSelector((state: any) => state.stateCity || {});
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -281,6 +281,15 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                 "Failed to fetch area dashboard");
         }
     };
+
+    const fetchBusinessOperations = async () => {
+        try {
+            await dispatch(getBusinessOperationsDashboard({ dbNumbers: [], cities: [], states: [], period: "", modules: [] }) as any).unwrap();
+        } catch (err: any) {
+            toast.error(err?.message || err?.data?.message || "Failed to fetch business operations");
+        }
+    };
+
     const clearDashboardFilters = () => {
         setDashboardFilters({
             dbNumbers: [],
@@ -416,6 +425,11 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             icon: <BarChart3 size={16} />
         },
         {
+            key: "businessOperations",
+            label: "Business Operations",
+            icon: <Database size={16} />
+        },
+        {
             key: "stateMap",
             label: "State Map",
             icon: <MapPinned size={16} />
@@ -530,6 +544,12 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         // @ts-ignore
         dispatch(getStates() as any);
         fetchAreaDashboard();
+    }, [activePageTab]);
+
+    useEffect(() => {
+        if (activePageTab !== "businessOperations")
+            return;
+        fetchBusinessOperations();
     }, [activePageTab]);
 
     useEffect(() => {
@@ -833,6 +853,59 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             year: "numeric"
         });
     };
+    const businessOperationsSource = Array.isArray(businessOperationsData?.dbWiseData) ? businessOperationsData.dbWiseData : [];
+    const businessOperationsRows = businessOperationsSource.map((item: any, index: number) => ({
+        ...item,
+        sNo: index + 1,
+        businessName: item?.parentName || "-",
+        districtCity: item?.city || item?.state || "-",
+        selfCapitalAmount: toNumber(item?.selfCapital?.totalAmount),
+        bankLoanAmount: toNumber(item?.bankLoan?.totalAmount),
+        loanRepaymentAmount: toNumber(item?.loanRepayment?.totalAmount),
+        subsidyAmount: toNumber(item?.availedSubsidy?.totalAmount),
+        totalCapitalAmount: toNumber(item?.totalCapitalInvested?.totalAmount),
+        purchaseAmount: toNumber(item?.purchaseInvoice?.totalAmount),
+        operatingExpenseAmount: toNumber(item?.otherOperatingExpenses?.totalAmount),
+        totalExpenseAmount: toNumber(item?.totalExpenses?.totalAmount),
+        salesAmount: toNumber(item?.salesInvoice?.totalAmount),
+        grossProfitAmount: toNumber(item?.grossProfit?.totalAmount),
+        netProfitAmount: toNumber(item?.netProfit?.totalAmount),
+        netProfitMarginPercentage: toNumber(item?.netProfitMargin?.percentage),
+    }));
+    const businessOperationsTotals = businessOperationsRows.reduce((acc: any, item: any) => {
+        acc.selfCapitalAmount += item.selfCapitalAmount;
+        acc.bankLoanAmount += item.bankLoanAmount;
+        acc.loanRepaymentAmount += item.loanRepaymentAmount;
+        acc.subsidyAmount += item.subsidyAmount;
+        acc.totalCapitalAmount += item.totalCapitalAmount;
+        acc.purchaseAmount += item.purchaseAmount;
+        acc.operatingExpenseAmount += item.operatingExpenseAmount;
+        acc.totalExpenseAmount += item.totalExpenseAmount;
+        acc.salesAmount += item.salesAmount;
+        acc.grossProfitAmount += item.grossProfitAmount;
+        acc.netProfitAmount += item.netProfitAmount;
+        return acc;
+    }, { selfCapitalAmount: 0, bankLoanAmount: 0, loanRepaymentAmount: 0, subsidyAmount: 0, totalCapitalAmount: 0, purchaseAmount: 0, operatingExpenseAmount: 0, totalExpenseAmount: 0, salesAmount: 0, grossProfitAmount: 0, netProfitAmount: 0 });
+    const businessOperationsTableData = businessOperationsRows.length ? [...businessOperationsRows, { sNo: "", isTotal: true, businessName: "", districtCity: "", ...businessOperationsTotals, netProfitMarginPercentage: businessOperationsTotals.salesAmount ? (businessOperationsTotals.netProfitAmount / businessOperationsTotals.salesAmount) * 100 : 0 }] : [];
+    const amountCell = (value: any, row: any) => <span className={row?.isTotal ? "font-bold text-card-foreground" : "font-normal text-card-foreground"}>{formatFullAmount(value)}</span>;
+    const businessOperationsColumns = [
+        { key: "sNo", title: "S.No", render: (row: any) => <span className={row?.isTotal ? "font-bold text-card-foreground" : "font-normal text-card-foreground"}>{row?.sNo}</span> },
+        { key: "businessName", title: "Small/Macro Business", render: (row: any) => row?.isTotal ? <span className="font-bold text-card-foreground">TOTAL</span> : <div><p className="font-medium text-card-foreground">{row?.businessName || "-"}</p><p className="text-[11px] font-normal text-muted-foreground">{row?.dbNumber || "-"}</p></div> },
+        { key: "districtCity", title: "District/City", render: (row: any) => row?.isTotal ? "" : <div><p className="font-normal text-card-foreground">{row?.city || "-"}</p>{row?.state && <p className="text-[11px] font-normal text-muted-foreground">{row.state}</p>}</div> },
+        { key: "selfCapitalAmount", title: "Self Capital (₹)", render: (row: any) => amountCell(row?.selfCapitalAmount, row) },
+        { key: "bankLoanAmount", title: "Bank Loan Borrowed (₹)", render: (row: any) => amountCell(row?.bankLoanAmount, row) },
+        { key: "loanRepaymentAmount", title: "Loan Repayment (₹)", render: (row: any) => amountCell(row?.loanRepaymentAmount, row) },
+        { key: "subsidyAmount", title: "Availed Subsidy (₹)", render: (row: any) => amountCell(row?.subsidyAmount, row) },
+        { key: "totalCapitalAmount", title: "Total Capital Invested (₹)", render: (row: any) => amountCell(row?.totalCapitalAmount, row) },
+        { key: "purchaseAmount", title: "Purchases (₹)", render: (row: any) => amountCell(row?.purchaseAmount, row) },
+        { key: "operatingExpenseAmount", title: "Other Operating Expenses (₹)", render: (row: any) => amountCell(row?.operatingExpenseAmount, row) },
+        { key: "totalExpenseAmount", title: "Total Expenses (₹)", render: (row: any) => amountCell(row?.totalExpenseAmount, row) },
+        { key: "salesAmount", title: "Sales (₹)", render: (row: any) => amountCell(row?.salesAmount, row) },
+        { key: "grossProfitAmount", title: "Gross Profit (₹)", render: (row: any) => amountCell(row?.grossProfitAmount, row) },
+        { key: "netProfitAmount", title: "Net Profit (₹)", render: (row: any) => <span className={`${row?.isTotal ? "font-bold" : "font-normal"} ${toNumber(row?.netProfitAmount) < 0 ? "text-danger" : "text-success"}`}>{formatFullAmount(row?.netProfitAmount)}</span> },
+        { key: "netProfitMarginPercentage", title: "Net Profit Margin (%)", render: (row: any) => <span className={`${row?.isTotal ? "font-bold" : "font-normal"} ${toNumber(row?.netProfitMarginPercentage) < 0 ? "text-danger" : "text-card-foreground"}`}>{toNumber(row?.netProfitMarginPercentage).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</span> },
+    ];
+
     const getModuleAmount = (key: string) => {
         return toNumber(dashboardData?.[key]?.totalAmount);
     };
@@ -1771,6 +1844,30 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                         </div>
                     </motion.div>
                 </div>
+            </div>)}
+        </div>)}
+
+        {/* ================= BUSINESS OPERATIONS TAB ================= */}
+        {activePageTab === "businessOperations" && (<div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background/70 p-4 shadow-sm">
+                <div>
+                    <h2 className="text-sm font-black text-card-foreground">Business Operations</h2>
+                    <p className="text-xs font-medium text-muted-foreground">Entrepreneur business operations summary across all accessible databases.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Badge {...{ count: businessOperationsData?.totalBusinesses || businessOperationsRows.length, text: "Total Businesses:" }} />
+                    <button type="button" onClick={fetchBusinessOperations} disabled={businessOperationsLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                        {businessOperationsLoading ? <><Loader2 size={15} className="animate-spin" />Loading...</> : <><RotateCcw size={15} />Refresh</>}
+                    </button>
+                </div>
+            </div>
+            {businessOperationsLoading ? (<div className="flex min-h-[300px] flex-1 items-center justify-center rounded border border-border bg-background">
+                <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                    <Loader2 size={18} className="animate-spin text-primary" />
+                    Loading business operations...
+                </div>
+            </div>) : (<div className="min-h-0 flex-1 overflow-auto rounded border border-border">
+                <DataTable columns={businessOperationsColumns} data={businessOperationsTableData} loading={false} emptyMessage="No business operations data found" />
             </div>)}
         </div>)}
 

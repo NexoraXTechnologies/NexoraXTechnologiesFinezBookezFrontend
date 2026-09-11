@@ -105,6 +105,29 @@ export const getStateCityDashboard = createAsyncThunk(
     }
 );
 
+
+/* ===================================================
+   GET BUSINESS OPERATIONS DASHBOARD
+=================================================== */
+
+export const getBusinessOperationsDashboard = createAsyncThunk(
+    "dbAccess/getBusinessOperationsDashboard",
+    async (
+        { dbNumbers = [], cities = [], states = [], period = "", fromDate, toDate, modules = [] }: { dbNumbers?: string[]; cities?: string[]; states?: string[]; period?: string; fromDate?: string; toDate?: string; modules?: string[] } = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const payload: any = { dbNumbers, cities, states, period, modules };
+            if (fromDate) payload.fromDate = fromDate;
+            if (toDate) payload.toDate = toDate;
+            const res = await professionalAxios.post(`eTaxSolnMongoApiBackend/users/admin/analyticsDbWise/areaDashboard`, payload, { headers: DB_ACCESS_HEADERS });
+            return res.data?.data || res.data;
+        } catch (err: any) {
+            return rejectWithValue({ message: err?.response?.data?.message || "Failed to fetch business operations dashboard", status: err?.response?.status });
+        }
+    }
+);
+
 /* ===================================================
    GET DATABASE LIST
 =================================================== */
@@ -385,6 +408,7 @@ const dbAccessSlice = createSlice({
         accessRequests: [],
         selectedAccessRequest: null,
         stateCityDashboardData: null,
+        businessOperationsData: null,
 
         pagination: {
             offset: 0,
@@ -411,6 +435,7 @@ const dbAccessSlice = createSlice({
         accessRequestsLoading: false,
         detailLoading: false,
         stateCityDashboardLoading: false,
+        businessOperationsLoading: false,
         error: null,
     },
 
@@ -424,6 +449,7 @@ const dbAccessSlice = createSlice({
             state.accessRequestsLoading = false;
             state.detailLoading = false;
             state.stateCityDashboardLoading = false;
+            state.businessOperationsLoading = false;
         },
 
         clearDbAccessList: (state) => {
@@ -488,6 +514,22 @@ const dbAccessSlice = createSlice({
                 state.stateCityDashboardLoading = false;
                 state.error = action.payload?.message;
                 state.stateCityDashboardData = null;
+            });
+
+
+        builder
+            .addCase(getBusinessOperationsDashboard.pending, (state) => {
+                state.businessOperationsLoading = true;
+                state.error = null;
+            })
+            .addCase(getBusinessOperationsDashboard.fulfilled, (state, action: any) => {
+                state.businessOperationsLoading = false;
+                state.businessOperationsData = action.payload || null;
+            })
+            .addCase(getBusinessOperationsDashboard.rejected, (state, action: any) => {
+                state.businessOperationsLoading = false;
+                state.error = action.payload?.message;
+                state.businessOperationsData = null;
             });
 
         builder
