@@ -342,94 +342,129 @@ const CustomMasterComp = ({
 	};
 	
 	const resolveSubmitValue = (
-		field: any,
-		currentValue: any
-	) => {
-		if (
-			!hasDynamicSource(
-				field
-			)
-		) {
+	field: any,
+	currentValue: any
+) => {
+	if (!hasDynamicSource(field)) {
+		return currentValue;
+	}
+
+	const options = dynamicOptions[field.key] || [];
+	const fieldType = getFieldType(field);
+
+	if (isCustomMasterMultiSelectField(field)) {
+		const selectedValues = Array.isArray(currentValue) ? currentValue : [];
+
+		return selectedValues.map((item: any) => {
+			if (item && typeof item === "object") {
+				return item;
+			}
+
+			const match = options.find(
+				(option: any) => String(option.value) === String(item)
+			);
+
+			return match?.raw ?? item;
+		});
+	}
+
+	// ⭐ YELLOW STAR: ADDED — STATE MASTER PAYLOAD FORMAT
+	if (fieldType === "statemaster") {
+		let selected = currentValue;
+
+		if (!selected || typeof selected !== "object") {
+			const match = options.find(
+				(option: any) => String(option.value) === String(currentValue)
+			);
+
+			selected = match?.raw;
+		}
+
+		if (!selected) {
 			return currentValue;
 		}
 
-		const options =
-			dynamicOptions[
-			field.key
-			] ||
-			[];
+		const stateCode =
+			selected?.stateCode ||
+			selected?.isoCode ||
+			selected?.code ||
+			currentValue ||
+			"";
 
-		if (
-			isCustomMasterMultiSelectField(
-				field
-			)
-		) {
-			const selectedValues =
-				Array.isArray(
-					currentValue
-				)
-					? currentValue
-					: [];
+		const name =
+			selected?.name?.en ||
+			selected?.stateName ||
+			selected?.name ||
+			"";
 
-			return selectedValues.map(
-				(
-					item: any
-				) => {
-					if (
-						item &&
-						typeof item ===
-						"object"
-					) {
-						return item;
-					}
+		return {
+			stateCode,
+			name,
+		};
+	}
 
-					const match =
-						options.find(
-							(
-								option: any
-							) =>
-								String(
-									option.value
-								) ===
-								String(
-									item
-								)
-						);
+	// ⭐ YELLOW STAR: ADDED — CITY MASTER PAYLOAD FORMAT
+	if (fieldType === "citymaster") {
+		let selected = currentValue;
 
-					return (
-						match?.raw ??
-						item
-					);
-				}
+		if (!selected || typeof selected !== "object") {
+			const match = options.find(
+				(option: any) => String(option.value) === String(currentValue)
 			);
+
+			selected = match?.raw;
 		}
 
-		if (
-			currentValue &&
-			typeof currentValue ===
-			"object"
-		) {
+		if (!selected) {
 			return currentValue;
 		}
 
-		const match =
-			options.find(
-				(
-					option: any
-				) =>
-					String(
-						option.value
-					) ===
-					String(
-						currentValue
-					)
+		const stateValue = form?.statemaster;
+
+		let stateCode = "";
+
+		if (stateValue && typeof stateValue === "object") {
+			stateCode =
+				stateValue?.stateCode ||
+				stateValue?.isoCode ||
+				stateValue?.code ||
+				"";
+		} else {
+			const stateOption = (dynamicOptions.statemaster || []).find(
+				(option: any) => String(option.value) === String(stateValue)
 			);
 
-		return (
-			match?.raw ??
-			currentValue
-		);
-	};
+			stateCode =
+				stateOption?.raw?.stateCode ||
+				stateOption?.raw?.isoCode ||
+				stateOption?.raw?.code ||
+				stateValue ||
+				"";
+		}
+
+		return {
+			stateCode:
+				selected?.stateCode ||
+				selected?.isoCode ||
+				stateCode,
+			name:
+				selected?.name?.en ||
+				selected?.cityName ||
+				selected?.name ||
+				"",
+		};
+	}
+
+	if (currentValue && typeof currentValue === "object") {
+		return currentValue;
+	}
+
+	const match = options.find(
+		(option: any) => String(option.value) === String(currentValue)
+	);
+
+	return match?.raw ?? currentValue;
+};
 	const openEditModal = async (acc: any = null) => {
 		setShowModal(true);
 		setForm(acc ? { ...acc, moduleCode } : { moduleCode });
