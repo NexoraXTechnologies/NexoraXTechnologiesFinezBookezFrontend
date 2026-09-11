@@ -6,6 +6,7 @@ import {
     ArrowLeft,
     CalendarDays,
     CheckCircle2,
+    ChevronDown,
     Coffee,
     CreditCard,
     Droplets,
@@ -59,6 +60,7 @@ import { createSalesOrder } from "../../../../redux/slices/professionalSlice/sal
 import { addPurchaseInvoice } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import { addPurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 import { addGrn } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
+import { addPayment } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
 import { getWhereIsMyDriverList } from "../../../../redux/slices/professionalSlice/transportation/whereIsMyDriverSlice";
 
 
@@ -593,6 +595,17 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         0
     );
 
+    // ⭐ YELLOW STAR: ADDED — ADVANCE TO VENDOR USED ONLY FOR AUTO PAYMENT
+    const advanceToVendor = Number(
+        vehicleSelection?.AdvanceToVendor ||
+        vehicleSelection?.advanceToVendor ||
+        tripExpense?.vehicle?.AdvanceToVendor ||
+        tripExpense?.vehicle?.advanceToVendor ||
+        tripExpense?.vehicleSelection?.AdvanceToVendor ||
+        tripExpense?.vehicleSelection?.advanceToVendor ||
+        0
+    );
+
     const customerCode = String(allocationOrder?.customerCode || allocationOrder?.customerDetails?.customerCode || transportOrder?.customerCode || transportOrder?.customerDetails?.customerCode || transportOrder?.customer?.code || vehicleSelection?.customerCode || tripExpense?.customerCode || "").trim();
     const customerName = String(allocationOrder?.customerName || allocationOrder?.customerDetails?.customerName || transportOrder?.customerName || transportOrder?.customerDetails?.customerName || transportOrder?.customer?.name || vehicleSelection?.customerName || tripExpense?.customerName || "").trim();
     const vendorCode = String(vehicleSelection?.vendorCode || vehicleSelection?.vendor?.code || allocation?.vendorCode || allocation?.vendor?.code || tripExpense?.vendorCode || "").trim();
@@ -726,6 +739,7 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         ownership,
         freightAmount,
         hiredCharges,
+        advanceToVendor,
         customerCode,
         customerName,
         vendorCode,
@@ -891,6 +905,150 @@ const createTripPurchaseInvoice = async ({ dispatch, context, product }: any) =>
     return voucherNumber;
 };
 
+// ⭐ YELLOW STAR: ADDED — FIND CASH IN HAND ACCOUNT WITHOUT CHANGING EXISTING ACCOUNT FLOW
+const resolveCashInHandAccount = async (dispatch: any) => {
+    const response = await unwrapThunk(
+        dispatch,
+        getAllAccounts({
+            accountType: "cash",
+            limit: 500,
+            offset: 0,
+        })
+    );
+
+    const accounts = extractAccountRecords(response);
+
+    const cashAccount =
+        accounts.find(
+            (item: any) =>
+                normalizeBillingValue(item?.accountName || item?.name) ===
+                normalizeBillingValue("Cash In Hand")
+        ) ||
+        accounts[0] ||
+        {};
+
+    return {
+        accountCode: String(
+            cashAccount?.accountCode ||
+            cashAccount?.code ||
+            ""
+        ).trim(),
+        accountName: String(
+            cashAccount?.accountName ||
+            cashAccount?.name ||
+            "Cash In Hand"
+        ).trim(),
+    };
+};
+
+// ⭐ YELLOW STAR: ADDED — HIRED VEHICLE ADVANCE TO VENDOR PAYMENT
+const createTripVendorAdvancePayment = async ({
+    dispatch,
+    context,
+    purchaseInvoiceVoucherNumber = "",
+}: any) => {
+    const advanceAmount = Number(context?.advanceToVendor || 0);
+
+    // No Advance to Vendor entered => do not create a zero-value Payment.
+    if (!(advanceAmount > 0)) {
+        return "";
+    }
+
+    if (!context?.vendorCode || !context?.vendorName) {
+        throw new Error(
+            `Vendor is required to create the Payment for trip ${context?.tripId || ""}`
+        );
+    }
+
+    const cashAccount = await resolveCashInHandAccount(dispatch);
+
+    if (!cashAccount.accountCode) {
+        throw new Error("Cash In Hand account is required to create the Payment");
+    }
+
+    const amount = formatInvoiceAmount(advanceAmount);
+    const paymentDate = todayYMD();
+    const remark = `Advance to Vendor - Trip ${context.tripId}`;
+
+    const payload = {
+        payVoucherNumber: "AUTO",
+        payVoucherDate: paymentDate,
+
+        payAccountCode: cashAccount.accountCode,
+        payAccountName: cashAccount.accountName,
+        payStatus: "open",
+        payRemark: remark,
+
+        paymentMode: "Cash",
+        bankReferenceNumber: "",
+        paidBy: "",
+
+        payBody: [
+            {
+                id: Date.now(),
+                accountCode: context.vendorCode,
+                accountName: context.vendorName,
+                amount,
+                netAmount: amount,
+
+                // Advance to Vendor remains an ADV/new reference.
+                // The existing Purchase Invoice is not adjusted by this advance entry.
+                references: [
+                    {
+                        referenceType: "NEW",
+                        newReference: "ADV",
+                        billDueDate: paymentDate,
+                        billAmount: amount,
+                        adjustedAmount: amount,
+                        purchaseInvoice: "",
+                    },
+                ],
+
+                customMasters: context.customMasters || {},
+                remarks: remark,
+            },
+        ],
+
+        payFooter: {
+            netAmount: amount,
+            adjustedAmount: amount,
+            balanceAmount: "0",
+        },
+
+        sourceModule: "TRIP_EXECUTION",
+        sourceVoucherNumber: context.tripId,
+        purchaseInvoiceVoucherNumber,
+
+        transportOrderNumber: context.transportOrderNumber || "",
+        trip_order: context.transportOrderNumber || "",
+        lr_no: context.lrNo || "",
+        driver: context.driver || "",
+        vehicleCode: context.vehicleCode || "",
+        vehicleName: context.vehicleName || "",
+        vehicleNumber: context.vehicleNumber || "",
+        customMasters: context.customMasters || {},
+
+        ownershipType: context.ownership || "",
+        vendorCode: context.vendorCode || "",
+        vendorName: context.vendorName || "",
+        vendorAmount: advanceAmount,
+
+        transactionPurpose: "ADVANCE_TO_VENDOR",
+    };
+
+    const response = await unwrapThunk(
+        dispatch,
+        addPayment({
+            payload: normalizeApiPayloadDates(payload),
+        })
+    );
+
+    return extractCreatedVoucherNumber(
+        response,
+        "payVoucherNumber"
+    );
+};
+
 // ⭐ YELLOW STAR: ADDED — CONTRACT / INDENT + OWNED => SALES ORDER
 const createTripSalesOrder = async ({ dispatch, context, product }: any) => {
     const remark = `Auto from trip ${context.tripId}`;
@@ -1008,7 +1166,12 @@ const createTripGrn = async ({
     return voucherNumber;
 };
 
-// ⭐ YELLOW STAR: UPDATED — COMPLETE TRIP VOUCHER FLOW
+// ⭐ YELLOW STAR: UPDATED — SIMPLE COMPLETE TRIP BILLING FLOW
+// PAYMENT TYPE = TO BE BILLED:
+//   OWNED => SALES ORDER -> SALES INVOICE
+//   HIRED => PURCHASE ORDER -> GRN -> PURCHASE INVOICE -> PAYMENT
+// PAYMENT TYPE != TO BE BILLED:
+//   SKIP BILLING
 const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => {
     const context = await resolveTripBillingContext({ dispatch, tripExpense });
 
@@ -1017,18 +1180,10 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
         return null;
     }
 
-    const isOneTimeOrder = context.orderType === "oneTimeOrder";
-    const isContractOrIndent =
-        context.orderType === "contract" ||
-        context.orderType === "indent";
-
-    if (isOneTimeOrder) {
+    // ⭐ YELLOW STAR: UPDATED — NO ONE-TIME / CONTRACT / INDENT CONDITION
+    if (context.ownership === "owned") {
         const existingSalesVoucher = String(
             tripExpense?.salesInvoiceVoucher || ""
-        ).trim();
-
-        const existingPurchaseVoucher = String(
-            tripExpense?.purchaseInvoiceVoucher || ""
         ).trim();
 
         if (existingSalesVoucher) {
@@ -1040,6 +1195,56 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
             };
         }
 
+        if (!context.customerCode || !context.customerName) {
+            throw new Error(
+                `Customer is required to create the Sales Order / Sales Invoice for trip ${context.tripId}`
+            );
+        }
+
+        const product = await ensureServiceProduct({
+            productName: TRIP_SALES_PRODUCT_NAME,
+        });
+
+        const salesContext = {
+            ...context,
+            freightAmount:
+                context.freightAmount > 0
+                    ? context.freightAmount
+                    : product.sellingPrice || 0,
+        };
+
+        // ⭐ YELLOW STAR: UPDATED — OWNED ALWAYS CREATES SALES ORDER FIRST
+        const salesOrderVoucherNumber =
+            await createTripSalesOrder({
+                dispatch,
+                context: salesContext,
+                product,
+            });
+
+        // ⭐ YELLOW STAR: UPDATED — SALES INVOICE AFTER SALES ORDER
+        const salesInvoiceVoucherNumber =
+            await createTripSalesInvoice({
+                dispatch,
+                context: salesContext,
+                product,
+            });
+
+        return {
+            invoiceType: "sales",
+            voucherType: "salesOrderSalesInvoice",
+            voucherNumber: salesInvoiceVoucherNumber,
+            salesOrderVoucherNumber,
+            salesInvoiceVoucherNumber,
+            alreadyCreated: false,
+        };
+    }
+
+    // ⭐ YELLOW STAR: UPDATED — HIRED ALWAYS USES PURCHASE FLOW
+    if (context.ownership === "hired") {
+        const existingPurchaseVoucher = String(
+            tripExpense?.purchaseInvoiceVoucher || ""
+        ).trim();
+
         if (existingPurchaseVoucher) {
             return {
                 invoiceType: "purchase",
@@ -1049,155 +1254,67 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
             };
         }
 
-        if (context.ownership === "owned") {
-            if (!context.customerCode || !context.customerName) {
-                throw new Error(
-                    `Customer is required to create the Sales Invoice for trip ${context.tripId}`
-                );
-            }
+        if (!context.vendorCode || !context.vendorName) {
+            throw new Error(
+                `Vendor is required to create the Purchase Order / GRN / Purchase Invoice for trip ${context.tripId}`
+            );
+        }
 
-            const product = await ensureServiceProduct({
-                productName: TRIP_SALES_PRODUCT_NAME,
-            });
+        const product = await ensureServiceProduct({
+            productName: TRIP_PURCHASE_PRODUCT_NAME,
+        });
 
-            const invoiceContext = {
-                ...context,
-                freightAmount:
-                    context.freightAmount > 0
-                        ? context.freightAmount
-                        : product.sellingPrice || 0,
-            };
+        const purchaseContext = {
+            ...context,
+            freightAmount:
+                context.freightAmount > 0
+                    ? context.freightAmount
+                    : product.sellingPrice || 0,
+        };
 
-            const voucherNumber = await createTripSalesInvoice({
+        // ⭐ YELLOW STAR: UPDATED — HIRED ALWAYS CREATES PURCHASE ORDER
+        const purchaseOrderVoucherNumber =
+            await createTripPurchaseOrder({
                 dispatch,
-                context: invoiceContext,
+                context: purchaseContext,
                 product,
             });
 
-            return {
-                invoiceType: "sales",
-                voucherType: "salesInvoice",
-                voucherNumber,
-                alreadyCreated: false,
-            };
-        }
-
-        if (context.ownership === "hired") {
-            if (!context.vendorCode || !context.vendorName) {
-                throw new Error(
-                    `Vendor is required to create the Purchase Invoice for trip ${context.tripId}`
-                );
-            }
-
-            const product = await ensureServiceProduct({
-                productName: TRIP_PURCHASE_PRODUCT_NAME,
-            });
-
-            const invoiceContext = {
-                ...context,
-                freightAmount:
-                    context.freightAmount > 0
-                        ? context.freightAmount
-                        : product.sellingPrice || 0,
-            };
-
-            const voucherNumber = await createTripPurchaseInvoice({
+        // ⭐ YELLOW STAR: UPDATED — GRN AFTER PURCHASE ORDER
+        const grnVoucherNumber =
+            await createTripGrn({
                 dispatch,
-                context: invoiceContext,
-                product,
-            });
-
-            return {
-                invoiceType: "purchase",
-                voucherType: "purchaseInvoice",
-                voucherNumber,
-                alreadyCreated: false,
-            };
-        }
-    }
-
-    if (isContractOrIndent) {
-        if (context.ownership === "owned") {
-            if (!context.customerCode || !context.customerName) {
-                throw new Error(
-                    `Customer is required to create the Sales Order for trip ${context.tripId}`
-                );
-            }
-
-            const product = await ensureServiceProduct({
-                productName: TRIP_SALES_PRODUCT_NAME,
-            });
-
-            const orderContext = {
-                ...context,
-                freightAmount:
-                    context.freightAmount > 0
-                        ? context.freightAmount
-                        : product.sellingPrice || 0,
-            };
-
-            const voucherNumber = await createTripSalesOrder({
-                dispatch,
-                context: orderContext,
-                product,
-            });
-
-            return {
-                invoiceType: "",
-                voucherType: "salesOrder",
-                voucherNumber,
-                alreadyCreated: false,
-            };
-        }
-
-        if (context.ownership === "hired") {
-            if (!context.vendorCode || !context.vendorName) {
-                throw new Error(
-                    `Vendor is required to create the Purchase Order for trip ${context.tripId}`
-                );
-            }
-
-            const product = await ensureServiceProduct({
-                productName: TRIP_PURCHASE_PRODUCT_NAME,
-            });
-
-            const orderContext = {
-                ...context,
-                freightAmount:
-                    context.freightAmount > 0
-                        ? context.freightAmount
-                        : product.sellingPrice || 0,
-            };
-
-            const purchaseOrderVoucherNumber =
-                await createTripPurchaseOrder({
-                    dispatch,
-                    context: orderContext,
-                    product,
-                });
-
-            const grnVoucherNumber = await createTripGrn({
-                dispatch,
-                context: orderContext,
+                context: purchaseContext,
                 product,
                 purchaseOrderVoucherNumber,
             });
 
-            return {
-                invoiceType: "",
-                voucherType: "purchaseOrderGrn",
-                voucherNumber: grnVoucherNumber,
-                purchaseOrderVoucherNumber,
-                grnVoucherNumber,
-                alreadyCreated: false,
-            };
-        }
-    }
+        // ⭐ YELLOW STAR: UPDATED — PURCHASE INVOICE AFTER GRN
+        const purchaseInvoiceVoucherNumber =
+            await createTripPurchaseInvoice({
+                dispatch,
+                context: purchaseContext,
+                product,
+            });
 
-    if (!context.orderType) {
-        throw new Error(
-            `Order type is required for trip ${context.tripId}`
-        );
+        // ⭐ YELLOW STAR: UPDATED — PAYMENT FOR ADVANCE TO VENDOR
+        const paymentVoucherNumber =
+            await createTripVendorAdvancePayment({
+                dispatch,
+                context: purchaseContext,
+                purchaseInvoiceVoucherNumber,
+            });
+
+        return {
+            invoiceType: "purchase",
+            voucherType: "purchaseOrderGrnPurchaseInvoicePayment",
+            voucherNumber: purchaseInvoiceVoucherNumber,
+            purchaseOrderVoucherNumber,
+            grnVoucherNumber,
+            purchaseInvoiceVoucherNumber,
+            paymentVoucherNumber,
+            alreadyCreated: false,
+        };
     }
 
     throw new Error(
@@ -1988,8 +2105,14 @@ const CreateEditTripExpence = () => {
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [vendorAccountOptions, setVendorAccountOptions] = useState<any[]>([]);
     const [expenseAccountOptions, setExpenseAccountOptions] = useState<any[]>([]);
-    // TOUCH UPS - DISPLAY ONLY
-    const [touchUps, setTouchUps] = useState<any[]>([]);
+
+    // ⭐ YELLOW STAR: ADDED — HIRED + TO BE BILLED CAN COMPLETE WITHOUT START / DRIVER ACCEPT
+    const [canCompleteHiredToBeBilledDirectly, setCanCompleteHiredToBeBilledDirectly] = useState(false);
+
+    // ⭐ YELLOW STAR: UPDATED — MULTIPLE LR WITH LR-WISE TOUCH UPS - DISPLAY ONLY
+    const [tripLrs, setTripLrs] = useState<any[]>([]);
+    // ⭐ YELLOW STAR: ADDED — LR-WISE TOUCH UP EXPAND / COLLAPSE - DISPLAY ONLY
+    const [expandedLrTouchUps, setExpandedLrTouchUps] = useState<Record<string, boolean>>({});
 
     const visibleCategories = useMemo(() => {
         if (!isChildUser) return CATEGORIES;
@@ -2055,12 +2178,21 @@ const CreateEditTripExpence = () => {
     //     isDriverAccepted &&
     //     isPodReadyToComplete;
 
-    // NEW: parent can also complete; driver must still accept before completing.
+    // ⭐ YELLOW STAR: UPDATED — HIRED + TO BE BILLED CAN COMPLETE DIRECTLY
+    // Normal trips keep the existing rules:
+    // - trip must already be in progress
+    // - child/driver must have accepted
+    // Special hired + To Be Billed trips bypass ONLY those two requirements.
     const showCompleteTripButton =
         isEdit &&
-        isTripReadyForComplete &&
         isPodReadyToComplete &&
-        (!isChildUser || isDriverAccepted);
+        (
+            canCompleteHiredToBeBilledDirectly ||
+            (
+                isTripReadyForComplete &&
+                (!isChildUser || isDriverAccepted)
+            )
+        );
 
     const vehicleVoucher = useMemo(
         () => getVehicleVoucherFromTripExpense(form),
@@ -2445,18 +2577,17 @@ const CreateEditTripExpence = () => {
                     lrRes?.data ||
                     [];
 
-                const lr = (
+                // ⭐ YELLOW STAR: UPDATED — FIND ALL LR RECORDS FOR THIS TRIP / ALLOCATION
+                const matchedLrs = (
                     Array.isArray(lrList)
                         ? lrList
                         : []
-                ).find((item: any) => {
+                ).filter((item: any) => {
                     const possibleValues = [
                         item?.tripNumber,
                         item?.transportOrderNumber,
                         item?.allocationVoucherNumber,
-                        item?.lrNumber,
-                        item?.lrVoucherNumber,
-                        item?.voucherNumber,
+                        item?.tripAllocationVoucherNumber,
                     ]
                         .map(normalizeTripDocKey)
                         .filter(Boolean);
@@ -2468,6 +2599,9 @@ const CreateEditTripExpence = () => {
                             normalizeTripDocKey(allocationKey)
                         );
                 });
+
+                // ⭐ YELLOW STAR: ADDED — KEEP FIRST LR FOR ALL EXISTING FORM / SAVE LOGIC
+                const lr = matchedLrs[0] || null;
 
                 // ⭐ YELLOW STAR: ADDED — FIND MATCHING TRIP ALLOCATION FOR LR FALLBACK
                 const allocationList =
@@ -2490,6 +2624,63 @@ const CreateEditTripExpence = () => {
                         ]
                     );
 
+                // ⭐ YELLOW STAR: ADDED — RESOLVE DIRECT COMPLETE RULE FROM ACTUAL
+                // TRIP ALLOCATION + TRANSPORT ORDER. THIS DOES NOT ALTER NORMAL FLOW.
+                const directCompleteTransportOrderNumber = String(
+                    allocation?.transportOrder?.transportOrderNumber ||
+                    allocation?.transportOrderNumber ||
+                    tripKey ||
+                    ""
+                ).trim();
+
+                let directCompleteTransportOrder: any = {};
+
+                if (directCompleteTransportOrderNumber) {
+                    try {
+                        const transportOrderResponse = await unwrapThunk(
+                            dispatch,
+                            getTransportOrderByVoucherNumber(
+                                directCompleteTransportOrderNumber
+                            )
+                        );
+
+                        directCompleteTransportOrder =
+                            extractTransportOrderRecord(
+                                transportOrderResponse
+                            );
+                    } catch (transportOrderError) {
+                        console.log(
+                            "[TripExpense] Direct complete transport order lookup failed",
+                            transportOrderError
+                        );
+                    }
+                }
+
+                const directCompleteOwnership = normalizeOwnershipType(
+                    allocation?.vehicleSelection?.ownershipType ||
+                    allocation?.vehicle?.ownershipType ||
+                    allocation?.ownershipType ||
+                    form?.vehicleSelection?.ownershipType ||
+                    form?.vehicle?.ownershipType ||
+                    form?.ownershipType ||
+                    ""
+                );
+
+                const directCompletePaymentType = normalizeBillingValue(
+                    directCompleteTransportOrder?.freightDetails?.paymentType ||
+                    allocation?.transportOrder?.freightDetails?.paymentType ||
+                    allocation?.freightDetails?.paymentType ||
+                    form?.freightDetails?.paymentType ||
+                    form?.paymentType ||
+                    ""
+                );
+
+                setCanCompleteHiredToBeBilledDirectly(
+                    directCompleteOwnership === "hired" &&
+                    directCompletePaymentType ===
+                    normalizeBillingValue(TO_BE_BILLED_PAYMENT_TYPE)
+                );
+
                 const mappedAllocation =
                     !lr && allocation
                         ? mapTripAllocationToExpenseForm(
@@ -2508,6 +2699,68 @@ const CreateEditTripExpence = () => {
                         }
                         : null;
 
+                const ewayRecords =
+                    extractEwayBillRecords(ewayRes);
+
+                // ⭐ YELLOW STAR: ADDED — EACH LR KEEPS ITS OWN TOUCH UPS + E-WAY BILL FOR DISPLAY ONLY
+                const lrWiseRecords = matchedLrs.map((lrItem: any) => {
+                    const lrMatchKeys = [
+                        lrItem?.lrNumber,
+                        lrItem?.lrVoucherNumber,
+                        lrItem?.voucherNumber,
+                    ]
+                        .map((value) => String(value || "").trim())
+                        .filter(Boolean);
+
+                    let lrEwayRecord =
+                        findEwayBillForTrip(
+                            ewayRecords,
+                            lrMatchKeys
+                        );
+
+                    // ⭐ YELLOW STAR: KEEP OLD TRIP/ALLOCATION MATCHING FOR EXISTING SINGLE-LR DATA
+                    if (!lrEwayRecord && matchedLrs.length === 1) {
+                        lrEwayRecord =
+                            findEwayBillForTrip(
+                                ewayRecords,
+                                [
+                                    tripKey,
+                                    allocationKey,
+                                    lrItem?.tripNumber,
+                                    lrItem?.transportOrderNumber,
+                                    lrItem?.allocationVoucherNumber,
+                                    lrItem?.tripAllocationVoucherNumber,
+                                    allocation?.tripNumber,
+                                    allocation?.transportOrderNumber,
+                                    allocation?.transportOrder?.transportOrderNumber,
+                                    allocation?.allocationVoucherNumber,
+                                    getAllocationVoucher(allocation),
+                                ]
+                            );
+                    }
+
+                    const lrEwayDetails =
+                        getEwayBillDetailsFromRecord(
+                            lrEwayRecord
+                        );
+
+                    return {
+                        ...lrItem,
+                        lrTouchUp: Array.isArray(lrItem?.lrTouchUp)
+                            ? lrItem.lrTouchUp
+                            : [],
+                        _ewayBillNo: lrEwayDetails?.ewayBillNo
+                            ? String(lrEwayDetails.ewayBillNo)
+                            : "",
+                        _ewayBillDate: lrEwayDetails?.ewayBillDate || "",
+                        _ewayBillValidUpto: lrEwayDetails?.validUpto || "",
+                        _ewayBillStatus: lrEwayDetails?.status || "",
+                    };
+                });
+
+                // ⭐ YELLOW STAR: ADDED — DISPLAY-ONLY MULTIPLE LR DATA
+                setTripLrs(lrWiseRecords);
+
                 const lrNumber =
                     lr?.lrNumber ||
                     lr?.lrVoucherNumber ||
@@ -2520,41 +2773,41 @@ const CreateEditTripExpence = () => {
                     lr?.createdOn ||
                     "";
 
-                setTouchUps(Array.isArray(lr?.lrTouchUp) ? lr.lrTouchUp : []);
+                // ⭐ YELLOW STAR: KEEP FIRST LR IN EXISTING FORM FIELDS FOR BACKWARD COMPATIBILITY
+                const firstLrDisplay = lrWiseRecords[0] || null;
 
-                const ewayRecords =
-                    extractEwayBillRecords(ewayRes);
+                let ewayDetails: any = {
+                    ewayBillNo: firstLrDisplay?._ewayBillNo || "",
+                    ewayBillDate: firstLrDisplay?._ewayBillDate || "",
+                    validUpto: firstLrDisplay?._ewayBillValidUpto || "",
+                    status: firstLrDisplay?._ewayBillStatus || "",
+                };
 
-                const matchKeys = [
-                    tripKey,
-                    allocationKey,
-                    lr?.tripNumber,
-                    lr?.transportOrderNumber,
-                    lr?.allocationVoucherNumber,
-                    lr?.lrNumber,
-                    lr?.lrVoucherNumber,
-                    lr?.voucherNumber,
-                    allocation?.tripNumber,
-                    allocation?.transportOrderNumber,
-                    allocation?.transportOrder?.transportOrderNumber,
-                    allocation?.allocationVoucherNumber,
-                    getAllocationVoucher(allocation),
-                ]
-                    .map((value) =>
-                        String(value || "").trim()
-                    )
-                    .filter(Boolean);
+                // ⭐ YELLOW STAR: KEEP EXISTING E-WAY FALLBACK WHEN NO LR RECORD IS AVAILABLE
+                if (!lr) {
+                    const matchKeys = [
+                        tripKey,
+                        allocationKey,
+                        allocation?.tripNumber,
+                        allocation?.transportOrderNumber,
+                        allocation?.transportOrder?.transportOrderNumber,
+                        allocation?.allocationVoucherNumber,
+                        getAllocationVoucher(allocation),
+                    ]
+                        .map((value) => String(value || "").trim())
+                        .filter(Boolean);
 
-                const ewayRecord =
-                    findEwayBillForTrip(
-                        ewayRecords,
-                        matchKeys
-                    );
+                    const ewayRecord =
+                        findEwayBillForTrip(
+                            ewayRecords,
+                            matchKeys
+                        );
 
-                const ewayDetails =
-                    getEwayBillDetailsFromRecord(
-                        ewayRecord
-                    );
+                    ewayDetails =
+                        getEwayBillDetailsFromRecord(
+                            ewayRecord
+                        );
+                }
 
                 setForm((prev: any) => {
                     // ⭐ YELLOW STAR: ADDED — ONLY WHEN LR RECORD IS MISSING,
@@ -2604,7 +2857,11 @@ const CreateEditTripExpence = () => {
                     };
                 });
             } catch (error) {
-                setTouchUps([]);
+                setTripLrs([]);
+
+                // ⭐ YELLOW STAR: ADDED — NEVER CARRY DIRECT-COMPLETE FLAG TO ANOTHER TRIP
+                setCanCompleteHiredToBeBilledDirectly(false);
+
                 console.log(
                     "[TripExpense] LR/E-Way Bill lookup failed",
                     error
@@ -3145,9 +3402,12 @@ const CreateEditTripExpence = () => {
         );
     };
 
-    const handleViewEwayBill = async () => {
+    // ⭐ YELLOW STAR: UPDATED — SUPPORT E-WAY BILL OF INDIVIDUAL LR
+    const handleViewEwayBill = async (selectedEwayBillNo: any = "") => {
         const ewayBillNo = String(
-            form.ewayBillNo || ""
+            selectedEwayBillNo ||
+            form.ewayBillNo ||
+            ""
         ).trim();
 
         if (!ewayBillNo) {
@@ -3527,114 +3787,250 @@ const CreateEditTripExpence = () => {
                         </div>
                     </SectionCard>
 
+                    {/* ⭐ YELLOW STAR: UPDATED — MULTIPLE LR WITH LR-WISE TOUCH UPS */}
                     <SectionCard
                         index={2}
                         title="LR & E-Way Bill"
+                        subtitle={`${tripLrs.length} ${tripLrs.length === 1 ? "LR" : "LRs"}`}
                         icon={<Paperclip size={18} />}
                         expanded={expandedSections.ewayBill}
                         onToggle={() => toggleSection("ewayBill")}
                     >
                         <div className="md:col-span-2 xl:col-span-3">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <Field label="LR Number">
-                                    <div className="relative">
-                                        <input
-                                            disabled={readOnly}
-                                            className={`${inputClass} pr-12`}
-                                            value={form.lrNumber || ""}
-                                            onChange={(e) => patchHeader({ lrNumber: e.target.value })}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const lrNumber = String(form.lrNumber || "").trim();
-                                                if (!lrNumber) {
-                                                    toast.warn("LR number is not available");
-                                                    return;
-                                                }
-                                                navigate(`/bookEz/transportation/trip-lr-entry/view/${lrNumber}`, { state: { mode: "view", voucherNumber: lrNumber, lrNumber } });
-                                            }}
-                                            disabled={!String(form.lrNumber || "").trim()}
-                                            title="View LR"
-                                            className="absolute right-1 top-1/2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            <Eye className="h-4 w-4" />
-                                        </button>
+                            {ewayBillLoading ? (
+                                <div className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border bg-muted/20">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Loading LR details...
                                     </div>
-                                </Field>
+                                </div>
+                            ) : tripLrs.length ? (
+                                <div className="flex flex-col gap-4">
+                                    {tripLrs.map((lr: any, lrIndex: number) => {
+                                        const lrNumber = String(
+                                            lr?.lrNumber ||
+                                            lr?.lrVoucherNumber ||
+                                            lr?.voucherNumber ||
+                                            ""
+                                        ).trim();
 
-                                <Field label="LR Date">
-                                    <input
-                                        disabled={readOnly}
-                                        type="date"
-                                        className={inputClass}
-                                        value={toDateInputValue(form.lrDate)}
-                                        onChange={(e) => patchHeader({ lrDate: e.target.value })}
-                                    />
-                                </Field>
+                                        const lrDate =
+                                            lr?.lrDate ||
+                                            lr?.createdAt ||
+                                            lr?.createdOn ||
+                                            "";
 
-                                <Field label="E-Way Bill No">
-                                    <div className="relative">
-                                        <input readOnly className={`${inputClass} pr-12`} value={form.ewayBillNo || ""} />
-                                        <button
-                                            type="button"
-                                            onClick={handleViewEwayBill}
-                                            disabled={ewayPdfLoading || !String(form.ewayBillNo || "").trim()}
-                                            title="View E-Way Bill"
-                                            className="absolute right-1 top-1/2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {ewayPdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
-                                        </button>
-                                    </div>
-                                </Field>
-                            </div>
-                        </div>
-                    </SectionCard>
+                                        const lrTouchUps =
+                                            Array.isArray(lr?.lrTouchUp)
+                                                ? lr.lrTouchUp
+                                                : [];
 
-                    <SectionCard
-                        index={3}
-                        title="Touch Ups"
-                        subtitle={`${touchUps.length} ${touchUps.length === 1 ? "Touch Up" : "Touch Ups"}`}
-                        icon={<Route size={18} />}
-                        expanded={expandedSections.touchUp}
-                        onToggle={() => toggleSection("touchUp")}
-                    >
-                        <div className="md:col-span-2 xl:col-span-3">
-                            {touchUps.length ? (
-                                <div className="flex flex-col gap-3">
-                                    {touchUps.map((touchUp: any, index: number) => {
-                                        const transportTouchupNumber = String(touchUp?.transportTouchupNumber || touchUp?.touchUpNumber || touchUp?.voucherNumber || "").trim();
+                                        const lrEwayBillNo = String(
+                                            lr?._ewayBillNo || ""
+                                        ).trim();
+
+                                        // ⭐ YELLOW STAR: ADDED — TOUCH UPS EXPANDED BY DEFAULT, TOGGLE LR-WISE
+                                        const touchUpSectionKey = lrNumber || `lr-${lrIndex}`;
+                                        const touchUpsExpanded = expandedLrTouchUps[touchUpSectionKey] !== false;
+
                                         return (
-                                            <div key={`${transportTouchupNumber || "touchup"}-${touchUp?.touchUpId || index}`} className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
-                                                <div className="flex min-w-0 flex-1 items-center gap-2">
-                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">{index + 1}</span>
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-bold text-card-foreground">{transportTouchupNumber ? `${transportTouchupNumber} - ${touchUp?.touchUpId || `Touch Up ${index + 1}`}` : touchUp?.touchUpId || `Touch Up ${index + 1}`}</p>
-                                                        <p className="truncate text-xs text-muted-foreground">{touchUp?.pickupDetails?.name || "-"} → {touchUp?.deliveryDetails?.name || "-"} | {touchUp?.material || "-"}</p>
-                                                    </div>
+                                            <div
+                                                key={`${lrNumber || "lr"}-${lrIndex}`}
+                                                className="overflow-hidden rounded-md border border-border bg-card"
+                                            >
+
+                                                {/* ⭐ YELLOW STAR: UPDATED — CLEAN SINGLE ROW LR DESIGN */}
+                                                <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
+                                                    <Field label="LR Number">
+                                                        <div className={`${inputClass} flex items-center justify-between gap-3 px-3`}>
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary/10 text-xs font-bold text-primary">
+                                                                    {lrIndex + 1}
+                                                                </span>
+
+                                                                <div className="min-w-0">
+                                                                    <p className="truncate text-sm font-semibold text-foreground">
+                                                                        {lrNumber || `LR ${lrIndex + 1}`}
+                                                                    </p>
+
+                                                                    {/* <p className="truncate text-[11px] text-muted-foreground">
+                                                                        {lrTouchUps.length}{" "}
+                                                                        {lrTouchUps.length === 1 ? "Touch Up" : "Touch Ups"}
+                                                                    </p> */}
+                                                                </div>
+                                                            </div>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (!lrNumber) {
+                                                                        toast.warn("LR number is not available");
+                                                                        return;
+                                                                    }
+
+                                                                    navigate(
+                                                                        `/bookEz/transportation/trip-lr-entry/view/${lrNumber}`,
+                                                                        {
+                                                                            state: {
+                                                                                mode: "view",
+                                                                                voucherNumber: lrNumber,
+                                                                                lrNumber,
+                                                                            },
+                                                                        }
+                                                                    );
+                                                                }}
+                                                                disabled={!lrNumber}
+                                                                title="View LR"
+                                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                            >
+                                                                <Eye size={15} />
+                                                            </button>
+                                                        </div>
+                                                    </Field>
+
+                                                    <Field label="LR Date">
+                                                        <input
+                                                            readOnly
+                                                            type="date"
+                                                            className={inputClass}
+                                                            value={toDateInputValue(lrDate)}
+                                                        />
+                                                    </Field>
+
+                                                    <Field label="E-Way Bill No">
+                                                        <div className="relative">
+                                                            <input
+                                                                readOnly
+                                                                className={`${inputClass} pr-11`}
+                                                                value={lrEwayBillNo}
+                                                            />
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleViewEwayBill(lrEwayBillNo)}
+                                                                disabled={ewayPdfLoading || !lrEwayBillNo}
+                                                                title="View E-Way Bill"
+                                                                className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                            >
+                                                                {ewayPdfLoading ? (
+                                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                                ) : (
+                                                                    <Eye className="h-4 w-4" />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </Field>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (!transportTouchupNumber) {
-                                                            toast.warn("Transport Touch Up number is not available");
-                                                            return;
+
+                                                {/* ⭐ YELLOW STAR: UPDATED — LR-WISE TOUCH UPS WITH EXPAND / COLLAPSE */}
+                                                <div className="border-t border-border">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setExpandedLrTouchUps((prev) => ({
+                                                                ...prev,
+                                                                [touchUpSectionKey]: prev[touchUpSectionKey] === false,
+                                                            }))
                                                         }
-                                                        navigate(`/bookEz/transportation/touch-up/view/${transportTouchupNumber}`, { state: { mode: "view", voucherNumber: transportTouchupNumber, transportTouchupNumber, touchUpId: touchUp?.touchUpId || "" } });
-                                                    }}
-                                                    disabled={!transportTouchupNumber}
-                                                    title="View Touch Up"
-                                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
+                                                        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition hover:bg-muted/30"
+                                                        aria-expanded={touchUpsExpanded}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Route size={16} className="text-primary" />
+                                                            <p className="text-sm font-bold text-card-foreground">
+                                                                Touch Ups
+                                                            </p>
+                                                            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                                                                {lrTouchUps.length}
+                                                            </span>
+                                                        </div>
+
+                                                        <ChevronDown
+                                                            size={18}
+                                                            className={`shrink-0 text-muted-foreground transition-transform ${touchUpsExpanded ? "rotate-180" : ""
+                                                                }`}
+                                                        />
+                                                    </button>
+
+                                                    {touchUpsExpanded && (
+                                                        <div className="px-4 pb-4">
+                                                            {lrTouchUps.length ? (
+                                                                <div className="flex flex-col gap-2">
+                                                                    {lrTouchUps.map((touchUp: any, touchUpIndex: number) => {
+                                                                        const transportTouchupNumber = String(
+                                                                            touchUp?.transportTouchupNumber ||
+                                                                            touchUp?.touchUpNumber ||
+                                                                            touchUp?.voucherNumber ||
+                                                                            ""
+                                                                        ).trim();
+
+                                                                        return (
+                                                                            <div
+                                                                                key={`${lrNumber}-${transportTouchupNumber || "touchup"}-${touchUp?.touchUpId || touchUpIndex}`}
+                                                                                className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3"
+                                                                            >
+                                                                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+                                                                                        {touchUpIndex + 1}
+                                                                                    </span>
+
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="truncate text-sm font-bold text-card-foreground">
+                                                                                            {transportTouchupNumber
+                                                                                                ? `${transportTouchupNumber} - ${touchUp?.touchUpId || `Touch Up ${touchUpIndex + 1}`}`
+                                                                                                : touchUp?.touchUpId || `Touch Up ${touchUpIndex + 1}`}
+                                                                                        </p>
+                                                                                        <p className="truncate text-xs text-muted-foreground">
+                                                                                            {touchUp?.pickupDetails?.name || "-"} → {touchUp?.deliveryDetails?.name || "-"} | {touchUp?.material || "-"}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        if (!transportTouchupNumber) {
+                                                                                            toast.warn("Transport Touch Up number is not available");
+                                                                                            return;
+                                                                                        }
+                                                                                        navigate(`/bookEz/transportation/touch-up/view/${transportTouchupNumber}`, {
+                                                                                            state: {
+                                                                                                mode: "view",
+                                                                                                voucherNumber: transportTouchupNumber,
+                                                                                                transportTouchupNumber,
+                                                                                                touchUpId: touchUp?.touchUpId || "",
+                                                                                            },
+                                                                                        });
+                                                                                    }}
+                                                                                    disabled={!transportTouchupNumber}
+                                                                                    title="View Touch Up"
+                                                                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                                >
+                                                                                    <Eye size={16} />
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex min-h-16 items-center justify-center rounded-md border border-dashed border-border bg-muted/20">
+                                                                    <p className="text-sm text-muted-foreground">
+                                                                        No Touch Ups found for this LR
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })}
                                 </div>
                             ) : (
                                 <div className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border bg-muted/20">
-                                    <p className="text-sm text-muted-foreground">No Touch Ups found in LR</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        No LR found for this trip
+                                    </p>
                                 </div>
                             )}
                         </div>
