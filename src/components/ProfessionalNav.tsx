@@ -155,7 +155,9 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
         <div className="relative" ref={notificationRef}>
           <button
             onClick={() => setShowNotifications((p) => !p)}
-            className="relative text-muted-foreground hover:text-primary"
+            className="relative text-muted-foreground hover:text-primary  flex h-9 w-9 cursor-pointer items-center justify-center rounded-full
+                border border-border bg-card text-card-foreground
+                transition hover:bg-muted hover:text-primary"
           >
             <Bell size={22} />
 
@@ -226,7 +228,7 @@ const ProfessionalNav = ({ menuItems = [], onMobileMenuToggle }: any) => {
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfileMenu((p) => !p)}
-            className="flex items-center gap-2 hover:bg-muted px-3 py-2 rounded-lg"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50"
           >
             {pic && !imageError ? (
               <img

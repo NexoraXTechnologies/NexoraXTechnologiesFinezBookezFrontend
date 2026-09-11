@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckSquare, Square, Trash2 } from "lucide-react";
+import { CheckSquare, Edit, Pencil, Square, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import DataTable from "../../../../../components/DataTable";
-import { DataREfreshButton } from "../../../../../components/buttons";
+import { DataCreateButton, DataREfreshButton } from "../../../../../components/buttons";
 import Toggle from "../../../../../components/toggle";
 import Badge from "../../../../../components/badge";
 import SearchInput from "../../../../../components/searchInput";
@@ -21,14 +21,17 @@ import {
     createMultiSalesInvoice,
     deleteMultiSalesInvoice,
     getAllMultiSalesInvoice,
-    getSalesInvoicesByCustomerCode
+    getMultiSalesInvoiceByVoucherNumber,
+    getSalesInvoicesByCustomerCode,
+    updateMultiSalesInvoice
 } from "../../../../../redux/slices/professionalSlice/salesWorkflow/multiInvoice";
 import { MultiInvoiceEditableTable } from "../../../../../components/voucher/EditableLineTable";
+import { getAllAccounts } from "../../../../../redux/slices/professionalSlice/accountMasterSlice";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 
 const getDefaultFooter = () => ({
-    totalInvoices: 0,
+    totalSalesOrders: 0,
     grossAmount: "0.00",
     discountAmount: "0.00",
     cgstAmount: "0.00",
@@ -52,7 +55,13 @@ const getDefaultForm = () => ({
     sMultiInvFooter: getDefaultFooter(),
 });
 
-const getInvoiceVoucherNumber = (invoice: any) => String(invoice?.sInvVoucherNumber || invoice?.sInvNo || invoice?.voucherNumber || "").trim();
+const getInvoiceVoucherNumber = (invoice: any) => String(invoice?.sOrderVoucherNumber || invoice?.sInvNo || invoice?.sInvVoucherNumber || "").trim();
+
+const getSingleMultiInvoiceRecord = (response: any) => {
+    const source = response?.data?.data ?? response?.data ?? response ?? {};
+    if (Array.isArray(source)) return source[0] || null;
+    return source?.item || source?.record || source?.multiSalesInvoice || source?.data || source || null;
+};
 
 const toIsoDate = (value: any) => {
     if (!value) return "";
@@ -64,7 +73,7 @@ const toIsoDate = (value: any) => {
 
 const calculateMultiInvoiceFooter = (invoices: any[]) => {
     const total = (invoices || []).reduce((acc: any, invoice: any) => {
-        const footer = invoice?.sInvFooter || {};
+        const footer = invoice?.sOrderFooter || invoice?.sInvFooter || {};
 
         acc.grossAmount += num(footer?.grossAmount || footer?.totalGrossAmount);
         acc.discountAmount += num(footer?.discountAmount || footer?.totalDiscountAmount);
@@ -90,7 +99,7 @@ const calculateMultiInvoiceFooter = (invoices: any[]) => {
     });
 
     return {
-        totalInvoices: invoices?.length || 0,
+        totalSalesOrders: invoices?.length || 0,
         grossAmount: total.grossAmount.toFixed(2),
         discountAmount: total.discountAmount.toFixed(2),
         cgstAmount: total.cgstAmount.toFixed(2),
@@ -105,22 +114,25 @@ const calculateMultiInvoiceFooter = (invoices: any[]) => {
 
 const normalizeInvoiceForMultiSalesInvoice = (invoice: any) => {
     const voucherNumber = getInvoiceVoucherNumber(invoice);
+    const body = invoice?.sOrderBody || invoice?.sInvBody || [];
+    const footer = invoice?.sOrderFooter || invoice?.sInvFooter || {};
 
     return {
-        sInvNo: voucherNumber,
-        sInvCustomerCode: invoice?.sInvCustomerCode || "",
-        sInvCustomerName: invoice?.sInvCustomerName || "",
-        sInvVoucherDate: invoice?.sInvVoucherDate || "",
-        sInvStatus: invoice?.sInvStatus || invoice?.sInvDocStatus || "open",
-        sOrderNumber: invoice?.sOrderNumber || invoice?.sInvSalesOrderVoucherNumber || invoice?.sInvBody?.find((item: any) => item?.sOrderNumber)?.sOrderNumber || "",
-        sInvRemark: invoice?.sInvRemark || invoice?.sInvRemarks || "",
-        sInvSalesAccount: invoice?.sInvSalesAccount || "",
+        ...invoice,
+        sOrderVoucherNumber: voucherNumber,
+        sOrderCustomerCode: invoice?.sOrderCustomerCode || invoice?.sInvCustomerCode || "",
+        sOrderCustomerName: invoice?.sOrderCustomerName || invoice?.sInvCustomerName || "",
+        sOrderQuotationVoucherNumber: invoice?.sOrderQuotationVoucherNumber || invoice?.sOrderNumber || invoice?.sInvSalesOrderVoucherNumber || null,
+        sOrderVoucherDate: invoice?.sOrderVoucherDate || invoice?.sInvVoucherDate || "",
+        sOrderSalesAccount: invoice?.sOrderSalesAccount || invoice?.sInvSalesAccount || "",
+        sOrderStatus: invoice?.sOrderStatus || invoice?.sOrderDocStatus || invoice?.sInvStatus || invoice?.sInvDocStatus || "open",
+        sOrderRemark: invoice?.sOrderRemark || invoice?.sOrderRemarks || invoice?.sInvRemark || invoice?.sInvRemarks || "",
         isPosPosting: invoice?.isPosPosting ?? false,
         isAutoPost: invoice?.isAutoPost ?? false,
         customMasters: invoice?.customMasters && typeof invoice.customMasters === "object" ? { ...invoice.customMasters } : {},
 
-        sInvBody: (invoice?.sInvBody || []).map((item: any) => ({
-            sOrderNumber: item?.sOrderNumber || "",
+        sOrderBody: body.map((item: any) => ({
+            ...item,
             productCode: item?.productCode || "",
             productName: item?.productName || "",
             productType: item?.productType || "",
@@ -140,20 +152,20 @@ const normalizeInvoiceForMultiSalesInvoice = (invoice: any) => {
             igstAmount: String(item?.igstAmount ?? "0"),
             taxAmount: String(item?.taxAmount ?? "0"),
             netAmount: String(item?.netAmount ?? item?.netTotal ?? "0"),
-            ...(item?.salesInvoiceBody !== undefined ? { salesInvoiceBody: item.salesInvoiceBody } : {}),
             customMasters: item?.customMasters && typeof item.customMasters === "object" ? { ...item.customMasters } : {},
         })),
 
-        sInvFooter: {
-            grossAmount: String(invoice?.sInvFooter?.grossAmount ?? invoice?.sInvFooter?.totalGrossAmount ?? "0"),
-            discountAmount: String(invoice?.sInvFooter?.discountAmount ?? invoice?.sInvFooter?.totalDiscountAmount ?? "0"),
-            cgstAmount: String(invoice?.sInvFooter?.cgstAmount ?? invoice?.sInvFooter?.totalCgstAmount ?? "0"),
-            sgstAmount: String(invoice?.sInvFooter?.sgstAmount ?? invoice?.sInvFooter?.totalSgstAmount ?? "0"),
-            igstAmount: String(invoice?.sInvFooter?.igstAmount ?? invoice?.sInvFooter?.totalIgstAmount ?? "0"),
-            taxAmount: String(invoice?.sInvFooter?.taxAmount ?? invoice?.sInvFooter?.totalTaxAmount ?? "0"),
-            netAmount: String(invoice?.sInvFooter?.netAmount ?? invoice?.sInvFooter?.totalNetAmount ?? "0"),
-            balanceAmount: String(invoice?.sInvFooter?.balanceAmount ?? invoice?.sInvFooter?.netAmount ?? invoice?.sInvFooter?.totalNetAmount ?? "0"),
-            loadingCharges: String(invoice?.sInvFooter?.loadingCharges ?? "0"),
+        sOrderFooter: {
+            ...footer,
+            grossAmount: String(footer?.grossAmount ?? footer?.totalGrossAmount ?? "0"),
+            discountAmount: String(footer?.discountAmount ?? footer?.totalDiscountAmount ?? "0"),
+            cgstAmount: String(footer?.cgstAmount ?? footer?.totalCgstAmount ?? "0"),
+            sgstAmount: String(footer?.sgstAmount ?? footer?.totalSgstAmount ?? "0"),
+            igstAmount: String(footer?.igstAmount ?? footer?.totalIgstAmount ?? "0"),
+            taxAmount: String(footer?.taxAmount ?? footer?.totalTaxAmount ?? "0"),
+            netAmount: String(footer?.netAmount ?? footer?.totalNetAmount ?? "0"),
+            balanceAmount: String(footer?.balanceAmount ?? footer?.netAmount ?? footer?.totalNetAmount ?? "0"),
+            loadingCharges: String(footer?.loadingCharges ?? "0"),
         },
     };
 };
@@ -205,8 +217,8 @@ const mapInvoiceToSchemaRow = (invoice: any, schemaFields: any[]) => {
     return {
         ...schemaValues,
         ...normalizedInvoice,
-        sInvBody: normalizedInvoice.sInvBody,
-        sInvFooter: normalizedInvoice.sInvFooter,
+        sOrderBody: normalizedInvoice.sOrderBody,
+        sOrderFooter: normalizedInvoice.sOrderFooter,
         customMasters: normalizedInvoice.customMasters,
     };
 };
@@ -249,10 +261,16 @@ const MultiSalesInvoice = () => {
     const dispatch = useDispatch<any>();
 
     const multiSalesInvoiceState = useSelector((state: any) => state.multiSalesInvoice);
-    const { multiSalesInvoices = [], customerSalesInvoices = [], loading = false, createLoading = false, deleteLoading = false, customerInvoicesLoading = false } = multiSalesInvoiceState || {};
+    const { multiSalesInvoices = [], customerSalesInvoices = [], loading = false, createLoading = false, updateLoading = false, deleteLoading = false, detailLoading = false, customerInvoicesLoading = false } = multiSalesInvoiceState || {};
 
     const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
     const { accounts = [], loading: accountsLoading = false } = useSelector((state: any) => state.accountMaster || {});
+
+    const customerInvoiceRecords = useMemo(() => {
+        if (Array.isArray(customerSalesInvoices)) return customerSalesInvoices;
+        if (Array.isArray(customerSalesInvoices?.records)) return customerSalesInvoices.records;
+        return [];
+    }, [customerSalesInvoices]);
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
@@ -263,6 +281,7 @@ const MultiSalesInvoice = () => {
 
     const [showSelectionModal, setShowSelectionModal] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [editingVoucherNumber, setEditingVoucherNumber] = useState("");
 
     const [selectedCustomerCode, setSelectedCustomerCode] = useState("");
     const [invoiceSearch, setInvoiceSearch] = useState("");
@@ -298,25 +317,51 @@ const MultiSalesInvoice = () => {
 
     const multiInvoiceBodyFields = useMemo(() => Array.isArray(templateFields?.body) ? templateFields.body : [], [templateFields?.body]);
 
+    // MULTI INVOICE TABLE VIEW ADAPTER
+    // MultiInvoiceEditableTable internally expects sInvBody / sInvFooter.
+    // Keep the real form/payload structure as sOrderBody / sOrderFooter and only adapt the data/schema passed to the table.
+    const multiInvoiceTableSchema = useMemo(() => {
+        return (templateFields?.body || []).map((field: any) => {
+            if (field?.key === "sOrderBody") return { ...field, key: "sInvBody" };
+            if (field?.key === "sOrderFooter") return { ...field, key: "sInvFooter" };
+            return field;
+        });
+    }, [templateFields?.body]);
+
+    const multiInvoiceTableInvoices = useMemo(() => {
+        return (form?.sMultiInvInvoices || []).map((invoice: any) => ({
+            ...invoice,
+            sInvNo: invoice?.sInvNo || invoice?.sOrderVoucherNumber || "",
+            sInvVoucherNumber: invoice?.sInvVoucherNumber || invoice?.sOrderVoucherNumber || "",
+            sInvVoucherDate: invoice?.sInvVoucherDate || invoice?.sOrderVoucherDate || "",
+            sInvCustomerCode: invoice?.sInvCustomerCode || invoice?.sOrderCustomerCode || "",
+            sInvCustomerName: invoice?.sInvCustomerName || invoice?.sOrderCustomerName || "",
+            sInvStatus: invoice?.sInvStatus || invoice?.sOrderStatus || invoice?.sOrderDocStatus || "open",
+            sInvSalesAccount: invoice?.sInvSalesAccount || invoice?.sOrderSalesAccount || "",
+            sInvBody: Array.isArray(invoice?.sOrderBody) ? invoice.sOrderBody : Array.isArray(invoice?.sInvBody) ? invoice.sInvBody : [],
+            sInvFooter: invoice?.sOrderFooter || invoice?.sInvFooter || {},
+        }));
+    }, [form?.sMultiInvInvoices]);
+
     const filteredCustomerInvoices = useMemo(() => {
         const searchText = invoiceSearch.trim().toLowerCase();
 
-        if (!searchText) return customerSalesInvoices || [];
+        if (!searchText) return customerInvoiceRecords;
 
-        return (customerSalesInvoices || []).filter((invoice: any) => {
+        return customerInvoiceRecords.filter((invoice: any) => {
             const values = [
                 getInvoiceVoucherNumber(invoice),
-                invoice?.sInvCustomerCode,
-                invoice?.sInvCustomerName,
-                invoice?.sOrderNumber,
-                invoice?.sInvSalesOrderVoucherNumber,
-                invoice?.sInvRemark,
-                invoice?.sInvRemarks,
+                invoice?.sOrderCustomerCode,
+                invoice?.sOrderCustomerName,
+                invoice?.sOrderQuotationVoucherNumber,
+                invoice?.sOrderSalesAccount,
+                invoice?.sOrderRemark,
+                invoice?.sOrderRemarks,
             ];
 
             return values.some((value) => String(value || "").toLowerCase().includes(searchText));
         });
-    }, [customerSalesInvoices, invoiceSearch]);
+    }, [customerInvoiceRecords, invoiceSearch]);
 
     const selectedInvoiceSet = useMemo(() => new Set(selectedInvoiceNumbers), [selectedInvoiceNumbers]);
 
@@ -345,7 +390,7 @@ const MultiSalesInvoice = () => {
         const footer = form?.sMultiInvFooter || getDefaultFooter();
 
         return {
-            totalInvoices: footer?.totalInvoices || 0,
+            totalSalesOrders: footer?.totalSalesOrders || footer?.totalInvoices || 0,
             grossAmount: num(footer?.grossAmount),
             discountAmount: num(footer?.discountAmount),
             cgstAmount: num(footer?.cgstAmount),
@@ -367,7 +412,7 @@ const MultiSalesInvoice = () => {
 
                 return {
                     ...field,
-                    value: field?.key === "totalInvoices" ? rawValue : money(rawValue),
+                    value: field?.key === "totalSalesOrders" ? rawValue : money(rawValue),
                     rawValue,
                 };
             });
@@ -424,7 +469,7 @@ const MultiSalesInvoice = () => {
         {
             key: "sMultiInvInvoices",
             title: "Invoices",
-            render: (row: any) => <span className="font-medium">{row?.sMultiInvFooter?.totalInvoices ?? row?.sMultiInvInvoices?.length ?? 0}</span>,
+            render: (row: any) => <span className="font-medium">{row?.sMultiInvFooter?.totalSalesOrders ?? row?.sMultiInvFooter?.totalInvoices ?? row?.sMultiInvSalesOrders?.length ?? row?.sMultiInvInvoices?.length ?? 0}</span>,
         },
         {
             key: "grossAmount",
@@ -484,6 +529,7 @@ const MultiSalesInvoice = () => {
     };
 
     const resetForm = () => {
+        setEditingVoucherNumber("");
         setForm({
             ...getDefaultForm(),
             ...getSchemaHeaderDefaults(templateFields?.header || []),
@@ -492,19 +538,74 @@ const MultiSalesInvoice = () => {
         setErrors({});
     };
 
-    // const openAddModal = async () => {
-    //     resetSelectionModal();
-    //     resetForm();
+    const openAddModal = async () => {
+        resetSelectionModal();
+        resetForm();
 
-    //     try {
-    //         await dispatch(getAllAccounts({ offset: 0, limit: 1000, search: "", accountType: "customer" }) as any).unwrap();
-    //     }
-    //     catch (error: any) {
-    //         toast.error(error?.message || "Failed to load customers");
-    //     }
+        try {
+            await dispatch(getAllAccounts({ offset: 0, limit: 1000, search: "", accountType: "customer" }) as any).unwrap();
+        }
+        catch (error: any) {
+            toast.error(error?.message || "Failed to load customers");
+        }
 
-    //     setShowSelectionModal(true);
-    // };
+        setShowSelectionModal(true);
+    };
+
+    const handleEditClick = async (record: any) => {
+        const voucherNumber = String(record?.sMultiInvVoucherNumber || "").trim();
+
+        if (!voucherNumber) {
+            toast.error("Multi Sales Invoice voucher number not found");
+            return;
+        }
+
+        try {
+            const response = await dispatch(getMultiSalesInvoiceByVoucherNumber(voucherNumber) as any).unwrap();
+            const editRecord = getSingleMultiInvoiceRecord(response);
+
+            if (!editRecord) {
+                toast.error("Multi Sales Invoice data not found");
+                return;
+            }
+
+            const salesOrders = Array.isArray(editRecord?.sMultiInvSalesOrders)
+                ? editRecord.sMultiInvSalesOrders
+                : Array.isArray(editRecord?.sMultiInvInvoices)
+                    ? editRecord.sMultiInvInvoices
+                    : [];
+
+            const normalizedSalesOrders = salesOrders.map((order: any) => normalizeInvoiceForMultiSalesInvoice(order));
+
+            setEditingVoucherNumber(voucherNumber);
+            setSelectedCustomerCode(String(editRecord?.sMultiInvCustomerCode || ""));
+            setSelectedInvoiceNumbers(normalizedSalesOrders.map(getInvoiceVoucherNumber).filter(Boolean));
+            setInvoiceSearch("");
+            setErrors({});
+
+            setForm({
+                ...getDefaultForm(),
+                ...getSchemaHeaderDefaults(templateFields?.header || []),
+                ...editRecord,
+                sMultiInvVoucherNumber: editRecord?.sMultiInvVoucherNumber || voucherNumber,
+                sMultiInvCustomerCode: editRecord?.sMultiInvCustomerCode || "",
+                sMultiInvCustomerName: editRecord?.sMultiInvCustomerName || "",
+                sMultiInvVoucherDate: formatDateForInput(editRecord?.sMultiInvVoucherDate || todayYMD()),
+                sMultiInvStatus: editRecord?.sMultiInvStatus || "open",
+                sMultiInvRemark: editRecord?.sMultiInvRemark || "",
+                customMasters: editRecord?.customMasters && typeof editRecord.customMasters === "object" ? { ...editRecord.customMasters } : {},
+                sMultiInvInvoices: normalizedSalesOrders,
+                sMultiInvFooter: editRecord?.sMultiInvFooter && typeof editRecord.sMultiInvFooter === "object"
+                    ? { ...getDefaultFooter(), ...editRecord.sMultiInvFooter }
+                    : calculateMultiInvoiceFooter(normalizedSalesOrders),
+            });
+
+            setShowForm(true);
+        }
+        catch (error: any) {
+            toast.error(error?.message || error || "Failed to load Multi Sales Invoice");
+        }
+    };
 
     const handleCustomerSelect = async (customerCode: string) => {
         setSelectedCustomerCode(customerCode);
@@ -554,7 +655,7 @@ const MultiSalesInvoice = () => {
             return;
         }
 
-        const selectedRawInvoices = (customerSalesInvoices || []).filter((invoice: any) => selectedInvoiceSet.has(getInvoiceVoucherNumber(invoice)));
+        const selectedRawInvoices = customerInvoiceRecords.filter((invoice: any) => selectedInvoiceSet.has(getInvoiceVoucherNumber(invoice)));
 
         if (!selectedRawInvoices.length) {
             toast.error("Selected Sales Invoice data not found");
@@ -570,7 +671,7 @@ const MultiSalesInvoice = () => {
             ...getSchemaHeaderDefaults(templateFields?.header || []),
             sMultiInvVoucherNumber: "AUTO",
             sMultiInvCustomerCode: selectedCustomerCode,
-            sMultiInvCustomerName: selectedCustomer?.accountName || firstInvoice?.sInvCustomerName || "",
+            sMultiInvCustomerName: selectedCustomer?.accountName || firstInvoice?.sOrderCustomerName || "",
             sMultiInvVoucherDate: formatDateForInput(todayYMD()),
             sMultiInvStatus: "open",
             sMultiInvRemark: "",
@@ -583,7 +684,6 @@ const MultiSalesInvoice = () => {
         setShowSelectionModal(false);
         setShowForm(true);
     };
-
     const handleMainChange = (key: string, value: any) => {
         setForm((previous: any) => ({ ...previous, [key]: value }));
         setErrors((previous: any) => ({ ...previous, [key]: "" }));
@@ -668,9 +768,28 @@ const MultiSalesInvoice = () => {
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
-        const invoices = (form?.sMultiInvInvoices || []).map((invoice: any) => ({
-            ...invoice,
-            sInvVoucherDate: toIsoDate(invoice?.sInvVoucherDate),
+        const salesOrders = (form?.sMultiInvInvoices || []).map((order: any) => ({
+            ...order,
+            sOrderVoucherDate: toIsoDate(order?.sOrderVoucherDate),
+            sOrderBody: Array.isArray(order?.sOrderBody)
+                ? order.sOrderBody.map((item: any) => ({
+                    ...item,
+                    quantity: String(item?.quantity ?? ""),
+                    rate: String(item?.rate ?? ""),
+                    gross: String(item?.gross ?? item?.grossAmount ?? "0"),
+                    discount: item?.discount == null ? null : String(item.discount),
+                    discountAmount: String(item?.discountAmount ?? "0"),
+                    cgst: item?.cgst == null ? null : String(item.cgst),
+                    cgstAmount: String(item?.cgstAmount ?? "0"),
+                    sgst: item?.sgst == null ? null : String(item.sgst),
+                    sgstAmount: String(item?.sgstAmount ?? "0"),
+                    igst: item?.igst == null ? null : String(item.igst),
+                    igstAmount: String(item?.igstAmount ?? "0"),
+                    taxAmount: String(item?.taxAmount ?? "0"),
+                    netAmount: String(item?.netAmount ?? item?.netTotal ?? "0"),
+                }))
+                : [],
+            sOrderFooter: order?.sOrderFooter && typeof order.sOrderFooter === "object" ? { ...order.sOrderFooter } : {},
         }));
 
         const payload = {
@@ -680,14 +799,20 @@ const MultiSalesInvoice = () => {
             sMultiInvStatus: form?.sMultiInvStatus || "open",
             sMultiInvRemark: form?.sMultiInvRemark || "",
             customMasters: form?.customMasters && typeof form.customMasters === "object" ? form.customMasters : {},
-            sMultiInvInvoices: invoices,
-            sMultiInvFooter: calculateMultiInvoiceFooter(invoices),
+            sMultiInvSalesOrders: salesOrders,
+            sMultiInvFooter: calculateMultiInvoiceFooter(salesOrders),
         };
 
-        try {
-            await dispatch(createMultiSalesInvoice({ payload }) as any).unwrap();
+        console.log("MULTI SALES INVOICE PAYLOAD:", payload);
 
-            toast.success("Multi Sales Invoice created successfully");
+        try {
+            if (editingVoucherNumber) {
+                await dispatch(updateMultiSalesInvoice({ sMultiInvVoucherNumber: editingVoucherNumber, payload }) as any).unwrap();
+                toast.success("Multi Sales Invoice updated successfully");
+            } else {
+                await dispatch(createMultiSalesInvoice({ payload }) as any).unwrap();
+                toast.success("Multi Sales Invoice created successfully");
+            }
 
             setShowForm(false);
             resetForm();
@@ -696,7 +821,7 @@ const MultiSalesInvoice = () => {
             await fetchMultiSalesInvoices();
         }
         catch (error: any) {
-            toast.error(error?.message || error || "Failed to create Multi Sales Invoice");
+            toast.error(error?.message || error || (editingVoucherNumber ? "Failed to update Multi Sales Invoice" : "Failed to create Multi Sales Invoice"));
         }
     };
 
@@ -755,7 +880,7 @@ const MultiSalesInvoice = () => {
 
             try {
                 setFieldsLoading(true);
-  
+
                 const updatedFields = await loadAllTemplateOptions(transactionsSchema);
 
                 setTemplateFields(updatedFields);
@@ -823,10 +948,10 @@ const MultiSalesInvoice = () => {
                     }} />
 
                     {/* @ts-ignore */}
-                    {/* <DataCreateButton {...{
+                    <DataCreateButton {...{
                         callBackFn: openAddModal,
                         text: "Add Multi Sales Invoice",
-                    }} /> */}
+                    }} />
                 </div>
             </div>
 
@@ -837,16 +962,23 @@ const MultiSalesInvoice = () => {
                 emptyMessage={`No ${status} Multi Sales Invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
-                        <Permission module="bookez" permissionKey="multiSalesInvoice" action="delete">
+                        <button
+                            id="multi-sales-invoice-edit-button"
+                            disabled={detailLoading || updateLoading}
+                            onClick={() => handleEditClick(record)}
+                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Edit size={16} />
+                        </button>
+
                             <button
                                 id="multi-sales-invoice-delete-button"
                                 disabled={deleteLoading}
                                 onClick={(event) => handleDeleteClick(event, record)}
                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <Trash2 size={16} />
-                            </button>
-                        </Permission>
+                            <Trash2 size={16} />
+                        </button>
                     </div>
                 )}
             />
@@ -893,7 +1025,6 @@ const MultiSalesInvoice = () => {
                     resetSelectionModal();
                 }}
                 gridCols={1}
-                maxWidth="5xl"
                 modalClassName="rounded-xl"
                 headerClassName="bg-card"
                 footerClassName="bg-card"
@@ -916,7 +1047,7 @@ const MultiSalesInvoice = () => {
                                 onChange={(event: any) => handleCustomerSelect(event?.target?.value || "")}
                             />
                         </div>
- 
+
                         {selectedCustomerCode && (
                             <div className="flex items-center gap-2 border-b border-border p-4">
                                 <input
@@ -947,7 +1078,7 @@ const MultiSalesInvoice = () => {
                             {!selectedCustomerCode ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
                                     Select a customer to load Sales Invoices
-                                </div> 
+                                </div>
                             ) : customerInvoicesLoading ? (
                                 <div className="flex h-full items-center justify-center text-sm font-medium text-muted-foreground">
                                     Loading Sales Invoices...
@@ -990,10 +1121,10 @@ const MultiSalesInvoice = () => {
                 <DynamicAddForm {...{
                     show: showForm,
                     setShow: setShowForm,
-                    edit: false,
-                    title: "Multi Sales Invoice",
+                    edit: !!editingVoucherNumber,
+                    title: editingVoucherNumber ? "Edit Multi Sales Invoice" : "Multi Sales Invoice",
                     subtitle: `${form?.sMultiInvInvoices?.length || 0} Sales Invoice${form?.sMultiInvInvoices?.length === 1 ? "" : "s"} selected`,
-                    loading: createLoading,
+                    loading: createLoading || updateLoading || detailLoading,
 
                     onClose: () => {
                         setShowForm(false);
@@ -1009,8 +1140,8 @@ const MultiSalesInvoice = () => {
 
                     customBody: (
                         <MultiInvoiceEditableTable
-                            invoices={form?.sMultiInvInvoices || []}
-                            schema={templateFields?.body || []}
+                            invoices={multiInvoiceTableInvoices}
+                            schema={multiInvoiceTableSchema}
                             errors={errors}
                             readonly={true}
                             showDelete={true}

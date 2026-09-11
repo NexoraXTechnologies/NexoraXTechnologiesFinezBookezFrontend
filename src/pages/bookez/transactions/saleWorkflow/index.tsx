@@ -4,6 +4,7 @@ import {
   ClipboardList,
   ReceiptText,
   RotateCcw,
+  FileStack,
 } from "lucide-react";
 import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
 import SalesQuotations from "./salesQuations/SalesQuations";
@@ -14,26 +15,20 @@ import SalesReceipt from "./salesReceipt";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useMemo } from "react";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
-// import MultiSalesInvoice from "./multiInvoice";
+import MultiSalesInvoice from "./multiInvoice";
 
 const SaleWorkflowDashboard = () => {
   const dispatch = useDispatch();
   const { configurations } = useSelector((state: any) => state.systemConfiguration);
 
   const enableReceipt = useMemo(() => {
-    const locationConfig = configurations?.[0]?.financeConfiguration?.isActive
+    const locationConfig = configurations?.[0]?.financeConfiguration?.isActive;
     return locationConfig === true || locationConfig === "true";
   }, [configurations]);
 
   useEffect(() => {
-    dispatch(
-      getAllSystemConfigurations({
-        offset: 0,
-        limit: 100000,
-        status: "",
-      }) as any
-    );
-  }, [])
+    dispatch(getAllSystemConfigurations({ offset: 0, limit: 100000, status: "" }) as any);
+  }, []);
 
   const cards: any = [
     {
@@ -58,19 +53,19 @@ const SaleWorkflowDashboard = () => {
       permissionKey: "salesInvoice"
     },
     {
+      title: "Multiple Invoices",
+      description: "Manage multiple sales invoices.",
+      component: MultiSalesInvoice,
+      icon: <FileStack size={22} />,
+      permissionKey: "salesInvoice"
+    },
+    {
       title: "Sales Return",
       description: "Manage sales return transactions.",
       component: SalesReturn,
       icon: <RotateCcw size={22} />,
       permissionKey: "salesReturn"
     },
-    // {
-    //   title: "Multiple Invoices",
-    //   description: "Manage multiple sales invoices.",
-    //   component: MultiSalesInvoice,
-    //   icon: <RotateCcw size={22} />,
-    //   permissionKey: "salesInvoice"
-    // },
     ...(enableReceipt ? [{
       title: "Receipt",
       description: "Manage customer receipts and incoming payment transactions.",
@@ -79,6 +74,7 @@ const SaleWorkflowDashboard = () => {
       permissionKey: "receipt"
     }] : []),
   ];
+
   return (
     <TransactionDashboard
       title="Sale Workflow"
