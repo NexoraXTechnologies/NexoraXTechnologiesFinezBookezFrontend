@@ -608,6 +608,28 @@ const buildTransportationAccountingFields = (vehicleMasterCode: string) => [
     },
 ];
 
+// ⭐ YELLOW STAR: ADDED — PAYMENT / RECEIPT HEADER FIELDS WHEN TRANSPORTATION IS ENABLED
+const buildTransportationPaymentReceiptHeaderFields = () => [
+    {
+        key: "paymentMode",
+        label: "Payment Mode",
+        type: "string",
+        isRequired: false,
+        isSearchable: true,
+        isFilterable: true,
+        isSystemGenerated: true,
+    },
+    {
+        key: "paymentReferenceNumber",
+        label: "Transaction No.",
+        type: "string",
+        isRequired: false,
+        isSearchable: true,
+        isFilterable: true,
+        isSystemGenerated: true,
+    },
+];
+
 const syncTransportationReceiptPaymentFields = async ({
     enabled,
     vehicleMasterSync,
@@ -634,9 +656,22 @@ const syncTransportationReceiptPaymentFields = async ({
         ? await getVehicleMasterModuleCode(vehicleMasterSync)
         : "";
 
-    const fields = buildTransportationAccountingFields(vehicleMasterCode);
+    const transportationFields =
+        buildTransportationAccountingFields(vehicleMasterCode);
+
+    const paymentReceiptHeaderFields =
+        buildTransportationPaymentReceiptHeaderFields();
 
     for (const { module, section } of modules) {
+        // ⭐ YELLOW STAR: UPDATED — PAYMENT / RECEIPT GET PAYMENT MODE + TRANSACTION NO IN HEADER
+        const fields =
+            module === "payment" || module === "receipt"
+                ? [
+                    ...transportationFields,
+                    ...paymentReceiptHeaderFields,
+                ]
+                : transportationFields;
+
         const schemaResponse = await professionalAxios.get(
             TRANSACTION_SCHEMA_GET_ALL_API,
             {

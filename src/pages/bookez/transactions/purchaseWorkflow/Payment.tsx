@@ -137,6 +137,7 @@ const getDefaultForm = () => ({
 
     paymentMode: "",
     bankReferenceNumber: "",
+    paymentReferenceNumber: "",
     paidBy: "",
     trip_order: "",
     lr_no: "",
@@ -1005,6 +1006,10 @@ const Payment = () => {
 
             paymentMode: record?.paymentMode || "",
             bankReferenceNumber: record?.bankReferenceNumber || "",
+
+            // ⭐ YELLOW STAR: ADDED — SHOW SAVED TRANSACTION NO. IN EDIT MODE
+            paymentReferenceNumber: record?.paymentReferenceNumber || "",
+
             paidBy: record?.paidBy || "",
 
 

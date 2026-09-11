@@ -1418,10 +1418,7 @@ const CreateEditDriverSettlement = ({
                 setPaymentMode(matchedMode?.value || "");
                 setPaymentReferenceNumber(
                     cleanText(
-                        record?.paymentReferenceNumber ||
-                        record?.bankReferenceNumber ||
-                        record?.transactionNumber ||
-                        record?.chequeNumber
+                        record?.paymentReferenceNumber
                     )
                 );
                 setSelectedTripId(cleanText(record?.transportOrderNumber));
@@ -2074,8 +2071,15 @@ const CreateEditDriverSettlement = ({
                 ? Number(vendorAmount || 0)
                 : 0;
 
+            // ⭐ YELLOW STAR: UPDATED — INCLUDE ADVANCE RECEIVED IN PAYMENT POSTING
+            const advanceReceivedPaymentAmount = Number(
+                settlementData?.totalAdvances || 0
+            );
+
             const paymentPostingAmount =
-                expenseAmount + marketVendorAmount;
+                expenseAmount +
+                marketVendorAmount +
+                advanceReceivedPaymentAmount;
 
             const freightAmount = Number(
                 tripDetails?.expectedFreight ||
@@ -2137,6 +2141,9 @@ const CreateEditDriverSettlement = ({
                 netPayableToDriver: calculatedNetPayable,
 
                 paymentMode,
+
+                // ⭐ YELLOW STAR: ADDED — POST PAYMENT REFERENCE NUMBER AS ENTERED
+                paymentReferenceNumber: cleanText(paymentReferenceNumber),
                 paymentDate,
                 remarks,
 
@@ -2271,6 +2278,11 @@ const CreateEditDriverSettlement = ({
                 (row: any) => Number(row?.amount || 0) > 0
             );
 
+            // ⭐ YELLOW STAR: ADDED — ADVANCE RECEIVED ALSO POSTS AS PAYMENT EXPENSE
+            const advanceReceivedLineItems = (settlementData?.advanceRows || []).filter(
+                (row: any) => Number(row?.amount || 0) > 0
+            );
+
             if (paymentPostingAmount > 0) {
                 try {
                     const payBody = expenseLineItems.map(
@@ -2334,6 +2346,50 @@ const CreateEditDriverSettlement = ({
                         }
                     );
 
+                    // ⭐ YELLOW STAR: ADDED — ADVANCE RECEIVED AS PAYMENT EXPENSE LINE
+                    advanceReceivedLineItems.forEach(
+                        (row: any, index: number) => {
+                            const amountStr = String(row.amount);
+
+                            payBody.push({
+                                id:
+                                    Date.now() +
+                                    expenseLineItems.length +
+                                    index,
+
+                                accountCode:
+                                    CASH_IN_HAND_ACCOUNT_CODE,
+
+                                accountName:
+                                    CASH_IN_HAND_ACCOUNT_NAME,
+
+                                amount: amountStr,
+                                netAmount: amountStr,
+
+                                references: [
+                                    {
+                                        referenceType: "NEW",
+                                        newReference: "ADV",
+                                        billDueDate: paymentDate,
+                                        billAmount: amountStr,
+                                        adjustedAmount: amountStr,
+                                        purchaseInvoice: "",
+                                    },
+                                ],
+
+                                customMasters:
+                                    row?.customMasters &&
+                                    typeof row.customMasters === "object"
+                                        ? { ...row.customMasters }
+                                        : {},
+
+                                remarks:
+                                    row?.remarks ||
+                                    `Advance Received - Trip ${transportOrderNumber}`,
+                            });
+                        }
+                    );
+
                     if (isMarketVehicle && marketVendorAmount > 0) {
                         payBody.push({
                             id: Date.now() + expenseLineItems.length,
@@ -2376,6 +2432,9 @@ const CreateEditDriverSettlement = ({
                             `Trip expense payment against Driver Settlement ${settlementNumber}`,
 
                         paymentMode,
+
+                        // ⭐ YELLOW STAR: ADDED — POST PAYMENT REFERENCE NUMBER AS ENTERED
+                        paymentReferenceNumber: cleanText(paymentReferenceNumber),
                         bankReferenceNumber: paymentReferenceNumber,
                         paidBy: getFullName(loginUser) || "",
 
@@ -2460,6 +2519,7 @@ const CreateEditDriverSettlement = ({
 
                         paymentMode,
                         receiptMode: paymentMode,
+                        paymentReferenceNumber: cleanText(paymentReferenceNumber),
                         bankReferenceNumber: paymentReferenceNumber,
                         receivedBy: getFullName(loginUser) || "",
 

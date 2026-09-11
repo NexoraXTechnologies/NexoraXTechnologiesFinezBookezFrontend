@@ -1088,6 +1088,13 @@ const createTripSalesOrder = async ({ dispatch, context, product }: any) => {
 const createTripPurchaseOrder = async ({ dispatch, context, product }: any) => {
     const remark = `Auto from trip ${context.tripId}`;
 
+    // ⭐ YELLOW STAR: UPDATED — HIRED CHARGES USED FOR PURCHASE ORDER RATE
+    const purchaseOrderAmount = Number(
+        context?.hiredCharges ||
+        context?.freightAmount ||
+        0
+    );
+
     const payload = {
         pOrdVoucherNumber: "AUTO",
         pOrdVoucherDate: new Date().toISOString(),
@@ -1103,10 +1110,10 @@ const createTripPurchaseOrder = async ({ dispatch, context, product }: any) => {
         pOrdBody: [
             buildInvoiceLine({
                 product,
-                freightAmount: context.freightAmount,
+                freightAmount: purchaseOrderAmount,
             }),
         ],
-        pOrdFooter: buildInvoiceFooter(context.freightAmount),
+        pOrdFooter: buildInvoiceFooter(purchaseOrderAmount),
     };
 
     const response = await unwrapThunk(dispatch, addPurchaseOrder({ payload: normalizeApiPayloadDates(payload) }));
@@ -1128,6 +1135,13 @@ const createTripGrn = async ({
 }: any) => {
     const remark = `Auto from trip ${context.tripId}`;
 
+    // ⭐ YELLOW STAR: UPDATED — HIRED CHARGES USED FOR GRN RATE
+    const grnAmount = Number(
+        context?.hiredCharges ||
+        context?.freightAmount ||
+        0
+    );
+
     const payload = {
         grnVoucherNumber: "AUTO",
         pOrdVoucherNumber: purchaseOrderVoucherNumber,
@@ -1145,7 +1159,7 @@ const createTripGrn = async ({
             {
                 ...buildInvoiceLine({
                     product,
-                    freightAmount: context.freightAmount,
+                    freightAmount: grnAmount,
                 }),
                 pOrdVoucherNumber: purchaseOrderVoucherNumber,
                 acceptedQuantity: 1,
@@ -1153,7 +1167,7 @@ const createTripGrn = async ({
                 rejectedReason: "",
             },
         ],
-        grnFooter: buildInvoiceFooter(context.freightAmount),
+        grnFooter: buildInvoiceFooter(grnAmount),
     };
 
     const response = await unwrapThunk(dispatch, addGrn({ payload: normalizeApiPayloadDates(payload) }));
@@ -1337,50 +1351,64 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
         if (context.ownership === "hired") {
             if (!context.vendorCode || !context.vendorName) {
                 throw new Error(
-                    `Vendor is required to create the Purchase Order for trip ${context.tripId}`
+                    `Vendor is required for hired vehicle trip ${context.tripId}`
                 );
             }
 
-            const product = await ensureServiceProduct({
-                productName: TRIP_PURCHASE_PRODUCT_NAME,
-            });
+            // ⭐ YELLOW STAR: ADDED — PO + GRN CREATE ONLY WHEN HIRED CHARGES > 0
+            const hiredChargesAmount = Number(
+                context?.hiredCharges || 0
+            );
 
-            const orderContext = {
-                ...context,
-                freightAmount:
-                    context.freightAmount > 0
-                        ? context.freightAmount
-                        : product.sellingPrice || 0,
-            };
+            let purchaseOrderVoucherNumber = "";
+            let grnVoucherNumber = "";
 
-            const purchaseOrderVoucherNumber =
-                await createTripPurchaseOrder({
-                    dispatch,
-                    context: orderContext,
-                    product,
+            if (hiredChargesAmount > 0) {
+                const product = await ensureServiceProduct({
+                    productName: TRIP_PURCHASE_PRODUCT_NAME,
                 });
 
-            const grnVoucherNumber =
-                await createTripGrn({
-                    dispatch,
-                    context: orderContext,
-                    product,
-                    purchaseOrderVoucherNumber,
-                });
+                const orderContext = {
+                    ...context,
+                    freightAmount:
+                        context.freightAmount > 0
+                            ? context.freightAmount
+                            : product.sellingPrice || 0,
+                };
 
-            // ⭐ YELLOW STAR: UPDATED — PAYMENT DIRECTLY AFTER GRN
+                purchaseOrderVoucherNumber =
+                    await createTripPurchaseOrder({
+                        dispatch,
+                        context: orderContext,
+                        product,
+                    });
+
+                grnVoucherNumber =
+                    await createTripGrn({
+                        dispatch,
+                        context: orderContext,
+                        product,
+                        purchaseOrderVoucherNumber,
+                    });
+            }
+
+            // ⭐ YELLOW STAR: EXISTING — PAYMENT HELPER ALREADY SKIPS WHEN ADVANCE TO VENDOR <= 0
             // PURCHASE INVOICE IS NOT CREATED FOR CONTRACT / INDENT + HIRED
             const paymentVoucherNumber =
                 await createTripVendorAdvancePayment({
                     dispatch,
-                    context: orderContext,
+                    context,
                     purchaseInvoiceVoucherNumber: "",
                 });
 
             return {
                 invoiceType: "",
                 voucherType: "purchaseOrderGrn",
-                voucherNumber: grnVoucherNumber,
+                voucherNumber:
+                    grnVoucherNumber ||
+                    purchaseOrderVoucherNumber ||
+                    paymentVoucherNumber ||
+                    "",
                 purchaseOrderVoucherNumber,
                 grnVoucherNumber,
                 paymentVoucherNumber,

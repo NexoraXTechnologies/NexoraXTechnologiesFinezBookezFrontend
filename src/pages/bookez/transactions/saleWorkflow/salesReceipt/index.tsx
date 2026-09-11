@@ -83,7 +83,7 @@ const emptyReceiptRow = { id: Date.now(), accountCode: "", accountName: "", amou
 
 const emptyReferenceRow = { id: Date.now(), saleInvoice: "", salesInvoice: "", docDate: "", netBillAmount: "", netReturnAmount: "", remainingBillAmount: "", adjustedAmount: "" };
 
-const getDefaultForm = () => ({ recVoucherNumber: "AUTO", recVoucherDate: todayYMD(), recAccountCode: "", recAccountName: "", recStatus: "open", recRemark: "", paymentMode: "", bankReferenceNumber: "", receivedBy: "", trip_order: "", lr_no: "", driver: "", vehicle_master: null, customMasters: {}, recBody: [{ ...emptyReceiptRow, id: Date.now() }], netAmount: "0.00", adjustedAmount: "0.00", balanceAmount: "0.00" });
+const getDefaultForm = () => ({ recVoucherNumber: "AUTO", recVoucherDate: todayYMD(), recAccountCode: "", recAccountName: "", recStatus: "open", recRemark: "", paymentMode: "", bankReferenceNumber: "", paymentReferenceNumber: "", receivedBy: "", trip_order: "", lr_no: "", driver: "", vehicle_master: null, customMasters: {}, recBody: [{ ...emptyReceiptRow, id: Date.now() }], netAmount: "0.00", adjustedAmount: "0.00", balanceAmount: "0.00" });
 
 const SalesReceipt = () => {
     const dispatch = useDispatch<any>();
@@ -455,6 +455,10 @@ const SalesReceipt = () => {
             recRemark: record?.recRemark || "",
             paymentMode: record?.paymentMode || "",
             bankReferenceNumber: record?.bankReferenceNumber || "",
+
+            // ⭐ YELLOW STAR: ADDED — SHOW SAVED TRANSACTION NO. IN EDIT MODE
+            paymentReferenceNumber: record?.paymentReferenceNumber || "",
+
             receivedBy: record?.receivedBy || "",
 
             trip_order: record?.trip_order || "",
@@ -1003,6 +1007,10 @@ const SalesReceipt = () => {
             recRemark: form.recRemark,
             paymentMode: form.paymentMode,
             bankReferenceNumber: form.bankReferenceNumber,
+
+            // ⭐ YELLOW STAR: ADDED — SEND TRANSACTION NO. FROM HEADER
+            paymentReferenceNumber: form.paymentReferenceNumber,
+
             receivedBy: form.receivedBy,
 
             ...(editingRecord?.sourceModule ? { sourceModule: editingRecord.sourceModule } : {}),

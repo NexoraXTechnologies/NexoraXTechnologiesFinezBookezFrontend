@@ -2117,7 +2117,7 @@ const CreateTripAllocation = ({
                 form.vehicleSelection?.hiredCharges === "" ||
                 form.vehicleSelection?.hiredCharges === null ||
                 form.vehicleSelection?.hiredCharges === undefined ||
-                Number(form.vehicleSelection?.hiredCharges) <= 0
+                Number(form.vehicleSelection?.hiredCharges) < 0
             )
         ) {
             toast.warn("Please enter Hired Charges");
@@ -2131,7 +2131,7 @@ const CreateTripAllocation = ({
                 form.vehicleSelection?.AdvanceToVendor === "" ||
                 form.vehicleSelection?.AdvanceToVendor === null ||
                 form.vehicleSelection?.AdvanceToVendor === undefined ||
-                Number(form.vehicleSelection?.AdvanceToVendor) <= 0
+                Number(form.vehicleSelection?.AdvanceToVendor) < 0
             )
         ) {
             toast.warn("Please enter Advance to Vendor");
