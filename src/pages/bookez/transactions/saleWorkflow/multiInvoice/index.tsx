@@ -1122,7 +1122,7 @@ const MultiSalesInvoice = () => {
                     show: showForm,
                     setShow: setShowForm,
                     edit: !!editingVoucherNumber,
-                    title: editingVoucherNumber ? "Edit Multi Sales Invoice" : "Multi Sales Invoice",
+                    title: editingVoucherNumber ? "Multiple Sales Invoice" : "Multiple Sales Invoice",
                     subtitle: `${form?.sMultiInvInvoices?.length || 0} Sales Invoice${form?.sMultiInvInvoices?.length === 1 ? "" : "s"} selected`,
                     loading: createLoading || updateLoading || detailLoading,
 
