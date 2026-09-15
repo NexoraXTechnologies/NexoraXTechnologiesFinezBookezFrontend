@@ -12,7 +12,7 @@ const SummaryCards = ({ items = [], isSummaryFooter = true }: SummaryCardsProps)
     if (!items.length) return null;
 
     return (
-        isSummaryFooter ? <div className="mt-6 w-full rounded-md border border-border bg-card p-4">
+        isSummaryFooter ? <div className="mt-3 w-full rounded-md border border-border bg-card p-4">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {items.map((item) => (
                     <div
