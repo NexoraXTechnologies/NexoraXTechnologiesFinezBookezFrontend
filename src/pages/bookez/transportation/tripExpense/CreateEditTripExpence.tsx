@@ -571,16 +571,23 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         return { shouldBill: false, orderType, ownership: "", freightAmount: 0, customerCode: "", customerName: "", vendorCode: "", vendorName: "", tripId };
     }
 
-    // To Be Billed: allocation + LR are required to resolve ownership and freight source.
+    // ⭐ YELLOW STAR: UPDATED — ACTIVE ALLOCATION IS OPTIONAL FOR ALREADY ASSIGNED DRIVER TRIP
     const [allocationResponse, lrResponse] = await Promise.all([
         unwrapThunk(dispatch, getActiveTripAllocations({ offset: 0, limit: 500 })),
         unwrapThunk(dispatch, getAllLRCollection({ offset: 0, limit: 500 })),
     ]);
 
-    const allocation = findTripRelatedRecord(extractTripRecords(allocationResponse), [tripId, tripExpense?.allocationVoucherNumber, tripExpense?.tripAllocationVoucherNumber]);
-    if (!allocation) throw new Error(`Trip allocation for ${tripId} was not found`);
+    const allocation = findTripRelatedRecord(
+        extractTripRecords(allocationResponse),
+        [tripId, tripExpense?.allocationVoucherNumber, tripExpense?.tripAllocationVoucherNumber]
+    );
 
-    const allocationVoucherNumber = String(getAllocationVoucher(allocation) || tripExpense?.allocationVoucherNumber || tripExpense?.tripAllocationVoucherNumber || "").trim();
+    const allocationVoucherNumber = String(
+        (allocation ? getAllocationVoucher(allocation) : "") ||
+        tripExpense?.allocationVoucherNumber ||
+        tripExpense?.tripAllocationVoucherNumber ||
+        ""
+    ).trim();
     const lrEntry = findTripRelatedRecord(extractTripRecords(lrResponse), [tripId, allocationVoucherNumber, tripExpense?.lrNumber, tripExpense?.lrVoucherNumber]) || {};
     const vehicleSelection = allocation?.vehicleSelection || allocation?.vehicle || tripExpense?.vehicleSelection || tripExpense?.vehicle || {};
     const allocationOrder = allocation?.transportOrder || {};
@@ -1246,12 +1253,10 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
                 productName: TRIP_SALES_PRODUCT_NAME,
             });
 
+            // ⭐ YELLOW STAR: UPDATED — SALES INVOICE MUST USE ACTUAL TRIP FREIGHT AMOUNT ONLY
             const invoiceContext = {
                 ...context,
-                freightAmount:
-                    context.freightAmount > 0
-                        ? context.freightAmount
-                        : product.sellingPrice || 0,
+                freightAmount: context.freightAmount,
             };
 
             const voucherNumber =
@@ -1325,12 +1330,10 @@ const createInvoiceForCompletedTrip = async ({ dispatch, tripExpense }: any) => 
                 productName: TRIP_SALES_PRODUCT_NAME,
             });
 
+            // ⭐ YELLOW STAR: UPDATED — SALES ORDER MUST USE ACTUAL TRIP FREIGHT AMOUNT ONLY
             const orderContext = {
                 ...context,
-                freightAmount:
-                    context.freightAmount > 0
-                        ? context.freightAmount
-                        : product.sellingPrice || 0,
+                freightAmount: context.freightAmount,
             };
 
             const voucherNumber =
@@ -2187,9 +2190,59 @@ const CreateEditTripExpence = () => {
         return Boolean(parentUserMobile && currentUserMobile !== parentUserMobile);
     }, [currentUserMobile, parentUserMobile, user]);
 
+    // ⭐ YELLOW STAR: ADDED — DRIVER / HELPER MUST NOT UPDATE MISSING FREIGHT
+    const isDriverOrHelperUser = useMemo(() => {
+        const userType = String(
+            user?.userType ||
+            user?.type ||
+            user?.role ||
+            user?.userRole ||
+            ""
+        )
+            .trim()
+            .toLowerCase()
+            .replace(/[\s_-]+/g, "");
+
+        return userType.includes("driver") || userType.includes("helper");
+    }, [user]);
+
+
     const [form, setForm] = useState<any>(createInitialTripExpense());
     const [loading, setLoading] = useState(false);
     const [completeConfirmModalVisible, setCompleteConfirmModalVisible] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — DRIVER / HELPER CONTACT AUTHORIZED PERSON MODAL
+    const [contactAuthorizedModalVisible, setContactAuthorizedModalVisible] = useState(false);
+
+    // ⭐ YELLOW STAR: ADDED — IDENTIFY ASSIGNED DRIVER EVEN WHEN LOGIN ROLE IS SAVED AS "EMPLOYEE"
+    const isAssignedDriverUser = useMemo(() => {
+        const loggedInMobile = cleanMobile(currentUserMobile);
+        if (!loggedInMobile) return false;
+
+        const assignedDriverValues = [
+            form?.assignedDriverMobile,
+            form?.tripAssignedToMobile,
+            form?.driver?.driverMobile,
+            form?.driver?.mobileNumber,
+            form?.driver?.driverId,
+        ]
+            .map(cleanMobile)
+            .filter(Boolean);
+
+        return assignedDriverValues.includes(loggedInMobile);
+    }, [
+        currentUserMobile,
+        form?.assignedDriverMobile,
+        form?.tripAssignedToMobile,
+        form?.driver?.driverMobile,
+        form?.driver?.mobileNumber,
+        form?.driver?.driverId,
+    ]);
+
+    // ⭐ YELLOW STAR: ADDED — ONLY TO BE BILLED + OWNED REQUIRES FREIGHT BEFORE SALES INVOICE / SALES ORDER
+    const [freightModalVisible, setFreightModalVisible] = useState(false);
+    const [freightAmountInput, setFreightAmountInput] = useState("");
+    const [freightUpdating, setFreightUpdating] = useState(false);
 
     const [ewayPdfUrl, setEwayPdfUrl] = useState("");
     // @ts-ignore
@@ -3265,7 +3318,7 @@ const CreateEditTripExpence = () => {
         setCompleteConfirmModalVisible(true);
     };
 
-    const confirmCompleteTrip = () => {
+    const confirmCompleteTrip = (skipFreightCheck = false) => {
         const completedBy = isChildUser ? "driver" : "parent";
         const completionRecipient = isChildUser
             ? user?.parentUserMobileNumber || ""
@@ -3299,6 +3352,34 @@ const CreateEditTripExpence = () => {
 
                 const completeSaveForm = buildChildSaveForm(form);
                 const completeSaveFormWithPod = { ...completeSaveForm, pod: buildPodForSave(completeSaveForm) };
+
+                // ⭐ YELLOW STAR: ADDED — ONLY TO BE BILLED + OWNED NEEDS FREIGHT BEFORE SALES INVOICE / SALES ORDER
+                // NOT TO BE BILLED => existing skip billing flow
+                // TO BE BILLED + HIRED => existing Purchase Invoice / PO / GRN / Payment flow remains unchanged
+                if (!skipFreightCheck) {
+                    const billingContext = await resolveTripBillingContext({
+                        dispatch,
+                        tripExpense: completeSaveFormWithPod,
+                    });
+
+                    if (
+                        billingContext?.shouldBill &&
+                        billingContext?.ownership === "owned" &&
+                        !(Number(billingContext?.freightAmount || 0) > 0)
+                    ) {
+                        // ⭐ YELLOW STAR: UPDATED — DRIVER / HELPER GETS CONTACT AUTHORIZED PERSON MODAL
+                        // Do not update vehicle status, trip status, or billing from driver/helper screen.
+                        if (isChildUser || isDriverOrHelperUser || isAssignedDriverUser) {
+                            setContactAuthorizedModalVisible(true);
+                            return;
+                        }
+
+                        // ⭐ YELLOW STAR: EXISTING — ONLY NON-DRIVER / NON-HELPER AUTHORIZED USER GETS THIS MODAL
+                        setFreightAmountInput("");
+                        setFreightModalVisible(true);
+                        return;
+                    }
+                }
 
                 // ⭐ YELLOW STAR: UPDATED — REQUIRED ACCOUNTING VOUCHER MUST SUCCEED BEFORE TRIP-COMPLETION SIDE EFFECT
                 const invoice = await createInvoiceForCompletedTrip({ dispatch, tripExpense: completeSaveFormWithPod });
@@ -3493,6 +3574,70 @@ const CreateEditTripExpence = () => {
             }
         })();
     };
+
+    // ⭐ YELLOW STAR: ADDED — SAVE MISSING FREIGHT TO TRANSPORT ORDER, THEN CONTINUE EXISTING COMPLETE FLOW
+    const handleUpdateFreightAndComplete = async () => {
+        // ⭐ YELLOW STAR: UPDATED — SECURITY CHECK: CHILD DRIVER / HELPER CANNOT UPDATE FREIGHT
+        if (isChildUser || isDriverOrHelperUser || isAssignedDriverUser) {
+            toast.error("Please contact an authorized person to update the freight amount");
+            return;
+        }
+
+        const freightAmount = toPositiveAmount(freightAmountInput);
+        const transportOrderNumber = String(form?.tripId || "").trim();
+
+        if (!(freightAmount > 0)) {
+            toast.error("Please enter a valid freight amount");
+            return;
+        }
+
+        if (!transportOrderNumber) {
+            toast.error("Transport Order number not found");
+            return;
+        }
+
+        try {
+            setFreightUpdating(true);
+
+            const orderResponse = await unwrapThunk(
+                dispatch,
+                getTransportOrderByVoucherNumber(transportOrderNumber)
+            );
+
+            const existingOrder = extractTransportOrderRecord(orderResponse);
+
+            if (!existingOrder || !Object.keys(existingOrder).length) {
+                throw new Error(`Transport Order ${transportOrderNumber} was not found`);
+            }
+
+            await unwrapThunk(
+                dispatch,
+                updateTransportOrderByVoucherNumber({
+                    voucherNumber: transportOrderNumber,
+                    payload: normalizeApiPayloadDates({
+                        ...existingOrder,
+                        // ⭐ YELLOW STAR: UPDATED — DO NOT ADD NEW freightAmount KEY
+                        // Update the existing Transport Order expectedFreight field only.
+                        freightDetails: {
+                            ...(existingOrder?.freightDetails || {}),
+                            expectedFreight: String(freightAmount),
+                        },
+                    }),
+                })
+            );
+
+            setFreightModalVisible(false);
+            setFreightAmountInput("");
+
+            // ⭐ YELLOW STAR: ADDED — RE-RUN EXISTING COMPLETION AFTER FREIGHT IS SAVED
+            confirmCompleteTrip(true);
+        } catch (e: any) {
+            toast.error(e?.message || "Failed to update freight amount");
+        } finally {
+            setFreightUpdating(false);
+        }
+    };
+
 
     const handleSave = () => {
         if (isChildUser && isTripPendingAccept(form)) {
@@ -3742,9 +3887,131 @@ const CreateEditTripExpence = () => {
 
                         <div className="mt-6 flex justify-end gap-2">
                             <button type="button" onClick={() => setCompleteConfirmModalVisible(false)} className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground transition hover:bg-muted">Cancel</button>
-                            <button type="button" onClick={confirmCompleteTrip} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
+                            <button type="button" onClick={() => confirmCompleteTrip()} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
                                 <CheckCircle2 size={17} />
                                 Complete Trip
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ⭐ YELLOW STAR: ADDED — FREIGHT REQUIRED ONLY FOR TO BE BILLED + OWNED SALES FLOW */}
+            {/* ⭐ YELLOW STAR: ADDED — DRIVER / HELPER MISSING FREIGHT MESSAGE MODAL */}
+            {contactAuthorizedModalVisible && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                    onClick={() => setContactAuthorizedModalVisible(false)}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="contact-authorized-title"
+                        className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                                    <CreditCard size={22} />
+                                </div>
+
+                                <div>
+                                    <h2
+                                        id="contact-authorized-title"
+                                        className="text-lg font-bold text-card-foreground"
+                                    >
+                                        Freight Amount Required
+                                    </h2>
+
+                                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                        Freight amount is not available for this trip.
+                                        Please contact an authorized person to update the freight amount
+                                        or complete the trip on your behalf.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setContactAuthorizedModalVisible(false)}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                                aria-label="Close message"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mt-6 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setContactAuthorizedModalVisible(false)}
+                                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ⭐ YELLOW STAR: UPDATED — NEVER RENDER FREIGHT MODAL ON CHILD DRIVER / HELPER SCREEN */}
+            {freightModalVisible && !isChildUser && !isDriverOrHelperUser && !isAssignedDriverUser && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => !freightUpdating && setFreightModalVisible(false)}>
+                    <div role="dialog" aria-modal="true" aria-labelledby="freight-required-title" className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 id="freight-required-title" className="text-lg font-bold text-card-foreground">Freight Amount Required</h2>
+                                <p className="mt-1 text-sm text-muted-foreground">Freight amount is required before creating the Sales Invoice or Sales Order. Enter the freight amount to update the Transport Order and complete the trip.</p>
+                            </div>
+
+                            <button
+                                type="button"
+                                disabled={freightUpdating}
+                                onClick={() => setFreightModalVisible(false)}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-60"
+                                aria-label="Close freight modal"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mt-5">
+                            <Field label="Freight Amount" mandatory>
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">₹</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={freightAmountInput}
+                                        onChange={(e) => setFreightAmountInput(e.target.value)}
+                                        disabled={freightUpdating}
+                                        placeholder="0.00"
+                                        className={`${inputClass} pl-8`}
+                                    />
+                                </div>
+                            </Field>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                disabled={freightUpdating}
+                                onClick={() => setFreightModalVisible(false)}
+                                className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={freightUpdating}
+                                onClick={handleUpdateFreightAndComplete}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                            >
+                                {freightUpdating ? <Loader2 className="animate-spin" size={17} /> : <CheckCircle2 size={17} />}
+                                {freightUpdating ? "Updating..." : "Update & Complete Trip"}
                             </button>
                         </div>
                     </div>

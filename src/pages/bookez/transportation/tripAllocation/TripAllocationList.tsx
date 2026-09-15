@@ -274,6 +274,23 @@ const TripAllocationList = () => {
 			return;
 		}
 
+		// ⭐ YELLOW STAR: ADDED — CAPTURE BUTTON POSITION BEFORE ANY await
+		// e.currentTarget can become null after async work completes.
+		const rect = e.currentTarget?.getBoundingClientRect();
+
+		if (!rect) {
+			toast.warn("Unable to open delete confirmation");
+			return;
+		}
+
+		let x = rect.left - 160;
+
+		if (x < 10) {
+			x = 10;
+		}
+
+		const y = rect.top + window.scrollY - 5;
+
 		try {
 			setCheckingTripExpense(true);
 
@@ -306,23 +323,13 @@ const TripAllocationList = () => {
 			});
 
 			if (linkedExpense) {
-				toast.error(
-					`This trip allocation is linked to trip expense ${linkedExpense?.tripExpenseNumber || ""
-					}. Delete the trip expense first to remove the full trip.`
+				// ⭐ YELLOW STAR: UPDATED — DELETE LINKED TRIP EXPENSE FIRST
+				toast.warn(
+					`This Trip Allocation is linked to Trip Expense ${linkedExpense?.tripExpenseNumber || ""}. Please delete the Trip Expense first, then delete this Trip Allocation.`
 				);
 
 				return;
 			}
-
-			const rect = e.currentTarget.getBoundingClientRect();
-
-			let x = rect.left - 160;
-
-			if (x < 10) {
-				x = 10;
-			}
-
-			const y = rect.top + window.scrollY - 5;
 
 			setConfirmTooltip({
 				show: true,

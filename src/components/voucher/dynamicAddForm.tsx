@@ -448,9 +448,6 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                             </div>
                         )}
 
-                        {/* TAX ERRORS */}
-                        {Object.keys(errors || {}).filter((key) => key.includes("_tax")).map((key) => <p key={key} className="mt-2 text-sm text-danger">{errors[key]}</p>)}
-
                         {/* SUMMARY */}
                         <SummaryCards items={loadedInputData?.footer || []} isSummaryFooter={isSummaryFooter} />
                     </>
