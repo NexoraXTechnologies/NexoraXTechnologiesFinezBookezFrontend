@@ -1,10 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import {
-  FaCalendarAlt,
-  FaEnvelope,
   FaIdCard,
   FaMobileAlt,
   FaShieldAlt,
@@ -15,8 +13,9 @@ import {
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 
-import { getProfessionalProfile } from "../../redux/slices/professionalSlice/professionalProfileSlice";
+import { getProfessionalProfile, updateProfessionalProfile } from "../../redux/slices/professionalSlice/professionalProfileSlice";
 import { formatToInputDate } from "../../components/common/DateFormator";
+import { SelectInput, TextInput } from "../../components/inputs";
 
 type ProfileFormValues = {
   userFirstName: string;
@@ -28,31 +27,36 @@ type ProfileFormValues = {
   userPAN: string;
   userMobileNumberHash: string;
   userType: string;
+  userGender: string;
+  businessType: string;
   isUserActive: string;
   parentUserMobileNumber: string;
 };
 
-type InputFieldProps = {
-  label: string;
-  icon: React.ReactNode;
-  error?: string;
-  children: React.ReactNode;
-};
+const userTypeOptions = [
+  { label: "All", value: "" },
+  { label: "Employee", value: "Employee" },
+  { label: "Company", value: "Company" },
+  { label: "Individual Tax Payer", value: "Individual Tax Payer" },
+  { label: "CA/CMA/Tax Consultant", value: "CA/CMA/Tax Consultant" },
+];
 
-const InputField = ({ label, icon, error, children }: InputFieldProps) => (
-  <div className="space-y-1.5">
-    <label className="flex items-center gap-2 text-sm font-medium text-card-foreground">
-      <span className="text-xs text-primary">{icon}</span>
-      {label}
-    </label>
+const businessTypeOptions = [
+  { label: "All", value: "" },
+  { label: "Manufacturing / Production", value: "manufacturing/production" },
+  { label: "Traders / Distributors", value: "traders/distributors" },
+  { label: "Retail Business", value: "retail business" },
+  { label: "FMCG & Distribution", value: "fmcg & distribution" },
+  { label: "Service Business", value: "service business" },
+  { label: "Construction & Projects", value: "construction & projects" },
+];
 
-    {children}
-
-    {error && (
-      <p className="text-xs font-medium text-destructive">{error}</p>
-    )}
-  </div>
-);
+const genderTypeOptions = [
+  { label: "All", value: "" },
+  { label: "Male", value: "Male" },
+  { label: "Female", value: "Female" },
+  { label: "Other", value: "Other" },
+];
 
 const LoadingSkeleton = () => (
   <div className="grid animate-pulse grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -73,10 +77,12 @@ const ProfessionalProfile = () => {
   );
 
   const [preview, setPreview] = useState<string | null>(null);
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+
+  // ⭐ YELLOW STAR: ADDED — STORE ONLY NEWLY SELECTED IMAGE AS BASE64
+  const [profileImageBase64, setProfileImageBase64] = useState<string>("");
 
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -91,16 +97,14 @@ const ProfessionalProfile = () => {
       userPAN: "",
       userMobileNumberHash: "",
       userType: "",
+      userGender: "",
+      businessType: "",
       isUserActive: "0",
       parentUserMobileNumber: "",
     },
   });
 
-  const editableInputClass =
-    "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition-all duration-200 placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10";
-
-  const readOnlyInputClass =
-    "h-10 w-full cursor-default rounded-lg border border-border bg-muted/60 px-3 text-sm text-muted-foreground outline-none";
+  // ⭐ YELLOW STAR: UPDATED — REUSE COMMON TextInput / SelectInput COMPONENTS
 
   const fullName = useMemo(() => {
     return [profile?.userFirstName, profile?.userMiddleName, profile?.userLastName]
@@ -108,7 +112,13 @@ const ProfessionalProfile = () => {
       .join(" ") || "Professional User";
   }, [profile]);
 
-  const isActive = profile?.isUserActive == "0";
+  // ⭐ YELLOW STAR: UPDATED — API VALUE "1" MEANS ACTIVE
+  // const isActive = String(profile?.isUserActive ?? "") === "1";
+  const isActive =
+    profile?.isUserActive !== null &&
+    profile?.isUserActive !== undefined &&
+    String(profile?.isUserActive).trim() !== "" &&
+    String(profile?.isUserActive) !== "0";
 
   useEffect(() => {
     dispatch(getProfessionalProfile());
@@ -127,20 +137,17 @@ const ProfessionalProfile = () => {
       userPAN: profile.userPAN || "",
       userMobileNumberHash: profile.userMobileNumberHash || "",
       userType: profile.userType || "",
+      userGender: profile.userGender || "",
+      businessType: profile.businessType || "",
       isUserActive: profile.isUserActive || "0",
       parentUserMobileNumber: profile.parentUserMobileNumber || "",
     });
 
     setPreview(profile.profilePic || null);
-  }, [profile, reset]);
 
-  useEffect(() => {
-    return () => {
-      if (selectedImageUrl) {
-        URL.revokeObjectURL(selectedImageUrl);
-      }
-    };
-  }, [selectedImageUrl]);
+    // ⭐ YELLOW STAR: ADDED — FETCHED URL IS ONLY PREVIEW, NOT A NEW IMAGE UPDATE
+    setProfileImageBase64("");
+  }, [profile, reset]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -159,13 +166,23 @@ const ProfessionalProfile = () => {
       return;
     }
 
-    if (selectedImageUrl) {
-      URL.revokeObjectURL(selectedImageUrl);
-    }
+    // ⭐ YELLOW STAR: UPDATED — CONVERT IMAGE TO BASE64 BEFORE UPDATE
+    const reader = new FileReader();
 
-    const objectUrl = URL.createObjectURL(file);
-    setSelectedImageUrl(objectUrl);
-    setPreview(objectUrl);
+    reader.onload = () => {
+      const base64Image = String(reader.result || "");
+
+      setProfileImageBase64(base64Image);
+      setPreview(base64Image);
+    };
+
+    reader.onerror = () => {
+      toast.error("Failed to read profile image.");
+    };
+
+    reader.readAsDataURL(file);
+
+    event.target.value = "";
   };
 
   const isAdult = (dobString: string) => {
@@ -194,14 +211,35 @@ const ProfessionalProfile = () => {
     }
 
     try {
-      // Add your updateProfessionalProfile dispatch here when the API is enabled.
-      // Example:
-      // await dispatch(updateProfessionalProfile(payload)).unwrap();
+      // ⭐ YELLOW STAR: UPDATED — BACKEND EXPECTS UPDATE FIELDS INSIDE ChildUser
+      const payload = {
+        ChildUser: {
+          userFirstName: data.userFirstName?.trim() || "",
+          userMiddleName: data.userMiddleName?.trim() || "",
+          userLastName: data.userLastName?.trim() || "",
+          userDOB: data.userDOB || "",
+          userGender: data.userGender || "",
+          userEmail: data.userEmail?.trim() || "",
+          userType: data.userType || "",
+          businessType: data.businessType || "",
+
+          // ⭐ YELLOW STAR: ADDED — SEND BASE64 ONLY WHEN USER SELECTS A NEW IMAGE
+          ...(profileImageBase64
+            ? { profilePic: profileImageBase64 }
+            : {}),
+        },
+      };
+
+      await dispatch(updateProfessionalProfile(payload)).unwrap();
 
       toast.success("Profile updated successfully!");
-      dispatch(getProfessionalProfile());
+      await dispatch(getProfessionalProfile()).unwrap();
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update profile");
+      toast.error(
+        error?.message ||
+        error?.payload?.message ||
+        "Failed to update profile"
+      );
     }
   };
 
@@ -234,8 +272,8 @@ const ProfessionalProfile = () => {
 
           <div
             className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${isActive
-                ? "border-emerald-300/20 bg-emerald-200/10 text-emerald-600 dark:text-emerald-400"
-                : "border-destructive/20 bg-destructive/10 text-destructive"
+              ? "border-emerald-300/20 bg-emerald-200/10 text-emerald-600 dark:text-emerald-400"
+              : "border-destructive/20 bg-destructive/10 text-destructive"
               }`}
           >
             <span
@@ -312,8 +350,8 @@ const ProfessionalProfile = () => {
                   <FaMobileAlt />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Mobile Number</p>
-                  <p className="truncate text-sm font-semibold text-card-foreground">
+                  <p className="text-[11px] text-muted-foreground">Mobile Number</p>
+                  <p className="truncate text-xs font-semibold text-card-foreground">
                     {profile?.userMobileNumberHash || "Not available"}
                   </p>
                 </div>
@@ -324,23 +362,53 @@ const ProfessionalProfile = () => {
                   <FaUsers />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Parent Mobile</p>
-                  <p className="truncate text-sm font-semibold text-card-foreground">
+                  <p className="text-[11px] text-muted-foreground">Parent Mobile</p>
+                  <p className="truncate text-xs font-semibold text-card-foreground">
                     {profile?.parentUserMobileNumber || "Not applicable"}
                   </p>
                 </div>
               </div>
+
+              {/* ⭐ YELLOW STAR: ADDED — PAN IN SIDEBAR */}
+              {profile?.userPAN && (
+                <div className="flex items-start gap-3 rounded-xl bg-muted/50 p-3">
+                  <div className="mt-0.5 text-primary">
+                    <FaIdCard />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">PAN</p>
+                    <p className="truncate text-xs font-semibold uppercase text-card-foreground">
+                      {profile?.userPAN}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ⭐ YELLOW STAR: ADDED — AADHAAR IN SIDEBAR */}
+              {profile?.userAadhar && (
+                <div className="flex items-start gap-3 rounded-xl bg-muted/50 p-3">
+                  <div className="mt-0.5 text-primary">
+                    <FaIdCard />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">Aadhaar Number</p>
+                    <p className="truncate text-xs font-semibold text-card-foreground">
+                      {profile?.userAadhar}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-start gap-3 rounded-xl bg-muted/50 p-3">
                 <div className="mt-0.5 text-primary">
                   <FaShieldAlt />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Account Status</p>
+                  <p className="text-[11px] text-muted-foreground">Account Status</p>
                   <p
-                    className={`text-sm font-semibold ${isActive
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-destructive"
+                    className={`text-xs font-semibold ${isActive
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-destructive"
                       }`}
                   >
                     {isActive ? "Active" : "Inactive"}
@@ -385,58 +453,72 @@ const ProfessionalProfile = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <InputField
-                        label="First Name"
-                        icon={<FaUser />}
-                        error={errors.userFirstName?.message}
-                      >
-                        <input
-                          {...register("userFirstName", {
-                            required: "First name is required",
-                            pattern: {
-                              value: /^[A-Za-z\s'-]+$/,
-                              message: "Only letters are allowed",
-                            },
-                          })}
-                          placeholder="Enter first name"
-                          className={editableInputClass}
-                        />
-                      </InputField>
+                      <Controller
+                        name="userFirstName"
+                        control={control}
+                        rules={{
+                          required: "First name is required",
+                          pattern: {
+                            value: /^[A-Za-z\s'-]+$/,
+                            message: "Only letters are allowed",
+                          },
+                        }}
+                        render={({ field }) => (
+                          <TextInput
+                            label="First Name"
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Enter first name"
+                            mandatory
+                            error={errors.userFirstName?.message || ""}
+                          />
+                        )}
+                      />
 
-                      <InputField
-                        label="Middle Name"
-                        icon={<FaUser />}
-                        error={errors.userMiddleName?.message}
-                      >
-                        <input
-                          {...register("userMiddleName", {
-                            pattern: {
-                              value: /^[A-Za-z\s'-]*$/,
-                              message: "Only letters are allowed",
-                            },
-                          })}
-                          placeholder="Enter middle name"
-                          className={editableInputClass}
-                        />
-                      </InputField>
+                      <Controller
+                        name="userMiddleName"
+                        control={control}
+                        rules={{
+                          pattern: {
+                            value: /^[A-Za-z\s'-]*$/,
+                            message: "Only letters are allowed",
+                          },
+                        }}
+                        render={({ field }) => (
+                          <TextInput
+                            label="Middle Name"
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Enter middle name"
+                            error={errors.userMiddleName?.message || ""}
+                          />
+                        )}
+                      />
 
-                      <InputField
-                        label="Last Name"
-                        icon={<FaUser />}
-                        error={errors.userLastName?.message}
-                      >
-                        <input
-                          {...register("userLastName", {
-                            required: "Last name is required",
-                            pattern: {
-                              value: /^[A-Za-z\s'-]+$/,
-                              message: "Only letters are allowed",
-                            },
-                          })}
-                          placeholder="Enter last name"
-                          className={editableInputClass}
-                        />
-                      </InputField>
+                      <Controller
+                        name="userLastName"
+                        control={control}
+                        rules={{
+                          required: "Last name is required",
+                          pattern: {
+                            value: /^[A-Za-z\s'-]+$/,
+                            message: "Only letters are allowed",
+                          },
+                        }}
+                        render={({ field }) => (
+                          <TextInput
+                            label="Last Name"
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Enter last name"
+                            mandatory
+                            error={errors.userLastName?.message || ""}
+                          />
+                        )}
+                      />
                     </div>
                   </div>
 
@@ -452,83 +534,95 @@ const ProfessionalProfile = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      <InputField label="Date of Birth" icon={<FaCalendarAlt />}>
-                        <input
-                          {...register("userDOB")}
-                          type="date"
-                          readOnly
-                          className={readOnlyInputClass}
-                        />
-                      </InputField>
+                      <Controller
+                        name="userDOB"
+                        control={control}
+                        render={({ field }) => (
+                          <TextInput
+                            label="Date of Birth"
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            type="date"
+                            className="dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-100"
 
-                      <InputField label="Email Address" icon={<FaEnvelope />}>
-                        <input
-                          {...register("userEmail")}
-                          type="email"
-                          readOnly
-                          className={readOnlyInputClass}
-                        />
-                      </InputField>
-
-                      <InputField label="Mobile Number" icon={<FaMobileAlt />}>
-                        <input
-                          {...register("userMobileNumberHash")}
-                          readOnly
-                          className={readOnlyInputClass}
-                        />
-                      </InputField>
-
-                      <InputField label="PAN" icon={<FaIdCard />}>
-                        <input
-                          {...register("userPAN")}
-                          readOnly
-                          className={`${readOnlyInputClass} uppercase`}
-                        />
-                      </InputField>
-
-                      <InputField label="Aadhaar Number" icon={<FaIdCard />}>
-                        <input
-                          {...register("userAadhar")}
-                          readOnly
-                          className={readOnlyInputClass}
-                        />
-                      </InputField>
-
-                      <InputField label="User Type" icon={<FaShieldAlt />}>
-                        <input
-                          {...register("userType")}
-                          readOnly
-                          className={readOnlyInputClass}
-                        />
-                      </InputField>
-
-                      <InputField label="Parent Mobile" icon={<FaUsers />}>
-                        <input
-                          {...register("parentUserMobileNumber")}
-                          readOnly
-                          className={readOnlyInputClass}
-                        />
-                      </InputField>
-
-                      <InputField label="Subscription Status" icon={<FaShieldAlt />}>
-                        <div
-                          className={`flex h-10 items-center rounded-lg border px-3 text-sm font-semibold ${isActive
-                              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : "border-destructive/20 bg-destructive/10 text-destructive"
-                            }`}
-                        >
-                          <span
-                            className={`mr-2 h-2 w-2 rounded-full ${isActive ? "bg-emerald-500" : "bg-destructive"
-                              }`}
                           />
-                          {isActive ? "Active" : "Inactive"}
-                        </div>
-                      </InputField>
+                        )}
+                      />
+
+                      <Controller
+                        name="userEmail"
+                        control={control}
+                        rules={{
+                          required: "Email address is required",
+                          pattern: {
+                            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                            message: "Enter a valid email address",
+                          },
+                        }}
+                        render={({ field }) => (
+                          <TextInput
+                            label="Email Address"
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            type="email"
+                            placeholder="Enter email address"
+                            mandatory
+                            error={errors.userEmail?.message || ""}
+                          />
+                        )}
+                      />
+
+                      <Controller
+                        name="userType"
+                        control={control}
+                        render={({ field }) => (
+                          <SelectInput
+                            label="Tax Payer Type"
+                            name={field.name}
+                            value={field.value}
+                            onChange={(e: any) => field.onChange(e?.target?.value ?? "")}
+                            options={userTypeOptions}
+                            placeholder="Select tax payer type"
+                          />
+                        )}
+                      />
+
+                      <Controller
+                        name="userGender"
+                        control={control}
+                        render={({ field }) => (
+                          <SelectInput
+                            label="Gender"
+                            name={field.name}
+                            value={field.value}
+                            onChange={(e: any) => field.onChange(e?.target?.value ?? "")}
+                            options={genderTypeOptions}
+                            placeholder="Select gender"
+                          />
+                        )}
+                      />
+
+                      <Controller
+                        name="businessType"
+                        control={control}
+                        render={({ field }) => (
+                          <SelectInput
+                            label="Business Type"
+                            name={field.name}
+                            value={field.value}
+                            onChange={(e: any) => field.onChange(e?.target?.value ?? "")}
+                            options={businessTypeOptions}
+                            placeholder="Select business type"
+                          />
+                        )}
+                      />
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] text-muted-foreground">
                       Fields shown with a muted background are verified and read-only.
                     </p>
 
@@ -536,9 +630,9 @@ const ProfessionalProfile = () => {
                       id="profile-update-button"
                       type="submit"
                       disabled={loading || isSubmitting}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="inline-flex h-10 min-w-40 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                      whileHover={!loading && !isSubmitting ? { scale: 1.02 } : {}}
+                      whileTap={!loading && !isSubmitting ? { scale: 0.98 } : {}}
+                      className="inline-flex h-10 min-w-40 cursor-pointer items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSubmitting ? (
                         <span className="flex items-center gap-2">

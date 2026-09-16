@@ -152,7 +152,9 @@ const normalizeDriverUsers = (users: any[] = []) => {
             const customFields = user?.childUserCustomFields || {};
             const mobileNumber = String(user?.userMobileNumberHash || "").trim();
             const userType = String(user?.userType || "").toLowerCase();
-            const isActive = String(user?.isUserActive || "") === "1";
+            const employeeCategory = String(
+                customFields?.employeeCategory || ""
+            ).trim().toLowerCase();
             const status = String(customFields?.status || user?.status || "");
 
             return {
@@ -176,9 +178,11 @@ const normalizeDriverUsers = (users: any[] = []) => {
 
                 userType: user?.userType || "",
                 status,
-                isActive,
                 hasParent: Boolean(user?.parentUserMobileNumber),
+
+                // ⭐ YELLOW STAR: UPDATED — DRIVER CATEGORY MUST ALSO IDENTIFY DRIVER
                 isDriverType:
+                    employeeCategory === "driver" ||
                     userType.includes("tax payer") ||
                     userType.includes("employee") ||
                     userType.includes("driver"),
@@ -187,7 +191,6 @@ const normalizeDriverUsers = (users: any[] = []) => {
         .filter((driver: any) => {
             return (
                 driver.driverId &&
-                driver.isActive &&
                 driver.hasParent &&
                 driver.isDriverType &&
                 !isAssignedStatus(driver.status)
@@ -1187,6 +1190,36 @@ const CreateEditDriverSettlement = ({
 
     const vendorAccountOptions = useMemo(() => accounts.filter((account: any) => normalizeText(account?.accountType) === "vendor" && cleanText(account?.accountCode)).map((account: any) => ({ value: cleanText(account?.accountCode), label: cleanText(account?.accountName) || cleanText(account?.accountCode) })), [accounts]);
     const expenseAccountOptions = useMemo(() => accounts.filter((account: any) => normalizeText(account?.accountType) === "expense" && cleanText(account?.accountCode)).map((account: any) => ({ value: cleanText(account?.accountCode), label: cleanText(account?.accountName) || cleanText(account?.accountCode) })), [accounts]);
+
+    // ⭐ YELLOW STAR: ADDED — PAYMENT SOURCE ACCOUNT BASED ON PAYMENT MODE
+    // Default / Cash => existing Cash In Hand fallback
+    // UPI / Bank Transfer / Cheque => Bank Account from Account Master
+    const paymentSourceAccount = useMemo(() => {
+        const isCash =
+            !cleanText(paymentMode) ||
+            normalizeText(paymentMode) === "cash";
+
+        const requiredAccountName = isCash
+            ? CASH_IN_HAND_ACCOUNT_NAME
+            : "Bank Account";
+
+        const matchedAccount = accounts.find(
+            (account: any) =>
+                normalizeText(account?.accountName) ===
+                normalizeText(requiredAccountName) &&
+                cleanText(account?.accountCode)
+        );
+
+        return {
+            code:
+                cleanText(matchedAccount?.accountCode) ||
+                (isCash ? CASH_IN_HAND_ACCOUNT_CODE : ""),
+            name:
+                cleanText(matchedAccount?.accountName) ||
+                (isCash ? CASH_IN_HAND_ACCOUNT_NAME : "Bank Account"),
+        };
+    }, [accounts, paymentMode]);
+
 
     useEffect(() => {
         dispatch(
@@ -2285,6 +2318,17 @@ const CreateEditDriverSettlement = ({
 
             if (paymentPostingAmount > 0) {
                 try {
+                    // ⭐ YELLOW STAR: ADDED — BANK ACCOUNT MUST EXIST FOR NON-CASH PAYMENT MODES
+                    if (
+                        normalizeText(paymentMode) !== "cash" &&
+                        cleanText(paymentMode) &&
+                        !paymentSourceAccount.code
+                    ) {
+                        throw new Error(
+                            'Account "Bank Account" was not found in Account Master.'
+                        );
+                    }
+
                     const payBody = expenseLineItems.map(
                         (row: any, index: number) => {
                             // ⭐ FIX — RESOLVE THE ACCOUNT ALREADY SELECTED ON THE EXPENSE ROW FIRST.
@@ -2423,8 +2467,9 @@ const CreateEditDriverSettlement = ({
                         payVoucherNumber: "AUTO",
                         payVoucherDate: paymentDate,
 
-                        payAccountCode: CASH_IN_HAND_ACCOUNT_CODE,
-                        payAccountName: CASH_IN_HAND_ACCOUNT_NAME,
+                        // ⭐ YELLOW STAR: UPDATED — PAYMENT SOURCE ACCOUNT BASED ON PAYMENT MODE
+                        payAccountCode: paymentSourceAccount.code,
+                        payAccountName: paymentSourceAccount.name,
                         payStatus: "open",
 
                         payRemark:

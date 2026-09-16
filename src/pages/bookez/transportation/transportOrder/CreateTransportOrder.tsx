@@ -1263,6 +1263,7 @@ const CreateTransportOrder = ({
 				freightDetails: {
 					...form.freightDetails,
 					balanceAmount,
+					paymentMode: form.freightDetails?.paymentMode || "Bank Transfer",
 				},
 			};
 

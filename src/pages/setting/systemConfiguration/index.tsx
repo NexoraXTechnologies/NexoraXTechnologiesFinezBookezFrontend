@@ -795,7 +795,7 @@ const SystemConfiguration = () => {
             if (result?.transportationTransactionFieldSync?.failed) {
                 toast.error(
                     result?.transportationTransactionFieldSync?.message ||
-                   "Configuration saved, but transportation transaction fields synchronization failed."
+                    "Configuration saved, but transportation transaction fields synchronization failed."
                 );
             }
 
@@ -827,12 +827,14 @@ const SystemConfiguration = () => {
 
             toast.success(
                 result?.message ||
-                (configuration
-                    ?.configurationCode
+                (configuration?.configurationCode
                     ? "Configuration updated successfully"
                     : "Configuration saved successfully")
             );
-            window.location.reload();
+
+
+            // ⭐ YELLOW STAR: UPDATED — REFRESH CONFIGURATION WITHOUT RELOADING PAGE
+            await dispatch(getLatestSystemConfiguration()).unwrap();
         } catch (err: any) {
             toast.error(
                 err?.message ||

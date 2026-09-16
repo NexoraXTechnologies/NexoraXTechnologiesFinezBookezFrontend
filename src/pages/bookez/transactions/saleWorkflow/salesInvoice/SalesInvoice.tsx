@@ -3459,8 +3459,6 @@ const SalesInVoice = () => {
     ]);
 
 
-    console.log("frieght invoice", downlaodPDF?.record)
-
     return (
         <div className="flex h-full w-full flex-col rounded-md border border-border bg-card p-4 text-card-foreground shadow-sm">
             <div id="sales-invoice-header" className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

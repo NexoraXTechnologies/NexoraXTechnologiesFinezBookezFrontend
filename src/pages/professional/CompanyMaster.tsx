@@ -599,7 +599,7 @@ const CompanyMaster = () => {
               </button>
 
               {/* DELETE */}
-              <button
+              {/* <button
                 id="company-delete-button"
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -619,7 +619,7 @@ const CompanyMaster = () => {
                 className="p-2 rounded-lg text-danger hover:bg-muted hover:text-danger transition-all duration-200 cursor-pointer"
               >
                 <Trash2 size={16} />
-              </button>
+              </button> */}
             </div>
           );
         }}
