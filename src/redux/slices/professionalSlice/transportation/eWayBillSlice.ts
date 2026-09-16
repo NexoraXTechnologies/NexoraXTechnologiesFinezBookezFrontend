@@ -109,6 +109,7 @@ type GetAllEWayBillPdfParams = {
 //     ewayBillNo: string | number;
 // };
 
+
 export const getAllEWayBill = createAsyncThunk(
     "eWayBill/getAllEWayBill",
     async (
@@ -145,6 +146,45 @@ export const getAllEWayBill = createAsyncThunk(
         }
     }
 );
+
+
+export const getAllTransporterEWayBill = createAsyncThunk(
+    "eWayBill/getAllTransporterEWayBill",
+    async (
+        {
+            limit = 10,
+            offset = 0,
+            search = "",
+            status = "",
+        }: EWayBillState = {},
+        { rejectWithValue }
+    ) => {
+        try {
+            const response = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/transporter/eWayBill/getAll",
+                {
+                    params: {
+                        limit,
+                        offset,
+                        search,
+                        status,
+
+                    },
+                }
+            );
+
+            return response?.data || null;
+        } catch (error: any) {
+            return rejectWithValue({
+                message:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "Failed to get all E-Way Bills",
+            });
+        }
+    }
+);
+
 
 
 /* ===================================================
@@ -1529,6 +1569,29 @@ const eWayBillSlice = createSlice({
                 state.eWayBill = [];
                 state.pagination = null;
                 state.error = action.payload?.message || "Failed to get e way bill";
+            })
+
+
+
+            // ===================================================
+            // GET BY transport-e-way-bill NUMBER
+            // ===================================================
+            .addCase(getAllTransporterEWayBill.pending, (state) => {
+                state.listingLoader = true;
+                state.error = null;
+            })
+            .addCase(getAllTransporterEWayBill.fulfilled, (state, action) => {
+                state.listingLoader = false;
+                const records = action.payload?.data?.items || [];
+                state.eWayBill = Array.isArray(records) ? records : [];
+                state.pagination = action.payload?.data?.pagination || null;
+                state.error = null;
+            })
+            .addCase(getAllTransporterEWayBill.rejected, (state, action: any) => {
+                state.listingLoader = false;
+                state.eWayBill = [];
+                state.pagination = null;
+                state.error = action.payload?.message || "Failed to get transport e way bill";
             })
 
 

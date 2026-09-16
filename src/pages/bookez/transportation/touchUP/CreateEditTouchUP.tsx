@@ -15,6 +15,7 @@ import { createTransportTouchup, updateTransportTouchup } from "../../../../redu
 import { getAllProducts } from "../../../../redux/slices/professionalSlice/productMasterSlice";
 import { getAllUnits } from "../../../../redux/slices/professionalSlice/unitMasterSlice";
 import professionalAxios from "../../../../services/professionalAxios";
+import { selectClassNames, selectThemeStyles } from "../tripAllocation/tripAllocationInitialState";
 
 const getDisplayName = (name: any) => {
     if (!name) return "";
@@ -112,9 +113,9 @@ const normalizeFormForEdit = (data: any = {}) => {
 const touchUpStatusOptions = [
     { label: "Select Status", value: "" },
     { label: "Pending", value: "pending" },
-   
+
     { label: "Completed", value: "completed" },
-   
+
 ];
 
 // LOCATION BLOCK
@@ -282,7 +283,7 @@ const TouchUpLocationBlock = ({ type, label, location, states, onFieldChange, is
                     })
                 )}
 
-               
+
             </div>
         </div>
     );
@@ -790,6 +791,8 @@ const CreateEditTouchUP = () => {
                                         isDisabled={isView}
                                         onChange={(option: any) => updateField("tripOrder", option?.value || "")}
                                         classNamePrefix="rs"
+                                        classNames={selectClassNames}
+                                        styles={selectThemeStyles}
                                     />
                                 </div>
 

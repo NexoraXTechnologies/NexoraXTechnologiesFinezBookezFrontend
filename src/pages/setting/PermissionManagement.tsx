@@ -475,7 +475,7 @@ const PermissionManagement = () => {
     }, [permissions]);
 
     return (
-        <div className="min-h-screen bg-muted/20 p-4 text-foreground">
+        <div className="min-h-screen bg-muted/20 p-4 text-foreground dark:bg-background">
             <div className="mx-auto max-w-[1700px] space-y-4">
 
                 <div className="rounded-xl border border-border bg-card shadow-sm">
