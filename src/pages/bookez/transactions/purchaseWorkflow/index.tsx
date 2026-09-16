@@ -1,4 +1,4 @@
-import { ShoppingCart, ClipboardList, Truck, RotateCcw, ReceiptText, WalletCards } from "lucide-react";
+import { ShoppingCart, ClipboardList, Truck, RotateCcw, ReceiptText, WalletCards, FileStack } from "lucide-react";
 import TransactionDashboard from "../../../../components/mainPage/TransactionDashboard";
 import PurchaseOrder from "./purchaseOrder";
 import Grn from "./Grn";
@@ -8,6 +8,7 @@ import Payment from "./Payment";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useMemo } from "react";
 import { getAllSystemConfigurations } from "../../../../redux/slices/systemConf";
+import MultiPurchaseInvoice from "./multiInvoice";
 
 const PurchaseWorkflowDashboard = () => {
   const dispatch = useDispatch();
@@ -57,6 +58,13 @@ const PurchaseWorkflowDashboard = () => {
       icon: <ReceiptText size={22} />,
       permissionKey: "purchaseInvoice"
     },
+    {
+      title: "Multi Purchase Invoices",
+      description: "Combine and manage multiple GRNs in a single purchase invoice.",
+      component: MultiPurchaseInvoice,
+      icon: <FileStack size={22} />,
+      permissionKey: "purchaseInvoice"
+    },
     ...(enablePayment ? [{
       title: "Payment",
       description: "Create and manage payments.",
@@ -65,7 +73,7 @@ const PurchaseWorkflowDashboard = () => {
       permissionKey: "payment"
     }] : [])
   ];
-
+ 
   return (
     <TransactionDashboard
       title="Purchase Workflow"

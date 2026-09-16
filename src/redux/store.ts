@@ -129,6 +129,7 @@ import barcodeQrReducer from "./slices/professionalSlice/BarCodeAndQRCode";
 import gstVerifyReducer from "./slices/professionalSlice/gstVerify";
 import profitAndLossReducer from "./slices/professionalSlice/accountStatment";
 import multiSalesInvoiceReducer from "./slices/professionalSlice/salesWorkflow/multiInvoice";
+import multiPurchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/multiInvoice";
 
 export const store = configureStore({
   reducer: {
@@ -261,6 +262,7 @@ export const store = configureStore({
     kitCollection: kitCollectionReducer,
     profitLoss: profitAndLossReducer,
     barcodeQr: barcodeQrReducer,
+    multiPurchaseInvoice: multiPurchaseInvoiceReducer,
     multiSalesInvoice: multiSalesInvoiceReducer,
     gstVerify: gstVerifyReducer
   },

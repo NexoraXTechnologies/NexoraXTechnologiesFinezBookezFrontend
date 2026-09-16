@@ -418,9 +418,9 @@ const MultiInvoiceEditableTable = ({
         return normalizeReadonlyColumns([...invoiceFields, ...productFields]);
     }, [invoiceFields, productFields]);
 
-    const rows = useMemo(() => {
+    const rows = useMemo(() => { 
         const flattenedRows: any[] = [];
-
+ 
         (invoices || []).forEach((invoice: any, invoiceIndex: number) => {
             const products = Array.isArray(invoice?.sInvBody) ? invoice.sInvBody : [];
             const invoiceNumber = invoice?.sInvNo || invoice?.sInvVoucherNumber || invoice?.sOrderVoucherNumber || `Invoice ${invoiceIndex + 1}`;
@@ -434,7 +434,7 @@ const MultiInvoiceEditableTable = ({
                 });
                 return;
             }
-
+ 
             products.forEach((product: any, productIndex: number) => {
                 flattenedRows.push({
                     ...invoice,
@@ -445,7 +445,7 @@ const MultiInvoiceEditableTable = ({
                 });
             });
         });
-
+ 
         return flattenedRows;
     }, [invoices]);
 
