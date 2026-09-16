@@ -345,8 +345,14 @@ const CustomerStep = ({
 		{
 			key: "customerDetails.mobileNumber",
 			label: "Mobile Number",
-			type: "number",
+			type: "text",
 			mandatory: true,
+			maxLength: 10,
+			error:
+				form.customerDetails?.mobileNumber &&
+					!/^\d{10}$/.test(String(form.customerDetails.mobileNumber))
+					? "Mobile number must be exactly 10 digits"
+					: "",
 		},
 		{
 			key: "customerDetails.email",
