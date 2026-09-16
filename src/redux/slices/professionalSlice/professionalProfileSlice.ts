@@ -1,6 +1,20 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import professionalAxios from "../../../services/professionalAxios";
 
+type UpdateProfessionalProfilePayload = {
+  ChildUser: {
+    userFirstName: string;
+    userMiddleName: string;
+    userLastName: string;
+    userDOB: string;
+    userGender: string;
+    userEmail: string;
+    userType: string;
+    businessType: string;
+    profilePic?: string;
+  };
+};
+
 // =======================================================
 // GET PROFILE
 // =======================================================
@@ -8,13 +22,17 @@ export const getProfessionalProfile = createAsyncThunk(
   "professionalProfile/getProfessionalProfile",
   async (_, { rejectWithValue }) => {
     try {
-      // Get mobile number from localStorage
       // @ts-ignore
-      const professionalHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
+      const professionalHeaders = JSON.parse(
+        localStorage.getItem("professionalHeaders") || "{}"
+      );
+
       const mobile = professionalHeaders?.loginuser;
 
       if (!mobile) {
-        return rejectWithValue({ message: "Mobile number not found in localStorage" });
+        return rejectWithValue({
+          message: "Mobile number not found in localStorage",
+        });
       }
 
       const res = await professionalAxios.get(
@@ -30,7 +48,9 @@ export const getProfessionalProfile = createAsyncThunk(
       return res.data.data?.ChildUsers;
     } catch (err: any) {
       return rejectWithValue({
-        message: err.response?.data?.message || "Failed to fetch profile",
+        message:
+          err.response?.data?.message ||
+          "Failed to fetch profile",
       });
     }
   }
@@ -39,33 +59,50 @@ export const getProfessionalProfile = createAsyncThunk(
 // =======================================================
 // UPDATE PROFILE
 // =======================================================
-export const updateProfessionalProfile = createAsyncThunk(
+export const updateProfessionalProfile = createAsyncThunk<
+  any,
+  UpdateProfessionalProfilePayload,
+  { rejectValue: { message: string } }
+>(
   "professionalProfile/updateProfessionalProfile",
   async (profileData, { rejectWithValue }) => {
     try {
       // @ts-ignore
-      const professionalHeaders = JSON.parse(localStorage.getItem("professionalHeaders"));
-      const mobile = professionalHeaders?.["x-db-name"];
+      const professionalHeaders = JSON.parse(
+        localStorage.getItem("professionalHeaders") || "{}"
+      );
+
+      const mobile = professionalHeaders?.loginuser;
 
       if (!mobile) {
-        return rejectWithValue({ message: "Mobile number not found in localStorage" });
+        return rejectWithValue({
+          message: "Mobile number not found in localStorage",
+        });
       }
 
       const res = await professionalAxios.put(
         `/eTaxSolnMongoApiBackend/users/${mobile}`,
-        profileData,
+        profileData
       );
 
       if (!res.data?.success) {
         return rejectWithValue({
-          message: res.data?.message || "Failed to update profile",
+          message:
+            res.data?.message ||
+            "Failed to update profile",
         });
       }
 
-      return res.data.data?.ChildUsers || profileData;
+      return (
+        res.data.data?.ChildUsers ||
+        profileData.ChildUser
+      );
     } catch (err: any) {
       return rejectWithValue({
-        message: err.response?.data?.message || "Failed to update profile",
+        message:
+          err.response?.data?.message ||
+          err?.message ||
+          "Failed to update profile",
       });
     }
   }
@@ -90,7 +127,6 @@ const professionalProfileSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // GET PROFILE
     builder
       .addCase(getProfessionalProfile.pending, (state) => {
         state.loading = true;
@@ -102,10 +138,11 @@ const professionalProfileSlice = createSlice({
       })
       .addCase(getProfessionalProfile.rejected, (state: any, action: any) => {
         state.loading = false;
-        state.error = action.payload?.message || "Something went wrong";
+        state.error =
+          action.payload?.message ||
+          "Something went wrong";
       });
 
-    // UPDATE PROFILE
     builder
       .addCase(updateProfessionalProfile.pending, (state) => {
         state.loading = true;
@@ -119,10 +156,14 @@ const professionalProfileSlice = createSlice({
       })
       .addCase(updateProfessionalProfile.rejected, (state, action: any) => {
         state.loading = false;
-        state.error = action.payload?.message || "Failed to update profile";
+        state.error =
+          action.payload?.message ||
+          "Failed to update profile";
       });
   },
 });
 
-export const { clearProfileState } = professionalProfileSlice.actions;
+export const { clearProfileState } =
+  professionalProfileSlice.actions;
+
 export default professionalProfileSlice.reducer;
