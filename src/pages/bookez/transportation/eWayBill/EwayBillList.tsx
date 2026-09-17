@@ -1978,23 +1978,23 @@ const EWayBillList = () => {
                             <button
                                 type="button"
                                 onClick={() => handleEwbTabChange("myEwb")}
-                                className={`whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-semibold transition-all ${activeEwbTab === "myEwb"
+                                className={`whitespace-nowrap rounded-md px-2 py-1 text-sm font-semibold transition-all ${activeEwbTab === "myEwb"
                                         ? "bg-card text-primary shadow-sm"
                                         : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
                                     }`}
                             >
-                                My EWB
+                                My E-Way Bills
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => handleEwbTabChange("transporterEwb")}
-                                className={`whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-semibold transition-all ${activeEwbTab === "transporterEwb"
+                                className={`whitespace-nowrap rounded-md px-2 py-1 text-sm font-semibold transition-all ${activeEwbTab === "transporterEwb"
                                         ? "bg-card text-primary shadow-sm"
                                         : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
                                     }`}
                             >
-                                Transporter's EWB
+                                Transporter's E-Way Bills
                             </button>
 
                         </div>

@@ -32,7 +32,7 @@ export const createCompany = createAsyncThunk(
 =================================================== */
 export const getCompany = createAsyncThunk(
   "professionalCompanyMaster/getCompany",
-  async (_: any, { rejectWithValue }) => {
+  async (_ , { rejectWithValue }) => {
     try {
       const res = await professionalAxios.get(
         "/eTaxSolnMongoApiBackend/companyMaster/getCompany"

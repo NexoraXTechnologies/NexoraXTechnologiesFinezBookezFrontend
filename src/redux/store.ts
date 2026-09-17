@@ -122,6 +122,7 @@ import transactionModuleReducer from "./slices/professionalSlice/transactionConf
 import voucherConfigurationReducer from "../redux/slices/professionalSlice/documentSeries"
 import registerFilterDropdownReducer from "../redux/slices/professionalSlice/registerModule";
 import drillDownReportReducer from "./slices/professionalSlice/drillDownReportSlice";
+import paymentReminderReportReducer from "./slices/professionalSlice/paymentReminderReportSlice";
 import cashBankReportReducer from "./slices/professionalSlice/cashBankReportSlice";
 import teamEmployeeSchemaReducer from "./slices/systemConf/teamEmployeeSchemaSlice";
 import kitCollectionReducer from "./slices/professionalSlice/kitCollection";
@@ -257,6 +258,7 @@ export const store = configureStore({
     customTransaction: customTransactionDataReducer,
 
     drillDownReport: drillDownReportReducer,
+    paymentReminderReport: paymentReminderReportReducer,
     cashBankReport: cashBankReportReducer,
     teamEmployeeSchema: teamEmployeeSchemaReducer,
     kitCollection: kitCollectionReducer,
