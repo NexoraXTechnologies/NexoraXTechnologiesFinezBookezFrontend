@@ -55,7 +55,7 @@ const PaymentReminders = () => {
     useEffect(() => {
         const fetchCompanyMaster = async () => {
             try {
-                const response = await dispatch(getCompany() as any).unwrap();
+                const response = await dispatch(getCompany({ withParent: true, limit: 100 }) as any).unwrap();
                 setCompanyMaster(response?.data || response || null);
             } catch (error: any) { setCompanyMaster(null); }
         };
