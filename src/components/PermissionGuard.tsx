@@ -1,7 +1,8 @@
-
 import type { ReactNode } from "react";
+import { useSelector } from "react-redux";
 import {
     checkCustomMasterPermissionFromData,
+    checkCustomTransactionPermissionFromData,
     checkPermissionFromData,
     getStoredPermissions,
     type PermissionAction,
@@ -12,6 +13,7 @@ type PermissionProps = {
     module?: string;
     permissionKey?: string;
     moduleCode?: string;
+    transactionModuleCode?: string;
     action?: PermissionAction;
 };
 
@@ -20,13 +22,27 @@ const Permission = ({
     module = "bookez",
     permissionKey = "",
     moduleCode = "",
+    transactionModuleCode = "",
     action = "view",
 }: PermissionProps) => {
-    const permissions = getStoredPermissions();
-    // console.log({permissions})
-    const hasPermission = moduleCode
-        ? checkCustomMasterPermissionFromData(permissions, moduleCode, action)
-        : checkPermissionFromData(permissions, module, permissionKey, action);
+    const currentUserPermissions = useSelector((state: any) => state?.permissions?.currentUserPermissions || {});
+
+    const permissions = Object.keys(currentUserPermissions || {}).length > 0
+        ? currentUserPermissions
+        : getStoredPermissions();
+
+    const normalizedMasterCode = String(moduleCode || "").trim();
+    const normalizedTransactionCode = String(transactionModuleCode || "").trim();
+
+    let hasPermission = false;
+
+    if (normalizedTransactionCode) {
+        hasPermission = checkCustomTransactionPermissionFromData(permissions, normalizedTransactionCode, action);
+    } else if (normalizedMasterCode) {
+        hasPermission = checkCustomMasterPermissionFromData(permissions, normalizedMasterCode, action);
+    } else {
+        hasPermission = checkPermissionFromData(permissions, module, permissionKey, action);
+    }
 
     if (!hasPermission) return null;
 
@@ -37,6 +53,7 @@ const isModuleEnabled = (moduleName: string) => {
     const permissions = getStoredPermissions();
     return permissions?.[moduleName]?.enabled === true;
 };
-export { isModuleEnabled }
+
+export { isModuleEnabled };
 
 export default Permission;

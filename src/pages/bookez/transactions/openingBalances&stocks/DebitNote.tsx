@@ -1231,25 +1231,14 @@ const DebitNote = () => {
                 item?.purchaseReturnNumber ||
                 "",
 
-            referenceNumber:
-                item?.reference?.purchaseInvoice?.invoiceNumber ||
-                item?.reference?.purchaseReturn?.purchaseReturnNumber ||
-                item?.referenceNumber ||
-                "",
-
+            referenceNumber: item?.reference?.purchaseInvoice?.invoiceNumber || item?.reference?.purchaseReturn?.purchaseReturnNumber || item?.referenceNumber || "",
             reason: item?.reason || "",
-
             adjustmentOnly: isAdjustmentOnly,
-
-            adjustmentNetAmount: isAdjustmentOnly
-                ? String(item?.totals?.netAmount || item?.netAmount || "")
-                : "",
-
+            adjustmentNetAmount: isAdjustmentOnly ? String(item?.totals?.netAmount || item?.netAmount || "") : "",
             remark: item?.remarks || item?.remark || "",
             remarks: item?.remarks || item?.remark || "",
-
             status: item?.status || "draft",
-
+ 
             // items: isAdjustmentOnly ? [] : body,
             items: body,
 

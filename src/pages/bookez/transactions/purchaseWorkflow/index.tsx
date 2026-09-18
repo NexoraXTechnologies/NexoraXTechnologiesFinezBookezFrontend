@@ -63,7 +63,7 @@ const PurchaseWorkflowDashboard = () => {
       description: "Combine and manage multiple GRNs in a single purchase invoice.",
       component: MultiPurchaseInvoice,
       icon: <FileStack size={22} />,
-      permissionKey: "purchaseInvoice"
+      permissionKey: "multiPurchaseInvoice"
     },
     ...(enablePayment ? [{
       title: "Payment",

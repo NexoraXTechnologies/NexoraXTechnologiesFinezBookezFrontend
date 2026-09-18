@@ -40,14 +40,14 @@ const AccountStatement = () => {
                 description: "Manage customers, vendors, cash, bank and ledgers.",
                 icon: <Wallet size={22} />,
                 component: ProfitAndLoss,
-                permissionKey: "accountMaster",
+                permissionKey: "accountStatement.profitAndLoss",
             },
             {
                 title: "Balance Sheet",
                 description: "Manage customers, vendors, cash, bank and ledgers.",
                 icon: <Wallet size={22} />,
                 component: BalanceSheet,
-                permissionKey: "accountMaster",
+                permissionKey: "accountStatement.balanceSheet",
             }
         ];
 

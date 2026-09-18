@@ -304,6 +304,19 @@ const SalesInVoice = () => {
         };
     }, [templateFields]);
 
+    // ⭐ YELLOW STAR: ADDED — CHECK CUSTOMER ACCOUNT AVAILABILITY FROM DYNAMIC SCHEMA OPTIONS
+    const schemaCustomerAvailability = useMemo(() => {
+        const customerFields = (templateFields?.header || []).filter((field: any) => {
+            const fieldKey = String(field?.key || "");
+            return !isTrueValue(field?.isHidden) && CUSTOMER_FIELD_KEYS.has(fieldKey);
+        });
+
+        return {
+            hasField: customerFields.length > 0,
+            hasAccounts: customerFields.some((field: any) => Array.isArray(field?.options) && field.options.length > 0),
+        };
+    }, [templateFields?.header]);
+
     const posPostingField = useMemo(() => (templateFieldsWithCreateActions?.header || []).find((field: any) => isPosPostingField(field)), [templateFieldsWithCreateActions]);
     const posPostingFieldKey = String(posPostingField?.key || "isAutoPost");
     const posPostingEnabled = isTrueValue(form?.[posPostingFieldKey] ?? form?.isAutoPost);
@@ -1724,19 +1737,18 @@ const SalesInVoice = () => {
                 accountResponse?.data ||
                 [];
 
-            const customerAccounts = Array.isArray(refreshedAccounts)
-                ? refreshedAccounts.filter((account: any) => String(account?.accountType || "").toLowerCase() === "customer")
-                : [];
+            // ⭐ YELLOW STAR: UPDATED — DO NOT FILTER CREATED ACCOUNT BY HARDCODED ACCOUNT TYPE
+            const accountList = Array.isArray(refreshedAccounts) ? refreshedAccounts : [];
 
             const savedCode = savedAccount?.accountCode || "";
             const savedName = savedAccount?.accountName || "";
 
-            const createdCustomer = customerAccounts.find((account: any) =>
+            const createdCustomer = accountList.find((account: any) =>
                 (savedCode && String(account?.accountCode) === String(savedCode)) ||
                 (savedName && String(account?.accountName) === String(savedName))
             ) ||
                 (savedCode || savedName ? savedAccount : null) ||
-                customerAccounts[customerAccounts.length - 1] ||
+                accountList[accountList.length - 1] ||
                 null;
 
             if (createdCustomer) {
@@ -3435,9 +3447,7 @@ const SalesInVoice = () => {
         loadAccounts();
     }, [dispatch]);
 
-    // ★ ADDED: Open Account Master only after the Sales Invoice form
-    // is visible, the Account Master request has completed, and there
-    // is no customer account.
+    // ⭐ YELLOW STAR: UPDATED — OPEN ACCOUNT MASTER USING SCHEMA OPTIONS, NOT HARDCODED ACCOUNT TYPE
     useEffect(() => {
         if (!showModal)
             return;
@@ -3448,14 +3458,20 @@ const SalesInVoice = () => {
         if (!accountListLoaded)
             return;
 
-        if (filterAccount.length === 0) {
+        if (fieldsLoading)
+            return;
+
+        const customerMissing = schemaCustomerAvailability.hasField && !schemaCustomerAvailability.hasAccounts;
+
+        if (customerMissing) {
             setCheckAccount(true);
         }
     }, [
         showModal,
         editingRecord,
         accountListLoaded,
-        filterAccount.length,
+        fieldsLoading,
+        schemaCustomerAvailability,
     ]);
 
 

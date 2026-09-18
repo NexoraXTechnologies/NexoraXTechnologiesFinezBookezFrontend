@@ -57,7 +57,7 @@ const SaleWorkflowDashboard = () => {
       description: "Manage multiple sales invoices.",
       component: MultiSalesInvoice,
       icon: <FileStack size={22} />,
-      permissionKey: "salesInvoice"
+      permissionKey: "multiSalesInvoice"
     },
     {
       title: "Sales Return",

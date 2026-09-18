@@ -15,7 +15,10 @@ const CustomTransactionDashboard = () => {
         (state: any) => state.transactionModule
     );
 
-    const transactionModules = transactionModuleState?.items || transactionModuleState?.data?.items || [];
+    const transactionModules =
+        transactionModuleState?.items ||
+        transactionModuleState?.data?.items ||
+        [];
 
     useEffect(() => {
         dispatch(
@@ -39,10 +42,11 @@ const CustomTransactionDashboard = () => {
             return {
                 title: item.moduleName || "Custom Transaction",
                 description: item.description || `Manage ${item.moduleName || "custom transaction"}.`,
-                icon: (<ShieldCheck size={22} />),
+                icon: <ShieldCheck size={22} />,
                 component: DynamicCustomTransaction,
-                permissionKey: "Pass",
-                moduleCode: item.moduleCode,
+
+                // CUSTOM TRANSACTION PERMISSION
+                transactionModuleCode: item.moduleCode,
             };
         });
     }, [transactionModules]);

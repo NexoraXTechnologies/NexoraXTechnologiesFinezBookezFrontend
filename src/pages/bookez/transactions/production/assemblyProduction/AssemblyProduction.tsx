@@ -1455,8 +1455,7 @@ const AssemblyProduction = () => {
                                 id="assembly-production-delete-button"
                                 disabled={deleteLoader}
                                 onClick={(e) => {
-                                    const rect =
-                                        e.currentTarget.getBoundingClientRect();
+                                    const rect = e.currentTarget.getBoundingClientRect();
 
                                     let x = rect.left - 150;
                                     if (x < 10) x = 10;

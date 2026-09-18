@@ -2,8 +2,10 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import professionalAxios from "../../services/professionalAxios";
 
 type PermissionModule = {
-    enabled: boolean;
-    permissions: Record<string, any>;
+    enabled?: boolean;
+    view?: boolean;
+    permissions?: Record<string, any>;
+    [key: string]: any;
 };
 
 type PermissionsData = Record<string, PermissionModule>;
@@ -11,6 +13,7 @@ type PermissionsData = Record<string, PermissionModule>;
 type PermissionState = {
     loader: boolean;
     permissions: PermissionsData;
+    currentUserPermissions: PermissionsData;
     parent: any;
     child: any;
     error: string | null;
@@ -33,9 +36,18 @@ type RejectValue = {
     message: string;
 };
 
+const getInitialPermissions = (): PermissionsData => {
+    try {
+        return JSON.parse(localStorage.getItem("permissions") || "{}");
+    } catch {
+        return {};
+    }
+};
+
 const initialState: PermissionState = {
     loader: false,
     permissions: {},
+    currentUserPermissions: getInitialPermissions(),
     parent: null,
     child: null,
     error: null,
@@ -114,6 +126,7 @@ const permissionSlice = createSlice({
     reducers: {
         clearPermissions: (state) => {
             state.permissions = {};
+            state.currentUserPermissions = {};
             state.parent = null;
             state.child = null;
             state.error = null;
@@ -122,6 +135,7 @@ const permissionSlice = createSlice({
 
         setPermissions: (state, action) => {
             state.permissions = action.payload || {};
+            state.currentUserPermissions = action.payload || {};
             localStorage.setItem("permissions", JSON.stringify(action.payload || {}));
         },
 
@@ -131,19 +145,29 @@ const permissionSlice = createSlice({
             state.optionsError = null;
         },
     },
+
     extraReducers: (builder) => {
         builder
             .addCase(getAllPermissions.pending, (state) => {
                 state.loader = true;
                 state.error = null;
             })
+
             .addCase(getAllPermissions.fulfilled, (state, action) => {
                 state.loader = false;
                 state.parent = action.payload?.parent || null;
                 state.child = action.payload?.child || null;
+
+                // Selected user permission for Permission Management
                 state.permissions = action.payload?.permissions || {};
-                action?.payload?.storeInLocal && localStorage.setItem("permissions", JSON.stringify(action.payload?.permissions || {}));
+
+                // Logged-in user permission
+                if (action.payload?.storeInLocal === true) {
+                    state.currentUserPermissions = action.payload?.permissions || {};
+                    localStorage.setItem("permissions", JSON.stringify(action.payload?.permissions || {}));
+                }
             })
+
             .addCase(getAllPermissions.rejected, (state, action) => {
                 state.loader = false;
                 state.error = action.payload?.message || "Failed to fetch permissions";
@@ -153,12 +177,17 @@ const permissionSlice = createSlice({
                 state.loader = true;
                 state.error = null;
             })
+
             .addCase(updatePermission.fulfilled, (state, action) => {
                 state.loader = false;
                 state.parent = action.payload?.parent || null;
                 state.child = action.payload?.child || null;
-                state.permissions = action.payload?.permissions || {};
+
+                if (action.payload?.permissions) {
+                    state.permissions = action.payload.permissions;
+                }
             })
+
             .addCase(updatePermission.rejected, (state, action) => {
                 state.loader = false;
                 state.error = action.payload?.message || "Failed to update permissions";
@@ -169,10 +198,12 @@ const permissionSlice = createSlice({
                 state.customMasterOptionsLoader = true;
                 state.optionsError = null;
             })
+
             .addCase(getCustomMasterPermissionOptions.fulfilled, (state, action) => {
                 state.customMasterOptionsLoader = false;
                 state.customMasterPermissionOptions = action.payload || [];
             })
+
             .addCase(getCustomMasterPermissionOptions.rejected, (state, action) => {
                 state.customMasterOptionsLoader = false;
                 state.optionsError = action.payload?.message || "Failed to fetch custom master permission options";
@@ -183,10 +214,12 @@ const permissionSlice = createSlice({
                 state.customTransactionOptionsLoader = true;
                 state.optionsError = null;
             })
+
             .addCase(getCustomTransactionPermissionOptions.fulfilled, (state, action) => {
                 state.customTransactionOptionsLoader = false;
                 state.customTransactionPermissionOptions = action.payload || [];
             })
+
             .addCase(getCustomTransactionPermissionOptions.rejected, (state, action) => {
                 state.customTransactionOptionsLoader = false;
                 state.optionsError = action.payload?.message || "Failed to fetch custom transaction permission options";

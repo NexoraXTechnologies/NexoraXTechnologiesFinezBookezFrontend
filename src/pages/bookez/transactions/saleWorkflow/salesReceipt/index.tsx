@@ -91,9 +91,6 @@ const SalesReceipt = () => {
     const { transactionsSchema } = useSelector((state: any) => state.getAllTransactionSchema);
     const { salesReceipt = [], pagination = defaultPagination, listingLoader = false, addLoader = false, deleteLoader = false, referenceLoader = false } = salesReceiptState;
     const { report } = useSelector((s: any) => s.reportMapping);
-    const { accounts = [] } = useSelector(
-        (state: any) => state.accountMaster || {}
-    );
 
     const [localOffset, setLocalOffset] = useState(0);
     const [localLimit, setLocalLimit] = useState(10);
@@ -132,24 +129,6 @@ const SalesReceipt = () => {
     const [newReferenceAmount, setNewReferenceAmount] = useState("");
     const [downlaodPDF, setDownlaodPDF] = useState<any>({ show: false, x: null, y: null, type: "" });
     const [confirmTooltip, setConfirmTooltip] = useState<ConfirmTooltipState>({ show: false, x: null, y: null, voucherNumber: null });
-
-    // ★ ADDED: Receipt needs cash/bank in header and customer in body
-    const customerAccounts = useMemo(() => {
-        return (accounts || []).filter(
-            (account: any) =>
-                String(account?.accountType || "").toLowerCase() === "customer"
-        );
-    }, [accounts]);
-
-    const cashBankAccounts = useMemo(() => {
-        return (accounts || []).filter((account: any) => {
-            const accountType = String(
-                account?.accountType || ""
-            ).toLowerCase();
-
-            return accountType === "cash" || accountType === "bank";
-        });
-    }, [accounts]);
 
     // ⭐ YELLOW STAR: ADDED — SEARCH-TO-CREATE FOR RECEIPT ACCOUNTS
     const templateFieldsWithCreateActions = useMemo(() => {
@@ -303,6 +282,26 @@ const SalesReceipt = () => {
             ),
         };
     }, [templateFields, editingRecord]);
+
+    // ⭐ YELLOW STAR: ADDED — CHECK ACCOUNT AVAILABILITY FROM DYNAMIC SCHEMA OPTIONS
+    const schemaAccountAvailability = useMemo(() => {
+        const getAvailability = (fields: any[] = [], accountKeys: Set<string>) => {
+            const accountFields = (fields || []).filter((field: any) => {
+                const fieldKey = String(field?.key || "");
+                return !field?.isHidden && accountKeys.has(fieldKey);
+            });
+
+            return {
+                hasField: accountFields.length > 0,
+                hasAccounts: accountFields.some((field: any) => Array.isArray(field?.options) && field.options.length > 0),
+            };
+        };
+
+        return {
+            header: getAvailability(templateFields?.header || [], HEADER_ACCOUNT_FIELD_KEYS),
+            body: getAvailability(templateFields?.body || [], BODY_ACCOUNT_FIELD_KEYS),
+        };
+    }, [templateFields?.header, templateFields?.body]);
 
     const toNumber = (value: any) => Number(value || 0);
 
@@ -596,14 +595,8 @@ const SalesReceipt = () => {
                 null;
 
             if (createdAccount) {
-                const accountType = String(
-                    createdAccount?.accountType || ""
-                ).toLowerCase();
-
-                if (
-                    accountType === "cash" ||
-                    accountType === "bank"
-                ) {
+                // ⭐ YELLOW STAR: UPDATED — USE DYNAMIC SCHEMA TARGET INSTEAD OF HARDCODED ACCOUNT TYPE
+                if (accountCreateTarget === "header") {
                     setForm((prev: any) => ({
                         ...prev,
                         recAccountCode:
@@ -623,7 +616,7 @@ const SalesReceipt = () => {
                     }));
                 }
 
-                if (accountType === "customer") {
+                if (accountCreateTarget === "body") {
                     setForm((prev: any) => {
                         const rows = [...(prev?.recBody || [])];
 
@@ -641,8 +634,7 @@ const SalesReceipt = () => {
                         );
 
                         const targetIndex =
-                            accountCreateTarget === "body" &&
-                                accountTargetRowIndex !== null &&
+                            accountTargetRowIndex !== null &&
                                 accountTargetRowIndex >= 0 &&
                                 accountTargetRowIndex < rows.length
                                 ? accountTargetRowIndex
@@ -670,11 +662,13 @@ const SalesReceipt = () => {
                         };
                     });
 
+                    const targetErrorRowIndex = accountTargetRowIndex !== null ? accountTargetRowIndex : 0;
+
                     setErrors((prev: any) => ({
                         ...prev,
                         recBody: "",
-                        row_0_accountCode: "",
-                        row_0_accountName: "",
+                        [`row_${targetErrorRowIndex}_accountCode`]: "",
+                        [`row_${targetErrorRowIndex}_accountName`]: "",
                     }));
                 }
             }
@@ -1439,18 +1433,20 @@ const SalesReceipt = () => {
         if (!showModal) return;
         if (editingRecord) return;
         if (!accountListLoaded) return;
+        if (fieldsLoading) return;
 
-        const customerMissing = customerAccounts.length === 0;
-        const cashBankMissing = cashBankAccounts.length === 0;
+        const headerAccountMissing = schemaAccountAvailability.header.hasField && !schemaAccountAvailability.header.hasAccounts;
+        const bodyAccountMissing = schemaAccountAvailability.body.hasField && !schemaAccountAvailability.body.hasAccounts;
+        console.log({ headerAccountMissing, bodyAccountMissing, schemaAccountAvailability })
 
-        if (cashBankMissing) {
+        if (headerAccountMissing) {
             setAccountCreateTarget("header");
             setAccountTargetRowIndex(null);
             setCheckAccount(true);
             return;
         }
 
-        if (customerMissing) {
+        if (bodyAccountMissing) {
             setAccountCreateTarget("body");
             setAccountTargetRowIndex(0);
             setCheckAccount(true);
@@ -1459,10 +1455,9 @@ const SalesReceipt = () => {
         showModal,
         editingRecord,
         accountListLoaded,
-        customerAccounts.length,
-        cashBankAccounts.length,
+        fieldsLoading,
+        schemaAccountAvailability,
     ]);
-
     const showInitialSkeleton = !refreshing && salesReceipt.length === 0 && (listingLoader || fieldsLoading);
 
     if (showInitialSkeleton) {

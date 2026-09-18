@@ -1,11 +1,40 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, IdCard, Users, Settings, ChevronDown, ChevronRight, Building2, Sliders, CloudCog, BookText, LayoutDashboard, X, BrickWallShield, WalletCards, BadgeIndianRupee, ShoppingCart, BarChart3, BookOpenCheck, LockKeyhole, Palette, Wrench, Truck, MonitorCog, Settings2, Workflow, Factory, ReceiptText, ScanLine } from "lucide-react";
+import {
+	LogOut,
+	IdCard,
+	Users,
+	Settings,
+	ChevronDown,
+	ChevronRight,
+	Building2,
+	Sliders,
+	CloudCog,
+	BookText,
+	LayoutDashboard,
+	X,
+	BrickWallShield,
+	WalletCards,
+	BadgeIndianRupee,
+	ShoppingCart,
+	BarChart3,
+	BookOpenCheck,
+	LockKeyhole,
+	Palette,
+	Wrench,
+	Truck,
+	MonitorCog,
+	Settings2,
+	Workflow,
+	Factory,
+	ReceiptText,
+	ScanLine,
+} from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
-// import { useDispatch } from "react-redux";
 import EZLogo from "../assets/Logo.EZ.png";
 import FinEzLogo from "../assets/FinEZ.png";
-import { isModuleEnabled } from "./PermissionGuard";
+import Permission from "./PermissionGuard";
+import { getStoredPermissions } from "../utils/permissionUtils";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllSystemConfigurations } from "../redux/slices/systemConf";
 
@@ -14,9 +43,18 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	const [openMenus, setOpenMenus] = useState({});
 	const localUser = JSON.parse(localStorage.getItem("professionalUser") || "{}");
 	const dispatch = useDispatch();
+
 	const { configurations } = useSelector((state: any) => state.systemConfiguration);
-	const isParentUser = localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash
+	const { currentUserPermissions } = useSelector((state: any) => state.permissions || {});
+
+	const loggedInPermissions =
+		currentUserPermissions && Object.keys(currentUserPermissions).length > 0
+			? currentUserPermissions
+			: getStoredPermissions();
+
+	const isParentUser = localUser?.parentUserMobileNumber === localUser?.userMobileNumberHash;
 	const navigate = useNavigate();
+
 	const [confirm, setConfirm] = useState<{
 		show: boolean;
 		x: number | null;
@@ -47,14 +85,13 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	useEffect(() => {
 		const updateSidebarWidth = () => {
 			const isDesktop = window.innerWidth >= 1024;
+
 			if (!isDesktop) {
 				document.documentElement.style.setProperty("--professional-sidebar-width", "0px");
 				return;
 			}
-			document.documentElement.style.setProperty(
-				"--professional-sidebar-width",
-				isExpanded ? "256px" : "80px"
-			);
+
+			document.documentElement.style.setProperty("--professional-sidebar-width", isExpanded ? "256px" : "80px");
 		};
 
 		updateSidebarWidth();
@@ -66,242 +103,320 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	}, [isExpanded]);
 
 	const enablePOS = useMemo(() => {
-		const locationConfig = configurations?.[0]?.systemConfiguration?.posConfiguration?.enablePOSModule
+		const locationConfig = configurations?.[0]?.systemConfiguration?.posConfiguration?.enablePOSModule;
 		return locationConfig === true || locationConfig === "true";
 	}, [configurations]);
 
-	const enableQrBarcode = configurations?.[0]?.inventoryConfiguration?.enableQrBarcode == true || configurations?.[0]?.inventoryConfiguration?.enableQrBarcode == "true"
+	const enableQrBarcode =
+		configurations?.[0]?.inventoryConfiguration?.enableQrBarcode == true ||
+		configurations?.[0]?.inventoryConfiguration?.enableQrBarcode == "true";
+
 	const enableEngineering = useMemo(() => {
-		const locationConfig = configurations?.[0]?.systemConfiguration?.engineeringModuleConfiguration?.enableEngineeringModule
+		const locationConfig = configurations?.[0]?.systemConfiguration?.engineeringModuleConfiguration?.enableEngineeringModule;
 		return locationConfig === true || locationConfig === "true";
 	}, [configurations]);
-
 
 	const enableTransport = useMemo(() => {
-		const locationConfig = configurations?.[0]?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule
+		const locationConfig = configurations?.[0]?.systemConfiguration?.transportationModuleConfiguration?.enableTransportationModule;
 		return locationConfig === true || locationConfig === "true";
 	}, [configurations]);
 
 	useEffect(() => {
-		dispatch(
-			getAllSystemConfigurations({
-				offset: 0,
-				limit: 100000,
-				status: "",
-			}) as any
-		);
-	}, [])
+		dispatch(getAllSystemConfigurations({ offset: 0, limit: 100000, status: "" }) as any);
+	}, []);
+
+	// LOGGED-IN USER BOOKEZ ACCESS
+	const isBookEZEnabled = loggedInPermissions?.bookez?.enabled === true;
 
 	const menuItems = [
 		{
 			name: "Dashboard",
 			path: "/",
 			icon: <LayoutDashboard size={20} />,
+			module: "dashboardTab",
+			permissionKey: "dashboardTab",
+			action: "view",
 		},
-		...(isModuleEnabled("bookez")
+
+		...(isBookEZEnabled
 			? [
 				{
 					name: "BookEZ",
 					icon: <BookText size={20} />,
-					module: "bookez",
-					permissionKey: "bookez",
 					children: [
 						{
 							name: "Master",
 							path: "/bookEz/master",
 							icon: <BrickWallShield size={20} />,
 							module: "bookez",
-							permissionKey: "accountMaster",
+							permissionKey: "masterTab.permissions.masterTab",
 							action: "view",
 						},
-						...(enableQrBarcode ? [{
-							name: "Code Generate and assign",
-							path: "/bookEz/qr-and-barcode-generator",
-							icon: <ScanLine size={20} />,
-							module: "bookez",
-							permissionKey: "Pass",
-							action: "view",
-						}] : []),
+
+						...(enableQrBarcode
+							? [
+								{
+									name: "Code Generate and assign",
+									path: "/bookEz/qr-and-barcode-generator",
+									icon: <ScanLine size={20} />,
+									module: "bookez",
+									permissionKey: "codeGenerateAndAssignTab.permissions.codeGenerateAndAssignTab",
+									action: "view",
+								},
+							]
+							: []),
+
 						{
 							name: "Opening Balances / Stocks",
 							path: "/bookEz/transaction/opening-balances",
 							icon: <WalletCards size={19} />,
 							module: "bookez",
-							permissionKey: "openingBalance",
+							permissionKey: "openingBalancesStocksTab.permissions.openingBalancesStocksTab",
 							action: "view",
 						},
+
 						{
 							name: "Production Workflow",
 							path: "/bookEz/transaction/production",
 							icon: <Factory size={19} />,
 							module: "bookez",
-							permissionKey: "production",
+							permissionKey: "productionWorkflowTab.permissions.productionWorkflowTab",
 							action: "view",
 						},
+
 						{
 							name: "Sale Workflow",
 							path: "/bookEz/transaction/sale-workflow",
 							icon: <BadgeIndianRupee size={19} />,
 							module: "bookez",
-							permissionKey: "salesInvoice",
+							permissionKey: "saleWorkflowTab.permissions.saleWorkflowTab",
 							action: "view",
 						},
+
 						{
 							name: "Purchase Workflow",
 							path: "/bookEz/transaction/purchase-workflow",
 							icon: <ShoppingCart size={19} />,
 							module: "bookez",
-							permissionKey: "purchaseInvoice",
+							permissionKey: "purchaseWorkflowTab.permissions.purchaseWorkflowTab",
 							action: "view",
 						},
+
 						{
 							name: "Custom Transactions",
 							path: "/bookEz/transaction/custom",
 							icon: <Workflow size={19} />,
 							module: "bookez",
-							permissionKey: "Pass",
+							permissionKey: "customTransactionsTab.permissions.customTransactionsTab",
 							action: "view",
 						},
 
-						...(enableEngineering ? [{
-							name: "Engineering Module",
-							path: "/bookEz/engineering-module",
-							icon: <Wrench size={24} />,
-							module: "bookez",
-							permissionKey: "",
-							action: "view",
+						...(enableEngineering
+							? [
+								{
+									name: "Engineering Module",
+									path: "/bookEz/engineering-module",
+									icon: <Wrench size={24} />,
+									module: "bookez",
+									permissionKey: "engineeringModuleTab.permissions.engineeringModuleTab",
+									action: "view",
+								},
+							]
+							: []),
 
-						}] : []),
+						...(enableTransport
+							? [
+								{
+									name: "Transportation",
+									path: "/bookEz/transportation",
+									icon: <Truck size={24} />,
+									module: "bookez",
+									permissionKey: "transportationTab.permissions.transportationTab",
+									action: "view",
+								},
+							]
+							: []),
 
-
-						...(enableTransport ? [{
-
-
-							name: "Transportation",
-							path: "/bookEz/transportation",
-							icon: <Truck size={24} />,
-							module: "bookez",
-							permissionKey: "",
-							action: "view",
-
-
-						}] : []),
 						{
 							name: "Reports",
 							path: "/bookEz/reports",
 							icon: <BarChart3 size={20} />,
 							module: "bookez",
-							permissionKey: "accountLedger",
+							permissionKey: "reportsTab.permissions.reportsTab",
 							action: "view",
 						},
+
 						{
 							name: "Registers",
 							path: "/bookEz/registers",
 							icon: <BookOpenCheck size={20} />,
 							module: "bookez",
-							permissionKey: "allRegisters",
+							permissionKey: "registersTab.permissions.registersTab",
 							action: "view",
 						},
-						...(enablePOS ? [{
-							name: "POS",
-							path: "/bookEz/pos",
-							icon: <ShoppingCart size={20} />,
-							module: "bookez",
-							permissionKey: "Pass",
-							action: "view",
-						}] : []),
+
+						...(enablePOS
+							? [
+								{
+									name: "POS",
+									path: "/bookEz/pos",
+									icon: <ShoppingCart size={20} />,
+									module: "bookez",
+									permissionKey: "posTab.permissions.posTab",
+									action: "view",
+								},
+							]
+							: []),
+
 						{
 							name: "Accounts Statement",
 							path: "/bookEz/accounts-statement",
 							icon: <ReceiptText size={20} />,
-							module: "bookez",
-							permissionKey: "Pass",
-							action: "view",
-						}
+						},
 					],
 				},
 			]
 			: []),
 
-		// {
-		// 	name: "Subscription",
-		// 	path: "/subscription",
-		// 	icon: <CreditCard size={20} />,
-		// },
 		{
 			name: "Settings",
 			icon: <Settings size={20} />,
+			module: "settingsTab",
+			permissionKey: "settingsTab",
+			action: "view",
 			children: [
 				{
 					name: "Company Master",
 					path: "/master/company",
 					icon: <Building2 size={20} />,
+					module: "companyMasterTab",
+					permissionKey: "companyMasterTab",
+					action: "view",
 				},
+
 				{
 					name: "Add Team/Employee",
 					path: "/users",
 					icon: <Users size={20} />,
+					module: "addTeamEmployeeTab",
+					permissionKey: "addTeamEmployeeTab",
+					action: "view",
 				},
+
 				{
 					name: "Profile",
 					path: "/profile",
 					icon: <IdCard size={19} />,
+					module: "profileTab",
+					permissionKey: "profileTab",
+					action: "view",
 				},
+
 				{
 					name: "Appearance",
 					path: "/appearance",
 					icon: <Palette size={19} />,
+					module: "appearanceTab",
+					permissionKey: "appearanceTab",
+					action: "view",
 				},
-				...(isParentUser ? [{
-					name: "System Configuration",
-					path: "/system-configuration",
-					icon: <MonitorCog size={19} />,
-				}] : []),
-				// ⭐ UPDATED: Added Master Configuration sidebar option
-				...(isParentUser ? [{
-					name: "Master Configuration",
-					path: "/master-configuration",
-					icon: <Sliders size={19} />,
-				}] : []),
-				...(isParentUser ? [{
-					name: "Transaction Configuration",
-					path: "/transaction-configuration",
-					icon: <Settings2 size={19} />,
-				}] : []),
+
+				...(isParentUser
+					? [
+						{
+							name: "System Configuration",
+							path: "/system-configuration",
+							icon: <MonitorCog size={19} />,
+							module: "systemConfigurationTab",
+							permissionKey: "systemConfigurationTab",
+							action: "view",
+						},
+					]
+					: []),
+
+				...(isParentUser
+					? [
+						{
+							name: "Master Configuration",
+							path: "/master-configuration",
+							icon: <Sliders size={19} />,
+							module: "masterConfigurationTab",
+							permissionKey: "masterConfigurationTab",
+							action: "view",
+						},
+					]
+					: []),
+
+				...(isParentUser
+					? [
+						{
+							name: "Transaction Configuration",
+							path: "/transaction-configuration",
+							icon: <Settings2 size={19} />,
+							module: "transactionConfigurationTab",
+							permissionKey: "transactionConfigurationTab",
+							action: "view",
+						},
+					]
+					: []),
+
 				{
 					name: "Document Series",
 					path: "/document-series",
 					icon: <Sliders size={19} />,
+					module: "documentSeriesTab",
+					permissionKey: "documentSeriesTab",
+					action: "view",
 				},
-				...(localUser?.accountType == "SUPER_ADMIN" ? [{
-					name: "User Explorer",
-					path: "/user-explorer",
-					icon: <MonitorCog size={19} />,
-				}] : []),
+
+				...(localUser?.accountType == "SUPER_ADMIN"
+					? [
+						{
+							name: "User Explorer",
+							path: "/user-explorer",
+							icon: <MonitorCog size={19} />,
+							module: "userExplorerTab",
+							permissionKey: "userExplorerTab",
+							action: "view",
+						},
+					]
+					: []),
+
 				...(isParentUser
 					? [
 						{
 							name: "Permission",
 							path: "/permission",
 							icon: <LockKeyhole size={19} />,
+							module: "permissionTab",
+							permissionKey: "permissionTab",
+							action: "view",
 						},
 					]
 					: []),
+
 				...(canShowUsers
 					? [
 						{
 							name: "Configuration",
 							icon: <Sliders size={19} />,
 							path: "/configuration",
+							module: "configurationTab",
+							permissionKey: "configurationTab",
+							action: "view",
 						},
 					]
 					: []),
+
 				...(canShowUsers
 					? [
 						{
 							name: "Automation",
 							icon: <CloudCog size={19} />,
 							path: "/automation",
+							module: "automationTab",
+							permissionKey: "automationTab",
+							action: "view",
 						},
 					]
 					: []),
@@ -320,19 +435,13 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		}
 	};
 
-	// const isItemActive = (item: any, pathname: string) => {
-	// 	if (item.path && pathname === item.path) return true;
-	// 	if (item.matchPaths?.includes(pathname)) return true;
-	// 	return false;
-	// };
-
 	const isItemActive = (item: any, pathname: string) => {
 		if (!item.path) return false;
 
-		// Dashboard should only match exactly
 		if (item.path === "/") {
 			return pathname === "/";
 		}
+
 		return pathname.startsWith(item.path);
 	};
 
@@ -357,6 +466,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	}: any) => {
 		const navigate = useNavigate();
 		const location = useLocation();
+
 		const hasChildren = item.children?.length > 0;
 		const isActive = isItemActive(item, location.pathname);
 		const isParentActive = hasActiveChild(item, location.pathname);
@@ -375,15 +485,15 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			}
 		};
 
-		return (
+		const sidebarContent = (
 			<div>
 				{/* MENU ITEM */}
 				<div
 					onClick={handleClick}
 					style={{ paddingLeft: `${20 + level * 14}px` }}
 					className={`flex items-center cursor-pointer py-3 px-2 mx-2 mb-1 rounded transition-all duration-200 select-none group ${isActive || isParentActive
-						? "bg-primary/10 text-primary"
-						: "text-muted-foreground hover:bg-muted hover:text-primary"
+							? "bg-primary/10 text-primary"
+							: "text-muted-foreground hover:bg-muted hover:text-primary"
 						}`}
 				>
 					{/* ICON */}
@@ -392,25 +502,13 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					</div>
 
 					{/* LABEL */}
-					<span
-						className={
-							"ml-3 text-sm truncate " +
-							(isExpanded ? "lg:block" : "lg:hidden") +
-							" block"
-						}
-					>
+					<span className={"ml-3 text-sm truncate " + (isExpanded ? "lg:block" : "lg:hidden") + " block"}>
 						{item.label || item.name}
 					</span>
 
 					{/* CHEVRON */}
 					{hasChildren && (
-						<div
-							className={
-								"ml-auto " +
-								(isExpanded ? "lg:block" : "lg:hidden") +
-								" block"
-							}
-						>
+						<div className={"ml-auto " + (isExpanded ? "lg:block" : "lg:hidden") + " block"}>
 							{isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 						</div>
 					)}
@@ -418,13 +516,7 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 
 				{/* CHILDREN */}
 				{hasChildren && isOpen && (
-					<div
-						className={
-							"space-y-1 " +
-							(isExpanded ? "lg:block" : "lg:hidden") +
-							" block"
-						}
-					>
+					<div className={"space-y-1 " + (isExpanded ? "lg:block" : "lg:hidden") + " block"}>
 						{item.children.map((child: any) => (
 							<SidebarItem
 								key={child.name}
@@ -439,6 +531,21 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 				)}
 			</div>
 		);
+
+		// APPLY PERMISSION
+		if (item?.module && item?.permissionKey) {
+			return (
+				<Permission
+					module={item.module}
+					permissionKey={item.permissionKey}
+					action={item?.action || "view"}
+				>
+					{sidebarContent}
+				</Permission>
+			);
+		}
+
+		return sidebarContent;
 	};
 
 	useEffect(() => {
@@ -461,8 +568,8 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			<div className="flex items-center justify-between h-16 px-3">
 				<h1
 					className={`font-bold text-xl bg-background border border-border flex items-center justify-center overflow-hidden ${isExpanded
-						? "w-full rounded-xl px-3 py-1"
-						: "w-12 h-12 rounded-full p-2"
+							? "w-full rounded-xl px-3 py-1"
+							: "w-12 h-12 rounded-full p-2"
 						}`}
 				>
 					<span className="lg:hidden flex items-center justify-center w-full">
@@ -521,19 +628,12 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 				>
 					<LogOut size={20} className="text-danger" />
 
-					<span
-						className={
-							"text-sm font-medium text-danger " +
-							(isExpanded ? "lg:block" : "lg:hidden") +
-							" block"
-						}
-					>
+					<span className={"text-sm font-medium text-danger " + (isExpanded ? "lg:block" : "lg:hidden") + " block"}>
 						Logout
 					</span>
 				</div>
 			</div>
 
-			{/* ---- reusable tooltip ---- */}
 			<ConfirmTooltip
 				x={confirm.x}
 				y={confirm.y}

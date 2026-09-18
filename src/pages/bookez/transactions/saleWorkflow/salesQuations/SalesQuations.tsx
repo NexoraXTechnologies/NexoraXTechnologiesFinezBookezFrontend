@@ -382,6 +382,19 @@ const SalesQuotations = () => {
         };
     }, [templateFields]);
 
+    // ⭐ YELLOW STAR: ADDED — CHECK CUSTOMER AVAILABILITY FROM DYNAMIC SCHEMA OPTIONS
+    const schemaCustomerAvailability = useMemo(() => {
+        const customerFields = (templateFields?.header || []).filter((field: any) => {
+            const fieldKey = String(field?.key || "");
+            return !isTrueValue(field?.isHidden) && CUSTOMER_FIELD_KEYS.has(fieldKey);
+        });
+
+        return {
+            hasField: customerFields.length > 0,
+            hasAccounts: customerFields.some((field: any) => Array.isArray(field?.options) && field.options.length > 0),
+        };
+    }, [templateFields?.header]);
+
     const getHeaderFieldByKey = (
         key: string
     ) =>
@@ -1526,20 +1539,12 @@ const SalesQuotations = () => {
                         ?.items ||
                     [];
 
+                // ⭐ YELLOW STAR: UPDATED — USE REFRESHED ACCOUNTS WITHOUT HARDCODED ACCOUNT TYPE CHECK
                 const customerAccounts =
                     Array.isArray(
                         refreshedAccounts
                     )
-                        ? refreshedAccounts.filter(
-                            (
-                                account: any
-                            ) =>
-                                String(
-                                    account?.accountType ||
-                                    ""
-                                ).toLowerCase() ===
-                                "customer"
-                        )
+                        ? refreshedAccounts
                         : [];
 
                 const savedCode =
@@ -3491,6 +3496,7 @@ const SalesQuotations = () => {
         }
     }, [dispatch]);
 
+    // ⭐ YELLOW STAR: UPDATED — OPEN ACCOUNT MASTER USING SCHEMA OPTIONS
     useEffect(() => {
         if (!showModal) {
             setCheckProduct(false);
@@ -3502,14 +3508,15 @@ const SalesQuotations = () => {
         }
 
         if (
-            !accountListLoaded
+            !accountListLoaded ||
+            fieldsLoading
         ) {
             return;
         }
 
         if (
-            filterAccount.length ===
-            0
+            schemaCustomerAvailability.hasField &&
+            !schemaCustomerAvailability.hasAccounts
         ) {
             setCheckAccount(
                 true
@@ -3519,7 +3526,8 @@ const SalesQuotations = () => {
         showModal,
         editingRecord,
         accountListLoaded,
-        filterAccount.length,
+        fieldsLoading,
+        schemaCustomerAvailability,
     ]);
 
     return (

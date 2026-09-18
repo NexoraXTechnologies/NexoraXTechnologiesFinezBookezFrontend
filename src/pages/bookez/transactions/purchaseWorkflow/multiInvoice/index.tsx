@@ -24,6 +24,7 @@ import {
     getMultiPurchaseInvoiceByVoucherNumber,
     updateMultiPurchaseInvoice
 } from "../../../../../redux/slices/professionalSlice/purchaseWorkflow/multiInvoice";
+import Permission from "../../../../../components/PermissionGuard";
 
 const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, currentPage: 1, hasNextPage: false, hasPrevPage: false };
 
@@ -1252,7 +1253,7 @@ const MultiPurchaseInvoice = () => {
                                 refreshing,
                         }}
                     />
-
+                    <Permission module="bookez" permissionKey="multiPurchaseInvoice" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton
                         {...{
@@ -1261,7 +1262,8 @@ const MultiPurchaseInvoice = () => {
                             text:
                                 "Add Multi Purchase Invoice",
                         }}
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -1272,6 +1274,7 @@ const MultiPurchaseInvoice = () => {
                 emptyMessage={`No ${status} Multi Purchase Invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="multiPurchaseInvoice" action="create">
                         <button
                             type="button"
                             disabled={
@@ -1288,7 +1291,8 @@ const MultiPurchaseInvoice = () => {
                         >
                             <Edit size={16} />
                         </button>
-
+                        </Permission>
+                        <Permission module="bookez" permissionKey="multiPurchaseInvoice" action="delete">
                         <button
                             type="button"
                             disabled={
@@ -1304,7 +1308,8 @@ const MultiPurchaseInvoice = () => {
                             title="Delete"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />
