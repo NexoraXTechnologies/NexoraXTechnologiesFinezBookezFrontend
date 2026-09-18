@@ -1,13 +1,37 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/FinEZFabIcon.svg" class="rounded"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FinEZ</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- ⭐ ADDED -->
+  <script>
+    (function () {
+      try {
+        const themeMode = localStorage.getItem("themeMode");
+
+        if (themeMode === "dark") {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        } else {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.style.colorScheme = "light";
+        }
+      } catch (error) {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.style.colorScheme = "light";
+      }
+    })();
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/FinEZFabIcon.svg" class="rounded" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinEZ</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

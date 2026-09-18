@@ -20,6 +20,8 @@ import {
     cancelEWayBill,
     extendEWayBillValidity,
     getAllEWayBill,
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER E-WAY BILL LIST API
+    getAllTransporterEWayBill,
     getEWayBillAccessToken,
     getEWayBillFromGst,
     getEWayBillPdfByNumber,
@@ -542,6 +544,11 @@ const EWayBillList = () => {
 
     const [localLimit, setLocalLimit] = useState(20);
 
+    // ⭐ YELLOW STAR: ADDED — MY EWB / TRANSPORTER EWB MAIN TAB
+    const [activeEwbTab, setActiveEwbTab] = useState<
+        "myEwb" | "transporterEwb"
+    >("myEwb");
+
     const [activeStatus, setActiveStatus] = useState<
         "open" | "close"
     >("open");
@@ -612,6 +619,20 @@ const EWayBillList = () => {
     const pageTitle =
         location.state?.title || "E-Way Bill";
 
+    // ⭐ YELLOW STAR: ADDED — CHANGE MAIN E-WAY BILL TAB
+    const handleEwbTabChange = (
+        tab: "myEwb" | "transporterEwb"
+    ) => {
+        if (activeEwbTab === tab) return;
+
+        setActiveEwbTab(tab);
+        setActiveStatus("open");
+        setSearch("");
+        setDebouncedSearch("");
+        setLocalOffset(0);
+        setOpenActionMenu("");
+    };
+
     // const fetchEWayBills = ({
     //     offset = localOffset,
     //     limit = localLimit,
@@ -631,8 +652,14 @@ const EWayBillList = () => {
         limit = localLimit,
         searchValue = search,
     }: any = {}) => {
+        // ⭐ YELLOW STAR: UPDATED — FETCH LIST BASED ON SELECTED MAIN TAB
+        const listAction =
+            activeEwbTab === "transporterEwb"
+                ? getAllTransporterEWayBill 
+                : getAllEWayBill;
+
         return dispatch(
-            getAllEWayBill({
+            listAction({
                 limit,
                 offset,
                 search: searchValue,
@@ -871,7 +898,7 @@ const EWayBillList = () => {
             limit: localLimit,
             searchValue: debouncedSearch,
         });
-    }, [dispatch, localOffset, localLimit, debouncedSearch]);
+    }, [dispatch, localOffset, localLimit, debouncedSearch, activeEwbTab]);
 
     /* ===================================================
        REFRESH
@@ -1726,17 +1753,12 @@ const EWayBillList = () => {
                 reasonRem: "Vehicle broke down",
             });
 
-            await dispatch(
-                getAllEWayBill({
-                    limit:
-                        localLimit,
-
-                    offset:
-                        localOffset,
-
-                    search,
-                })
-            );
+            // ⭐ YELLOW STAR: UPDATED — REFRESH CURRENT MAIN TAB AFTER ACTION
+            await fetchEWayBills({
+                limit: localLimit,
+                offset: localOffset,
+                searchValue: search,
+            });
         } catch (error: any) {
             const apiErrorMessage =
                 error?.error?.error?.message ||
@@ -1937,76 +1959,124 @@ const EWayBillList = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
+                {/* ========================= Header ========================= */}
 
-                    <Badge
-                        {...{
-                            count:
-                                pagination?.totalDocs ??
-                                pagination?.totalRecords ??
-                                eWayBill.length ??
-                                0,
-                            text: "Total E-Way Bills:",
-                            varient: "primary",
-                        }}
-                    />
+                <div
+                    id="eway-bill-header"
+                    className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
+                >
+                    {/* ⭐ YELLOW STAR: UPDATED — TITLE + EWB TABS IN SAME TOP ROW */}
+                    <div className="flex min-w-0 flex-wrap items-center gap-3">
 
-                    <div className="flex rounded-md border border-border bg-background p-1">
 
-                        <button
-                            type="button"
-                            onClick={() => setActiveStatus("open")}
-                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "open"
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:bg-muted"
-                                }`}
-                        >
-                            Open ({openCount})
-                        </button>
+                        {/* DIVIDER */}
+                        <div className="hidden h-7 w-px bg-border sm:block" />
 
-                        <button
-                            type="button"
-                            onClick={() => setActiveStatus("close")}
-                            className={`rounded px-3 py-1.5 text-xs transition ${activeStatus === "close"
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:bg-muted"
-                                }`}
-                        >
-                            Closed ({closeCount})
-                        </button>
+                        {/* ⭐ YELLOW STAR: UPDATED — COMPACT TOP TABS */}
+                        <div className="flex items-center rounded-lg bg-muted/60 p-1">
 
+                            <button
+                                type="button"
+                                onClick={() => handleEwbTabChange("myEwb")}
+                                className={`whitespace-nowrap rounded-md px-2 py-1 text-sm font-semibold transition-all ${activeEwbTab === "myEwb"
+                                        ? "bg-card text-primary shadow-sm"
+                                        : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
+                                    }`}
+                            >
+                                My E-Way Bills
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleEwbTabChange("transporterEwb")}
+                                className={`whitespace-nowrap rounded-md px-2 py-1 text-sm font-semibold transition-all ${activeEwbTab === "transporterEwb"
+                                        ? "bg-card text-primary shadow-sm"
+                                        : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
+                                    }`}
+                            >
+                                Transporter's E-Way Bills
+                            </button>
+
+                        </div>
                     </div>
 
-                    <DataREfreshButton
-                        {...{
-                            callBackFn: handleRefresh,
-                            loading: refreshing,
-                        }}
-                    />
+                    {/* ⭐ YELLOW STAR: EXISTING RIGHT SIDE CONTROLS */}
+                    <div className="flex flex-wrap items-center gap-2 xl:ml-auto xl:flex-nowrap">
 
-                    <SearchInput
-                        {...{
-                            search,
-                            setSearch,
-                        }}
-                    />
+                        <div className="shrink-0">
+                            <Badge
+                                {...{
+                                    count:
+                                        pagination?.totalDocs ??
+                                        pagination?.totalRecords ??
+                                        eWayBill.length ??
+                                        0,
+                                    text: "Total E-Way Bills:",
+                                    varient: "primary",
+                                }}
+                            />
+                        </div>
 
-                    {/* <Permission
-                        module="bookez"
-                        permissionKey="Pass"
-                        action="create"
-                    >
-                       
-                        <DataCreateButton
-                            {...{
-                                callBackFn: openCreateEWayBill,
-                                text: "Create E-Way Bill",
-                            }}
-                        />
-                    </Permission> */}
+                        <div className="flex shrink-0 rounded-lg border border-border bg-background p-1">
+                            <button
+                                type="button"
+                                onClick={() => setActiveStatus("open")}
+                                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${activeStatus === "open"
+                                        ? "bg-primary text-primary-foreground"
+                                        : "text-muted-foreground hover:bg-muted"
+                                    }`}
+                            >
+                                Open ({openCount})
+                            </button>
 
+                            <button
+                                type="button"
+                                onClick={() => setActiveStatus("close")}
+                                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${activeStatus === "close"
+                                        ? "bg-primary text-primary-foreground"
+                                        : "text-muted-foreground hover:bg-muted"
+                                    }`}
+                            >
+                                Closed ({closeCount})
+                            </button>
+                        </div>
+
+                        <div className="shrink-0">
+                            <DataREfreshButton
+                                {...{
+                                    callBackFn: handleRefresh,
+                                    loading: refreshing,
+                                }}
+                            />
+                        </div>
+
+                        <div className="min-w-[220px]">
+                            <SearchInput
+                                {...{
+                                    search,
+                                    setSearch,
+                                }}
+                            />
+                        </div>
+
+                        {/* <Permission
+            module="bookez"
+            permissionKey="Pass"
+            action="create"
+        >
+            <DataCreateButton
+                {...{
+                    callBackFn: openCreateEWayBill,
+                    text: "Create E-Way Bill",
+                }}
+            />
+        </Permission> */}
+
+                    </div>
                 </div>
             </div>
+
+
 
             {/* ========================= Table ========================= */}
 

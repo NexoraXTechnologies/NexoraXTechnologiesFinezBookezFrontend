@@ -8,7 +8,7 @@ import {
 } from "../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 
 import { toast } from "react-toastify";
-import { Edit, RefreshCcw, CheckCircle2, Trash2 } from "lucide-react";
+import { Edit, RefreshCcw, CheckCircle2 } from "lucide-react";
 import { ImageUploadInput, SelectInput, TextArea, TextInput } from "../../components/inputs";
 import Modal from "../../components/modal";
 import {
@@ -585,7 +585,7 @@ const CompanyMaster = () => {
         loading={loading}
         emptyMessage="No company data found"
         actions={(companyRow: any) => {
-          const companyCode = companyRow.companyCode || companyRow.companyPublicId || companyRow.code || companyRow._id;
+          // const companyCode = companyRow.companyCode || companyRow.companyPublicId || companyRow.code || companyRow._id;
 
           return (
             <div className="flex items-center gap-2">
