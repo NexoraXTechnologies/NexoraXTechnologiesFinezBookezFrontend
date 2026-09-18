@@ -435,6 +435,26 @@ const Payment = () => {
         };
     }, [templateFields, editingRecord]);
 
+    // ⭐ UPDATED — CHECK PAYMENT ACCOUNT AVAILABILITY FROM DYNAMIC SCHEMA OPTIONS
+    const schemaAccountAvailability = useMemo(() => {
+        const getAvailability = (fields: any[] = [], accountKeys: Set<string>) => {
+            const accountFields = (fields || []).filter((field: any) => {
+                const fieldKey = String(field?.key || "");
+                return !field?.isHidden && accountKeys.has(fieldKey);
+            });
+
+            return {
+                hasField: accountFields.length > 0,
+                hasAccounts: accountFields.some((field: any) => Array.isArray(field?.options) && field.options.length > 0),
+            };
+        };
+
+        return {
+            header: getAvailability(templateFields?.header || [], HEADER_ACCOUNT_FIELD_KEYS),
+            body: getAvailability(templateFields?.body || [], BODY_ACCOUNT_FIELD_KEYS),
+        };
+    }, [templateFields?.header, templateFields?.body]);
+
     /* ===================================================
        FIELD HELPERS
     =================================================== */
@@ -796,10 +816,10 @@ const Payment = () => {
                 const paymentSchema = preparePaymentSchema(transactionsSchema);
 
                 const updatedData = await loadAllTemplateOptions(paymentSchema,
-                //     {
-                //     header: { accountType: "bank , cash" },
-                //     body: { accountType: "vendor , expense", limit: 1000 },
-                // }
+                    //     {
+                    //     header: { accountType: "bank , cash" },
+                    //     body: { accountType: "vendor , expense", limit: 1000 },
+                    // }
                 );
 
                 setTemplateFields(updatedData);
@@ -970,11 +990,11 @@ const Payment = () => {
             (option: any) =>
                 String(option?.value ?? "").trim() === savedDriver ||
                 String(option?.label ?? "").trim().toLowerCase() ===
-                    savedDriver.toLowerCase() ||
+                savedDriver.toLowerCase() ||
                 String(option?.raw?.driverName ?? "").trim().toLowerCase() ===
-                    savedDriver.toLowerCase() ||
+                savedDriver.toLowerCase() ||
                 String(option?.raw?.userFirstName ?? "").trim().toLowerCase() ===
-                    savedDriver.toLowerCase()
+                savedDriver.toLowerCase()
         );
 
         const body =
@@ -1173,10 +1193,6 @@ const Payment = () => {
                 );
 
             if (createdAccount) {
-                const accountType = String(
-                    createdAccount?.accountType || ""
-                ).toLowerCase();
-
                 const accountCode =
                     createdAccount?.accountCode ||
                     createdAccount?.code ||
@@ -1187,10 +1203,8 @@ const Payment = () => {
                     createdAccount?.name ||
                     "";
 
-                if (
-                    accountType === "cash" ||
-                    accountType === "bank"
-                ) {
+                // ⭐ UPDATED — USE SCHEMA ACCOUNT TARGET INSTEAD OF HARDCODED ACCOUNT TYPE
+                if (accountCreateTarget === "header") {
                     setForm((prev: any) => ({
                         ...prev,
                         payAccountCode:
@@ -1210,10 +1224,7 @@ const Payment = () => {
                     }));
                 }
 
-                if (
-                    accountType === "vendor" ||
-                    accountType === "expense"
-                ) {
+                if (accountCreateTarget === "body") {
                     setForm((prev: any) => {
                         const updatedRows = [
                             ...(prev?.payBody || []),
@@ -1234,8 +1245,7 @@ const Payment = () => {
                             );
 
                         const targetIndex =
-                            accountCreateTarget === "body" &&
-                                accountTargetRowIndex !== null &&
+                            accountTargetRowIndex !== null &&
                                 accountTargetRowIndex >= 0 &&
                                 accountTargetRowIndex < updatedRows.length
                                 ? accountTargetRowIndex
@@ -1268,8 +1278,7 @@ const Payment = () => {
                     });
 
                     const errorRowIndex =
-                        accountCreateTarget === "body" &&
-                            accountTargetRowIndex !== null &&
+                        accountTargetRowIndex !== null &&
                             accountTargetRowIndex >= 0
                             ? accountTargetRowIndex
                             : 0;
@@ -2189,29 +2198,39 @@ const Payment = () => {
         loadAccounts();
     }, [dispatch]);
 
+    // ⭐ UPDATED — CHECK PAYMENT ACCOUNTS USING SCHEMA OPTIONS, NOT HARDCODED ACCOUNT TYPES
     useEffect(() => {
         if (!showModal) return;
         if (editingRecord) return;
         if (!accountListLoaded) return;
+        if (fieldsLoading) return;
 
-        const cashBankMissing =
-            cashBankAccounts.length === 0;
+        const headerAccountMissing =
+            schemaAccountAvailability.header.hasField &&
+            !schemaAccountAvailability.header.hasAccounts;
 
-        const vendorExpenseMissing =
-            vendorExpenseAccounts.length === 0;
+        const bodyAccountMissing =
+            schemaAccountAvailability.body.hasField &&
+            !schemaAccountAvailability.body.hasAccounts;
 
-        if (
-            cashBankMissing ||
-            vendorExpenseMissing
-        ) {
+        if (headerAccountMissing) {
+            setAccountCreateTarget("header");
+            setAccountTargetRowIndex(null);
+            setCheckAccount(true);
+            return;
+        }
+
+        if (bodyAccountMissing) {
+            setAccountCreateTarget("body");
+            setAccountTargetRowIndex(0);
             setCheckAccount(true);
         }
     }, [
         showModal,
         editingRecord,
         accountListLoaded,
-        cashBankAccounts.length,
-        vendorExpenseAccounts.length,
+        fieldsLoading,
+        schemaAccountAvailability,
     ]);
 
     if (showInitialSkeleton) { return <ModulePageSkeleton rows={8} columns={5} /> }

@@ -128,301 +128,308 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 	// LOGGED-IN USER BOOKEZ ACCESS
 	const isBookEZEnabled = loggedInPermissions?.bookez?.enabled === true;
 
-	const menuItems = [
-		{
-			name: "Dashboard",
-			path: "/",
-			icon: <LayoutDashboard size={20} />,
-			module: "dashboardTab",
-			permissionKey: "dashboardTab",
-			action: "view",
-		},
+	// ⭐ UPDATED
+	const menuItems = localUser?.accountType == "SUPER_ADMIN"
+		? [
+			{
+				name: "Profile",
+				path: "/profile",
+				icon: <IdCard size={19} />,
+				module: "profileTab",
+				permissionKey: "profileTab",
+				action: "view",
+			},
+			{
+				name: "User Explorer",
+				path: "/user-explorer",
+				icon: <MonitorCog size={19} />,
+				module: "userExplorerTab",
+				permissionKey: "userExplorerTab",
+				action: "view",
+			},
+		]
+		: [
+			{
+				name: "Dashboard",
+				path: "/",
+				icon: <LayoutDashboard size={20} />,
+				module: "dashboardTab",
+				permissionKey: "dashboardTab",
+				action: "view",
+			},
 
-		...(isBookEZEnabled
-			? [
-				{
-					name: "BookEZ",
-					icon: <BookText size={20} />,
-					children: [
-						{
-							name: "Master",
-							path: "/bookEz/master",
-							icon: <BrickWallShield size={20} />,
-							module: "bookez",
-							permissionKey: "masterTab.permissions.masterTab",
-							action: "view",
-						},
+			...(isBookEZEnabled
+				? [
+					{
+						name: "BookEZ",
+						icon: <BookText size={20} />,
+						children: [
+							{
+								name: "Master",
+								path: "/bookEz/master",
+								icon: <BrickWallShield size={20} />,
+								module: "bookez",
+								permissionKey: "masterTab.permissions.masterTab",
+								action: "view",
+							},
 
-						...(enableQrBarcode
-							? [
-								{
-									name: "Code Generate and assign",
-									path: "/bookEz/qr-and-barcode-generator",
-									icon: <ScanLine size={20} />,
-									module: "bookez",
-									permissionKey: "codeGenerateAndAssignTab.permissions.codeGenerateAndAssignTab",
-									action: "view",
-								},
-							]
-							: []),
+							...(enableQrBarcode
+								? [
+									{
+										name: "Code Generate and assign",
+										path: "/bookEz/qr-and-barcode-generator",
+										icon: <ScanLine size={20} />,
+										module: "bookez",
+										permissionKey: "codeGenerateAndAssignTab.permissions.codeGenerateAndAssignTab",
+										action: "view",
+									},
+								]
+								: []),
 
-						{
-							name: "Opening Balances / Stocks",
-							path: "/bookEz/transaction/opening-balances",
-							icon: <WalletCards size={19} />,
-							module: "bookez",
-							permissionKey: "openingBalancesStocksTab.permissions.openingBalancesStocksTab",
-							action: "view",
-						},
+							{
+								name: "Opening Balances / Stocks",
+								path: "/bookEz/transaction/opening-balances",
+								icon: <WalletCards size={19} />,
+								module: "bookez",
+								permissionKey: "openingBalancesStocksTab.permissions.openingBalancesStocksTab",
+								action: "view",
+							},
 
-						{
-							name: "Production Workflow",
-							path: "/bookEz/transaction/production",
-							icon: <Factory size={19} />,
-							module: "bookez",
-							permissionKey: "productionWorkflowTab.permissions.productionWorkflowTab",
-							action: "view",
-						},
+							{
+								name: "Production Workflow",
+								path: "/bookEz/transaction/production",
+								icon: <Factory size={19} />,
+								module: "bookez",
+								permissionKey: "productionWorkflowTab.permissions.productionWorkflowTab",
+								action: "view",
+							},
 
-						{
-							name: "Sale Workflow",
-							path: "/bookEz/transaction/sale-workflow",
-							icon: <BadgeIndianRupee size={19} />,
-							module: "bookez",
-							permissionKey: "saleWorkflowTab.permissions.saleWorkflowTab",
-							action: "view",
-						},
+							{
+								name: "Sale Workflow",
+								path: "/bookEz/transaction/sale-workflow",
+								icon: <BadgeIndianRupee size={19} />,
+								module: "bookez",
+								permissionKey: "saleWorkflowTab.permissions.saleWorkflowTab",
+								action: "view",
+							},
 
-						{
-							name: "Purchase Workflow",
-							path: "/bookEz/transaction/purchase-workflow",
-							icon: <ShoppingCart size={19} />,
-							module: "bookez",
-							permissionKey: "purchaseWorkflowTab.permissions.purchaseWorkflowTab",
-							action: "view",
-						},
+							{
+								name: "Purchase Workflow",
+								path: "/bookEz/transaction/purchase-workflow",
+								icon: <ShoppingCart size={19} />,
+								module: "bookez",
+								permissionKey: "purchaseWorkflowTab.permissions.purchaseWorkflowTab",
+								action: "view",
+							},
 
-						{
-							name: "Custom Transactions",
-							path: "/bookEz/transaction/custom",
-							icon: <Workflow size={19} />,
-							module: "bookez",
-							permissionKey: "customTransactionsTab.permissions.customTransactionsTab",
-							action: "view",
-						},
+							{
+								name: "Custom Transactions",
+								path: "/bookEz/transaction/custom",
+								icon: <Workflow size={19} />,
+								module: "bookez",
+								permissionKey: "customTransactionsTab.permissions.customTransactionsTab",
+								action: "view",
+							},
 
-						...(enableEngineering
-							? [
-								{
-									name: "Engineering Module",
-									path: "/bookEz/engineering-module",
-									icon: <Wrench size={24} />,
-									module: "bookez",
-									permissionKey: "engineeringModuleTab.permissions.engineeringModuleTab",
-									action: "view",
-								},
-							]
-							: []),
+							...(enableEngineering
+								? [
+									{
+										name: "Engineering Module",
+										path: "/bookEz/engineering-module",
+										icon: <Wrench size={24} />,
+										module: "bookez",
+										permissionKey: "engineeringModuleTab.permissions.engineeringModuleTab",
+										action: "view",
+									},
+								]
+								: []),
 
-						...(enableTransport
-							? [
-								{
-									name: "Transportation",
-									path: "/bookEz/transportation",
-									icon: <Truck size={24} />,
-									module: "bookez",
-									permissionKey: "transportationTab.permissions.transportationTab",
-									action: "view",
-								},
-							]
-							: []),
+							...(enableTransport
+								? [
+									{
+										name: "Transportation",
+										path: "/bookEz/transportation",
+										icon: <Truck size={24} />,
+										module: "bookez",
+										permissionKey: "transportationTab.permissions.transportationTab",
+										action: "view",
+									},
+								]
+								: []),
 
-						{
-							name: "Reports",
-							path: "/bookEz/reports",
-							icon: <BarChart3 size={20} />,
-							module: "bookez",
-							permissionKey: "reportsTab.permissions.reportsTab",
-							action: "view",
-						},
+							{
+								name: "Reports",
+								path: "/bookEz/reports",
+								icon: <BarChart3 size={20} />,
+								module: "bookez",
+								permissionKey: "reportsTab.permissions.reportsTab",
+								action: "view",
+							},
 
-						{
-							name: "Registers",
-							path: "/bookEz/registers",
-							icon: <BookOpenCheck size={20} />,
-							module: "bookez",
-							permissionKey: "registersTab.permissions.registersTab",
-							action: "view",
-						},
+							{
+								name: "Registers",
+								path: "/bookEz/registers",
+								icon: <BookOpenCheck size={20} />,
+								module: "bookez",
+								permissionKey: "registersTab.permissions.registersTab",
+								action: "view",
+							},
 
-						...(enablePOS
-							? [
-								{
-									name: "POS",
-									path: "/bookEz/pos",
-									icon: <ShoppingCart size={20} />,
-									module: "bookez",
-									permissionKey: "posTab.permissions.posTab",
-									action: "view",
-								},
-							]
-							: []),
+							...(enablePOS
+								? [
+									{
+										name: "POS",
+										path: "/bookEz/pos",
+										icon: <ShoppingCart size={20} />,
+										module: "bookez",
+										permissionKey: "posTab.permissions.posTab",
+										action: "view",
+									},
+								]
+								: []),
 
-						{
-							name: "Accounts Statement",
-							path: "/bookEz/accounts-statement",
-							icon: <ReceiptText size={20} />,
-						},
-					],
-				},
-			]
-			: []),
+							{
+								name: "Accounts Statement",
+								path: "/bookEz/accounts-statement",
+								icon: <ReceiptText size={20} />,
+							},
+						],
+					},
+				]
+				: []),
 
-		{
-			name: "Settings",
-			icon: <Settings size={20} />,
-			module: "settingsTab",
-			permissionKey: "settingsTab",
-			action: "view",
-			children: [
-				{
-					name: "Company Master",
-					path: "/master/company",
-					icon: <Building2 size={20} />,
-					module: "companyMasterTab",
-					permissionKey: "companyMasterTab",
-					action: "view",
-				},
+			{
+				name: "Settings",
+				icon: <Settings size={20} />,
+				module: "settingsTab",
+				permissionKey: "settingsTab",
+				action: "view",
+				children: [
+					{
+						name: "Company Master",
+						path: "/master/company",
+						icon: <Building2 size={20} />,
+						module: "companyMasterTab",
+						permissionKey: "companyMasterTab",
+						action: "view",
+					},
 
-				{
-					name: "Add Team/Employee",
-					path: "/users",
-					icon: <Users size={20} />,
-					module: "addTeamEmployeeTab",
-					permissionKey: "addTeamEmployeeTab",
-					action: "view",
-				},
+					{
+						name: "Add Team/Employee",
+						path: "/users",
+						icon: <Users size={20} />,
+						module: "addTeamEmployeeTab",
+						permissionKey: "addTeamEmployeeTab",
+						action: "view",
+					},
 
-				{
-					name: "Profile",
-					path: "/profile",
-					icon: <IdCard size={19} />,
-					module: "profileTab",
-					permissionKey: "profileTab",
-					action: "view",
-				},
+					{
+						name: "Profile",
+						path: "/profile",
+						icon: <IdCard size={19} />,
+						module: "profileTab",
+						permissionKey: "profileTab",
+						action: "view",
+					},
 
-				{
-					name: "Appearance",
-					path: "/appearance",
-					icon: <Palette size={19} />,
-					module: "appearanceTab",
-					permissionKey: "appearanceTab",
-					action: "view",
-				},
+					{
+						name: "Appearance",
+						path: "/appearance",
+						icon: <Palette size={19} />,
+						module: "appearanceTab",
+						permissionKey: "appearanceTab",
+						action: "view",
+					},
 
-				...(isParentUser
-					? [
-						{
-							name: "System Configuration",
-							path: "/system-configuration",
-							icon: <MonitorCog size={19} />,
-							module: "systemConfigurationTab",
-							permissionKey: "systemConfigurationTab",
-							action: "view",
-						},
-					]
-					: []),
+					...(isParentUser
+						? [
+							{
+								name: "System Configuration",
+								path: "/system-configuration",
+								icon: <MonitorCog size={19} />,
+								module: "systemConfigurationTab",
+								permissionKey: "systemConfigurationTab",
+								action: "view",
+							},
+						]
+						: []),
 
-				...(isParentUser
-					? [
-						{
-							name: "Master Configuration",
-							path: "/master-configuration",
-							icon: <Sliders size={19} />,
-							module: "masterConfigurationTab",
-							permissionKey: "masterConfigurationTab",
-							action: "view",
-						},
-					]
-					: []),
+					...(isParentUser
+						? [
+							{
+								name: "Master Configuration",
+								path: "/master-configuration",
+								icon: <Sliders size={19} />,
+								module: "masterConfigurationTab",
+								permissionKey: "masterConfigurationTab",
+								action: "view",
+							},
+						]
+						: []),
 
-				...(isParentUser
-					? [
-						{
-							name: "Transaction Configuration",
-							path: "/transaction-configuration",
-							icon: <Settings2 size={19} />,
-							module: "transactionConfigurationTab",
-							permissionKey: "transactionConfigurationTab",
-							action: "view",
-						},
-					]
-					: []),
+					...(isParentUser
+						? [
+							{
+								name: "Transaction Configuration",
+								path: "/transaction-configuration",
+								icon: <Settings2 size={19} />,
+								module: "transactionConfigurationTab",
+								permissionKey: "transactionConfigurationTab",
+								action: "view",
+							},
+						]
+						: []),
 
-				{
-					name: "Document Series",
-					path: "/document-series",
-					icon: <Sliders size={19} />,
-					module: "documentSeriesTab",
-					permissionKey: "documentSeriesTab",
-					action: "view",
-				},
+					{
+						name: "Document Series",
+						path: "/document-series",
+						icon: <Sliders size={19} />,
+						module: "documentSeriesTab",
+						permissionKey: "documentSeriesTab",
+						action: "view",
+					},
 
-				...(localUser?.accountType == "SUPER_ADMIN"
-					? [
-						{
-							name: "User Explorer",
-							path: "/user-explorer",
-							icon: <MonitorCog size={19} />,
-							module: "userExplorerTab",
-							permissionKey: "userExplorerTab",
-							action: "view",
-						},
-					]
-					: []),
+					...(isParentUser
+						? [
+							{
+								name: "Permission",
+								path: "/permission",
+								icon: <LockKeyhole size={19} />,
+								module: "permissionTab",
+								permissionKey: "permissionTab",
+								action: "view",
+							},
+						]
+						: []),
 
-				...(isParentUser
-					? [
-						{
-							name: "Permission",
-							path: "/permission",
-							icon: <LockKeyhole size={19} />,
-							module: "permissionTab",
-							permissionKey: "permissionTab",
-							action: "view",
-						},
-					]
-					: []),
+					...(canShowUsers
+						? [
+							{
+								name: "Configuration",
+								icon: <Sliders size={19} />,
+								path: "/configuration",
+								module: "configurationTab",
+								permissionKey: "configurationTab",
+								action: "view",
+							},
+						]
+						: []),
 
-				...(canShowUsers
-					? [
-						{
-							name: "Configuration",
-							icon: <Sliders size={19} />,
-							path: "/configuration",
-							module: "configurationTab",
-							permissionKey: "configurationTab",
-							action: "view",
-						},
-					]
-					: []),
-
-				...(canShowUsers
-					? [
-						{
-							name: "Automation",
-							icon: <CloudCog size={19} />,
-							path: "/automation",
-							module: "automationTab",
-							permissionKey: "automationTab",
-							action: "view",
-						},
-					]
-					: []),
-			],
-		},
-	];
+					...(canShowUsers
+						? [
+							{
+								name: "Automation",
+								icon: <CloudCog size={19} />,
+								path: "/automation",
+								module: "automationTab",
+								permissionKey: "automationTab",
+								action: "view",
+							},
+						]
+						: []),
+				],
+			},
+		];
 
 	const handleLogout = async () => {
 		try {

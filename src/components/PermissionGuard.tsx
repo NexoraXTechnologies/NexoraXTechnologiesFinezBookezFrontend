@@ -26,6 +26,7 @@ const Permission = ({
     action = "view",
 }: PermissionProps) => {
     const currentUserPermissions = useSelector((state: any) => state?.permissions?.currentUserPermissions || {});
+    if (permissionKey == "Pass") return <>{children}</>
 
     const permissions = Object.keys(currentUserPermissions || {}).length > 0
         ? currentUserPermissions
