@@ -29,6 +29,14 @@ const moduleColumns = [
         title: "Module Type",
         render: (row: TransactionModuleItem) => row.moduleType || "—",
     },
+
+    {
+        key: "schemaType",
+        title: "Schema Type",
+        render: (row: TransactionModuleItem) => row.schemaType || "—",
+    },
+
+
     {
         key: "description",
         title: "Description",

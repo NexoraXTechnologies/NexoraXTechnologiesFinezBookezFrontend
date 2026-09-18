@@ -17,6 +17,7 @@ export const INITIAL_MODULE_FORM: TransactionModuleForm = {
     moduleName: "",
     description: "",
     moduleType: "",
+    schemaType:"normal",
     status: "active",
 };
 

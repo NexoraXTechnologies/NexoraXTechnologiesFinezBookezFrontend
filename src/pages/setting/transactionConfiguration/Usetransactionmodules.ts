@@ -99,6 +99,7 @@ export function useTransactionModules() {
             moduleName: selectedTransactionModule.moduleName || "",
             description: selectedTransactionModule.description || "",
             moduleType: selectedTransactionModule.moduleType || "",
+            schemaType: selectedTransactionModule.schemaType || "",
             status: selectedTransactionModule.status === "inactive" ? "inactive" : "active",
         });
     }, [editingModuleCode, selectedTransactionModule]);
@@ -129,12 +130,24 @@ export function useTransactionModules() {
         setShowModuleForm(true);
 
         try {
-            await dispatch(getTransactionModuleByCode(moduleCode)).unwrap();
+            const response = await dispatch(
+                getTransactionModuleByCode(moduleCode)
+            ).unwrap();
+
+            const existingData = response?.data && typeof response.data === "object" ? response.data : response;
+
+            setModuleForm({
+                moduleName: existingData?.moduleName || "",
+                description: existingData?.description || "",
+                moduleType: existingData?.moduleType || "",
+                schemaType: String(existingData?.schemaType || "sectioned").trim().toLowerCase() === "normal" ? "normal" : "sectioned",
+                status: String(existingData?.status || "active").trim().toLowerCase() === "inactive" ? "inactive" : "active",
+            });
+
         } catch {
             // Error is rendered inside modal via moduleError.
         }
     };
-
     const updateModuleFormField = (field: keyof TransactionModuleForm, value: string) => {
         setModuleForm((previous) => ({ ...previous, [field]: value }));
         setModuleFormErrors((previous) => ({ ...previous, [field]: "" }));
@@ -159,6 +172,7 @@ export function useTransactionModules() {
             moduleName: moduleForm.moduleName.trim(),
             description: moduleForm.description.trim(),
             moduleType: moduleForm.moduleType.trim(),
+            schemaType: moduleForm.schemaType,
             status: moduleForm.status,
         };
 

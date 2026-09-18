@@ -8,6 +8,7 @@ export type TransactionModuleForm = {
     moduleName: string;
     description: string;
     moduleType: string;
+    schemaType: string;
     status: "active" | "inactive";
 };
 
