@@ -162,32 +162,20 @@ const fileToBase64 = (file: File): Promise<string> => {
 
         reader.onload = () => {
             if (typeof reader.result !== "string") {
-                reject(
-                    new Error(
-                        "Unable to read selected PDF file"
-                    )
-                );
+                reject(new Error("Unable to read selected PDF file"));
                 return;
             }
-
             resolve(reader.result);
         };
 
         reader.onerror = () => {
-            reject(
-                new Error(
-                    "Unable to read selected PDF file"
-                )
-            );
+            reject(new Error("Unable to read selected PDF file"));
         };
-
         reader.readAsDataURL(file);
     });
 };
 
-const formatAmount = (
-    value: number | string | undefined
-): string => {
+const formatAmount = (value: number | string | undefined): string => {
     const amount = Number(value);
 
     if (!Number.isFinite(amount)) {
@@ -200,13 +188,8 @@ const formatAmount = (
     });
 };
 
-const resolveSelectedAccount = (
-    options: DropdownOption[],
-    selectedValue: string
-): SelectedAccount | null => {
-    const selectedOption = options.find(
-        (option) => option?.value === selectedValue
-    );
+const resolveSelectedAccount = (options: DropdownOption[], selectedValue: string): SelectedAccount | null => {
+    const selectedOption = options.find((option) => option?.value === selectedValue);
 
     if (!selectedOption) {
         return null;
@@ -214,10 +197,7 @@ const resolveSelectedAccount = (
 
     return {
         code: selectedOption.value,
-        name:
-            selectedOption.label ||
-            selectedOption.raw?.accountName ||
-            selectedOption.value,
+        name: selectedOption.label || selectedOption.raw?.accountName || selectedOption.value,
     };
 };
 
@@ -225,12 +205,7 @@ const resolveSelectedAccount = (
    SUMMARY CARD
 =================================================== */
 
-const SummaryCard = ({
-    label,
-    value,
-    icon,
-    valueClassName = "text-foreground",
-}: SummaryCardProps) => {
+const SummaryCard = ({ label, value, icon, valueClassName = "text-foreground", }: SummaryCardProps) => {
     return (
         <motion.div
             whileHover={{ y: -2 }}
@@ -288,15 +263,11 @@ const TransactionSection = ({
                 <div className="flex min-w-0 items-center gap-3">
                     <div
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${isReceipt
-                                ? "bg-success/10 text-success"
-                                : "bg-danger/10 text-danger"
+                            ? "bg-success/10 text-success"
+                            : "bg-danger/10 text-danger"
                             }`}
                     >
-                        {isReceipt ? (
-                            <ArrowDownLeft size={20} />
-                        ) : (
-                            <ArrowUpRight size={20} />
-                        )}
+                        {isReceipt ? (<ArrowDownLeft size={20} />) : (<ArrowUpRight size={20} />)}
                     </div>
 
                     <div className="min-w-0">
@@ -314,8 +285,8 @@ const TransactionSection = ({
                 <div className="flex items-center gap-3">
                     <span
                         className={`hidden rounded-md px-2.5 py-1 text-xs font-semibold sm:block ${isReceipt
-                                ? "bg-success/10 text-success"
-                                : "bg-danger/10 text-danger"
+                            ? "bg-success/10 text-success"
+                            : "bg-danger/10 text-danger"
                             }`}
                     >
                         ₹ {formatAmount(totalAmount)}
@@ -357,10 +328,7 @@ const TransactionSection = ({
                     >
                         {!items.length ? (
                             <div className="p-6 text-center">
-                                <FileText
-                                    size={28}
-                                    className="mx-auto mb-2 text-muted-foreground"
-                                />
+                                <FileText size={28} className="mx-auto mb-2 text-muted-foreground" />
 
                                 <p className="text-sm font-normal text-muted-foreground">
                                     No transactions found
@@ -373,85 +341,55 @@ const TransactionSection = ({
                                     <span>Narration</span>
                                     <span>Reference</span>
 
-                                    <span className="text-right">
-                                        Amount
-                                    </span>
+                                    <span className="text-right"> Amount </span>
                                 </div>
 
                                 {items.map(
                                     (item, index) => {
-                                        const amount =
-                                            isReceipt
-                                                ? item?.creditAmount ||
-                                                0
-                                                : item?.debitAmount ||
-                                                0;
+                                        const amount = isReceipt ? item?.creditAmount || 0 : item?.debitAmount || 0;
 
                                         return (
                                             <motion.div
                                                 layout
-                                                key={`${type}-${item?.referenceNumber ||
-                                                    item?.transactionDate ||
-                                                    index
-                                                    }`}
+                                                key={`${type}-${item?.referenceNumber || item?.transactionDate || index}`}
                                                 className="grid grid-cols-1 gap-2 border-b border-border px-3 py-3 last:border-b-0 hover:bg-muted lg:grid-cols-[120px_minmax(220px,1fr)_150px_150px] lg:items-center lg:gap-3"
                                             >
                                                 <div>
-                                                    <p className="text-xs font-medium text-card-foreground">
-                                                        {item?.transactionDate ||
-                                                            "—"}
-                                                    </p>
+                                                    <p className="text-xs font-medium text-card-foreground"> {item?.transactionDate || "—"} </p>
 
                                                     <p className="mt-0.5 text-[11px] font-normal text-muted-foreground lg:hidden">
-                                                        {item?.paymentMode ||
-                                                            "Unknown mode"}
+                                                        {item?.paymentMode || "Unknown mode"}
                                                     </p>
                                                 </div>
 
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-normal leading-5 text-card-foreground">
-                                                        {item?.narration ||
-                                                            "—"}
+                                                        {item?.narration || "—"}
                                                     </p>
 
                                                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                                                         {item?.paymentMode ? (
                                                             <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase text-primary">
-                                                                {
-                                                                    item.paymentMode
-                                                                }
+                                                                {item.paymentMode}
                                                             </span>
                                                         ) : null}
 
                                                         {item?.confidence ? (
                                                             <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium capitalize text-muted-foreground">
-                                                                {
-                                                                    item.confidence
-                                                                }{" "}
-                                                                confidence
+                                                                {item.confidence}{" "} confidence
                                                             </span>
                                                         ) : null}
                                                     </div>
                                                 </div>
 
                                                 <p className="truncate text-xs font-normal text-muted-foreground">
-                                                    {item?.referenceNumber ||
-                                                        "—"}
+                                                    {item?.referenceNumber || "—"}
                                                 </p>
 
                                                 <p
-                                                    className={`text-left text-sm font-semibold lg:text-right ${isReceipt
-                                                            ? "text-success"
-                                                            : "text-danger"
-                                                        }`}
-                                                >
-                                                    {isReceipt
-                                                        ? "+"
-                                                        : "-"}{" "}
-                                                    ₹{" "}
-                                                    {formatAmount(
-                                                        amount
-                                                    )}
+                                                    className={`text-left text-sm font-semibold lg:text-right ${isReceipt ? "text-success" : "text-danger"}`} >
+                                                    {isReceipt ? "+" : "-"}{" "} ₹{" "}
+                                                    {formatAmount(amount)}
                                                 </p>
                                             </motion.div>
                                         );
@@ -473,70 +411,36 @@ const TransactionSection = ({
 const ImportBankStatement = () => {
     const dispatch = useDispatch<any>();
 
-    const fileInputRef =
-        useRef<HTMLInputElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const {
         bankAccounts = [],
         receiptAccounts = [],
         paymentAccounts = [],
-
         parseResult,
         summary,
         receipts = [],
         payments = [],
-
         postResult,
-
         configLoading,
         accountsLoading,
         parseLoading,
         postLoading,
-
         progressText,
         error,
-    } = useSelector(
-        (state: any) =>
-            state.importBankStatement
-    );
+    } = useSelector((state: any) => state.importBankStatement);
 
-    const [selectedFile, setSelectedFile] =
-        useState<File | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedBank, setSelectedBank] = useState("");
+    const [selectedReceiptAccount, setSelectedReceiptAccount,] = useState("");
+    const [selectedPaymentAccount, setSelectedPaymentAccount,] = useState("");
+    const [receiptsExpanded, setReceiptsExpanded,] = useState(false);
+    const [paymentsExpanded, setPaymentsExpanded,] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
-    const [selectedBank, setSelectedBank] =
-        useState("");
+    const isLoading = configLoading || accountsLoading || parseLoading || postLoading;
 
-    const [
-        selectedReceiptAccount,
-        setSelectedReceiptAccount,
-    ] = useState("");
-
-    const [
-        selectedPaymentAccount,
-        setSelectedPaymentAccount,
-    ] = useState("");
-
-    const [
-        receiptsExpanded,
-        setReceiptsExpanded,
-    ] = useState(false);
-
-    const [
-        paymentsExpanded,
-        setPaymentsExpanded,
-    ] = useState(false);
-
-    const [confirmOpen, setConfirmOpen] =
-        useState(false);
-
-    const isLoading =
-        configLoading ||
-        accountsLoading ||
-        parseLoading ||
-        postLoading;
-
-    const loaderMessage =
-        progressText ||
+    const loaderMessage = progressText ||
         (accountsLoading
             ? "Loading account masters..."
             : parseLoading
@@ -551,19 +455,14 @@ const ImportBankStatement = () => {
        INITIAL LOAD
     =================================================== */
 
-    useEffect(() => {
-        dispatch(getBankStatementAccounts());
-    }, [dispatch]);
+    useEffect(() => { dispatch(getBankStatementAccounts()); }, [dispatch]);
 
     /* ===================================================
        ERROR MESSAGE
     =================================================== */
 
     useEffect(() => {
-        if (!error) {
-            return;
-        }
-
+        if (!error) { return; }
         toast.error(error);
         dispatch(clearBankStatementError());
     }, [error, dispatch]);
@@ -578,15 +477,11 @@ const ImportBankStatement = () => {
         }
 
         if (postResult.totalFailCount > 0) {
-            toast.warning(
-                `Created ${postResult.totalSuccessCount} voucher(s). ${postResult.totalFailCount} failed.`
-            );
+            toast.warning(`Created ${postResult.totalSuccessCount} voucher(s). ${postResult.totalFailCount} failed.`);
             return;
         }
 
-        toast.success(
-            `Created ${postResult.receiptSuccessCount} receipt(s) and ${postResult.paymentSuccessCount} payment(s).`
-        );
+        toast.success(`Created ${postResult.receiptSuccessCount} receipt(s) and ${postResult.paymentSuccessCount} payment(s).`);
     }, [postResult]);
 
     /* ===================================================
@@ -601,62 +496,38 @@ const ImportBankStatement = () => {
         return [
             {
                 label: "Opening Balance",
-                value: `₹ ${formatAmount(
-                    summary.openingBalance
-                )}`,
+                value: `₹ ${formatAmount(summary.openingBalance)}`,
                 icon: <WalletCards size={17} />,
                 valueClassName: "text-foreground",
             },
             {
                 label: "Closing Balance",
-                value: `₹ ${formatAmount(
-                    summary.closingBalance
-                )}`,
+                value: `₹ ${formatAmount(summary.closingBalance)}`,
                 icon: <Building2 size={17} />,
                 valueClassName: "text-foreground",
             },
             {
                 label: "Total Receipts",
-                value: `₹ ${formatAmount(
-                    summary.totalReceipts
-                )}`,
-                icon: (
-                    <ArrowDownLeft size={17} />
-                ),
+                value: `₹ ${formatAmount(summary.totalReceipts)}`,
+                icon: (<ArrowDownLeft size={17} />),
                 valueClassName: "text-success",
             },
             {
                 label: "Total Payments",
-                value: `₹ ${formatAmount(
-                    summary.totalPayments
-                )}`,
-                icon: (
-                    <ArrowUpRight size={17} />
-                ),
+                value: `₹ ${formatAmount(summary.totalPayments)}`,
+                icon: (<ArrowUpRight size={17} />),
                 valueClassName: "text-danger",
             },
             {
                 label: "Receipt Count",
-                value: String(
-                    summary.receiptCount ?? 0
-                ),
-                icon: (
-                    <ReceiptIndianRupee
-                        size={17}
-                    />
-                ),
+                value: String(summary.receiptCount ?? 0),
+                icon: (<ReceiptIndianRupee size={17} />),
                 valueClassName: "text-foreground",
             },
             {
                 label: "Payment Count",
-                value: String(
-                    summary.paymentCount ?? 0
-                ),
-                icon: (
-                    <BadgeIndianRupee
-                        size={17}
-                    />
-                ),
+                value: String(summary.paymentCount ?? 0),
+                icon: (<BadgeIndianRupee size={17} />),
                 valueClassName: "text-foreground",
             },
         ];
@@ -666,47 +537,30 @@ const ImportBankStatement = () => {
        FILE SELECTION
     =================================================== */
 
-    const validateAndSetFile = (
-        file: File
-    ) => {
-        const isPdf =
-            file.type === "application/pdf" ||
-            file.name
-                .toLowerCase()
-                .endsWith(".pdf");
+    const validateAndSetFile = (file: File) => {
+        const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
         if (!isPdf) {
-            toast.error(
-                "Please select a valid PDF file"
-            );
+            toast.error("Please select a valid PDF file");
             return;
         }
 
-        const maximumFileSize =
-            20 * 1024 * 1024;
+        const maximumFileSize = 20 * 1024 * 1024;
 
         if (file.size > maximumFileSize) {
-            toast.error(
-                "PDF file size must not exceed 20 MB"
-            );
+            toast.error("PDF file size must not exceed 20 MB");
             return;
         }
 
         setSelectedFile(file);
-
-        dispatch(
-            clearBankStatementParseResult()
-        );
-
+        dispatch(clearBankStatementParseResult());
         setReceiptsExpanded(false);
         setPaymentsExpanded(false);
     };
 
     const handleFileChange = (
-        event: ChangeEvent<HTMLInputElement>
-    ) => {
-        const file =
-            event.target.files?.[0];
+        event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
 
         if (!file) {
             return;
@@ -716,12 +570,10 @@ const ImportBankStatement = () => {
     };
 
     const handleDrop = (
-        event: DragEvent<HTMLDivElement>
-    ) => {
+        event: DragEvent<HTMLDivElement>) => {
         event.preventDefault();
 
-        const file =
-            event.dataTransfer.files?.[0];
+        const file = event.dataTransfer.files?.[0];
 
         if (!file) {
             return;
@@ -732,13 +584,9 @@ const ImportBankStatement = () => {
 
     const handleRemoveFile = () => {
         setSelectedFile(null);
-
         setReceiptsExpanded(false);
         setPaymentsExpanded(false);
-
-        dispatch(
-            clearBankStatementParseResult()
-        );
+        dispatch(clearBankStatementParseResult());
 
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -751,37 +599,20 @@ const ImportBankStatement = () => {
 
     const handleFetchData = async () => {
         if (!selectedFile) {
-            toast.error(
-                "Please attach bank statement PDF"
-            );
+            toast.error("Please attach bank statement PDF");
             return;
         }
 
         try {
-            const pdfBase64 =
-                await fileToBase64(selectedFile);
-
-            await dispatch(
-                parseBankStatement({
-                    pdfBase64,
-                })
-            ).unwrap();
-
+            const pdfBase64 = await fileToBase64(selectedFile);
+            await dispatch(parseBankStatement({ pdfBase64, })).unwrap();
             setReceiptsExpanded(false);
             setPaymentsExpanded(false);
+            toast.success("Bank statement processed successfully");
 
-            toast.success(
-                "Bank statement processed successfully"
-            );
         } catch (parseError: any) {
             if (
-                parseError?.message ===
-                "Unable to read selected PDF file"
-            ) {
-                toast.error(
-                    parseError.message
-                );
-            }
+                parseError?.message === "Unable to read selected PDF file") { toast.error(parseError.message); }
         }
     };
 
@@ -791,30 +622,22 @@ const ImportBankStatement = () => {
 
     const validatePostData = () => {
         if (!parseResult) {
-            toast.error(
-                "Please fetch bank statement data first"
-            );
+            toast.error("Please fetch bank statement data first");
             return false;
         }
 
         if (!selectedBank) {
-            toast.error(
-                "Please select Bank Account"
-            );
+            toast.error("Please select Bank Account");
             return false;
         }
 
         if (!selectedReceiptAccount) {
-            toast.error(
-                "Please select Receipt Account"
-            );
+            toast.error("Please select Receipt Account");
             return false;
         }
 
         if (!selectedPaymentAccount) {
-            toast.error(
-                "Please select Payment Account"
-            );
+            toast.error("Please select Payment Account");
             return false;
         }
 
@@ -822,9 +645,7 @@ const ImportBankStatement = () => {
             !receipts.length &&
             !payments.length
         ) {
-            toast.error(
-                "No receipts or payments found to create"
-            );
+            toast.error("No receipts or payments found to create");
             return false;
         }
 
@@ -844,56 +665,37 @@ const ImportBankStatement = () => {
     =================================================== */
 
     const confirmPostData = async () => {
-        const bankAccount =
-            resolveSelectedAccount(
-                bankAccounts,
-                selectedBank
-            );
+        const bankAccount = resolveSelectedAccount(bankAccounts, selectedBank);
 
-        const receiptAccount =
-            resolveSelectedAccount(
-                receiptAccounts,
-                selectedReceiptAccount
-            );
+        const receiptAccount = resolveSelectedAccount(receiptAccounts, selectedReceiptAccount);
 
-        const paymentAccount =
-            resolveSelectedAccount(
-                paymentAccounts,
-                selectedPaymentAccount
-            );
+        const paymentAccount = resolveSelectedAccount(paymentAccounts, selectedPaymentAccount);
 
         if (!bankAccount) {
-            toast.error(
-                "Invalid bank account selected"
-            );
+            toast.error("Invalid bank account selected");
             return;
         }
 
         if (!receiptAccount) {
-            toast.error(
-                "Please select a valid Receipt Account"
-            );
+            toast.error("Please select a valid Receipt Account");
             return;
         }
 
         if (!paymentAccount) {
-            toast.error(
-                "Please select a valid Payment Account"
-            );
+            toast.error("Please select a valid Payment Account");
             return;
         }
 
         setConfirmOpen(false);
 
         try {
-            await dispatch(
-                postBankStatementVouchers({
-                    bankAccount,
-                    receiptAccount,
-                    paymentAccount,
-                    receipts,
-                    payments,
-                })
+            await dispatch(postBankStatementVouchers({
+                bankAccount,
+                receiptAccount,
+                paymentAccount,
+                receipts,
+                payments,
+            })
             ).unwrap();
         } catch {
             // Redux error state handles the message.
@@ -906,15 +708,9 @@ const ImportBankStatement = () => {
             <AnimatePresence>
                 {isLoading ? (
                     <motion.div
-                        initial={{
-                            opacity: 0,
-                        }}
-                        animate={{
-                            opacity: 1,
-                        }}
-                        exit={{
-                            opacity: 0,
-                        }}
+                        initial={{ opacity: 0, }}
+                        animate={{ opacity: 1, }}
+                        exit={{ opacity: 0, }}
                         className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
                     >
                         <motion.div
@@ -925,10 +721,7 @@ const ImportBankStatement = () => {
                             className="w-full max-w-[360px] rounded-2xl border border-border bg-card p-6 text-center text-card-foreground shadow-2xl"
                         >
                             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                <Loader2
-                                    size={26}
-                                    className="animate-spin"
-                                />
+                                <Loader2 size={26} className="animate-spin" />
                             </div>
 
                             <p className="text-sm font-semibold text-card-foreground">
@@ -944,11 +737,7 @@ const ImportBankStatement = () => {
                 ) : null}
             </AnimatePresence>
 
-            <div
-                className={`grid grid-cols-1 gap-3 ${summary
-                        ? "xl:grid-cols-[minmax(0,1fr)_380px]"
-                        : ""
-                    }`}
+            <div className={`grid grid-cols-1 gap-3 ${summary ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}
             >
                 {/* Left Section */}
                 <div className="space-y-3">
@@ -962,9 +751,7 @@ const ImportBankStatement = () => {
                         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-2.5">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                                    <FileText
-                                        size={20}
-                                    />
+                                    <FileText size={20} />
                                 </div>
 
                                 <div>
@@ -981,28 +768,16 @@ const ImportBankStatement = () => {
 
                             {parseResult ? (
                                 <motion.div
-                                    initial={{
-                                        opacity: 0,
-                                        scale: 0.9,
-                                    }}
-                                    animate={{
-                                        opacity: 1,
-                                        scale: 1,
-                                    }}
+                                    initial={{ opacity: 0, scale: 0.9, }}
+                                    animate={{ opacity: 1, scale: 1, }}
                                     className="flex w-fit items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-xs font-medium text-success"
                                 >
-                                    <CircleCheckBig
-                                        size={16}
-                                    />
-
+                                    <CircleCheckBig size={16} />
                                     Statement Analysed
                                 </motion.div>
                             ) : (
                                 <div className="flex w-fit items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-xs font-medium text-primary">
-                                    <Sparkles
-                                        size={16}
-                                    />
-
+                                    <Sparkles size={16} />
                                     AI Bank Import
                                 </div>
                             )}
@@ -1012,35 +787,22 @@ const ImportBankStatement = () => {
                             ref={fileInputRef}
                             type="file"
                             accept=".pdf,application/pdf"
-                            onChange={
-                                handleFileChange
-                            }
+                            onChange={handleFileChange}
                             className="hidden"
                         />
 
                         {!selectedFile ? (
                             <div
-                                onDragOver={(
-                                    event
-                                ) =>
-                                    event.preventDefault()
-                                }
+                                onDragOver={(event) => event.preventDefault()}
                                 onDrop={handleDrop}
-                                onClick={() =>
-                                    fileInputRef.current?.click()
-                                }
+                                onClick={() => fileInputRef.current?.click()}
                                 className="group flex min-h-[170px] cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-border bg-muted p-5 text-center transition hover:border-primary hover:bg-primary/5"
                             >
                                 <motion.div
-                                    whileHover={{
-                                        y: -3,
-                                        scale: 1.03,
-                                    }}
+                                    whileHover={{ y: -3, scale: 1.03, }}
                                     className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary"
                                 >
-                                    <UploadCloud
-                                        size={25}
-                                    />
+                                    <UploadCloud size={25} />
                                 </motion.div>
 
                                 <p className="text-sm font-medium text-card-foreground">
@@ -1059,37 +821,21 @@ const ImportBankStatement = () => {
                             </div>
                         ) : (
                             <motion.div
-                                initial={{
-                                    opacity: 0,
-                                    y: 6,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                }}
+                                initial={{ opacity: 0, y: 6, }}
+                                animate={{ opacity: 1, y: 0, }}
                                 className="flex items-center gap-3 rounded-md border border-primary/20 bg-primary/5 p-3"
                             >
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                                    <FileCheck2
-                                        size={22}
-                                    />
+                                    <FileCheck2 size={22} />
                                 </div>
 
                                 <div className="min-w-0 flex-1">
                                     <p className="truncate text-sm font-medium text-card-foreground">
-                                        {
-                                            selectedFile.name
-                                        }
+                                        {selectedFile.name}
                                     </p>
 
                                     <p className="mt-0.5 text-xs font-normal text-muted-foreground">
-                                        {(
-                                            selectedFile.size /
-                                            (1024 *
-                                                1024)
-                                        ).toFixed(
-                                            2
-                                        )}{" "}
+                                        {(selectedFile.size / (1024 * 1024)).toFixed(2)}{" "}
                                         MB · PDF
                                         document
                                     </p>
@@ -1097,18 +843,11 @@ const ImportBankStatement = () => {
 
                                 <button
                                     type="button"
-                                    disabled={
-                                        parseLoading ||
-                                        postLoading
-                                    }
-                                    onClick={
-                                        handleRemoveFile
-                                    }
+                                    disabled={parseLoading || postLoading}
+                                    onClick={handleRemoveFile}
                                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-danger/10 text-danger transition hover:bg-danger hover:text-danger-foreground disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    <Trash2
-                                        size={17}
-                                    />
+                                    <Trash2 size={17} />
                                 </button>
                             </motion.div>
                         )}
@@ -1123,9 +862,7 @@ const ImportBankStatement = () => {
                     >
                         <div className="mb-3 flex items-center gap-2.5">
                             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                                <Building2
-                                    size={20}
-                                />
+                                <Building2 size={20} />
                             </div>
 
                             <div>
@@ -1150,71 +887,39 @@ const ImportBankStatement = () => {
                                 mandatory
                                 largeData
                                 batchSize={100}
-                                disabled={
-                                    accountsLoading ||
-                                    postLoading
-                                }
-                                onChange={(
-                                    event: any
-                                ) => {
-                                    setSelectedBank(
-                                        event.target
-                                            .value
-                                    );
+                                disabled={accountsLoading || postLoading}
+                                onChange={(event: any) => {
+                                    setSelectedBank(event.target.value);
                                 }}
                             />
 
                             <SelectInput
                                 label="Receipt Account"
                                 name="receiptAccount"
-                                value={
-                                    selectedReceiptAccount
-                                }
+                                value={selectedReceiptAccount}
                                 placeholder="Select receipt account"
-                                options={
-                                    receiptAccounts
-                                }
+                                options={receiptAccounts}
                                 mandatory
                                 largeData
                                 batchSize={100}
-                                disabled={
-                                    accountsLoading ||
-                                    postLoading
-                                }
-                                onChange={(
-                                    event: any
-                                ) => {
-                                    setSelectedReceiptAccount(
-                                        event.target
-                                            .value
-                                    );
+                                disabled={accountsLoading || postLoading}
+                                onChange={(event: any) => {
+                                    setSelectedReceiptAccount(event.target.value);
                                 }}
                             />
 
                             <SelectInput
                                 label="Payment Account"
                                 name="paymentAccount"
-                                value={
-                                    selectedPaymentAccount
-                                }
+                                value={selectedPaymentAccount}
                                 placeholder="Select payment account"
-                                options={
-                                    paymentAccounts
-                                }
+                                options={paymentAccounts}
                                 mandatory
                                 largeData
                                 batchSize={100}
-                                disabled={
-                                    accountsLoading ||
-                                    postLoading
-                                }
-                                onChange={(
-                                    event: any
-                                ) => {
-                                    setSelectedPaymentAccount(
-                                        event.target
-                                            .value
-                                    );
+                                disabled={accountsLoading || postLoading}
+                                onChange={(event: any) => {
+                                    setSelectedPaymentAccount(event.target.value);
                                 }}
                             />
                         </div>
@@ -1243,54 +948,29 @@ const ImportBankStatement = () => {
 
                         <div className="flex shrink-0 gap-2">
                             <motion.button
-                                whileTap={{
-                                    scale: 0.97,
-                                }}
+                                whileTap={{ scale: 0.97, }}
                                 type="button"
-                                onClick={
-                                    handleFetchData
-                                }
-                                disabled={
-                                    !selectedFile ||
-                                    parseLoading ||
-                                    postLoading
-                                }
+                                onClick={handleFetchData}
+                                disabled={!selectedFile || parseLoading || postLoading}
                                 className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-primary bg-card px-4 text-sm font-medium text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground sm:flex-none"
                             >
-                                {parseLoading ? (
-                                    <Loader2
-                                        size={17}
-                                        className="animate-spin"
-                                    />
+                                {parseLoading ? (<Loader2 size={17} className="animate-spin" />
                                 ) : (
-                                    <Sparkles
-                                        size={17}
-                                    />
+                                    <Sparkles size={17} />
                                 )}
 
                                 Fetch Data
                             </motion.button>
 
                             <motion.button
-                                whileTap={{
-                                    scale: 0.97,
-                                }}
+                                whileTap={{ scale: 0.97, }}
                                 type="button"
-                                onClick={
-                                    handlePostButton
-                                }
-                                disabled={
-                                    !parseResult ||
-                                    parseLoading ||
-                                    postLoading
-                                }
+                                onClick={handlePostButton}
+                                disabled={!parseResult || parseLoading || postLoading}
                                 className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-md shadow-primary/20 transition hover:-translate-y-0.5 hover:opacity-95 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none sm:flex-none"
                             >
                                 {postLoading ? (
-                                    <Loader2
-                                        size={17}
-                                        className="animate-spin"
-                                    />
+                                    <Loader2 size={17} className="animate-spin" />
                                 ) : (
                                     <Send size={17} />
                                 )}
@@ -1306,49 +986,21 @@ const ImportBankStatement = () => {
                             <TransactionSection
                                 title="Receipts"
                                 type="receipt"
-                                count={
-                                    summary.receiptCount ??
-                                    receipts.length
-                                }
-                                totalAmount={
-                                    summary.totalReceipts
-                                }
+                                count={summary.receiptCount ?? receipts.length}
+                                totalAmount={summary.totalReceipts}
                                 items={receipts}
-                                expanded={
-                                    receiptsExpanded
-                                }
-                                onToggle={() =>
-                                    setReceiptsExpanded(
-                                        (
-                                            previous
-                                        ) =>
-                                            !previous
-                                    )
-                                }
+                                expanded={receiptsExpanded}
+                                onToggle={() => setReceiptsExpanded((previous) => !previous)}
                             />
 
                             <TransactionSection
                                 title="Payments"
                                 type="payment"
-                                count={
-                                    summary.paymentCount ??
-                                    payments.length
-                                }
-                                totalAmount={
-                                    summary.totalPayments
-                                }
+                                count={summary.paymentCount ?? payments.length}
+                                totalAmount={summary.totalPayments}
                                 items={payments}
-                                expanded={
-                                    paymentsExpanded
-                                }
-                                onToggle={() =>
-                                    setPaymentsExpanded(
-                                        (
-                                            previous
-                                        ) =>
-                                            !previous
-                                    )
-                                }
+                                expanded={paymentsExpanded}
+                                onToggle={() => setPaymentsExpanded((previous) => !previous)}
                             />
                         </div>
                     ) : null}
@@ -1363,11 +1015,7 @@ const ImportBankStatement = () => {
                             className="overflow-hidden rounded-md border border-danger/20 bg-card shadow-sm"
                         >
                             <div className="flex items-center gap-3 border-b border-danger/20 bg-danger/10 p-3">
-                                <AlertCircle
-                                    size={20}
-                                    className="text-danger"
-                                />
-
+                                <AlertCircle size={20} className="text-danger" />
                                 <div>
                                     <p className="text-sm font-semibold text-danger">
                                         Failed
@@ -1375,9 +1023,7 @@ const ImportBankStatement = () => {
                                     </p>
 
                                     <p className="text-xs font-normal text-muted-foreground">
-                                        {
-                                            postResult.totalFailCount
-                                        }{" "}
+                                        {postResult.totalFailCount}{" "}
                                         transaction(s)
                                         failed while
                                         creating
@@ -1388,28 +1034,20 @@ const ImportBankStatement = () => {
 
                             <div className="divide-y divide-border">
                                 {postResult.failures.map(
-                                    (
-                                        failure: any,
-                                        index: number
-                                    ) => (
+                                    (failure: any, index: number) => (
                                         <div
                                             key={`${failure.type}-${failure.index}-${index}`}
                                             className="flex items-start justify-between gap-3 p-3"
                                         >
                                             <div>
                                                 <p className="text-sm font-medium capitalize text-card-foreground">
-                                                    {
-                                                        failure.type
-                                                    }{" "}
+                                                    {failure.type}{" "}
                                                     #
-                                                    {failure.index +
-                                                        1}
+                                                    {failure.index + 1}
                                                 </p>
 
                                                 <p className="mt-1 text-xs font-normal text-danger">
-                                                    {
-                                                        failure.message
-                                                    }
+                                                    {failure.message}
                                                 </p>
                                             </div>
                                         </div>
@@ -1440,10 +1078,7 @@ const ImportBankStatement = () => {
                                     </p>
 
                                     <h2 className="mt-1 text-2xl font-semibold">
-                                        ₹{" "}
-                                        {formatAmount(
-                                            summary.closingBalance
-                                        )}
+                                        ₹{" "}{formatAmount(summary.closingBalance)}
                                     </h2>
 
                                     <p className="mt-1 text-xs font-normal text-primary-foreground/70">
@@ -1457,21 +1092,11 @@ const ImportBankStatement = () => {
                                     {summaryCards.map(
                                         (card) => (
                                             <SummaryCard
-                                                key={
-                                                    card.label
-                                                }
-                                                label={
-                                                    card.label
-                                                }
-                                                value={
-                                                    card.value
-                                                }
-                                                icon={
-                                                    card.icon
-                                                }
-                                                valueClassName={
-                                                    card.valueClassName
-                                                }
+                                                key={card.label}
+                                                label={card.label}
+                                                value={card.value}
+                                                icon={card.icon}
+                                                valueClassName={card.valueClassName}
                                             />
                                         )
                                     )}
@@ -1489,9 +1114,7 @@ const ImportBankStatement = () => {
                                             </span>
 
                                             <span className="text-sm font-semibold text-success">
-                                                {
-                                                    receipts.length
-                                                }
+                                                {receipts.length}
                                             </span>
                                         </div>
 
@@ -1501,9 +1124,7 @@ const ImportBankStatement = () => {
                                             </span>
 
                                             <span className="text-sm font-semibold text-danger">
-                                                {
-                                                    payments.length
-                                                }
+                                                {payments.length}
                                             </span>
                                         </div>
 
@@ -1515,8 +1136,7 @@ const ImportBankStatement = () => {
                                                 </span>
 
                                                 <span className="text-sm font-semibold text-primary">
-                                                    {receipts.length +
-                                                        payments.length}
+                                                    {receipts.length + payments.length}
                                                 </span>
                                             </div>
                                         </div>
@@ -1532,15 +1152,9 @@ const ImportBankStatement = () => {
             <AnimatePresence>
                 {confirmOpen ? (
                     <motion.div
-                        initial={{
-                            opacity: 0,
-                        }}
-                        animate={{
-                            opacity: 1,
-                        }}
-                        exit={{
-                            opacity: 0,
-                        }}
+                        initial={{ opacity: 0, }}
+                        animate={{ opacity: 1, }}
+                        exit={{ opacity: 0, }}
                         className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
                     >
                         <motion.div
@@ -1572,8 +1186,7 @@ const ImportBankStatement = () => {
                                         </p>
 
                                         <p className="text-base font-semibold">
-                                            {receipts.length +
-                                                payments.length}
+                                            {receipts.length + payments.length}
                                         </p>
                                     </div>
                                 </div>
@@ -1590,17 +1203,13 @@ const ImportBankStatement = () => {
                                     <p className="mt-2 text-sm font-normal leading-6 text-muted-foreground">
                                         This will create{" "}
                                         <span className="font-medium text-success">
-                                            {
-                                                receipts.length
-                                            }{" "}
+                                            {receipts.length}{" "}
                                             receipt
                                             voucher(s)
                                         </span>{" "}
                                         and{" "}
                                         <span className="font-medium text-danger">
-                                            {
-                                                payments.length
-                                            }{" "}
+                                            {payments.length}{" "}
                                             payment
                                             voucher(s)
                                         </span>
@@ -1610,9 +1219,7 @@ const ImportBankStatement = () => {
 
                                 <div className="mb-4 grid grid-cols-2 gap-3">
                                     <div className="rounded-md border border-success/20 bg-success/10 p-3">
-                                        <ArrowDownLeft
-                                            size={18}
-                                            className="mb-2 text-success"
+                                        <ArrowDownLeft size={18} className="mb-2 text-success"
                                         />
 
                                         <p className="text-xs font-medium uppercase text-success">
@@ -1620,77 +1227,46 @@ const ImportBankStatement = () => {
                                         </p>
 
                                         <p className="mt-1 text-lg font-semibold text-card-foreground">
-                                            {
-                                                receipts.length
-                                            }
+                                            {receipts.length}
                                         </p>
                                     </div>
 
                                     <div className="rounded-md border border-danger/20 bg-danger/10 p-3">
-                                        <ArrowUpRight
-                                            size={18}
-                                            className="mb-2 text-danger"
-                                        />
+                                        <ArrowUpRight size={18} className="mb-2 text-danger" />
 
                                         <p className="text-xs font-medium uppercase text-danger">
                                             Payments
                                         </p>
 
                                         <p className="mt-1 text-lg font-semibold text-card-foreground">
-                                            {
-                                                payments.length
-                                            }
+                                            {payments.length}
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <motion.button
-                                        whileTap={{
-                                            scale: 0.97,
-                                        }}
+                                        whileTap={{ scale: 0.97, }}
                                         type="button"
-                                        disabled={
-                                            postLoading
-                                        }
-                                        onClick={() =>
-                                            setConfirmOpen(
-                                                false
-                                            )
-                                        }
+                                        disabled={postLoading}
+                                        onClick={() => setConfirmOpen(false)}
                                         className="h-10 rounded-md border border-border bg-card text-sm font-medium text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         Cancel
                                     </motion.button>
 
                                     <motion.button
-                                        whileTap={{
-                                            scale: 0.97,
-                                        }}
+                                        whileTap={{ scale: 0.97, }}
                                         type="button"
-                                        disabled={
-                                            postLoading
-                                        }
-                                        onClick={
-                                            confirmPostData
-                                        }
+                                        disabled={postLoading}
+                                        onClick={confirmPostData}
                                         className="flex h-10 items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-md shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                                     >
                                         {postLoading ? (
-                                            <Loader2
-                                                size={
-                                                    16
-                                                }
-                                                className="animate-spin"
-                                            />
+                                            <Loader2 size={16} className="animate-spin" />
                                         ) : (
-                                            <Check
-                                                size={
-                                                    16
-                                                }
-                                            />
+                                            <Check size={16} />
                                         )}
-
                                         Yes, Create
                                     </motion.button>
                                 </div>

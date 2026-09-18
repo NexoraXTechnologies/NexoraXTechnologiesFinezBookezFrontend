@@ -23,6 +23,8 @@ import {
     // ⭐ YELLOW STAR: ADDED — TRANSPORTER E-WAY BILL LIST API
     getAllTransporterEWayBill,
     getEWayBillAccessToken,
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER E-WAY BILL ACCESS TOKEN API
+    getTransporterEWayBillAccessToken,
     getEWayBillFromGst,
     getEWayBillPdfByNumber,
     multiVehicleUpdate,
@@ -32,6 +34,7 @@ import {
     updateEWayBill,
 
 } from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
+import { TextInput } from "../../../../components/inputs";
 
 /* ===================================================
    E-WAY BILL LIST
@@ -523,6 +526,54 @@ const MULTI_VEHICLE_REASON_OPTIONS = [
     },
 ];
 
+// ⭐ YELLOW STAR: ADDED — CURRENT SYSTEM DATE FOR DATE INPUT
+const getCurrentDateForInput = () => {
+    const today = new Date();
+
+    const year =
+        today.getFullYear();
+
+    const month = String(
+        today.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+        today.getDate()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+};
+
+
+// ⭐ YELLOW STAR: ADDED — CONVERT SELECTED DATE YYYY-MM-DD TO DD/MM/YYYY
+const formatTransporterEwbDate = (
+    value: string
+) => {
+    const normalizedValue =
+        String(
+            value || ""
+        ).trim();
+
+    if (!normalizedValue) {
+        return "";
+    }
+
+    const [
+        year,
+        month,
+        day,
+    ] = normalizedValue.split("-");
+
+    if (
+        !year ||
+        !month ||
+        !day
+    ) {
+        return "";
+    }
+
+    return `${day}/${month}/${year}`;
+};
 
 const EWayBillList = () => {
     const dispatch = useDispatch<any>();
@@ -543,11 +594,33 @@ const EWayBillList = () => {
     const [localOffset, setLocalOffset] = useState(0);
 
     const [localLimit, setLocalLimit] = useState(20);
-
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER EWB SELECTED DATE
+    // ⭐ YELLOW STAR: UPDATED — KEEP TRANSPORTER DATE AFTER PAGE RELOAD
+    const [
+        transporterEwbDate,
+        setTransporterEwbDate,
+    ] = useState<string>(() => {
+        return (
+            sessionStorage.getItem(
+                "transporterEwbDate"
+            ) || getCurrentDateForInput()
+        );
+    });
     // ⭐ YELLOW STAR: ADDED — MY EWB / TRANSPORTER EWB MAIN TAB
+    // ⭐ YELLOW STAR: UPDATED — KEEP SELECTED EWB TAB AFTER PAGE RELOAD
     const [activeEwbTab, setActiveEwbTab] = useState<
         "myEwb" | "transporterEwb"
-    >("myEwb");
+    >(() => {
+        const savedTab =
+            sessionStorage.getItem(
+                "activeEwbTab"
+            );
+
+        return savedTab ===
+            "transporterEwb"
+            ? "transporterEwb"
+            : "myEwb";
+    });
 
     const [activeStatus, setActiveStatus] = useState<
         "open" | "close"
@@ -619,11 +692,18 @@ const EWayBillList = () => {
     const pageTitle =
         location.state?.title || "E-Way Bill";
 
-    // ⭐ YELLOW STAR: ADDED — CHANGE MAIN E-WAY BILL TAB
+
+    // ⭐ YELLOW STAR: UPDATED — SAVE SELECTED TAB
     const handleEwbTabChange = (
         tab: "myEwb" | "transporterEwb"
     ) => {
         if (activeEwbTab === tab) return;
+
+        // ⭐ YELLOW STAR: ADDED
+        sessionStorage.setItem(
+            "activeEwbTab",
+            tab
+        );
 
         setActiveEwbTab(tab);
         setActiveStatus("open");
@@ -632,7 +712,6 @@ const EWayBillList = () => {
         setLocalOffset(0);
         setOpenActionMenu("");
     };
-
     // const fetchEWayBills = ({
     //     offset = localOffset,
     //     limit = localLimit,
@@ -647,22 +726,112 @@ const EWayBillList = () => {
     //     );
     // };
 
-    const fetchEWayBills = ({
+    // ⭐ YELLOW STAR: UPDATED — FETCH BASED ON SELECTED EWB TAB
+    // ⭐ YELLOW STAR: UPDATED — FETCH BASED ON SELECTED EWB TAB
+    const fetchEWayBills = async ({
         offset = localOffset,
         limit = localLimit,
         searchValue = search,
     }: any = {}) => {
-        // ⭐ YELLOW STAR: UPDATED — FETCH LIST BASED ON SELECTED MAIN TAB
-        const listAction =
-            activeEwbTab === "transporterEwb"
-                ? getAllTransporterEWayBill 
-                : getAllEWayBill;
+
+        /* ===================================================
+           TRANSPORTER E-WAY BILL
+        =================================================== */
+
+        if (
+            activeEwbTab ===
+            "transporterEwb"
+        ) {
+            try {
+                // ⭐ YELLOW STAR: USER MUST SELECT DATE
+                if (!transporterEwbDate) {
+                    return null;
+                }
+
+                const formattedDate =
+                    formatTransporterEwbDate(
+                        transporterEwbDate
+                    );
+
+                if (!formattedDate) {
+                    return null;
+                }
+
+                /* ===================================================
+                   STEP 1: GET TRANSPORTER E-WAY BILL ACCESS TOKEN
+                =================================================== */
+
+                // ⭐ YELLOW STAR: UPDATED — TRANSPORTER CREDENTIALS
+                const tokenResult =
+                    await unwrapThunk(
+                        dispatch,
+                        getTransporterEWayBillAccessToken()
+                    );
+
+                const gstAuthToken =
+                    String(
+                        tokenResult?.authtoken ||
+                        tokenResult?.authToken ||
+                        tokenResult?.data?.authtoken ||
+                        tokenResult?.data?.authToken ||
+                        tokenResult?.data?.data?.authtoken ||
+                        tokenResult?.data?.data?.authToken ||
+                        ""
+                    ).trim();
+
+                if (!gstAuthToken) {
+                    throw new Error(
+                        "Transporter E-Way Bill access token was not received"
+                    );
+                }
+
+                /* ===================================================
+                   STEP 2: GET TRANSPORTER E-WAY BILLS
+                =================================================== */
+
+                return await unwrapThunk(
+                    dispatch,
+                    getAllTransporterEWayBill({
+                        limit,
+                        offset,
+
+                        search:
+                            searchValue,
+
+                        status:
+                            "",
+
+                        // ⭐ YELLOW STAR: DYNAMIC TOKEN
+                        authtoken:
+                            gstAuthToken,
+
+                        // ⭐ YELLOW STAR: USER SELECTED DATE
+                        date:
+                            formattedDate,
+                    })
+                );
+            } catch (error: any) {
+                toast.error(
+                    error?.message ||
+                    error?.data?.message ||
+                    error?.payload?.message ||
+                    "Failed to get Transporter's E-Way Bills"
+                );
+
+                return null;
+            }
+        }
+
+        /* ===================================================
+           MY E-WAY BILL — EXISTING FLOW UNCHANGED
+        =================================================== */
 
         return dispatch(
-            listAction({
+            getAllEWayBill({
                 limit,
                 offset,
-                search: searchValue,
+                search:
+                    searchValue,
             })
         );
     };
@@ -730,6 +899,24 @@ const EWayBillList = () => {
             return true;
         });
     }, [eWayBill, activeStatus]);
+
+
+    // ⭐ YELLOW STAR: ADDED — KEEP EXISTING ACTIONS COMPATIBLE FOR TRANSPORTER EWB
+    // Transporter API returns `ewbNo`, while the already-working action code
+    // uses `ewayBillNo`. We only add the alias here; existing action code stays unchanged.
+    const tableEWayBills = useMemo(() => {
+        if (activeEwbTab !== "transporterEwb") {
+            return filteredEWayBills;
+        }
+
+        return filteredEWayBills.map((item: any) => ({
+            ...item,
+            ewayBillNo:
+                item?.ewayBillNo ||
+                item?.ewbNo ||
+                "",
+        }));
+    }, [filteredEWayBills, activeEwbTab]);
 
 
     const openEWayBillActionConfirm = (
@@ -892,13 +1079,21 @@ const EWayBillList = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
+    // ⭐ YELLOW STAR: UPDATED — REFRESH WHEN TRANSPORTER DATE CHANGES
     useEffect(() => {
         fetchEWayBills({
             offset: localOffset,
             limit: localLimit,
             searchValue: debouncedSearch,
         });
-    }, [dispatch, localOffset, localLimit, debouncedSearch, activeEwbTab]);
+    }, [
+        dispatch,
+        localOffset,
+        localLimit,
+        debouncedSearch,
+        activeEwbTab,
+        transporterEwbDate,
+    ]);
 
     /* ===================================================
        REFRESH
@@ -1787,7 +1982,8 @@ const EWayBillList = () => {
     =================================================== */
 
 
-    const columns = [
+    // ⭐ YELLOW STAR: EXISTING — MY E-WAY BILL COLUMNS KEPT UNCHANGED
+    const myEWayBillColumns = [
         {
             key: "ewayBillNo",
             title: "E-Way Bill No",
@@ -1924,10 +2120,152 @@ const EWayBillList = () => {
                 );
             },
         },
-
-
-
     ];
+
+
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER E-WAY BILL COLUMNS ONLY
+    // Action UI/functionality below is NOT changed.
+    const transporterEWayBillColumns = [
+        // ⭐ YELLOW STAR: UPDATED — E-WAY BILL DATE BELOW E-WAY BILL NO
+        {
+            key: "ewbNo",
+            title: "E-Way Bill No",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-card-foreground">
+                        {row?.ewbNo ||
+                            row?.ewayBillNo ||
+                            "-"}
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                        {row?.ewbDate ||
+                            row?.ewayBillDate ||
+                            "-"}
+                    </div>
+                </div>
+            ),
+        },
+        // ⭐ YELLOW STAR: UPDATED — DOCUMENT DATE BELOW DOCUMENT NO
+        {
+            key: "docNo",
+            title: "Document No",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium text-card-foreground">
+                        {row?.docNo || "-"}
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                        {row?.docDate || "-"}
+                    </div>
+                </div>
+            ),
+        },
+
+        {
+            key: "genGstin",
+            title: "Generated GSTIN",
+            render: (row: any) =>
+                row?.genGstin || "-",
+        },
+
+        {
+            key: "delPlace",
+            title: "Delivery Place",
+            render: (row: any) => (
+                <div>
+                    <div className="font-medium">
+                        {row?.delPlace || "-"}
+                    </div>
+
+                    {row?.delPinCode ? (
+                        <div className="text-xs text-muted-foreground">
+                            PIN: {row.delPinCode}
+                        </div>
+                    ) : null}
+                </div>
+            ),
+        },
+
+        {
+            key: "delStateCode",
+            title: "State Code",
+            render: (row: any) =>
+                row?.delStateCode ?? "-",
+        },
+
+        {
+            key: "validUpto",
+            title: "Valid Upto",
+            render: (row: any) =>
+                row?.validUpto || "-",
+        },
+
+        {
+            key: "extendedTimes",
+            title: "Extended",
+            render: (row: any) =>
+                row?.extendedTimes ?? 0,
+        },
+
+        {
+            key: "rejectStatus",
+            title: "Reject Status",
+            render: (row: any) => {
+                const rejected =
+                    String(
+                        row?.rejectStatus || ""
+                    )
+                        .trim()
+                        .toUpperCase() === "Y";
+
+                return (
+                    <span
+                        className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${rejected
+                            ? "bg-danger/10 text-danger"
+                            : "bg-success/10 text-success"
+                            }`}
+                    >
+                        {rejected
+                            ? "Rejected"
+                            : "Not Rejected"}
+                    </span>
+                );
+            },
+        },
+
+        {
+            key: "status",
+            title: "Status",
+            render: (row: any) => {
+                const status =
+                    row?.status || "-";
+
+                return (
+                    <span
+                        className="inline-flex rounded-md px-2.5 py-1 text-xs font-bold"
+                        style={{
+                            color:
+                                getStatusColor(status),
+
+                            backgroundColor:
+                                `${getStatusColor(status)}18`,
+                        }}
+                    >
+                        {getStatusLabel(status)}
+                    </span>
+                );
+            },
+        },
+    ];
+
+
+    // ⭐ YELLOW STAR: ADDED — CHANGE ONLY LIST COLUMNS BASED ON TAB
+    const columns =
+        activeEwbTab === "transporterEwb"
+            ? transporterEWayBillColumns
+            : myEWayBillColumns;
 
 
     return (
@@ -1979,8 +2317,8 @@ const EWayBillList = () => {
                                 type="button"
                                 onClick={() => handleEwbTabChange("myEwb")}
                                 className={`whitespace-nowrap rounded-md px-2 py-1 text-sm font-semibold transition-all ${activeEwbTab === "myEwb"
-                                        ? "bg-card text-primary shadow-sm"
-                                        : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
+                                    ? "bg-card text-primary shadow-sm"
+                                    : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
                                     }`}
                             >
                                 My E-Way Bills
@@ -1990,8 +2328,8 @@ const EWayBillList = () => {
                                 type="button"
                                 onClick={() => handleEwbTabChange("transporterEwb")}
                                 className={`whitespace-nowrap rounded-md px-2 py-1 text-sm font-semibold transition-all ${activeEwbTab === "transporterEwb"
-                                        ? "bg-card text-primary shadow-sm"
-                                        : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
+                                    ? "bg-card text-primary shadow-sm"
+                                    : "text-muted-foreground hover:bg-card/60 hover:text-card-foreground"
                                     }`}
                             >
                                 Transporter's E-Way Bills
@@ -2002,6 +2340,40 @@ const EWayBillList = () => {
 
                     {/* ⭐ YELLOW STAR: EXISTING RIGHT SIDE CONTROLS */}
                     <div className="flex flex-wrap items-center gap-2 xl:ml-auto xl:flex-nowrap">
+
+                        {/* ⭐ YELLOW STAR: ADDED — DATE FILTER ONLY FOR TRANSPORTER EWB */}
+                        {activeEwbTab === "transporterEwb" && (
+                            <div className="min-w-[170px]">
+                                <TextInput
+                                    label=""
+                                    name="transporterEwbDate"
+                                    type="date"
+                                    value={transporterEwbDate}
+                                    onChange={(event: any) => {
+                                        const selectedDate =
+                                            event?.target?.value || "";
+
+                                        setTransporterEwbDate(
+                                            selectedDate
+                                        );
+
+                                        // ⭐ YELLOW STAR: KEEP DATE AFTER RELOAD
+                                        if (selectedDate) {
+                                            sessionStorage.setItem(
+                                                "transporterEwbDate",
+                                                selectedDate
+                                            );
+                                        } else {
+                                            sessionStorage.removeItem(
+                                                "transporterEwbDate"
+                                            );
+                                        }
+
+                                        setLocalOffset(0);
+                                    }}
+                                />
+                            </div>
+                        )}
 
                         <div className="shrink-0">
                             <Badge
@@ -2022,8 +2394,8 @@ const EWayBillList = () => {
                                 type="button"
                                 onClick={() => setActiveStatus("open")}
                                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${activeStatus === "open"
-                                        ? "bg-primary text-primary-foreground"
-                                        : "text-muted-foreground hover:bg-muted"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-muted"
                                     }`}
                             >
                                 Open ({openCount})
@@ -2033,8 +2405,8 @@ const EWayBillList = () => {
                                 type="button"
                                 onClick={() => setActiveStatus("close")}
                                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${activeStatus === "close"
-                                        ? "bg-primary text-primary-foreground"
-                                        : "text-muted-foreground hover:bg-muted"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-muted"
                                     }`}
                             >
                                 Closed ({closeCount})
@@ -2084,7 +2456,7 @@ const EWayBillList = () => {
 
                 <DataTable
                     columns={columns}
-                    data={filteredEWayBills}
+                    data={tableEWayBills}
                     loading={listingLoader}
                     emptyMessage={
                         activeStatus === "open"
@@ -2112,33 +2484,36 @@ const EWayBillList = () => {
 
                         return (
                             <div className="relative flex items-center gap-2">
-                                <Permission
-                                    module="bookez"
-                                    permissionKey="eWayBill"
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (actionsDisabled) return;
-
-                                            handleEditEWayBill(
-                                                record
-                                            );
-                                        }}
-                                        disabled={actionsDisabled}
-                                        className={`rounded-md p-2 ${actionsDisabled
-                                            ? "cursor-not-allowed text-muted-foreground opacity-40"
-                                            : "text-amber-600 hover:bg-amber-100"
-                                            }`}
-                                        title={
-                                            actionsDisabled
-                                                ? "Actions are disabled for cancelled E-Way Bill"
-                                                : "Edit"
-                                        }
+                                {/* ⭐ YELLOW STAR: UPDATED — EDIT ONLY FOR MY E-WAY BILL */}
+                                {activeEwbTab === "myEwb" && (
+                                    <Permission
+                                        module="bookez"
+                                        permissionKey="eWayBill"
                                     >
-                                        <Edit size={16} />
-                                    </button>
-                                </Permission>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (actionsDisabled) return;
+
+                                                handleEditEWayBill(
+                                                    record
+                                                );
+                                            }}
+                                            disabled={actionsDisabled}
+                                            className={`rounded-md p-2 ${actionsDisabled
+                                                ? "cursor-not-allowed text-muted-foreground opacity-40"
+                                                : "text-amber-600 hover:bg-amber-100"
+                                                }`}
+                                            title={
+                                                actionsDisabled
+                                                    ? "Actions are disabled for cancelled E-Way Bill"
+                                                    : "Edit"
+                                            }
+                                        >
+                                            <Edit size={16} />
+                                        </button>
+                                    </Permission>
+                                )}
 
                                 <button
                                     type="button"

@@ -53,6 +53,10 @@ type EWayBillSliceState = {
     detailLoader: boolean;
     saveLoader: boolean;
     accessTokenLoader: boolean;
+
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER ACCESS TOKEN LOADER
+    transporterAccessTokenLoader: boolean;
+
     generateLoader: boolean;
     updateLoader: boolean;
 
@@ -67,6 +71,10 @@ type EWayBillSliceState = {
     printDetailEWayBillLoader: boolean;
 
     accessToken: string | null;
+
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER ACCESS TOKEN
+    transporterAccessToken: string | null;
+
     generatedEWayBill: any | null;
 
     // ⭐ YELLOW STAR: ADDED — GST E-WAY BILL DETAILS
@@ -103,6 +111,18 @@ type GetAllEWayBillPdfParams = {
     offset?: number;
     limit?: number;
     search?: string;
+};
+
+
+// ⭐ YELLOW STAR: ADDED — TRANSPORTER E-WAY BILL PARAMS
+type TransporterEWayBillParams = {
+    authtoken: string;
+    date: string;
+
+    limit?: number;
+    offset?: number;
+    search?: string;
+    status?: string;
 };
 
 // type GetEWayBillPdfByNumberPayload = {
@@ -148,44 +168,122 @@ export const getAllEWayBill = createAsyncThunk(
 );
 
 
+// ⭐ YELLOW STAR: ADDED — TRANSPORTER E-WAY BILL CREDENTIALS
+const TRANSPORTER_EWB_CREDENTIALS = {
+    action: "GetEwayBillsForTransporter",
+    aspid: "1807712726",
+    password: "NexoraX@1234",
+    gstin: "27AAMCM2827Q1ZQ",
+    username: "API_MarsHighway",
+    ewbpwd: "Vijay@1234",
+};
+
+
+// ⭐ YELLOW STAR: UPDATED — GET TRANSPORTER E-WAY BILLS
 export const getAllTransporterEWayBill = createAsyncThunk(
     "eWayBill/getAllTransporterEWayBill",
     async (
         {
+            authtoken,
+            date,
+
             limit = 10,
             offset = 0,
             search = "",
             status = "",
-        }: EWayBillState = {},
+        }: TransporterEWayBillParams,
         { rejectWithValue }
     ) => {
         try {
-            const response = await professionalAxios.get(
-                "/eTaxSolnMongoApiBackend/users/transporter/eWayBill/getAll",
-                {
-                    params: {
-                        limit,
-                        offset,
-                        search,
-                        status,
+            const normalizedAuthToken =
+                String(
+                    authtoken || ""
+                ).trim();
 
-                    },
-                }
+            // ⭐ YELLOW STAR: UPDATED — REMOVE ANY ACCIDENTAL QUOTES
+            const normalizedDate =
+                String(
+                    date || ""
+                )
+                    .trim()
+                    .replace(/['"]/g, "");
+
+            if (!normalizedAuthToken) {
+                return rejectWithValue({
+                    message:
+                        "E-Way Bill access token is required",
+                });
+            }
+
+            if (!normalizedDate) {
+                return rejectWithValue({
+                    message:
+                        "Date is required",
+                });
+            }
+
+            // ⭐ YELLOW STAR: ADDED — TRANSPORTER API REQUIRES DD/MM/YYYY
+            if (
+                !/^\d{2}\/\d{2}\/\d{4}$/.test(
+                    normalizedDate
+                )
+            ) {
+                return rejectWithValue({
+                    message:
+                        "Date must be in DD/MM/YYYY format",
+                });
+            }
+
+            const response =
+                await professionalAxios.get(
+                    "/eTaxSolnMongoApiBackend/users/bookez/ewayBill/getEwayBillsForTransporter",
+                    {
+                        params: {
+                            action:
+                                TRANSPORTER_EWB_CREDENTIALS.action,
+
+                            aspid:
+                                TRANSPORTER_EWB_CREDENTIALS.aspid,
+
+                            password:
+                                TRANSPORTER_EWB_CREDENTIALS.password,
+
+                            gstin:
+                                TRANSPORTER_EWB_CREDENTIALS.gstin,
+
+                            // ⭐ YELLOW STAR: DYNAMIC TOKEN
+                            authtoken:
+                                normalizedAuthToken,
+
+                            // ⭐ YELLOW STAR: USER SELECTED DATE DD/MM/YYYY
+                            date:
+                                normalizedDate,
+
+                            limit,
+                            offset,
+                            search,
+                            status,
+                        },
+                    }
+                );
+
+            return (
+                response?.data ||
+                null
             );
-
-            return response?.data || null;
         } catch (error: any) {
             return rejectWithValue({
                 message:
                     error?.response?.data?.message ||
+                    error?.response?.data?.data?.message ||
+                    error?.response?.data?.error?.error?.message ||
+                    error?.response?.data?.error?.message ||
                     error?.message ||
-                    "Failed to get all E-Way Bills",
+                    "Failed to get Transporter E-Way Bills",
             });
         }
     }
 );
-
-
 
 /* ===================================================
     GET E-Way Bill BY VOUCHER NUMBER
@@ -477,6 +575,70 @@ export const getEWayBillAccessToken = createAsyncThunk(
     }
 );
 
+
+
+/* ===================================================
+    GET TRANSPORTER E-WAY BILL ACCESS TOKEN
+=================================================== */
+
+// ⭐ YELLOW STAR: ADDED — TRANSPORTER CREDENTIALS ARE PASSED TO ACCESS TOKEN API
+export const getTransporterEWayBillAccessToken = createAsyncThunk(
+    "eWayBill/getTransporterEWayBillAccessToken",
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await eWayBillAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookez/eWayBill/accessToken",
+                {
+                    params: {
+                        action:
+                            "ACCESSTOKEN",
+
+                        aspid:
+                            TRANSPORTER_EWB_CREDENTIALS.aspid,
+
+                        password:
+                            TRANSPORTER_EWB_CREDENTIALS.password,
+
+                        gstin:
+                            TRANSPORTER_EWB_CREDENTIALS.gstin,
+
+                        username:
+                            TRANSPORTER_EWB_CREDENTIALS.username,
+
+                        ewbpwd:
+                            TRANSPORTER_EWB_CREDENTIALS.ewbpwd,
+                    },
+                }
+            );
+
+            const responseData =
+                response?.data?.data ||
+                response?.data;
+
+            if (!responseData?.authtoken) {
+                return rejectWithValue({
+                    message:
+                        response?.data?.message ||
+                        responseData?.error?.message ||
+                        responseData?.errorMessage ||
+                        "Transporter E-Way Bill access token was not received",
+                });
+            }
+
+            return responseData;
+        } catch (error: any) {
+            return rejectWithValue({
+                message:
+                    error?.response?.data?.message ||
+                    error?.response?.data?.data?.message ||
+                    error?.response?.data?.error?.error?.message ||
+                    error?.response?.data?.error?.message ||
+                    error?.message ||
+                    "Failed to get Transporter E-Way Bill access token",
+            });
+        }
+    }
+);
 
 
 export const generateEWayBill = createAsyncThunk(
@@ -1474,6 +1636,10 @@ const initialState: EWayBillSliceState = {
     detailLoader: false,
     saveLoader: false,
     accessTokenLoader: false,
+
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER ACCESS TOKEN LOADER
+    transporterAccessTokenLoader: false,
+
     generateLoader: false,
     rejectLoader: false,
     cancelLoader: false,
@@ -1497,6 +1663,10 @@ const initialState: EWayBillSliceState = {
     selectedEWayBillPdf: null,
 
     accessToken: null,
+
+    // ⭐ YELLOW STAR: ADDED — TRANSPORTER ACCESS TOKEN
+    transporterAccessToken: null,
+
     generatedEWayBill: null,
 
     // ⭐ YELLOW STAR: ADDED — GST E-WAY BILL DETAILS
@@ -1580,13 +1750,111 @@ const eWayBillSlice = createSlice({
                 state.listingLoader = true;
                 state.error = null;
             })
-            .addCase(getAllTransporterEWayBill.fulfilled, (state, action) => {
-                state.listingLoader = false;
-                const records = action.payload?.data?.items || [];
-                state.eWayBill = Array.isArray(records) ? records : [];
-                state.pagination = action.payload?.data?.pagination || null;
-                state.error = null;
-            })
+            // ⭐ YELLOW STAR: UPDATED — TRANSPORTER RESPONSE HAS data AS DIRECT ARRAY
+            .addCase(
+                getAllTransporterEWayBill.fulfilled,
+                (state, action: any) => {
+                    state.listingLoader = false;
+
+                    const responseData =
+                        action.payload?.data ??
+                        action.payload ??
+                        [];
+
+                    const allRecords =
+                        Array.isArray(responseData)
+                            ? responseData
+                            : Array.isArray(responseData?.items)
+                                ? responseData.items
+                                : [];
+
+                    const offset =
+                        Number(
+                            action.meta?.arg?.offset || 0
+                        );
+
+                    const limit =
+                        Number(
+                            action.meta?.arg?.limit || 20
+                        );
+
+                    // ⭐ YELLOW STAR: LOCAL SEARCH
+                    const searchValue =
+                        String(
+                            action.meta?.arg?.search || ""
+                        )
+                            .trim()
+                            .toLowerCase();
+
+                    const searchedRecords =
+                        searchValue
+                            ? allRecords.filter(
+                                (item: any) => {
+                                    return [
+                                        item?.ewbNo,
+                                        item?.docNo,
+                                        item?.genGstin,
+                                        item?.delPlace,
+                                        item?.delPinCode,
+                                        item?.status,
+                                    ].some((value) =>
+                                        String(
+                                            value ?? ""
+                                        )
+                                            .toLowerCase()
+                                            .includes(
+                                                searchValue
+                                            )
+                                    );
+                                }
+                            )
+                            : allRecords;
+
+                    // ⭐ YELLOW STAR: LOCAL PAGINATION
+                    const records =
+                        searchedRecords.slice(
+                            offset,
+                            offset + limit
+                        );
+
+                    state.eWayBill =
+                        records;
+
+                    state.pagination = {
+                        offset,
+                        limit,
+
+                        totalDocs:
+                            searchedRecords.length,
+
+                        totalRecords:
+                            searchedRecords.length,
+
+                        currentPage:
+                            Math.floor(
+                                offset / limit
+                            ) + 1,
+
+                        totalPages:
+                            Math.max(
+                                1,
+                                Math.ceil(
+                                    searchedRecords.length /
+                                    limit
+                                )
+                            ),
+
+                        hasNextPage:
+                            offset + limit <
+                            searchedRecords.length,
+
+                        hasPrevPage:
+                            offset > 0,
+                    };
+
+                    state.error = null;
+                }
+            )
             .addCase(getAllTransporterEWayBill.rejected, (state, action: any) => {
                 state.listingLoader = false;
                 state.eWayBill = [];
@@ -1667,6 +1935,33 @@ const eWayBillSlice = createSlice({
                 state.error =
                     action.payload?.message ||
                     "Failed to get e-way bill access token";
+            })
+
+
+            /* ===================================================
+        TRANSPORTER ACCESS TOKEN
+    =================================================== */
+
+            // ⭐ YELLOW STAR: ADDED — TRANSPORTER ACCESS TOKEN STATE
+            .addCase(getTransporterEWayBillAccessToken.pending, (state) => {
+                state.transporterAccessTokenLoader = true;
+                state.error = null;
+            })
+
+            .addCase(getTransporterEWayBillAccessToken.fulfilled, (state, action: any) => {
+                state.transporterAccessTokenLoader = false;
+                state.transporterAccessToken =
+                    action.payload?.authtoken ||
+                    null;
+                state.error = null;
+            })
+
+            .addCase(getTransporterEWayBillAccessToken.rejected, (state, action: any) => {
+                state.transporterAccessTokenLoader = false;
+                state.transporterAccessToken = null;
+                state.error =
+                    action.payload?.message ||
+                    "Failed to get transporter e-way bill access token";
             })
 
 

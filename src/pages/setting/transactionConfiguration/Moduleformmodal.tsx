@@ -2,6 +2,13 @@ import type { FormEventHandler } from "react";
 import { X } from "lucide-react";
 import type { TransactionModuleForm } from "./Types";
 
+// ⭐ YELLOW STAR: ADDED — REUSABLE INPUT FIELDS
+import {
+    SelectInput,
+    TextArea,
+    TextInput,
+} from "../../../components/inputs";
+
 type ModuleFormModalProps = {
     open: boolean;
     editingModuleCode: string | null;
@@ -10,7 +17,10 @@ type ModuleFormModalProps = {
     errors: Partial<Record<keyof TransactionModuleForm, string>>;
     submitting: boolean;
     serverError: string | null;
-    onChangeField: (field: keyof TransactionModuleForm, value: string) => void;
+    onChangeField: (
+        field: keyof TransactionModuleForm,
+        value: string
+    ) => void;
     onSubmit: FormEventHandler<HTMLFormElement>;
     onClose: () => void;
 };
@@ -32,10 +42,15 @@ const ModuleFormModal = ({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-xl overflow-hidden rounded border border-border bg-card text-card-foreground shadow-2xl">
+
+                {/* ================= HEADER ================= */}
+
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                     <div>
                         <h2 className="text-lg font-semibold text-card-foreground">
-                            {editingModuleCode ? "Edit Custom Transaction" : "Add Custom Transaction"}
+                            {editingModuleCode
+                                ? "Edit Custom Transaction"
+                                : "Add Custom Transaction"}
                         </h2>
 
                         {editingModuleCode ? (
@@ -55,70 +70,137 @@ const ModuleFormModal = ({
                     </button>
                 </div>
 
-                {editingModuleCode && loadingExisting ? (
+                {/* ================= BODY ================= */}
+
+                {editingModuleCode &&
+                    loadingExisting ? (
                     <div className="flex items-center justify-center gap-2 px-5 py-16 text-muted-foreground">
                         Loading custom transaction...
                     </div>
                 ) : (
-                    <form onSubmit={onSubmit} className="space-y-5 p-5">
-                        <div>
-                            <label className="mb-1.5 block text-sm font-bold text-card-foreground">
-                                Module Name <span className="text-danger">*</span>
-                            </label>
+                    <form
+                        onSubmit={onSubmit}
+                        className="space-y-5 p-5"
+                    >
+                        {/* ⭐ YELLOW STAR: UPDATED — REUSABLE TEXT INPUT */}
+                        <TextInput
+                            label="Module Name"
+                            name="moduleName"
+                            mandatory={true}
+                            type="text"
+                            value={form.moduleName}
+                            placeholder="Example: Delivery Challan"
+                            maxLength={100}
+                            error={errors.moduleName}
+                            disabled={submitting}
+                            onChange={(event: any) =>
+                                onChangeField(
+                                    "moduleName",
+                                    event.target.value
+                                )
+                            }
+                        />
 
-                            <input
-                                type="text"
-                                value={form.moduleName}
-                                onChange={(event) => onChangeField("moduleName", event.target.value)}
-                                placeholder="Example: Delivery Challan"
-                                maxLength={100}
-                                className={`h-10 w-full rounded border bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 ${
-                                    errors.moduleName ? "border-danger" : "border-input"
-                                }`}
+                        {/* ⭐ YELLOW STAR: UPDATED — REUSABLE TEXT INPUT */}
+                        <TextInput
+                            label="Module Type"
+                            name="moduleType"
+                            mandatory={true}
+                            type="text"
+                            value={form.moduleType}
+                            placeholder="Example: sales / purchase / inventory"
+                            maxLength={100}
+                            error={errors.moduleType}
+                            disabled={submitting}
+                            onChange={(event: any) =>
+                                onChangeField(
+                                    "moduleType",
+                                    event.target.value
+                                )
+                            }
+                        />
+
+                        {/* ⭐ YELLOW STAR: UPDATED — REUSABLE SELECT INPUT */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <SelectInput
+                                label="Schema Type"
+                                name="schemaType"
+                                mandatory={false}
+                                value={form.schemaType}
+                                placeholder="Select schema type"
+                                disabled={submitting}
+                                error={errors.schemaType}
+                                options={[
+                                    {
+                                        value: "",
+                                        label: "Select schema type",
+                                    },
+                                    {
+                                        value: "normal",
+                                        label: "Normal",
+                                    },
+                                    {
+                                        value: "sectioned",
+                                        label: "Sectioned",
+                                    },
+                                ]}
+                                onChange={(event: any) =>
+                                    onChangeField(
+                                        "schemaType",
+                                        event?.target?.value ?? ""
+                                    )
+                                }
                             />
 
-                            {errors.moduleName ? (
-                                <p className="mt-1 text-xs font-semibold text-danger">
-                                    {errors.moduleName}
-                                </p>
-                            ) : null}
-                        </div>
-
-                        <div>
-                            <label className="mb-1.5 block text-sm font-bold text-card-foreground">
-                                Module Type <span className="text-danger">*</span>
-                            </label>
-
-                            <input
-                                type="text"
-                                value={form.moduleType}
-                                onChange={(event) => onChangeField("moduleType", event.target.value)}
-                                placeholder="Example: sales / purchase / inventory"
-                                maxLength={100}
-                                className={`h-10 w-full rounded border bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 ${
-                                    errors.moduleType ? "border-danger" : "border-input"
-                                }`}
+                            <SelectInput
+                                label="Status"
+                                name="status"
+                                mandatory={false}
+                                value={form.status}
+                                placeholder="Select status"
+                                disabled={submitting}
+                                error={errors.status}
+                                options={[
+                                    {
+                                        value: "",
+                                        label: "Select status",
+                                    },
+                                    {
+                                        value: "active",
+                                        label: "Active",
+                                    },
+                                    {
+                                        value: "inactive",
+                                        label: "Inactive",
+                                    },
+                                ]}
+                                onChange={(event: any) =>
+                                    onChangeField(
+                                        "status",
+                                        event?.target?.value ?? ""
+                                    )
+                                }
                             />
-
-                            {errors.moduleType ? (
-                                <p className="mt-1 text-xs font-semibold text-danger">
-                                    {errors.moduleType}
-                                </p>
-                            ) : null}
                         </div>
 
+                        {/* ⭐ YELLOW STAR: UPDATED — REUSABLE TEXT AREA */}
                         <div>
-                            <label className="mb-1.5 block text-sm font-bold text-card-foreground">
-                                Description
-                            </label>
-
-                            <textarea
+                            <TextArea
+                                label="Description"
+                                mandatory={false}
                                 value={form.description}
-                                onChange={(event) => onChangeField("description", event.target.value)}
                                 placeholder="Describe where this transaction will be used"
                                 rows={4}
-                                maxLength={500}
-                                className="w-full resize-none rounded border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
+                                error={errors.description}
+                                disabled={submitting}
+                                onChange={(event: any) =>
+                                    onChangeField(
+                                        "description",
+                                        String(
+                                            event.target.value || ""
+                                        ).slice(0, 500)
+                                    )
+                                }
                             />
 
                             <div className="mt-1 flex items-center justify-end">
@@ -128,31 +210,15 @@ const ModuleFormModal = ({
                             </div>
                         </div>
 
-                        <div>
-                            <label className="mb-1.5 block text-sm font-bold text-card-foreground">
-                                Status
-                            </label>
-
-                            <select
-                                value={form.status}
-                                onChange={(event) => onChangeField("status", event.target.value)}
-                                className="h-10 w-full rounded border border-input bg-background px-3 text-sm font-semibold text-foreground outline-none focus:border-primary"
-                            >
-                                <option value="active" className="bg-card text-card-foreground">
-                                    Active
-                                </option>
-
-                                <option value="inactive" className="bg-card text-card-foreground">
-                                    Inactive
-                                </option>
-                            </select>
-                        </div>
+                        {/* ================= SERVER ERROR ================= */}
 
                         {serverError ? (
                             <div className="rounded border border-danger/30 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger">
                                 {serverError}
                             </div>
                         ) : null}
+
+                        {/* ================= ACTIONS ================= */}
 
                         <div className="flex justify-end gap-3 border-t border-border pt-4">
                             <button
@@ -169,7 +235,9 @@ const ModuleFormModal = ({
                                 disabled={submitting}
                                 className="inline-flex h-10 min-w-28 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {editingModuleCode ? "Update" : "Create"}
+                                {editingModuleCode
+                                    ? "Update"
+                                    : "Create"}
                             </button>
                         </div>
                     </form>
