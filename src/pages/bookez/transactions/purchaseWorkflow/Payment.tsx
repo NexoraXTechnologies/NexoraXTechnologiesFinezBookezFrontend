@@ -190,9 +190,9 @@ const Payment = () => {
     const [form, setForm] = useState<any>(getDefaultForm());
     const [errors, setErrors] = useState<any>({});
     const { report } = useSelector((s: any) => s.reportMapping);
-    const { accounts = [] } = useSelector(
-        (state: any) => state.accountMaster || {}
-    );
+    // const { accounts = [] } = useSelector(
+    //     (state: any) => state.accountMaster || {}
+    // );
     const [downlaodPDF, setDownlaodPDF]: any = useState({ show: false, type: "" });
     const [templateFields, setTemplateFields] = useState<any>({ header: [], body: [], footer: [], });
     const [fieldsLoading, setFieldsLoading] = useState(false);
@@ -209,31 +209,31 @@ const Payment = () => {
             : Array.isArray(res?.records) ? res.records : Array.isArray(res?.docs) ? res.docs : Array.isArray(res?.data?.items) ? res.data.items : Array.isArray(res?.data?.records) ? res.data.records : Array.isArray(res?.data?.docs) ? res.data.docs : Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
     };
 
-    const cashBankAccounts = useMemo(() => {
-        return (accounts || []).filter((account: any) => {
-            const accountType = String(
-                account?.accountType || ""
-            ).toLowerCase();
+    // const cashBankAccounts = useMemo(() => {
+    //     return (accounts || []).filter((account: any) => {
+    //         const accountType = String(
+    //             account?.accountType || ""
+    //         ).toLowerCase();
 
-            return (
-                accountType === "cash" ||
-                accountType === "bank"
-            );
-        });
-    }, [accounts]);
+    //         return (
+    //             accountType === "cash" ||
+    //             accountType === "bank"
+    //         );
+    //     });
+    // }, [accounts]);
 
-    const vendorExpenseAccounts = useMemo(() => {
-        return (accounts || []).filter((account: any) => {
-            const accountType = String(
-                account?.accountType || ""
-            ).toLowerCase();
+    // const vendorExpenseAccounts = useMemo(() => {
+    //     return (accounts || []).filter((account: any) => {
+    //         const accountType = String(
+    //             account?.accountType || ""
+    //         ).toLowerCase();
 
-            return (
-                accountType === "vendor" ||
-                accountType === "expense"
-            );
-        });
-    }, [accounts]);
+    //         return (
+    //             accountType === "vendor" ||
+    //             accountType === "expense"
+    //         );
+    //     });
+    // }, [accounts]);
 
     // ⭐ YELLOW STAR: ADDED — SEARCH-TO-CREATE FOR PAYMENT ACCOUNTS
     // const templateFieldsWithCreateActions = useMemo(() => {
